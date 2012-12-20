@@ -1,8 +1,8 @@
 {
     "id" : "window",
-    "label": "Crop Pollination: Biophysical",
-    "targetScript" : "invest_natcap.pollination.pollination_biophysical",
-    "modelName" : "pollination_biophysical",
+    "label": "Crop Pollination",
+    "targetScript" : "invest_natcap.pollination.pollination",
+    "modelName" : "pollination",
     "localDocURI": "../documentation/croppollination.html",
     "height": 500,
     "width" : 700,
@@ -102,7 +102,55 @@
                                    "allowedValues": {"pattern": "[0-9 ]*"}},
                     "dataType": "string",
                     "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If you do not provide agricultural classes here, the entire land cover raster will be considered to be agricultural."
-                },
+                }
+            ]
+        },
+        {
+            "id": "valuation_container",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "do_valuation",
+            "elements": [
+                {
+                    "id": "valuation_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id" : "half_saturation_const",
+                            "type": "text",
+                            "label": "Half-saturation constant",
+                            "args_id": "half_saturation",
+                            "required": true,
+                            "width": 60,
+                            "defaultValue": "0.125",
+                            "validateAs": {"type": "number",
+                                           "lteq": 1,
+                                           "gteq": 0},
+                            "dataType": "float",
+                            "helpText": "This should be a number between 0 and 1.  It represents the abundance of pollinators required to reack 50% of pollinator-dependent yield."
+                        },
+                        {
+                            "id" : "wild_pollination_proportion",
+                            "type": "text",
+                            "label": "Proportion of total yield due to wild pollinators",
+                            "args_id": "wild_pollination_proportion",
+                            "required": true,
+                            "width": 60,
+                            "defaultValue": "1",
+                            "validateAs": {"type": "number",
+                                           "lteq": 1,
+                                           "gteq": 0},
+                            "dataType": "float",
+                            "helpText": "This should be a number between 0 and 1.  It represents the proportion of all crop yield attributed to wild pollinators on this landscape."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "suffix_list",
+            "type": "list",
+            "elements": [
                 {
                     "id" : "results_suffix",
                     "type": "text",
