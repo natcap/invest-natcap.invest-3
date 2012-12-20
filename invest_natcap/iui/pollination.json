@@ -4,6 +4,7 @@
     "targetScript" : "invest_natcap.pollination.pollination",
     "modelName" : "pollination",
     "localDocURI": "../documentation/croppollination.html",
+    "condenseElements": true,
     "height": 500,
     "width" : 700,
     "elements": [
@@ -73,43 +74,11 @@
             ]
         },
         {
-            "id": "remaining_items_list",
-            "type": "list",
-            "elements": [
-                {
-                    "id" : "guilds",
-                    "type": "file",
-                    "label": "Guilds table",
-                    "defaultValue": "../Pollination/Input/Guild.csv",
-                    "args_id": "guilds_uri",
-                    "required": true,
-                    "validateAs": {"type": "CSV",
-                                   "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
-                                   "restrictions": [{"field": "ALPHA",
-                                                     "validateAs": {"type": "number",
-                                                                    "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}}]},
-                    "helpText": "This table must be either a DBF or CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table."
-                },
-                {
-                    "id" : "ag_classes",
-                    "type": "text",
-                    "label": "Agricultural classes (space-separated)",
-                    "args_id": "ag_classes",
-                    "required": false,
-                    "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
-                    "validText": "[0-9 ]*",
-                    "validateAs": {"type": "string",
-                                   "allowedValues": {"pattern": "[0-9 ]*"}},
-                    "dataType": "string",
-                    "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If you do not provide agricultural classes here, the entire land cover raster will be considered to be agricultural."
-                }
-            ]
-        },
-        {
             "id": "valuation_container",
             "type": "container",
             "collapsible": true,
             "args_id": "do_valuation",
+            "label": "Valuation options (enable to trigger valuation)",
             "elements": [
                 {
                     "id": "valuation_list",
@@ -127,7 +96,7 @@
                                            "lteq": 1,
                                            "gteq": 0},
                             "dataType": "float",
-                            "helpText": "This should be a number between 0 and 1.  It represents the abundance of pollinators required to reack 50% of pollinator-dependent yield."
+                            "helpText": "This should be a number between 0 and 1.  It represents the abundance of pollinators required to reach 50% of pollinator-dependent yield."
                         },
                         {
                             "id" : "wild_pollination_proportion",
@@ -148,9 +117,36 @@
             ]
         },
         {
-            "id": "suffix_list",
+            "id": "remaining_items_list",
             "type": "list",
             "elements": [
+                {
+                    "id" : "guilds",
+                    "type": "file",
+                    "label": "Guilds table",
+                    "defaultValue": "../Pollination/Input/Guild.csv",
+                    "args_id": "guilds_uri",
+                    "required": true,
+                    "validateAs": {"type": "CSV",
+                                   "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
+                                   "restrictions": [{"field": "ALPHA",
+                                                     "validateAs": {"type": "number",
+                                                                    "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}}]},
+                    "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table."
+                },
+                {
+                    "id" : "ag_classes",
+                    "type": "text",
+                    "label": "Agricultural classes (space-separated)",
+                    "args_id": "ag_classes",
+                    "required": false,
+                    "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
+                    "validText": "[0-9 ]*",
+                    "validateAs": {"type": "string",
+                                   "allowedValues": {"pattern": "[0-9 ]*"}},
+                    "dataType": "string",
+                    "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If you do not provide agricultural classes here, the entire land cover raster will be considered to be agricultural."
+                },
                 {
                     "id" : "results_suffix",
                     "type": "text",
