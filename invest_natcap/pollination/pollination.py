@@ -180,7 +180,7 @@ def execute(args):
             ('farm_value', 'frm_val', inter_dir),
             ('value_abundance_ratio', 'val_sup_ratio', inter_dir),
             ('value_abundance_ratio_blur', 'val_sup_ratio_blur', inter_dir),
-            ('service_value', 'sup_val', out_dir)]
+            ('service_value', 'sup_val', inter_dir)]
 
         # Loop through each species and define the necessary raster URIs, as
         # defined by the species_rasters list.

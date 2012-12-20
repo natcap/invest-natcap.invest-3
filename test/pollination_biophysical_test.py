@@ -270,6 +270,7 @@ class UnifiedPollinationTest(PollinationTest):
 
         val_inter_files = ['frm_val_%s_cur.tif' % part for part in
             ['Apis', 'Bombus', 'sum']]
+        val_inter_files += ['sup_val_Apis_cur.tif', 'sup_val_Bombus_cur.tif']
         for filename in val_inter_files:
             test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
             reg_file = os.path.join(REGRESSION_FOLDER_BASE,
@@ -278,7 +279,7 @@ class UnifiedPollinationTest(PollinationTest):
 
         # Build up a list of all output files
         val_output_files = ['sup_val_%s_cur.tif' % (filename) for filename in
-            ['Apis', 'Bombus', 'sum']]
+            ['sum']]
 
         # Verify all output files from biophysical
         LOGGER.debug('Checking output files from valuation')
