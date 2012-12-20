@@ -358,7 +358,11 @@ def water_yield(args):
     
     for key, val in sws_dict.iteritems():
         for index, item in sub_value_dict.iteritems():
-            val[index] = item[int(key)]
+            try:
+                val[index] = item[int(key)]
+            except KeyError:
+                LOGGER.error("Warning subwatershed %s was not in the calculated"
+                             " region.  Is it a very small polygon?" % key)
     
     LOGGER.debug('Performing CSV table writing')
     write_csv_table(ws_dict, field_list, shed_table_path)

@@ -14,6 +14,50 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('pollination')
 
 def execute(args):
+    """Execute the pollination model from the topmost, user-accessible level.
+
+        args - a python dictionary with the following required inputs:
+            'workspace_dir' - a URI to the workspace folder.  Not required to
+                exist on disk.  Additional folders will be created inside of
+                this folder.  If there are any file name collisions, this model
+                will overwrite those files.
+            'landuse_cur_uri' - a URI to a GDAL raster on disk.
+            'do_valuation' - A boolean.  Indicates whether valuation should be
+                performed.  This applies to all scenarios.
+            'landuse_attributes_uri' - a URI to a CSV on disk.  See the
+                model's documentation for details on the structure of this
+                table.
+            'guilds_uri' - a URI to a CSV on disk.  See the model's
+                documentation for details on the structure of this table.
+
+        Additionally, the following args dictionary entries are optional, and
+        will affect the behavior of the model if provided:
+            'landuse_fut_uri' - (Optional) a URI to a GDAL dataset on disk.  If
+                this args dictionary entry is provided, this model will process
+                both the current and future scenarios.
+            'ag_classes' - (Optional) a space-separated list of land cover
+                classes that are to be considered as agricultural.  If this
+                input is not provided, all land cover classes are considered to
+                be agricultural.
+            'results_suffix' - (Optional) a string.  If provided, this string
+                will be inserted into the URI of each file created by this
+                model, right before the file extension.
+                Example:
+                    suffix = 'aaaa'
+                    file_uri = 'foo/bar.baz'
+                    file_with_suffix = 'foo/bar_aaaa.baz'
+
+        If args['do_valuation'] is set to True, the following args dictionary
+        entries are also required:
+            'half_saturation' - a number between 0 and 1 indicating the
+                half-saturation constant.  See the pollination documentation for
+                more information.
+            'wild_pollination_proportion' - a number between 0 and 1 indicating
+                the proportion of all pollinators that are wild.
+
+        This function has no return value, though it does save a number of
+        rasters to disk.  See the user's guide for details."""
+
     workspace = args['workspace_dir']
 
     # If the user has not provided a results suffix, assume it to be an empty
@@ -27,7 +71,6 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-
     for folder in [inter_dir, out_dir]:
         if not os.path.isdir(folder):
             os.makedirs(folder)
@@ -41,6 +84,8 @@ def execute(args):
 
     for scenario in landuse_scenarios:
         LOGGER.info('Starting pollination model for the %s scenario', scenario)
+
+        # Create the args dictionary with a couple of statically defined values.
         biophysical_args = {
             'paths': {
                 'workspace': workspace,
@@ -58,28 +103,34 @@ def execute(args):
                 biophysical_args[arg] = args[arg]
 
         # Open the landcover raster
-        biophysical_args['landuse'] = gdal.Open(
-            args['landuse_' + scenario +'_uri'].encode('utf-8'), gdal.GA_ReadOnly)
+        uri = args['landuse_' + scenario +'_uri'].encode('utf-8')
+        LOGGER.debug('Opening landuse raster from %s', uri)
+        biophysical_args['landuse'] = gdal.Open(uri, gdal.GA_ReadOnly)
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
+        LOGGER.info('Opening landuse attributes table')
         att_table_handler = fileio.TableHandler(args['landuse_attributes_uri'])
+        biophysical_args['landuse_attributes'] = att_table_handler
+
         att_table_fields = att_table_handler.get_fieldnames()
         nesting_fields = [f[2:] for f in att_table_fields if re.match('^n_', f)]
         floral_fields = [f[2:] for f in att_table_fields if re.match('^f_', f)]
+        LOGGER.debug('Parsed nesting fields: %s', nesting_fields)
+        LOGGER.debug('Parsed floral fields: %s', floral_fields)
         biophysical_args['nesting_fields'] = nesting_fields
         biophysical_args['floral_fields'] = floral_fields
 
+        LOGGER.info('Opening guilds table')
         att_table_handler.set_field_mask('(^n_)|(^f_)', trim=2)
         guilds_handler = fileio.TableHandler(args['guilds_uri'])
         guilds_handler.set_field_mask('(^ns_)|(^fs_)', trim=3)
-
-        biophysical_args['landuse_attributes'] = att_table_handler
         biophysical_args['guilds'] = guilds_handler
 
         # Convert agricultural classes (a space-separated list of ints) into a
         # list of ints.  If the user has not provided a string list of ints, then
         # use an empty list instead.
+        LOGGER.info('Processing agricultural classes')
         try:
             # This approach will create a list with only ints, even if the user has
             # accidentally entered additional spaces.  Any other incorrect input
@@ -94,32 +145,33 @@ def execute(args):
         LOGGER.debug('Parsed ag classes: %s', ag_class_list)
         biophysical_args['ag_classes'] = ag_class_list
 
-        # Create a new raster for use as a raster of booleans, either 1 if the land
-        # cover class is in the ag list, or 0 if the land cover class is not.
-        biophysical_args['ag_map'] = pollination_core.build_uri(
-            inter_dir, 'agmap.tif', [scenario, suffix])
+        # Defined which rasters need to be created at the global level (at the
+        # top level of the model dictionary).  the global_rasters list has this
+        # structure:
+        #   (model_args key, raster_uri base, folder to be saved to)
+        global_rasters = [
+            ('foraging_total', 'frm_tot', out_dir),
+            ('foraging_average', 'frm_avg', out_dir),
+            ('farm_value_sum', 'frm_val_sum', inter_dir),
+            ('service_value_sum', 'sup_val_sum', out_dir),
+            ('abundance_total', 'sup_tot', out_dir),
+            ('ag_map', 'agmap', inter_dir)]
 
-        # Create a new raster for a mean of all foraging rasters.
-        biophysical_args['foraging_total'] = pollination_core.build_uri(
-            out_dir, 'frm_tot.tif', [scenario, suffix])
-        biophysical_args['foraging_average'] = pollination_core.build_uri(
-            out_dir, 'frm_avg.tif', [scenario, suffix])
-        biophysical_args['farm_value_sum'] = pollination_core.build_uri(
-            inter_dir, 'frm_val.tif', ['sum', scenario, suffix])
-        biophysical_args['service_value_sum'] = pollination_core.build_uri(
-            out_dir, 'sup_val.tif', ['sum', scenario, suffix])
-
-        # Create a new raster for the total of all pollinator supply rasters.
-        biophysical_args['abundance_total'] = pollination_core.build_uri(
-            out_dir, 'sup_tot.tif', [scenario, suffix])
+        # loop through the global rasters provided and actually create the uris,
+        # saving them to the model args dictionary.
+        LOGGER.info('Creating top-level raster URIs')
+        for key, base, folder in global_rasters:
+            raster_uri = build_uri(folder, '%s.tif' % base, [scenario, suffix])
+            LOGGER.debug('%s: %s', key, raster_uri)
+            biophysical_args[key] = raster_uri
 
         # Fetch a list of all species from the guilds table.
         species_list = [row['species'] for row in guilds_handler.table]
 
         # Make new rasters for each species.  In this list of tuples, the first
         # value of each tuple is the args dictionary key, and the second value of
-        # each tuple is the raster prefix.
-
+        # each tuple is the raster prefix.  The third value is the folder in
+        # which the created raster should exist.
         species_rasters = [
             ('nesting', 'hn', inter_dir),
             ('floral', 'hf', inter_dir),
@@ -128,15 +180,45 @@ def execute(args):
             ('farm_value', 'frm_val', inter_dir),
             ('value_abundance_ratio', 'val_sup_ratio', inter_dir),
             ('value_abundance_ratio_blur', 'val_sup_ratio_blur', inter_dir),
-            ('service_value', 'sup_val', out_dir)]
+            ('service_value', 'sup_val', inter_dir)]
 
+        # Loop through each species and define the necessary raster URIs, as
+        # defined by the species_rasters list.
+        LOGGER.info('Creating species-specific raster URIs')
         biophysical_args['species'] = {}
         for species in species_list:
+            LOGGER.info('Creating rasters for %s', species)
             biophysical_args['species'][species] = {}
             for group, prefix, folder in species_rasters:
                 raster_name = prefix + '_' + species + '.tif'
-                raster_uri = pollination_core.build_uri(folder, raster_name,
-                    [scenario, suffix])
+                raster_uri = build_uri(folder, raster_name, [scenario, suffix])
+                LOGGER.debug('%s: %s', group, raster_uri)
                 biophysical_args['species'][species][group] = raster_uri
 
         pollination_core.execute_model(biophysical_args)
+
+
+def build_uri(directory, basename, suffix=[]):
+    """Take the input directory and basename, inserting the provided suffixes
+        just before the file extension.  Each string in the suffix list will be
+        underscore-separated.
+
+        directory - a python string folder path
+        basename - a python string filename
+        suffix='' - a python list of python strings to be separated by
+            underscores and concatenated with the basename just before the
+            extension.
+
+        returns a python string of the complete path with the correct
+        filename."""
+
+    file_base, extension = os.path.splitext(basename)
+
+    # If a siffix is provided, we want the suffix to be prepended with an
+    # underscore, so as to separate the file basename and the suffix.  If a
+    # suffix is an empty string, ignore it.
+    if len(suffix) > 0:
+        suffix = '_' + '_'.join([s for s in suffix if s != ''])
+
+    new_filepath = file_base + suffix + extension
+    return os.path.join(directory, new_filepath)

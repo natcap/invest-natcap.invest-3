@@ -4,7 +4,6 @@ from invest_natcap import raster_utils
 
 from osgeo import gdal
 
-import os.path
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -14,67 +13,91 @@ def execute_model(args):
     """Execute the biophysical component of the pollination model.
 
         args - a python dictionary with at least the following entries:
-        args['landuse'] - a GDAL dataset
-        args['landuse_attributes'] - A fileio AbstractTableHandler object
-        args['guilds'] - A fileio AbstractTableHandler object
-        args['ag_classes'] - a python list of ints representing agricultural
-            classes in the landuse map.  This list may be empty to represent
-            the fact that no landuse classes are to be designated as strictly
-            agricultural.
-        args['ag_map'] - a GDAL dataset
-        args['species'] - a python dictionary with the following entries:
-        args['species'][species_name] - a python dictionary where 'species
-            name' is the string name of the pollinator species in question.
-            This dictionary should have the following contents:
-        args['species'][species_name]['floral'] - a GDAL dataset
-        args['species'][species_name]['nesting'] - a GDAL dataset
-        args['species'][species_name]['species_abundance'] - a GDAL dataset
-        args['species'][species_name]['farm_abundance'] - a GDAL dataset
-        args['nesting_fields'] - a python list of string nesting field
-            basenames
-        args['floral fields'] - a python list of string floral fields
-        args['foraging_average'] - a GDAL dataset
-        args['abundance_total'] - a GDAL dataset
-        args['paths'] - a dictionary with the following entries:
-            'workspace' - the workspace path
-            'intermediate' - the intermediate folder path
-            'output' - the output folder path
-            'temp' - a temp folder path.  This folder will be created and
-                deleted several times.
+            'landuse' - a GDAL dataset
+            'landuse_attributes' - A fileio AbstractTableHandler object
+            'guilds' - A fileio AbstractTableHandler object
+            'ag_classes' - a python list of ints representing agricultural
+                classes in the landuse map.  This list may be empty to represent
+                the fact that no landuse classes are to be designated as strictly
+                agricultural.
+            'nesting_fields' - a python list of string nesting fields
+            'floral fields' - a python list of string floral fields
+            'do_valuation' - a boolean indicating whether to do valuation
+            'paths' - a dictionary with the following entries:
+                'workspace' - the workspace path
+                'intermediate' - the intermediate folder path
+                'output' - the output folder path
+                'temp' - a temp folder path.
+
+        Additionally, the args dictionary should contain these URIs, which must
+        all be python strings of either type str or else utf-8 encoded unicode.
+            'ag_map' - a URI
+            'foraging_average' - a URI
+            'abundance_total' - a URI
+            'farm_value_sum' - a URI (Required if do_valuation == True)
+            'service_value_sum' - a URI (Required if do_valuation == True)
+
+        The args dictionary must also have a dictionary containing
+        species-specific information:
+            'species' - a python dictionary with a contained dictionary for each
+                species to be considered by the model.  The key to each
+                dictionary should be the species name.  For example:
+
+                    args['species']['Apis'] = { ... species_dictionary ... }
+
+                The species-specific dictionary must contain these elements:
+                    'floral' - a URI
+                    'nesting' - a URI
+                    'species_abundance' - a URI
+                    'farm_abundance' - a URI
+
+                If do_valuation == True, the following entries are also required
+                to be in the species-specific dictionary:
+                    'farm_value' - a URI
+                    'value_abundance_ratio' - a URI
+                    'value_abundance_ratio_blurred' - a URI
+                    'service_value' - a URI
 
         returns nothing."""
 
-    LOGGER.debug('Starting pollination biophysical calculations')
+    LOGGER.debug('Starting pollination calculations')
 
     nodata = -1.0
     LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
 
-    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+    ag_map = reclass_ag_raster(args['landuse'], args['ag_map'],
         args['ag_classes'], nodata)
 
-    # Open the average foraging matrix for use in the loop over all species,
-    # but first we need to ensure that the matrix is filled with 0's.
-    foraging_total_raster = raster_utils.reclassify_by_dictionary(
-        args['landuse'], {}, args['foraging_average'], 'GTiff', nodata,
-        gdal.GDT_Float32, 0.0)
+    # Create the necessary sum rasters by reclassifying the ag map so that all
+    # pixels that are not nodata have a value of 0.0.
+    foraging_sum = raster_utils.reclassify_by_dictionary(ag_map, {},
+        args['foraging_average'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    # Open the abundance total raster for use in the loop over all species and
-    # ensure that it's filled entirely with 0's.
-    abundance_total_raster = raster_utils.reclassify_by_dictionary(
-        args['landuse'], {}, args['abundance_total'], 'GTiff', nodata,
-        gdal.GDT_Float32, 0.0)
+    abundance_sum = raster_utils.reclassify_by_dictionary(ag_map, {},
+        args['abundance_total'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    # Open matrices for use later.
-    farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
-        {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+    # We only need to create these rasters if we're doing valuation.
+    if args['do_valuation'] == True:
+        farm_value_sum = raster_utils.reclassify_by_dictionary(ag_map,
+            {}, args['farm_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
-        {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+        service_value_sum = raster_utils.reclassify_by_dictionary(ag_map,
+            {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    # Loop through all species and calculate the pollinator service value
+
+    # Loop through all species and perform the necessary calculations.
     for species, species_dict in args['species'].iteritems():
-        guild_dict = args['guilds'].get_table_row('species', species)
+        LOGGER.debug('Starting %s species', species)
 
+        # We need the guild dictionary for a couple different things later on
+        guild_dict = args['guilds'].get_table_row('species', species)
+        LOGGER.debug('Guild dictionary=%s', guild_dict)
+
+        # Calculate species abundance.  This represents the relative index of
+        # how much of a species we can expect to find across the landscape given
+        # the floral and nesting patterns (based on land cover) and the
+        # specified use of these resources (defined in the guild_dict).
+        LOGGER.info('Calculating %s abundance on the landscape', species)
         species_abundance = calculate_abundance(args['landuse'],
             args['landuse_attributes'], guild_dict, args['nesting_fields'],
             args['floral_fields'], uris={
@@ -84,34 +107,41 @@ def execute_model(args):
                 'temp': args['paths']['temp']
             })
 
-        # Take the pollinator abundance index and multiply it by the species
-        # weight in the guilds table.
-        abundance_total_raster = add_two_rasters(abundance_total_raster,
-            species_abundance, args['abundance_total'])
+        # Add the newly-calculated abundance to the abundance_sum raster.
+        LOGGER.info('Adding %s species abundance to the total', species)
+        abundance_sum = add_two_rasters(abundance_sum, species_abundance,
+            args['abundance_total'])
 
+        # Calculate the farm abundance.  This takes the species abundance and
+        # calculates roughly how much of a species we can expect to find on farm
+        # pixels.
+        LOGGER.info('Calculating %s abundance on farms ("foraging")', species)
         farm_abundance = calculate_farm_abundance(species_abundance,
-            args['ag_map'], guild_dict['alpha'],
-            species_dict['farm_abundance'], args['paths']['intermediate'])
+            ag_map, guild_dict['alpha'], species_dict['farm_abundance'],
+            args['paths']['intermediate'])
 
-        # Add the current foraging raster to the existing 'foraging_total'
-        # raster
-        LOGGER.debug('Adding %s foraging abundance raster to total', species)
-        foraging_total_raster = add_two_rasters(farm_abundance,
-            foraging_total_raster, args['foraging_total'])
+        # Add the newly calculated farm abundance raster to the total.
+        LOGGER.info('Adding %s foraging abundance raster to total', species)
+        foraging_sum = add_two_rasters(farm_abundance, foraging_sum,
+            args['foraging_total'])
 
         if args['do_valuation'] == True:
-            LOGGER.info('Calculating crop yield due to %s', species)
+            LOGGER.info('Starting species-specific valuation for %s', species)
+
             # Apply the half-saturation yield function from the documentation and
             # write it to its raster
+            LOGGER.info('Calculating crop yield due to %s', species)
             farm_value_raster = calculate_yield(farm_abundance,
                 species_dict['farm_value'], args['half_saturation'],
                 args['wild_pollination_proportion'], -1.0)
 
             # Add the new farm_value_matrix to the farm value sum matrix.
+            LOGGER.info('Adding crop yield due to %s to the crop yield total',
+                species)
             farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
                 args['farm_value_sum'])
 
-            LOGGER.debug('Calculating service value for %s', species)
+            LOGGER.info('Calculating service value for %s', species)
             # Calculate sigma for the gaussian blur.  Sigma is based on the species
             # alpha (from the guilds table) and twice the pixel size.
             guild_dict = args['guilds'].get_table_row('species', species)
@@ -124,7 +154,7 @@ def execute_model(args):
                     'farm_value': farm_value_raster,
                     'farm_abundance': farm_abundance,
                     'species_abundance': species_abundance,
-                    'ag_map': args['ag_map']
+                    'ag_map': ag_map
                 },
                 nodata=-1.0,
                 sigma=sigma,
@@ -137,25 +167,25 @@ def execute_model(args):
                 })
 
             # Add the new service value to the service value sum matrix
+            LOGGER.info('Adding the %s service value raster to the sum',
+                species)
             service_value_sum = add_two_rasters(service_value_sum,
                 service_value_raster, args['service_value_sum'])
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
     # to get the mean pollinator foraging index and save that to its raster.
-    LOGGER.debug('Calculating the mean foraging index across all species')
-
     num_species = float(len(args['species'].values()))
     LOGGER.debug('Number of species: %s', num_species)
 
     # Calculate the mean foraging values per species.
     LOGGER.debug('Calculating mean foraging score')
-    divide_raster(foraging_total_raster, num_species, args['foraging_average'])
+    divide_raster(foraging_sum, num_species, args['foraging_average'])
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
     LOGGER.debug('Calculating mean pollinator supply')
-    divide_raster(abundance_total_raster, num_species, args['abundance_total'])
+    divide_raster(abundance_sum, num_species, args['abundance_total'])
 
     LOGGER.debug('Finished pollination biophysical calculations')
 
@@ -298,82 +328,6 @@ def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     return raster_utils.reclassify_by_dictionary(landuse,
         reclass_rules, uri, 'GTiff', nodata, gdal.GDT_Float32,
         default_value=default_value)
-
-
-def valuation(args):
-    """Perform the computation of the valuation component of the pollination
-        model.
-
-        args - a python dictionary with at least the following entries:
-        args['half_saturation'] - a python int or float
-        args['wild_pollination_proportion'] - a python int or float between 0
-            and 1.
-        args['species'][<species_name>]['species_abundance'] - a GDAL dataset
-        args['species'][<species_name>]['farm_abundance'] - a GDAL dataset
-        args['species'][<species_name>]['farm_value'] - a GDAL dataset
-        args['species'][<species_name>]['service_value'] - a GDAL dataset
-        args['species'][<species_name>]['value_abundance_ratio'] - a URI
-        args['species'][<species_name>]['value_abundance_ratio_blur'] - a URI
-        args['service_value_sum'] - a GDAL dataset
-        args['farm_value_sum'] - a URI
-        args['foraging_average'] - a GDAL dataset
-        args['guilds'] - a fileio tablehandler class
-        args['ag_map'] - a GDAL dataset
-
-        returns nothing"""
-
-    LOGGER.debug('Starting valuation')
-
-    # Open matrices for use later.
-    farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
-        {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
-
-    service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
-        {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
-
-    # Loop through all species and calculate the pollinator service value
-    for species, species_dict in args['species'].iteritems():
-
-        LOGGER.info('Calculating crop yield due to %s', species)
-        # Apply the half-saturation yield function from the documentation and
-        # write it to its raster
-        farm_value_raster = calculate_yield(species_dict['farm_abundance'],
-            species_dict['farm_value'], args['half_saturation'],
-            args['wild_pollination_proportion'], -1.0)
-
-        # Add the new farm_value_matrix to the farm value sum matrix.
-        farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
-            args['farm_value_sum'])
-
-        LOGGER.debug('Calculating service value for %s', species)
-        # Calculate sigma for the gaussian blur.  Sigma is based on the species
-        # alpha (from the guilds table) and twice the pixel size.
-        guild_dict = args['guilds'].get_table_row('species', species)
-        pixel_size = abs(farm_value_raster.GetGeoTransform()[1])
-        sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
-        LOGGER.debug('Pixel size: %s, sigma: %s')
-
-        service_value_raster = calculate_service(
-            rasters={
-                'farm_value': farm_value_raster,
-                'farm_abundance': species_dict['farm_abundance'],
-                'species_abundance': species_dict['species_abundance'],
-                'ag_map': args['ag_map']
-            },
-            nodata=-1.0,
-            sigma=sigma,
-            part_wild=args['wild_pollination_proportion'],
-            out_uris={
-                'species_value': species_dict['value_abundance_ratio'],
-                'species_value_blurred': species_dict['value_abundance_ratio_blur'],
-                'service_value': species_dict['service_value']
-            })
-
-        # Add the new service value to the service value sum matrix
-        service_value_sum = add_two_rasters(service_value_sum,
-            service_value_raster, args['service_value_sum'])
-
-    LOGGER.debug('Finished calculating service value')
 
 
 def add_two_rasters(raster_1, raster_2, out_uri):
@@ -541,29 +495,3 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     out_raster = raster_utils.reclassify_by_dictionary(base_raster,
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
     return out_raster
-
-
-def build_uri(directory, basename, suffix=[]):
-    """Take the input directory and basename, inserting the provided suffixes
-        just before the file extension.  Each string in the suffix list will be
-        underscore-separated.
-
-        directory - a python string folder path
-        basename - a python string filename
-        suffix='' - a python list of python strings to be separated by
-            underscores and concatenated with the basename just before the
-            extension.
-
-        returns a python string of the complete path with the correct
-        filename."""
-
-    file_base, extension = os.path.splitext(basename)
-
-    # If a siffix is provided, we want the suffix to be prepended with an
-    # underscore, so as to separate the file basename and the suffix.  If a
-    # suffix is an empty string, ignore it.
-    if len(suffix) > 0:
-        suffix = '_' + '_'.join([s for s in suffix if s != ''])
-
-    new_filepath = file_base + suffix + extension
-    return os.path.join(directory, new_filepath)
