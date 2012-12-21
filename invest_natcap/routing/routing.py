@@ -82,12 +82,27 @@ def calculate_routing(
     d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
     d_inf_dir_nodata = -1.0
 
-    bounding_box = [0, 0, n_cols, n_rows]
-
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
         gdal.GDT_Float32)
 
+    inflow_uri = os.path.join(workspace_dir, 'inflow.tif')
+    inflow_nodata = -1.0
+    inflow_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, inflow_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    inflow_band, _, inflow_array = raster_utils.extract_band_and_nodata(inflow_dataset, get_array = True)
+    inflow_array[:] = 0
+
+    outflow_uri = os.path.join(workspace_dir, 'outflow.tif')
+    outflow_nodata = -1.0
+    outflow_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, outflow_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    outflow_band, _, outflow_array = raster_utils.extract_band_and_nodata(outflow_dataset, get_array = True)
+    outflow_array[:] = 0
+
+    bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
     flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
@@ -144,7 +159,7 @@ def calculate_routing(
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
                     outflow_cell_set.add(flat_index)
-                    
+                    outflow_array[row_index, col_index] = 1
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
@@ -168,6 +183,12 @@ def calculate_routing(
                         
                         neighbor_index = \
                             flat_index + diagonal_offsets[offset_index]
+
+                        neighbor_row = neighbor_index/n_cols
+                        neighbor_col = neighbor_index%n_cols
+                        inflow_array[neighbor_row, neighbor_col] += 1
+
+
                         inflow_cell_set.add(neighbor_index)
 
                         flow_graph_diagonals[offset_index, neighbor_index] = \
@@ -183,5 +204,9 @@ def calculate_routing(
 
     sink_cells = inflow_cell_set.difference(outflow_cell_set)
     source_cells = outflow_cell_set.difference(inflow_cell_set)
+
+    outflow_band.WriteArray(outflow_array,0,0)
+    inflow_band.WriteArray(inflow_array,0,0)
+
 
     LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
