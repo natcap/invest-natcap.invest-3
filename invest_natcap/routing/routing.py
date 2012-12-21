@@ -75,21 +75,34 @@ def calculate_routing(
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
     n_elements = n_rows * n_cols
 
-
-    #1a) create AOI mask raster
+    #Create AOI mask raster
     aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
 
-
-    #1b) calculate d-infinity flow direction
+    #Calculate d-infinity flow direction
     d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
     d_inf_dir_nodata = -1.0
-
-    bounding_box = [0, 0, n_cols, n_rows]
 
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
         gdal.GDT_Float32)
 
+    inflow_uri = os.path.join(workspace_dir, 'inflow.tif')
+    inflow_nodata = -1.0
+    inflow_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, inflow_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    inflow_band, _, inflow_array = raster_utils.extract_band_and_nodata(inflow_dataset, get_array = True)
+    inflow_array[:] = 0
+
+    outflow_uri = os.path.join(workspace_dir, 'outflow.tif')
+    outflow_nodata = -1.0
+    outflow_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, outflow_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    outflow_band, _, outflow_array = raster_utils.extract_band_and_nodata(outflow_dataset, get_array = True)
+    outflow_array[:] = 0
+
+    bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
     flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
@@ -98,15 +111,14 @@ def calculate_routing(
     #get a memory mapped flow direction array
     flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
     flow_direction_array = numpy.memmap(
-        flow_direction_filename, dtype='float32', mode='w+', 
+        flow_direction_filename, dtype='float32', mode='w+',
         shape = (n_rows, n_cols))
     LOGGER.info('load flow dataset into array')
     for row_index in range(n_rows):
         row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
         flow_direction_array[row_index, :] = row_array
 
-    #2)  calculate the flow graph
-
+    #Calculate the flow graph
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
@@ -128,8 +140,13 @@ def calculate_routing(
     #diagonals of the matrix stored row-wise.  We add an additional
     flow_graph_diagonals = numpy.zeros((n_neighbors, n_elements+n_neighbors))
 
+    #These will be used to determine inflow and outflow later
+    inflow_cell_set = set()
+    outflow_cell_set = set()
+
     #Iterate over flow directions
     for row_index in range(n_rows):
+        LOGGER.info("processing row %s of %s" % (row_index+1, n_rows))
         for col_index in range(n_cols):
             flow_direction = flow_direction_array[row_index, col_index]
             #make sure the flow direction is defined, if not, skip this cell
@@ -141,7 +158,8 @@ def calculate_routing(
                 if flow_angle_to_neighbor < angle_between_neighbors:
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
-                    
+                    outflow_cell_set.add(flat_index)
+                    outflow_array[row_index, col_index] = 1
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
@@ -156,16 +174,23 @@ def calculate_routing(
                     #Whatever's left will flow into the next clockwise pixel
                     percent_flow[1] = 1.0 - percent_flow[0]
                     
-                    LOGGER.debug(percent_flow)
-
                     #set the edge weight for the current and next edge
                     for edge_index in range(2):
                         #This lets the current index wrap around if we're at 
                         #the last index and we we need to go to 0
-                        offset_index = (neighbor_index+edge_index) % n_neighbors
-                        flow_graph_diagonals[
-                            offset_index, flat_index +
-                            diagonal_offsets[offset_index]] = \
+                        offset_index = \
+                            (neighbor_index + edge_index) % n_neighbors
+                        
+                        outflow_flat_index = \
+                            flat_index + diagonal_offsets[offset_index]
+
+                        neighbor_row = outflow_flat_index/n_cols
+                        neighbor_col = outflow_flat_index%n_cols
+                        inflow_array[neighbor_row, neighbor_col] += 1
+
+                        inflow_cell_set.add(neighbor_index)
+
+                        flow_graph_diagonals[offset_index, neighbor_index] = \
                             percent_flow[edge_index]
                     #We don't need to check any more edges
                     break
@@ -174,4 +199,13 @@ def calculate_routing(
     adjacency_matrix = scipy.sparse.spdiags(
         flow_graph_diagonals, diagonal_offsets, n_elements, n_elements)
 
-    LOGGER.debug(flow_graph_diagonals)
+    LOGGER.debug("Processing sink and source cells")
+
+    sink_cells = inflow_cell_set.difference(outflow_cell_set)
+    source_cells = outflow_cell_set.difference(inflow_cell_set)
+
+    outflow_band.WriteArray(outflow_array,0,0)
+    inflow_band.WriteArray(inflow_array,0,0)
+
+
+    LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
