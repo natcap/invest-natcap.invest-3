@@ -86,22 +86,6 @@ def calculate_routing(
         dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
         gdal.GDT_Float32)
 
-    inflow_uri = os.path.join(workspace_dir, 'inflow.tif')
-    inflow_nodata = -1.0
-    inflow_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, inflow_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Int32)
-    inflow_band, _, inflow_array = raster_utils.extract_band_and_nodata(inflow_dataset, get_array = True)
-    inflow_array[:] = 0
-
-    outflow_uri = os.path.join(workspace_dir, 'outflow.tif')
-    outflow_nodata = -1.0
-    outflow_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, outflow_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Int32)
-    outflow_band, _, outflow_array = raster_utils.extract_band_and_nodata(outflow_dataset, get_array = True)
-    outflow_array[:] = 0
-
     bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
@@ -159,7 +143,6 @@ def calculate_routing(
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
                     outflow_cell_set.add(flat_index)
-                    outflow_array[row_index, col_index] = 1
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
@@ -184,11 +167,7 @@ def calculate_routing(
                         outflow_flat_index = \
                             flat_index + diagonal_offsets[offset_index]
 
-                        neighbor_row = outflow_flat_index/n_cols
-                        neighbor_col = outflow_flat_index%n_cols
-                        inflow_array[neighbor_row, neighbor_col] += 1
-
-                        inflow_cell_set.add(neighbor_index)
+                        inflow_cell_set.add(outflow_flat_index)
 
                         flow_graph_diagonals[offset_index, neighbor_index] = \
                             percent_flow[edge_index]
@@ -204,8 +183,37 @@ def calculate_routing(
     sink_cells = inflow_cell_set.difference(outflow_cell_set)
     source_cells = outflow_cell_set.difference(inflow_cell_set)
 
-    outflow_band.WriteArray(outflow_array,0,0)
-    inflow_band.WriteArray(inflow_array,0,0)
+
+    sink_uri = os.path.join(workspace_dir, 'sink.tif')
+    sink_nodata = -1.0
+    sink_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, sink_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    sink_band, _, sink_array = raster_utils.extract_band_and_nodata(sink_dataset, get_array = True)
+    sink_array[:] = sink_nodata
+
+    source_uri = os.path.join(workspace_dir, 'source.tif')
+    source_nodata = -1.0
+    source_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, source_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    source_band, _, source_array = raster_utils.extract_band_and_nodata(source_dataset, get_array = True)
+    source_array[:] = source_nodata
+
+    for cell_index in sink_cells:
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
+        sink_array[cell_row, cell_col] = 1
+
+    for cell_index in source_cells:
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
+        source_array[cell_row, cell_col] = 1
+
+    
+
+    sink_band.WriteArray(sink_array,0,0)
+    source_band.WriteArray(source_array,0,0)
 
 
     LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
