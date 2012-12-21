@@ -181,13 +181,12 @@ def calculate_routing(
                         offset_index = \
                             (neighbor_index + edge_index) % n_neighbors
                         
-                        neighbor_index = \
+                        outflow_flat_index = \
                             flat_index + diagonal_offsets[offset_index]
 
-                        neighbor_row = neighbor_index/n_cols
-                        neighbor_col = neighbor_index%n_cols
+                        neighbor_row = outflow_flat_index/n_cols
+                        neighbor_col = outflow_flat_index%n_cols
                         inflow_array[neighbor_row, neighbor_col] += 1
-
 
                         inflow_cell_set.add(neighbor_index)
 
