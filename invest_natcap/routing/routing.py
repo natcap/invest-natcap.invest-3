@@ -75,21 +75,18 @@ def calculate_routing(
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
     n_elements = n_rows * n_cols
 
-
-    #1a) create AOI mask raster
+    #Create AOI mask raster
     aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
 
-
-    #1b) calculate d-infinity flow direction
+    #Calculate d-infinity flow direction
     d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
     d_inf_dir_nodata = -1.0
-
-    bounding_box = [0, 0, n_cols, n_rows]
 
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
         gdal.GDT_Float32)
 
+    bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
     flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
@@ -98,15 +95,14 @@ def calculate_routing(
     #get a memory mapped flow direction array
     flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
     flow_direction_array = numpy.memmap(
-        flow_direction_filename, dtype='float32', mode='w+', 
+        flow_direction_filename, dtype='float32', mode='w+',
         shape = (n_rows, n_cols))
     LOGGER.info('load flow dataset into array')
     for row_index in range(n_rows):
         row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
         flow_direction_array[row_index, :] = row_array
 
-    #2)  calculate the flow graph
-
+    #Calculate the flow graph
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
@@ -128,8 +124,13 @@ def calculate_routing(
     #diagonals of the matrix stored row-wise.  We add an additional
     flow_graph_diagonals = numpy.zeros((n_neighbors, n_elements+n_neighbors))
 
+    #These will be used to determine inflow and outflow later
+    inflow_cell_set = set()
+    outflow_cell_set = set()
+
     #Iterate over flow directions
     for row_index in range(n_rows):
+        LOGGER.info("processing row %s of %s" % (row_index+1, n_rows))
         for col_index in range(n_cols):
             flow_direction = flow_direction_array[row_index, col_index]
             #make sure the flow direction is defined, if not, skip this cell
@@ -137,21 +138,21 @@ def calculate_routing(
                 continue
             for neighbor_index in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
-                    angle_to_neighbor[neighbor_index] - 
-                    flow_direction)
+                    angle_to_neighbor[neighbor_index] - flow_direction)
                 if flow_angle_to_neighbor < angle_between_neighbors:
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
-                    
+                    outflow_cell_set.add(flat_index)
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
                     percent_flow = [0.0, 0.0]
                     if neighbor_index % 2 == 0:
-                        percent_flow[0] = numpy.tan(angle_between_neighbors)
-                    else:
                         percent_flow[0] = 1.0 - numpy.tan(
-                            numpy.pi/4.0 - angle_between_neighbors)
+                            flow_angle_to_neighbor)
+                    else:
+                        percent_flow[0] = numpy.tan(
+                            numpy.pi/4.0 - flow_angle_to_neighbor)
 
                     #Whatever's left will flow into the next clockwise pixel
                     percent_flow[1] = 1.0 - percent_flow[0]
@@ -160,10 +161,15 @@ def calculate_routing(
                     for edge_index in range(2):
                         #This lets the current index wrap around if we're at 
                         #the last index and we we need to go to 0
-                        offset_index = (neighbor_index+edge_index) % n_neighbors
-                        flow_graph_diagonals[
-                            offset_index, flat_index +
-                            diagonal_offsets[offset_index]] = \
+                        offset_index = \
+                            (neighbor_index + edge_index) % n_neighbors
+                        
+                        outflow_flat_index = \
+                            flat_index + diagonal_offsets[offset_index]
+
+                        inflow_cell_set.add(outflow_flat_index)
+
+                        flow_graph_diagonals[offset_index, neighbor_index] = \
                             percent_flow[edge_index]
                     #We don't need to check any more edges
                     break
@@ -172,4 +178,42 @@ def calculate_routing(
     adjacency_matrix = scipy.sparse.spdiags(
         flow_graph_diagonals, diagonal_offsets, n_elements, n_elements)
 
-    LOGGER.debug(flow_graph_diagonals)
+    LOGGER.debug("Processing sink and source cells")
+
+    sink_cells = inflow_cell_set.difference(outflow_cell_set)
+    source_cells = outflow_cell_set.difference(inflow_cell_set)
+
+
+    sink_uri = os.path.join(workspace_dir, 'sink.tif')
+    sink_nodata = -1.0
+    sink_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, sink_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    sink_band, _, sink_array = raster_utils.extract_band_and_nodata(sink_dataset, get_array = True)
+    sink_array[:] = sink_nodata
+
+    source_uri = os.path.join(workspace_dir, 'source.tif')
+    source_nodata = -1.0
+    source_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, source_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    source_band, _, source_array = raster_utils.extract_band_and_nodata(source_dataset, get_array = True)
+    source_array[:] = source_nodata
+
+    for cell_index in sink_cells:
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
+        sink_array[cell_row, cell_col] = 1
+
+    for cell_index in source_cells:
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
+        source_array[cell_row, cell_col] = 1
+
+    
+
+    sink_band.WriteArray(sink_array,0,0)
+    source_band.WriteArray(source_array,0,0)
+
+
+    LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))

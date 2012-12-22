@@ -711,7 +711,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1.0
     mask_dataset = new_raster_from_base(clipped_raster, 
-        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Float32)
+        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Int32)
 
     mask_band = mask_dataset.GetRasterBand(1)
     mask_band.Fill(mask_nodata)
@@ -833,16 +833,24 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     # the rules dictionary.
     if default_value == None:
         default_value = nodata
+        LOGGER.debug('Default value not user-defined, using nodata value (%s)',
+            nodata)
     else:
+        LOGGER.debug('User defined default value=%s', default_value)
         rules = rules.copy()
         if nodata not in rules:
             in_nodata = dataset.GetRasterBand(1).GetNoDataValue()
             rules[in_nodata] = nodata
+            LOGGER.debug('Creating a nodata mapping rule: {%s: %s}', in_nodata,
+                nodata)
 
+    LOGGER.info('Creating a new raster for reclassification')
     output_dataset = new_raster_from_base(dataset, output_uri, format, nodata, 
                                           datatype)
+    LOGGER.info('Starting cythonized reclassification')
     raster_cython_utils.reclassify_by_dictionary(
         dataset, rules, output_uri, format, default_value, datatype, output_dataset,)
+    LOGGER.info('Finished reclassification')
 
     calculate_raster_stats(output_dataset)
 
