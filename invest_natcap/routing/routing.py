@@ -125,13 +125,11 @@ def calculate_routing(
 
     LOGGER.info('Processing flow through the grid')
 
-    contribution_uri = os.path.join(workspace_dir, 'contribution.tif')
-    contribution_nodata = -1.0
-    contribution_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, contribution_uri, 'GTiff', d_inf_dir_nodata,
+    raster_out_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, raster_out_uri, 'GTiff', out_nodata_value,
         gdal.GDT_Float32)
-    contribution_band, _, contribution_array = raster_utils.extract_band_and_nodata(contribution_dataset, get_array = True)
-    contribution_array[:] = 0.0
+    raster_out_band, _, raster_out_array = raster_utils.extract_band_and_nodata(raster_out_dataset, get_array = True)
+    raster_out_array[:] = out_nodata_value
 
     visited_cells = set(source_cells)
     cells_to_process = collections.deque(source_cells)
@@ -140,6 +138,12 @@ def calculate_routing(
         cell_index = cells_to_process.popleft()
         cell_row = cell_index / n_cols
         cell_col = cell_index % n_cols
+
+        #if any contributing neighbors aren't processed yet, push back on queue and wait
+
+        if raster_out_array[cell_row, cell_col] == out_nodata_value:
+            raster_out_array[cell_row, cell_col] = 1
+
         for offset in [0, 1]:
             neighbor_index = flow_graph_neighbor_indexes[cell_index, offset]
             neighbor_row = neighbor_index / n_cols
@@ -147,13 +151,16 @@ def calculate_routing(
             flow_percent = flow_graph_edge_weights[cell_index, offset]
 
             #propagate flux to neighbors
-            contribution_array[neighbor_row, neighbor_col] += flow_graph_edge_weights[cell_index, offset]
+            if raster_out_array[neighbor_row, neighbor_col] == out_nodata_value:
+                raster_out_array[neighbor_row, neighbor_col] = 1 + raster_out_array[cell_row, cell_col] * flow_percent
+            else:
+                raster_out_array[neighbor_row, neighbor_col] += raster_out_array[cell_row, cell_col] * flow_percent
 
             if neighbor_index not in visited_cells:
                 cells_to_process.append(neighbor_index)
                 visited_cells.add(neighbor_index)
 
-    contribution_band.WriteArray(contribution_array,0,0)
+    raster_out_band.WriteArray(raster_out_array,0,0)
 
     #This is for debugging
     sink_uri = os.path.join(workspace_dir, 'sink.tif')
