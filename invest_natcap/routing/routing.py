@@ -102,11 +102,10 @@ def calculate_routing(
         row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
         flow_direction_array[row_index, :] = row_array
 
-    #This is the array that's used to keep track of the connections. With dinf
-    #there are only two cells that can recieve flow, hence the 2 as the second
-    #element in the size
-    flow_graph_edge_weights = numpy.zeros((n_elements, 2), dtype=numpy.float)
-    flow_graph_neighbor_indexes = numpy.zeros((n_elements, 2), dtype = numpy.int)
+    #This is the array that's used to keep track of the connections of the 
+    #current cell to those *inflowing* to the cell, thus the 8 directions
+    flow_graph_edge_weights = numpy.zeros((n_elements, 8), dtype=numpy.float)
+    flow_graph_neighbor_indexes = numpy.zeros((n_elements, 8), dtype = numpy.int)
 
     #These will be used to determine inflow and outflow later
     inflow_cell_set = set()
@@ -233,6 +232,20 @@ def calculate_flow_path(
     #    3 2 1
     #    4 p 0
     #    5 6 7
+
+    #When on a cell, the "parent" offset for that cell to the current cell
+    #looks like this
+
+    #   7 6 5
+    #   0 p 4
+    #   1 2 3
+
+    #This can be used to determine what direction the inflow cell will think
+    #the current cell is flowing from.  Say we point in direciton '3' then
+    #the cell sitting in direciton '3' will think flow is coming from direction
+    #parent_offset[3] (i.e. 7 in this case)
+    parent_offset = [4, 5, 6, 7, 0, 1, 2, 3]
+
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     diagonal_offsets = \
         [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
@@ -251,40 +264,30 @@ def calculate_flow_path(
             #make sure the flow direction is defined, if not, skip this cell
             if flow_direction == flow_nodata:
                 continue
-            for neighbor_index in range(n_neighbors):
+            current_index = row_index * n_cols + col_index
+            for neighbor_offset in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
-                    angle_to_neighbor[neighbor_index] - flow_direction)
+                    angle_to_neighbor[neighbor_offset] - flow_direction)
                 if flow_angle_to_neighbor < angle_between_neighbors:
                     #There's flow from the current cell to the neighbor
-                    flat_index = row_index * n_cols + col_index
-                    outflow_cell_set.add(flat_index)
+                    #Get the flat indexes for the current and outflow cell
+                    outflow_index = \
+                        current_index + diagonal_offsets[neighbor_offset]
+
+                    #Something flows out of this cell, remember that
+                    outflow_cell_set.add(current_index)
+
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
-                    if neighbor_index % 2 == 0:
-                        flow_graph_edge_weights[flat_index, 0] = \
+                    if neighbor_offset % 2 == 0:
+                        flow_graph_edge_weights[outflow_index, parent_offset[neighbor_offset]] = \
                             1.0 - numpy.tan(flow_angle_to_neighbor)
                     else:
-                        flow_graph_edge_weights[flat_index, 0] = \
+                        flow_graph_edge_weights[outflow_index, parent_offset[neighbor_offset]] = \
                             numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
 
-                    #Whatever's left will flow into the next clockwise pixel
-                    flow_graph_edge_weights[flat_index, 1] = \
-                        1.0 - flow_graph_edge_weights[flat_index, 0]
-                    
-                    #set the edge weight for the current and next edge
-                    for edge_index in [0, 1]:
-                        #This lets the current index wrap around if we're at 
-                        #the last index and we we need to go to 0
-                        offset_index = \
-                            (neighbor_index + edge_index) % n_neighbors
-                        
-                        outflow_flat_index = \
-                            flat_index + diagonal_offsets[offset_index]
+                    flow_graph_neighbor_indexes[outflow_index, parent_offset[neighbor_offset]] = \
+                            current_index
 
-                        flow_graph_neighbor_indexes[flat_index, edge_index] = \
-                            outflow_flat_index
-
-                        inflow_cell_set.add(outflow_flat_index)
-                    #We don't need to check any more edges
-                    break
+                    inflow_cell_set.add(outflow_index)
