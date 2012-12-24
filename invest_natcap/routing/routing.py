@@ -27,6 +27,7 @@
 
 import os
 import logging
+import collections
 
 from osgeo import gdal
 import numpy
@@ -117,10 +118,23 @@ def calculate_routing(
         flow_graph_edge_weights, flow_graph_neighbor_indexes, outflow_cell_set,
         inflow_cell_set)
 
-    LOGGER.debug("Processing sink and source cells")
+    LOGGER.debug("Calculating sink and source cells")
 
     sink_cells = inflow_cell_set.difference(outflow_cell_set)
     source_cells = outflow_cell_set.difference(inflow_cell_set)
+
+    LOGGER.info('Processing flow through the grid')
+    visited_cells = set(source_cells)
+    cells_to_process = collections.deque(source_cells)
+    
+    while len(cells_to_process) > 0:
+        cell_index = cells_to_process.popleft()
+        for offset in [0, 1]:
+            neighbor_index = flow_graph_neighbor_indexes[cell_index, offset]
+            if neighbor_index not in visited_cells:
+                cells_to_process.append(neighbor_index)
+                visited_cells.add(neighbor_index)
+        #propagate flux to neighbors
 
     #This is for debugging
     sink_uri = os.path.join(workspace_dir, 'sink.tif')
