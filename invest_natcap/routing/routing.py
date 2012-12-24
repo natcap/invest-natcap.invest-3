@@ -104,8 +104,9 @@ def calculate_routing(
 
     #This is the array that's used to keep track of the connections of the 
     #current cell to those *inflowing* to the cell, thus the 8 directions
-    flow_graph_edge_weights = numpy.zeros((n_elements, 8), dtype=numpy.float)
-    flow_graph_neighbor_indexes = numpy.zeros((n_elements, 8), dtype = numpy.int)
+    flow_graph_edge_weights = numpy.empty((n_elements, 8), dtype=numpy.float)
+    flow_graph_neighbor_indexes = numpy.empty((n_elements, 8), dtype = numpy.int)
+    flow_graph_neighbor_indexes[:] = out_nodata_value
 
     #These will be used to determine inflow and outflow later
     inflow_cell_set = set()
@@ -130,36 +131,47 @@ def calculate_routing(
     raster_out_band, _, raster_out_array = raster_utils.extract_band_and_nodata(raster_out_dataset, get_array = True)
     raster_out_array[:] = out_nodata_value
 
-    visited_cells = set(source_cells)
-    cells_to_process = collections.deque(source_cells)
+    visited_cells = set(sink_cells)
+    cells_to_process = collections.deque(sink_cells)
     
     while len(cells_to_process) > 0:
-        cell_index = cells_to_process.popleft()
-        cell_row = cell_index / n_cols
-        cell_col = cell_index % n_cols
+        current_index = cells_to_process.popleft()
+        current_row = current_index / n_cols
+        current_col = current_index % n_cols
+        visited_cells.add(current_index)
 
-        #if any contributing neighbors aren't processed yet, push back on queue and wait
+#        LOGGER.info('current_index %s' % current_index)
+        parents_calculated = True
+        for offset in range(8):
+            parent_index = flow_graph_neighbor_indexes[current_index, offset]
+            if parent_index == out_nodata_value:
+                continue
+#            LOGGER.info('parent_index %s' % parent_index)
+            if parent_index not in visited_cells:
+                if parents_calculated:
+                    cells_to_process.appendleft(current_index)
+                cells_to_process.appendleft(parent_index)
+                visited_cells.add(parent_index)
+                parents_calculated = False
+            continue
 
-        if raster_out_array[cell_row, cell_col] == out_nodata_value:
-            raster_out_array[cell_row, cell_col] = 1
+#        LOGGER.info('parents calculated current_index %s' % current_index)
+        #all parents calculated so loop over them and calculate current flow
+        current_flow = 1.0
+        for offset in range(8):
+            parent_index = flow_graph_neighbor_indexes[current_index, offset]
+            if parent_index == out_nodata_value:
+                continue
+            parent_row = parent_index / n_cols
+            parent_col = parent_index % n_cols
+            parent_percent = flow_graph_edge_weights[current_index, offset]
+#            LOGGER.debug("parent_percent raster_out_array[parent_row, parent_col] %s %s" % (parent_percent,raster_out_array[parent_row, parent_col]))
+            current_flow += parent_percent * raster_out_array[parent_row, parent_col]
 
-        for offset in [0, 1]:
-            neighbor_index = flow_graph_neighbor_indexes[cell_index, offset]
-            neighbor_row = neighbor_index / n_cols
-            neighbor_col = neighbor_index % n_cols
-            flow_percent = flow_graph_edge_weights[cell_index, offset]
+        raster_out_array[current_row, current_col] = current_flow
 
-            #propagate flux to neighbors
-            if raster_out_array[neighbor_row, neighbor_col] == out_nodata_value:
-                raster_out_array[neighbor_row, neighbor_col] = 1 + raster_out_array[cell_row, cell_col] * flow_percent
-            else:
-                raster_out_array[neighbor_row, neighbor_col] += raster_out_array[cell_row, cell_col] * flow_percent
 
-            if neighbor_index not in visited_cells:
-                cells_to_process.append(neighbor_index)
-                visited_cells.add(neighbor_index)
-
-    raster_out_band.WriteArray(raster_out_array,0,0)
+    raster_out_band.WriteArray(raster_out_array, 0, 0)
 
     #This is for debugging
     sink_uri = os.path.join(workspace_dir, 'sink.tif')
@@ -188,8 +200,8 @@ def calculate_routing(
         cell_col = cell_index % n_cols
         source_array[cell_row, cell_col] = 1
 
-    sink_band.WriteArray(sink_array,0,0)
-    source_band.WriteArray(source_array,0,0)
+    sink_band.WriteArray(sink_array, 0, 0)
+    source_band.WriteArray(source_array, 0, 0)
 
     LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
 
