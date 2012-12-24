@@ -30,7 +30,6 @@ import logging
 
 from osgeo import gdal
 import numpy
-import scipy.sparse
 
 from invest_natcap import raster_utils
 import invest_cython_core
@@ -180,6 +179,8 @@ def calculate_routing(
     source_cells = outflow_cell_set.difference(inflow_cell_set)
 
 
+
+    #This is for debugging
     sink_uri = os.path.join(workspace_dir, 'sink.tif')
     sink_nodata = -1.0
     sink_dataset = raster_utils.new_raster_from_base(
