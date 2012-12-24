@@ -101,22 +101,6 @@ def calculate_routing(
         row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
         flow_direction_array[row_index, :] = row_array
 
-    #Calculate the flow graph
-    #Diagonal offsets are based off the following index notation for neighbors
-    #    3 2 1
-    #    4 p 0
-    #    5 6 7
-    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
-    diagonal_offsets = [
-        1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
-
-    #The number of diagonal offsets defines the neighbors, angle between them
-    #and the actual angle to point to the neighbor
-    n_neighbors = 8
-    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
-    angle_to_neighbor = \
-        [i * angle_between_neighbors for i in range(n_neighbors)]
-
     #This is the array that's used to keep track of the connections. With dinf
     #there are only two cells that can recieve flow, hence the 2 as the second
     #element in the size
@@ -127,9 +111,101 @@ def calculate_routing(
     inflow_cell_set = set()
     outflow_cell_set = set()
 
+    LOGGER.info('Calculating flow path')
+    calculate_flow_path(
+        flow_direction_array, flow_nodata,
+        flow_graph_edge_weights, flow_graph_neighbor_indexes, outflow_cell_set,
+        inflow_cell_set)
+
+    LOGGER.debug("Processing sink and source cells")
+
+    sink_cells = inflow_cell_set.difference(outflow_cell_set)
+    source_cells = outflow_cell_set.difference(inflow_cell_set)
+
+    #This is for debugging
+    sink_uri = os.path.join(workspace_dir, 'sink.tif')
+    sink_nodata = -1.0
+    sink_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, sink_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    sink_band, _, sink_array = raster_utils.extract_band_and_nodata(sink_dataset, get_array = True)
+    sink_array[:] = sink_nodata
+
+    source_uri = os.path.join(workspace_dir, 'source.tif')
+    source_nodata = -1.0
+    source_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, source_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Int32)
+    source_band, _, source_array = raster_utils.extract_band_and_nodata(source_dataset, get_array = True)
+    source_array[:] = source_nodata
+
+    for cell_index in sink_cells:
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
+        sink_array[cell_row, cell_col] = 1
+
+    for cell_index in source_cells:
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
+        source_array[cell_row, cell_col] = 1
+
+    sink_band.WriteArray(sink_array,0,0)
+    source_band.WriteArray(source_array,0,0)
+
+    LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
+
+def calculate_flow_path(
+    flow_direction_array, flow_nodata, flow_graph_edge_weights,
+    flow_graph_neighbor_indexes, outflow_cell_set, inflow_cell_set):
+    """Calculates the graph flow path given a d-infinity flow direction array
+
+        flow_direction_array - numpy 2D array of float with elements that
+            describe the d infinity outflow direction from the center of
+            that cell.
+        
+        flow_nodata - the value that represents an undefined value in 
+            flow_direction_array
+
+        flow_graph_edge_weights - an output value whose initial state is
+            a 2D numpy array of as many rows as there are values in 
+            flow_direction_array and two columns.  The two columns indicate
+            the two outflow neighbor weights determined by the d infinity
+            algorithm which should sum to 1.0.
+
+        flow_graph_neighbor_indexes - an output value whose initial state is
+            a 2D numpy array of as many rows as there are values in 
+            flow_direction_array and two columns.  The two columns indicate
+            the flat indexes of the two outflow neighbor cells.
+
+        outflow_cell_set - an output value whose initial state is an empty
+            set.  The output value contains all flat indexes that have
+            outflow in the simulation.
+
+        inflow_cell_set - an output value whose initial state is an empty
+            set.  The output value contains all flat indexes that have
+            inflow in the simulation.
+
+    returns nothing"""
+
+    n_rows, n_cols = flow_direction_array.shape
+
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
+    diagonal_offsets = \
+        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+
+    #The number of diagonal offsets defines the neighbors, angle between them
+    #and the actual angle to point to the neighbor
+    n_neighbors = 8
+    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
+    angle_to_neighbor = \
+        [i * angle_between_neighbors for i in range(n_neighbors)]
+
     #Iterate over flow directions
     for row_index in range(n_rows):
-        LOGGER.info("processing row %s of %s" % (row_index+1, n_rows))
         for col_index in range(n_cols):
             flow_direction = flow_direction_array[row_index, col_index]
             #make sure the flow direction is defined, if not, skip this cell
@@ -172,45 +248,3 @@ def calculate_routing(
                         inflow_cell_set.add(outflow_flat_index)
                     #We don't need to check any more edges
                     break
-
-    LOGGER.debug("Processing sink and source cells")
-
-    sink_cells = inflow_cell_set.difference(outflow_cell_set)
-    source_cells = outflow_cell_set.difference(inflow_cell_set)
-
-
-
-    #This is for debugging
-    sink_uri = os.path.join(workspace_dir, 'sink.tif')
-    sink_nodata = -1.0
-    sink_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, sink_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Int32)
-    sink_band, _, sink_array = raster_utils.extract_band_and_nodata(sink_dataset, get_array = True)
-    sink_array[:] = sink_nodata
-
-    source_uri = os.path.join(workspace_dir, 'source.tif')
-    source_nodata = -1.0
-    source_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, source_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Int32)
-    source_band, _, source_array = raster_utils.extract_band_and_nodata(source_dataset, get_array = True)
-    source_array[:] = source_nodata
-
-    for cell_index in sink_cells:
-        cell_row = cell_index / n_cols
-        cell_col = cell_index % n_cols
-        sink_array[cell_row, cell_col] = 1
-
-    for cell_index in source_cells:
-        cell_row = cell_index / n_cols
-        cell_col = cell_index % n_cols
-        source_array[cell_row, cell_col] = 1
-
-    
-
-    sink_band.WriteArray(sink_array,0,0)
-    source_band.WriteArray(source_array,0,0)
-
-
-    LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
