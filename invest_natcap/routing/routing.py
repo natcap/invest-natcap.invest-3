@@ -107,22 +107,22 @@ def calculate_routing(
     #    3 2 1
     #    4 p 0
     #    5 6 7
-    #i.e. the node to the right of p is index '0', the one to the lower right
-    #is '5' etc.
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     diagonal_offsets = [
         1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
-    
+
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
     n_neighbors = 8
     angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
-    angle_to_neighbor = [
-        i * angle_between_neighbors for i in range(n_neighbors)]
+    angle_to_neighbor = \
+        [i * angle_between_neighbors for i in range(n_neighbors)]
 
-    #This is the array that's used to keep track of the connections. It's the
-    #diagonals of the matrix stored row-wise.  We add an additional
-    flow_graph_diagonals = numpy.zeros((n_neighbors, n_elements+n_neighbors))
+    #This is the array that's used to keep track of the connections. With dinf
+    #there are only two cells that can recieve flow, hence the 2 as the second
+    #element in the size
+    flow_graph_edge_weights = numpy.zeros((n_elements, 2), dtype=numpy.float)
+    flow_graph_neighbor_indexes = numpy.zeros((n_elements, 2), dtype = numpy.int)
 
     #These will be used to determine inflow and outflow later
     inflow_cell_set = set()
@@ -146,19 +146,19 @@ def calculate_routing(
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
-                    percent_flow = [0.0, 0.0]
                     if neighbor_index % 2 == 0:
-                        percent_flow[0] = 1.0 - numpy.tan(
-                            flow_angle_to_neighbor)
+                        flow_graph_edge_weights[flat_index, 0] = \
+                            1.0 - numpy.tan(flow_angle_to_neighbor)
                     else:
-                        percent_flow[0] = numpy.tan(
-                            numpy.pi/4.0 - flow_angle_to_neighbor)
+                        flow_graph_edge_weights[flat_index, 0] = \
+                            numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
 
                     #Whatever's left will flow into the next clockwise pixel
-                    percent_flow[1] = 1.0 - percent_flow[0]
+                    flow_graph_edge_weights[flat_index, 1] = \
+                        1.0 - flow_graph_edge_weights[flat_index, 0]
                     
                     #set the edge weight for the current and next edge
-                    for edge_index in range(2):
+                    for edge_index in [0, 1]:
                         #This lets the current index wrap around if we're at 
                         #the last index and we we need to go to 0
                         offset_index = \
@@ -167,16 +167,12 @@ def calculate_routing(
                         outflow_flat_index = \
                             flat_index + diagonal_offsets[offset_index]
 
-                        inflow_cell_set.add(outflow_flat_index)
+                        flow_graph_neighbor_indexes[flat_index, edge_index] = \
+                            outflow_flat_index
 
-                        flow_graph_diagonals[offset_index, neighbor_index] = \
-                            percent_flow[edge_index]
+                        inflow_cell_set.add(outflow_flat_index)
                     #We don't need to check any more edges
                     break
-
-    #This builds the sparse adjaency matrix
-    adjacency_matrix = scipy.sparse.spdiags(
-        flow_graph_diagonals, diagonal_offsets, n_elements, n_elements)
 
     LOGGER.debug("Processing sink and source cells")
 
