@@ -124,17 +124,36 @@ def calculate_routing(
     source_cells = outflow_cell_set.difference(inflow_cell_set)
 
     LOGGER.info('Processing flow through the grid')
+
+    contribution_uri = os.path.join(workspace_dir, 'contribution.tif')
+    contribution_nodata = -1.0
+    contribution_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, contribution_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Float32)
+    contribution_band, _, contribution_array = raster_utils.extract_band_and_nodata(contribution_dataset, get_array = True)
+    contribution_array[:] = 0.0
+
     visited_cells = set(source_cells)
     cells_to_process = collections.deque(source_cells)
     
     while len(cells_to_process) > 0:
         cell_index = cells_to_process.popleft()
+        cell_row = cell_index / n_cols
+        cell_col = cell_index % n_cols
         for offset in [0, 1]:
             neighbor_index = flow_graph_neighbor_indexes[cell_index, offset]
+            neighbor_row = neighbor_index / n_cols
+            neighbor_col = neighbor_index % n_cols
+            flow_percent = flow_graph_edge_weights[cell_index, offset]
+
+            #propagate flux to neighbors
+            contribution_array[neighbor_row, neighbor_col] += flow_graph_edge_weights[cell_index, offset]
+
             if neighbor_index not in visited_cells:
                 cells_to_process.append(neighbor_index)
                 visited_cells.add(neighbor_index)
-        #propagate flux to neighbors
+
+    contribution_band.WriteArray(contribution_array,0,0)
 
     #This is for debugging
     sink_uri = os.path.join(workspace_dir, 'sink.tif')
