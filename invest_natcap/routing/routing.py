@@ -150,13 +150,11 @@ def calculate_routing(
         current_col = current_index % n_cols
         visited_cells.add(current_index)
 
-#        LOGGER.info('current_index %s' % current_index)
         parents_calculated = True
         for offset in range(8):
             parent_index = flow_graph_neighbor_indexes[current_index, offset]
             if parent_index == out_nodata_value:
                 continue
-#            LOGGER.info('parent_index %s' % parent_index)
             if parent_index not in visited_cells:
                 if parents_calculated:
                     cells_to_process.appendleft(current_index)
@@ -165,7 +163,6 @@ def calculate_routing(
                 parents_calculated = False
             continue
 
-#        LOGGER.info('parents calculated current_index %s' % current_index)
         #all parents calculated so loop over them and calculate current flow
         current_flow = 1.0
         for offset in range(8):
@@ -175,7 +172,6 @@ def calculate_routing(
             parent_row = parent_index / n_cols
             parent_col = parent_index % n_cols
             parent_percent = flow_graph_edge_weights[current_index, offset]
-#            LOGGER.debug("parent_percent raster_out_array[parent_row, parent_col] %s %s" % (parent_percent,raster_out_array[parent_row, parent_col]))
             current_flow += parent_percent * raster_out_array[parent_row, parent_col]
 
         raster_out_array[current_row, current_col] = current_flow
@@ -288,6 +284,7 @@ def calculate_flow_path(
             if flow_direction == flow_nodata:
                 continue
             current_index = row_index * n_cols + col_index
+            n_flows = 0
             for neighbor_offset in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
                     angle_to_neighbor[neighbor_offset] - flow_direction)
@@ -314,3 +311,7 @@ def calculate_flow_path(
                             current_index
 
                     inflow_cell_set.add(outflow_index)
+                    
+                    n_flows += 1
+                    if n_flows == 2:
+                        break
