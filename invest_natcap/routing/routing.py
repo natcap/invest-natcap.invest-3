@@ -28,6 +28,7 @@
 import os
 import logging
 import collections
+import time
 
 from osgeo import gdal
 import numpy
@@ -79,6 +80,8 @@ def calculate_routing(
     aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
 
     #Calculate d-infinity flow direction
+    LOGGER.info('Calculate d-infinity flow direction')
+    start = time.clock()
     d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
     d_inf_dir_nodata = -1.0
 
@@ -102,6 +105,8 @@ def calculate_routing(
         row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
         flow_direction_array[row_index, :] = row_array
 
+    LOGGER.info('Done calculating d-infinity elapsed time %s' % (time.clock()-start))
+
     #This is the array that's used to keep track of the connections of the 
     #current cell to those *inflowing* to the cell, thus the 8 directions
     flow_graph_edge_weights = numpy.empty((n_elements, 8), dtype=numpy.float)
@@ -113,10 +118,14 @@ def calculate_routing(
     outflow_cell_set = set()
 
     LOGGER.info('Calculating flow path')
+    start = time.clock()
     calculate_flow_path(
         flow_direction_array, flow_nodata,
         flow_graph_edge_weights, flow_graph_neighbor_indexes, outflow_cell_set,
         inflow_cell_set)
+
+    LOGGER.info('Done calculating flow path elapsed time %s' % (time.clock()-start))
+
 
     LOGGER.debug("Calculating sink and source cells")
 
@@ -124,6 +133,7 @@ def calculate_routing(
     source_cells = outflow_cell_set.difference(inflow_cell_set)
 
     LOGGER.info('Processing flow through the grid')
+    start = time.clock()
 
     raster_out_dataset = raster_utils.new_raster_from_base(
         dem_dataset, raster_out_uri, 'GTiff', out_nodata_value,
@@ -172,6 +182,7 @@ def calculate_routing(
 
 
     raster_out_band.WriteArray(raster_out_array, 0, 0)
+    LOGGER.info('Done processing flow elapsed time %s' % (time.clock()-start))
 
     #This is for debugging
     sink_uri = os.path.join(workspace_dir, 'sink.tif')
