@@ -148,7 +148,6 @@ def calculate_routing(
         current_index = cells_to_process.popleft()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
-        visited_cells.add(current_index)
 
         parents_calculated = True
         for offset in range(8):
