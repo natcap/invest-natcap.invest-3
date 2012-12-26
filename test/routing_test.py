@@ -4,6 +4,7 @@ import unittest
 import os
 import subprocess
 import logging
+import subprocess
 
 from osgeo import gdal
 from nose.plugins.skip import SkipTest
@@ -21,9 +22,14 @@ class TestRasterUtils(unittest.TestCase):
             os.makedirs(base_dir)
 
         output_uri = os.path.join(base_dir, 'out.tif')
-#        dem_uri = 'data/sediment_test_data/dem'
-        dem_uri = 'data/smooth_rasters/smoothleft.tif'
+        regression_uri = 'data/routing_regression/out.tif'
+        dem_uri = 'data/sediment_test_data/dem'
+#        dem_uri = 'data/smooth_rasters/smoothleft.tif'
+#        dem_uri = 'data/smooth_rasters/random.tif'
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
         out_nodata = -1.0
         routing.calculate_routing(dem_uri, [], lambda x: x, base_dir, output_uri, out_nodata, aoi_uri = aoi_uri)
+
+        invest_test_core.assertTwoDatasetEqualURI(self, output_uri, regression_uri)
+#        subprocess.Popen(['qgis', output_uri])

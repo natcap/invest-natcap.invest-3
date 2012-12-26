@@ -322,9 +322,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         the individual numerical criteria, and the raster criteria.'''
 
         crit_rate_numerator = 0
-        #H-S dictionary, H dictionary, Numerical Criteria: should output a 
+        #H-S dictionary, Numerical Criteria: should output a 
         #single raster that equals to the sum of r/dq*w for all single number 
-        #criteria in both H and H-S
+        #criteria in H-S
         for crit in (h_s[pair]['Crit_Ratings'], h[pair]['Crit_Ratings']):
             
             r. = crit['Rating']
@@ -345,6 +345,13 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         i_burned_array = base_array * crit_rate_numerator
         band.WriteArray(i_burned_array)
 
+        #H Dictionary, Numerical Criteria: needed to burn this separately so
+        #that it can be used within the recovery poten
+
+        #Add the burned ds containing only the numerator burned ratings to
+        #the list in which all rasters will reside
+        crit_lists['h_s'][pair].append(c_ds)
+
         #H-S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
         for crit in h_s[pair]['Crit_Rasters']:
@@ -362,7 +369,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             band, nodata = raster_utils.extract_band_and_nodata(c_ds)
             band.Fill(nodata)
 
-            edited__array = base_array. / (dq * w)
+            edited_array = base_array. / (dq * w)
             band.WriteArray(edited_array)
 
             
