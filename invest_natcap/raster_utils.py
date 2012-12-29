@@ -1654,3 +1654,16 @@ def align_datasets(datasets, dataset_uris):
             datatype=band.DataType, nodata=nodata)
 
     return dataset_list
+
+def load_memory_mapped_array(dataset_uri, memory_file):
+    """This function loads the first band of a dataset into a memory mapped
+        array.
+
+        dataset_uri - the GDAL dataset to load into a memory mapped array
+        memory_file - an existing file on disk that will be used to 
+            hold the memory map.  It is up to the caller to create and
+            delete this file.
+
+        returns a memmap numpy array of the data contained in the first band
+            of dataset_uri"""
+    pass
