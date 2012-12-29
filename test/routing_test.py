@@ -21,15 +21,17 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        output_uri = os.path.join(base_dir, 'out.tif')
         regression_uri = 'data/routing_regression/out.tif'
-        dem_uri = 'data/sediment_test_data/dem'
-#        dem_uri = 'data/smooth_rasters/smoothleft.tif'
+#        dem_uri = 'data/sediment_test_data/dem'
+        dem_uri = 'data/smooth_rasters/smoothleft.tif'
 #        dem_uri = 'data/smooth_rasters/random.tif'
+        source_uri = dem_uri
+        absorption_rate_uri = dem_uri
+        loss_uri = os.path.join(base_dir, 'loss.tif')
+        flux_uri = os.path.join(base_dir, 'flux.tif')
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
-        out_nodata = -1.0
-        routing.calculate_routing(dem_uri, [], lambda x: x, base_dir, output_uri, out_nodata, aoi_uri = aoi_uri)
+        routing.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, aoi_uri = aoi_uri)
 
         invest_test_core.assertTwoDatasetEqualURI(self, output_uri, regression_uri)
 #        subprocess.Popen(['qgis', output_uri])
