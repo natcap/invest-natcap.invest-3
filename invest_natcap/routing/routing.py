@@ -70,7 +70,7 @@ def route_flux(
 
     flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
     inflow_direction_uri = os.path.join(workspace_dir, 'inflow_direction.tif')
-    calculate_flow_direction(dem_uri, flow_direction_uri, inflow_direction_uri)
+    calculate_flow_direction(dem_uri, flow_direction_uri)
     calculate_transport(flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
 #    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
@@ -328,8 +328,7 @@ def calculate_transport(
     pass
            
 
-def calculate_flow_direction(
-    dem_uri, flow_direction_uri, inflow_direction_uri):
+def calculate_flow_direction(dem_uri, flow_direction_uri):
     """Calculates the flow direction of a landscape given its dem
 
         dem_uri - a URI to a GDAL dataset to the DEM that will be used to
@@ -354,13 +353,11 @@ def calculate_flow_direction(
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri, 'GTiff', d_inf_dir_nodata,
         gdal.GDT_Float32)
-    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(flow_direction_dataset)
 
     #Calcualte the d infinity flow direction
     bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
-
 
     #Calculate inflow directions, these are per pixel flags that are turned
     #on if the neighbor in the direciton indicated inflows into x:
@@ -368,19 +365,22 @@ def calculate_flow_direction(
     #16  x   1
     #32 64 128
 
-    inflow_direction_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, inflow_direction_uri, 'GTiff', 0,
-        gdal.GDT_Byte)
+#    inflow_direction_dataset = raster_utils.new_raster_from_base(
+#        dem_dataset, inflow_direction_uri, 'GTiff', 0,
+#        gdal.GDT_Byte)
 
-    inflow_band, inflow_nodata = raster_utils.extract_band_and_nodata(inflow_direction_dataset)
-    inflow_band.Fill(0)
+#    inflow_band, inflow_nodata = raster_utils.extract_band_and_nodata(inflow_direction_dataset)
+#    inflow_band.Fill(0)
 
-    flow_array_file = tempfile.TemporaryFile()
-    inflow_array_file = tempfile.TemporaryFile()
+#    flow_array_file = tempfile.TemporaryFile()
+#    inflow_array_file = tempfile.TemporaryFile()
 
-    flow_array = raster_utils.load_memory_mapped_array(flow_direction_uri, flow_array_file)
-    inflow_array = raster_utils.load_memory_mapped_array(inflow_direction_uri, inflow_array_file)
+#    flow_array = raster_utils.load_memory_mapped_array(flow_direction_uri, flow_array_file)
+#    inflow_array = raster_utils.load_memory_mapped_array(inflow_direction_uri, inflow_array_file)
 
+
+#    for row_index in xrange(n_rows):
+#        for col_index in xrange(n_cols):
 
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
 
