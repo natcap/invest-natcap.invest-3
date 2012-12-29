@@ -31,7 +31,7 @@ class TestRasterUtils(unittest.TestCase):
         flux_uri = os.path.join(base_dir, 'flux.tif')
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
-        routing.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, aoi_uri = aoi_uri)
+        routing.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
 
         invest_test_core.assertTwoDatasetEqualURI(self, output_uri, regression_uri)
 #        subprocess.Popen(['qgis', output_uri])

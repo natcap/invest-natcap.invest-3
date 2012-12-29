@@ -43,7 +43,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('routing')
 
 def route_flux(
-    dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, aoi_uri = None):
+    dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, workspace_dir, aoi_uri = None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -58,6 +58,8 @@ def route_flux(
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
             traveling through each pixel
+        workspace_dir - a URI to an existing directory that can be used to
+            write intermediate files to
         aoi_uri - an OGR datasource for an area of interest polygon.
             the routing flux calculation will only occur on those pixels
             and neighboring pixels will either be raw outlets or 
