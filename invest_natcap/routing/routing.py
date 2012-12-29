@@ -68,8 +68,9 @@ def route_flux(
         returns nothing"""
 
     flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
-    calculate_flow_direction(dem_uri, flow_direction_uri)
-
+    inflow_direction_uri = os.path.join(workspace_dir, 'inflow_direction.tif')
+    calculate_flow_direction(dem_uri, flow_direction_uri, inflow_direction_uri)
+    calculate_transport(flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
 #    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
 #        flow_direction_dataset)
@@ -326,13 +327,16 @@ def calculate_transport(
     pass
            
 
-def calculate_flow_direction(dem_uri, flow_direction_uri):
+def calculate_flow_direction(
+    dem_uri, flow_direction_uri, inflow_direction_uri):
     """Calculates the flow direction of a landscape given its dem
 
         dem_uri - a URI to a GDAL dataset to the DEM that will be used to
             determine flow direction.
         flow_direction_uri - a URI to create a dataset that will be used
             to store the flow direction.
+        inflow_direction_uri - a URI to a byte GDAL raster that's used
+            to determine which neighbors inflow into the current cell
 
         returns nothing"""
 
@@ -354,6 +358,11 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
     bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
+
+    inflow_direction_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, inflow_direction_uri, 'GTiff', 0,
+        gdal.GDT_Byte)
+
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
 
 
