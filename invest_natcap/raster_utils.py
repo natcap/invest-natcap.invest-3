@@ -1660,9 +1660,9 @@ def load_memory_mapped_array(dataset_uri, memory_file):
         array.
 
         dataset_uri - the GDAL dataset to load into a memory mapped array
-        memory_file - an existing file on disk or filename uri that will be
-            used to hold the memory map.  It is up to the caller to create and
-            delete this file.
+        memory_uri - a path to a file OR a file-like object that will be used
+            to hold the memory map. It is up to the caller to create and delete
+            this file.
 
         returns a memmap numpy array of the data contained in the first band
             of dataset_uri"""
@@ -1689,5 +1689,7 @@ def load_memory_mapped_array(dataset_uri, memory_file):
 
     memory_array = np.memmap(
         memory_file, dtype=dtype, mode='w+', shape = (n_rows, n_cols))
+
+    band.ReadAsArray(buf_obj = memory_array)
 
     return memory_array
