@@ -426,15 +426,14 @@ class Executor(threading.Thread):
 
         try:
             LOGGER.info('Running InVEST version "%s"', invest_natcap.__version__)
-            LOGGER.info('Disk space remaining for workspace: %s GB',
-                        fileio.get_free_space(workspace, unit='GB'))
+            LOGGER.info('Disk space remaining for workspace: %s',
+                        fileio.get_free_space(workspace))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
             #case for out of disk space
-            LOGGER.info('Disk space free: %s MB',
-                        fileio.get_free_space(workspace, unit='MB'))
+            LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
             LOGGER.error('Error: a problem occurred while running the model')
 
             # If the exception indicates that we ran out of disk space, convert
@@ -487,7 +486,6 @@ class Executor(threading.Thread):
                 LOGGER.error('Cannot find default file browser. Platform: %s |' +
                     ' folder: %s', platform.system(), workspace)
 
-        LOGGER.info('Disk space free: %s GB',
-                    fileio.get_free_space(workspace,unit='GB'))
+        LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
         LOGGER.info('Finished.')
         self.move_log_file(workspace)
