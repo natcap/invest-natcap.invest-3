@@ -279,8 +279,9 @@ class Executor(threading.Thread):
         returns noting"""
 
         self.write("Arguments:\n")
-        format_str = "%-20s %s\n"
         sorted_args = sorted(args_dict.iteritems(), key=lambda x: x[0])
+        max_key_width = max(map(lambda x:len(x[0]), sorted_args))
+        format_str = "%-" + str(max_key_width) + "s %s\n"
         for name, value in sorted_args:
             self.write(format_str % (name, value))
         self.write("\n\n")
