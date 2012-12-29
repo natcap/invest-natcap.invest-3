@@ -70,41 +70,22 @@ def route_flux(
     flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
     calculate_flow_direction(dem_uri, flow_direction_uri)
 
-    dem_dataset = gdal.Open(dem_uri)
-    dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
-    n_rows, n_cols = dem_band.YSize, dem_band.XSize
-    n_elements = n_rows * n_cols
 
-    #Create AOI mask raster
-    aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
-
-    #Calculate d-infinity flow direction
-    LOGGER.info('Calculate d-infinity flow direction')
-    start = time.clock()
-    d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
-    d_inf_dir_nodata = -1.0
-
-    flow_direction_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Float32)
-
-    bounding_box = [0, 0, n_cols, n_rows]
-    invest_cython_core.flow_direction_inf(
-        dem_dataset, bounding_box, flow_direction_dataset)
-    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
-        flow_direction_dataset)
+#    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
+#        flow_direction_dataset)
 
     #get a memory mapped flow direction array
-    flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
-    flow_direction_array = numpy.memmap(
-        flow_direction_filename, dtype='float32', mode='w+',
-        shape = (n_rows, n_cols))
-    LOGGER.info('load flow dataset into array')
-    for row_index in range(n_rows):
-        row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
-        flow_direction_array[row_index, :] = row_array
+#    flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
+#    flow_direction_array = numpy.memmap(
+#        flow_direction_filename, dtype='float32', mode='w+',
+#        shape = (n_rows, n_cols))
+#    LOGGER.info('load flow dataset into array')
+#    for row_index in range(n_rows):
+#        row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
+#        flow_direction_array[row_index, :] = row_array
 
-    LOGGER.info('Done calculating d-infinity elapsed time %s' % (time.clock()-start))
+
+
 
     #This is the array that's used to keep track of the connections of the 
     #current cell to those *inflowing* to the cell, thus the 8 directions
@@ -354,7 +335,27 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
             to store the flow direction.
 
         returns nothing"""
-    pass
+
+    LOGGER.info('Calculate flow direction')
+    start = time.clock()
+
+    #We need to open the dem so we can create the dataset to hold the output
+    #flow direction raster
+    dem_dataset = gdal.Open(dem_uri)
+    dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
+    n_rows, n_cols = dem_band.YSize, dem_band.XSize
+
+    d_inf_dir_nodata = -1.0
+    flow_direction_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Float32)
+
+    #Calcualte the d infinity flow direction
+    bounding_box = [0, 0, n_cols, n_rows]
+    invest_cython_core.flow_direction_inf(
+        dem_dataset, bounding_box, flow_direction_dataset)
+    LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
+
 
 
 def calculate_transport_with_flow_graph():
