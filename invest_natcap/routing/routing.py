@@ -71,6 +71,7 @@ def route_flux(
     flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
     inflow_direction_uri = os.path.join(workspace_dir, 'inflow_direction.tif')
     calculate_flow_direction(dem_uri, flow_direction_uri)
+    calculate_flow_graph(flow_direction_uri)
     calculate_transport(flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
 #    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
@@ -384,7 +385,16 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
 
+def calculate_flow_graph(flow_direction_uri):
+    """This function calculates the flow graph including source/sink cells
+        as well as a data structure to assist in walking up the flow graph.
 
+        flow_direction_uri - uri to a flow direction GDAL dataset that's 
+            used to calculate the flow graph
+
+        returns nothing"""
+
+    pass
 
 def calculate_transport_with_flow_graph():
     pass
