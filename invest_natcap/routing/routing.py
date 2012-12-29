@@ -29,6 +29,7 @@ import os
 import logging
 import collections
 import time
+import tempfile
 
 from osgeo import gdal
 import numpy
@@ -372,6 +373,13 @@ def calculate_flow_direction(
         gdal.GDT_Byte)
 
     inflow_band, inflow_nodata = raster_utils.extract_band_and_nodata(inflow_direction_dataset)
+    inflow_band.Fill(0)
+
+    flow_array_file = tempfile.TemporaryFile()
+    inflow_array_file = tempfile.TemporaryFile()
+
+    flow_array = raster_utils.load_memory_mapped_array(flow_direction_uri, flow_array_file)
+    inflow_array = raster_utils.load_memory_mapped_array(inflow_direction_uri, inflow_array_file)
 
 
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
