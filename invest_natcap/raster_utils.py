@@ -1666,4 +1666,28 @@ def load_memory_mapped_array(dataset_uri, memory_file):
 
         returns a memmap numpy array of the data contained in the first band
             of dataset_uri"""
-    pass
+
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
+    n_rows = dataset.RasterYSize
+    n_cols = dataset.RasterXSize
+
+    gdal_to_numpy_type = {
+        gdal.GDT_Byte: np.byte,
+        gdal.GDT_Int16: np.int16,
+        gdal.GDT_Int32: np.int32,
+        gdal.GDT_UInt16: np.uint16,
+        gdal.GDT_UInt32: np.uint32,
+        gdal.GDT_Float32: np.float32,
+        gdal.GDT_Float64: np.float64
+        }
+
+    try:
+        dtype = gdal_to_numpy_type[band.DataType]
+    except KeyError:
+        raise TypeError('Unknown GDAL type %s' % band.DataType)
+
+    memory_array = np.memmap(
+        memory_file, dtype=dtype, mode='w+', shape = (n_rows, n_cols))
+
+    return memory_array
