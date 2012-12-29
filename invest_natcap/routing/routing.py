@@ -42,9 +42,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('routing')
 
-def calculate_routing(
-    dem_uri, dataset_uri_list, mass_balance_op, workspace_dir, raster_out_uri,
-    out_nodata_value, aoi_uri = None):
+def route_flux(
+    dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, aoi_uri = None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -52,18 +51,13 @@ def calculate_routing(
         to determine nodal output flux.
 
         dem_uri - a URI to a DEM raster
-        dataset_uri_list - a list of GDAL readable rasters that will be
-            used as input to the 'mass_balance_op' operation.  These datasets
-            must be aligned with themselves and dem_uri.
-        mass_balance_op - a len(dataset_uri_list)+1 function that operates per
-            pixel on the aligned pixel stack from dataset_uri_list where the
-            first input is the incoming flux from other contributing 
-            nodes.
-        workspace_dir - a directory that can be used for intermediate
-            file generation.  The contents of this directory are not safe
-            for preseveration if files already exist in it.
-        raster_out_uri - the name/uri of the output raster?  TODO: WHAT OUTPUTS?
-        out_nodata_value - the nodata value of the ouput raster TODO: RASTERS?
+        source_uri - a GDAL dataset that has source flux per pixel
+        absorption_rate_uri - a GDAL floating point dataset that has a percent
+            of flux absorbed per pixel
+        loss_uri - an output URI to to the dataset that will output the
+            amount of flux absorbed by each pixel
+        flux_uri - a URI to an output dataset that records the amount of flux
+            traveling through each pixel
         aoi_uri - an OGR datasource for an area of interest polygon.
             the routing flux calculation will only occur on those pixels
             and neighboring pixels will either be raw outlets or 
@@ -339,5 +333,11 @@ def calculate_transport(
 
         returns nothing"""
 
+    #Calculate flow graph
+
+    #Pass transport
+
     pass
            
+def calculate_transport_with_flow_graph():
+    pass
