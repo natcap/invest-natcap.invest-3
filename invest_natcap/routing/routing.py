@@ -353,15 +353,26 @@ def calculate_flow_direction(
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri, 'GTiff', d_inf_dir_nodata,
         gdal.GDT_Float32)
+    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(flow_direction_dataset)
 
     #Calcualte the d infinity flow direction
     bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
 
+
+    #Calculate inflow directions, these are per pixel flags that are turned
+    #on if the neighbor in the direciton indicated inflows into x:
+    # 8  4   2
+    #16  x   1
+    #32 64 128
+
     inflow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, inflow_direction_uri, 'GTiff', 0,
         gdal.GDT_Byte)
+
+    inflow_band, inflow_nodata = raster_utils.extract_band_and_nodata(inflow_direction_dataset)
+
 
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
 
