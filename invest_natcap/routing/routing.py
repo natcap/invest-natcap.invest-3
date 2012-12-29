@@ -67,6 +67,9 @@ def route_flux(
 
         returns nothing"""
 
+    flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
+    calculate_flow_direction(dem_uri, flow_direction_uri)
+
     dem_dataset = gdal.Open(dem_uri)
     dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
@@ -341,5 +344,18 @@ def calculate_transport(
 
     pass
            
+
+def calculate_flow_direction(dem_uri, flow_direction_uri):
+    """Calculates the flow direction of a landscape given its dem
+
+        dem_uri - a URI to a GDAL dataset to the DEM that will be used to
+            determine flow direction.
+        flow_direction_uri - a URI to create a dataset that will be used
+            to store the flow direction.
+
+        returns nothing"""
+    pass
+
+
 def calculate_transport_with_flow_graph():
     pass
