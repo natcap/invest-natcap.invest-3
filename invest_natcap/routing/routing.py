@@ -314,3 +314,30 @@ def calculate_flow_path(
                     n_flows += 1
                     if n_flows == 2:
                         break
+
+def calculate_transport(
+    flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri):
+    """This is a generalized flux transport algorithm that operates
+        on a 2D grid given a per pixel flow direction, per pixel source,
+        and per pixel absorption rate.  It produces a grid of loss per
+        pixel, and amount of outgoing flux per pixel.
+
+        flow_direction_uri - a GDAL dataset that has flow direction per
+            pixel expressed in radians indicating angles in a right handed
+            cartesian coordinate system.
+
+        source_uri - a GDAL dataset that has source flux per pixel
+
+        absorption_rate_uri - a GDAL floating point dataset that has a percent
+            of flux absorbed per pixel
+
+        loss_uri - an output URI to to the dataset that will output the
+            amount of flux absorbed by each pixel
+
+        flux_uri - a URI to an output dataset that records the amount of flux
+            traveling through each pixel
+
+        returns nothing"""
+
+    pass
+           
