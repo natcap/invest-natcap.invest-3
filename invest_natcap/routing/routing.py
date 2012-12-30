@@ -402,15 +402,6 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
 
-    outflow_weights_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_weights_uri, 'GTiff', outflow_weights_nodata,
-        gdal.GDT_Float32)
-    
-    outflow_direction_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_direction_uri, 'GTiff', outflow_direction_nodata,
-        gdal.GDT_Byte)
-
-
     #These will be used to determine inflow and outflow later
 
     inflow_cell_set = set()
@@ -472,6 +463,25 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                     
                     #we found the outflow direction
                     break
+
+    #write outflow direction and weights
+    outflow_weights_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_weights_uri, 'GTiff', outflow_weights_nodata,
+        gdal.GDT_Float32)
+    outflow_weights_band, _ = raster_utils.extract_band_and_nodata(outflow_weights_dataset)
+    outflow_weights_band.WriteArray(numpy.memmap.reshape(outflow_weights, (n_rows, n_cols)))
+    
+    outflow_direction_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_direction_uri, 'GTiff', outflow_direction_nodata,
+        gdal.GDT_Byte)
+    outflow_direction_band, _ = raster_utils.extract_band_and_nodata(outflow_direction_dataset)
+    outflow_direction_band.WriteArray(numpy.memmap.reshape(outflow_direction, (n_rows, n_cols)))
+
+
+
+
+
+
 
 
     LOGGER.debug("Calculating sink and source cells")
