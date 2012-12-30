@@ -91,9 +91,6 @@ def route_flux(
 #        flow_direction_array[row_index, :] = row_array
 
 
-
-
-
     LOGGER.info('Processing flow through the grid')
     start = time.clock()
 
@@ -419,18 +416,85 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     inflow_cell_set = set()
     outflow_cell_set = set()
 
-#    calculate_flow_path(
-#        flow_direction_array, flow_nodata,
-#        flow_graph_edge_weights, flow_graph_neighbor_indexes, outflow_cell_set,
-#        inflow_cell_set)
+
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+
+    #When on a cell, the "parent" offset for that cell to the current cell
+    #looks like this
+
+    #   7 6 5
+    #   0 p 4
+    #   1 2 3
+
+    #This can be used to determine what direction the inflow cell will think
+    #the current cell is flowing from.  Say we point in direciton '3' then
+    #the cell sitting in direciton '3' will think flow is coming from direction
+    #parent_offset[3] (i.e. 7 in this case)
+    parent_offset = [4, 5, 6, 7, 0, 1, 2, 3]
+
+    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
+    diagonal_offsets = \
+        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+
+    #The number of diagonal offsets defines the neighbors, angle between them
+    #and the actual angle to point to the neighbor
+    n_neighbors = 8
+    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
+    angle_to_neighbor = \
+        [i * angle_between_neighbors for i in range(n_neighbors)]
+
+    flow_direction_memory_file = tempfile.TemporaryFile()
+    flow_direction_array = raster_utils.load_memory_mapped_array(flow_direction_uri, flow_direction_memory_file)
+
+    #Iterate over flow directions
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            flow_direction = flow_direction_array[row_index, col_index]
+            #make sure the flow direction is defined, if not, skip this cell
+            if flow_direction == flow_direction_nodata:
+                continue
+            current_index = row_index * n_cols + col_index
+            for neighbor_offset in range(n_neighbors):
+                flow_angle_to_neighbor = numpy.abs(
+                    angle_to_neighbor[neighbor_offset] - flow_direction)
+                if flow_angle_to_neighbor < angle_between_neighbors:
+                    #There's flow from the current cell to the neighbor
+                    #Get the flat indexes for the current and outflow cell
+                    outflow_index = \
+                        current_index + diagonal_offsets[neighbor_offset]
+
+                    #Something flows out of this cell, remember that
+                    outflow_cell_set.add(current_index)
+
+                    #Determine if the direction we're on is oriented at 90
+                    #degrees or 45 degrees.  Given our orientation even number
+                    #neighbor indexes are oriented 90 degrees and odd are 45
+                    if neighbor_offset % 2 == 0:
+                        outflow_weights[outflow_index] = \
+                            1.0 - numpy.tan(flow_angle_to_neighbor)
+                    else:
+                        outflow_weights[outflow_index] = \
+                            numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
+
+                    #Update outflow neighbor
+                    #flow_graph_neighbor_indexes[outflow_index, parent_offset[neighbor_offset]] = \
+                    #    current_index
+
+                    inflow_cell_set.add(outflow_index)
+                    
+                    #we found the outflow direction
+                    break
 
 
     LOGGER.debug("Calculating sink and source cells")
-    sink_cells = inflow_cell_set.difference(outflow_cell_set)
-    source_cells = outflow_cell_set.difference(inflow_cell_set)
+    sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
+    source_cell_set = outflow_cell_set.difference(inflow_cell_set)
 
     LOGGER.info('Done calculating flow path elapsed time %s' % (time.clock()-start))
-
+    return sink_cell_set, source_cell_set
 
 def calculate_transport_with_flow_graph():
     pass
