@@ -13,6 +13,7 @@ import shutil
 import codecs
 
 import invest_natcap
+import invest_natcap.iui
 from invest_natcap.invest_core import fileio as fileio
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
@@ -278,8 +279,9 @@ class Executor(threading.Thread):
         returns noting"""
 
         self.write("Arguments:\n")
-        format_str = "%-20s %s\n"
         sorted_args = sorted(args_dict.iteritems(), key=lambda x: x[0])
+        max_key_width = max(map(lambda x:len(x[0]), sorted_args))
+        format_str = "%-" + str(max_key_width) + "s %s\n"
         for name, value in sorted_args:
             self.write(format_str % (name, value))
         self.write("\n\n")
@@ -425,15 +427,14 @@ class Executor(threading.Thread):
 
         try:
             LOGGER.info('Running InVEST version "%s"', invest_natcap.__version__)
-            LOGGER.info('Disk space remaining for workspace: %s GB',
-                        fileio.get_free_space(workspace, unit='GB'))
+            LOGGER.info('Disk space remaining for workspace: %s',
+                        fileio.get_free_space(workspace))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
             #case for out of disk space
-            LOGGER.info('Disk space free: %s MB',
-                        fileio.get_free_space(workspace, unit='MB'))
+            LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
             LOGGER.error('Error: a problem occurred while running the model')
 
             # If the exception indicates that we ran out of disk space, convert
@@ -486,7 +487,6 @@ class Executor(threading.Thread):
                 LOGGER.error('Cannot find default file browser. Platform: %s |' +
                     ' folder: %s', platform.system(), workspace)
 
-        LOGGER.info('Disk space free: %s GB',
-                    fileio.get_free_space(workspace,unit='GB'))
+        LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
         LOGGER.info('Finished.')
         self.move_log_file(workspace)

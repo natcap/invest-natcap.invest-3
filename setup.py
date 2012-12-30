@@ -46,7 +46,8 @@ packages = ['invest_natcap',
             'invest_natcap.coastal_vulnerability',
             'invest_natcap.overlap_analysis',
             'invest_natcap.wind_energy',
-            'invest_natcap.habitat_risk_assessment']
+            'invest_natcap.habitat_risk_assessment',
+            'invest_natcap.routing']
 
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
@@ -81,8 +82,7 @@ if platform.system() == 'Windows':
          'invest_hydropower_valuation.py',
          'invest_water_scarcity.py',
          'invest_marine_water_quality_biophysical.py',
-         'invest_pollination_biophysical.py',
-         'invest_pollination_valuation.py',
+         'invest_pollination.py',
          'invest_finfish_aquaculture.py',
          'invest_biodiversity_biophysical.py',
          'invest_overlap_analysis.py',
@@ -102,8 +102,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/water_scarcity.json',
                'invest_natcap/iui/hydropower_valuation.json',
-               'invest_natcap/iui/pollination_biophysical.json',
-               'invest_natcap/iui/pollination_valuation.json',
+               'invest_natcap/iui/pollination.json',
                'invest_natcap/iui/finfish_aquaculture.json',
                'invest_natcap/iui/marine_water_quality_biophysical.json',
                'invest_natcap/iui/biodiversity_biophysical.json',
@@ -138,8 +137,6 @@ setup(name='invest_natcap',
       data_files=data_files,
       ext_modules=cythonize([Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES),
-                   Extension(name="coastal_vulnerability_cython_core",
-                             sources = ['invest_natcap/coastal_vulnerability/coastal_vulnerability_cython_core.pyx']),
                    Extension(name="hydropower_cython_core",
                              sources = ['invest_natcap/hydropower/hydropower_cython_core.pyx']),
                    Extension(name="raster_cython_utils",

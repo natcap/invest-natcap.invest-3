@@ -486,6 +486,7 @@ class DynamicPrimitive(DynamicElement):
 
             # Toggle dependent elements based on the results of this validation
             enable = not self.has_error() and self.requirementsMet()
+            print ('enable: ', enable)
             DynamicElement.setState(self, enable, includeSelf=False,
                 recursive=True)
 
@@ -747,12 +748,14 @@ class DynamicText(LabeledElement):
                 appropriately.
 
             returns nothing."""
-
+        print 'toggled!'
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.error_button.deactivate()
-        if self.validator != None:
+        if self.validator != None and self.requirementsMet():
+            print 'validating'
             self.validate()
         else:
+            print 'not validating'
             self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
 
@@ -903,6 +906,9 @@ class Container(QtGui.QGroupBox, DynamicGroup):
                         'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
+        if 'enabled' in self.attributes:
+            self.setEnabled(self.attributes['enabled'])
+
     def toggleHiding(self, state):
         """Show or hide all sub-elements of container (if collapsible) as
             necessary.  This function is a callback for the toggled() signal.
@@ -924,6 +930,14 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
         self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
             recursive=True)
+
+    def requirementsMet(self):
+        """This function is used to return whether the container is enabled or
+        not.  Used for determining whether other elements should be triggered."""
+        return self.value()
+
+    def value(self):
+        return self.isChecked()
 
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
@@ -1337,8 +1351,8 @@ class HideableElement(LabeledElement):
 
 class HideableFileEntry(HideableElement, FileEntry):
     def __init__(self, attributes):
-        FileEntry.__init__(self, attributes)
         HideableElement.__init__(self, attributes)
+        FileEntry.__init__(self, attributes)
         self.elements = [self.error_button, self.checkbox, self.textField,
                          self.button, self.info_button]
         self.hideableElements = [self.textField, self.button]
@@ -2151,11 +2165,17 @@ class MainWindow(QtGui.QMainWindow):
         self.remove_lastrun.triggered.connect(self.ui.remove_lastrun)
 
 class ExecRoot(Root):
-    def __init__(self, uri, layout, object_registrar, main_window=None):
+    def __init__(self, uri, layout=None, object_registrar=None, main_window=None):
         if main_window == None:
             self.main_window = self
         else:
             self.main_window = main_window # a pointer
+
+        if layout == None:
+            layout = QtGui.QVBoxLayout()
+
+        if object_registrar == None:
+            object_registrar = ElementRegistrar(self)
 
         self.messageArea = MessageArea()
         self.messageArea.setError(False)

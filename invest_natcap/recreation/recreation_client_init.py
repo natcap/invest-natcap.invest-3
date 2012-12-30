@@ -7,6 +7,8 @@ import time
 import json
 import logging
 
+import datetime
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -134,6 +136,7 @@ def execute(args):
     url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
     complete = False
     oldlog=""
+    msg=""
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
@@ -181,7 +184,7 @@ def execute(args):
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
-    with open(args["workspace_dir"]+config["files"]["results"], 'wb') as fp:
+    with open(args["workspace_dir"]+"results"+datetime.datetime.now().strftime("-%Y-%m-%d--%H_%M_%S")+".zip", 'wb') as fp:
       while True:
         chunk = req.read(CHUNK)
         if not chunk: break

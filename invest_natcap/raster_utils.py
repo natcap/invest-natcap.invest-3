@@ -711,7 +711,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1.0
     mask_dataset = new_raster_from_base(clipped_raster, 
-        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Float32)
+        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Int32)
 
     mask_band = mask_dataset.GetRasterBand(1)
     mask_band.Fill(mask_nodata)
@@ -797,10 +797,20 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     return result_dict
 
-def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatype):
+def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
+    datatype, default_value=None):
     """Convert all the non-nodata values in dataset to the values mapped to 
         by rules.  If there is no rule for an input value it is replaced by
-        the nodata output value.
+        default_value.  If default_value is None, nodata is used.
+
+        If default_value is None, the default_value will only be used if a pixel
+        is not nodata and the pixel does not have a rule defined for its value.
+        If the user wishes to have nodata values also mapped to the default
+        value, this can be achieved by defining a rule such as:
+
+            rules[dataset_nodata] = default_value
+
+        Doing so will override the default nodata behaviour.
 
         dataset - GDAL raster dataset
         rules - a dictionary of the form: 
@@ -811,13 +821,36 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
         format - either 'MEM' or 'GTiff'
         nodata - output raster dataset nodata value
         datatype - a GDAL output type
+        default=None - the value to be used if a reclass rule is not defined.
 
         return the mapped raster as a GDAL dataset"""
 
+    # If a default value is not set, assume that the default value is the
+    # used-defined nodata value.
+    # If a default value is defined by the user, assume that nodata values
+    # should remain nodata.  This check is sensitive to different nodata values
+    # between input and output rasters.  This modification is made on a copy of
+    # the rules dictionary.
+    if default_value == None:
+        default_value = nodata
+        LOGGER.debug('Default value not user-defined, using nodata value (%s)',
+            nodata)
+    else:
+        LOGGER.debug('User defined default value=%s', default_value)
+        rules = rules.copy()
+        if nodata not in rules:
+            in_nodata = dataset.GetRasterBand(1).GetNoDataValue()
+            rules[in_nodata] = nodata
+            LOGGER.debug('Creating a nodata mapping rule: {%s: %s}', in_nodata,
+                nodata)
+
+    LOGGER.info('Creating a new raster for reclassification')
     output_dataset = new_raster_from_base(dataset, output_uri, format, nodata, 
                                           datatype)
+    LOGGER.info('Starting cythonized reclassification')
     raster_cython_utils.reclassify_by_dictionary(
-        dataset, rules, output_uri, format, nodata, datatype, output_dataset)
+        dataset, rules, output_uri, format, default_value, datatype, output_dataset,)
+    LOGGER.info('Finished reclassification')
 
     calculate_raster_stats(output_dataset)
 
@@ -1447,7 +1480,8 @@ def get_rat_as_dictionary(dataset):
 
     return rat_dictionary
 
-def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
+def gaussian_filter_dataset(
+    dataset, sigma, out_uri, out_nodata, temp_dir = None):
     """A memory efficient gaussian filter function that operates on 
        the dataset level and creates a new dataset that's filtered.
        It will treat any nodata value in dataset as 0, and re-nodata
@@ -1457,11 +1491,21 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
        sigma - the sigma value of a gaussian filter
        out_uri - the uri output of the filtered dataset
        out_nodata - the nodata value of dataset
+       temp_dir - (optional) the directory in which to store the memory
+           mapped arrays.  If left off will use the system temp
+           directory.  If defined the directory must exist on the
+           filesystem (a temporary folder will be created inside of temp_dir).
 
        returns the filtered dataset created at out_uri"""
 
-    LOGGER.info('setting up fiels in gaussian_filter_dataset')
-    temp_dir = tempfile.mkdtemp()
+    LOGGER.info('setting up files in gaussian_filter_dataset')
+
+    #Create a system temporary directory if one doesn't exist.
+    #If the parameter temp_dir is None, the default tempfile location is used.
+    #If the parameter temp_dir is a folder, a temp folder is created inside of
+    #the defined folder.
+    temp_dir = tempfile.mkdtemp(dir=temp_dir)
+
     source_filename = os.path.join(temp_dir, 'source.dat')
     mask_filename = os.path.join(temp_dir, 'mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
@@ -1610,3 +1654,42 @@ def align_datasets(datasets, dataset_uris):
             datatype=band.DataType, nodata=nodata)
 
     return dataset_list
+
+def load_memory_mapped_array(dataset_uri, memory_file):
+    """This function loads the first band of a dataset into a memory mapped
+        array.
+
+        dataset_uri - the GDAL dataset to load into a memory mapped array
+        memory_uri - a path to a file OR a file-like object that will be used
+            to hold the memory map. It is up to the caller to create and delete
+            this file.
+
+        returns a memmap numpy array of the data contained in the first band
+            of dataset_uri"""
+
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
+    n_rows = dataset.RasterYSize
+    n_cols = dataset.RasterXSize
+
+    gdal_to_numpy_type = {
+        gdal.GDT_Byte: np.byte,
+        gdal.GDT_Int16: np.int16,
+        gdal.GDT_Int32: np.int32,
+        gdal.GDT_UInt16: np.uint16,
+        gdal.GDT_UInt32: np.uint32,
+        gdal.GDT_Float32: np.float32,
+        gdal.GDT_Float64: np.float64
+        }
+
+    try:
+        dtype = gdal_to_numpy_type[band.DataType]
+    except KeyError:
+        raise TypeError('Unknown GDAL type %s' % band.DataType)
+
+    memory_array = np.memmap(
+        memory_file, dtype=dtype, mode='w+', shape = (n_rows, n_cols))
+
+    band.ReadAsArray(buf_obj = memory_array)
+
+    return memory_array
