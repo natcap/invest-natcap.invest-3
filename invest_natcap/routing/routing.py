@@ -70,8 +70,11 @@ def route_flux(
 
     flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
     inflow_direction_uri = os.path.join(workspace_dir, 'inflow_direction.tif')
+    outflow_weights_uri = os.path.join(workspace_dir, 'outflow_weights.tif')
+    outflow_direction_uri = os.path.join(workspace_dir, 'outflow_directions.tif')
+
     calculate_flow_direction(dem_uri, flow_direction_uri)
-    calculate_flow_graph(flow_direction_uri)
+    calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     calculate_transport(flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
 #    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
@@ -90,30 +93,6 @@ def route_flux(
 
 
 
-    #This is the array that's used to keep track of the connections of the 
-    #current cell to those *inflowing* to the cell, thus the 8 directions
-    flow_graph_edge_weights = numpy.empty((n_elements, 8), dtype=numpy.float)
-    flow_graph_neighbor_indexes = numpy.empty((n_elements, 8), dtype = numpy.int)
-    flow_graph_neighbor_indexes[:] = out_nodata_value
-
-    #These will be used to determine inflow and outflow later
-    inflow_cell_set = set()
-    outflow_cell_set = set()
-
-    LOGGER.info('Calculating flow path')
-    start = time.clock()
-    calculate_flow_path(
-        flow_direction_array, flow_nodata,
-        flow_graph_edge_weights, flow_graph_neighbor_indexes, outflow_cell_set,
-        inflow_cell_set)
-
-    LOGGER.info('Done calculating flow path elapsed time %s' % (time.clock()-start))
-
-
-    LOGGER.debug("Calculating sink and source cells")
-
-    sink_cells = inflow_cell_set.difference(outflow_cell_set)
-    source_cells = outflow_cell_set.difference(inflow_cell_set)
 
     LOGGER.info('Processing flow through the grid')
     start = time.clock()
@@ -385,16 +364,73 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
 
-def calculate_flow_graph(flow_direction_uri):
-    """This function calculates the flow graph including source/sink cells
-        as well as a data structure to assist in walking up the flow graph.
+def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
+    """This function calculates the flow graph from a d-infinity based 
+        flow algorithm to include including source/sink cells
+        as well as a data structures to assist in walking up the flow graph.
 
         flow_direction_uri - uri to a flow direction GDAL dataset that's 
             used to calculate the flow graph
+        outflow_weights_uri - a uri to a float32 dataset that will be created
+            whose elements correspond to the percent outflow from the current
+            cell to its first counter-clockwise neighbor
+        outflow_direction_uri - a uri to a byte dataset that will indicate the
+            first counter clockwise outflow neighbor as an index from the
+            following diagram
 
-        returns nothing"""
+            3 2 1
+            4 x 0
+            5 6 7
 
-    pass
+        returns sink_cell_set, source_cell_set
+            where these sets indicate the cells with only inflow (sinks) or
+            only outflow (source)"""
+
+    LOGGER.info('Calculating flow graph')
+    start = time.clock()
+
+    #This is the array that's used to keep track of the connections of the
+    #current cell to those *inflowing* to the cell, thus the 8 directions
+    flow_direction_dataset = gdal.Open(flow_direction_uri)
+    flow_direction_band, flow_direction_nodata = raster_utils.extract_band_and_nodata(flow_direction_dataset)
+    n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
+    n_elements = n_cols * n_rows
+
+
+    outflow_weights = numpy.empty(n_elements, dtype = numpy.float32)
+    outflow_weights_nodata = -1.0
+    outflow_weights[:] = outflow_weights_nodata
+
+    outflow_direction = numpy.empty(n_elements, dtype = numpy.byte)
+    outflow_direction_nodata = 9
+    outflow_direction[:] = outflow_direction_nodata
+
+    outflow_weights_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_weights_uri, 'GTiff', outflow_weights_nodata,
+        gdal.GDT_Float32)
+    
+    outflow_direction_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_direction_uri, 'GTiff', outflow_direction_nodata,
+        gdal.GDT_Byte)
+
+
+    #These will be used to determine inflow and outflow later
+
+    inflow_cell_set = set()
+    outflow_cell_set = set()
+
+#    calculate_flow_path(
+#        flow_direction_array, flow_nodata,
+#        flow_graph_edge_weights, flow_graph_neighbor_indexes, outflow_cell_set,
+#        inflow_cell_set)
+
+
+    LOGGER.debug("Calculating sink and source cells")
+    sink_cells = inflow_cell_set.difference(outflow_cell_set)
+    source_cells = outflow_cell_set.difference(inflow_cell_set)
+
+    LOGGER.info('Done calculating flow path elapsed time %s' % (time.clock()-start))
+
 
 def calculate_transport_with_flow_graph():
     pass
