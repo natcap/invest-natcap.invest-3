@@ -416,24 +416,10 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     inflow_cell_set = set()
     outflow_cell_set = set()
 
-
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
     #    5 6 7
-
-    #When on a cell, the "parent" offset for that cell to the current cell
-    #looks like this
-
-    #   7 6 5
-    #   0 p 4
-    #   1 2 3
-
-    #This can be used to determine what direction the inflow cell will think
-    #the current cell is flowing from.  Say we point in direciton '3' then
-    #the cell sitting in direciton '3' will think flow is coming from direction
-    #parent_offset[3] (i.e. 7 in this case)
-    parent_offset = [4, 5, 6, 7, 0, 1, 2, 3]
 
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     diagonal_offsets = \
@@ -480,8 +466,7 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                             numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
 
                     #Update outflow neighbor
-                    #flow_graph_neighbor_indexes[outflow_index, parent_offset[neighbor_offset]] = \
-                    #    current_index
+                    outflow_direction[outflow_index] = neighbor_offset
 
                     inflow_cell_set.add(outflow_index)
                     
