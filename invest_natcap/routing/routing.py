@@ -314,6 +314,17 @@ def calculate_transport(
     flux_array[:] = transport_nodata
 
 
+    #Process flux through the grid
+    visited_cells = set(sink_cell_set)
+    cells_to_process = collections.deque(sink_cell_set)
+    
+    while len(cells_to_process) > 0:
+        current_index = cells_to_process.popleft()
+        current_row = current_index / n_cols
+        current_col = current_index % n_cols
+
+
+
 
     #Write results to disk
     loss_dataset = raster_utils.new_raster_from_base(
