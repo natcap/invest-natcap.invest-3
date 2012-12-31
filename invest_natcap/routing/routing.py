@@ -77,18 +77,7 @@ def route_flux(
     calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
     calculate_transport(flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
-#    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
-#        flow_direction_dataset)
-
-    #get a memory mapped flow direction array
-#    flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
-#    flow_direction_array = numpy.memmap(
-#        flow_direction_filename, dtype='float32', mode='w+',
-#        shape = (n_rows, n_cols))
-#    LOGGER.info('load flow dataset into array')
-#    for row_index in range(n_rows):
-#        row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
-#        flow_direction_array[row_index, :] = row_array
+    LOGGER.info('OLD STUFF FOLLOWS')
 
 
     LOGGER.info('Processing flow through the grid')
@@ -170,140 +159,6 @@ def route_flux(
 
     LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
 
-def calculate_flow_path(
-    flow_direction_array, flow_nodata, flow_graph_edge_weights,
-    flow_graph_neighbor_indexes, outflow_cell_set, inflow_cell_set):
-    """Calculates the graph flow path given a d-infinity flow direction array
-
-        flow_direction_array - numpy 2D array of float with elements that
-            describe the d infinity outflow direction from the center of
-            that cell.
-        
-        flow_nodata - the value that represents an undefined value in 
-            flow_direction_array
-
-        flow_graph_edge_weights - an output value whose initial state is
-            a 2D numpy array of as many rows as there are values in 
-            flow_direction_array and two columns.  The two columns indicate
-            the two outflow neighbor weights determined by the d infinity
-            algorithm which should sum to 1.0.
-
-        flow_graph_neighbor_indexes - an output value whose initial state is
-            a 2D numpy array of as many rows as there are values in 
-            flow_direction_array and two columns.  The two columns indicate
-            the flat indexes of the two outflow neighbor cells.
-
-        outflow_cell_set - an output value whose initial state is an empty
-            set.  The output value contains all flat indexes that have
-            outflow in the simulation.
-
-        inflow_cell_set - an output value whose initial state is an empty
-            set.  The output value contains all flat indexes that have
-            inflow in the simulation.
-
-    returns nothing"""
-
-    n_rows, n_cols = flow_direction_array.shape
-
-    #Diagonal offsets are based off the following index notation for neighbors
-    #    3 2 1
-    #    4 p 0
-    #    5 6 7
-
-    #When on a cell, the "parent" offset for that cell to the current cell
-    #looks like this
-
-    #   7 6 5
-    #   0 p 4
-    #   1 2 3
-
-    #This can be used to determine what direction the inflow cell will think
-    #the current cell is flowing from.  Say we point in direciton '3' then
-    #the cell sitting in direciton '3' will think flow is coming from direction
-    #parent_offset[3] (i.e. 7 in this case)
-    parent_offset = [4, 5, 6, 7, 0, 1, 2, 3]
-
-    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
-    diagonal_offsets = \
-        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
-
-    #The number of diagonal offsets defines the neighbors, angle between them
-    #and the actual angle to point to the neighbor
-    n_neighbors = 8
-    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
-    angle_to_neighbor = \
-        [i * angle_between_neighbors for i in range(n_neighbors)]
-
-    #Iterate over flow directions
-    for row_index in range(n_rows):
-        for col_index in range(n_cols):
-            flow_direction = flow_direction_array[row_index, col_index]
-            #make sure the flow direction is defined, if not, skip this cell
-            if flow_direction == flow_nodata:
-                continue
-            current_index = row_index * n_cols + col_index
-            n_flows = 0
-            for neighbor_offset in range(n_neighbors):
-                flow_angle_to_neighbor = numpy.abs(
-                    angle_to_neighbor[neighbor_offset] - flow_direction)
-                if flow_angle_to_neighbor < angle_between_neighbors:
-                    #There's flow from the current cell to the neighbor
-                    #Get the flat indexes for the current and outflow cell
-                    outflow_index = \
-                        current_index + diagonal_offsets[neighbor_offset]
-
-                    #Something flows out of this cell, remember that
-                    outflow_cell_set.add(current_index)
-
-                    #Determine if the direction we're on is oriented at 90
-                    #degrees or 45 degrees.  Given our orientation even number
-                    #neighbor indexes are oriented 90 degrees and odd are 45
-                    if neighbor_offset % 2 == 0:
-                        flow_graph_edge_weights[outflow_index, parent_offset[neighbor_offset]] = \
-                            1.0 - numpy.tan(flow_angle_to_neighbor)
-                    else:
-                        flow_graph_edge_weights[outflow_index, parent_offset[neighbor_offset]] = \
-                            numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
-
-                    flow_graph_neighbor_indexes[outflow_index, parent_offset[neighbor_offset]] = \
-                            current_index
-
-                    inflow_cell_set.add(outflow_index)
-                    
-                    n_flows += 1
-                    if n_flows == 2:
-                        break
-
-def calculate_transport(
-    flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri):
-    """This is a generalized flux transport algorithm that operates
-        on a 2D grid given a per pixel flow direction, per pixel source,
-        and per pixel absorption rate.  It produces a grid of loss per
-        pixel, and amount of outgoing flux per pixel.
-
-        flow_direction_uri - a GDAL dataset that has flow direction per
-            pixel expressed in radians indicating angles in a right handed
-            cartesian coordinate system.
-
-        source_uri - a GDAL dataset that has source flux per pixel
-
-        absorption_rate_uri - a GDAL floating point dataset that has a percent
-            of flux absorbed per pixel
-
-        loss_uri - an output URI to to the dataset that will output the
-            amount of flux absorbed by each pixel
-
-        flux_uri - a URI to an output dataset that records the amount of flux
-            traveling through each pixel
-
-        returns nothing"""
-
-    #Calculate flow graph
-
-    #Pass transport
-
-    pass
-           
 
 def calculate_flow_direction(dem_uri, flow_direction_uri):
     """Calculates the flow direction of a landscape given its dem
@@ -335,29 +190,6 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
     bounding_box = [0, 0, n_cols, n_rows]
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
-
-    #Calculate inflow directions, these are per pixel flags that are turned
-    #on if the neighbor in the direciton indicated inflows into x:
-    # 8  4   2
-    #16  x   1
-    #32 64 128
-
-#    inflow_direction_dataset = raster_utils.new_raster_from_base(
-#        dem_dataset, inflow_direction_uri, 'GTiff', 0,
-#        gdal.GDT_Byte)
-
-#    inflow_band, inflow_nodata = raster_utils.extract_band_and_nodata(inflow_direction_dataset)
-#    inflow_band.Fill(0)
-
-#    flow_array_file = tempfile.TemporaryFile()
-#    inflow_array_file = tempfile.TemporaryFile()
-
-#    flow_array = raster_utils.load_memory_mapped_array(flow_direction_uri, flow_array_file)
-#    inflow_array = raster_utils.load_memory_mapped_array(inflow_direction_uri, inflow_array_file)
-
-
-#    for row_index in xrange(n_rows):
-#        for col_index in xrange(n_cols):
 
     LOGGER.info('Done calculating d-infinity elapsed time %ss' % (time.clock()-start))
 
@@ -477,13 +309,6 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     outflow_direction_band, _ = raster_utils.extract_band_and_nodata(outflow_direction_dataset)
     outflow_direction_band.WriteArray(numpy.memmap.reshape(outflow_direction, (n_rows, n_cols)))
 
-
-
-
-
-
-
-
     LOGGER.debug("Calculating sink and source cells")
     sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
     source_cell_set = outflow_cell_set.difference(inflow_cell_set)
@@ -491,5 +316,32 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     LOGGER.info('Done calculating flow path elapsed time %s' % (time.clock()-start))
     return sink_cell_set, source_cell_set
 
-def calculate_transport_with_flow_graph():
+def calculate_transport(
+    flow_direction_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri):
+    """This is a generalized flux transport algorithm that operates
+        on a 2D grid given a per pixel flow direction, per pixel source,
+        and per pixel absorption rate.  It produces a grid of loss per
+        pixel, and amount of outgoing flux per pixel.
+
+        flow_direction_uri - a GDAL dataset that has flow direction per
+            pixel expressed in radians indicating angles in a right handed
+            cartesian coordinate system.
+
+        source_uri - a GDAL dataset that has source flux per pixel
+
+        absorption_rate_uri - a GDAL floating point dataset that has a percent
+            of flux absorbed per pixel
+
+        loss_uri - an output URI to to the dataset that will output the
+            amount of flux absorbed by each pixel
+
+        flux_uri - a URI to an output dataset that records the amount of flux
+            traveling through each pixel
+
+        returns nothing"""
+
+    #Calculate flow graph
+
+    #Pass transport
+
     pass
