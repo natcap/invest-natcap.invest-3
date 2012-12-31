@@ -317,14 +317,59 @@ def calculate_transport(
     #Process flux through the grid
     visited_cells = set(sink_cell_set)
     cells_to_process = collections.deque(sink_cell_set)
+
+
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+
+    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
+    diagonal_offsets = \
+        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+
+    row_offsets = [0, -1, -1, -1, 0, 1, 1, 1]
+    col_offsets = [1, 1, 0, -1, -1, -1, 0, 1]
+
     
+    neighbors_to_process = numpy.empty(8)
     while len(cells_to_process) > 0:
-        current_index = cells_to_process.popleft()
+        current_index = cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
 
+        #see if all inflow neighbors are calculated
+        unprocessed_count = 0
+        in_flux = 0.0
+        for neighbor_index in xrange(8):
+            neighbor_row = current_row+row_offsets[neighbor_index] 
+            neighbor_col = current_row+col_offsets[neighbor_index] 
+            try:
+                if flux_array[neighbor_row, neighbor_col] == transport_nodata:
+                    flat_index = neighbor_row * n_cols + neighbor_col
+                    neighbors_to_process[unprocessed_count] = flat_index
+                    unprocessed_count += 1
+                else:
+                    #add up the influx
+                    pass
+            except IndexError:
+                #This happens if we index on the edge, okay to pass
+                pass
 
 
+
+        #if any inflow neighbors are not calculated, *push current and neighbors on stack*
+        if unprocessed_count > 0:
+            cells_to_process.append(current_index)
+            for neighbor_index in xrange(unprocessed_count):
+                cells_to_process.append(neighbors_to_process[neighbor_index])
+            continue
+
+        #otherwise calculate mass balance for current pixel
+        loss = in_flux * absorption_rate_array[current_row, current_col]
+        flux_out = in_flux - loss + source_array[current_row, current_col]
+        loss_array[current_row, current_col] = loss
+        flux_array[current_row, current_col] = flux_out
 
     #Write results to disk
     loss_dataset = raster_utils.new_raster_from_base(
@@ -339,79 +384,3 @@ def calculate_transport(
 
     loss_band.WriteArray(loss_array)
     flux_band.WriteArray(flux_array)
-
-
-
-    visited_cells = set(sink_cells)
-    cells_to_process = collections.deque(sink_cells)
-    
-    while len(cells_to_process) > 0:
-        current_index = cells_to_process.popleft()
-        current_row = current_index / n_cols
-        current_col = current_index % n_cols
-
-        parents_calculated = True
-        for offset in range(8):
-            parent_index = flow_graph_neighbor_indexes[current_index, offset]
-            if parent_index == out_nodata_value:
-                continue
-            if parent_index not in visited_cells:
-                if parents_calculated:
-                    cells_to_process.appendleft(current_index)
-                cells_to_process.appendleft(parent_index)
-                visited_cells.add(parent_index)
-                parents_calculated = False
-            continue
-
-        #all parents calculated so loop over them and calculate current flow
-        current_flow = 1.0
-        for offset in range(8):
-            parent_index = flow_graph_neighbor_indexes[current_index, offset]
-            if parent_index == out_nodata_value:
-                continue
-            parent_row = parent_index / n_cols
-            parent_col = parent_index % n_cols
-            parent_percent = flow_graph_edge_weights[current_index, offset]
-            current_flow += parent_percent * raster_out_array[parent_row, parent_col]
-
-        raster_out_array[current_row, current_col] = current_flow
-
-
-    raster_out_band.WriteArray(raster_out_array, 0, 0)
-    LOGGER.info('Done processing flow elapsed time %s' % (time.clock()-start))
-
-    #This is for debugging
-    sink_uri = os.path.join(workspace_dir, 'sink.tif')
-    sink_nodata = -1.0
-    sink_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, sink_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Int32)
-    sink_band, _, sink_array = raster_utils.extract_band_and_nodata(sink_dataset, get_array = True)
-    sink_array[:] = sink_nodata
-
-    source_uri = os.path.join(workspace_dir, 'source.tif')
-    source_nodata = -1.0
-    source_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, source_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Int32)
-    source_band, _, source_array = raster_utils.extract_band_and_nodata(source_dataset, get_array = True)
-    source_array[:] = source_nodata
-
-    for cell_index in sink_cells:
-        cell_row = cell_index / n_cols
-        cell_col = cell_index % n_cols
-        sink_array[cell_row, cell_col] = 1
-
-    for cell_index in source_cells:
-        cell_row = cell_index / n_cols
-        cell_col = cell_index % n_cols
-        source_array[cell_row, cell_col] = 1
-
-    sink_band.WriteArray(sink_array, 0, 0)
-    source_band.WriteArray(source_array, 0, 0)
-
-    LOGGER.debug("number of sinks %s number of sources %s" % (len(sink_cells), len(source_cells)))
-
-
-
-    pass
