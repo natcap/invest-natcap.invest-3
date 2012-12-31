@@ -233,7 +233,7 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
     source_cell_set = outflow_cell_set.difference(inflow_cell_set)
 
-    LOGGER.info('Done calculating flow path elapsed time %s' % (time.clock()-start))
+    LOGGER.info('Done calculating flow path elapsed time %ss' % (time.clock()-start))
     return sink_cell_set, source_cell_set
 
 def calculate_transport(
@@ -328,11 +328,13 @@ def calculate_transport(
     diagonal_offsets = \
         [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
 
-    row_offsets = [0, -1, -1, -1, 0, 1, 1, 1]
-    col_offsets = [1, 1, 0, -1, -1, -1, 0, 1]
+    row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
-    
-    neighbors_to_process = numpy.empty(8)
+    inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
+
+
+    neighbors_to_process = numpy.empty(8, dtype=numpy.int)
     while len(cells_to_process) > 0:
         current_index = cells_to_process.pop()
         current_row = current_index / n_cols
@@ -342,21 +344,28 @@ def calculate_transport(
         unprocessed_count = 0
         in_flux = 0.0
         for neighbor_index in xrange(8):
-            neighbor_row = current_row+row_offsets[neighbor_index] 
-            neighbor_col = current_row+col_offsets[neighbor_index] 
+            neighbor_row = current_row+row_offsets[neighbor_index]
+            neighbor_col = current_col+col_offsets[neighbor_index]
+
             try:
+                #if neighbor inflows
+                neighbor_direction = outflow_direction_array[neighbor_row, neighbor_col]
+                if inflow_offsets[neighbor_index] != neighbor_direction and \
+                   inflow_offsets[neighbor_index] != (neighbor_direction +1) % 8:
+                    #then neighbor doesn't inflow into current cell
+                    continue
+
+                #Check if inflow flux has been processed
                 if flux_array[neighbor_row, neighbor_col] == transport_nodata:
                     flat_index = neighbor_row * n_cols + neighbor_col
                     neighbors_to_process[unprocessed_count] = flat_index
                     unprocessed_count += 1
                 else:
                     #add up the influx
-                    pass
+                    in_flux += 1
             except IndexError:
                 #This happens if we index on the edge, okay to pass
                 pass
-
-
 
         #if any inflow neighbors are not calculated, *push current and neighbors on stack*
         if unprocessed_count > 0:
@@ -364,6 +373,7 @@ def calculate_transport(
             for neighbor_index in xrange(unprocessed_count):
                 cells_to_process.append(neighbors_to_process[neighbor_index])
             continue
+
 
         #otherwise calculate mass balance for current pixel
         loss = in_flux * absorption_rate_array[current_row, current_col]
@@ -384,3 +394,5 @@ def calculate_transport(
 
     loss_band.WriteArray(loss_array)
     flux_band.WriteArray(flux_array)
+
+    LOGGER.info('Done processing transport elapsed time %ss' % (time.clock()-start))
