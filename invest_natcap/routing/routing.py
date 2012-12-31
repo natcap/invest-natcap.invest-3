@@ -300,16 +300,36 @@ def calculate_transport(
     absorption_rate_array = raster_utils.load_memory_mapped_array(absorption_rate_uri, absorption_rate_data_file)
 
 
+    #Create output arrays for loss and flux
+    n_cols = outflow_direction_dataset.RasterXSize
+    n_rows = outflow_direction_dataset.RasterYSize
+    transport_nodata = -1.0
+
+    loss_data_file = tempfile.TemporaryFile()
+    flux_data_file = tempfile.TemporaryFile()
+
+    loss_array = numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+', shape = (n_rows, n_cols))
+    flux_array = numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+', shape = (n_rows, n_cols))
+    loss_array[:] = transport_nodata
+    flux_array[:] = transport_nodata
+
+
+
+    #Write results to disk
     loss_dataset = raster_utils.new_raster_from_base(
-        flow_direction, loss_uri, 'GTiff', transport_nodata,
+        outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
         gdal.GDT_Float32)
     flux_dataset = raster_utils.new_raster_from_base(
-        flow_direction, flux_uri, 'GTiff', transport_nodata,
+        outflow_direction_dataset, flux_uri, 'GTiff', transport_nodata,
         gdal.GDT_Float32)
-
 
     loss_band, _ = raster_utils.extract_band_and_nodata(loss_dataset)
     flux_band, _ = raster_utils.extract_band_and_nodata(flux_dataset)
+
+    loss_band.WriteArray(loss_array)
+    flux_band.WriteArray(flux_array)
+
+
 
     visited_cells = set(sink_cells)
     cells_to_process = collections.deque(sink_cells)
