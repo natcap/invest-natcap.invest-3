@@ -1688,7 +1688,7 @@ def load_memory_mapped_array(dataset_uri, memory_file):
         raise TypeError('Unknown GDAL type %s' % band.DataType)
 
     memory_array = np.memmap(
-        memory_file, dtype=dtype, mode='w+', shape = (n_rows, n_cols))
+        memory_file, dtype = dtype, mode = 'w+', shape = (n_rows, n_cols))
 
     band.ReadAsArray(buf_obj = memory_array)
 
