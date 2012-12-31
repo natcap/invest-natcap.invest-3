@@ -76,7 +76,7 @@ def route_flux(
     calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, source_cell_set = calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
-    calculate_transport(flow_direction_uri, sink_cell_set, source_uri, absorption_rate_uri, loss_uri, flux_uri)
+    calculate_transport(outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
 
 
@@ -237,15 +237,23 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     return sink_cell_set, source_cell_set
 
 def calculate_transport(
-    flow_direction_uri, sink_cell_set, source_uri, absorption_rate_uri, loss_uri, flux_uri):
+    outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri, absorption_rate_uri, loss_uri, flux_uri):
     """This is a generalized flux transport algorithm that operates
         on a 2D grid given a per pixel flow direction, per pixel source,
         and per pixel absorption rate.  It produces a grid of loss per
         pixel, and amount of outgoing flux per pixel.
 
-        flow_direction_uri - a GDAL dataset that has flow direction per
-            pixel expressed in radians indicating angles in a right handed
-            cartesian coordinate system.
+        outflow_direction_uri - a uri to a byte dataset that indicates the
+            first counter clockwise outflow neighbor as an index from the
+            following diagram
+
+            3 2 1
+            4 x 0
+            5 6 7
+
+        outflow_weights_uri - a uri to a float32 dataset whose elements
+            correspond to the percent outflow from the current cell to its 
+            first counter-clockwise neighbor
 
         sink_cell_set - a set of flat integer indexes for the cells in flow
             graph that have no outflow
@@ -266,14 +274,42 @@ def calculate_transport(
     #Calculate flow graph
 
     #Pass transport
-    LOGGER.info('Processing flow through the grid')
+    LOGGER.info('Processing transport through grid')
     start = time.clock()
 
-    raster_out_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, raster_out_uri, 'GTiff', out_nodata_value,
+    #Extract input datasets
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    source_dataset = gdal.Open(source_uri)
+    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
+
+    #Extract nodata values
+    _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(outflow_weights_dataset)
+    _, source_nodata = raster_utils.extract_band_and_nodata(source_dataset)
+    _, absorption_rate_nodata = raster_utils.extract_band_and_nodata(absorption_rate_dataset)
+
+    #Create memory mapped lookup arrays
+    outflow_direction_data_file = tempfile.TemporaryFile()
+    outflow_weights_data_file = tempfile.TemporaryFile()
+    source_data_file = tempfile.TemporaryFile()
+    absorption_rate_data_file = tempfile.TemporaryFile()
+
+    outflow_direction_array = raster_utils.load_memory_mapped_array(outflow_direction_uri, outflow_direction_data_file)
+    outflow_weights_array = raster_utils.load_memory_mapped_array(outflow_weights_uri, outflow_weights_data_file)
+    source_array = raster_utils.load_memory_mapped_array(source_uri, source_data_file)
+    absorption_rate_array = raster_utils.load_memory_mapped_array(absorption_rate_uri, absorption_rate_data_file)
+
+
+    loss_dataset = raster_utils.new_raster_from_base(
+        flow_direction, loss_uri, 'GTiff', transport_nodata,
         gdal.GDT_Float32)
-    raster_out_band, _, raster_out_array = raster_utils.extract_band_and_nodata(raster_out_dataset, get_array = True)
-    raster_out_array[:] = out_nodata_value
+    flux_dataset = raster_utils.new_raster_from_base(
+        flow_direction, flux_uri, 'GTiff', transport_nodata,
+        gdal.GDT_Float32)
+
+
+    loss_band, _ = raster_utils.extract_band_and_nodata(loss_dataset)
+    flux_band, _ = raster_utils.extract_band_and_nodata(flux_dataset)
 
     visited_cells = set(sink_cells)
     cells_to_process = collections.deque(sink_cells)
