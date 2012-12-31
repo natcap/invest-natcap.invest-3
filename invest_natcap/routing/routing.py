@@ -104,7 +104,7 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
     d_inf_dir_nodata = -1.0
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Float32)
+        gdal.GDT_Float64)
 
     #Calcualte the d infinity flow direction
     bounding_box = [0, 0, n_cols, n_rows]
@@ -146,11 +146,11 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     n_elements = n_cols * n_rows
 
 
-    outflow_weights = numpy.empty(n_elements, dtype = numpy.float32)
+    outflow_weights = numpy.empty((n_rows, n_cols), dtype = numpy.float32)
     outflow_weights_nodata = -1.0
     outflow_weights[:] = outflow_weights_nodata
 
-    outflow_direction = numpy.empty(n_elements, dtype = numpy.byte)
+    outflow_direction = numpy.empty((n_rows, n_cols), dtype = numpy.byte)
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
 
@@ -171,9 +171,8 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
     n_neighbors = 8
-    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
     angle_to_neighbor = \
-        [i * angle_between_neighbors for i in range(n_neighbors)]
+        [i * numpy.pi/4.0 for i in range(n_neighbors)]
 
     flow_direction_memory_file = tempfile.TemporaryFile()
     flow_direction_array = raster_utils.load_memory_mapped_array(flow_direction_uri, flow_direction_memory_file)
@@ -186,14 +185,18 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
             if flow_direction == flow_direction_nodata:
                 continue
             current_index = row_index * n_cols + col_index
+            found = False
             for neighbor_offset in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
                     angle_to_neighbor[neighbor_offset] - flow_direction)
-                if flow_angle_to_neighbor < angle_between_neighbors:
+                if flow_angle_to_neighbor < numpy.pi/4.0:
+                    found = True
                     #There's flow from the current cell to the neighbor
                     #Get the flat indexes for the current and outflow cell
                     outflow_index = \
                         current_index + diagonal_offsets[neighbor_offset]
+                    outflow_row = outflow_index / n_cols
+                    outflow_col = outflow_index % n_cols
 
                     #Something flows out of this cell, remember that
                     outflow_cell_set.add(current_index)
@@ -202,32 +205,34 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
                     if neighbor_offset % 2 == 0:
-                        outflow_weights[outflow_index] = \
+                        outflow_weights[outflow_row, outflow_col] = \
                             1.0 - numpy.tan(flow_angle_to_neighbor)
                     else:
-                        outflow_weights[outflow_index] = \
+                        outflow_weights[outflow_row, outflow_col] = \
                             numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
 
                     #Update outflow neighbor
-                    outflow_direction[outflow_index] = neighbor_offset
+                    outflow_direction[outflow_row, outflow_col] = neighbor_offset
 
                     inflow_cell_set.add(outflow_index)
                     
                     #we found the outflow direction
                     break
+            if not found:
+                LOGGER.debug('no flow direction found for %s %s' % (row_index, col_index))
 
     #write outflow direction and weights
     outflow_weights_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, outflow_weights_uri, 'GTiff', outflow_weights_nodata,
         gdal.GDT_Float32)
     outflow_weights_band, _ = raster_utils.extract_band_and_nodata(outflow_weights_dataset)
-    outflow_weights_band.WriteArray(numpy.memmap.reshape(outflow_weights, (n_rows, n_cols)))
+    outflow_weights_band.WriteArray(outflow_weights)
     
     outflow_direction_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, outflow_direction_uri, 'GTiff', outflow_direction_nodata,
         gdal.GDT_Byte)
     outflow_direction_band, _ = raster_utils.extract_band_and_nodata(outflow_direction_dataset)
-    outflow_direction_band.WriteArray(numpy.memmap.reshape(outflow_direction, (n_rows, n_cols)))
+    outflow_direction_band.WriteArray(outflow_direction)
 
     LOGGER.debug("Calculating sink and source cells")
     sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
