@@ -46,7 +46,8 @@ def make_smooth_raster(cols, rows, uribase='smooth', format='GTiff', min_val=0.0
         dataset_type = gdal.GDT_Int32
 
 #    for suffix in ['right', 'left', 'top', 'bottom']:
-    for suffix in ['bottom_right']:
+#    for suffix in ['bottom_right']:
+    for suffix in ['top_left']:
         dataset = driver.Create(uribase+suffix+'.tif', cols, rows, 1, dataset_type)
 
         #Random spatial reference from http://www.gdal.org/gdal_tutorial.html
@@ -84,6 +85,12 @@ def make_smooth_raster(cols, rows, uribase='smooth', format='GTiff', min_val=0.0
             for row in range(rows):
                 for col in range(cols):
                     alpha = (col+row)/(float(rows-1)+float(cols-1))
+                    value = min_val * (1-alpha) + max_val * (alpha)
+                    raster[row,col] = value
+        elif suffix == 'top_left':
+            for row in range(rows):
+                for col in range(cols):
+                    alpha = 1-(col+row)/(float(rows-1)+float(cols-1))
                     value = min_val * (1-alpha) + max_val * (alpha)
                     raster[row,col] = value
                     
