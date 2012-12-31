@@ -25,7 +25,8 @@ class TestRasterUtils(unittest.TestCase):
 #        dem_uri = 'data/sediment_test_data/dem'
 #        dem_uri = 'data/smooth_rasters/smoothleft.tif'
 #        dem_uri = 'data/smooth_rasters/smoothright.tif'
-        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
+#        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
+        dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
 #        dem_uri = 'data/smooth_rasters/random.tif'
         source_uri = dem_uri
         absorption_rate_uri = dem_uri
