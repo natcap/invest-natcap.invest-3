@@ -12,8 +12,18 @@ import numpy
 
 from invest_natcap.routing import routing
 import invest_test_core
+from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('routing_test')
+
+def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
+    base_dataset = gdal.Open(base_dataset_uri)
+    out_dataset = raster_utils.new_raster_from_base(
+        base_dataset, out_uri, 'GTiff', constant_value-1,
+        gdal.GDT_Float32)
+    out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
+    out_band.Fill(constant_value)
+
 
 class TestRasterUtils(unittest.TestCase):
     def test_smoke_routing(self):
@@ -28,8 +38,13 @@ class TestRasterUtils(unittest.TestCase):
 #        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
         dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
 #        dem_uri = 'data/smooth_rasters/random.tif'
-        source_uri = dem_uri
-        absorption_rate_uri = dem_uri
+        source_uri = os.path.join(base_dir, 'source.tif')
+        absorption_rate_uri = os.path.join(base_dir, 'absorption.tif')
+
+
+        make_constant_raster_from_base(dem_uri, 1.0, source_uri)
+        make_constant_raster_from_base(dem_uri, 0.0, absorption_rate_uri)
+
         loss_uri = os.path.join(base_dir, 'loss.tif')
         flux_uri = os.path.join(base_dir, 'flux.tif')
         aoi_uri = 'data/sediment_test_data/watersheds.shp'

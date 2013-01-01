@@ -401,3 +401,10 @@ def calculate_transport(
     flux_band.WriteArray(flux_array)
 
     LOGGER.info('Done processing transport elapsed time %ss' % (time.clock()-start))
+
+def make_constant_raster_from_base(base_dataset, constant_value, out_uri):
+    out_dataset = raster_utils.new_raster_from_base(
+        base_dataset, out_uri, 'GTiff', constant_value-1,
+        gdal.GDT_Float32)
+    out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
+    out_band.Fill(constant_value)
