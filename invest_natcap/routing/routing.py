@@ -204,12 +204,26 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                     #Determine if the direction we're on is oriented at 90
                     #degrees or 45 degrees.  Given our orientation even number
                     #neighbor indexes are oriented 90 degrees and odd are 45
+                    outflow_weight = 0.0
+
                     if neighbor_offset % 2 == 0:
-                        outflow_weights[outflow_row, outflow_col] = \
-                            1.0 - numpy.tan(flow_angle_to_neighbor)
+                        outflow_weight = 1.0 - numpy.tan(flow_angle_to_neighbor)
                     else:
-                        outflow_weights[outflow_row, outflow_col] = \
-                            numpy.tan(numpy.pi/4.0 - flow_angle_to_neighbor)
+                        outflow_weight = numpy.tan(
+                            numpy.pi/4.0 - flow_angle_to_neighbor)
+
+                    #This will optimize things a bit:
+                    #If it's nearly all flowing in one direction make it
+                    #entirely flow in one direction
+                    if outflow_weight > 0.999:
+                        outflow_weight = 1.0
+
+                    #If the outflow is nearly 0, make it zero and push it all
+                    #To the next neighbor
+                    if outflow_weight < 0.001:
+                        outflow_weight = 0.0
+
+                    outflow_weights[outflow_row, outflow_col] = outflow_weight
 
                     #Update outflow neighbor
                     outflow_direction[outflow_row, outflow_col] = neighbor_offset
