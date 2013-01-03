@@ -353,11 +353,25 @@ def calculate_transport(
     inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
 
+    #debugging
+    visit_count_dataset = raster_utils.new_raster_from_base(
+        outflow_direction_dataset, 'count.tif', 'GTiff', -1,
+        gdal.GDT_Int32)
+    visit_band, visit_nodata, visit_array = raster_utils.extract_band_and_nodata(visit_count_dataset, get_array = True)
+    visit_array[:] = -1
+
+
+    visit_count = 0
     neighbors_to_process = numpy.empty(8, dtype=numpy.int)
     while len(cells_to_process) > 0:
         current_index = cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
+
+        if visit_array[current_row, current_col] == -1:
+            visit_array[current_row, current_col] = visit_count
+            visit_count += 1
+        
 
         #see if all inflow neighbors are calculated
         unprocessed_count = 0
@@ -370,18 +384,30 @@ def calculate_transport(
                 #if neighbor inflows
                 neighbor_direction = outflow_direction_array[neighbor_row, neighbor_col]
                 if inflow_offsets[neighbor_index] != neighbor_direction and \
-                   inflow_offsets[neighbor_index] != (neighbor_direction +1) % 8:
+                   inflow_offsets[neighbor_index] != (neighbor_direction - 1) % 8:
                     #then neighbor doesn't inflow into current cell
                     continue
 
+                #Calculate the outflow weight
+                outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
+                if inflow_offsets[neighbor_index] == (neighbor_direction - 1) % 8:
+                    outflow_weight = 1.0 - outflow_weight
+                    pass
+                
+                #If the outflow weight is 0, no reason to process that inflow cell
+                if abs(outflow_weight) < 0.001:
+                    continue
+                
                 #Check if inflow flux has been processed
-                if flux_array[neighbor_row, neighbor_col] == transport_nodata:
+                inflow_flux = flux_array[neighbor_row, neighbor_col]
+#                if inflow_flux == transport_nodata and outflow_weight > 0.0:
+                if inflow_flux == transport_nodata:
                     flat_index = neighbor_row * n_cols + neighbor_col
                     neighbors_to_process[unprocessed_count] = flat_index
                     unprocessed_count += 1
                 else:
                     #add up the influx
-                    in_flux += 1
+                    in_flux += inflow_flux * outflow_weight
             except IndexError:
                 #This happens if we index on the edge, okay to pass
                 pass
@@ -413,6 +439,8 @@ def calculate_transport(
 
     loss_band.WriteArray(loss_array)
     flux_band.WriteArray(flux_array)
+
+    visit_band.WriteArray(visit_array)
 
     LOGGER.info('Done processing transport elapsed time %ss' % (time.clock()-start))
 
