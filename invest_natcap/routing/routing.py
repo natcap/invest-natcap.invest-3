@@ -227,9 +227,15 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
 
                     #Update outflow neighbor
                     outflow_direction[outflow_row, outflow_col] = neighbor_offset
-
-                    inflow_cell_set.add(outflow_index)
                     
+                    if outflow_weight != 0.0:
+                        inflow_cell_set.add(outflow_index)
+                    
+                    if outflow_weight != 1.0:
+                        next_outflow_index = \
+                            current_index + diagonal_offsets[neighbor_offset+1]
+                        inflow_cell_set.add(next_outflow_index)
+
                     #we found the outflow direction
                     break
             if not found:
