@@ -362,16 +362,19 @@ def calculate_transport(
 
 
     visit_count = 0
-    neighbors_to_process = numpy.empty(8, dtype=numpy.int)
+    neighbors_to_process = numpy.empty(8, dtype=numpy.int32)
     while len(cells_to_process) > 0:
         current_index = cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
 
-        if visit_array[current_row, current_col] == -1:
-            visit_array[current_row, current_col] = visit_count
-            visit_count += 1
-        
+        try:
+            if visit_array[current_row, current_col] == -1:
+                visit_array[current_row, current_col] = visit_count
+                visit_count += 1
+        except IndexError:
+            LOGGER.error('current_index %s current_row, current_col %s %s' % (current_index, current_row, current_col))
+            raise Exception()
 
         #see if all inflow neighbors are calculated
         unprocessed_count = 0
@@ -379,6 +382,10 @@ def calculate_transport(
         for neighbor_index in xrange(8):
             neighbor_row = current_row+row_offsets[neighbor_index]
             neighbor_col = current_col+col_offsets[neighbor_index]
+
+            #See if neighbor out of bounds
+            if neighbor_row < 0 or neighbor_col < 0 or neighbor_row >= n_rows or neighbor_col > n_cols:
+                continue
 
             try:
                 #if neighbor inflows
@@ -403,6 +410,8 @@ def calculate_transport(
 #                if inflow_flux == transport_nodata and outflow_weight > 0.0:
                 if inflow_flux == transport_nodata:
                     flat_index = neighbor_row * n_cols + neighbor_col
+                    if flat_index < 0:
+                        raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
                     neighbors_to_process[unprocessed_count] = flat_index
                     unprocessed_count += 1
                 else:
