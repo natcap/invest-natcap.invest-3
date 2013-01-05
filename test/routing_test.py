@@ -34,8 +34,8 @@ class TestRasterUtils(unittest.TestCase):
         regression_uri = 'data/routing_regression/out.tif'
 #        dem_uri = 'data/sediment_test_data/dem'
 #        dem_uri = 'data/smooth_rasters/smoothleft.tif'
-        dem_uri = 'data/smooth_rasters/smoothright.tif'
-#        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
+#        dem_uri = 'data/smooth_rasters/smoothright.tif'
+        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
 #        dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
 #        dem_uri = 'data/smooth_rasters/random.tif'
         source_uri = os.path.join(base_dir, 'source.tif')
