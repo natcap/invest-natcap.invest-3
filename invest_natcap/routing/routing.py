@@ -191,12 +191,6 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                     angle_to_neighbor[neighbor_offset] - flow_direction)
                 if flow_angle_to_neighbor < numpy.pi/4.0:
                     found = True
-                    #There's flow from the current cell to the neighbor
-                    #Get the flat indexes for the current and outflow cell
-                    outflow_index = \
-                        current_index + diagonal_offsets[neighbor_offset]
-                    outflow_row = outflow_index / n_cols
-                    outflow_col = outflow_index % n_cols
 
                     #Something flows out of this cell, remember that
                     outflow_cell_set.add(current_index)
@@ -218,18 +212,32 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                     if outflow_weight > 0.999:
                         outflow_weight = 1.0
 
-                    #If the outflow is nearly 0, make it zero and push it all
+                    #If the outflow is nearly 0, make push it all
                     #To the next neighbor
                     if outflow_weight < 0.001:
-                        outflow_weight = 0.0
+                        outflow_weight = 1.0
+                        neighbor_offset += 1
+
+                    #There's flow from the current cell to the neighbor
+                    #Get the flat indexes for the current and outflow cell
+                    outflow_index = \
+                        current_index + diagonal_offsets[neighbor_offset]
+                    outflow_row = outflow_index / n_cols
+                    outflow_col = outflow_index % n_cols
 
                     outflow_weights[outflow_row, outflow_col] = outflow_weight
 
                     #Update outflow neighbor
                     outflow_direction[outflow_row, outflow_col] = neighbor_offset
-
-                    inflow_cell_set.add(outflow_index)
                     
+                    if outflow_weight != 0.0:
+                        inflow_cell_set.add(outflow_index)
+                    
+                    if outflow_weight != 1.0:
+                        next_outflow_index = \
+                            current_index + diagonal_offsets[neighbor_offset+1]
+                        inflow_cell_set.add(next_outflow_index)
+
                     #we found the outflow direction
                     break
             if not found:
@@ -362,16 +370,19 @@ def calculate_transport(
 
 
     visit_count = 0
-    neighbors_to_process = numpy.empty(8, dtype=numpy.int)
+    neighbors_to_process = numpy.empty(8, dtype=numpy.int32)
     while len(cells_to_process) > 0:
         current_index = cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
 
-        if visit_array[current_row, current_col] == -1:
-            visit_array[current_row, current_col] = visit_count
-            visit_count += 1
-        
+        try:
+            if visit_array[current_row, current_col] == -1:
+                visit_array[current_row, current_col] = visit_count
+                visit_count += 1
+        except IndexError:
+            LOGGER.error('current_index %s current_row, current_col %s %s' % (current_index, current_row, current_col))
+            raise Exception()
 
         #see if all inflow neighbors are calculated
         unprocessed_count = 0
@@ -379,6 +390,10 @@ def calculate_transport(
         for neighbor_index in xrange(8):
             neighbor_row = current_row+row_offsets[neighbor_index]
             neighbor_col = current_col+col_offsets[neighbor_index]
+
+            #See if neighbor out of bounds
+            if neighbor_row < 0 or neighbor_col < 0 or neighbor_row >= n_rows or neighbor_col > n_cols:
+                continue
 
             try:
                 #if neighbor inflows
@@ -403,6 +418,8 @@ def calculate_transport(
 #                if inflow_flux == transport_nodata and outflow_weight > 0.0:
                 if inflow_flux == transport_nodata:
                     flat_index = neighbor_row * n_cols + neighbor_col
+                    if flat_index < 0:
+                        raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
                     neighbors_to_process[unprocessed_count] = flat_index
                     unprocessed_count += 1
                 else:
