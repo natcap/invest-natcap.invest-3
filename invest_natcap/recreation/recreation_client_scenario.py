@@ -14,6 +14,19 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('recreation_client')
 
+def reLOGGER(log,entry):
+    timestamp,msgType,msg = entry.split(",")
+    if msgType == "INFO":
+        log.info(msg)
+    elif msgType == "DEBUG":
+        log.debug(msg)
+    elif msgType == "WARNING":
+        log.warn(msg)
+    elif msgType == "ERROR":
+        log.error(msg)
+        raise IOError, "Error on server: %s" % (msg)
+    else:
+        log.warn("Unknown logging message type %s: %s" % (msgType,msg))
 
 def execute(args):
     # Register the streaming http handlers with urllib2
@@ -28,6 +41,10 @@ def execute(args):
     
     if args["data_dir"][-1] != os.sep:
         args["data_dir"]=args["data_dir"]+os.sep
+
+    if args["workspace_dir"][-1] != os.sep:
+        args["workspace_dir"]=args["workspace_dir"]+os.sep
+        
 
 ##    LOGGER.info("Validating grid.")
 ##    dirname=os.path.dirname(args["gridFileName"])+os.sep
@@ -120,18 +137,7 @@ def execute(args):
             serverLogging=[]
             
         for entry in serverLogging:
-            timestamp,msgType,msg = entry.split(",")
-            if msgType == "INFO":
-                LOGGER.info(msg)
-            elif msgType == "DEBUG":
-                LOGGER.debug(msg)
-            elif msgType == "WARNING":
-                LOGGER.warn(msg)
-            elif msgType == "ERROR":
-                LOGGER.error(msg)
-                raise IOError, "Error on server: %s" % (msg)
-            else:
-                LOGGER.warn("Unknown logging message type %s: %s" % (msgType,msg))
+            reLOGGER(LOGGER,entry)
             
         oldlog=log
         
