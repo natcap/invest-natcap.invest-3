@@ -14,6 +14,19 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('recreation_client')
 
+def reLOGGER(log,entry):
+    timestamp,msgType,msg = entry.split(",")
+    if msgType == "INFO":
+        log.info(msg)
+    elif msgType == "DEBUG":
+        log.debug(msg)
+    elif msgType == "WARNING":
+        log.warn(msg)
+    elif msgType == "ERROR":
+        log.error(msg)
+        raise IOError, "Error on server: %s" % (msg)
+    else:
+        log.warn("Unknown logging message type %s: %s" % (msgType,msg))    
 
 def execute(args):
     # Register the streaming http handlers with urllib2
@@ -49,20 +62,6 @@ def execute(args):
         LOGGER.debug("File %s is missing." % aoiFileNamePRJ)
         LOGGER.error("The shapefile must have a PRJ file.")
         raise IOError, "Missing PRJ file."
-    else:
-        pass
-        #this code does not seem to be working anyway.
-##        WGS84=['GEOGCS["GCS_WGS_1984",DATUM["WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]',
-##               'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]',
-##               'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]']
-##        aoiPRJ=open(aoiFileNamePRJ)
-##        if aoiPRJ.read() in WGS84:
-##            LOGGER.info("AOI is in WGS84.")
-##            aoiPRJ.close()
-##        else:
-##            aoiPRJ.close()
-##            LOGGER.error("AOI is NOT in WGS84.")
-##            raise ValueError, ("AOI must be in WGS84!")
 
     #scanning data directory for shapefiles
     LOGGER.info("Processing predictors.")
@@ -149,18 +148,7 @@ def execute(args):
             serverLogging=[]
             
         for entry in serverLogging:
-            timestamp,msgType,msg = entry.split(",")
-            if msgType == "INFO":
-                LOGGER.info(msg)
-            elif msgType == "DEBUG":
-                LOGGER.debug(msg)
-            elif msgType == "WARNING":
-                LOGGER.warn(msg)
-            elif msgType == "ERROR":
-                LOGGER.error(msg)
-                raise IOError, "Error on server: %s" % (msg)
-            else:
-                LOGGER.warn("Unknown logging message type %s: %s" % (msgType,msg))
+            reLOGGER(LOGGER,entry)
             
         oldlog=log
 
