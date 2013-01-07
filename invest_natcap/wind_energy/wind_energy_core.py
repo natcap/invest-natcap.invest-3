@@ -795,7 +795,7 @@ def valuation(args):
     center_y = (ysize / 2) * gt[5] + gt[3]
     start_point = (center_x, center_y)
     # Get the projection of the dataset
-    raster_wkt = dataset.GetProjection()
+    raster_wkt = npv_ds.GetProjection()
     # Make a spatial reference from the projection to use for the farm polygon
     spat_ref = osr.SpatialReference()
     spat_ref.ImportFromWkt(raster_wkt)
