@@ -731,6 +731,12 @@ def valuation(args):
 
     wind_energy_layer.SyncToDisk()
 
+    # Open the density raster, which is an output of the biophyiscal portion, so
+    # that we can properly mask the valuation outputs
+    density_uri = os.path.join(output_dir, 'density.tif')
+    density_ds = gdal.Open(density_uri)
+    _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
+
     npv_uri = os.path.join(output_dir, 'npv.tif')
     levelized_uri = os.path.join(output_dir, 'levelized.tif')
     carbon_uri = os.path.join(output_dir, 'carbon_emissions.tif')
@@ -742,34 +748,39 @@ def valuation(args):
     for uri, field in zip(uri_list, field_list):
         # Create a raster for the points to be vectorized to 
         LOGGER.info('Creating Output raster : %s', uri)
-        output_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, uri, wind_energy_points) 
+        # Creating a temperary uri here because new_raster_from_base requires
+        # one, even if the format is 'MEM'
+        tmp_uri = os.path.join(intermediate_dir, 'tmp_val_out.tif')
+        output_tmp_ds = raster_utils.new_raster_from_base(
+                density_ds, tmp_uri, 'MEM', out_nodata, gdal.GDT_Float32)
 
         # Interpolate and vectorize the points field onto a gdal dataset
         LOGGER.info('Vectorizing the points from the %s field', field)
         raster_utils.vectorize_points(
-                wind_energy_points, field, output_ds)
+                wind_energy_points, field, output_tmp_ds)
+        
+        def mask_nodata(masker, masky):
+            """A vectorize rasters function that uses the first raster as a
+                nodata mask
 
-        output_ds.FlushCache()
+                masker - a float to compare against the nodata value 
+                masky - a float of the relevant data to return if 'masker' is
+                    not a nodata value
+
+                returns - nodata or the masky value"""
+            
+            if masker == density_nodata:
+                return out_nodata
+            else:
+                return masky
+        # Mask out the valuation rasters based on the output from the
+        # biophysical run. This ensures that the distances and depths we are not
+        # interested in are not shown.
+        output_ds = raster_utils.vectorize_rasters(
+                [density_ds, output_tmp_ds], mask_nodata, raster_out_uri = uri,
+                nodata = out_nodata)
+
         output_ds = None
-
-    try:
-        land_shape_layer = args['land_polygon'].GetLayer()
-        for uri in uri_list:
-            dataset = gdal.Open(uri, gdal.GA_Update)
-            # Mask out the output rasters to make them more presentable by taking
-            # any overlap from the land polygon and setting those pixel values to
-            # nodata
-            gdal.RasterizeLayer(
-                    dataset, [1], land_shape_layer, burn_values=[out_nodata], 
-                    options = ['ALL_TOUCHED=TRUE'])
-
-            dataset.FlushCache()
-            dataset = None
-
-    except KeyError:
-        LOGGER.debug('Cannot mask output by land polygon because it was not'
-            'provided as an input')
 
     # Create the farm polygon shapefile, which is an example of how big the farm
     # will be with a rough representation of its dimensions. 
@@ -795,7 +806,7 @@ def valuation(args):
     center_y = (ysize / 2) * gt[5] + gt[3]
     start_point = (center_x, center_y)
     # Get the projection of the dataset
-    raster_wkt = dataset.GetProjection()
+    raster_wkt = npv_ds.GetProjection()
     # Make a spatial reference from the projection to use for the farm polygon
     spat_ref = osr.SpatialReference()
     spat_ref.ImportFromWkt(raster_wkt)
@@ -804,7 +815,7 @@ def valuation(args):
     # turbines and the number of turbines per circuit. If a fractional value is
     # returned we want to round up and error on the side of having the farm be
     # slightly larger
-    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
+    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
     # The distance needed between turbines
     spacing_dist = rotor_diameter * rotor_diameter_factor
 
