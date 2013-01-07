@@ -320,6 +320,8 @@ def calculate_transport(
     absorption_rate_data_file = tempfile.TemporaryFile()
 
     outflow_direction_array = raster_utils.load_memory_mapped_array(outflow_direction_uri, outflow_direction_data_file)
+    #This is hard-coded because load memory mapped array doesn't return a nodata value
+    outflow_direction_nodata = 9
     outflow_weights_array = raster_utils.load_memory_mapped_array(outflow_weights_uri, outflow_weights_data_file)
     source_array = raster_utils.load_memory_mapped_array(source_uri, source_data_file)
     absorption_rate_array = raster_utils.load_memory_mapped_array(absorption_rate_uri, absorption_rate_data_file)
@@ -377,8 +379,13 @@ def calculate_transport(
 
         try:
             if visit_array[current_row, current_col] == not_visited_constant:
+                #LOGGER.error('current_row, current_col %s %s visit_count %s' % (current_row, current_col, visit_count))
                 visit_array[current_row, current_col] = visit_count
                 visit_count += 1
+            else:
+                pass
+                #LOGGER.error('visited before current_row, current_col %s %s' % (current_row, current_col))
+                
         except IndexError:
             LOGGER.error('current_index %s current_row, current_col %s %s' % (current_index, current_row, current_col))
             raise Exception()
@@ -387,6 +394,8 @@ def calculate_transport(
         unprocessed_count = 0
         in_flux = 0.0
         for neighbor_index in xrange(8):
+#            LOGGER.info('neighbor index %s' % (neighbor_index))
+
             neighbor_row = current_row+row_offsets[neighbor_index]
             neighbor_col = current_col+col_offsets[neighbor_index]
 
@@ -394,39 +403,41 @@ def calculate_transport(
             if neighbor_row < 0 or neighbor_col < 0 or neighbor_row >= n_rows or neighbor_col >= n_cols:
                 continue
 
-            try:
-                #if neighbor inflows
-                neighbor_direction = outflow_direction_array[neighbor_row, neighbor_col]
-                if inflow_offsets[neighbor_index] != neighbor_direction and \
-                   inflow_offsets[neighbor_index] != (neighbor_direction - 1) % 8:
-                    #then neighbor doesn't inflow into current cell
-                    continue
+            #if neighbor inflows
+            neighbor_direction = outflow_direction_array[neighbor_row, neighbor_col]
+            if neighbor_direction == outflow_direction_nodata:
+                continue
 
-                #Calculate the outflow weight
-                outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
-                if inflow_offsets[neighbor_index] == (neighbor_direction - 1) % 8:
-                    outflow_weight = 1.0 - outflow_weight
-                    pass
-                
-                #If the outflow weight is 0, no reason to process that inflow cell
-                if abs(outflow_weight) < 0.001:
-                    continue
-                
-                #Check if inflow flux has been processed
-                inflow_flux = flux_array[neighbor_row, neighbor_col]
-#                if inflow_flux == transport_nodata and outflow_weight > 0.0:
-                if inflow_flux == transport_nodata:
-                    flat_index = neighbor_row * n_cols + neighbor_col
-                    if flat_index < 0:
-                        raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
-                    neighbors_to_process[unprocessed_count] = flat_index
-                    unprocessed_count += 1
-                else:
-                    #add up the influx
-                    in_flux += inflow_flux * outflow_weight
-            except IndexError:
-                #This happens if we index on the edge, okay to pass
-                pass
+            if inflow_offsets[neighbor_index] != neighbor_direction and \
+               inflow_offsets[neighbor_index] != (neighbor_direction - 1) % 8:
+                #then neighbor doesn't inflow into current cell
+                continue
+
+            #Calculate the outflow weight
+            outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
+            if inflow_offsets[neighbor_index] == (neighbor_direction - 1) % 8:
+                outflow_weight = 1.0 - outflow_weight
+            
+            #Make sure that there is outflow from the neighbor cell to the current one before processing
+            if abs(outflow_weight) < 0.001:
+                continue
+    
+            #LOGGER.info('neighbor flows into current cell index direction %s %s' % (neighbor_index,neighbor_direction))
+
+            #Check if inflow flux has been processed
+            inflow_flux = flux_array[neighbor_row, neighbor_col]
+            #if inflow_flux == transport_nodata and outflow_weight > 0.0:
+            if inflow_flux == transport_nodata:
+                flat_index = neighbor_row * n_cols + neighbor_col
+                if flat_index < 0:
+                    raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
+                neighbors_to_process[unprocessed_count] = flat_index
+                unprocessed_count += 1
+            else:
+                #add up the influx
+                in_flux += inflow_flux * outflow_weight
+
+        #LOGGER.info("number of unprocessed neighbors %s" % (unprocessed_count))
 
         #if any inflow neighbors are not calculated, *push current and neighbors on stack*
         if unprocessed_count > 0:
@@ -441,6 +452,7 @@ def calculate_transport(
         loss_array[current_row, current_col] = loss
         flux_array[current_row, current_col] = flux_out
 
+    LOGGER.info('Writing results to disk')
     #Write results to disk
     loss_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, loss_uri, 'GTiff', transport_nodata,
