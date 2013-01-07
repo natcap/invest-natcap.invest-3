@@ -486,7 +486,6 @@ class DynamicPrimitive(DynamicElement):
 
             # Toggle dependent elements based on the results of this validation
             enable = not self.has_error() and self.requirementsMet()
-            print ('enable: ', enable)
             DynamicElement.setState(self, enable, includeSelf=False,
                 recursive=True)
 
@@ -748,14 +747,11 @@ class DynamicText(LabeledElement):
                 appropriately.
 
             returns nothing."""
-        print 'toggled!'
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.error_button.deactivate()
         if self.validator != None and self.requirementsMet():
-            print 'validating'
             self.validate()
         else:
-            print 'not validating'
             self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
 
