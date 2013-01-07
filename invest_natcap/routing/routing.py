@@ -145,7 +145,6 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
     n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
     n_elements = n_cols * n_rows
 
-
     outflow_weights = numpy.empty((n_rows, n_cols), dtype = numpy.float32)
     outflow_weights_nodata = -1.0
     outflow_weights[:] = outflow_weights_nodata
@@ -186,9 +185,9 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                 continue
             current_index = row_index * n_cols + col_index
             found = False
-            for neighbor_offset in range(n_neighbors):
+            for neighbor_direction_index in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
-                    angle_to_neighbor[neighbor_offset] - flow_direction)
+                    angle_to_neighbor[neighbor_direction_index] - flow_direction)
                 if flow_angle_to_neighbor < numpy.pi/4.0:
                     found = True
 
@@ -200,42 +199,41 @@ def calculate_flow_graph(flow_direction_uri, outflow_weights_uri, outflow_direct
                     #neighbor indexes are oriented 90 degrees and odd are 45
                     outflow_weight = 0.0
 
-                    if neighbor_offset % 2 == 0:
+                    if neighbor_direction_index % 2 == 0:
                         outflow_weight = 1.0 - numpy.tan(flow_angle_to_neighbor)
                     else:
                         outflow_weight = numpy.tan(
                             numpy.pi/4.0 - flow_angle_to_neighbor)
 
-                    #This will optimize things a bit:
-                    #If it's nearly all flowing in one direction make it
-                    #entirely flow in one direction
+                    #This will handle cases where almost all flow is going in
+                    #one direction, or is supposed to go in one direction,
+                    #but because of machine error splits insignificantly
+                    #between two cells. The 0.999 is a little overkill but works
                     if outflow_weight > 0.999:
                         outflow_weight = 1.0
 
                     #If the outflow is nearly 0, make push it all
-                    #To the next neighbor
+                    #to the next neighbor
                     if outflow_weight < 0.001:
                         outflow_weight = 1.0
-                        neighbor_offset += 1
+                        neighbor_direction_index = \
+                            (neighbor_direction_index + 1) % 8
+
+                    outflow_direction[row_index, col_index] = \
+                        neighbor_direction_index
+                    outflow_weights[row_index, col_index] = outflow_weight
 
                     #There's flow from the current cell to the neighbor
-                    #Get the flat indexes for the current and outflow cell
+                    #so figure out the neighbor then add to inflow set
                     outflow_index = \
-                        current_index + diagonal_offsets[neighbor_offset]
-                    outflow_row = outflow_index / n_cols
-                    outflow_col = outflow_index % n_cols
+                        current_index + diagonal_offsets[neighbor_direction_index]
+                    inflow_cell_set.add(outflow_index)
 
-                    outflow_weights[outflow_row, outflow_col] = outflow_weight
-
-                    #Update outflow neighbor
-                    outflow_direction[outflow_row, outflow_col] = neighbor_offset
-                    
-                    if outflow_weight != 0.0:
-                        inflow_cell_set.add(outflow_index)
-                    
+                    #if there is non-zero flow to the next cell clockwise then
+                    #add it to the inflow set
                     if outflow_weight != 1.0:
-                        next_outflow_index = \
-                            current_index + diagonal_offsets[neighbor_offset+1]
+                        next_outflow_index = current_index + \
+                            diagonal_offsets[(neighbor_direction_index + 1) % 8]
                         inflow_cell_set.add(next_outflow_index)
 
                     #we found the outflow direction
@@ -421,7 +419,7 @@ def calculate_transport(
                     if flat_index < 0:
                         raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
                     neighbors_to_process[unprocessed_count] = flat_index
-                    unprocessed_count += 1
+#                    unprocessed_count += 1
                 else:
                     #add up the influx
                     in_flux += inflow_flux * outflow_weight
@@ -435,7 +433,6 @@ def calculate_transport(
             for neighbor_index in xrange(unprocessed_count):
                 cells_to_process.append(neighbors_to_process[neighbor_index])
             continue
-
 
         #otherwise calculate mass balance for current pixel
         loss = in_flux * absorption_rate_array[current_row, current_col]
