@@ -804,7 +804,7 @@ def valuation(args):
     # turbines and the number of turbines per circuit. If a fractional value is
     # returned we want to round up and error on the side of having the farm be
     # slightly larger
-    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
+    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
     # The distance needed between turbines
     spacing_dist = rotor_diameter * rotor_diameter_factor
 
