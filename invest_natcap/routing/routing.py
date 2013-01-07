@@ -364,7 +364,8 @@ def calculate_transport(
         outflow_direction_dataset, 'count.tif', 'GTiff', -1,
         gdal.GDT_Int32)
     visit_band, visit_nodata, visit_array = raster_utils.extract_band_and_nodata(visit_count_dataset, get_array = True)
-    visit_array[:] = -1
+    not_visited_constant = -1
+    visit_array[:] = not_visited_constant
 
 
     visit_count = 0
@@ -375,7 +376,7 @@ def calculate_transport(
         current_col = current_index % n_cols
 
         try:
-            if visit_array[current_row, current_col] == -1:
+            if visit_array[current_row, current_col] == not_visited_constant:
                 visit_array[current_row, current_col] = visit_count
                 visit_count += 1
         except IndexError:
@@ -390,7 +391,7 @@ def calculate_transport(
             neighbor_col = current_col+col_offsets[neighbor_index]
 
             #See if neighbor out of bounds
-            if neighbor_row < 0 or neighbor_col < 0 or neighbor_row >= n_rows or neighbor_col > n_cols:
+            if neighbor_row < 0 or neighbor_col < 0 or neighbor_row >= n_rows or neighbor_col >= n_cols:
                 continue
 
             try:
@@ -419,7 +420,7 @@ def calculate_transport(
                     if flat_index < 0:
                         raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
                     neighbors_to_process[unprocessed_count] = flat_index
-#                    unprocessed_count += 1
+                    unprocessed_count += 1
                 else:
                     #add up the influx
                     in_flux += inflow_flux * outflow_weight
