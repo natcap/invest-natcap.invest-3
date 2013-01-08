@@ -300,6 +300,14 @@ class CSVCheckerTester(CheckerTester):
                                                 str_restriction]
             self.assertNoError()
 
+        def test_regexp_fieldname_restriction(self):
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
+                 'samp_input', 'Guild.csv')
+            field_restriction = {'field': {'pattern': 'NS_.*', 'flag':
+                                           'ignoreCase'}}
+            self.validate_as['restrictions'] = [field_restriction]
+            self.assertNoError()
+
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
     def setUp(self):

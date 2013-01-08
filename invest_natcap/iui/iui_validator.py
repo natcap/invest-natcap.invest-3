@@ -463,17 +463,35 @@ class TableChecker(FileChecker, ValidationAssembler):
         table = self._build_table()
         for restriction in restriction_list:
             for row in table:
-                value = row[restriction['field']]
-                assembled_dict = self.assemble(value, restriction['validateAs'])
+                if restriction['field'].__class__ in [unicode, str]:
+                    if restriction['field'] not in row:
+                        print row
+                        return 'Field %s is required.' % restriction['field']
+                    field_names = [restriction['field']]
+                else:
+                    field_names = []
+                    for field in row.keys():
+                        field_error = self.str_checker.check_regexp(
+                            restriction['field'])
+                        if field_error in [None, '']:
+                            field_names.append(field)
 
-                error = None
-                if assembled_dict['type'] == 'number':
-                    error = self.num_checker.run_checks(assembled_dict)
-                else:  # assume the restriction type is a string
-                    error = self.str_checker.run_checks(assembled_dict)
+                    if len(field_names) == 0:
+                        return str('This file must have at least one field '
+                            'matching the pattern %s' %
+                            restriction['field']['pattern'])
 
-                if error != None and error != '':
-                    return error
+                for field_name in field_names:
+                    assembled_dict = self.assemble(field_name, restriction['validateAs'])
+
+                    error = None
+                    if assembled_dict['type'] == 'number':
+                        error = self.num_checker.run_checks(assembled_dict)
+                    else:  # assume the restriction type is a string
+                        error = self.str_checker.run_checks(assembled_dict)
+
+                    if error != None and error != '':
+                        return error
 
     def _build_table(self):
         """This is a function stub for reimplementation.  Must return a list of
