@@ -286,9 +286,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         {h_s: {
             (hab1, stressA): [indiv num raster, crit raster1, crit raster2...],
             (hab2, stressA): [...] }
+         #Habitats will have to be rasterized twice. Once as r/dq*w, and once
+         #as r/dq for the recovery potential calcs.
          h: {
-            (hab1): [indiv num raster, hab crit raster, ...],
-            ...}
+            (hab1): {'Risk': [indiv num raster, hab crit raster, ...],
+                    'RP': [indiv num raster, hab crit raster]
+                    }
+             ...
+            }
          s: {
             (stress1): [indiv num raster, stress crit raster, ...]
             }
@@ -300,15 +305,20 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         }
     '''
     temp_rast_dict = os.path.join(dir, 'Intermediate', 'Crit_Rasters')
-    denoms = {}
+    denoms = {'h':{}, 'h_s':{}}
     crit_lists = {'h_s': {}, 'h': {}, 's': {}}
 
     for pair in h_s:
         h, s = pair
-        denoms[pair]['E'], denoms[pair]['C'] = 0
-        ###########FIGURE OUT WHAT TO DO WITH THIS. DO IT BY H-S/H/S OR BY
-        ###########C/E/RECOVERY POTENTIAL?#################################
-        #########crit_lists['h_s'][pair] = []################
+        
+        #All of the initialization for the verious subdictionaries. God
+        #help you trying to remember individual structure. 
+        denoms['h_s'][pair] = {}
+        denoms['h'][h], denoms['h'][h], denoms['h_s'][pair]['E'], 
+            denoms['h_s'][pair]['C'] = 0
+
+        crit_lists['h_s'][pair], crit_lists['s'][s] = [] 
+        crit_lists['h'][h] = {'Risk':[], 'RP':[]}
 
         base_ds = h_s[pair]['DS']
         base_band = base_ds.GetRasterBand(1)
