@@ -4,16 +4,18 @@ import time
 import logging
 
 import numpy
+cimport numpy
 from osgeo import gdal
 
 from invest_natcap import raster_utils
+
+from libcpp.stack cimport stack
+
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing cython core')
-
-
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
@@ -66,49 +68,69 @@ def calculate_transport(
     source_data_file = tempfile.TemporaryFile()
     absorption_rate_data_file = tempfile.TemporaryFile()
 
-    outflow_direction_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = raster_utils.load_memory_mapped_array(
         outflow_direction_uri, outflow_direction_data_file)
 
     #TODO: This is hard-coded because load memory mapped array doesn't return a nodata value
-    outflow_direction_nodata = 9
-    outflow_weights_array = raster_utils.load_memory_mapped_array(
+    cdef int outflow_direction_nodata = 9
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = raster_utils.load_memory_mapped_array(
         outflow_weights_uri, outflow_weights_data_file)
-    source_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = raster_utils.load_memory_mapped_array(
         source_uri, source_data_file)
-    absorption_rate_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = raster_utils.load_memory_mapped_array(
         absorption_rate_uri, absorption_rate_data_file)
 
     #Create output arrays for loss and flux
-    n_cols = outflow_direction_dataset.RasterXSize
-    n_rows = outflow_direction_dataset.RasterYSize
+    cdef int n_cols = outflow_direction_dataset.RasterXSize
+    cdef int n_rows = outflow_direction_dataset.RasterYSize
     transport_nodata = -1.0
 
     loss_data_file = tempfile.TemporaryFile()
     flux_data_file = tempfile.TemporaryFile()
 
-    loss_array = numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+',
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] loss_array = numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+',
                               shape=(n_rows, n_cols))
-    flux_array = numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+',
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flux_array = numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+',
                               shape=(n_rows, n_cols))
     loss_array[:] = transport_nodata
     flux_array[:] = transport_nodata
 
     #Process flux through the grid
-    cells_to_process = collections.deque(sink_cell_set)
-    cell_neighbor_to_process = collections.deque([0]*len(cells_to_process))
+
+#    cells_to_process = collections.deque(sink_cell_set)
+#    cell_neighbor_to_process = collections.deque([0]*len(cells_to_process))
+
+    cdef stack[int] cells_to_process
+    for cell in sink_cell_set:
+        cells_to_process.push(cell)
+    cdef stack[int] cell_neighbor_to_process
+    for _ in range(cells_to_process.size()):
+        cell_neighbor_to_process.push(0)
+
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
     #    5 6 7
 
-    row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
-    inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    while len(cells_to_process) > 0:
-        current_index = cells_to_process.pop()
+    cdef int current_index
+    cdef int current_row
+    cdef int current_col
+    cdef int neighbor_direction
+    cdef int neighbor_row
+    cdef int neighbor_col
+    cdef double absorption_rate
+    cdef double outflow_weight
+    cdef double in_flux
+
+    while cells_to_process.size() > 0:
+        current_index = cells_to_process.top()
+        cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
 
@@ -117,7 +139,8 @@ def calculate_transport(
                 current_row, current_col]
             loss_array[current_row, current_col] = 0.0
 
-        current_neighbor_index = cell_neighbor_to_process.pop()
+        current_neighbor_index = cell_neighbor_to_process.top()
+        cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
             #get percent flow from neighbor to current cell
 
@@ -162,13 +185,13 @@ def calculate_transport(
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
-                cells_to_process.append(current_index)
-                cell_neighbor_to_process.append(direction_index)
+                cells_to_process.push(current_index)
+                cell_neighbor_to_process.push(direction_index)
 
                 #Calculating the flat index for the neighbor and starting
                 #at it's neighbor index of 0
-                cells_to_process.append(neighbor_row * n_cols + neighbor_col)
-                cell_neighbor_to_process.append(0)
+                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
+                cell_neighbor_to_process.push(0)
                 break
 
     LOGGER.info('Writing results to disk')
