@@ -32,12 +32,12 @@ class TestRasterUtils(unittest.TestCase):
             os.makedirs(base_dir)
 
         flux_regression_uri = 'data/routing_regression/flux.tif'
-#        dem_uri = 'data/sediment_test_data/dem'
+        dem_uri = 'data/sediment_test_data/dem'
 #        dem_uri = 'data/smooth_rasters/smoothleft.tif'
 #        dem_uri = 'data/smooth_rasters/smoothright.tif'
 #        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
 #        dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
-        dem_uri = 'data/smooth_rasters/random.tif'
+#        dem_uri = 'data/smooth_rasters/random.tif'
         source_uri = os.path.join(base_dir, 'source.tif')
         absorption_rate_uri = os.path.join(base_dir, 'absorption.tif')
 
