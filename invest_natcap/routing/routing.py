@@ -45,7 +45,7 @@ LOGGER = logging.getLogger('routing')
 
 def route_flux(
     dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri,
-    workspace_dir, aoi_uri = None):
+    workspace_dir, aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -82,7 +82,6 @@ def route_flux(
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
 
-
 def calculate_flow_direction(dem_uri, flow_direction_uri):
     """Calculates the flow direction of a landscape given its dem
 
@@ -117,6 +116,7 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
     LOGGER.info(
         'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
 
+
 def calculate_flow_graph(
     flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
     """This function calculates the flow graph from a d-infinity based
@@ -150,11 +150,11 @@ def calculate_flow_graph(
         raster_utils.extract_band_and_nodata(flow_direction_dataset)
     n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
 
-    outflow_weights = numpy.empty((n_rows, n_cols), dtype = numpy.float32)
+    outflow_weights = numpy.empty((n_rows, n_cols), dtype=numpy.float32)
     outflow_weights_nodata = -1.0
     outflow_weights[:] = outflow_weights_nodata
 
-    outflow_direction = numpy.empty((n_rows, n_cols), dtype = numpy.byte)
+    outflow_direction = numpy.empty((n_rows, n_cols), dtype=numpy.byte)
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
 
@@ -167,7 +167,7 @@ def calculate_flow_graph(
     #and the actual angle to point to the neighbor
     n_neighbors = 8
     angle_to_neighbor = \
-        [i * numpy.pi/4.0 for i in range(n_neighbors)]
+        [i * numpy.pi / 4.0 for i in range(n_neighbors)]
 
     flow_direction_memory_file = tempfile.TemporaryFile()
     flow_direction_array = raster_utils.load_memory_mapped_array(
@@ -176,7 +176,6 @@ def calculate_flow_graph(
     #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
     diagonal_offsets = \
         [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
-
 
     #Iterate over flow directions
     for row_index in range(n_rows):
@@ -266,6 +265,7 @@ def calculate_flow_graph(
                     (time.clock()-start))
     return sink_cell_set, source_cell_set
 
+
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
     absorption_rate_uri, loss_uri, flux_uri):
@@ -337,10 +337,10 @@ def calculate_transport(
     loss_data_file = tempfile.TemporaryFile()
     flux_data_file = tempfile.TemporaryFile()
 
-    loss_array = numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+', \
-                                  shape = (n_rows, n_cols))
-    flux_array = numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+', \
-                                  shape = (n_rows, n_cols))
+    loss_array = numpy.memmap(loss_data_file, dtype=numpy.float32, mode='w+',
+                              shape=(n_rows, n_cols))
+    flux_array = numpy.memmap(flux_data_file, dtype=numpy.float32, mode='w+',
+                              shape=(n_rows, n_cols))
     loss_array[:] = transport_nodata
     flux_array[:] = transport_nodata
 
@@ -362,7 +362,6 @@ def calculate_transport(
         current_index = cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
-
 
         if flux_array[current_row, current_col] == transport_nodata:
             flux_array[current_row, current_col] = source_array[
@@ -438,5 +437,5 @@ def calculate_transport(
     loss_band.WriteArray(loss_array)
     flux_band.WriteArray(flux_array)
 
-    LOGGER.info('Done processing transport elapsed time %ss' % \
-                    (time.clock() - start))
+    LOGGER.info('Done processing transport elapsed time %ss' %
+                (time.clock() - start))
