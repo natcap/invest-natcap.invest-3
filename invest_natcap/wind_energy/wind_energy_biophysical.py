@@ -422,7 +422,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     if os.path.isfile(output_uri):
         os.remove(output_uri)
 
-    LOGGER.info('Creating new datasource')
+    LOGGER.debug('Creating new datasource')
     # Create a new shapefile from the orginal_datasource 
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
@@ -439,7 +439,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     # Get the number of fields in original_layer
     original_field_count = original_layer_dfn.GetFieldCount()
 
-    LOGGER.info('Creating new fields')
+    LOGGER.debug('Creating new fields')
     # For every field, create a duplicate field and add it to the new 
     # shapefiles layer
     for fld_index in range(original_field_count):
@@ -454,7 +454,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     aoi_feat = aoi_layer.GetFeature(0)
     aoi_geom = aoi_feat.GetGeometryRef()
     
-    LOGGER.info('Starting iteration over geometries')
+    LOGGER.debug('Starting iteration over geometries')
     # Iterate over each feature in original layer
     for orig_feat in orig_layer:
         # Get the geometry for the feature
