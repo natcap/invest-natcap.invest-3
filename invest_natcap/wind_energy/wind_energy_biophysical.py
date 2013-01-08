@@ -114,18 +114,6 @@ def execute(args):
     try:
         LOGGER.info('Trying to open the AOI')
         aoi = ogr.Open(str(args['aoi_uri']))
-        
-        LOGGER.info('Checking AOIs projection')
-        # Check to make sure that the AOI is projected and in meters
-        if not check_datasource_projections([aoi]):
-            # Creating a unique exception on the fly to provide better feedback
-            # to the user
-            class ProjectionError(Exception):
-                """A self defined Exception for a bad projection"""
-                pass
-
-            raise ProjectionError('The AOI is not projected properly. Please '
-                   'refer to the user guide or help icon on the user interface')
 
         wind_pts_uris = os.path.join(inter_dir, 'wind_points' + suffix)
         bathymetry_uris = os.path.join(inter_dir, 'bathymetry' + suffix)
@@ -216,28 +204,6 @@ def execute(args):
     wind_energy_core.biophysical(biophysical_args)
 
     LOGGER.info('Leaving Wind_Energy_Biophysical')
-
-def check_datasource_projections(dsource_list):
-    """Checks if a list of OGR Datasources are projected and projected in the
-        linear units of 1.0 which is meters
-
-        dsource_list - a list of OGR Datasources
-
-        returns - True if all Datasources are projected and projected in meters,
-            otherwise returns False"""
-    LOGGER.info('Entering check_datasource_projections')
-    # Loop through all the datasources and check the projection
-    for dsource in dsource_list:
-        srs = dsource.GetLayer().GetSpatialRef()
-        if not srs.IsProjected():
-            return False
-        # Compare linear units against 1.0 because that identifies units are in
-        # meters
-        if srs.GetLinearUnits() != 1.0:
-            return False
-
-    LOGGER.info('Leaving check_datasource_projections')
-    return True
 
 def read_wind_data(wind_data_uri, field_list):
     """Unpack the wind data into a dictionary
