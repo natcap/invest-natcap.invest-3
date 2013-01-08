@@ -18,5 +18,7 @@
         },
         "log": "log.txt",
         "results": "results.zip"
-    }
+    },
+    "timeout": 15,
+    "retries": 3
 }
