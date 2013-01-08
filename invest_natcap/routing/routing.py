@@ -10,9 +10,9 @@
     The 'p' refers to 'pixel' since the flow model is pixel centric.
 
     One of the outputs from this model will be a flow graph represented as a
-    sparse matrix.  The rows in the matrix are the originating nodes and the 
+    sparse matrix.  The rows in the matrix are the originating nodes and the
     columns represent the outflow, thus G[i,j]'s value is the fraction of flow
-    from node 'i' to node 'j'.  The following expresses how to calculate the 
+    from node 'i' to node 'j'.  The following expresses how to calculate the
     matrix indexes from the pixels original row,column position in the raster.
     Given that the raster's dimension is 'n_rows' by 'n_columns', pixel located
     at row 'r' and colunn 'c' has index
@@ -21,7 +21,7 @@
 
     Likewise given 'index' r and c can be derived as:
 
-        (index) -> (index div n_columns, index mod n_columns) where 'div' is 
+        (index) -> (index div n_columns, index mod n_columns) where 'div' is
             the integer division operator and 'mod' is the integer remainder
             operation."""
 
@@ -64,7 +64,7 @@ def route_flux(
             write intermediate files to
         aoi_uri - an OGR datasource for an area of interest polygon.
             the routing flux calculation will only occur on those pixels
-            and neighboring pixels will either be raw outlets or 
+            and neighboring pixels will either be raw outlets or
             non-contibuting inputs depending on the orientation of the DEM.
 
         returns nothing"""
@@ -119,11 +119,11 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
 def calculate_flow_graph(
     flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
-    """This function calculates the flow graph from a d-infinity based 
+    """This function calculates the flow graph from a d-infinity based
         flow algorithm to include including source/sink cells
         as well as a data structures to assist in walking up the flow graph.
 
-        flow_direction_uri - uri to a flow direction GDAL dataset that's 
+        flow_direction_uri - uri to a flow direction GDAL dataset that's
             used to calculate the flow graph
         outflow_weights_uri - a uri to a float32 dataset that will be created
             whose elements correspond to the percent outflow from the current
@@ -189,7 +189,7 @@ def calculate_flow_graph(
             found = False
             for neighbor_direction_index in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
-                    angle_to_neighbor[neighbor_direction_index] - 
+                    angle_to_neighbor[neighbor_direction_index] -
                     flow_direction)
                 if flow_angle_to_neighbor < numpy.pi/4.0:
                     found = True
@@ -251,9 +251,9 @@ def calculate_flow_graph(
         outflow_weights_nodata, gdal.GDT_Float32)
     outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
     outflow_weights_band.WriteArray(outflow_weights)
-    
+
     outflow_direction_dataset = raster_utils.new_raster_from_base(
-        flow_direction_dataset, outflow_direction_uri, 'GTiff', 
+        flow_direction_dataset, outflow_direction_uri, 'GTiff',
         outflow_direction_nodata, gdal.GDT_Byte)
     outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
     outflow_direction_band.WriteArray(outflow_direction)
@@ -283,7 +283,7 @@ def calculate_transport(
             5 6 7
 
         outflow_weights_uri - a uri to a float32 dataset whose elements
-            correspond to the percent outflow from the current cell to its 
+            correspond to the percent outflow from the current cell to its
             first counter-clockwise neighbor
 
         sink_cell_set - a set of flat integer indexes for the cells in flow
@@ -363,7 +363,7 @@ def calculate_transport(
         current_row = current_index / n_cols
         current_col = current_index % n_cols
 
-        
+
         if flux_array[current_row, current_col] == transport_nodata:
             flux_array[current_row, current_col] = source_array[
                 current_row, current_col]
@@ -396,7 +396,7 @@ def calculate_transport(
             outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
             if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
-            
+
             #TODO: Make sure that there is outflow from the neighbor cell to the current one before processing
             if abs(outflow_weight) < 0.001:
                 continue
@@ -416,7 +416,7 @@ def calculate_transport(
                 #then add the neighbor to the process stack
                 cells_to_process.append(current_index)
                 cell_neighbor_to_process.append(direction_index)
-                
+
                 #Calculating the flat index for the neighbor and starting
                 #at it's neighbor index of 0
                 cells_to_process.append(neighbor_row * n_cols + neighbor_col)
