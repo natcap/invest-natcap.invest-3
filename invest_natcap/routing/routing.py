@@ -379,6 +379,7 @@ def calculate_transport(
         if flux_array[current_row, current_col] == transport_nodata:
             flux_array[current_row, current_col] = source_array[
                 current_row, current_col]
+            loss_array[current_row, current_col] = 0.0
 
         current_neighbor_index = cell_neighbor_to_process.pop()
         for direction_index in xrange(current_neighbor_index, 8):
@@ -417,12 +418,8 @@ def calculate_transport(
                 flux_array[current_row, current_col] += outflow_weight * in_flux * \
                     (1.0 - absorption_rate)
 
-                loss = in_flux * absorption_rate
+                loss_array[current_row, current_col] += in_flux * absorption_rate
 
-                if loss_array[current_row, current_col] == transport_nodata:
-                    loss_array[current_row, current_col] = loss
-                else:
-                    loss_array[current_row, current_col] += loss
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
