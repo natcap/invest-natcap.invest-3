@@ -141,6 +141,9 @@ setup(name='invest_natcap',
                              sources = ['invest_natcap/hydropower/hydropower_cython_core.pyx']),
                    Extension(name="raster_cython_utils",
                              sources = ['invest_natcap/raster_cython_utils.pyx'],
+                             language="c++"),
+                   Extension(name="routing_cython_core",
+                             sources = ['invest_natcap/routing/routing_cython_core.pyx'],
                              language="c++")]),
       **py2exe_args)
 
