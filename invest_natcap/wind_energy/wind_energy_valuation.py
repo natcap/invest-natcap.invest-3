@@ -4,7 +4,6 @@ import logging
 import csv
 import json
 
-from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
@@ -124,6 +123,7 @@ def execute(args):
     val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
     if len(val_turbine_dict.keys()) != val_param_len:
         class FieldError(Exception):
+            """A custom error message for fields that are missing"""
             pass
         raise FieldError('An Error occured from reading in a field value from '
                 'either the turbine CSV file or the global parameters JSON '
@@ -154,9 +154,9 @@ def execute(args):
 
         grid_dict = {}
         land_dict = {}
-        # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
-        # all the fields to lowercase because it is more readable and easier than
-        # editing the attribute itself
+        # Making a shallow copy of the attribute 'fieldnames' explicitly to
+        # edit to all the fields to lowercase because it is more readable 
+        # and easier than editing the attribute itself
         field_names = reader.fieldnames
 
         for index in range(len(field_names)):
