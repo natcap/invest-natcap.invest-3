@@ -7,16 +7,9 @@ import json
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import shapely.wkt
-from shapely.ops import unary_union
-from shapely.wkb import dumps
-from shapely.wkb import loads
-from shapely import speedups
 
 from invest_natcap.wind_energy import wind_energy_core
 from invest_natcap import raster_utils
-
-speedups.enable()
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -205,6 +198,7 @@ def execute(args):
     
     if len(bio_turbine_dict.keys()) != len(biophysical_params):
         class FieldError(Exception):
+            """A custom error message for fields that are missing"""
             pass
         raise FieldError('An Error occured from reading in a field value from '
         'either the turbine CSV file or the global parameters JSON file. ' 
@@ -522,185 +516,3 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     
     LOGGER.info('Leaving clip_datasource')
     return output_datasource
-
-#def clip_datasource_new(aoi_ds, orig_ds, output_uri):
-#   """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
-#       geometry type polygon. The aoi_ds should be a shapefile with a layer
-#       that has only one polygon feature
-
-#       aoi_ds - an OGR Datasource that is the clipping bounding box
-#       orig_ds - an OGR Datasource to clip
-#       out_uri - output uri path for the clipped datasource
-
-#       returns - a clipped OGR Datasource """
-#  
-#   LOGGER.info('Entering clip_datasource_new')
-
-#   orig_layer = orig_ds.GetLayer()
-#   aoi_layer = aoi_ds.GetLayer()
-
-#   # If the file already exists remove it
-#   if os.path.isfile(output_uri):
-#       os.remove(output_uri)
-
-#   LOGGER.info('Creating new datasource')
-#   # Create a new shapefile from the orginal_datasource 
-#   output_driver = ogr.GetDriverByName('ESRI Shapefile')
-#   output_datasource = output_driver.CreateDataSource(output_uri)
-
-#   # Get the original_layer definition which holds needed attribute values
-#   original_layer_dfn = orig_layer.GetLayerDefn()
-
-#   # Create the new layer for output_datasource using same name and geometry
-#   # type from original_datasource as well as spatial reference
-#   output_layer = output_datasource.CreateLayer(
-#           original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
-#           original_layer_dfn.GetGeomType())
-
-#   # Get the number of fields in original_layer
-#   original_field_count = original_layer_dfn.GetFieldCount()
-
-#   LOGGER.info('Creating new fields')
-#   # For every field, create a duplicate field and add it to the new 
-#   # shapefiles layer
-#   for fld_index in range(original_field_count):
-#       original_field = original_layer_dfn.GetFieldDefn(fld_index)
-#       output_field = ogr.FieldDefn(
-#               original_field.GetName(), original_field.GetType())
-#       # NOT setting the WIDTH or PRECISION because that seems to be unneeded
-#       # and causes interesting OGR conflicts
-#       output_layer.CreateField(output_field)
-
-#   # A list to hold the aoi shapefiles geometries
-#   aoi_datasource_geoms = []
-
-#   LOGGER.info('Build up AOI datasources geometries with Shapely')
-#   for aoi_feat in aoi_layer:
-#       aoi_geom = shapely.wkt.loads(aoi_feat.GetGeometryRef().ExportToWkt())
-#       aoi_datasource_geoms.append(aoi_geom)
-#   
-#   LOGGER.info('Taking Unary Union on AOI geometries')
-#   # Calculate the union on the list of geometries to get one collection of
-#   # geometries
-#   aoi_geom_collection = unary_union(aoi_datasource_geoms)
-#   
-#   LOGGER.info('Starting iteration over geometries')
-#   # Iterate over each feature in original layer
-#   for orig_feat in orig_layer:
-#       # Get the geometry for the feature
-#       orig_geom_wkb = orig_feat.GetGeometryRef().ExportToWkb()
-#       orig_geom_shapely = loads(orig_geom_wkb) 
-#       
-#       intersect_geom = aoi_geom_collection.intersection(orig_geom_shapely)
-#       
-#       if not intersect_geom.is_empty:
-#           # Copy original_datasource's feature and set as new shapes feature
-#           output_feature = ogr.Feature(
-#                   feature_def=output_layer.GetLayerDefn())
-#           output_layer.CreateFeature(output_feature)
-#       
-#           output_feature.SetFrom(orig_feat, False)
-#           output_layer.SetFeature(output_feature)
-#           output_feature = None
-#   
-#   LOGGER.info('Leaving clip_datasource_new')
-#   return output_datasource
-
-#def clip_datasource_fast(aoi_ds, orig_ds, output_uri):
-#   """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
-#       geometry type polygon. The aoi_ds should be a shapefile with a layer
-#       that has only one polygon feature
-
-#       aoi_ds - an OGR Datasource that is the clipping bounding box
-#       orig_ds - an OGR Datasource to clip
-#       out_uri - output uri path for the clipped datasource
-
-#       returns - a clipped OGR Datasource """
-#  
-#   LOGGER.info('Entering clip_datasource_fast')
-
-#   orig_layer = orig_ds.GetLayer()
-#   aoi_layer = aoi_ds.GetLayer()
-
-#   # If the file already exists remove it
-#   if os.path.isfile(output_uri):
-#       os.remove(output_uri)
-
-#   LOGGER.info('Creating new datasource')
-#   # Create a new shapefile from the orginal_datasource 
-#   output_driver = ogr.GetDriverByName('ESRI Shapefile')
-#   output_datasource = output_driver.CreateDataSource(output_uri)
-
-#   # Get the original_layer definition which holds needed attribute values
-#   original_layer_dfn = orig_layer.GetLayerDefn()
-
-#   # Create the new layer for output_datasource using same name and geometry
-#   # type from original_datasource as well as spatial reference
-#   output_layer = output_datasource.CreateLayer(
-#           original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
-#           original_layer_dfn.GetGeomType())
-
-#   LOGGER.info('Creating new field')
-#   # We only create one general field here because this function assumes that
-#   # only the geometries and shapes themselves matter. It uses a faster
-#   # clipping approach such that the specific field values can not be tracked
-#   output_field = ogr.FieldDefn('id', ogr.OFTReal)
-#   output_layer.CreateField(output_field)
-
-#   # A list to hold the original shapefiles geometries
-#   original_datasource_geoms = []
-#   LOGGER.info('Build up original datasources geometries with Shapely')
-#   for original_feat in original_layer:
-#       original_geom = shapely.wkt.loads(
-#               original_feat.GetGeometryRef().ExportToWkt())
-#       # The commented line below simplies the geometry by smoothing it which
-#       # allows the union operation to run much faster. Until accuracy is
-#       # decided upon, we will do it straight up
-#       #original_datasource_geoms.append(geom.simplify(0.001, preserve_topology=False))
-#       
-#       original_datasource_geoms.append(geom)
-
-#   LOGGER.info('Taking Unary Union on original geometries')
-#   # Calculate the union on the list of geometries to get one collection of
-#   # geometries
-#   original_geom_collection = unary_union(original_datasource_geoms)
-
-#   # A list to hold the aoi shapefiles geometries
-#   aoi_datasource_geoms = []
-
-#   LOGGER.info('Build up AOI datasources geometries with Shapely')
-#   for aoi_feat in aoi_layer:
-#       aoi_geom = shapely.wkt.loads(aoi_feat.GetGeometryRef().ExportToWkt())
-#       aoi_datasource_geoms.append(aoi_geom)
-#   
-#   LOGGER.info('Taking Unary Union on AOI geometries')
-#   # Calculate the union on the list of geometries to get one collection of
-#   # geometries
-#   aoi_geom_collection = unary_union(aoi_datasource_geoms)
-
-#   LOGGER.info('Take the intersection of the AOI geometry collection and the original geometry collection')
-#   # Take the intersection of the geometry collections which will give us our
-#   # 'clipped' geometry set
-#   clipped_geom = aoi_geom_collection.intersection(original_geom_collection)
-
-#   LOGGER.debug('Dump the Shapely geometry to Well Known Binary format')
-#   # Dump the unioned Shapely geometry into a Well Known Binary format so that
-#   # it can be read and used by OGR
-#   wkb_geom = dumps(clipped_geom)
-
-#   # Create a new OGR geometry from the Well Known Binary
-#   ogr_geom = ogr.CreateGeometryFromWkb(wkb_geom)
-#   output_feature = ogr.Feature(output_layer.GetLayerDefn())
-#   output_layer.CreateFeature(output_feature)
-#   
-#   field_index = output_feature.GetFieldIndex('id')
-#   # Arbitrarily set the field to 1 since there is just one feature that has
-#   # the clipped geometry
-#   output_feature.SetField(field_index, 1)
-#   output_feature.SetGeometry(ogr_geom)
-#   
-#   output_layer.SetFeature(output_feature)
-#   output_feature = None
-#   
-#   LOGGER.info('Leaving clip_datasource_fast')
-#   return output_datasource
