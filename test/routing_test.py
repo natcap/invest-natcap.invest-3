@@ -31,13 +31,13 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        regression_uri = 'data/routing_regression/out.tif'
-        dem_uri = 'data/sediment_test_data/dem'
+        flux_regression_uri = 'data/routing_regression/flux.tif'
+#        dem_uri = 'data/sediment_test_data/dem'
 #        dem_uri = 'data/smooth_rasters/smoothleft.tif'
 #        dem_uri = 'data/smooth_rasters/smoothright.tif'
 #        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
 #        dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
-#        dem_uri = 'data/smooth_rasters/random.tif'
+        dem_uri = 'data/smooth_rasters/random.tif'
         source_uri = os.path.join(base_dir, 'source.tif')
         absorption_rate_uri = os.path.join(base_dir, 'absorption.tif')
 
@@ -51,6 +51,6 @@ class TestRasterUtils(unittest.TestCase):
 
         routing.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
 
-#        invest_test_core.assertTwoDatasetEqualURI(self, output_uri, regression_uri)
-        subprocess.Popen(['qgis', flux_uri, 'count.tif', dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
-                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])
+        invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
+#        subprocess.Popen(['qgis', flux_uri, 'count.tif', dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
+#                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])
