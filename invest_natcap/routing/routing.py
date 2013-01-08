@@ -344,7 +344,7 @@ def calculate_transport(
     #Process flux through the grid
     visited_cells = set(sink_cell_set)
     cells_to_process = collections.deque(sink_cell_set)
-
+    cell_neighbor_to_process = collections.deque([0]*len(cells_to_process))
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
@@ -360,7 +360,6 @@ def calculate_transport(
 
     inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-
     #debugging
     visit_count_dataset = raster_utils.new_raster_from_base(
         outflow_direction_dataset, 'count.tif', 'GTiff', -1,
@@ -369,35 +368,24 @@ def calculate_transport(
     not_visited_constant = -1
     visit_array[:] = not_visited_constant
 
+    
 
-    visit_count = 0
-    neighbors_to_process = numpy.empty(8, dtype=numpy.int32)
     while len(cells_to_process) > 0:
         current_index = cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
 
-        try:
-            if visit_array[current_row, current_col] == not_visited_constant:
-                #LOGGER.error('current_row, current_col %s %s visit_count %s' % (current_row, current_col, visit_count))
-                visit_array[current_row, current_col] = visit_count
-                visit_count += 1
-            else:
-                pass
-                #LOGGER.error('visited before current_row, current_col %s %s' % (current_row, current_col))
-                
-        except IndexError:
-            LOGGER.error('current_index %s current_row, current_col %s %s' % (current_index, current_row, current_col))
-            raise Exception()
+        
+        if flux_array[current_row, current_col] == transport_nodata:
+            flux_array[current_row, current_col] = source_array[
+                current_row, current_col]
 
-        #see if all inflow neighbors are calculated
-        unprocessed_count = 0
-        in_flux = 0.0
-        for neighbor_index in xrange(8):
-#            LOGGER.info('neighbor index %s' % (neighbor_index))
+        current_neighbor_index = cell_neighbor_to_process.pop()
+        for direction_index in xrange(current_neighbor_index, 8):
+            #get percent flow from neighbor to current cell
 
-            neighbor_row = current_row+row_offsets[neighbor_index]
-            neighbor_col = current_col+col_offsets[neighbor_index]
+            neighbor_row = current_row+row_offsets[direction_index]
+            neighbor_col = current_col+col_offsets[direction_index]
 
             #See if neighbor out of bounds
             if neighbor_row < 0 or neighbor_col < 0 or neighbor_row >= n_rows or neighbor_col >= n_cols:
@@ -408,49 +396,44 @@ def calculate_transport(
             if neighbor_direction == outflow_direction_nodata:
                 continue
 
-            if inflow_offsets[neighbor_index] != neighbor_direction and \
-               inflow_offsets[neighbor_index] != (neighbor_direction - 1) % 8:
+            if inflow_offsets[direction_index] != neighbor_direction and \
+               inflow_offsets[direction_index] != (neighbor_direction - 1) % 8:
                 #then neighbor doesn't inflow into current cell
                 continue
 
             #Calculate the outflow weight
             outflow_weight = outflow_weights_array[neighbor_row, neighbor_col]
-            if inflow_offsets[neighbor_index] == (neighbor_direction - 1) % 8:
+            if inflow_offsets[direction_index] == (neighbor_direction - 1) % 8:
                 outflow_weight = 1.0 - outflow_weight
             
             #Make sure that there is outflow from the neighbor cell to the current one before processing
             if abs(outflow_weight) < 0.001:
                 continue
-    
-            #LOGGER.info('neighbor flows into current cell index direction %s %s' % (neighbor_index,neighbor_direction))
 
-            #Check if inflow flux has been processed
-            inflow_flux = flux_array[neighbor_row, neighbor_col]
-            #if inflow_flux == transport_nodata and outflow_weight > 0.0:
-            if inflow_flux == transport_nodata:
-                flat_index = neighbor_row * n_cols + neighbor_col
-                if flat_index < 0:
-                    raise Exception("Flat index less than 0 %s neighbor_row %s neighbor_col %s" % (flat_index, neighbor_row, neighbor_col))
-                neighbors_to_process[unprocessed_count] = flat_index
-                unprocessed_count += 1
+            in_flux = flux_array[neighbor_row, neighbor_col]
+            if in_flux != transport_nodata:
+                absorption_rate = absorption_rate_array[current_row, current_col]
+
+                flux_array[current_row, current_col] += outflow_weight * in_flux * \
+                    (1.0 - absorption_rate)
+
+                loss = in_flux * absorption_rate
+
+                if loss_array[current_row, current_col] == transport_nodata:
+                    loss_array[current_row, current_col] = loss
+                else:
+                    loss_array[current_row, current_col] += loss
             else:
-                #add up the influx
-                in_flux += inflow_flux * outflow_weight
-
-        #LOGGER.info("number of unprocessed neighbors %s" % (unprocessed_count))
-
-        #if any inflow neighbors are not calculated, *push current and neighbors on stack*
-        if unprocessed_count > 0:
-            cells_to_process.append(current_index)
-            for neighbor_index in xrange(unprocessed_count):
-                cells_to_process.append(neighbors_to_process[neighbor_index])
-            continue
-
-        #otherwise calculate mass balance for current pixel
-        loss = in_flux * absorption_rate_array[current_row, current_col]
-        flux_out = in_flux - loss + source_array[current_row, current_col]
-        loss_array[current_row, current_col] = loss
-        flux_array[current_row, current_col] = flux_out
+                #we need to process the neighbor, remember where we were
+                #then add the neighbor to the process stack
+                cells_to_process.append(current_index)
+                cell_neighbor_to_process.append(direction_index)
+                
+                #Calculating the flat index for the neighbor and starting
+                #at it's neighbor index of 0
+                cells_to_process.append(neighbor_row * n_cols + neighbor_col)
+                cell_neighbor_to_process.append(0)
+                break
 
     LOGGER.info('Writing results to disk')
     #Write results to disk
@@ -470,4 +453,3 @@ def calculate_transport(
     visit_band.WriteArray(visit_array)
 
     LOGGER.info('Done processing transport elapsed time %ss' % (time.clock()-start))
-
