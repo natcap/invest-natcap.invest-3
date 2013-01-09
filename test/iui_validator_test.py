@@ -302,6 +302,7 @@ class CSVCheckerTester(CheckerTester):
             self.assertNoError()
 
         def test_regexp_fieldname_restriction(self):
+            """Assert that CSVChecker can select fields based on regex."""
             self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
                  'samp_input', 'Guild.csv')
             field_restriction = {'field': {'pattern': 'NS_.*', 'flag':
