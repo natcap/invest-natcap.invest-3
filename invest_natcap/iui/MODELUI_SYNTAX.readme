@@ -364,10 +364,14 @@ others are optional.
     file.
 
     All per-record restrictions have two attributes:
-        "field": string
+        "field": string or dictionary
         ----------------
         This is the field that is being checked against either some
         value or against the value in another field.
+
+        If this field is a dictionary, it must define a regular expression that
+        will select a set of fields.  This dictionary must have the same
+        structure of primitive number checking.
 
         "validateAs" : JSON object
         ---------------------------
@@ -400,6 +404,17 @@ others are optional.
                                       "validateAs": {"type": "number",
                                                      "lessThan": 42}
                                      }                                     
+                                    ]}
+
+    example regex field selection
+    "validateAs": {"type": "CSV",
+                    "fieldsExist": ["NAME", "VALUE1", "VALUE2", "VALUE3", "NOTE"],
+                    "restrictions": [{"field": {"pattern": "VALUE[0-3]",
+                                                "flag": "ignoreCase"}},
+                                      "validateAs": {"type": "number",
+                                                     "lessThan": "10",
+                                                     "gteq": "0"}
+                                     }
                                     ]}
 
 
