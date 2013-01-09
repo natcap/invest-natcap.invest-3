@@ -454,8 +454,9 @@ class TableChecker(FileChecker, ValidationAssembler):
         List order is not validated.  Returns the error string if an error is
         found.  Returns None if no error found."""
 
-        available_fields = self._get_fieldnames()
+        available_fields = map(lambda x: x.upper(), self._get_fieldnames())
         for required_field in field_list:
+            required_field = required_field.upper()
             if required_field not in available_fields:
                 return str('Required field: ' + required_field + ' not found')
 
@@ -464,15 +465,16 @@ class TableChecker(FileChecker, ValidationAssembler):
         for restriction in restriction_list:
             for row in table:
                 if restriction['field'].__class__ in [unicode, str]:
-                    if restriction['field'] not in row:
-                        print row
+                    if restriction['field'].upper() not in row:
                         return 'Field %s is required.' % restriction['field']
                     field_names = [restriction['field']]
                 else:
                     field_names = []
                     for field in row.keys():
+                        restriction_dict = restriction['field'].copy()
+                        restriction_dict['value'] = field
                         field_error = self.str_checker.check_regexp(
-                            restriction['field'])
+                            restriction_dict)
                         if field_error in [None, '']:
                             field_names.append(field)
 
@@ -482,7 +484,7 @@ class TableChecker(FileChecker, ValidationAssembler):
                             restriction['field']['pattern'])
 
                 for field_name in field_names:
-                    assembled_dict = self.assemble(field_name, restriction['validateAs'])
+                    assembled_dict = self.assemble(row[field_name], restriction['validateAs'])
 
                     error = None
                     if assembled_dict['type'] == 'number':
@@ -649,7 +651,7 @@ class DBFChecker(TableChecker):
             return str('Must be a DBF file')
 
     def _get_fieldnames(self):
-        return self.file.header.fields
+        return self.file.fieldNames
 
     def _build_table(self):
         table_rows = []
