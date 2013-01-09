@@ -194,7 +194,8 @@ def execute_model(args):
 
 def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     floral_fields, uris):
-    """Calculate pollinator abundance on the landscape.
+    """Calculate pollinator abundance on the landscape.  The calculated
+    pollinator abundance raster will be created at uris['species_abundance'].
 
         landuse - a GDAL dataset of the LULC.
         lu_attr - a TableHandler
@@ -223,7 +224,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
                 will be saved.
             'temp' - a URI to a folder where temp files will be saved
 
-        Returns a GDAL dataset of the species abundance."""
+        Returns nothing."""
     nodata = -1.0
     map_attribute(landuse, lu_attr, guild, floral_fields, uris['floral'], sum)
     map_attribute(landuse, lu_attr, guild, nesting_fields, uris['nesting'], max)
@@ -262,7 +263,8 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
 
 
 def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
-    """Calculate the farm abundance raster.
+    """Calculate the farm abundance raster.  The final farm abundance raster
+    will be saved to uri.
 
         species_abundance - a URI to a GDAL dataset of species abundance.
         ag_map - a uri to a GDAL dataset of values where ag pixels are 1
@@ -271,7 +273,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
         uri - the output URI for the farm_abundance raster.
         temp_dir- the output folder for temp files
 
-        Returns a GDAL dataset of the farm abundance raster."""
+        Returns nothing."""
 
     LOGGER.debug('Starting to calculate farm abundance')
 
@@ -305,7 +307,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
-        state of a given pixel.
+        state of a given pixel.  The reclassed ag raster will be saved to uri.
 
         landuse - a GDAL dataset.  The land use/land cover raster.
         uri - the uri of the output, reclassified ag raster.
@@ -314,7 +316,7 @@ def reclass_ag_raster(landuse, uri, ag_classes, nodata):
             agricultural.
         nodata - an int or float.
 
-        Returns a GDAL dataset of the ag raster."""
+        Returns nothing."""
 
     # mask agricultural classes to ag_map.
     LOGGER.debug('Starting to create an ag raster at %s. Nodata=%s',
@@ -343,7 +345,7 @@ def add_two_rasters(raster_1, raster_2, out_uri):
         raster_2 - a uri to a GDAL dataset
         out_uri - the uri at which to save the resulting raster.
 
-        Returns the resulting dataset."""
+        Returns nothing."""
 
     raster_1 = gdal.Open(raster_1)
     raster_2 = gdal.Open(raster_2)
@@ -355,7 +357,8 @@ def add_two_rasters(raster_1, raster_2, out_uri):
 
 
 def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
-    """Calculate the service raster.
+    """Calculate the service raster.  The finished raster will be saved to
+    out_uris['service_value'].
 
         rasters - a dictionary with these entries:
             'farm_value' - a GDAL dataset.
@@ -380,7 +383,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
                 calculated service value raster.
             'temp' - a folder in which to store temp files.
 
-        Returns a GDAL dataset of the service value raster."""
+        Returns nothing."""
 
     LOGGER.debug('Calculating the service value')
 
@@ -427,13 +430,13 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     """Calculate the yield raster.
 
         in_raster - a uri to a GDAL dataset
-        out_uri -a uri for the output dataset
+        out_uri -a uri for the output (yield) dataset
         half_sat - the half-saturation constant, a python int or float
         wild_poll - the proportion of crops that are pollinated by wild
             pollinators.  An int or float from 0 to 1.
         out_nodata - the nodata value for the output raster
 
-        returns a GDAL dataset"""
+        Returns nothing"""
 
     LOGGER.debug('Calculating yield')
 
@@ -463,7 +466,7 @@ def divide_raster(raster, divisor, uri):
         divisor - the divisor (a python scalar)
         uri - the uri to which to save the output raster.
 
-        Returns a GDAL dataset."""
+        Returns nothing."""
 
     raster = gdal.Open(raster)
     nodata = raster.GetRasterBand(1).GetNoDataValue()
@@ -506,5 +509,5 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 
     # Use the rules dictionary to reclassify the LULC accordingly.  This
     # calls the cythonized functionality in raster_utils.
-    out_raster = raster_utils.reclassify_by_dictionary(base_raster,
+    raster_utils.reclassify_by_dictionary(base_raster,
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
