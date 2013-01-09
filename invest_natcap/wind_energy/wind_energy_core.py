@@ -117,7 +117,7 @@ def biophysical(args):
                     intermediate_dir, 'aoi_raster' + tif_suffix)
 
             LOGGER.info('Create Raster From AOI')
-            # Make a raster from the AOI 
+            # Make a raster from the AOI using the bathymetry rasters pixel size 
             aoi_raster = raster_utils.create_raster_from_vector_extents(
                     bath_prop['width'], abs(bath_prop['height']), 
                     gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
@@ -252,7 +252,7 @@ def biophysical(args):
 
     LOGGER.info('Entering Density and Harvest Calculations for each point')
     # For all the locations compute the weibull density and 
-    # harvested wind energy. save in a field of the feature
+    # harvested wind energy. Save in a field of the feature
     for feat in wind_points_layer:
         # Get the scale and shape values
         scale_value = feat.GetField(scale_index)
@@ -703,6 +703,7 @@ def valuation(args):
         levelized_cost_num = 0
         levelized_cost_denom = 0
         # Calculate the total NPV summation over the lifespan of the wind farm
+        # as well as the levelized cost
         for year in range(1, time + 1):
             # The revenue in the current time period
             rev = energy_val * dollar_per_kwh
@@ -974,59 +975,6 @@ def add_field_to_shape_given_list(shape_ds, value_list, field_name):
     layer.SyncToDisk()
      
     return shape_ds
-
-def build_subset_dictionary(main_dict, key_field, value_field):
-    """Take the main dictionary and build a subset dictionary depending on the
-        key of the inner dictionary and corresponding value 
-        
-        main_dict - a dictionary that has keys which point to dictionaries
-        key_field - the key of the inner dictionaries which are of interest
-        value_field - the value that corresponds to the key_field
-
-        returns - a dictionary"""
-
-    subset_dict = {}
-    index = 0
-    for val in main_dict.itervalues():
-        if val[key_field].lower() == value_field:
-            subset_dict[index] = val
-            index = index + 1
-    return subset_dict
-
-def build_list_points_from_dict(main_dict):
-    """Builds a list of latitude and longitude points from a dictionary
-    
-        main_dict - a dictionary where keys point to a dictionary that have a
-            'long' and 'lati' key:value pair
-
-        returns - a list of points"""
-
-    points_list = []
-    sorted_keys = main_dict.keys()
-    sorted_keys.sort()
-
-    for key in sorted_keys:
-        val = main_dict[key]
-        points_list.append([float(val['long']), float(val['lati'])])
-
-    return points_list
-
-def distance_kd(array_one, array_two):
-    """Computes the closest distance between to arrays of points using a k-d
-        tree data structure.
-    
-        array_one - a numpy array of the points to build the k-d tree from
-        array_two - a numpy array of points
-
-        returns - a numpy array of distances and a numpy array of the closest
-            indices"""
-
-    tree = spatial.KDTree(array_one)
-    dist, closest_index = tree.query(array_two)
-    LOGGER.debug('KD Distance: %s', dist)
-    LOGGER.debug('KD Closest Index: %s', closest_index)
-    dist_and_index = [ dist, closest_index ]
-    return dist_and_index
 
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
