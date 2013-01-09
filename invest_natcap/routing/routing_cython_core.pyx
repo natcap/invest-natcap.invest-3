@@ -10,7 +10,8 @@ from osgeo import gdal
 from invest_natcap import raster_utils
 
 from libcpp.stack cimport stack
-
+from libc.math cimport atan
+from libc.math cimport sqrt
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -224,9 +225,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
        
        returns nothing"""
 
-    cdef int col_index, row_index, col_max, row_max, max_index, facet_index
+    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
-        flow_direction_max_slope, slope_max, nodata_dem, nodata_flow
+        flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
 
     dem_dataset = gdal.Open(dem_uri)
 
@@ -339,7 +340,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
                 if s_1 != 0:
-                    flow_direction = numpy.arctan(s_2 / s_1) #Eqn 3
+                    flow_direction = atan(s_2 / s_1) #Eqn 3
 
                 if flow_direction < 0: #Eqn 4
                     #LOGGER.debug("flow direciton negative")
@@ -349,16 +350,16 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                     flow_direction = 0
                     slope = s_1
                     #LOGGER.debug("flow direction < 0 slope=%s"%slope)
-                elif flow_direction > numpy.arctan(d_2 / d_1): #Eqn 5
+                elif flow_direction > atan(d_2 / d_1): #Eqn 5
                     #LOGGER.debug("flow direciton greater than 45 degrees")
                     #If the flow direciton goes off the diagonal side, figure
                     #out what its value is and
-                    flow_direction = numpy.arctan(d_2 / d_1)
-                    slope = (e_0 - e_2) / numpy.sqrt(d_1 ** 2 + d_2 ** 2)
+                    flow_direction = atan(d_2 / d_1)
+                    slope = (e_0 - e_2) / sqrt(d_1 * d_1 + d_2 * d_2)
                     #LOGGER.debug("flow direction > 45 slope=%s"%slope)
                 else:
                     #LOGGER.debug("flow direciton in bounds")
-                    slope = numpy.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                    slope = sqrt(s_1 * s_1 + s_2 * s_2) #Eqn 3
                     #LOGGER.debug("flow direction in middle slope=%s"%slope)
 
                 #LOGGER.debug("slope %s" % slope)
