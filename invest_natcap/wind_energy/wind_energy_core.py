@@ -976,59 +976,6 @@ def add_field_to_shape_given_list(shape_ds, value_list, field_name):
      
     return shape_ds
 
-def build_subset_dictionary(main_dict, key_field, value_field):
-    """Take the main dictionary and build a subset dictionary depending on the
-        key of the inner dictionary and corresponding value 
-        
-        main_dict - a dictionary that has keys which point to dictionaries
-        key_field - the key of the inner dictionaries which are of interest
-        value_field - the value that corresponds to the key_field
-
-        returns - a dictionary"""
-
-    subset_dict = {}
-    index = 0
-    for val in main_dict.itervalues():
-        if val[key_field].lower() == value_field:
-            subset_dict[index] = val
-            index = index + 1
-    return subset_dict
-
-def build_list_points_from_dict(main_dict):
-    """Builds a list of latitude and longitude points from a dictionary
-    
-        main_dict - a dictionary where keys point to a dictionary that have a
-            'long' and 'lati' key:value pair
-
-        returns - a list of points"""
-
-    points_list = []
-    sorted_keys = main_dict.keys()
-    sorted_keys.sort()
-
-    for key in sorted_keys:
-        val = main_dict[key]
-        points_list.append([float(val['long']), float(val['lati'])])
-
-    return points_list
-
-def distance_kd(array_one, array_two):
-    """Computes the closest distance between to arrays of points using a k-d
-        tree data structure.
-    
-        array_one - a numpy array of the points to build the k-d tree from
-        array_two - a numpy array of points
-
-        returns - a numpy array of distances and a numpy array of the closest
-            indices"""
-
-    tree = spatial.KDTree(array_one)
-    dist, closest_index = tree.query(array_two)
-    LOGGER.debug('KD Distance: %s', dist)
-    LOGGER.debug('KD Closest Index: %s', closest_index)
-    dist_and_index = [ dist, closest_index ]
-    return dist_and_index
-
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
     the X and Y value from it's geometry. The X and Y value are stored in
