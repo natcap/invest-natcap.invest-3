@@ -159,6 +159,36 @@ class UnifiedPollinationTest(unittest.TestCase):
                 'valuation_output', 'with_ag_classes', 'output', filename)
             invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
 
+    def test_one_species(self):
+        # This test exists for the sake of issue 1536.
+        # When Running a user's data, I encountered what appeared to be a bug in
+        # InVEST 2.4.4, which would cause a raster to not have any values set to
+        # it if there is only one species.
+        #
+        # In this test case, I have a test guilds file with only the Apis
+        # species in it.  All I have to do, then, is check that frm_avg_cur.tif
+        # and frm_Apis_cur.tif are equal to the regression file
+        # frm_Apis_cur.tif.
+        #
+        # This test assumes that other bugs are caught by the other regression
+        # tests.
+
+        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
+            ' 83 84 85 88 90 91 92')
+        self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
+            'apis_only_guild.csv')
+        pollination.execute(self.args)
+
+        files_to_check = ['output/frm_avg_cur.tif',
+                          'intermediate/frm_Apis_cur.tif']
+
+        for filename in files_to_check:
+            test_file = os.path.join(self.workspace_dir, filename)
+            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
+                'biophysical_output', 'with_ag_classes', 'intermediate',
+                'frm_Apis_cur.tif')
+            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+
 
 class PollinationSmokeTest(unittest.TestCase):
     """To only run this test class at the command line, do this:
