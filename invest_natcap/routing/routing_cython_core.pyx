@@ -451,11 +451,15 @@ def calculate_flow_graph(
     cdef int n_cols, n_rows
     n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
 
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = numpy.empty((n_rows, n_cols), dtype=numpy.float32)
+    outflow_weight_data_file = tempfile.TemporaryFile()
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = numpy.memmap(outflow_weight_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
     outflow_weights_nodata = -1.0
     outflow_weights[:] = outflow_weights_nodata
 
-    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = numpy.empty((n_rows, n_cols), dtype=numpy.byte)
+    outflow_direction_data_file = tempfile.TemporaryFile()
+
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = numpy.memmap(outflow_direction_data_file, dtype=numpy.byte, mode='w+', shape=(n_rows, n_cols))
     outflow_direction_nodata = 9
     outflow_direction[:] = outflow_direction_nodata
 
