@@ -487,7 +487,8 @@ class TableChecker(FileChecker, ValidationAssembler):
                 for field in fieldnames:
                     # Create a copy of the restriction dictionary so we don't
                     # cause unwanted side effects.
-                    field_regex_dict = restriction['field'].copy()
+                    field_regex_dict = {'allowedValues':
+                                        restriction['field'].copy()}
 
                     # PrimitiveChecker.check_regexp() needs a value to check, so
                     # set it to the fieldname.
