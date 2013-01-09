@@ -117,7 +117,7 @@ def biophysical(args):
                     intermediate_dir, 'aoi_raster' + tif_suffix)
 
             LOGGER.info('Create Raster From AOI')
-            # Make a raster from the AOI 
+            # Make a raster from the AOI using the bathymetry rasters pixel size 
             aoi_raster = raster_utils.create_raster_from_vector_extents(
                     bath_prop['width'], abs(bath_prop['height']), 
                     gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
@@ -252,7 +252,7 @@ def biophysical(args):
 
     LOGGER.info('Entering Density and Harvest Calculations for each point')
     # For all the locations compute the weibull density and 
-    # harvested wind energy. save in a field of the feature
+    # harvested wind energy. Save in a field of the feature
     for feat in wind_points_layer:
         # Get the scale and shape values
         scale_value = feat.GetField(scale_index)
@@ -703,6 +703,7 @@ def valuation(args):
         levelized_cost_num = 0
         levelized_cost_denom = 0
         # Calculate the total NPV summation over the lifespan of the wind farm
+        # as well as the levelized cost
         for year in range(1, time + 1):
             # The revenue in the current time period
             rev = energy_val * dollar_per_kwh
