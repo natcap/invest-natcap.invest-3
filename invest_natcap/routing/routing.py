@@ -110,7 +110,7 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     #Calcualte the d infinity flow direction
     bounding_box = [0, 0, n_cols, n_rows]
-    invest_cython_core.flow_direction_inf(
+    routing_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
 
     LOGGER.info(

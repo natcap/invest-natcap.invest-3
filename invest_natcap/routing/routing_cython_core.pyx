@@ -211,3 +211,203 @@ def calculate_transport(
 
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
+
+def flow_direction_inf(dem, bounding_box, flow):
+    """Calculates the D-infinity flow algorithm.  The output is a float
+        raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
+
+       dem - (input) a single band GDAL Dataset with elevation values
+       bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
+       flow - (output) a single band float raster of same dimensions as
+           dem.  After the function call it will have flow direction in it 
+       
+       returns nothing"""
+
+    cdef int col_index, row_index, col_max, row_max, max_index, facet_index
+    cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
+        flow_direction_max_slope, slope_max, nodata_dem, nodata_flow
+
+    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
+    nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
+
+    #GDal inverts col_index and row_index, so it'slope easier to transpose in and 
+    #back out later on gdal arrays, so we invert the col_index and row_index 
+    #offsets here
+    LOGGER.info("loading DEM")
+    dem_matrix_tmp = \
+        dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
+
+    #Incoming matrix type could be anything numerical.  Cast to a floating
+    #point for cython speed and because it'slope the most general form.
+    cdef numpy.ndarray [numpy.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(numpy.float)
+    dem_matrix[:] = dem_matrix_tmp
+
+    col_max, row_max = dem_matrix.shape[0], dem_matrix.shape[1]
+
+    #This matrix holds the flow direction value, initialize to nodata_flow
+    cdef numpy.ndarray [numpy.float_t,ndim=2] flow_matrix = numpy.empty([col_max, row_max], 
+                                                               dtype=numpy.float)
+    flow_matrix[:] = nodata_flow
+
+    #facet elevation and factors for slope and flow_direction calculations 
+    #from Table 1 in Tarboton 1997.  
+    #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
+    #convention.
+    cdef int *e_0_offsets = [+0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0]
+    cdef int *e_1_offsets = [+0, +1,
+                             -1, +0,
+                             -1, +0,
+                             +0, -1,
+                             +0, -1,
+                             +1, +0,
+                             +1, +0,
+                             +0, +1]
+    cdef int *e_2_offsets = [-1, +1,
+                             -1, +1,
+                             -1, -1,
+                             -1, -1,
+                             +1, -1,
+                             +1, -1,
+                             +1, +1,
+                             +1, +1]
+    cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
+    cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
+
+    #Get pixel sizes
+    d_1 = abs(dem.GetGeoTransform()[1])
+    d_2 = abs(dem.GetGeoTransform()[5])
+
+    LOGGER.info("calculating d-inf per pixel flows")
+    #loop through each cell and skip any edge pixels
+    for col_index in range(1, col_max - 1):
+        for row_index in range(1, row_max - 1):
+
+            #If we're on a nodata pixel, set the flow to nodata and skip
+            if dem_matrix[col_index, row_index] == nodata_dem:
+                flow_matrix[col_index, row_index] = nodata_flow
+                continue
+
+            #Calculate the flow flow_direction for each facet
+            slope_max = 0 #use this to keep track of the maximum down-slope
+            flow_direction_max_slope = 0 #flow direction on max downward slope
+            max_index = 0 #index to keep track of max slope facet
+            
+            #Initialize flow matrix to nod_data flow so the default is to 
+            #calculate with D8.
+            flow_matrix[col_index, row_index] = nodata_flow
+            
+            for facet_index in range(8):
+                #This defines the three height points
+                e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + col_index,
+                                 e_0_offsets[facet_index*2+0] + row_index]
+                e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + col_index,
+                                 e_1_offsets[facet_index*2+0] + row_index]
+                e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
+                                 e_2_offsets[facet_index*2+0] + row_index]
+                
+                #LOGGER.debug('facet %s' % (facet_index+1))
+                #LOGGER.debug('e_1_offsets %s %s' %(e_1_offsets[facet_index*2+1],
+                #                                   e_1_offsets[facet_index*2+0]))
+                #LOGGER.debug('e_0 %s e_1 %s e_2 %s' % (e_0, e_1, e_2))
+                
+                #avoid calculating a slope on nodata values
+                if e_1 == nodata_dem or e_2 == nodata_dem: 
+                    break #fallthrough to D8
+                 
+                #s_1 is slope along straight edge
+                s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                
+                #slope along diagonal edge
+                s_2 = (e_1 - e_2) / d_2 #Eqn 2
+                
+                if s_1 <= 0 and s_2 <= 0:
+                    #uphill slope or flat, so skip, D8 resolve 
+                    continue 
+                
+                #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
+                flow_direction = 3.14159262/2.0
+                if s_1 != 0:
+                    flow_direction = numpy.arctan(s_2 / s_1) #Eqn 3
+
+                if flow_direction < 0: #Eqn 4
+                    #LOGGER.debug("flow direciton negative")
+                    #If the flow direction goes off one side, set flow
+                    #direction to that side and the slope to the straight line
+                    #distance slope
+                    flow_direction = 0
+                    slope = s_1
+                    #LOGGER.debug("flow direction < 0 slope=%s"%slope)
+                elif flow_direction > numpy.arctan(d_2 / d_1): #Eqn 5
+                    #LOGGER.debug("flow direciton greater than 45 degrees")
+                    #If the flow direciton goes off the diagonal side, figure
+                    #out what its value is and
+                    flow_direction = numpy.arctan(d_2 / d_1)
+                    slope = (e_0 - e_2) / numpy.sqrt(d_1 ** 2 + d_2 ** 2)
+                    #LOGGER.debug("flow direction > 45 slope=%s"%slope)
+                else:
+                    #LOGGER.debug("flow direciton in bounds")
+                    slope = numpy.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                    #LOGGER.debug("flow direction in middle slope=%s"%slope)
+
+                #LOGGER.debug("slope %s" % slope)
+                if slope > slope_max:
+                    flow_direction_max_slope = flow_direction
+                    slope_max = slope
+                    max_index = facet_index
+            else: 
+                # This is the fallthrough condition for the for loop, we reach
+                # it only if we haven't encountered an invalid slope or pixel
+                # that caused the above algorithm to break out
+                 
+                #Calculate the global angle depending on the max slope facet
+                #LOGGER.debug("slope_max %s" % slope_max)
+                #LOGGER.debug("max_index %s" % (max_index+1))
+                if slope_max > 0:
+                    flow_matrix[col_index, row_index] = \
+                        a_f[max_index] * flow_direction_max_slope + \
+                        a_c[max_index] * 3.14159265 / 2.0
+
+    #Calculate D8 flow to resolve undefined flows in D-inf
+#    d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
+#    LOGGER.info("calculating D8 flow")
+#    flowDirectionD8(dem, bounding_box, d8_flow_dataset)
+#    d8_flow_matrix = d8_flow_dataset.ReadAsArray(*bounding_box).transpose()
+    
+#    nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
+
+    d8_to_radians = {0: -1.0,
+                     1: 0.0,
+                     2: 5.497787144,
+                     4: 4.71238898,
+                     8: 3.926990817,
+                     16: 3.141592654,
+                     32: 2.35619449,
+                     64: 1.570796327,
+                     128: 0.785398163,
+                     nodata_d8: nodata_flow
+                     }
+    
+#    for col_index in range(1, col_max - 1):
+#        for row_index in range(1, row_max - 1):
+#            if flow_matrix[col_index, row_index] == nodata_flow:
+#                flow_matrix[col_index, row_index] = \
+#                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
+
+    LOGGER.info("writing flow data to raster")
+    #Don't write the outer uncalculated part that's the [1:-1,1:-1] below
+    flow.GetRasterBand(1).WriteArray(flow_matrix[1:-1,1:-1].transpose(), 
+                                     bounding_box[0]+1,
+                                     bounding_box[1]+1)
+    flow.GetRasterBand(1).FlushCache()
+    invest_core.calculateRasterStats(flow.GetRasterBand(1))
