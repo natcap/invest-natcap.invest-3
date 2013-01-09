@@ -209,7 +209,7 @@ def calculate_transport(
                 (time.clock() - start))
 
 
-def flow_direction_inf(dem, bounding_box, flow):
+def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
@@ -228,27 +228,31 @@ def flow_direction_inf(dem, bounding_box, flow):
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
         flow_direction_max_slope, slope_max, nodata_dem, nodata_flow
 
-    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
-    nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
+    dem_dataset = gdal.Open(dem_uri)
 
-    #GDal inverts col_index and row_index, so it'slope easier to transpose in and 
-    #back out later on gdal arrays, so we invert the col_index and row_index 
-    #offsets here
+    flow_nodata = -1.0
+    flow_direction_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri, 'GTiff', flow_nodata,
+        gdal.GDT_Float64)
+
+    dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
+    flow_band = flow_direction_dataset.GetRasterBand(1)
+
     LOGGER.info("loading DEM")
-    dem_matrix_tmp = \
-        dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
+    dem_data_file = tempfile.TemporaryFile()
+    flow_data_file = tempfile.TemporaryFile()
 
-    #Incoming matrix type could be anything numerical.  Cast to a floating
-    #point for cython speed and because it'slope the most general form.
-    cdef numpy.ndarray [numpy.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(numpy.float)
-    dem_matrix[:] = dem_matrix_tmp
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
+        raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
 
-    col_max, row_max = dem_matrix.shape[0], dem_matrix.shape[1]
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
 
-    #This matrix holds the flow direction value, initialize to nodata_flow
-    cdef numpy.ndarray [numpy.float_t,ndim=2] flow_matrix = numpy.empty([col_max, row_max], 
-                                                               dtype=numpy.float)
-    flow_matrix[:] = nodata_flow
+    #This matrix holds the flow direction value, initialize to flow_nodata
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = \
+        numpy.memmap(flow_data_file, dtype=numpy.float32, mode='w+',
+                     shape=(n_rows, n_cols))
+    flow_array[:] = flow_nodata
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -282,17 +286,17 @@ def flow_direction_inf(dem, bounding_box, flow):
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
     #Get pixel sizes
-    d_1 = abs(dem.GetGeoTransform()[1])
-    d_2 = abs(dem.GetGeoTransform()[5])
+    d_1 = abs(dem_dataset.GetGeoTransform()[1])
+    d_2 = abs(dem_dataset.GetGeoTransform()[5])
 
     LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
-    for col_index in range(1, col_max - 1):
-        for row_index in range(1, row_max - 1):
+    for col_index in range(1, n_cols - 1):
+        for row_index in range(1, n_rows - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_matrix[col_index, row_index] == nodata_dem:
-                flow_matrix[col_index, row_index] = nodata_flow
+            if dem_array[row_index, col_index] == dem_nodata:
+                flow_array[row_index, col_index] = flow_nodata
                 continue
 
             #Calculate the flow flow_direction for each facet
@@ -302,16 +306,16 @@ def flow_direction_inf(dem, bounding_box, flow):
             
             #Initialize flow matrix to nod_data flow so the default is to 
             #calculate with D8.
-            flow_matrix[col_index, row_index] = nodata_flow
+            flow_array[row_index, col_index] = flow_nodata
             
             for facet_index in range(8):
                 #This defines the three height points
-                e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + col_index,
-                                 e_0_offsets[facet_index*2+0] + row_index]
-                e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + col_index,
-                                 e_1_offsets[facet_index*2+0] + row_index]
-                e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
-                                 e_2_offsets[facet_index*2+0] + row_index]
+                e_0 = dem_array[e_0_offsets[facet_index*2+0] + row_index,
+                                e_0_offsets[facet_index*2+1] + col_index]
+                e_1 = dem_array[e_1_offsets[facet_index*2+0] + row_index,
+                                e_1_offsets[facet_index*2+1] + col_index]
+                e_2 = dem_array[e_2_offsets[facet_index*2+0] + row_index,
+                                e_2_offsets[facet_index*2+1] + col_index]
                 
                 #LOGGER.debug('facet %s' % (facet_index+1))
                 #LOGGER.debug('e_1_offsets %s %s' %(e_1_offsets[facet_index*2+1],
@@ -319,7 +323,7 @@ def flow_direction_inf(dem, bounding_box, flow):
                 #LOGGER.debug('e_0 %s e_1 %s e_2 %s' % (e_0, e_1, e_2))
                 
                 #avoid calculating a slope on nodata values
-                if e_1 == nodata_dem or e_2 == nodata_dem: 
+                if e_1 == dem_nodata or e_2 == dem_nodata: 
                     break #fallthrough to D8
                  
                 #s_1 is slope along straight edge
@@ -371,17 +375,17 @@ def flow_direction_inf(dem, bounding_box, flow):
                 #LOGGER.debug("slope_max %s" % slope_max)
                 #LOGGER.debug("max_index %s" % (max_index+1))
                 if slope_max > 0:
-                    flow_matrix[col_index, row_index] = \
+                    flow_array[row_index, col_index] = \
                         a_f[max_index] * flow_direction_max_slope + \
                         a_c[max_index] * 3.14159265 / 2.0
 
     #Calculate D8 flow to resolve undefined flows in D-inf
-    d8_flow_dataset = raster_utils.new_raster_from_base(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
-    LOGGER.info("calculating D8 flow")
-#    flowDirectionD8(dem, bounding_box, d8_flow_dataset)
-#    d8_flow_matrix = d8_flow_dataset.ReadAsArray(*bounding_box).transpose()
+#    d8_flow_direction_dataset = raster_utils.new_raster_from_base(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
+#    LOGGER.info("calculating D8 flow")
+#    flowDirectionD8(dem, bounding_box, d8_flow_direction_dataset)
+#    d8_flow_matrix = d8_flow_direction_dataset.ReadAsArray(*bounding_box).transpose()
     
-#    nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
+#    nodata_d8 = d8_flow_direction_dataset.GetRasterBand(1).GetNoDataValue()
 
 #    d8_to_radians = {0: -1.0,
 #                     1: 0.0,
@@ -392,19 +396,15 @@ def flow_direction_inf(dem, bounding_box, flow):
 #                     32: 2.35619449,
 #                     64: 1.570796327,
 #                     128: 0.785398163,
-#                     nodata_d8: nodata_flow
+#                     nodata_d8: flow_nodata
 #                     }
     
 #    for col_index in range(1, col_max - 1):
 #        for row_index in range(1, row_max - 1):
-#            if flow_matrix[col_index, row_index] == nodata_flow:
-#                flow_matrix[col_index, row_index] = \
-#                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
+#            if flow_matrix[row_index, col_index] == flow_nodata:
+#                flow_matrix[row_index, col_index] = \
+#                    d8_to_radians[d8_flow_matrix[row_index, col_index]]
 
     LOGGER.info("writing flow data to raster")
-    #Don't write the outer uncalculated part that's the [1:-1,1:-1] below
-    flow.GetRasterBand(1).WriteArray(flow_matrix[1:-1,1:-1].transpose(), 
-                                     bounding_box[0]+1,
-                                     bounding_box[1]+1)
-    flow.GetRasterBand(1).FlushCache()
-    raster_utils.calculate_raster_stats(flow)
+    flow_band.WriteArray(flow_array)
+    raster_utils.calculate_raster_stats(flow_direction_dataset)

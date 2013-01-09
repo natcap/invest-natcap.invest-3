@@ -103,15 +103,9 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
     dem_band = dem_dataset.GetRasterBand(1)
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
 
-    d_inf_dir_nodata = -1.0
-    flow_direction_dataset = raster_utils.new_raster_from_base(
-        dem_dataset, flow_direction_uri, 'GTiff', d_inf_dir_nodata,
-        gdal.GDT_Float64)
-
     #Calcualte the d infinity flow direction
-    bounding_box = [0, 0, n_cols, n_rows]
     routing_cython_core.flow_direction_inf(
-        dem_dataset, bounding_box, flow_direction_dataset)
+        dem_uri, flow_direction_uri)
 
     LOGGER.info(
         'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
