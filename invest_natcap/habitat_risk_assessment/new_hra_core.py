@@ -300,26 +300,36 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
          }
     
     Denoms Dicts:
-        { (h, s): { 'E': Denominator,
-                    'C': Denominator    }
+        {h_s: { (hab1,stressA): concatonated double (1/dq*w),
+                (hab2,stressA): ...
+              }
+         h: { hab1: {'Risk': concat. double (1/dq*w),
+                    'RP': concat double (1/dq)
+                   }
+             ...
+           }
+         s: {stressA: concat. double (1/dq*w),
+             stressB: ...
+            }
         }
     '''
     temp_rast_dict = os.path.join(dir, 'Intermediate', 'Crit_Rasters')
-    denoms = {'h':{}, 'h_s':{}}
+    denoms = {'RP':{}, 'Risk':{}}
     crit_lists = {'h_s': {}, 'h': {}, 's': {}}
 
+    #Go through each of the dictionaries individually, and add to the crit_lists
+    #and denoms dictionaries for each of them. For denoms, can't really do 
+    #modularly, need to just know that H_S/H go in Risk[C] and S goes in Risk[E].
+    #RP is obviously only habitat based. 
     for pair in h_s:
         h, s = pair
-        
-        #All of the initialization for the verious subdictionaries. God
-        #help you trying to remember individual structure. 
-        denoms['h_s'][pair] = {}
-        denoms['h'][h], denoms['h'][h], denoms['h_s'][pair]['E'], 
-            denoms['h_s'][pair]['C'] = 0
 
-        crit_lists['h_s'][pair], crit_lists['s'][s] = [] 
-        crit_lists['h'][h] = {'Risk':[], 'RP':[]}
+        #Instantiate the relevant subdictionaries
+        denoms['h_s'][pair] = 0
+        crit_lists['h_s'][pair] = []
 
+        #The base dataset for all h_s overlap criteria. Will need to load bases
+        #for each of the h/s crits too.
         base_ds = h_s[pair]['DS']
         base_band = base_ds.GetRasterBand(1)
         base_array = base_band.ReadAsArray() 
@@ -329,23 +339,24 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #separate until after all raster crits are added.
 
         '''The following handle the cases for each dictionary for rasterizing
-        the individual numerical criteria, and the raster criteria.'''
+        the individual numerical criteria, and then the raster criteria.'''
 
         crit_rate_numerator = 0
         #H-S dictionary, Numerical Criteria: should output a 
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
-        for crit in (h_s[pair]['Crit_Ratings'], h[pair]['Crit_Ratings']):
+        for crit in (h_s[pair]['Crit_Ratings']):
             
-            r. = crit['Rating']
+            r = crit['Rating']
             dq = ['DQ']
             w = ['Weight']
 
-            crit_rate_numerator += r / (dq*w) 
-            denoms[pair]['C'] += 1 / (dq*w)
+            #Explicitly want a float output so as not to lose precision.
+            crit_rate_numerator += r / float(dq*w)
+            denoms['h_s'][pair] += 1 / float(dq*w)
 
-        single_crit_C_uri = os.path.join(temp_raster_dict, pair + 
-                                        '_Individs_C_Raster.tif')
+        single_crit_C_uri = os.path.join(temp_raster_dict, h + '_' + s + 
+                                        '_Indiv_C_Raster.tif')
 
         c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
                                      'GTiff', 0, gdal.GDT_Float32)
@@ -354,9 +365,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         i_burned_array = base_array * crit_rate_numerator
         band.WriteArray(i_burned_array)
-
-        #H Dictionary, Numerical Criteria: needed to burn this separately so
-        #that it can be used within the recovery poten
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -369,7 +377,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             dq = crit['DQ']
             w = crit['Weight']
 
-            denoms[pair]['C'] += 1/ (dq * w)
+            denoms['h_s'][pair] += 1/ float(dq * w)
 
             crit_C_uri = os.path.join(temp_raster_dict, pair + '_' + crit + \
                                                 '_' + 'C_Raster.tif')
@@ -381,8 +389,16 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             edited_array = base_array. / (dq * w)
             band.WriteArray(edited_array)
-
             
+            crit_lists['h_s'][pair].append(c_ds)
+
+    #Habitats serves as a special case, since each raster is going to have to be
+    #burned twice- once for r/dq*w and once for r/dq. Denoms will be split as
+    #well. 1/dq*w will be placed in denoms['Risk'][
+    for h in hab:
+        
+        #Initialize
+        denoms
 
 '---------------------------------------------------------------------'
             crit_C_uri = os.path.join(temp_raster_dict, pair + '_' + crit + \
@@ -400,4 +416,3 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             #the list in which all rasters will reside
             crit_lists['h_s'][pair].append(c_ds)
 
-        #H-S dictionary

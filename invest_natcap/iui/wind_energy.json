@@ -39,7 +39,12 @@
                     "required": false,
                     "requiredIf": ["valuation_container", "distance_container"],
                     "returns": {"ifEmpty": "pass"},
-                    "validateAs": {"type": "OGR"},
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "file"},
+                                               "type": "polygons",
+                                               "projection" : {"units": "meters", "exists": true}
+                                             }]
+                                  },
                     "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly." 
                 },
                 {
