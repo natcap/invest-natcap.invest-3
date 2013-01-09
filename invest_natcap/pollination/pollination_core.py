@@ -98,7 +98,7 @@ def execute_model(args):
         # the floral and nesting patterns (based on land cover) and the
         # specified use of these resources (defined in the guild_dict).
         LOGGER.info('Calculating %s abundance on the landscape', species)
-        species_abundance = calculate_abundance(args['landuse'],
+        calculate_abundance(args['landuse'],
             args['landuse_attributes'], guild_dict, args['nesting_fields'],
             args['floral_fields'], uris={
                 'nesting': species_dict['nesting'],
@@ -106,6 +106,7 @@ def execute_model(args):
                 'species_abundance': species_dict['species_abundance'],
                 'temp': args['paths']['temp']
             })
+        species_abundance = gdal.Open(species_dict['species_abundance'])
 
         # Add the newly-calculated abundance to the abundance_sum raster.
         LOGGER.info('Adding %s species abundance to the total', species)
@@ -255,7 +256,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # total abundance matrix.
     LOGGER.debug('Calculating abundance index')
     species_weight = guild['species_weight']
-    return raster_utils.vectorize_rasters(
+    raster_utils.vectorize_rasters(
         [nesting_raster, floral_raster],
         lambda x, y: (x * y) * species_weight if x != nodata else nodata,
         raster_out_uri=uris['species_abundance'], nodata=nodata)
