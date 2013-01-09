@@ -29,7 +29,7 @@ def biophysical(args):
         args[wind_data_points] - an OGR point geometry shapefile of the wind
             energy points of interest (required)
         args[aoi] - an OGR datasource of type polygon of the area of interest
-            (optional)
+            (optional, required if distance parameters have been selected)
         args[bathymetry] - a GDAL dataset of elevation values that encompasses
             the area of interest (required)
         args[bottom_type] - an OGR datasource of type polygon that depicts the 
@@ -48,7 +48,7 @@ def biophysical(args):
         args[suffix] - a String to append to the end of the filenames (required)
         args[land_polygon_uri] - an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins
-            (optional)
+            (optional, required if distance parameters have been selected)
         args[min_distance] - a float value for the minimum distance from shore
             for offshore wind farm installation (meters) (optional)
         args[max_distance] - a float value for the maximum distance from shore
