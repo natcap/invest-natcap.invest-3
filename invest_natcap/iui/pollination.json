@@ -144,7 +144,19 @@
                                    "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
                                    "restrictions": [{"field": "ALPHA",
                                                      "validateAs": {"type": "number",
-                                                                    "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}}]},
+                                                                    "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}
+                                                    },
+                                                    {"field": {"pattern": "NS_.*", "flag": "ignoreCase"},
+                                                     "validateAs": {
+                                                         "type": "number",
+                                                         "allowedValues": {"pattern": {"values": [0, 1, 0.0, 1.0]}}}
+                                                    },
+                                                    {"field": {"pattern": "FS_.*", "flag": "ignoreCase"},
+                                                     "validateAs": {
+                                                         "type": "number",
+                                                         "gteq": 0.0,
+                                                         "lteq": 1.0}
+                                                    }]},
                     "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table."
                 },
                 {
