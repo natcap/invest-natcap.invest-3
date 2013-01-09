@@ -161,7 +161,8 @@ def execute(args):
 
         for index in range(len(field_names)):
             field_names[index] = field_names[index].lower()
-
+        # Iterate through the CSV file and construct two different dictionaries
+        # for grid and land points. 
         for row in reader:
             if row['type'].lower() == 'grid':
                 grid_dict[row['id']] = row
@@ -173,12 +174,18 @@ def execute(args):
 
         grid_ds_uri = os.path.join(inter_dir, 'val_grid_points.shp')
         land_ds_uri = os.path.join(inter_dir, 'val_land_points.shp')
-
+        
+        # Create a point shapefile from the grid and land point dictionaries.
+        # This makes it easier for future distance calculations and provides a
+        # nice intermediate output for users
         grid_point_ds = dictionary_to_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri) 
         land_point_ds = dictionary_to_shapefile(
                 land_dict, 'land_points', land_ds_uri) 
-
+        # In case any of the above points lie outside the AOI, clip the
+        # shapefiles and then project them to the AOI as well.
+        # NOTE: There could be an error here where NO points lie within the AOI,
+        # what then????????
         grid_point_prj = clip_and_project_datasource(
                 grid_point_ds, aoi, os.path.join(inter_dir, 'grid_point'))
         land_point_prj = clip_and_project_datasource(
