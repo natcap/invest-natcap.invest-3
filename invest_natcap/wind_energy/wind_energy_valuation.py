@@ -104,7 +104,7 @@ def execute(args):
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
             'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
             'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
-            'rotor_diameter_factor']
+            'rotor_diameter_factor', 'carbon_coefficient']
 
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
