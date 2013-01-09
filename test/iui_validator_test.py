@@ -222,13 +222,14 @@ class DBFCheckerTester(CheckerTester):
         def setUp(self):
             self.validate_as = {'type': 'DBF',
                                 'value': TEST_DATA +
-                                '/carbon/input/carbon_pools_samp.dbf',
+                                '/carbon/input/harv_samp_cur.dbf',
                                 'fieldsExist': []}
             self.checker = iui_validator.DBFChecker()
 
         def test_fields_exist(self):
             """Assert that DBFChecker can verify fields exist."""
-            self.validate_as['fieldsExist'] = ['C_above', 'LULC', 'C_soil']
+            self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
+                                               'Start_date']
             self.assertNoError()
 
         def test_nonexistent_fields(self):
