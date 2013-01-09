@@ -230,9 +230,10 @@ def biophysical(args):
     v_rate = float(bio_turbine_dict['rated_wspd'])
     v_out = float(bio_turbine_dict['cut_out_wspd'])
     v_in = float(bio_turbine_dict['cut_in_wspd'])
+    air_density_coef = float(bio_turbine_dict['air_density_coefficient'])
 
     # Compute the mean air density, given by CKs formulas
-    mean_air_density = air_density_standard - (1.194*10**-4) * hub_height
+    mean_air_density = air_density_standard - air_density_coef * hub_height
     LOGGER.debug('mean_air_density : %s', mean_air_density)
 
     # Fractional coefficient that lives outside the intregation for computing
@@ -723,7 +724,8 @@ def valuation(args):
         levelized_cost = levelized_cost_num / levelized_cost_denom
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
-        carbon_emissions = 6.8956e-4 * energy_val
+        carbon_coef = float(turbine_dict['carbon_coefficient']) 
+        carbon_emissions = carbon_coef * energy_val
         
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)

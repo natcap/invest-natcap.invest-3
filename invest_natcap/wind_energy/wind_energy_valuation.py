@@ -16,6 +16,11 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('wind_energy_valuation')
 
+# This is the path to the global wind energy parameters that lies within
+# invest_natcap/wind_energy that is added by setup.py
+GLOBAL_WIND_PARAMETERS = \
+    'invest_natcap/wind_energy/global_wind_energy_attributes.json'
+
 def execute(args):
     """Takes care of all file handling for the valuation part of the wind
         energy model
@@ -99,7 +104,7 @@ def execute(args):
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
             'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
             'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
-            'rotor_diameter_factor']
+            'rotor_diameter_factor', 'carbon_coefficient']
 
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
@@ -111,8 +116,7 @@ def execute(args):
         if field_value_row[0].lower() in valuation_turbine_params:
             val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
     
-    val_global_params_file = open(
-            os.path.join(workspace, 'input/global_wind_energy_attributes.json'))
+    val_global_params_file = open(GLOBAL_WIND_PARAMETERS)
 
     val_global_params_dict = json.load(val_global_params_file)
     for key, val in val_global_params_dict.iteritems():
