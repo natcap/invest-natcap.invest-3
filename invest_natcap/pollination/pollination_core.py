@@ -83,7 +83,8 @@ def execute_model(args):
             {}, args['farm_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
         raster_utils.reclassify_by_dictionary(ag_map,
-            {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
+            {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32,
+            0.0)
 
 
     # Loop through all species and perform the necessary calculations.
@@ -129,8 +130,8 @@ def execute_model(args):
         if args['do_valuation'] == True:
             LOGGER.info('Starting species-specific valuation for %s', species)
 
-            # Apply the half-saturation yield function from the documentation and
-            # write it to its raster
+            # Apply the half-saturation yield function from the documentation
+            # and write it to its raster
             LOGGER.info('Calculating crop yield due to %s', species)
             calculate_yield(species_dict['farm_abundance'],
                 species_dict['farm_value'], args['half_saturation'],
@@ -143,8 +144,8 @@ def execute_model(args):
                 args['farm_value_sum'])
 
             LOGGER.info('Calculating service value for %s', species)
-            # Calculate sigma for the gaussian blur.  Sigma is based on the species
-            # alpha (from the guilds table) and twice the pixel size.
+            # Calculate sigma for the gaussian blur.  Sigma is based on the
+            # species alpha (from the guilds table) and twice the pixel size.
             guild_dict = args['guilds'].get_table_row('species', species)
             sample_raster = gdal.Open(args['farm_value_sum'])
             pixel_size = abs(sample_raster.GetGeoTransform()[1])
@@ -163,7 +164,8 @@ def execute_model(args):
                 part_wild=args['wild_pollination_proportion'],
                 out_uris={
                     'species_value': species_dict['value_abundance_ratio'],
-                    'species_value_blurred': species_dict['value_abundance_ratio_blur'],
+                    'species_value_blurred':\
+                        species_dict['value_abundance_ratio_blur'],
                     'service_value': species_dict['service_value'],
                     'temp': args['paths']['temp']
                 })
@@ -182,7 +184,8 @@ def execute_model(args):
 
     # Calculate the mean foraging values per species.
     LOGGER.debug('Calculating mean foraging score')
-    divide_raster(args['foraging_average'], num_species, args['foraging_average'])
+    divide_raster(args['foraging_average'], num_species,
+        args['foraging_average'])
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
@@ -441,17 +444,21 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     LOGGER.debug('Calculating yield')
 
     # Calculate the yield raster
-    k = float(half_sat)
-    v = float(wild_poll)
+    kappa_c = float(half_sat)
+    nu_c = float(wild_poll)
     in_raster = gdal.Open(in_raster)
     in_nodata = in_raster.GetRasterBand(1).GetNoDataValue()
 
     # This function is a vectorize-compatible implementation of the yield
     # function from the documentation.
     def calc_yield(frm_avg):
+        """Calculate the yield for a farm pixel.  frm_avg is the average
+        foraging score on the landscape on this pixel aross all pollinators.
+        This function applies the 'expected yield' function from the
+        documentation."""
         if frm_avg == in_nodata:
             return out_nodata
-        return (1.0 - v) + (v * (frm_avg / (frm_avg + k)))
+        return (1.0 - nu_c) + (nu_c * (frm_avg / (frm_avg + kappa_c)))
 
     # Apply the yield calculation to the foraging_average raster
     raster_utils.vectorize_rasters([in_raster], calc_yield,
