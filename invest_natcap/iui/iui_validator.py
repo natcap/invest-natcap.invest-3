@@ -463,28 +463,29 @@ class TableChecker(FileChecker, ValidationAssembler):
     def verify_restrictions(self, restriction_list):
         table = self._build_table()
         for restriction in restriction_list:
+            fieldnames = self._get_fieldnames()
+            if restriction['field'].__class__ in [unicode, str]:
+                if restriction['field'].upper() not in fieldnames:
+                    return 'Field %s is required.' % restriction['field']
+                restricted_fields = [restriction['field']]
+            else:
+                restricted_fields = []
+                for field in fieldnames:
+                    restriction_dict = restriction['field'].copy()
+                    restriction_dict['value'] = field
+                    field_error = self.str_checker.check_regexp(
+                        restriction_dict)
+                    if field_error in [None, '']:
+                        restricted_fields.append(field)
+
+                if len(restricted_fields) == 0:
+                    return str('This file must have at least one field '
+                        'matching the pattern %s' %
+                        restriction['field']['pattern'])
+
             for row in table:
-                if restriction['field'].__class__ in [unicode, str]:
-                    if restriction['field'].upper() not in row:
-                        return 'Field %s is required.' % restriction['field']
-                    field_names = [restriction['field']]
-                else:
-                    field_names = []
-                    for field in row.keys():
-                        restriction_dict = restriction['field'].copy()
-                        restriction_dict['value'] = field
-                        field_error = self.str_checker.check_regexp(
-                            restriction_dict)
-                        if field_error in [None, '']:
-                            field_names.append(field)
-
-                    if len(field_names) == 0:
-                        return str('This file must have at least one field '
-                            'matching the pattern %s' %
-                            restriction['field']['pattern'])
-
-                for field_name in field_names:
-                    assembled_dict = self.assemble(row[field_name], restriction['validateAs'])
+                for field in restricted_fields:
+                    assembled_dict = self.assemble(row[field], restriction['validateAs'])
 
                     error = None
                     if assembled_dict['type'] == 'number':
