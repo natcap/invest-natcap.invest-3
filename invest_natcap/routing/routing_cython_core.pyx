@@ -97,16 +97,12 @@ def calculate_transport(
 
     #Process flux through the grid
 
-#    cells_to_process = collections.deque(sink_cell_set)
-#    cell_neighbor_to_process = collections.deque([0]*len(cells_to_process))
-
     cdef stack[int] cells_to_process
     for cell in sink_cell_set:
         cells_to_process.push(cell)
     cdef stack[int] cell_neighbor_to_process
     for _ in range(cells_to_process.size()):
         cell_neighbor_to_process.push(0)
-
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
@@ -211,6 +207,7 @@ def calculate_transport(
 
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
+
 
 def flow_direction_inf(dem, bounding_box, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
