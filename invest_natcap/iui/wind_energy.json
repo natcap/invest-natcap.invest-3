@@ -1,6 +1,6 @@
 {
     "id" : "window",
-    "label": "",
+    "label": "Wind Energy",
     "targetScript" : "invest_natcap.wind_energy.wind_energy_uri_handler",
     "modelName" : "wind_energy",
     "localDocURI": "../documentation/wind_energy.html",
@@ -28,7 +28,7 @@
                     "label": "Wind Data Points",
                     "defaultValue": "../Wind_Energy/Input/wind_data.txt",
                     "required": true,
-                    "helpText": "A text file that represents the wind energy data points. The text file should be set up with the first line having the following comma separated fields:<br/> N (Unique ID), LONG (the longitude coordinate), LATI (the latitude coordinate), Ram-010m (a range of the scale parameter which varies at different heights: Ram-020m,Ram-030m,...,Ram-140m,Ram-150m), K-010m (the shape parameter which does not vary by height). The following lines should be individual and unique wind data bins with information corresponding to the fields from the first line."
+                    "helpText": "A text file that represents the wind energy data points. The text file should be set up with the first line, or row, having the following comma separated fields (column headers):<br/> N (Unique ID), LONG (the longitude coordinate), LATI (the latitude coordinate), Ram-010m (a range of the scale parameter which varies at different heights: Ram-020m,Ram-030m,...,Ram-140m,Ram-150m), K-010m (the shape parameter which does not vary by height). The following lines should be individual and unique wind data bins with information corresponding to the fields from the first line."
                 },
                 {
                     "id" : "aoi",
@@ -39,7 +39,12 @@
                     "required": false,
                     "requiredIf": ["valuation_container", "distance_container"],
                     "returns": {"ifEmpty": "pass"},
-                    "validateAs": {"type": "OGR"},
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "file"},
+                                               "type": "polygons",
+                                               "projection" : {"units": "meters", "exists": true}
+                                             }]
+                                  },
                     "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly." 
                 },
                 {
@@ -59,6 +64,7 @@
                     "label": "Land Polygon to Calculate Distance From",
                     "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
                     "required": true,
+                    "requiredIf": ["valuation_container", "distance_container"],
                     "validateAs": {"type": "OGR"},
                     "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
                 },

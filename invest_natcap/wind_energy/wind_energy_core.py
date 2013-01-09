@@ -10,7 +10,6 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
-from scipy import signal
 from scipy import integrate
 from scipy import spatial
 import shapely.wkt
@@ -30,7 +29,7 @@ def biophysical(args):
         args[wind_data_points] - an OGR point geometry shapefile of the wind
             energy points of interest (required)
         args[aoi] - an OGR datasource of type polygon of the area of interest
-            (optional)
+            (optional, required if distance parameters have been selected)
         args[bathymetry] - a GDAL dataset of elevation values that encompasses
             the area of interest (required)
         args[bottom_type] - an OGR datasource of type polygon that depicts the 
@@ -49,7 +48,7 @@ def biophysical(args):
         args[suffix] - a String to append to the end of the filenames (required)
         args[land_polygon_uri] - an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins
-            (optional)
+            (optional, required if distance parameters have been selected)
         args[min_distance] - a float value for the minimum distance from shore
             for offshore wind farm installation (meters) (optional)
         args[max_distance] - a float value for the maximum distance from shore
@@ -68,7 +67,7 @@ def biophysical(args):
     min_depth = args['min_depth']
     max_depth = args['max_depth']
     
-    bathymetry_band, out_nodata = raster_utils.extract_band_and_nodata(
+    _, out_nodata = raster_utils.extract_band_and_nodata(
             bathymetry)
     bath_prop = raster_utils.get_raster_properties(bathymetry)
     
@@ -615,8 +614,8 @@ def valuation(args):
             # Knowing the closest index we can look into the land geoms lists,
             # pull that lat/long key, and then use that to index into the
             # dictionary to get the proper distance
-            L2G_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
-            grid_to_land_dist.append(L2G_dist)
+            l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
+            grid_to_land_dist.append(l2g_dist)
 
         wind_energy_layer.ResetReading()
         wind_energy_layer = None
@@ -668,26 +667,28 @@ def valuation(args):
         levelized_index = feat.GetFieldIndex('LevCost')
         co2_index = feat.GetFieldIndex('CO2')
         energy_index = feat.GetFieldIndex('HarvEnergy')
-        O2L_index = feat.GetFieldIndex('O2L')
-        L2G_index = feat.GetFieldIndex('L2G')
+        o2l_index = feat.GetFieldIndex('O2L')
+        l2g_index = feat.GetFieldIndex('L2G')
         
         # The energy value converted from Wh (Watt hours as output from CK's
         # biophysical model equations) to kWh
         energy_val = feat.GetField(energy_index) / 1000.0
-        O2L_val = feat.GetField(O2L_index)
-        L2G_val = feat.GetField(L2G_index)
+        o2l_val = feat.GetField(o2l_index)
+        l2g_val = feat.GetField(l2g_index)
 
         # Get the total cable distance
-        total_cable_dist = O2L_val + L2G_val
+        total_cable_dist = o2l_val + l2g_val
         # Initialize cable cost variable
         cable_cost = 0
 
         # The break at 'circuit_break' indicates the difference in using AC and
         # DC current systems
         if total_cable_dist <= circuit_break:
-            cable_cost = (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist)
+            cable_cost = (mw_coef_ac * total_mega_watt) + \
+                            (cable_coef_ac * total_cable_dist)
         else:
-            cable_cost = (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist)
+            cable_cost = (mw_coef_dc * total_mega_watt) + \
+                            (cable_coef_dc * total_cable_dist)
         
         # Compute the total CAP
         cap = cap_less_dist + cable_cost
@@ -788,7 +789,7 @@ def valuation(args):
     # The number of turbines allowed per circuit for infield cabling
     turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
     # The rotor diameter of the turbines
-    rotor_diameter= int(turbine_dict['rotor_diameter'])
+    rotor_diameter = int(turbine_dict['rotor_diameter'])
     # The rotor diameter factor is a rule by which to use in deciding how far
     # apart the turbines should be spaced
     rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
@@ -798,12 +799,12 @@ def valuation(args):
     # This is where the farm polygon will be placed in space
     npv_ds = gdal.Open(npv_uri)
     npv_band = npv_ds.GetRasterBand(1)
-    gt = npv_ds.GetGeoTransform()
+    geo_transform = npv_ds.GetGeoTransform()
     xsize = npv_band.XSize
     ysize = npv_band.YSize
     # Find the center x and y points by indexing into the grid
-    center_x = (xsize / 2) * gt[1] + gt[0]
-    center_y = (ysize / 2) * gt[5] + gt[3]
+    center_x = (xsize / 2) * geo_transform[1] + geo_transform[0]
+    center_y = (ysize / 2) * geo_transform[5] + geo_transform[3]
     start_point = (center_x, center_y)
     # Get the projection of the dataset
     raster_wkt = npv_ds.GetProjection()
@@ -830,7 +831,7 @@ def valuation(args):
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
 
-    farm_poly = create_rectangular_polygon(
+    _ = create_rectangular_polygon(
             spat_ref, start_point, width, length, farm_poly_uri)
     
     LOGGER.info('Farm Polygon Created')
@@ -913,7 +914,8 @@ def point_to_polygon_distance(poly_ds, point_ds):
     for poly_feat in poly_layer:
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
         shapely_polygon = shapely.wkt.loads(poly_wkt)
-        poly_list.append(shapely_polygon.simplify(0.01, preserve_topology=False))
+        poly_list.append(
+                shapely_polygon.simplify(0.01, preserve_topology=False))
 
     LOGGER.info('Get the collection of polygon geometries by taking the union')
     polygon_collection = shapely.ops.unary_union(poly_list)
@@ -985,7 +987,7 @@ def build_subset_dictionary(main_dict, key_field, value_field):
 
     subset_dict = {}
     index = 0
-    for key, val in main_dict.iteritems():
+    for val in main_dict.itervalues():
         if val[key_field].lower() == value_field:
             subset_dict[index] = val
             index = index + 1
@@ -1065,7 +1067,6 @@ def get_dictionary_from_shape(shape):
     """
     layer = shape.GetLayer()
     layer.ResetReading()
-    feat_count = layer.GetFeatureCount() 
     feat_dict = {}
 
     for feat in layer:    

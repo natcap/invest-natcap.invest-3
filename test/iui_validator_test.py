@@ -222,13 +222,14 @@ class DBFCheckerTester(CheckerTester):
         def setUp(self):
             self.validate_as = {'type': 'DBF',
                                 'value': TEST_DATA +
-                                '/carbon/input/carbon_pools_samp.dbf',
+                                '/carbon/input/harv_samp_cur.dbf',
                                 'fieldsExist': []}
             self.checker = iui_validator.DBFChecker()
 
         def test_fields_exist(self):
             """Assert that DBFChecker can verify fields exist."""
-            self.validate_as['fieldsExist'] = ['C_above', 'LULC', 'C_soil']
+            self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
+                                               'Start_date']
             self.assertNoError()
 
         def test_nonexistent_fields(self):
@@ -299,6 +300,23 @@ class CSVCheckerTester(CheckerTester):
                                                 const_restriction,
                                                 str_restriction]
             self.assertNoError()
+
+        def test_regexp_fieldname_restriction(self):
+            """Assert that CSVChecker can select fields based on regex."""
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
+                 'samp_input', 'Guild.csv')
+            field_restriction = {'field': {'pattern': 'NS_.*', 'flag':
+                                           'ignoreCase'}}
+            self.validate_as['restrictions'] = [field_restriction]
+            self.assertNoError()
+
+        def test_regexp_fieldname_not_exists(self):
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
+                 'samp_input', 'Guild.csv')
+            field_restriction = {'field': {'pattern': 'AA_.*', 'flag':
+                                           'ignoreCase'}}
+            self.validate_as['restrictions'] = [field_restriction]
+            self.assertError()
 
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""

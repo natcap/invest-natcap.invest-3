@@ -1,10 +1,8 @@
 """InVEST Wind Energy model file handler module"""
 import logging
-import os
 
 from invest_natcap.wind_energy import wind_energy_biophysical
 from invest_natcap.wind_energy import wind_energy_valuation
-from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -45,7 +43,8 @@ def execute(args):
             (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins.
-            AOI must be selected for this input to be active (optional)
+            (required if : distance container is selected OR valuation is
+            selected)
         args[min_distance] - a float value for the minimum distance from shore
             for offshore wind farm installation (meters) The AOI must be
             selected for this input to be active (optional)
@@ -54,9 +53,6 @@ def execute(args):
             selected for this input to be active (optional)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
-        args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
-            use for distance calculations if grid points were not provided 
-            (required for valuation if grid_points_uri is not provided)
         args[foundation_cost] - a float representing how much the foundation
             will cost for the specific type of turbine (required for valuation)
         args[number_of_machines] - an integer value for the number of machines
