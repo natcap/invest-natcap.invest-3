@@ -105,11 +105,21 @@ def execute(args):
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)
     url = config["server"]+config["files"]["PHP"]["predictor"]
-    LOGGER.info("URL: %s." % url)
     request = urllib2.Request(url, datagen, headers)
 
     #save session id
-    args["sessid"] = urllib2.urlopen(request).read().strip()
+    retries=0
+    while retries<config["retries"] and not args.has_key("sessid"):
+        LOGGER.info("Trying URL: %s." % url)
+        try:
+            args["sessid"] = urllib2.urlopen(request).read().strip()
+        except urllib2.URLError, msg:
+            LOGGER.warn("Encountered error: %s" % msg)
+        retries=retries+1
+    if not args.has_key("sessid"):
+        LOGGER.error("Failed to start new sesssion.")
+        raise urllib2.URLError, msg
+        
     LOGGER.debug("Server session %s." % (args["sessid"]))
     
     #upload aoi and model parameters
