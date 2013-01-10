@@ -151,6 +151,8 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cells_to_process = collections.deque()
     neighbor_index_to_process = collections.deque()
 
+    #Build an initial list of cells to depth first search through to find
+    #minimum distances
     for row_index in xrange(n_rows):
         for col_index in xrange(n_cols):
             dem_value = dem_array[row_index, col_index]
