@@ -311,12 +311,19 @@ class CSVCheckerTester(CheckerTester):
             self.assertNoError()
 
         def test_regexp_fieldname_not_exists(self):
+            """Assert that CSVChecker fails when selecting a nonexist. field"""
             self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
                  'samp_input', 'Guild.csv')
             field_restriction = {'field': {'pattern': 'AA_.*', 'flag':
                                            'ignoreCase'}}
             self.validate_as['restrictions'] = [field_restriction]
             self.assertError()
+
+        def test_non_comma_delimiting(self):
+            """Assert that CSVChecker fails when a CSV is semicolon-delim."""
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'iui',
+                'validation', 'semicolon-delimited.csv')
+            self.assertNoError()
 
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
