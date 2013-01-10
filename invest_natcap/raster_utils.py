@@ -1491,7 +1491,7 @@ def get_rat_as_dictionary(dataset):
     return rat_dictionary
 
 def gaussian_filter_dataset(
-    dataset, sigma, out_uri, out_nodata, temp_dir = None):
+    dataset, sigma, out_uri, out_nodata, temp_dir=None):
     """A memory efficient gaussian filter function that operates on 
        the dataset level and creates a new dataset that's filtered.
        It will treat any nodata value in dataset as 0, and re-nodata
@@ -1531,11 +1531,13 @@ def gaussian_filter_dataset(
 
     LOGGER.info('make the source memmap at %s' % source_filename)
     source_array = np.memmap(
-        source_filename, dtype='float32', mode='w+', shape = shape)
+        source_filename, dtype='float32', mode='w+', shape=shape)
+    LOGGER.info('make the mask memmap at %s' % mask_filename)
     mask_array = np.memmap(
-        mask_filename, dtype='bool', mode='w+', shape = shape)
+        mask_filename, dtype='bool', mode='w+', shape=shape)
+    LOGGER.info('make the dest memmap at %s' % dest_filename)
     dest_array = np.memmap(
-        dest_filename, dtype='float32', mode='w+', shape = shape)
+        dest_filename, dtype='float32', mode='w+', shape=shape)
 
     LOGGER.info('load dataset into source array')
     for row_index in xrange(source_band.YSize):
