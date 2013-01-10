@@ -174,12 +174,14 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     dem_neighbors_valid = False
                     break
 
-                if dem_array[neighbor_row, neighbor_col] == dem_nodata:
+                dem_neighbor_value = dem_array[neighbor_row, neighbor_col]
+
+                if dem_neighbor_value == dem_nodata:
                     dem_neighbors_valid = False
                     break
 
                 if flow_direction_array[neighbor_row, neighbor_col] != \
-                        flow_direction_nodata:
+                        flow_direction_nodata and dem_neighbor_value <= dem_value:
                     #Here we found a flow direction that is valid
                     #we can build from here
                     flow_direction_neighbors_valid = True
