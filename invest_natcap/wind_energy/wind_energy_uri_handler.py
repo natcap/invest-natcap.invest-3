@@ -69,10 +69,13 @@ def execute(args):
     LOGGER.debug('Stepping into Biophysical URI Handler')
     wind_energy_biophysical.execute(args)
     
-    # If valuation was checked in the UI then run valuation 
-    if args['valuation_container']:
-        # Run the valuation uri module
-        LOGGER.debug('Stepping into Valuation URI Handler')
-        wind_energy_valuation.execute(args)
-   
+    try:
+        # If valuation was checked in the UI then run valuation 
+        if args['valuation_container']:
+            # Run the valuation uri module
+            LOGGER.debug('Stepping into Valuation URI Handler')
+            wind_energy_valuation.execute(args)
+    except KeyError:
+        LOGGER.debug('Valuation Checkbox Disabled')
+
     LOGGER.debug('Leaving wind_energy_uri_handler')

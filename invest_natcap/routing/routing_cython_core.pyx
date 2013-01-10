@@ -10,12 +10,17 @@ from osgeo import gdal
 from invest_natcap import raster_utils
 
 from libcpp.stack cimport stack
-
+from libc.math cimport atan
+from libc.math cimport tan
+from libc.math cimport sqrt
+from libc.math cimport fabs
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing cython core')
+
+cdef double PI = 3.141592653589793238462643383279502884
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
@@ -97,16 +102,12 @@ def calculate_transport(
 
     #Process flux through the grid
 
-#    cells_to_process = collections.deque(sink_cell_set)
-#    cell_neighbor_to_process = collections.deque([0]*len(cells_to_process))
-
     cdef stack[int] cells_to_process
     for cell in sink_cell_set:
         cells_to_process.push(cell)
     cdef stack[int] cell_neighbor_to_process
     for _ in range(cells_to_process.size()):
         cell_neighbor_to_process.push(0)
-
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
@@ -212,7 +213,8 @@ def calculate_transport(
     LOGGER.info('Done processing transport elapsed time %ss' %
                 (time.clock() - start))
 
-def flow_direction_inf(dem, bounding_box, flow):
+
+def flow_direction_inf(dem_uri, flow_direction_uri):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
@@ -227,31 +229,35 @@ def flow_direction_inf(dem, bounding_box, flow):
        
        returns nothing"""
 
-    cdef int col_index, row_index, col_max, row_max, max_index, facet_index
+    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
-        flow_direction_max_slope, slope_max, nodata_dem, nodata_flow
+        flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
 
-    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
-    nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
+    dem_dataset = gdal.Open(dem_uri)
 
-    #GDal inverts col_index and row_index, so it'slope easier to transpose in and 
-    #back out later on gdal arrays, so we invert the col_index and row_index 
-    #offsets here
+    flow_nodata = -1.0
+    flow_direction_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri, 'GTiff', flow_nodata,
+        gdal.GDT_Float64)
+
+    dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
+    flow_band = flow_direction_dataset.GetRasterBand(1)
+
     LOGGER.info("loading DEM")
-    dem_matrix_tmp = \
-        dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
+    dem_data_file = tempfile.TemporaryFile()
+    flow_data_file = tempfile.TemporaryFile()
 
-    #Incoming matrix type could be anything numerical.  Cast to a floating
-    #point for cython speed and because it'slope the most general form.
-    cdef numpy.ndarray [numpy.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(numpy.float)
-    dem_matrix[:] = dem_matrix_tmp
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
+        raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
 
-    col_max, row_max = dem_matrix.shape[0], dem_matrix.shape[1]
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
 
-    #This matrix holds the flow direction value, initialize to nodata_flow
-    cdef numpy.ndarray [numpy.float_t,ndim=2] flow_matrix = numpy.empty([col_max, row_max], 
-                                                               dtype=numpy.float)
-    flow_matrix[:] = nodata_flow
+    #This matrix holds the flow direction value, initialize to flow_nodata
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = \
+        numpy.memmap(flow_data_file, dtype=numpy.float32, mode='w+',
+                     shape=(n_rows, n_cols))
+    flow_array[:] = flow_nodata
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -285,17 +291,17 @@ def flow_direction_inf(dem, bounding_box, flow):
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
     #Get pixel sizes
-    d_1 = abs(dem.GetGeoTransform()[1])
-    d_2 = abs(dem.GetGeoTransform()[5])
+    d_1 = abs(dem_dataset.GetGeoTransform()[1])
+    d_2 = abs(dem_dataset.GetGeoTransform()[5])
 
     LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
-    for col_index in range(1, col_max - 1):
-        for row_index in range(1, row_max - 1):
+    for col_index in range(1, n_cols - 1):
+        for row_index in range(1, n_rows - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_matrix[col_index, row_index] == nodata_dem:
-                flow_matrix[col_index, row_index] = nodata_flow
+            if dem_array[row_index, col_index] == dem_nodata:
+                flow_array[row_index, col_index] = flow_nodata
                 continue
 
             #Calculate the flow flow_direction for each facet
@@ -305,16 +311,16 @@ def flow_direction_inf(dem, bounding_box, flow):
             
             #Initialize flow matrix to nod_data flow so the default is to 
             #calculate with D8.
-            flow_matrix[col_index, row_index] = nodata_flow
+            flow_array[row_index, col_index] = flow_nodata
             
             for facet_index in range(8):
                 #This defines the three height points
-                e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + col_index,
-                                 e_0_offsets[facet_index*2+0] + row_index]
-                e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + col_index,
-                                 e_1_offsets[facet_index*2+0] + row_index]
-                e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
-                                 e_2_offsets[facet_index*2+0] + row_index]
+                e_0 = dem_array[e_0_offsets[facet_index*2+0] + row_index,
+                                e_0_offsets[facet_index*2+1] + col_index]
+                e_1 = dem_array[e_1_offsets[facet_index*2+0] + row_index,
+                                e_1_offsets[facet_index*2+1] + col_index]
+                e_2 = dem_array[e_2_offsets[facet_index*2+0] + row_index,
+                                e_2_offsets[facet_index*2+1] + col_index]
                 
                 #LOGGER.debug('facet %s' % (facet_index+1))
                 #LOGGER.debug('e_1_offsets %s %s' %(e_1_offsets[facet_index*2+1],
@@ -322,7 +328,7 @@ def flow_direction_inf(dem, bounding_box, flow):
                 #LOGGER.debug('e_0 %s e_1 %s e_2 %s' % (e_0, e_1, e_2))
                 
                 #avoid calculating a slope on nodata values
-                if e_1 == nodata_dem or e_2 == nodata_dem: 
+                if e_1 == dem_nodata or e_2 == dem_nodata: 
                     break #fallthrough to D8
                  
                 #s_1 is slope along straight edge
@@ -338,7 +344,7 @@ def flow_direction_inf(dem, bounding_box, flow):
                 #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
                 if s_1 != 0:
-                    flow_direction = numpy.arctan(s_2 / s_1) #Eqn 3
+                    flow_direction = atan(s_2 / s_1) #Eqn 3
 
                 if flow_direction < 0: #Eqn 4
                     #LOGGER.debug("flow direciton negative")
@@ -348,16 +354,16 @@ def flow_direction_inf(dem, bounding_box, flow):
                     flow_direction = 0
                     slope = s_1
                     #LOGGER.debug("flow direction < 0 slope=%s"%slope)
-                elif flow_direction > numpy.arctan(d_2 / d_1): #Eqn 5
+                elif flow_direction > atan(d_2 / d_1): #Eqn 5
                     #LOGGER.debug("flow direciton greater than 45 degrees")
                     #If the flow direciton goes off the diagonal side, figure
                     #out what its value is and
-                    flow_direction = numpy.arctan(d_2 / d_1)
-                    slope = (e_0 - e_2) / numpy.sqrt(d_1 ** 2 + d_2 ** 2)
+                    flow_direction = atan(d_2 / d_1)
+                    slope = (e_0 - e_2) / sqrt(d_1 * d_1 + d_2 * d_2)
                     #LOGGER.debug("flow direction > 45 slope=%s"%slope)
                 else:
                     #LOGGER.debug("flow direciton in bounds")
-                    slope = numpy.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                    slope = sqrt(s_1 * s_1 + s_2 * s_2) #Eqn 3
                     #LOGGER.debug("flow direction in middle slope=%s"%slope)
 
                 #LOGGER.debug("slope %s" % slope)
@@ -374,40 +380,193 @@ def flow_direction_inf(dem, bounding_box, flow):
                 #LOGGER.debug("slope_max %s" % slope_max)
                 #LOGGER.debug("max_index %s" % (max_index+1))
                 if slope_max > 0:
-                    flow_matrix[col_index, row_index] = \
+                    flow_array[row_index, col_index] = \
                         a_f[max_index] * flow_direction_max_slope + \
                         a_c[max_index] * 3.14159265 / 2.0
 
     #Calculate D8 flow to resolve undefined flows in D-inf
-#    d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
+#    d8_flow_direction_dataset = raster_utils.new_raster_from_base(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
 #    LOGGER.info("calculating D8 flow")
-#    flowDirectionD8(dem, bounding_box, d8_flow_dataset)
-#    d8_flow_matrix = d8_flow_dataset.ReadAsArray(*bounding_box).transpose()
+#    flowDirectionD8(dem, bounding_box, d8_flow_direction_dataset)
+#    d8_flow_matrix = d8_flow_direction_dataset.ReadAsArray(*bounding_box).transpose()
     
-#    nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
+#    nodata_d8 = d8_flow_direction_dataset.GetRasterBand(1).GetNoDataValue()
 
-    d8_to_radians = {0: -1.0,
-                     1: 0.0,
-                     2: 5.497787144,
-                     4: 4.71238898,
-                     8: 3.926990817,
-                     16: 3.141592654,
-                     32: 2.35619449,
-                     64: 1.570796327,
-                     128: 0.785398163,
-                     nodata_d8: nodata_flow
-                     }
+#    d8_to_radians = {0: -1.0,
+#                     1: 0.0,
+#                     2: 5.497787144,
+#                     4: 4.71238898,
+#                     8: 3.926990817,
+#                     16: 3.141592654,
+#                     32: 2.35619449,
+#                     64: 1.570796327,
+#                     128: 0.785398163,
+#                     nodata_d8: flow_nodata
+#                     }
     
 #    for col_index in range(1, col_max - 1):
 #        for row_index in range(1, row_max - 1):
-#            if flow_matrix[col_index, row_index] == nodata_flow:
-#                flow_matrix[col_index, row_index] = \
-#                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
+#            if flow_matrix[row_index, col_index] == flow_nodata:
+#                flow_matrix[row_index, col_index] = \
+#                    d8_to_radians[d8_flow_matrix[row_index, col_index]]
 
     LOGGER.info("writing flow data to raster")
-    #Don't write the outer uncalculated part that's the [1:-1,1:-1] below
-    flow.GetRasterBand(1).WriteArray(flow_matrix[1:-1,1:-1].transpose(), 
-                                     bounding_box[0]+1,
-                                     bounding_box[1]+1)
-    flow.GetRasterBand(1).FlushCache()
-    invest_core.calculateRasterStats(flow.GetRasterBand(1))
+    flow_band.WriteArray(flow_array)
+    raster_utils.calculate_raster_stats(flow_direction_dataset)
+
+
+def calculate_flow_graph(
+    flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
+    """This function calculates the flow graph from a d-infinity based
+        flow algorithm to include including source/sink cells
+        as well as a data structures to assist in walking up the flow graph.
+
+        flow_direction_uri - uri to a flow direction GDAL dataset that's
+            used to calculate the flow graph
+        outflow_weights_uri - a uri to a float32 dataset that will be created
+            whose elements correspond to the percent outflow from the current
+            cell to its first counter-clockwise neighbor
+        outflow_direction_uri - a uri to a byte dataset that will indicate the
+            first counter clockwise outflow neighbor as an index from the
+            following diagram
+
+            3 2 1
+            4 x 0
+            5 6 7
+
+        returns sink_cell_set, source_cell_set
+            where these sets indicate the cells with only inflow (sinks) or
+            only outflow (source)"""
+
+    LOGGER.info('Calculating flow graph')
+    start = time.clock()
+
+    #This is the array that's used to keep track of the connections of the
+    #current cell to those *inflowing* to the cell, thus the 8 directions
+    flow_direction_dataset = gdal.Open(flow_direction_uri)
+    cdef double flow_direction_nodata
+    flow_direction_band, flow_direction_nodata = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
+
+    cdef int n_cols, n_rows
+    n_cols, n_rows = flow_direction_band.XSize, flow_direction_band.YSize
+
+    outflow_weight_data_file = tempfile.TemporaryFile()
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = numpy.memmap(outflow_weight_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
+    outflow_weights_nodata = -1.0
+    outflow_weights[:] = outflow_weights_nodata
+
+    outflow_direction_data_file = tempfile.TemporaryFile()
+
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = numpy.memmap(outflow_direction_data_file, dtype=numpy.byte, mode='w+', shape=(n_rows, n_cols))
+    outflow_direction_nodata = 9
+    outflow_direction[:] = outflow_direction_nodata
+
+    #These will be used to determine inflow and outflow later
+
+    inflow_cell_set = set()
+    outflow_cell_set = set()
+
+    #The number of diagonal offsets defines the neighbors, angle between them
+    #and the actual angle to point to the neighbor
+    cdef int n_neighbors = 8
+    cdef double *angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+
+    flow_direction_memory_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
+        flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
+
+    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
+    cdef int *diagonal_offsets = \
+        [1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+
+    #Iterate over flow directions
+    cdef int row_index, col_index, neighbor_direction_index
+    cdef long current_index
+    cdef double flow_direction, flow_angle_to_neighbor, outflow_weight
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            flow_direction = flow_direction_array[row_index, col_index]
+            #make sure the flow direction is defined, if not, skip this cell
+            if flow_direction == flow_direction_nodata:
+                continue
+            current_index = row_index * n_cols + col_index
+            found = False
+            for neighbor_direction_index in range(n_neighbors):
+                flow_angle_to_neighbor = fabs(
+                    angle_to_neighbor[neighbor_direction_index] -
+                    flow_direction)
+                if flow_angle_to_neighbor < PI/4.0:
+                    found = True
+
+                    #Something flows out of this cell, remember that
+                    outflow_cell_set.add(current_index)
+
+                    #Determine if the direction we're on is oriented at 90
+                    #degrees or 45 degrees.  Given our orientation even number
+                    #neighbor indexes are oriented 90 degrees and odd are 45
+                    outflow_weight = 0.0
+
+                    if neighbor_direction_index % 2 == 0:
+                        outflow_weight = 1.0 - tan(flow_angle_to_neighbor)
+                    else:
+                        outflow_weight = tan(PI/4.0 - flow_angle_to_neighbor)
+
+                    #This will handle cases where almost all flow is going in
+                    #one direction, or is supposed to go in one direction,
+                    #but because of machine error splits insignificantly
+                    #between two cells. The 0.999 is a little overkill but works
+                    if outflow_weight > 0.999:
+                        outflow_weight = 1.0
+
+                    #If the outflow is nearly 0, make push it all
+                    #to the next neighbor
+                    if outflow_weight < 0.001:
+                        outflow_weight = 1.0
+                        neighbor_direction_index = \
+                            (neighbor_direction_index + 1) % 8
+
+                    outflow_direction[row_index, col_index] = \
+                        neighbor_direction_index
+                    outflow_weights[row_index, col_index] = outflow_weight
+
+                    #There's flow from the current cell to the neighbor
+                    #so figure out the neighbor then add to inflow set
+                    outflow_index = current_index + \
+                        diagonal_offsets[neighbor_direction_index]
+                    inflow_cell_set.add(outflow_index)
+
+                    #if there is non-zero flow to the next cell clockwise then
+                    #add it to the inflow set
+                    if outflow_weight != 1.0:
+                        next_outflow_index = current_index + \
+                            diagonal_offsets[(neighbor_direction_index + 1) % 8]
+                        inflow_cell_set.add(next_outflow_index)
+
+                    #we found the outflow direction
+                    break
+            if not found:
+                LOGGER.debug('no flow direction found for %s %s' % \
+                                 (row_index, col_index))
+
+    #write outflow direction and weights
+    outflow_weights_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_weights_uri, 'GTiff',
+        outflow_weights_nodata, gdal.GDT_Float32)
+    outflow_weights_band = outflow_weights_dataset.GetRasterBand(1)
+    outflow_weights_band.WriteArray(outflow_weights)
+
+    outflow_direction_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, outflow_direction_uri, 'GTiff',
+        outflow_direction_nodata, gdal.GDT_Byte)
+    outflow_direction_band = outflow_direction_dataset.GetRasterBand(1)
+    outflow_direction_band.WriteArray(outflow_direction)
+
+    LOGGER.debug("Calculating sink and source cells")
+    sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
+    source_cell_set = outflow_cell_set.difference(inflow_cell_set)
+
+    LOGGER.info('Done calculating flow path elapsed time %ss' % \
+                    (time.clock()-start))
+    return sink_cell_set, source_cell_set

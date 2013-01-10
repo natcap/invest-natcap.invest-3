@@ -1,3 +1,4 @@
+import sys
 
 class Registrar(object):
     def __init__(self):
@@ -20,8 +21,8 @@ class Registrar(object):
             if mapKey in ['int', 'float']:
                 return 0
             else:
-                print e  # More helpful printing this than just crashing.
-                raise ValueError
+                # Actually print out the exception information.
+                raise sys.exc_info()[1], None, sys.exc_info()[2]
 
     def get_func(self, mapKey):
         return self.map[mapKey]
