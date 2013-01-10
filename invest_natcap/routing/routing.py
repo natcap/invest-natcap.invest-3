@@ -113,7 +113,7 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
         'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
 
 
-def resolve_undefined_flow_direction(dem_uri, flow_direction_uri):
+def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     """Take a raster that has flow directions already defined and fill in
         the undefined ones.
 
@@ -125,4 +125,67 @@ def resolve_undefined_flow_direction(dem_uri, flow_direction_uri):
             will be resolved.
 
         returns nothing"""
-    pass
+
+    dem_dataset = gdal.Open(dem_uri)
+    dem_band, dem_nodata, dem_array = raster_utils.extract_band_and_nodata(
+        dem_dataset, get_array=True)
+
+    flow_direction_dataset = gdal.Open(flow_direction_uri)
+    flow_direction_band, flow_direction_nodata, flow_direction_array = \
+        raster_utils.extract_band_and_nodata(
+        flow_direction_dataset, get_array=True)
+
+    n_cols = dem_dataset.RasterXSize
+    n_rows = dem_dataset.RasterYSize
+
+
+    ### Grid cell direction reference
+    # 3 2 1
+    # 4 x 0
+    # 5 6 7
+
+    row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+
+    cells_to_process = collections.deque()
+    neighbor_index_to_process = collections.deque()
+
+    for row_index in xrange(n_rows):
+        for col_index in xrange(n_cols):
+            dem_value = dem_array[row_index, col_index]
+            if dem_value == dem_nodata:
+                continue
+
+            flow_direction_value = flow_direction_array[row_index, col_index]
+            if flow_direction_value != flow_direction_nodata:
+                continue
+            
+            dem_neighbors_valid = True
+            flow_direction_neighbors_valid = False
+
+            for neighbor_index in xrange(8):
+                neighbor_row = row_index + row_offsets[neighbor_index]
+                neighbor_col = col_index + col_offsets[neighbor_index]
+                
+                if neighbor_row < 0 or neighbor_row >= n_rows or \
+                        neighbor_col < 0 or neighbor_col >= n_cols:
+                    #we're out of range, no way is the dem valid
+                    dem_neighbors_valid = False
+                    break
+
+                if dem_array[neighbor_row, neighbor_col] == dem_nodata:
+                    dem_neighbors_valid = False
+                    break
+
+                if flow_direction_array[neighbor_row, neighbor_col] != \
+                        flow_direction_nodata:
+                    #Here we found a flow direction that is valid
+                    #we can build from here
+                    flow_direction_neighbors_valid = True
+                    break
+                
+            if dem_neighbors_valid and flow_direction_neighbors_valid:
+                #Then we can define a valid direction
+                cells_to_process.append(row_index * n_cols + col_index)
+                neighbor_index_to_process.append(0)
