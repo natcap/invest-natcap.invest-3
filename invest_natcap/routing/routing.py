@@ -107,7 +107,22 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
     routing_cython_core.flow_direction_inf(
         dem_uri, flow_direction_uri)
 
+    resolve_undefined_flow_directions(dem_uri, flow_direction_uri)
+
     LOGGER.info(
         'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
 
 
+def resolve_undefined_flow_direction(dem_uri, flow_direction_uri):
+    """Take a raster that has flow directions already defined and fill in
+        the undefined ones.
+
+        dem_uri - the path to a DEM GDAL dataset
+        flow_direction_uri - the path to a flow direction dataset whose
+            flow directions have already been defined, but may have undefined
+            flow directions due to plateaus.  The value of this raster will
+            be modified where flow directions that were previously undefined
+            will be resolved.
+
+        returns nothing"""
+    pass
