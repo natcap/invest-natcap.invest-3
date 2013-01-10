@@ -546,3 +546,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 edited_array = base_array / float(dq * w)
                 band.WriteArray(edited_array)
                 crit_lists['Risk']['s'][s].append(e_ds)
+
+    #OHAI. This might help.
+    return (crit_lists, denoms)
