@@ -877,15 +877,26 @@ class CSVChecker(TableChecker):
     def open(self, valid_dict):
         """Attempt to open the CSV file"""
 
+        # Before we actually open up the CSV for use, we need to check it for
+        # consistency.  Specifically, all CSV inputs to InVEST must adhere to
+        # the following:
+        #    - All strings are surrounded by double-quotes
+        #    - the CSV is comma-delimited.
+
         try:
             #The best we can do is try to open the file as a CSV dictionary
             #and if it fails as an IOError kick that out as an error
             #we used to try to use sniffer to see if it was valid but had
             #big issues about it.  See the following for details:
             #http://code.google.com/p/invest-natcap/issues/detail?id=1076
-            self.file = csv.DictReader(open(self.uri, 'rU'))
+            self.file = csv.DictReader(open(self.uri, 'rU'),
+                quoting=csv.QUOTE_NONNUMERIC, quotechar='"', delimiter=',', strict=True)
+            fieldnames = self._get_fieldnames()
+            table = self._build_table()
         except IOError as e:
             return str("IOError: %s" % str(e))
+        except (csv.Error, ValueError) as e:
+            return str(e)
 
     def _build_table(self):
         table_rows = []
