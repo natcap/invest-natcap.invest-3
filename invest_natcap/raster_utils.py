@@ -1114,7 +1114,7 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
                       datatype = band.DataType, nodata=nodata)
     return clipped_dataset
 
-def extract_band_and_nodata(dataset, get_array = False):
+def extract_band_and_nodata(dataset, get_array=False):
     """It's often useful to get the first band and corresponding nodata value
         for a dataset.  This function does that.
 
