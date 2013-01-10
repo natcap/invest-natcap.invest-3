@@ -151,6 +151,21 @@ class DynamicElement(QtGui.QWidget):
     def getElementsDictionary(self):
         return {self.attributes['id']: self}
 
+    def set_element_state(self, state):
+        """Set the element's state from state.  State is assumed to come from
+        self.get_element_state()."""
+
+        self.setValue(state)
+
+    def get_element_state(self):
+        """This function gets the relevant element state information for setting
+        a lastrun dictionary.  It defaults to just return the value of the
+        element (whatever its return value is), but can be overridden to return
+        more specific element information.  Information saved in this way can be
+        set by using the function 'set_element_state'."""
+
+        return self.value()
+
 class DynamicGroup(DynamicElement):
     """Creates an object intended for grouping other elements together.
     
@@ -1345,6 +1360,12 @@ class HideableElement(LabeledElement):
     def requirementsMet(self):
         return self.checkbox.isChecked()
 
+    def get_element_state(self):
+        """Get the state of the HideableElement.  Since this is just a base
+        class, we can only really return a dictionary with the checked value."""
+
+        return {'checked': self.checkbox.isChecked()}
+
 class HideableFileEntry(HideableElement, FileEntry):
     def __init__(self, attributes):
         HideableElement.__init__(self, attributes)
@@ -1371,6 +1392,16 @@ class HideableFileEntry(HideableElement, FileEntry):
         # If the user can interact with the element, return this element's check
         # state.
         return self.checkbox.isChecked()
+
+    def get_element_state(self):
+        hideable_state = HideableElement.get_element_state(self)
+        hideable_state['value'] = self.value()
+
+        return hideable_state
+
+    def set_element_state(self, state):
+        self.checkbox.setChecked(state['checked'])
+        self.setValue(state['value'])
 
 class Dropdown(LabeledElement):
     def __init__(self, attributes):
@@ -2095,6 +2126,21 @@ class Root(DynamicElement):
                     pass
         return user_args
 
+    def get_element_state(self):
+        user_args = {}
+
+        if self.isEnabled():
+            #loop through all elements known to the UI, assemble into a dictionary
+            #with the mapping element ID -> element value
+            for id, element in self.allElements.iteritems():
+                try:
+                    value = element.get_element_state()
+                    if value != None:
+                        user_args[id] = value
+                except:
+                    pass
+        return user_args
+
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
@@ -2224,7 +2270,7 @@ class ExecRoot(Root):
         filename = str(filename)
         if filename != '':
             save_handler = fileio.JSONHandler(filename)
-            save_handler.write_to_disk(self.value())
+            save_handler.write_to_disk(self.get_element_state())
             print 'parameters written to %s' % filename
             basename = os.path.basename(filename)
             self.messageArea.append('Parameters saved to %s' % basename)
@@ -2248,18 +2294,17 @@ class ExecRoot(Root):
             
             returns nothing"""
 
-        self.last_run_handler.write_to_disk(self.value())
+        self.last_run_handler.write_to_disk(self.get_element_state())
 
     def load_elements_from_save(self, save_dict):
         for id, value in save_dict.iteritems():
             try:
                 element = self.allElements[str(id)]
-                element.setValue(value)
+                element.set_element_state(value)
             except Exception as e:
                 print traceback.print_exc()
                 print 'Error \'%s\' when setting lastrun value %s to %s' %\
                     (e, value, str(id))
-
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 
