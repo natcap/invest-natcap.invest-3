@@ -1532,8 +1532,10 @@ def gaussian_filter_dataset(
     LOGGER.info('make the source memmap at %s' % source_filename)
     source_array = np.memmap(
         source_filename, dtype='float32', mode='w+', shape=shape)
+    LOGGER.info('make the mask memmap at %s' % mask_filename)
     mask_array = np.memmap(
         mask_filename, dtype='bool', mode='w+', shape=shape)
+    LOGGER.info('make the dest memmap at %s' % dest_filename)
     dest_array = np.memmap(
         dest_filename, dtype='float32', mode='w+', shape=shape)
 
