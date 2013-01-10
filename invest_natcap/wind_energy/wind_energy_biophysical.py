@@ -104,22 +104,41 @@ def execute(args):
     # Define a list of the fields that of interest in the wind data file
     wind_data_field_list = ['LATI', 'LONG', scale_key, 'K-010m']
 
-    # Read the wind points from a text file into a dictionary and create a point
-    # shapefile from that dictionary
-    wind_point_shape_uri = os.path.join(
-            inter_dir, 'wind_points_shape' + suffix + '.shp')
-    
+    # Read the wind energy data into a dictionary
     LOGGER.info('Read wind data from text file')
     wind_data = read_wind_data(str(args['wind_data_uri']), wind_data_field_list)
-    
-    LOGGER.info('Create point shapefile from wind data')
-    wind_data_points = wind_data_to_point_shape(
-            wind_data, 'wind_data', wind_point_shape_uri)
 
     try:
         LOGGER.info('Trying to open the AOI')
         aoi = ogr.Open(str(args['aoi_uri']))
-
+    except KeyError:
+        LOGGER.debug("AOI argument was not selected")
+        
+        # Since no AOI was provided the wind energy points shapefile that is
+        # created directly from dictionary will be the final output, so set the
+        # uri to point to the output folder
+        wind_point_shape_uri = os.path.join(
+                inter_dir, 'wind_energy_points' + suffix + '.shp')
+        
+        LOGGER.info('Create point shapefile from wind data')
+        
+        wind_data_points = wind_data_to_point_shape(
+            wind_data, 'wind_data', wind_point_shape_uri)
+        
+        biophysical_args['bathymetry'] = bathymetry
+        biophysical_args['wind_data_points'] = wind_data_points
+    else:
+        # Since an AOI was provided the wind energy points shapefile will need
+        # to be clipped and projected. Thus save the construction of the
+        # shapefile from dictionary in the intermediate directory
+        wind_point_shape_uri = os.path.join(
+                inter_dir, 'wind_energy_points_from_dat' + suffix + '.shp')
+        
+        LOGGER.info('Create point shapefile from wind data')
+        
+        wind_data_points = wind_data_to_point_shape(
+            wind_data, 'wind_data', wind_point_shape_uri)
+        
         # Define the uri's for clipping and projecting the wind energy data
         # points
         wind_points_clip_uri = os.path.join(
@@ -177,10 +196,6 @@ def execute(args):
 
         else:
             LOGGER.info('Distance information not provided')
-    except KeyError:
-        LOGGER.debug("AOI argument was not selected")
-        biophysical_args['bathymetry'] = bathymetry
-        biophysical_args['wind_data_points'] = wind_data_points
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
