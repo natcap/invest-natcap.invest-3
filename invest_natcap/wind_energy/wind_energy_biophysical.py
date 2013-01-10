@@ -120,16 +120,32 @@ def execute(args):
         LOGGER.info('Trying to open the AOI')
         aoi = ogr.Open(str(args['aoi_uri']))
 
-        wind_pts_uris = os.path.join(inter_dir, 'wind_points' + suffix)
-        bathymetry_uris = os.path.join(inter_dir, 'bathymetry' + suffix)
-        
+        # Define the uri's for clipping and projecting the wind energy data
+        # points
+        wind_points_clip_uri = os.path.join(
+                inter_dir, 'wind_points_clipped' + suffix)
+        wind_points_proj_uri = os.path.join(
+                out_dir, 'wind_energy_points' + suffix)
+        aoi_reprojected_wind_uri = os.path.join(
+                inter_dir, 'aoi_proj_to_wind_points' + suffix + '.shp')
+        # Clip and project the wind energy points datasource
         LOGGER.info('Clip and project wind points to AOI')
         wind_pts_prj = clip_and_reproject_maps(
-                wind_data_points, aoi, wind_pts_uris) 
+                wind_data_points, aoi, wind_points_clip_uri,
+                wind_points_proj_uri, aoi_reprojected_wind_uri) 
     
+        # Define the uri's for clipping and projecting the bathymetry
+        bathymetry_clip_uri = os.path.join(
+                inter_dir, 'bathymetry_clipped' + suffix)
+        bathymetry_proj_uri = os.path.join(
+                inter_dir, 'bathymetry_projected' + suffix)
+        aoi_reprojected_bath_uri = os.path.join(
+                inter_dir, 'aoi_proj_to_bath' + suffix + '.shp')
+        # Clip and project the bathymetry dataset
         LOGGER.info('Clip and project bathymetry to AOI')
         clip_and_proj_bath = clip_and_reproject_maps(
-                bathymetry, aoi, bathymetry_uris)
+                bathymetry, aoi, bathymetry_clip_uri, bathymetry_proj_uri,
+                aoi_reprojected_bath_uri)
 
         biophysical_args['bathymetry'] = clip_and_proj_bath
         biophysical_args['wind_data_points'] = wind_pts_prj
@@ -141,11 +157,19 @@ def execute(args):
             LOGGER.info('Handling distance parameters')
             land_polygon = ogr.Open(str(args['land_polygon_uri']))
 
-            land_poly_uris = os.path.join(inter_dir, 'land_poly' + suffix)
-        
+            # Define the uri's for clipping and reprojecting the land polygon
+            # datasource
+            land_poly_clip_uri = os.path.join(
+                    inter_dir, 'land_poly_clipped' + suffix)
+            land_poly_proj_uri = os.path.join(
+                    inter_dir, 'land_poly_projected' + suffix)
+            aoi_reprojected_land_uri = os.path.join(
+                    inter_dir, 'aoi_proj_to_land' + suffix + '.shp')
+            # Clip and project the land polygon datasource 
             LOGGER.info('Clip and project land poly to AOI')
             projected_land = clip_and_reproject_maps(
-                    land_polygon, aoi, land_poly_uris)
+                    land_polygon, aoi, land_poly_clip_uri, land_poly_proj_uri,
+                    aoi_reprojected_land_uri)
 
             biophysical_args['land_polygon'] = projected_land
             biophysical_args['min_distance'] = float(args['min_distance']) 
@@ -315,13 +339,19 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     LOGGER.info('Leaving wind_data_to_point_shape')
     return output_datasource
 
-def clip_and_reproject_maps(data_obj, aoi, output_uri):
+def clip_and_reproject_maps(
+        data_obj, aoi, clipped_uri, projected_uri, aoi_reprojected_uri):
     """Clip and project a Dataset/DataSource to an area of interest
 
         data_obj - a gdal Dataset or ogr Datasource
         aoi - an ogr DataSource of geometry type polygon
-        output_uri - a string of the desired base output name without the
-            extension (.tif, .shp, etc...) 
+        clipped_uri - a string of the desired uri path for the clipped
+            output step on data_obj, without the extension (.tif, .shp, etc...) 
+        projected_uri - a string of the desired uri path for the
+            projected output step on data_obj, without the extension 
+            (.tif, .shp, etc...) 
+        aoi_reprojected_uri - a string of the desired uri path for the
+            reprojected output step on the aoi 
 
         returns - a Dataset or DataSource clipped and projected to an area
             of interest"""
@@ -333,10 +363,6 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
 
     data_obj_wkt = None
     extension = None
-    
-    # Get the basename and directory name of the uri to help create future uri's
-    basename = os.path.basename(output_uri)
-    dirname = os.path.dirname(output_uri)
 
     # Get the Well Known Text of the data object and set the appropriate
     # extension for future uri's
@@ -354,14 +380,8 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
     # Reproject the AOI to the spatial reference of the data_obj so that the
     # AOI can be used to clip the data_obj properly
     
-    aoi_prj_to_obj_uri = os.path.join(
-            dirname, 'aoi_prj_to_' + basename + '.shp')
-    
     aoi_prj_to_obj = raster_utils.reproject_datasource(
-            aoi, data_obj_wkt, aoi_prj_to_obj_uri)
-    
-    data_obj_clipped_uri = output_uri + '_clipped' + extension
-    data_obj_reprojected_uri = output_uri + '_reprojected' + extension
+            aoi, data_obj_wkt, aoi_reprojected_uri)
 
     data_obj_prj = None
     
@@ -369,17 +389,17 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
         LOGGER.info('Clipping datasource')
         # Clip the data_obj to the AOI
         data_obj_clipped = clip_datasource(
-                aoi_prj_to_obj, data_obj, data_obj_clipped_uri)
+                aoi_prj_to_obj, data_obj, clipped_uri)
         
         LOGGER.info('Reprojecting datasource')
         # Reproject the clipped data obj to that of the AOI
         data_obj_prj = raster_utils.reproject_datasource(
-            data_obj_clipped, aoi_wkt, data_obj_reprojected_uri)
+            data_obj_clipped, aoi_wkt, projected_uri)
     else:
         LOGGER.info('Clipping dataset')
         # Clip the data obj to the AOI
         data_obj_clipped = raster_utils.clip_dataset(
-                data_obj, aoi_prj_to_obj, data_obj_clipped_uri)
+                data_obj, aoi_prj_to_obj, clipped_uri)
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
@@ -401,7 +421,7 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
         # Reproject the data object to the projection of the AOI
         data_obj_prj = raster_utils.reproject_dataset(
                 data_obj_clipped, pixel_size[0], aoi_wkt,
-                data_obj_reprojected_uri)
+                projected_uri)
     
     LOGGER.info('Leaving clip_and_reproject_maps')
     return data_obj_prj
