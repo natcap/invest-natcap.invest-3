@@ -950,6 +950,9 @@ class Container(QtGui.QGroupBox, DynamicGroup):
     def value(self):
         return self.isChecked()
 
+    def setValue(self, value):
+        self.setChecked(value)
+
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
     same input by providing an hyperlink by which to add another element.
