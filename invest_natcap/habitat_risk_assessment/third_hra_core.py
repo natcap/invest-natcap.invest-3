@@ -1,4 +1,3 @@
-
 def execute(args):
     
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
@@ -7,7 +6,54 @@ def execute(args):
     crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h-s'],
                                     args['habitats'], args['stressors'])
 
-    risk_dict = make_risk_rasters(crit_lists, denoms, args['risk_eq'])
+    risk_dict = make_risk_rasters(inter_dir, crit_lists, denoms, 
+                                    args['risk_eq'])
+
+def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
+    '''This will combine all of the intermediate criteria rasters that we
+    pre-processed with their r/dq*w. At this juncture, we should be able to 
+    straight add the E/C within themselven. The way in which the E/C rasters
+    are combined depends on the risk equation desired.
+
+    Input:
+        inter_dir- Intermediate directory in which the H_S risk-burned rasters
+            can be placed.
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
+
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
+                     }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+        denoms- Dictionary containing the combined denominator for a given
+            H-S overlap. Once all of the rasters are combined, each H-S raster
+            can be divided by this. 
+            
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
+                     }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+        risk_eq- A string description of the desired equation to use when
+            preforming risk calculation. 
+    '''    
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
      '''Want to return two dictionaries in the format of the following:
@@ -280,5 +326,5 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 band.WriteArray(edited_array)
                 crit_lists['Risk']['s'][s].append(e_ds)
 
-    #OHAI. This might help.
+    #This might help.
     return (crit_lists, denoms)
