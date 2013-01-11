@@ -155,6 +155,9 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cells_to_process = collections.deque()
     current_distance = collections.deque()
 
+    angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+
+
     #Build an initial list of cells to depth first search through to find
     #minimum distances
     LOGGER.info('Building initial list of edge plateau pixels')
@@ -188,7 +191,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     break
 
                 if flow_direction_array[neighbor_row, neighbor_col] != \
-                        flow_direction_nodata and dem_neighbor_value == dem_value:
+                        flow_direction_nodata and dem_neighbor_value <= dem_value:
                     #Here we found a flow direction that is valid
                     #we can build from here
                     flow_direction_neighbors_valid = True
@@ -199,7 +202,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 distance_array[row_index, col_index] = 0.0
 
 
-    angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+    
     
     #Distance to a cell if linear or diagonal
     distance_lookup = [1.0, 1.4142135623730951]
@@ -231,14 +234,13 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 #we're out of range, no way is the dem valid
                 continue
 
-            if dem_array[neighbor_row, neighbor_col] == dem_value:
-                if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
-                    cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
-                else:
-                    neighbor_distance = distance_array[neighbor_row, neighbor_col]
-                    if neighbor_distance < min_distance or min_direction == -1:
-                        min_direction = neighbor_index
-                        min_distance = neighbor_distance
+            if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
+                cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
+            elif dem_array[neighbor_row, neighbor_col] <= dem_value:
+                neighbor_distance = distance_array[neighbor_row, neighbor_col]
+                if neighbor_distance < min_distance or min_direction == -1:
+                    min_direction = neighbor_index
+                    min_distance = neighbor_distance
 
         flow_direction_array[row_index, col_index] = angle_to_neighbor[min_direction]
         distance_array[row_index, col_index] = min_distance + distance_lookup[neighbor_index % 2]
