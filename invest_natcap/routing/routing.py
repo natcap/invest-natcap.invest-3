@@ -160,20 +160,6 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
             if dem_value == dem_nodata:
                 continue
 
-            on_edge = False
-            for neighbor_index in xrange(8):
-                neighbor_row = row_index + row_offsets[neighbor_index]
-                neighbor_col = col_index + col_offsets[neighbor_index]
-                if neighbor_row < 0 or neighbor_row >= n_rows or \
-                        neighbor_col < 0 or neighbor_col >= n_cols:
-                    #we're out of range, no way is the dem valid
-                    continue
-                if dem_array[neighbor_row, neighbor_col] == dem_nodata:
-                    on_edge = True
-                    break
-            if on_edge:
-                continue
-
             flow_direction_value = flow_direction_array[row_index, col_index]
             if flow_direction_value != flow_direction_nodata:
                 continue
@@ -198,7 +184,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     break
 
                 if flow_direction_array[neighbor_row, neighbor_col] != \
-                        flow_direction_nodata and dem_neighbor_value <= dem_value:
+                        flow_direction_nodata and dem_neighbor_value == dem_value:
                     #Here we found a flow direction that is valid
                     #we can build from here
                     flow_direction_neighbors_valid = True
@@ -225,21 +211,32 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
         if flow_direction_value != flow_direction_nodata:
             continue
         
+        distance_defined = False
+        diagonal = False
         for neighbor_index in xrange(8):
             neighbor_row = row_index + row_offsets[neighbor_index]
             neighbor_col = col_index + col_offsets[neighbor_index]
             
+
             if neighbor_row < 0 or neighbor_row >= n_rows or \
                     neighbor_col < 0 or neighbor_col >= n_cols:
                 #we're out of range, no way is the dem valid
                 continue
 
+            neighbor_dem_value = dem_array[neighbor_row, neighbor_col]
             neighbor_flow_direction = flow_direction_array[neighbor_row, neighbor_col]
 
-            if neighbor_flow_direction == flow_direction_nodata:
-                #if the neighbor is undefined it needs it
-                cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
-            else:
-                flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+            if neighbor_dem_value == dem_value:
+                if neighbor_flow_direction == flow_direction_nodata:
+                    cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
+                else:
+                    if not distance_defined:
+                        flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+                        diagonal = neighbor_index % 2 == 1
+                        distance_defined = True
+                    elif diagonal and neighbor_index % 2 == 0:
+                        flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+                        diagonal = False
+
 
     flow_direction_band.WriteArray(flow_direction_array)
