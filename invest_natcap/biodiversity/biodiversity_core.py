@@ -445,7 +445,7 @@ def make_raster_from_shape(base_raster, shape, attr):
     return base_raster 
        
 def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
-        out_nodata, raise_error, error_message = 'An Error occured mapping' + \
+        out_nodata, raise_error, error_message='An Error occured mapping' + \
         'a dictionary to a raster'):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values 
@@ -480,6 +480,6 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
 
     reclassified_dataset = raster_utils.reclassify_dataset(
         key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
-        exception_flag = raise_error)
+        exception_flag=raise_error)
 
     return reclassified_dataset
