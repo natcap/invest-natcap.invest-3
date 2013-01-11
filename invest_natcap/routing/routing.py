@@ -198,7 +198,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     break
 
                 if flow_direction_array[neighbor_row, neighbor_col] != \
-                        flow_direction_nodata and dem_neighbor_value <= dem_value:
+                        flow_direction_nodata and dem_neighbor_value == dem_value:
                     #Here we found a flow direction that is valid
                     #we can build from here
                     flow_direction_neighbors_valid = True
@@ -229,17 +229,22 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
             neighbor_row = row_index + row_offsets[neighbor_index]
             neighbor_col = col_index + col_offsets[neighbor_index]
             
+
             if neighbor_row < 0 or neighbor_row >= n_rows or \
                     neighbor_col < 0 or neighbor_col >= n_cols:
                 #we're out of range, no way is the dem valid
                 continue
 
+            neighbor_dem_value = dem_array[neighbor_row, neighbor_col]
             neighbor_flow_direction = flow_direction_array[neighbor_row, neighbor_col]
 
-            if neighbor_flow_direction == flow_direction_nodata:
-                #if the neighbor is undefined it needs it
-                cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
-            else:
-                flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+            if neighbor_dem_value == dem_value:
+                if neighbor_flow_direction == flow_direction_nodata:
+                    #if the neighbor is undefined it needs it
+                    cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
+                else:
+                    flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+                    #flow_direction_array[row_index, col_index] = 10.0
+
 
     flow_direction_band.WriteArray(flow_direction_array)
