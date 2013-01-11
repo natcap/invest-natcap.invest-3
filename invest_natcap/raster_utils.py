@@ -22,6 +22,16 @@ import pyamg
 
 import raster_cython_utils
 
+GDAL_TO_NUMPY_TYPE = {
+    gdal.GDT_Byte: np.byte,
+    gdal.GDT_Int16: np.int16,
+    gdal.GDT_Int32: np.int32,
+    gdal.GDT_UInt16: np.uint16,
+    gdal.GDT_UInt32: np.uint32,
+    gdal.GDT_Float32: np.float32,
+    gdal.GDT_Float64: np.float64
+    }
+
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
 class SpatialExtentOverlapException(Exception): pass
@@ -1104,7 +1114,7 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
                       datatype = band.DataType, nodata=nodata)
     return clipped_dataset
 
-def extract_band_and_nodata(dataset, get_array = False):
+def extract_band_and_nodata(dataset, get_array=False):
     """It's often useful to get the first band and corresponding nodata value
         for a dataset.  This function does that.
 
@@ -1481,7 +1491,7 @@ def get_rat_as_dictionary(dataset):
     return rat_dictionary
 
 def gaussian_filter_dataset(
-    dataset, sigma, out_uri, out_nodata, temp_dir = None):
+    dataset, sigma, out_uri, out_nodata, temp_dir=None):
     """A memory efficient gaussian filter function that operates on 
        the dataset level and creates a new dataset that's filtered.
        It will treat any nodata value in dataset as 0, and re-nodata
@@ -1521,11 +1531,13 @@ def gaussian_filter_dataset(
 
     LOGGER.info('make the source memmap at %s' % source_filename)
     source_array = np.memmap(
-        source_filename, dtype='float32', mode='w+', shape = shape)
+        source_filename, dtype='float32', mode='w+', shape=shape)
+    LOGGER.info('make the mask memmap at %s' % mask_filename)
     mask_array = np.memmap(
-        mask_filename, dtype='bool', mode='w+', shape = shape)
+        mask_filename, dtype='bool', mode='w+', shape=shape)
+    LOGGER.info('make the dest memmap at %s' % dest_filename)
     dest_array = np.memmap(
-        dest_filename, dtype='float32', mode='w+', shape = shape)
+        dest_filename, dtype='float32', mode='w+', shape=shape)
 
     LOGGER.info('load dataset into source array')
     for row_index in xrange(source_band.YSize):
@@ -1655,7 +1667,7 @@ def align_datasets(datasets, dataset_uris):
 
     return dataset_list
 
-def load_memory_mapped_array(dataset_uri, memory_file):
+def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     """This function loads the first band of a dataset into a memory mapped
         array.
 
@@ -1663,6 +1675,8 @@ def load_memory_mapped_array(dataset_uri, memory_file):
         memory_uri - a path to a file OR a file-like object that will be used
             to hold the memory map. It is up to the caller to create and delete
             this file.
+        array_type - the type of the resulting array, if None defaults
+            to the type of the raster band in the dataset
 
         returns a memmap numpy array of the data contained in the first band
             of dataset_uri"""
@@ -1672,20 +1686,13 @@ def load_memory_mapped_array(dataset_uri, memory_file):
     n_rows = dataset.RasterYSize
     n_cols = dataset.RasterXSize
 
-    gdal_to_numpy_type = {
-        gdal.GDT_Byte: np.byte,
-        gdal.GDT_Int16: np.int16,
-        gdal.GDT_Int32: np.int32,
-        gdal.GDT_UInt16: np.uint16,
-        gdal.GDT_UInt32: np.uint32,
-        gdal.GDT_Float32: np.float32,
-        gdal.GDT_Float64: np.float64
-        }
-
-    try:
-        dtype = gdal_to_numpy_type[band.DataType]
-    except KeyError:
-        raise TypeError('Unknown GDAL type %s' % band.DataType)
+    if array_type == None:
+        try:
+            dtype = GDAL_TO_NUMPY_TYPE[band.DataType]
+        except KeyError:
+            raise TypeError('Unknown GDAL type %s' % band.DataType)
+    else:
+        dtype = array_type
 
     memory_array = np.memmap(
         memory_file, dtype = dtype, mode = 'w+', shape = (n_rows, n_cols))

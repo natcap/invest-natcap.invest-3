@@ -113,6 +113,8 @@ if platform.system() == 'Windows':
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
     data_files.append(('installer', glob.glob('installer/*')))
+    data_files.append(('invest_natcap/wind_energy',
+        ['invest_natcap/wind_energy/global_wind_energy_attributes.json']))
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
@@ -141,6 +143,9 @@ setup(name='invest_natcap',
                              sources = ['invest_natcap/hydropower/hydropower_cython_core.pyx']),
                    Extension(name="raster_cython_utils",
                              sources = ['invest_natcap/raster_cython_utils.pyx'],
+                             language="c++"),
+                   Extension(name="routing_cython_core",
+                             sources = ['invest_natcap/routing/routing_cython_core.pyx'],
                              language="c++")]),
       **py2exe_args)
 

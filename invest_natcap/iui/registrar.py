@@ -1,3 +1,4 @@
+import sys
 
 class Registrar(object):
     def __init__(self):
@@ -12,7 +13,7 @@ class Registrar(object):
             return self.map[mapKey](opValues)
         except KeyError: #key not in self.map
             return None
-        except ValueError:
+        except ValueError as e:
             #This handles the case where a type is a numeric value but doens't cast 
             #correctly.  In that case what is the value of an empty string?  Perhaps
             #it should be NaN?  Here we're returning 0.  James and Rich arbitrarily
@@ -20,7 +21,8 @@ class Registrar(object):
             if mapKey in ['int', 'float']:
                 return 0
             else:
-                raise ValueError
+                # Actually print out the exception information.
+                raise sys.exc_info()[1], None, sys.exc_info()[2]
 
     def get_func(self, mapKey):
         return self.map[mapKey]

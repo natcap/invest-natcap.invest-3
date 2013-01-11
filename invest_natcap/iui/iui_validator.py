@@ -454,26 +454,79 @@ class TableChecker(FileChecker, ValidationAssembler):
         List order is not validated.  Returns the error string if an error is
         found.  Returns None if no error found."""
 
-        available_fields = self._get_fieldnames()
+        available_fields = map(lambda x: x.upper(), self._get_fieldnames())
         for required_field in field_list:
+            required_field = required_field.upper()
             if required_field not in available_fields:
                 return str('Required field: ' + required_field + ' not found')
 
     def verify_restrictions(self, restriction_list):
         table = self._build_table()
         for restriction in restriction_list:
+            fieldnames = self._get_fieldnames()
+
+            # If the field is statically defined, check that the field exists
+            # and move on, raising an error if it does not exist.
+            if restriction['field'].__class__ in [unicode, str]:
+                if restriction['field'].upper() not in fieldnames:
+                    return 'Field %s is required.' % restriction['field']
+                restricted_fields = [restriction['field']]
+
+            # If the fieldname is defined by a regular expression, we need to go
+            # through all the fieldnames in this table to check if the target
+            # regex matches.
+            else:
+                # Use a list to keep track of the restricted fields that match
+                # the defined regex.
+                restricted_fields = []
+
+                # Loop through all fields to check if the field matches the
+                # target regular expression.  NOTE: restriction['field'] is
+                # allowed the same structure as defined in
+                # PrimitiveChecker.check_regexp().
+                for field in fieldnames:
+                    # Create a copy of the restriction dictionary so we don't
+                    # cause unwanted side effects.
+                    field_regex_dict = {'allowedValues':
+                                        restriction['field'].copy()}
+
+                    # PrimitiveChecker.check_regexp() needs a value to check, so
+                    # set it to the fieldname.
+                    field_regex_dict['value'] = field
+
+                    # Check whether the fieldname matches the defined field
+                    # regular expression by using the logic in
+                    # PrimitiveChecker().
+                    field_error = self.str_checker.check_regexp(
+                        field_regex_dict)
+
+                    # In this case, we want to know whether the regex matches.
+                    # When the regex matches, no error is returned.  If no error
+                    # is found (so the field matches the regex), track the field
+                    # so we can check it later.
+                    if field_error in [None, '']:
+                        restricted_fields.append(field)
+
+                # If a restriction is provided, we assume that the field is
+                # required.  If no fields match the regex provided, return an
+                # error message stating as much.
+                if len(restricted_fields) == 0:
+                    return str('This file must have at least one field '
+                        'matching the pattern %s' %
+                        restriction['field']['pattern'])
+
             for row in table:
-                value = row[restriction['field']]
-                assembled_dict = self.assemble(value, restriction['validateAs'])
+                for field in restricted_fields:
+                    assembled_dict = self.assemble(row[field], restriction['validateAs'])
 
-                error = None
-                if assembled_dict['type'] == 'number':
-                    error = self.num_checker.run_checks(assembled_dict)
-                else:  # assume the restriction type is a string
-                    error = self.str_checker.run_checks(assembled_dict)
+                    error = None
+                    if assembled_dict['type'] == 'number':
+                        error = self.num_checker.run_checks(assembled_dict)
+                    else:  # assume the restriction type is a string
+                        error = self.str_checker.run_checks(assembled_dict)
 
-                if error != None and error != '':
-                    return error
+                    if error != None and error != '':
+                        return error
 
     def _build_table(self):
         """This is a function stub for reimplementation.  Must return a list of
@@ -631,7 +684,7 @@ class DBFChecker(TableChecker):
             return str('Must be a DBF file')
 
     def _get_fieldnames(self):
-        return self.file.header.fields
+        return self.file.fieldNames
 
     def _build_table(self):
         table_rows = []
@@ -824,6 +877,12 @@ class CSVChecker(TableChecker):
     def open(self, valid_dict):
         """Attempt to open the CSV file"""
 
+        # Before we actually open up the CSV for use, we need to check it for
+        # consistency.  Specifically, all CSV inputs to InVEST must adhere to
+        # the following:
+        #    - All strings are surrounded by double-quotes
+        #    - the CSV is comma-delimited.
+
         try:
             #The best we can do is try to open the file as a CSV dictionary
             #and if it fails as an IOError kick that out as an error
@@ -831,8 +890,12 @@ class CSVChecker(TableChecker):
             #big issues about it.  See the following for details:
             #http://code.google.com/p/invest-natcap/issues/detail?id=1076
             self.file = csv.DictReader(open(self.uri, 'rU'))
+            fieldnames = self._get_fieldnames()
+            table = self._build_table()
         except IOError as e:
             return str("IOError: %s" % str(e))
+        except (csv.Error, ValueError) as e:
+            return str(e)
 
     def _build_table(self):
         table_rows = []

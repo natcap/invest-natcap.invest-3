@@ -4,7 +4,6 @@ import logging
 import csv
 import json
 
-from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
@@ -16,6 +15,11 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('wind_energy_valuation')
+
+# This is the path to the global wind energy parameters that lies within
+# invest_natcap/wind_energy that is added by setup.py
+GLOBAL_WIND_PARAMETERS = \
+    'invest_natcap/wind_energy/global_wind_energy_attributes.json'
 
 def execute(args):
     """Takes care of all file handling for the valuation part of the wind
@@ -77,13 +81,12 @@ def execute(args):
     aoi = ogr.Open(str(args['aoi_uri']))
     
     biophysical_points_uri = os.path.join(
-            inter_dir, 'wind_points_reprojected.shp')
-    biophysical_points = ogr.Open(biophysical_points_uri)
+            out_dir, 'wind_energy_points.shp')
+    # Open the wind energy points from the biophsyical run to be updated and
+    # edited
+    biophysical_points = ogr.Open(biophysical_points_uri, 1)
     
-    biophysical_points_proj = clip_and_project_datasource(
-            biophysical_points, aoi, os.path.join(inter_dir, 'bio_points'))
-    
-    valuation_args['biophysical_data'] = biophysical_points_proj
+    valuation_args['biophysical_data'] = biophysical_points
     
     # Number of machines
     valuation_args['number_of_machines'] = int(args['number_of_machines'])
@@ -100,7 +103,7 @@ def execute(args):
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
             'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
             'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
-            'rotor_diameter_factor']
+            'rotor_diameter_factor', 'carbon_coefficient']
 
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
@@ -112,8 +115,7 @@ def execute(args):
         if field_value_row[0].lower() in valuation_turbine_params:
             val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
     
-    val_global_params_file = open(
-            os.path.join(workspace, 'input/global_wind_energy_attributes.json'))
+    val_global_params_file = open(GLOBAL_WIND_PARAMETERS)
 
     val_global_params_dict = json.load(val_global_params_file)
     for key, val in val_global_params_dict.iteritems():
@@ -124,6 +126,7 @@ def execute(args):
     val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
     if len(val_turbine_dict.keys()) != val_param_len:
         class FieldError(Exception):
+            """A custom error message for fields that are missing"""
             pass
         raise FieldError('An Error occured from reading in a field value from '
                 'either the turbine CSV file or the global parameters JSON '
@@ -154,14 +157,15 @@ def execute(args):
 
         grid_dict = {}
         land_dict = {}
-        # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
-        # all the fields to lowercase because it is more readable and easier than
-        # editing the attribute itself
+        # Making a shallow copy of the attribute 'fieldnames' explicitly to
+        # edit to all the fields to lowercase because it is more readable 
+        # and easier than editing the attribute itself
         field_names = reader.fieldnames
 
         for index in range(len(field_names)):
             field_names[index] = field_names[index].lower()
-
+        # Iterate through the CSV file and construct two different dictionaries
+        # for grid and land points. 
         for row in reader:
             if row['type'].lower() == 'grid':
                 grid_dict[row['id']] = row
@@ -173,12 +177,18 @@ def execute(args):
 
         grid_ds_uri = os.path.join(inter_dir, 'val_grid_points.shp')
         land_ds_uri = os.path.join(inter_dir, 'val_land_points.shp')
-
+        
+        # Create a point shapefile from the grid and land point dictionaries.
+        # This makes it easier for future distance calculations and provides a
+        # nice intermediate output for users
         grid_point_ds = dictionary_to_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri) 
         land_point_ds = dictionary_to_shapefile(
                 land_dict, 'land_points', land_ds_uri) 
-
+        # In case any of the above points lie outside the AOI, clip the
+        # shapefiles and then project them to the AOI as well.
+        # NOTE: There could be an error here where NO points lie within the AOI,
+        # what then????????
         grid_point_prj = clip_and_project_datasource(
                 grid_point_ds, aoi, os.path.join(inter_dir, 'grid_point'))
         land_point_prj = clip_and_project_datasource(

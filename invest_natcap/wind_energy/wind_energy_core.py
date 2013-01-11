@@ -10,7 +10,6 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
-from scipy import signal
 from scipy import integrate
 from scipy import spatial
 import shapely.wkt
@@ -30,7 +29,7 @@ def biophysical(args):
         args[wind_data_points] - an OGR point geometry shapefile of the wind
             energy points of interest (required)
         args[aoi] - an OGR datasource of type polygon of the area of interest
-            (optional)
+            (optional, required if distance parameters have been selected)
         args[bathymetry] - a GDAL dataset of elevation values that encompasses
             the area of interest (required)
         args[bottom_type] - an OGR datasource of type polygon that depicts the 
@@ -49,7 +48,7 @@ def biophysical(args):
         args[suffix] - a String to append to the end of the filenames (required)
         args[land_polygon_uri] - an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins
-            (optional)
+            (optional, required if distance parameters have been selected)
         args[min_distance] - a float value for the minimum distance from shore
             for offshore wind farm installation (meters) (optional)
         args[max_distance] - a float value for the maximum distance from shore
@@ -68,7 +67,7 @@ def biophysical(args):
     min_depth = args['min_depth']
     max_depth = args['max_depth']
     
-    bathymetry_band, out_nodata = raster_utils.extract_band_and_nodata(
+    _, out_nodata = raster_utils.extract_band_and_nodata(
             bathymetry)
     bath_prop = raster_utils.get_raster_properties(bathymetry)
     
@@ -118,7 +117,7 @@ def biophysical(args):
                     intermediate_dir, 'aoi_raster' + tif_suffix)
 
             LOGGER.info('Create Raster From AOI')
-            # Make a raster from the AOI 
+            # Make a raster from the AOI using the bathymetry rasters pixel size 
             aoi_raster = raster_utils.create_raster_from_vector_extents(
                     bath_prop['width'], abs(bath_prop['height']), 
                     gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
@@ -231,9 +230,10 @@ def biophysical(args):
     v_rate = float(bio_turbine_dict['rated_wspd'])
     v_out = float(bio_turbine_dict['cut_out_wspd'])
     v_in = float(bio_turbine_dict['cut_in_wspd'])
+    air_density_coef = float(bio_turbine_dict['air_density_coefficient'])
 
     # Compute the mean air density, given by CKs formulas
-    mean_air_density = air_density_standard - (1.194*10**-4) * hub_height
+    mean_air_density = air_density_standard - air_density_coef * hub_height
     LOGGER.debug('mean_air_density : %s', mean_air_density)
 
     # Fractional coefficient that lives outside the intregation for computing
@@ -253,7 +253,7 @@ def biophysical(args):
 
     LOGGER.info('Entering Density and Harvest Calculations for each point')
     # For all the locations compute the weibull density and 
-    # harvested wind energy. save in a field of the feature
+    # harvested wind energy. Save in a field of the feature
     for feat in wind_points_layer:
         # Get the scale and shape values
         scale_value = feat.GetField(scale_index)
@@ -615,8 +615,8 @@ def valuation(args):
             # Knowing the closest index we can look into the land geoms lists,
             # pull that lat/long key, and then use that to index into the
             # dictionary to get the proper distance
-            L2G_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
-            grid_to_land_dist.append(L2G_dist)
+            l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
+            grid_to_land_dist.append(l2g_dist)
 
         wind_energy_layer.ResetReading()
         wind_energy_layer = None
@@ -668,26 +668,28 @@ def valuation(args):
         levelized_index = feat.GetFieldIndex('LevCost')
         co2_index = feat.GetFieldIndex('CO2')
         energy_index = feat.GetFieldIndex('HarvEnergy')
-        O2L_index = feat.GetFieldIndex('O2L')
-        L2G_index = feat.GetFieldIndex('L2G')
+        o2l_index = feat.GetFieldIndex('O2L')
+        l2g_index = feat.GetFieldIndex('L2G')
         
         # The energy value converted from Wh (Watt hours as output from CK's
         # biophysical model equations) to kWh
         energy_val = feat.GetField(energy_index) / 1000.0
-        O2L_val = feat.GetField(O2L_index)
-        L2G_val = feat.GetField(L2G_index)
+        o2l_val = feat.GetField(o2l_index)
+        l2g_val = feat.GetField(l2g_index)
 
         # Get the total cable distance
-        total_cable_dist = O2L_val + L2G_val
+        total_cable_dist = o2l_val + l2g_val
         # Initialize cable cost variable
         cable_cost = 0
 
         # The break at 'circuit_break' indicates the difference in using AC and
         # DC current systems
         if total_cable_dist <= circuit_break:
-            cable_cost = (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist)
+            cable_cost = (mw_coef_ac * total_mega_watt) + \
+                            (cable_coef_ac * total_cable_dist)
         else:
-            cable_cost = (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist)
+            cable_cost = (mw_coef_dc * total_mega_watt) + \
+                            (cable_coef_dc * total_cable_dist)
         
         # Compute the total CAP
         cap = cap_less_dist + cable_cost
@@ -702,6 +704,7 @@ def valuation(args):
         levelized_cost_num = 0
         levelized_cost_denom = 0
         # Calculate the total NPV summation over the lifespan of the wind farm
+        # as well as the levelized cost
         for year in range(1, time + 1):
             # The revenue in the current time period
             rev = energy_val * dollar_per_kwh
@@ -721,7 +724,8 @@ def valuation(args):
         levelized_cost = levelized_cost_num / levelized_cost_denom
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
-        carbon_emissions = 6.8956e-4 * energy_val
+        carbon_coef = float(turbine_dict['carbon_coefficient']) 
+        carbon_emissions = carbon_coef * energy_val
         
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)
@@ -730,6 +734,12 @@ def valuation(args):
         wind_energy_layer.SetFeature(feat)
 
     wind_energy_layer.SyncToDisk()
+
+    # Open the density raster, which is an output of the biophyiscal portion, so
+    # that we can properly mask the valuation outputs
+    density_uri = os.path.join(output_dir, 'density.tif')
+    density_ds = gdal.Open(density_uri)
+    _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
     npv_uri = os.path.join(output_dir, 'npv.tif')
     levelized_uri = os.path.join(output_dir, 'levelized.tif')
@@ -742,34 +752,39 @@ def valuation(args):
     for uri, field in zip(uri_list, field_list):
         # Create a raster for the points to be vectorized to 
         LOGGER.info('Creating Output raster : %s', uri)
-        output_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, uri, wind_energy_points) 
+        # Creating a temperary uri here because new_raster_from_base requires
+        # one, even if the format is 'MEM'
+        tmp_uri = os.path.join(intermediate_dir, 'tmp_val_out.tif')
+        output_tmp_ds = raster_utils.new_raster_from_base(
+                density_ds, tmp_uri, 'MEM', out_nodata, gdal.GDT_Float32)
 
         # Interpolate and vectorize the points field onto a gdal dataset
         LOGGER.info('Vectorizing the points from the %s field', field)
         raster_utils.vectorize_points(
-                wind_energy_points, field, output_ds)
+                wind_energy_points, field, output_tmp_ds)
+        
+        def mask_nodata(masker, masky):
+            """A vectorize rasters function that uses the first raster as a
+                nodata mask
 
-        output_ds.FlushCache()
+                masker - a float to compare against the nodata value 
+                masky - a float of the relevant data to return if 'masker' is
+                    not a nodata value
+
+                returns - nodata or the masky value"""
+            
+            if masker == density_nodata:
+                return out_nodata
+            else:
+                return masky
+        # Mask out the valuation rasters based on the output from the
+        # biophysical run. This ensures that the distances and depths we are not
+        # interested in are not shown.
+        output_ds = raster_utils.vectorize_rasters(
+                [density_ds, output_tmp_ds], mask_nodata, raster_out_uri = uri,
+                nodata = out_nodata)
+
         output_ds = None
-
-    try:
-        land_shape_layer = args['land_polygon'].GetLayer()
-        for uri in uri_list:
-            dataset = gdal.Open(uri, gdal.GA_Update)
-            # Mask out the output rasters to make them more presentable by taking
-            # any overlap from the land polygon and setting those pixel values to
-            # nodata
-            gdal.RasterizeLayer(
-                    dataset, [1], land_shape_layer, burn_values=[out_nodata], 
-                    options = ['ALL_TOUCHED=TRUE'])
-
-            dataset.FlushCache()
-            dataset = None
-
-    except KeyError:
-        LOGGER.debug('Cannot mask output by land polygon because it was not'
-            'provided as an input')
 
     # Create the farm polygon shapefile, which is an example of how big the farm
     # will be with a rough representation of its dimensions. 
@@ -777,7 +792,7 @@ def valuation(args):
     # The number of turbines allowed per circuit for infield cabling
     turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
     # The rotor diameter of the turbines
-    rotor_diameter= int(turbine_dict['rotor_diameter'])
+    rotor_diameter = int(turbine_dict['rotor_diameter'])
     # The rotor diameter factor is a rule by which to use in deciding how far
     # apart the turbines should be spaced
     rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
@@ -787,15 +802,15 @@ def valuation(args):
     # This is where the farm polygon will be placed in space
     npv_ds = gdal.Open(npv_uri)
     npv_band = npv_ds.GetRasterBand(1)
-    gt = npv_ds.GetGeoTransform()
+    geo_transform = npv_ds.GetGeoTransform()
     xsize = npv_band.XSize
     ysize = npv_band.YSize
     # Find the center x and y points by indexing into the grid
-    center_x = (xsize / 2) * gt[1] + gt[0]
-    center_y = (ysize / 2) * gt[5] + gt[3]
+    center_x = (xsize / 2) * geo_transform[1] + geo_transform[0]
+    center_y = (ysize / 2) * geo_transform[5] + geo_transform[3]
     start_point = (center_x, center_y)
     # Get the projection of the dataset
-    raster_wkt = dataset.GetProjection()
+    raster_wkt = npv_ds.GetProjection()
     # Make a spatial reference from the projection to use for the farm polygon
     spat_ref = osr.SpatialReference()
     spat_ref.ImportFromWkt(raster_wkt)
@@ -804,7 +819,7 @@ def valuation(args):
     # turbines and the number of turbines per circuit. If a fractional value is
     # returned we want to round up and error on the side of having the farm be
     # slightly larger
-    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
+    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
     # The distance needed between turbines
     spacing_dist = rotor_diameter * rotor_diameter_factor
 
@@ -819,7 +834,7 @@ def valuation(args):
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
 
-    farm_poly = create_rectangular_polygon(
+    _ = create_rectangular_polygon(
             spat_ref, start_point, width, length, farm_poly_uri)
     
     LOGGER.info('Farm Polygon Created')
@@ -902,7 +917,8 @@ def point_to_polygon_distance(poly_ds, point_ds):
     for poly_feat in poly_layer:
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
         shapely_polygon = shapely.wkt.loads(poly_wkt)
-        poly_list.append(shapely_polygon.simplify(0.01, preserve_topology=False))
+        poly_list.append(
+                shapely_polygon.simplify(0.01, preserve_topology=False))
 
     LOGGER.info('Get the collection of polygon geometries by taking the union')
     polygon_collection = shapely.ops.unary_union(poly_list)
@@ -962,59 +978,6 @@ def add_field_to_shape_given_list(shape_ds, value_list, field_name):
      
     return shape_ds
 
-def build_subset_dictionary(main_dict, key_field, value_field):
-    """Take the main dictionary and build a subset dictionary depending on the
-        key of the inner dictionary and corresponding value 
-        
-        main_dict - a dictionary that has keys which point to dictionaries
-        key_field - the key of the inner dictionaries which are of interest
-        value_field - the value that corresponds to the key_field
-
-        returns - a dictionary"""
-
-    subset_dict = {}
-    index = 0
-    for key, val in main_dict.iteritems():
-        if val[key_field].lower() == value_field:
-            subset_dict[index] = val
-            index = index + 1
-    return subset_dict
-
-def build_list_points_from_dict(main_dict):
-    """Builds a list of latitude and longitude points from a dictionary
-    
-        main_dict - a dictionary where keys point to a dictionary that have a
-            'long' and 'lati' key:value pair
-
-        returns - a list of points"""
-
-    points_list = []
-    sorted_keys = main_dict.keys()
-    sorted_keys.sort()
-
-    for key in sorted_keys:
-        val = main_dict[key]
-        points_list.append([float(val['long']), float(val['lati'])])
-
-    return points_list
-
-def distance_kd(array_one, array_two):
-    """Computes the closest distance between to arrays of points using a k-d
-        tree data structure.
-    
-        array_one - a numpy array of the points to build the k-d tree from
-        array_two - a numpy array of points
-
-        returns - a numpy array of distances and a numpy array of the closest
-            indices"""
-
-    tree = spatial.KDTree(array_one)
-    dist, closest_index = tree.query(array_two)
-    LOGGER.debug('KD Distance: %s', dist)
-    LOGGER.debug('KD Closest Index: %s', closest_index)
-    dist_and_index = [ dist, closest_index ]
-    return dist_and_index
-
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
     the X and Y value from it's geometry. The X and Y value are stored in
@@ -1054,7 +1017,6 @@ def get_dictionary_from_shape(shape):
     """
     layer = shape.GetLayer()
     layer.ResetReading()
-    feat_count = layer.GetFeatureCount() 
     feat_dict = {}
 
     for feat in layer:    

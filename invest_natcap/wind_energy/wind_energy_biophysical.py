@@ -7,21 +7,19 @@ import json
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import shapely.wkt
-from shapely.ops import unary_union
-from shapely.wkb import dumps
-from shapely.wkb import loads
-from shapely import speedups
 
 from invest_natcap.wind_energy import wind_energy_core
 from invest_natcap import raster_utils
-
-speedups.enable()
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('wind_energy_biophysical')
+
+# This is the path to the global wind energy parameters that lies within
+# invest_natcap/wind_energy that is added by setup.py
+GLOBAL_WIND_PARAMETERS = \
+    'invest_natcap/wind_energy/global_wind_energy_attributes.json'
 
 def execute(args):
     """Takes care of all file handling for the biophysical part of the wind
@@ -106,44 +104,67 @@ def execute(args):
     # Define a list of the fields that of interest in the wind data file
     wind_data_field_list = ['LATI', 'LONG', scale_key, 'K-010m']
 
-    # Read the wind points from a text file into a dictionary and create a point
-    # shapefile from that dictionary
-    wind_point_shape_uri = os.path.join(
-            inter_dir, 'wind_points_shape' + suffix + '.shp')
-    
+    # Read the wind energy data into a dictionary
     LOGGER.info('Read wind data from text file')
     wind_data = read_wind_data(str(args['wind_data_uri']), wind_data_field_list)
-    
-    LOGGER.info('Create point shapefile from wind data')
-    wind_data_points = wind_data_to_point_shape(
-            wind_data, 'wind_data', wind_point_shape_uri)
 
     try:
         LOGGER.info('Trying to open the AOI')
         aoi = ogr.Open(str(args['aoi_uri']))
+    except KeyError:
+        LOGGER.debug("AOI argument was not selected")
         
-        LOGGER.info('Checking AOIs projection')
-        # Check to make sure that the AOI is projected and in meters
-        if not check_datasource_projections([aoi]):
-            # Creating a unique exception on the fly to provide better feedback
-            # to the user
-            class ProjectionError(Exception):
-                """A self defined Exception for a bad projection"""
-                pass
-
-            raise ProjectionError('The AOI is not projected properly. Please '
-                   'refer to the user guide or help icon on the user interface')
-
-        wind_pts_uris = os.path.join(inter_dir, 'wind_points' + suffix)
-        bathymetry_uris = os.path.join(inter_dir, 'bathymetry' + suffix)
+        # Since no AOI was provided the wind energy points shapefile that is
+        # created directly from dictionary will be the final output, so set the
+        # uri to point to the output folder
+        wind_point_shape_uri = os.path.join(
+                out_dir, 'wind_energy_points' + suffix + '.shp')
         
+        LOGGER.info('Create point shapefile from wind data')
+        
+        wind_data_points = wind_data_to_point_shape(
+            wind_data, 'wind_data', wind_point_shape_uri)
+        
+        biophysical_args['bathymetry'] = bathymetry
+        biophysical_args['wind_data_points'] = wind_data_points
+    else:
+        # Since an AOI was provided the wind energy points shapefile will need
+        # to be clipped and projected. Thus save the construction of the
+        # shapefile from dictionary in the intermediate directory
+        wind_point_shape_uri = os.path.join(
+                inter_dir, 'wind_energy_points_from_dat' + suffix + '.shp')
+        
+        LOGGER.info('Create point shapefile from wind data')
+        
+        wind_data_points = wind_data_to_point_shape(
+            wind_data, 'wind_data', wind_point_shape_uri)
+        
+        # Define the uri's for clipping and projecting the wind energy data
+        # points
+        wind_points_clip_uri = os.path.join(
+                inter_dir, 'wind_points_clipped' + suffix + '.shp')
+        wind_points_proj_uri = os.path.join(
+                out_dir, 'wind_energy_points' + suffix + '.shp')
+        aoi_reprojected_wind_uri = os.path.join(
+                inter_dir, 'aoi_proj_to_wind_points' + suffix + '.shp')
+        # Clip and project the wind energy points datasource
         LOGGER.info('Clip and project wind points to AOI')
         wind_pts_prj = clip_and_reproject_maps(
-                wind_data_points, aoi, wind_pts_uris) 
+                wind_data_points, aoi, wind_points_clip_uri,
+                wind_points_proj_uri, aoi_reprojected_wind_uri) 
     
+        # Define the uri's for clipping and projecting the bathymetry
+        bathymetry_clip_uri = os.path.join(
+                inter_dir, 'bathymetry_clipped' + suffix + '.tif')
+        bathymetry_proj_uri = os.path.join(
+                inter_dir, 'bathymetry_projected' + suffix + '.tif')
+        aoi_reprojected_bath_uri = os.path.join(
+                inter_dir, 'aoi_proj_to_bath' + suffix + '.shp')
+        # Clip and project the bathymetry dataset
         LOGGER.info('Clip and project bathymetry to AOI')
         clip_and_proj_bath = clip_and_reproject_maps(
-                bathymetry, aoi, bathymetry_uris)
+                bathymetry, aoi, bathymetry_clip_uri, bathymetry_proj_uri,
+                aoi_reprojected_bath_uri)
 
         biophysical_args['bathymetry'] = clip_and_proj_bath
         biophysical_args['wind_data_points'] = wind_pts_prj
@@ -155,11 +176,19 @@ def execute(args):
             LOGGER.info('Handling distance parameters')
             land_polygon = ogr.Open(str(args['land_polygon_uri']))
 
-            land_poly_uris = os.path.join(inter_dir, 'land_poly' + suffix)
-        
+            # Define the uri's for clipping and reprojecting the land polygon
+            # datasource
+            land_poly_clip_uri = os.path.join(
+                    inter_dir, 'land_poly_clipped' + suffix + '.shp')
+            land_poly_proj_uri = os.path.join(
+                    inter_dir, 'land_poly_projected' + suffix + '.shp')
+            aoi_reprojected_land_uri = os.path.join(
+                    inter_dir, 'aoi_proj_to_land' + suffix + '.shp')
+            # Clip and project the land polygon datasource 
             LOGGER.info('Clip and project land poly to AOI')
             projected_land = clip_and_reproject_maps(
-                    land_polygon, aoi, land_poly_uris)
+                    land_polygon, aoi, land_poly_clip_uri, land_poly_proj_uri,
+                    aoi_reprojected_land_uri)
 
             biophysical_args['land_polygon'] = projected_land
             biophysical_args['min_distance'] = float(args['min_distance']) 
@@ -167,10 +196,6 @@ def execute(args):
 
         else:
             LOGGER.info('Distance information not provided')
-    except KeyError:
-        LOGGER.debug("AOI argument was not selected")
-        biophysical_args['bathymetry'] = bathymetry
-        biophysical_args['wind_data_points'] = wind_data_points
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
@@ -181,7 +206,7 @@ def execute(args):
     # input files
     biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
                           'turbine_rated_pwr', 'air_density',
-                          'exponent_power_curve']
+                          'exponent_power_curve', 'air_density_coefficient']
     # Get the biophysical turbine parameters from the CSV file
     bio_turbine_param_file = open(args['turbine_parameters_uri'])
     bio_turbine_reader = csv.reader(bio_turbine_param_file)
@@ -192,8 +217,7 @@ def execute(args):
             bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
 
     # Get the global biophysical parameters from the JSON file
-    bio_global_params_file = open(
-           os.path.join(workspace, 'input/global_wind_energy_attributes.json'))
+    bio_global_params_file = open(GLOBAL_WIND_PARAMETERS)
 
     bio_global_params_dict = json.load(bio_global_params_file)
     for key, val in bio_global_params_dict.iteritems():
@@ -205,6 +229,7 @@ def execute(args):
     
     if len(bio_turbine_dict.keys()) != len(biophysical_params):
         class FieldError(Exception):
+            """A custom error message for fields that are missing"""
             pass
         raise FieldError('An Error occured from reading in a field value from '
         'either the turbine CSV file or the global parameters JSON file. ' 
@@ -222,28 +247,6 @@ def execute(args):
     wind_energy_core.biophysical(biophysical_args)
 
     LOGGER.info('Leaving Wind_Energy_Biophysical')
-
-def check_datasource_projections(dsource_list):
-    """Checks if a list of OGR Datasources are projected and projected in the
-        linear units of 1.0 which is meters
-
-        dsource_list - a list of OGR Datasources
-
-        returns - True if all Datasources are projected and projected in meters,
-            otherwise returns False"""
-    LOGGER.info('Entering check_datasource_projections')
-    # Loop through all the datasources and check the projection
-    for dsource in dsource_list:
-        srs = dsource.GetLayer().GetSpatialRef()
-        if not srs.IsProjected():
-            return False
-        # Compare linear units against 1.0 because that identifies units are in
-        # meters
-        if srs.GetLinearUnits() != 1.0:
-            return False
-
-    LOGGER.info('Leaving check_datasource_projections')
-    return True
 
 def read_wind_data(wind_data_uri, field_list):
     """Unpack the wind data into a dictionary
@@ -351,13 +354,18 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     LOGGER.info('Leaving wind_data_to_point_shape')
     return output_datasource
 
-def clip_and_reproject_maps(data_obj, aoi, output_uri):
+def clip_and_reproject_maps(
+        data_obj, aoi, clipped_uri, projected_uri, aoi_reprojected_uri):
     """Clip and project a Dataset/DataSource to an area of interest
 
         data_obj - a gdal Dataset or ogr Datasource
         aoi - an ogr DataSource of geometry type polygon
-        output_uri - a string of the desired base output name without the
-            extension (.tif, .shp, etc...) 
+        clipped_uri - a string of the desired uri path for the clipped
+            output step on data_obj 
+        projected_uri - a string of the desired uri path for the
+            projected output step on data_obj 
+        aoi_reprojected_uri - a string of the desired uri path for the
+            reprojected output step on the aoi 
 
         returns - a Dataset or DataSource clipped and projected to an area
             of interest"""
@@ -369,10 +377,6 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
 
     data_obj_wkt = None
     extension = None
-    
-    # Get the basename and directory name of the uri to help create future uri's
-    basename = os.path.basename(output_uri)
-    dirname = os.path.dirname(output_uri)
 
     # Get the Well Known Text of the data object and set the appropriate
     # extension for future uri's
@@ -381,23 +385,14 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
         data_obj_sr = data_obj_layer.GetSpatialRef()
         data_obj_wkt = data_obj_sr.ExportToWkt()
     
-        extension = '.shp'
     else:
         data_obj_wkt = data_obj.GetProjection()
-        
-        extension = '.tif'
 
     # Reproject the AOI to the spatial reference of the data_obj so that the
     # AOI can be used to clip the data_obj properly
     
-    aoi_prj_to_obj_uri = os.path.join(
-            dirname, 'aoi_prj_to_' + basename + '.shp')
-    
     aoi_prj_to_obj = raster_utils.reproject_datasource(
-            aoi, data_obj_wkt, aoi_prj_to_obj_uri)
-    
-    data_obj_clipped_uri = output_uri + '_clipped' + extension
-    data_obj_reprojected_uri = output_uri + '_reprojected' + extension
+            aoi, data_obj_wkt, aoi_reprojected_uri)
 
     data_obj_prj = None
     
@@ -405,17 +400,17 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
         LOGGER.info('Clipping datasource')
         # Clip the data_obj to the AOI
         data_obj_clipped = clip_datasource(
-                aoi_prj_to_obj, data_obj, data_obj_clipped_uri)
+                aoi_prj_to_obj, data_obj, clipped_uri)
         
         LOGGER.info('Reprojecting datasource')
         # Reproject the clipped data obj to that of the AOI
         data_obj_prj = raster_utils.reproject_datasource(
-            data_obj_clipped, aoi_wkt, data_obj_reprojected_uri)
+            data_obj_clipped, aoi_wkt, projected_uri)
     else:
         LOGGER.info('Clipping dataset')
         # Clip the data obj to the AOI
         data_obj_clipped = raster_utils.clip_dataset(
-                data_obj, aoi_prj_to_obj, data_obj_clipped_uri)
+                data_obj, aoi_prj_to_obj, clipped_uri)
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
@@ -437,7 +432,7 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
         # Reproject the data object to the projection of the AOI
         data_obj_prj = raster_utils.reproject_dataset(
                 data_obj_clipped, pixel_size[0], aoi_wkt,
-                data_obj_reprojected_uri)
+                projected_uri)
     
     LOGGER.info('Leaving clip_and_reproject_maps')
     return data_obj_prj
@@ -462,7 +457,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     if os.path.isfile(output_uri):
         os.remove(output_uri)
 
-    LOGGER.info('Creating new datasource')
+    LOGGER.debug('Creating new datasource')
     # Create a new shapefile from the orginal_datasource 
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
@@ -479,7 +474,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     # Get the number of fields in original_layer
     original_field_count = original_layer_dfn.GetFieldCount()
 
-    LOGGER.info('Creating new fields')
+    LOGGER.debug('Creating new fields')
     # For every field, create a duplicate field and add it to the new 
     # shapefiles layer
     for fld_index in range(original_field_count):
@@ -494,7 +489,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     aoi_feat = aoi_layer.GetFeature(0)
     aoi_geom = aoi_feat.GetGeometryRef()
     
-    LOGGER.info('Starting iteration over geometries')
+    LOGGER.debug('Starting iteration over geometries')
     # Iterate over each feature in original layer
     for orig_feat in orig_layer:
         # Get the geometry for the feature
@@ -522,185 +517,3 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     
     LOGGER.info('Leaving clip_datasource')
     return output_datasource
-
-#def clip_datasource_new(aoi_ds, orig_ds, output_uri):
-#   """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
-#       geometry type polygon. The aoi_ds should be a shapefile with a layer
-#       that has only one polygon feature
-
-#       aoi_ds - an OGR Datasource that is the clipping bounding box
-#       orig_ds - an OGR Datasource to clip
-#       out_uri - output uri path for the clipped datasource
-
-#       returns - a clipped OGR Datasource """
-#  
-#   LOGGER.info('Entering clip_datasource_new')
-
-#   orig_layer = orig_ds.GetLayer()
-#   aoi_layer = aoi_ds.GetLayer()
-
-#   # If the file already exists remove it
-#   if os.path.isfile(output_uri):
-#       os.remove(output_uri)
-
-#   LOGGER.info('Creating new datasource')
-#   # Create a new shapefile from the orginal_datasource 
-#   output_driver = ogr.GetDriverByName('ESRI Shapefile')
-#   output_datasource = output_driver.CreateDataSource(output_uri)
-
-#   # Get the original_layer definition which holds needed attribute values
-#   original_layer_dfn = orig_layer.GetLayerDefn()
-
-#   # Create the new layer for output_datasource using same name and geometry
-#   # type from original_datasource as well as spatial reference
-#   output_layer = output_datasource.CreateLayer(
-#           original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
-#           original_layer_dfn.GetGeomType())
-
-#   # Get the number of fields in original_layer
-#   original_field_count = original_layer_dfn.GetFieldCount()
-
-#   LOGGER.info('Creating new fields')
-#   # For every field, create a duplicate field and add it to the new 
-#   # shapefiles layer
-#   for fld_index in range(original_field_count):
-#       original_field = original_layer_dfn.GetFieldDefn(fld_index)
-#       output_field = ogr.FieldDefn(
-#               original_field.GetName(), original_field.GetType())
-#       # NOT setting the WIDTH or PRECISION because that seems to be unneeded
-#       # and causes interesting OGR conflicts
-#       output_layer.CreateField(output_field)
-
-#   # A list to hold the aoi shapefiles geometries
-#   aoi_datasource_geoms = []
-
-#   LOGGER.info('Build up AOI datasources geometries with Shapely')
-#   for aoi_feat in aoi_layer:
-#       aoi_geom = shapely.wkt.loads(aoi_feat.GetGeometryRef().ExportToWkt())
-#       aoi_datasource_geoms.append(aoi_geom)
-#   
-#   LOGGER.info('Taking Unary Union on AOI geometries')
-#   # Calculate the union on the list of geometries to get one collection of
-#   # geometries
-#   aoi_geom_collection = unary_union(aoi_datasource_geoms)
-#   
-#   LOGGER.info('Starting iteration over geometries')
-#   # Iterate over each feature in original layer
-#   for orig_feat in orig_layer:
-#       # Get the geometry for the feature
-#       orig_geom_wkb = orig_feat.GetGeometryRef().ExportToWkb()
-#       orig_geom_shapely = loads(orig_geom_wkb) 
-#       
-#       intersect_geom = aoi_geom_collection.intersection(orig_geom_shapely)
-#       
-#       if not intersect_geom.is_empty:
-#           # Copy original_datasource's feature and set as new shapes feature
-#           output_feature = ogr.Feature(
-#                   feature_def=output_layer.GetLayerDefn())
-#           output_layer.CreateFeature(output_feature)
-#       
-#           output_feature.SetFrom(orig_feat, False)
-#           output_layer.SetFeature(output_feature)
-#           output_feature = None
-#   
-#   LOGGER.info('Leaving clip_datasource_new')
-#   return output_datasource
-
-#def clip_datasource_fast(aoi_ds, orig_ds, output_uri):
-#   """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
-#       geometry type polygon. The aoi_ds should be a shapefile with a layer
-#       that has only one polygon feature
-
-#       aoi_ds - an OGR Datasource that is the clipping bounding box
-#       orig_ds - an OGR Datasource to clip
-#       out_uri - output uri path for the clipped datasource
-
-#       returns - a clipped OGR Datasource """
-#  
-#   LOGGER.info('Entering clip_datasource_fast')
-
-#   orig_layer = orig_ds.GetLayer()
-#   aoi_layer = aoi_ds.GetLayer()
-
-#   # If the file already exists remove it
-#   if os.path.isfile(output_uri):
-#       os.remove(output_uri)
-
-#   LOGGER.info('Creating new datasource')
-#   # Create a new shapefile from the orginal_datasource 
-#   output_driver = ogr.GetDriverByName('ESRI Shapefile')
-#   output_datasource = output_driver.CreateDataSource(output_uri)
-
-#   # Get the original_layer definition which holds needed attribute values
-#   original_layer_dfn = orig_layer.GetLayerDefn()
-
-#   # Create the new layer for output_datasource using same name and geometry
-#   # type from original_datasource as well as spatial reference
-#   output_layer = output_datasource.CreateLayer(
-#           original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
-#           original_layer_dfn.GetGeomType())
-
-#   LOGGER.info('Creating new field')
-#   # We only create one general field here because this function assumes that
-#   # only the geometries and shapes themselves matter. It uses a faster
-#   # clipping approach such that the specific field values can not be tracked
-#   output_field = ogr.FieldDefn('id', ogr.OFTReal)
-#   output_layer.CreateField(output_field)
-
-#   # A list to hold the original shapefiles geometries
-#   original_datasource_geoms = []
-#   LOGGER.info('Build up original datasources geometries with Shapely')
-#   for original_feat in original_layer:
-#       original_geom = shapely.wkt.loads(
-#               original_feat.GetGeometryRef().ExportToWkt())
-#       # The commented line below simplies the geometry by smoothing it which
-#       # allows the union operation to run much faster. Until accuracy is
-#       # decided upon, we will do it straight up
-#       #original_datasource_geoms.append(geom.simplify(0.001, preserve_topology=False))
-#       
-#       original_datasource_geoms.append(geom)
-
-#   LOGGER.info('Taking Unary Union on original geometries')
-#   # Calculate the union on the list of geometries to get one collection of
-#   # geometries
-#   original_geom_collection = unary_union(original_datasource_geoms)
-
-#   # A list to hold the aoi shapefiles geometries
-#   aoi_datasource_geoms = []
-
-#   LOGGER.info('Build up AOI datasources geometries with Shapely')
-#   for aoi_feat in aoi_layer:
-#       aoi_geom = shapely.wkt.loads(aoi_feat.GetGeometryRef().ExportToWkt())
-#       aoi_datasource_geoms.append(aoi_geom)
-#   
-#   LOGGER.info('Taking Unary Union on AOI geometries')
-#   # Calculate the union on the list of geometries to get one collection of
-#   # geometries
-#   aoi_geom_collection = unary_union(aoi_datasource_geoms)
-
-#   LOGGER.info('Take the intersection of the AOI geometry collection and the original geometry collection')
-#   # Take the intersection of the geometry collections which will give us our
-#   # 'clipped' geometry set
-#   clipped_geom = aoi_geom_collection.intersection(original_geom_collection)
-
-#   LOGGER.debug('Dump the Shapely geometry to Well Known Binary format')
-#   # Dump the unioned Shapely geometry into a Well Known Binary format so that
-#   # it can be read and used by OGR
-#   wkb_geom = dumps(clipped_geom)
-
-#   # Create a new OGR geometry from the Well Known Binary
-#   ogr_geom = ogr.CreateGeometryFromWkb(wkb_geom)
-#   output_feature = ogr.Feature(output_layer.GetLayerDefn())
-#   output_layer.CreateFeature(output_feature)
-#   
-#   field_index = output_feature.GetFieldIndex('id')
-#   # Arbitrarily set the field to 1 since there is just one feature that has
-#   # the clipped geometry
-#   output_feature.SetField(field_index, 1)
-#   output_feature.SetGeometry(ogr_geom)
-#   
-#   output_layer.SetFeature(output_feature)
-#   output_feature = None
-#   
-#   LOGGER.info('Leaving clip_datasource_fast')
-#   return output_datasource

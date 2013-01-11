@@ -489,7 +489,7 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
         return return_stats[0]
     return return_stats
 
-def split_datasource(ds, uris=None):
+def split_datasource(ds, uris=None, include_fields=[]):
     """Split the input OGR datasource into a list of datasources, each with a
     single layer containing a single feature.
 
@@ -497,6 +497,8 @@ def split_datasource(ds, uris=None):
         uris - a list of uris to where the new datasources should be saved on
             disk.  Must have a URI for each feature in ds (even if features are
             split across multiple layers).
+        include_fields=[] - a list of string fields to be copied from the source
+            datsource to the destination datasources.
 
     Returns a list of OGR datasources."""
 
@@ -523,6 +525,26 @@ def split_datasource(ds, uris=None):
             feature_geom = feature.GetGeometryRef()
             temp_feature = ogr.Feature(temp_layer_defn)
             temp_feature.SetGeometry(feature_geom)
+
+            if len(include_fields) > 0:
+                LOGGER.debug('Copying over fields %s', include_fields)
+                for field in include_fields:
+                    # Create the new field in the temp feature.
+                    new_field = ogr.FieldDefn(field, ogr.OFTReal)
+                    index = feature.GetFieldIndex(field)
+                    if index == -1:
+                        temp_layer.CreateField(new_field)
+
+                    LOGGER.debug('avail. fields=%s', temp_feature.keys())
+
+                    # Now that the new field has been created, copy the value.
+                    field_index = feature.GetFieldIndex(field)
+
+                    LOGGER.debug('field index=%s', field_index)
+                    field_value = feature.GetFieldAsString(field_index)
+                    new_index = temp_feature.GetFieldIndex(field)
+                    temp_feature.SetField(new_index, field_value)
+
             temp_feature.SetFrom(feature)
             temp_layer.CreateFeature(temp_feature)
 

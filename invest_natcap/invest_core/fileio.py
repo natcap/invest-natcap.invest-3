@@ -119,7 +119,7 @@ class CSVDriver(TableDriverTemplate):
     """The CSVDriver class is a subclass of TableDriverTemplate."""
     def get_file_object(self, uri=None):
         uri = max(uri, self.uri)
-        return csv.DictReader(open(uri, 'rU'), quoting=csv.QUOTE_NONNUMERIC)
+        return csv.DictReader(open(uri, 'rU'))
 
     def get_fieldnames(self):
         file_object = self.get_file_object(self.uri)
@@ -132,8 +132,22 @@ class CSVDriver(TableDriverTemplate):
     def read_table(self):
         file_object = self.get_file_object()
         table = []
+
+        # Instead of relying on the CSV module's ability to cast input values
+        # (which has been unreliable in James' experience), I'm instead
+        # implementing this solution: Assume that all values are input as
+        # strings or floats.  If the value cannot be cast to a float, then it is
+        # a string and should be returned as a string.  See issue 1548 for some
+        # of this issue.
         for row in file_object:
-            table.append(row)  # row is a dictionary of values
+            cast_row = {}
+            for key, value in row.iteritems():
+                try:
+                    cast_value = float(value)
+                except ValueError:
+                    cast_value = value
+                cast_row[key] = cast_value
+            table.append(cast_row)
         return table
 
     def write_table(self, table_list, uri=None, fieldnames=None):
@@ -143,7 +157,7 @@ class CSVDriver(TableDriverTemplate):
             fieldnames = self.get_fieldnames()
         file_handler = open(uri, 'wb')
         writer = csv.DictWriter(file_handler, fieldnames,
-            quoting=csv.QUOTE_NONNUMERIC)
+            quoting=csv.QUOTE_NONNUMERIC, delimiter=',', quotechar='"')
         try:
             writer.writeheader()
         except AttributeError:
