@@ -118,7 +118,7 @@ def execute(args):
         # created directly from dictionary will be the final output, so set the
         # uri to point to the output folder
         wind_point_shape_uri = os.path.join(
-                inter_dir, 'wind_energy_points' + suffix + '.shp')
+                out_dir, 'wind_energy_points' + suffix + '.shp')
         
         LOGGER.info('Create point shapefile from wind data')
         
@@ -142,9 +142,9 @@ def execute(args):
         # Define the uri's for clipping and projecting the wind energy data
         # points
         wind_points_clip_uri = os.path.join(
-                inter_dir, 'wind_points_clipped' + suffix)
+                inter_dir, 'wind_points_clipped' + suffix + '.shp')
         wind_points_proj_uri = os.path.join(
-                out_dir, 'wind_energy_points' + suffix)
+                out_dir, 'wind_energy_points' + suffix + '.shp')
         aoi_reprojected_wind_uri = os.path.join(
                 inter_dir, 'aoi_proj_to_wind_points' + suffix + '.shp')
         # Clip and project the wind energy points datasource
@@ -155,9 +155,9 @@ def execute(args):
     
         # Define the uri's for clipping and projecting the bathymetry
         bathymetry_clip_uri = os.path.join(
-                inter_dir, 'bathymetry_clipped' + suffix)
+                inter_dir, 'bathymetry_clipped' + suffix + '.tif')
         bathymetry_proj_uri = os.path.join(
-                inter_dir, 'bathymetry_projected' + suffix)
+                inter_dir, 'bathymetry_projected' + suffix + '.tif')
         aoi_reprojected_bath_uri = os.path.join(
                 inter_dir, 'aoi_proj_to_bath' + suffix + '.shp')
         # Clip and project the bathymetry dataset
@@ -179,9 +179,9 @@ def execute(args):
             # Define the uri's for clipping and reprojecting the land polygon
             # datasource
             land_poly_clip_uri = os.path.join(
-                    inter_dir, 'land_poly_clipped' + suffix)
+                    inter_dir, 'land_poly_clipped' + suffix + '.shp')
             land_poly_proj_uri = os.path.join(
-                    inter_dir, 'land_poly_projected' + suffix)
+                    inter_dir, 'land_poly_projected' + suffix + '.shp')
             aoi_reprojected_land_uri = os.path.join(
                     inter_dir, 'aoi_proj_to_land' + suffix + '.shp')
             # Clip and project the land polygon datasource 
@@ -361,10 +361,9 @@ def clip_and_reproject_maps(
         data_obj - a gdal Dataset or ogr Datasource
         aoi - an ogr DataSource of geometry type polygon
         clipped_uri - a string of the desired uri path for the clipped
-            output step on data_obj, without the extension (.tif, .shp, etc...) 
+            output step on data_obj 
         projected_uri - a string of the desired uri path for the
-            projected output step on data_obj, without the extension 
-            (.tif, .shp, etc...) 
+            projected output step on data_obj 
         aoi_reprojected_uri - a string of the desired uri path for the
             reprojected output step on the aoi 
 
@@ -386,11 +385,8 @@ def clip_and_reproject_maps(
         data_obj_sr = data_obj_layer.GetSpatialRef()
         data_obj_wkt = data_obj_sr.ExportToWkt()
     
-        extension = '.shp'
     else:
         data_obj_wkt = data_obj.GetProjection()
-        
-        extension = '.tif'
 
     # Reproject the AOI to the spatial reference of the data_obj so that the
     # AOI can be used to clip the data_obj properly
