@@ -1595,8 +1595,8 @@ def reclassify_dataset(
             raise an exception if there is a value in the raster that is not
             found in value_map
 
-       returns the new reclassified dataset GDAL raster, or raises an Exception 
-           if exception_flag == 'values_required' and the value from 
+       returns the new reclassified dataset GDAL raster, or raises an Exception
+           if exception_flag == 'values_required' and the value from
            'key_raster' is not a key in 'attr_dict'"""
 
     LOGGER.info('Reclassifying')

@@ -8,6 +8,7 @@ import shutil
 from osgeo import gdal
 from osgeo import ogr
 
+from invest_natcap import raster_utils as raster_utils
 from invest_natcap.invest_core import fileio as fileio
 from invest_natcap.iui import iui_validator as iui_validator
 from invest_natcap.nutrient import nutrient_core as nutrient_core
@@ -219,11 +220,10 @@ def execute(args):
 
             # Make the shapefile folder to contain the farms shapefile.
             os.makedirs(shapefile_folder)
-            copy_uri = os.path.join(shapefile_folder, 'farms_abundance')
 
             farms_file = ogr.Open(base_shapefile, 0)
             ogr_driver = ogr.GetDriverByName('ESRI Shapefile')
-            farms_copy = ogr_driver.CopyDataSource(farms_file, copy_uri)
+            farms_copy = ogr_driver.CopyDataSource(farms_file, shapefile_folder)
 
             crop_fields = [r for r in guilds_handler.get_fieldnames() if
                 r[0:4] == 'crp_']
@@ -246,16 +246,25 @@ def execute(args):
                 LOGGER.debug('fields=%s', fields)
 
                 for fieldname, field_value in fields.iteritems():
-                    print fieldname, field_value
-                    if fieldname[0:4].lower() == 'crp_' and field_value == 1:
+                    print fieldname, field_value, fieldname[0:4].lower()
+
+                    # The field value is often stored as either 0 or
+                    # some other value, but not necessarily 1.  So here,
+                    # I need to compare the value against 0, not vs. 1.
+                    if fieldname[0:4].lower() == 'crp_' and field_value != 0:
+                        print fieldname, fieldname[0:4].lower(), field_value
                         crop_sum = 0
                         for species in guilds_handler.table:
                             species_name = species['species']
-                            if species[field_value] == 1:
+
+                            if species[fieldname] == 1:
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
+                                LOGGER.debug('Supply raster URI=%s', supply_uri)
                                 supply_raster = gdal.Open(supply_uri)
-                                pixel_value = nutrient_core.get_raster_stat_under_polygon(
-                                    supply_raster, farm_site, stat='sum')
+                                #pixel_value = nutrient_core.get_raster_stat_under_polygon(
+                                #    supply_raster, farm_site, stat='sum')
+                                pixel_value = raster_utils.aggregate_raster_values(supply_raster,
+                                        farm_site, 'id', 'sum')
                                 LOGGER.debug('species_name=%s, pixel_value=%s',
                                             species_name, pixel_value)
 

@@ -518,36 +518,86 @@ def split_datasource(ds, uris=None, include_fields=[]):
             uri_index = len(output_shapefiles)
             temp_shapefile = ogr_driver.CreateDataSource(uris[uri_index])
             temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
-                layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
+                layer.GetSpatialRef())
             temp_layer_defn = temp_layer.GetLayerDefn()
 
+            # Create the obligatory ID field.
+            # If I don't create the ID field, I can't properly select other
+            # fields later on, when I need to set their values.
+            id_field = ogr.FieldDefn('id', ogr.OFTInteger)
+            temp_layer.CreateField(id_field)
+
+            # Create the new feature with all of the characteristics of the old
+            # field except for the fields.  Those are brought along separately.
             LOGGER.debug('Creating new feature with duplicate geometry')
             feature_geom = feature.GetGeometryRef()
             temp_feature = ogr.Feature(temp_layer_defn)
             temp_feature.SetGeometry(feature_geom)
-
-            if len(include_fields) > 0:
-                LOGGER.debug('Copying over fields %s', include_fields)
-                for field in include_fields:
-                    # Create the new field in the temp feature.
-                    new_field = ogr.FieldDefn(field, ogr.OFTReal)
-                    index = feature.GetFieldIndex(field)
-                    if index == -1:
-                        temp_layer.CreateField(new_field)
-
-                    LOGGER.debug('avail. fields=%s', temp_feature.keys())
-
-                    # Now that the new field has been created, copy the value.
-                    field_index = feature.GetFieldIndex(field)
-
-                    LOGGER.debug('field index=%s', field_index)
-                    field_value = feature.GetFieldAsString(field_index)
-                    new_index = temp_feature.GetFieldIndex(field)
-                    temp_feature.SetField(new_index, field_value)
-
             temp_feature.SetFrom(feature)
-            temp_layer.CreateFeature(temp_feature)
 
+            # Since there's only one feature in this shapefile, set id to 0.
+            id_field_index = temp_feature.GetFieldIndex('id')
+            temp_feature.SetField(id_field_index, 0)
+
+            LOGGER.debug('Copying over fields %s', include_fields)
+            for field in include_fields:
+                LOGGER.debug('Adding field "%s"', field)
+
+                index = temp_feature.GetFieldIndex(field)  # index in temp shp
+                field_exists = feature.GetFieldIndex(field)  # idx in old shp.
+
+                # Create the new field in the temp feature, but only if the new
+                # field does not already exist in the temp feature AND the field
+                # can be found in the current feature.
+                if index == -1 and field_exists != -1:
+                    LOGGER.debug('Making new field "%s" in temp layer', field)
+                    field_type = feature.GetFieldType(field_exists)
+                    LOGGER.debug('Field type=%s', field_type)
+
+                    new_field = ogr.FieldDefn(field, field_type)
+                    temp_layer.CreateField(new_field)
+                    temp_layer.SyncToDisk()
+
+                    # Reloading the temp layer definition now that a new field
+                    # has been created.
+                    temp_layer_defn = temp_layer.GetLayerDefn()
+
+                # If the target field already exists in the new feature, print a
+                # debug message and pass since we have nothing to do.
+                elif index != -1:
+                    LOGGER.debug('Field "%s" already exists in the new feature',
+                        field)
+
+                # If the target field does not exist in the source feature, we
+                # can't copy the field over.  Print a WARNING to logger and
+                # pass since there's nothing we can do.
+                elif field_exists == -1:
+                    LOGGER.warn('Field "%s" cannot be found in the source '
+                        'feature.  Skipping the creation of this feature',
+                        field)
+
+                # If for whatever reason we cannot create the field, print the
+                # state of the old and new field indices and pass, since there's
+                # nothing we can do except examine the log file.
+                else:
+                    LOGGER.debug('Skipping field creation. '
+                        'old_index=%s, new_index=%s', index, field_exists)
+
+                LOGGER.debug('Fields in source=%s', feature.keys())
+                LOGGER.debug('Fields in temp=%s', temp_feature.keys())
+
+                if field_exists != -1:
+                    LOGGER.debug('Copying field "%s" value to new feature',
+                        field)
+                    field_index = feature.GetFieldIndex(field)
+                    field_value = feature.GetFieldAsString(field_index)
+                    LOGGER.debug('Extracted field value=%s', field_value)
+                    new_index = temp_feature.GetFieldIndex(field)
+                    LOGGER.debug('Target field index=%s', new_index)
+                    LOGGER.debug('Sourcefield index=%s', field_exists)
+                    temp_feature.SetField(field_exists, field_value)
+
+            temp_layer.CreateFeature(temp_feature)
             temp_feature.Destroy()
             temp_layer.SyncToDisk()
             output_shapefiles.append(temp_shapefile)
