@@ -32,6 +32,7 @@ import time
 import tempfile
 
 from osgeo import gdal
+import osgeo.gdalconst
 import numpy
 
 from invest_natcap import raster_utils
@@ -130,7 +131,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     dem_band, dem_nodata, dem_array = raster_utils.extract_band_and_nodata(
         dem_dataset, get_array=True)
 
-    flow_direction_dataset = gdal.Open(flow_direction_uri)
+    flow_direction_dataset = gdal.Open(flow_direction_uri, osgeo.gdalconst.GA_Update)
     flow_direction_band, flow_direction_nodata, flow_direction_array = \
         raster_utils.extract_band_and_nodata(
         flow_direction_dataset, get_array=True)
@@ -149,7 +150,6 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
 
 
     cells_to_process = collections.deque()
-    neighbor_index_to_process = collections.deque()
 
     #Build an initial list of cells to depth first search through to find
     #minimum distances
@@ -188,12 +188,11 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     #Here we found a flow direction that is valid
                     #we can build from here
                     flow_direction_neighbors_valid = True
-                    break
                 
             if dem_neighbors_valid and flow_direction_neighbors_valid:
                 #Then we can define a valid direction
                 cells_to_process.append(row_index * n_cols + col_index)
-                neighbor_index_to_process.append(0)
+
 
     angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
 
@@ -224,3 +223,5 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
             else:
                 flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+
+    flow_direction_band.WriteArray(flow_direction_array)
