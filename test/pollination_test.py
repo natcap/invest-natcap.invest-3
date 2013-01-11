@@ -189,6 +189,12 @@ class UnifiedPollinationTest(unittest.TestCase):
                 'frm_Apis_cur.tif')
             invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
 
+    def test_farms_shapefile(self):
+        self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
+        self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
+            'Guild_with_crops.csv')
+        pollination.execute(self.args)
+
 
 class PollinationSmokeTest(unittest.TestCase):
     """To only run this test class at the command line, do this:
