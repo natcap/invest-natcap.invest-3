@@ -288,6 +288,42 @@ def read_wind_data(wind_data_uri, field_list):
 
     LOGGER.debug('Leaving read_wind_data')
     return wind_dict
+def read_binary_wind_data(wind_data_uri, field_list):
+    """Unpack the wind data into a dictionary
+
+        wind_data_uri - a uri for the wind data text file
+        field_list - a list of strings referring to the column headers from
+            the text file that are to be included in the dictionary
+
+        returns - a dictionary where the keys are lat/long tuples which point
+            to dictionaries that hold wind data at that location"""
+
+    LOGGER.debug('Entering read_wind_data')
+   
+    column_header_list = [
+            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
+            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
+            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
+    
+    wind_file = open(wind_data_uri, 'rb')
+    
+    for row in file_reader:
+        # Create the key for the dictionary based on the unique lat/long
+        # coordinate
+        key = (row['LATI'], row['LONG'])
+        wind_dict[key] = {}
+        
+        for row_key in row:
+            # Only add the values specified in the list to the dictionary. This
+            # allows some flexibility in removing columns that are not cared
+            # about 
+            if row_key in field_list:
+                wind_dict[key][row_key] = row[row_key]
+
+    wind_file.close()
+
+    LOGGER.debug('Leaving read_wind_data')
+    return wind_dict
 
 def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     """Given a dictionary of the wind data create a point shapefile that
