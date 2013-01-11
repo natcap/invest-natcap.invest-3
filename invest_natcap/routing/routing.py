@@ -153,6 +153,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
 
     #Build an initial list of cells to depth first search through to find
     #minimum distances
+    LOGGER.info('Building initial list of edge plateau pixels')
     for row_index in xrange(n_rows):
         for col_index in xrange(n_cols):
             dem_value = dem_array[row_index, col_index]
@@ -193,3 +194,33 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 #Then we can define a valid direction
                 cells_to_process.append(row_index * n_cols + col_index)
                 neighbor_index_to_process.append(0)
+
+    angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+
+    LOGGER.info('resolving directions')
+    while len(cells_to_process) > 0:
+        current_index = cells_to_process.pop()
+
+        row_index = current_index / n_cols
+        col_index = current_index % n_cols
+
+        flow_direction_value = flow_direction_array[row_index, col_index]
+        if flow_direction_value != flow_direction_nodata:
+            continue
+        
+        for neighbor_index in xrange(8):
+            neighbor_row = row_index + row_offsets[neighbor_index]
+            neighbor_col = col_index + col_offsets[neighbor_index]
+            
+            if neighbor_row < 0 or neighbor_row >= n_rows or \
+                    neighbor_col < 0 or neighbor_col >= n_cols:
+                #we're out of range, no way is the dem valid
+                continue
+
+            neighbor_flow_direction = flow_direction_array[neighbor_row, neighbor_col]
+
+            if neighbor_flow_direction == flow_direction_nodata:
+                #if the neighbor is undefined it needs it
+                cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
+            else:
+                flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
