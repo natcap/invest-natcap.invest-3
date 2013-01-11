@@ -106,6 +106,37 @@ def calc_E_raster(out_uri, s_list, s_denom):
 
     return e_ratser
 
+def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom)
+    '''Should return a raster burned with an 'E' raster that is a combination
+    of all the rasters passed in within the list, divided by the denominator.
+
+    Input:
+        s_list- A list of rasters burned with the equation r/dq*w for every
+            criteria applicable for that s.
+        s_denom- A double representing the sum total of all applicable criteria
+            using the equation 1/dq*w.
+
+    Returns an 'E' raster that is the sum of all individual r/dq*w burned
+    criteria rasters divided by the summed denominator.
+    '''
+    tot_crit_list = h_s_list + h_list
+    tot_denom = h_s_denom + h_denom
+
+    def add_c_pix(*pixels):
+        
+        value = 0.
+        
+        for p in pixels:
+            value += p
+    
+        return value / tot_denom
+
+    c_raster = raster_utils.vectorize_rasters(tot_crit_list, add_c_pix, aoi = None,
+                            raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                            nodata = 0)
+    return c_ratser
+
+
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
      '''Want to return two dictionaries in the format of the following:
      (Note: the individual num raster comes from the crit_ratings
