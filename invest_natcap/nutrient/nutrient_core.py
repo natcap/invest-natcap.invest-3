@@ -518,36 +518,59 @@ def split_datasource(ds, uris=None, include_fields=[]):
             uri_index = len(output_shapefiles)
             temp_shapefile = ogr_driver.CreateDataSource(uris[uri_index])
             temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
-                layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
+                layer.GetSpatialRef())
             temp_layer_defn = temp_layer.GetLayerDefn()
+
+            # Create the obligatory ID field.
+            id_field = ogr.FieldDefn('id', ogr.OFTInteger)
+            temp_layer.CreateField(id_field)
 
             LOGGER.debug('Creating new feature with duplicate geometry')
             feature_geom = feature.GetGeometryRef()
             temp_feature = ogr.Feature(temp_layer_defn)
             temp_feature.SetGeometry(feature_geom)
+            temp_feature.SetFrom(feature)
 
-            if len(include_fields) > 0:
-                LOGGER.debug('Copying over fields %s', include_fields)
-                for field in include_fields:
-                    # Create the new field in the temp feature.
-                    new_field = ogr.FieldDefn(field, ogr.OFTReal)
-                    index = feature.GetFieldIndex(field)
-                    if index == -1:
-                        temp_layer.CreateField(new_field)
+            id_field_index = temp_feature.GetFieldIndex('id')
+            temp_feature.SetField(id_field_index, 0)
 
-                    LOGGER.debug('avail. fields=%s', temp_feature.keys())
+            LOGGER.debug('Copying over fields %s', include_fields)
 
+
+            for field in include_fields:
+                # Create the new field in the temp feature.
+                index = temp_feature.GetFieldIndex(field)
+                field_exists = feature.GetFieldIndex(field)
+                if index == -1 and field_exists != -1:
+                    LOGGER.debug('field %s dne, making new field',
+                        field)
+                    field_type = feature.GetFieldType(field_exists)
+                    LOGGER.debug('Field type=%s', field_type)
+
+                    new_field = ogr.FieldDefn(field, field_type)
+                    temp_layer.CreateField(new_field)
+                    temp_layer.SyncToDisk()
+
+                    LOGGER.debug('Reloading the new layer defn.')
+                    temp_layer_defn = temp_layer.GetLayerDefn()
+
+                LOGGER.debug('finished')
+                LOGGER.debug('Old fields=%s', feature.keys())
+                LOGGER.debug('avail. fields=%s', temp_feature.keys())
+
+                if field_exists != -1:
                     # Now that the new field has been created, copy the value.
                     field_index = feature.GetFieldIndex(field)
 
                     LOGGER.debug('field index=%s', field_index)
                     field_value = feature.GetFieldAsString(field_index)
+                    LOGGER.debug('Extracted field value=%s', field_value)
                     new_index = temp_feature.GetFieldIndex(field)
-                    temp_feature.SetField(new_index, field_value)
+                    LOGGER.debug('New field index=%s', new_index)
+                    temp_feature.SetField2(1, 1)
 
-            temp_feature.SetFrom(feature)
+
             temp_layer.CreateFeature(temp_feature)
-
             temp_feature.Destroy()
             temp_layer.SyncToDisk()
             output_shapefiles.append(temp_shapefile)
