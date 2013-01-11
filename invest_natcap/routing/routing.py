@@ -211,6 +211,8 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
         if flow_direction_value != flow_direction_nodata:
             continue
         
+        distance_defined = False
+        diagonal = False
         for neighbor_index in xrange(8):
             neighbor_row = row_index + row_offsets[neighbor_index]
             neighbor_col = col_index + col_offsets[neighbor_index]
@@ -228,6 +230,13 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 if neighbor_flow_direction == flow_direction_nodata:
                     cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
                 else:
-                    flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+                    if not distance_defined:
+                        flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+                        diagonal = neighbor_index % 2 == 1
+                        distance_defined = True
+                    elif diagonal and neighbor_index % 2 == 0:
+                        flow_direction_array[row_index, col_index] = angle_to_neighbor[neighbor_index]
+                        diagonal = False
+
 
     flow_direction_band.WriteArray(flow_direction_array)
