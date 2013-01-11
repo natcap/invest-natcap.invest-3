@@ -219,11 +219,10 @@ def execute(args):
 
             # Make the shapefile folder to contain the farms shapefile.
             os.makedirs(shapefile_folder)
-            copy_uri = os.path.join(shapefile_folder, 'farms_abundance')
 
             farms_file = ogr.Open(base_shapefile, 0)
             ogr_driver = ogr.GetDriverByName('ESRI Shapefile')
-            farms_copy = ogr_driver.CopyDataSource(farms_file, copy_uri)
+            farms_copy = ogr_driver.CopyDataSource(farms_file, shapefile_folder)
 
             crop_fields = [r for r in guilds_handler.get_fieldnames() if
                 r[0:4] == 'crp_']
