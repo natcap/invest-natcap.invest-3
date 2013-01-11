@@ -66,13 +66,45 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
         #Want to get E and C from the applicable subdictionaries
         #E and C should be rasters of their own that are calc'd using
         #vectorize raster to straight add the pixels and divide by denoms
+        c_out_uri = os.path.join(inter_dir, h + '_' + s + 'C_Risk_Raster.tif')
+        e_out_uri = os.path.join(inter_dir, h + '_' + s + 'E_Risk_Raster.tif')
 
         #E will only need to take in stressor subdictionary data
-        E = calc_E_raster(crit_lists['Risk']['s'][s], denoms['Risk']['s'][s])
+        E = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
+                        denoms['Risk']['s'][s])
         #C will need to take in both habitat and hab-stress subdictionary data
-        C = calc_C_raster(crit_lists['Risk']['h-s'][pair], 
+        C = calc_C_raster(c_out_uri, crit_lists['Risk']['h-s'][pair], 
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
+
+def calc_E_raster(out_uri, s_list, s_denom):
+    '''Should return a raster burned with an 'E' raster that is a combination
+    of all the rasters passed in within the list, divided by the denominator.
+
+    Input:
+        s_list- A list of rasters burned with the equation r/dq*w for every
+            criteria applicable for that s.
+        s_denom- A double representing the sum total of all applicable criteria
+            using the equation 1/dq*w.
+
+    Returns an 'E' raster that is the sum of all individual r/dq*w burned
+    criteria rasters divided by the summed denominator.
+    '''
+    
+    def add_e_pix(*pixels):
+        
+        value = 0.
+        
+        for p in pixels:
+            value += p
+    
+        return value / s_denom
+
+    e_raster = raster_utils.vectorize_rasters(s_list, add_e_pix, aoi = None,
+                            raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                            nodata = 0)
+
+    return e_ratser
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
      '''Want to return two dictionaries in the format of the following:
