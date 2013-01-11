@@ -13,7 +13,6 @@ from libcpp.stack cimport stack
 from libc.math cimport atan
 from libc.math cimport tan
 from libc.math cimport sqrt
-from libc.math cimport fabs
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -494,7 +493,7 @@ def calculate_flow_graph(
             current_index = row_index * n_cols + col_index
             found = False
             for neighbor_direction_index in range(n_neighbors):
-                flow_angle_to_neighbor = fabs(
+                flow_angle_to_neighbor = abs(
                     angle_to_neighbor[neighbor_direction_index] -
                     flow_direction)
                 if flow_angle_to_neighbor < PI/4.0:

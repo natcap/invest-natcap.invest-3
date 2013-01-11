@@ -81,13 +81,12 @@ def execute(args):
     aoi = ogr.Open(str(args['aoi_uri']))
     
     biophysical_points_uri = os.path.join(
-            inter_dir, 'wind_points_reprojected.shp')
-    biophysical_points = ogr.Open(biophysical_points_uri)
+            out_dir, 'wind_energy_points.shp')
+    # Open the wind energy points from the biophsyical run to be updated and
+    # edited
+    biophysical_points = ogr.Open(biophysical_points_uri, 1)
     
-    biophysical_points_proj = clip_and_project_datasource(
-            biophysical_points, aoi, os.path.join(inter_dir, 'bio_points'))
-    
-    valuation_args['biophysical_data'] = biophysical_points_proj
+    valuation_args['biophysical_data'] = biophysical_points
     
     # Number of machines
     valuation_args['number_of_machines'] = int(args['number_of_machines'])
