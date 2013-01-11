@@ -136,7 +136,6 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom)
                             nodata = 0)
     return c_ratser
 
-
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
      '''Want to return two dictionaries in the format of the following:
      (Note: the individual num raster comes from the crit_ratings
