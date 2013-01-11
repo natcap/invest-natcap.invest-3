@@ -1,5 +1,5 @@
 import csv
-import invest_natcap.dbfpy
+from invest_natcap.dbfpy import dbf
 import os
 import re
 import platform

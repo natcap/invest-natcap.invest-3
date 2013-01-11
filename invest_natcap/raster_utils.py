@@ -1114,7 +1114,7 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
                       datatype = band.DataType, nodata=nodata)
     return clipped_dataset
 
-def extract_band_and_nodata(dataset, get_array = False):
+def extract_band_and_nodata(dataset, get_array=False):
     """It's often useful to get the first band and corresponding nodata value
         for a dataset.  This function does that.
 
@@ -1595,8 +1595,8 @@ def reclassify_dataset(
             raise an exception if there is a value in the raster that is not
             found in value_map
 
-       returns the new reclassified dataset GDAL raster, or raises an Exception 
-           if exception_flag == 'values_required' and the value from 
+       returns the new reclassified dataset GDAL raster, or raises an Exception
+           if exception_flag == 'values_required' and the value from
            'key_raster' is not a key in 'attr_dict'"""
 
     LOGGER.info('Reclassifying')

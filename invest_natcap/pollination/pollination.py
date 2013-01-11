@@ -2,10 +2,16 @@
 import os
 import logging
 import re
+import sys
+import shutil
 
 from osgeo import gdal
+from osgeo import ogr
 
+from invest_natcap import raster_utils as raster_utils
 from invest_natcap.invest_core import fileio as fileio
+from invest_natcap.iui import iui_validator as iui_validator
+from invest_natcap.nutrient import nutrient_core as nutrient_core
 from invest_natcap.pollination import pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -196,6 +202,71 @@ def execute(args):
                 biophysical_args['species'][species][group] = raster_uri
 
         pollination_core.execute_model(biophysical_args)
+
+        # If the user provided a farms shapefile input, aggregate the
+        # biophysical species abundance data according to the farms table.
+        if 'farms_shapefile' in args:
+            encoding = sys.getfilesystemencoding()
+            base_shapefile = args['farms_shapefile'].encode(encoding)
+            shapefile_folder = os.path.join(out_dir, 'farms_abundance')
+
+            # Delete the old shapefile folder if it already exists.
+            try:
+                shutil.rmtree(shapefile_folder)
+            except OSError:
+                # The shapefile folder does not exist.  We need to make it
+                # anyways, so we really don't care.
+                pass
+
+            # Make the shapefile folder to contain the farms shapefile.
+            os.makedirs(shapefile_folder)
+
+            farms_file = ogr.Open(base_shapefile, 0)
+            ogr_driver = ogr.GetDriverByName('ESRI Shapefile')
+            farms_copy = ogr_driver.CopyDataSource(farms_file, shapefile_folder)
+
+            crop_fields = [r for r in guilds_handler.get_fieldnames() if
+                r[0:4] == 'crp_']
+
+#            crop_fields = [name for row in guilds_handler.table for
+#                name in row.keys() if name[0:4].lower() == 'crp_']
+            LOGGER.debug('crop fields:%s', crop_fields)
+
+
+            farm_sites = nutrient_core.split_datasource(farms_copy,
+                include_fields=crop_fields)
+
+            for farm_site in farm_sites:
+                LOGGER.debug('farm_site:%s', farm_site)
+                layer = farm_site.GetLayer(0)
+                farm_centroid = layer.GetFeature(0)
+                LOGGER.debug('Centroid=%s', farm_centroid)
+                visitation_sum = 0
+                fields = iui_validator.get_fields(farm_centroid)
+                LOGGER.debug('fields=%s', fields)
+
+                for fieldname, field_value in fields.iteritems():
+                    print fieldname, field_value, fieldname[0:4].lower()
+
+                    # The field value is often stored as either 0 or
+                    # some other value, but not necessarily 1.  So here,
+                    # I need to compare the value against 0, not vs. 1.
+                    if fieldname[0:4].lower() == 'crp_' and field_value != 0:
+                        print fieldname, fieldname[0:4].lower(), field_value
+                        crop_sum = 0
+                        for species in guilds_handler.table:
+                            species_name = species['species']
+
+                            if species[fieldname] == 1:
+                                supply_uri = biophysical_args['species'][species_name]['species_abundance']
+                                LOGGER.debug('Supply raster URI=%s', supply_uri)
+                                supply_raster = gdal.Open(supply_uri)
+                                #pixel_value = nutrient_core.get_raster_stat_under_polygon(
+                                #    supply_raster, farm_site, stat='sum')
+                                pixel_value = raster_utils.aggregate_raster_values(supply_raster,
+                                        farm_site, 'id', 'sum')
+                                LOGGER.debug('species_name=%s, pixel_value=%s',
+                                            species_name, pixel_value)
 
 
 def build_uri(directory, basename, suffix=[]):
