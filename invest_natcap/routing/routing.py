@@ -160,6 +160,20 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
             if dem_value == dem_nodata:
                 continue
 
+            on_edge = False
+            for neighbor_index in xrange(8):
+                neighbor_row = row_index + row_offsets[neighbor_index]
+                neighbor_col = col_index + col_offsets[neighbor_index]
+                if neighbor_row < 0 or neighbor_row >= n_rows or \
+                        neighbor_col < 0 or neighbor_col >= n_cols:
+                    #we're out of range, no way is the dem valid
+                    continue
+                if dem_array[neighbor_row, neighbor_col] == dem_nodata:
+                    on_edge = True
+                    break
+            if on_edge:
+                continue
+
             flow_direction_value = flow_direction_array[row_index, col_index]
             if flow_direction_value != flow_direction_nodata:
                 continue
@@ -202,6 +216,10 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
 
         row_index = current_index / n_cols
         col_index = current_index % n_cols
+
+        dem_value = dem_array[row_index, col_index]
+        if dem_value == dem_nodata:
+            continue
 
         flow_direction_value = flow_direction_array[row_index, col_index]
         if flow_direction_value != flow_direction_nodata:
