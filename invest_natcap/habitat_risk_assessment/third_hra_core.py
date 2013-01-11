@@ -54,6 +54,25 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
         risk_eq- A string description of the desired equation to use when
             preforming risk calculation. 
     '''    
+    #Create dictionary that we can pass back to execute to be passed along to
+    #make_habitat_rasters
+    risk_rasters = {}
+
+    #We will use the h-s pairs as the way of iterrating through everything else.
+    for pair in crit_lists['Risk']['h-s']:
+
+        h, s = pair
+
+        #Want to get E and C from the applicable subdictionaries
+        #E and C should be rasters of their own that are calc'd using
+        #vectorize raster to straight add the pixels and divide by denoms
+
+        #E will only need to take in stressor subdictionary data
+        E = calc_E_raster(crit_lists['Risk']['s'][s], denoms['Risk']['s'][s])
+        #C will need to take in both habitat and hab-stress subdictionary data
+        C = calc_C_raster(crit_lists['Risk']['h-s'][pair], 
+                        denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
+                        denoms['Risk']['h'][h])
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
      '''Want to return two dictionaries in the format of the following:
