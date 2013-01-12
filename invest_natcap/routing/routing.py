@@ -225,6 +225,8 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
         min_distance = -1.0
         min_direction = -1
 
+        dem_nodata_neighbor = False
+
         for neighbor_index in xrange(8):
             neighbor_row = row_index + row_offsets[neighbor_index]
             neighbor_col = col_index + col_offsets[neighbor_index]
@@ -233,7 +235,23 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     neighbor_col < 0 or neighbor_col >= n_cols:
                 #we're out of range, no way is the dem valid
                 continue
+            
+            if dem_array[neighbor_row, neighbor_col] == dem_nodata:
+                dem_nodata_neighbor = True
+                continue
 
+        if dem_nodata_neighbor:
+            continue
+
+        for neighbor_index in xrange(8):
+            neighbor_row = row_index + row_offsets[neighbor_index]
+            neighbor_col = col_index + col_offsets[neighbor_index]
+
+            if neighbor_row < 0 or neighbor_row >= n_rows or \
+                    neighbor_col < 0 or neighbor_col >= n_cols:
+                #we're out of range, no way is the dem valid
+                continue
+            
             if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
                 cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
             elif dem_array[neighbor_row, neighbor_col] <= dem_value:
