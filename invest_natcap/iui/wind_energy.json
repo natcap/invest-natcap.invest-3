@@ -26,9 +26,9 @@
                     "args_id" : "wind_data_uri",
                     "type": "file",
                     "label": "Wind Data Points",
-                    "defaultValue": "../Wind_Energy/Input/wind_data.txt",
+                    "defaultValue": "../Wind_Energy/Input/wind_data.bin",
                     "required": true,
-                    "helpText": "A text file that represents the wind energy data points. The text file should be set up with the first line, or row, having the following comma separated fields (column headers):<br/> N (Unique ID), LONG (the longitude coordinate), LATI (the latitude coordinate), Ram-010m (a range of the scale parameter which varies at different heights: Ram-020m,Ram-030m,...,Ram-140m,Ram-150m), K-010m (the shape parameter which does not vary by height). The following lines should be individual and unique wind data bins with information corresponding to the fields from the first line."
+                    "helpText": "A binary file that represents the wind energy data points. Please see the users guide on how this file was generated."
                 },
                 {
                     "id" : "aoi",

@@ -3,6 +3,7 @@ import logging
 import os
 import csv
 import json
+import struct
 
 from osgeo import gdal
 from osgeo import ogr
