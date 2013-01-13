@@ -250,47 +250,6 @@ def execute(args):
 
     LOGGER.info('Leaving Wind_Energy_Biophysical')
 
-def read_wind_data(wind_data_uri, field_list):
-    """Unpack the wind data into a dictionary
-
-        wind_data_uri - a uri for the wind data text file
-        field_list - a list of strings referring to the column headers from
-            the text file that are to be included in the dictionary
-
-        returns - a dictionary where the keys are lat/long tuples which point
-            to dictionaries that hold wind data at that location"""
-
-    LOGGER.debug('Entering read_wind_data')
-    
-    # The 'rU' flag is to mark ensure the file is open as read only and with
-    # Universal newline support
-    wind_file = open(wind_data_uri, 'rU')
-    
-    # Read in the file as a CSV in dictionary format such that the first row of
-    # the file is treated as the list of keys for the respective values on the
-    # following rows
-    file_reader = csv.DictReader(wind_file)
-    
-    wind_dict = {}
-    
-    for row in file_reader:
-        # Create the key for the dictionary based on the unique lat/long
-        # coordinate
-        key = (row['LATI'], row['LONG'])
-        wind_dict[key] = {}
-        
-        for row_key in row:
-            # Only add the values specified in the list to the dictionary. This
-            # allows some flexibility in removing columns that are not cared
-            # about 
-            if row_key in field_list:
-                wind_dict[key][row_key] = row[row_key]
-
-    wind_file.close()
-
-    LOGGER.debug('Leaving read_wind_data')
-    return wind_dict
-
 def read_binary_wind_data(wind_data_uri, field_list):
     """Unpack the binary wind data into a dictionary
 
