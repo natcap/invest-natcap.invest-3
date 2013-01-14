@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 import shutil
+import struct
 
 from osgeo import gdal
 from osgeo import ogr
@@ -293,3 +294,26 @@ def build_uri(directory, basename, suffix=[]):
 
     new_filepath = file_base + suffix + extension
     return os.path.join(directory, new_filepath)
+
+
+def get_point(raster_uri, shapefile_uri):
+    raster = gdal.Open(raster_uri)
+    raster_gt = raster.GetGeoTransform()
+    raster_band = raster.GetRasterBand(1)
+
+    shapes = ogr.Open(shapefile_uri)
+    layer = shapes.GetLayer(0)
+    point_vals = []
+    for point in layer:
+        geometry = point.GetGeometryRef()
+        mx, my = geometry.GetX(), geometry.GetY()  # Coordinates in map units
+
+        # Convert from map to pixel coordinates
+        px = int((mx - raster_gt[0]) / (raster_gt[1]))
+        py = int((my - raster_gt[3]) / (raster_gt[5]))
+        structval = raster_band.ReadRaster(px, py, 1, 1,
+            buf_type=gdal.GDT_Float32)
+        intval = struct.unpack('f', structval)
+        point_vals.append(intval[0])
+
+    return point_vals
