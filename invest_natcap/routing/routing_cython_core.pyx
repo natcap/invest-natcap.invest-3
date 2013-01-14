@@ -643,9 +643,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cdef int* row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int* col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
-
-    cells_to_process = collections.deque()
-    current_distance = collections.deque()
+    cdef queue[int] cells_to_process
 
     cdef double* angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
 
@@ -694,11 +692,8 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 
             if dem_neighbors_valid and flow_direction_neighbors_valid:
                 #Then we can define a valid direction
-                cells_to_process.append(row_index * n_cols + col_index)
+                cells_to_process.push(row_index * n_cols + col_index)
                 distance_array[row_index, col_index] = 0.0
-
-
-    
     
     #Distance to a cell if linear or diagonal
     cdef double *distance_lookup = [1.0, 1.4142135623730951]
@@ -706,8 +701,9 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cdef int current_index
 
     LOGGER.info('resolving directions')
-    while len(cells_to_process) > 0:
-        current_index = cells_to_process.pop()
+    while cells_to_process.size() > 0:
+        current_index = cells_to_process.front()
+        cells_to_process.pop()
 
         row_index = current_index / n_cols
         col_index = current_index % n_cols
@@ -751,7 +747,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                 continue
             
             if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
-                cells_to_process.appendleft(neighbor_row * n_cols + neighbor_col)
+                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
             elif dem_array[neighbor_row, neighbor_col] <= dem_value:
                 neighbor_distance = distance_array[neighbor_row, neighbor_col]
                 if neighbor_distance < min_distance or min_direction == -1:
