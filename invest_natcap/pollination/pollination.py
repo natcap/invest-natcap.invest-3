@@ -229,45 +229,44 @@ def execute(args):
             crop_fields = [r for r in guilds_handler.get_fieldnames() if
                 r[0:4] == 'crp_']
 
-#            crop_fields = [name for row in guilds_handler.table for
-#                name in row.keys() if name[0:4].lower() == 'crp_']
             LOGGER.debug('crop fields:%s', crop_fields)
 
-
-            farm_sites = nutrient_core.split_datasource(farms_copy,
-                include_fields=crop_fields)
-
-            for farm_site in farm_sites:
+            farms_layer = farms_copy.GetLayer(0)
+            for farm_site in farms_layer:
                 LOGGER.debug('farm_site:%s', farm_site)
-                layer = farm_site.GetLayer(0)
-                farm_centroid = layer.GetFeature(0)
-                LOGGER.debug('Centroid=%s', farm_centroid)
                 visitation_sum = 0
-                fields = iui_validator.get_fields(farm_centroid)
+                fields = iui_validator.get_fields(farm_site)
                 LOGGER.debug('fields=%s', fields)
 
                 for fieldname, field_value in fields.iteritems():
-                    print fieldname, field_value, fieldname[0:4].lower()
 
                     # The field value is often stored as either 0 or
                     # some other value, but not necessarily 1.  So here,
                     # I need to compare the value against 0, not vs. 1.
                     if fieldname[0:4].lower() == 'crp_' and field_value != 0:
-                        print fieldname, fieldname[0:4].lower(), field_value
                         crop_sum = 0
                         for species in guilds_handler.table:
                             species_name = species['species']
 
-                            if species[fieldname] == 1:
+                            try:
+                                species_crop = species[fieldname]
+                            except KeyError:
+                                LOGGER.warn('Crop "%s" found in the farms '
+                                    'shapefile, but not found in guilds,',
+                                    fieldname)
+                                species_crop = 0
+
+                            if species_crop == 1:
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
-                                LOGGER.debug('Supply raster URI=%s', supply_uri)
-                                supply_raster = gdal.Open(supply_uri)
-                                #pixel_value = nutrient_core.get_raster_stat_under_polygon(
-                                #    supply_raster, farm_site, stat='sum')
-                                pixel_value = raster_utils.aggregate_raster_values(supply_raster,
-                                        farm_site, 'id', 'sum')
-                                LOGGER.debug('species_name=%s, pixel_value=%s',
-                                            species_name, pixel_value)
+                                LOGGER.debug('Supply raster URI="%s"', supply_uri)
+                                pixel_value = get_point(supply_uri, farm_site)[0]
+                                LOGGER.debug('Crop="%s", species="%s", pixel_value=%s',
+                                            fieldname, species_name, pixel_value)
+                                crop_sum += pixel_value
+                        LOGGER.debug('Species sum for crop "%s": %s', fieldname,
+                            crop_sum)
+                visitation_sum += crop_sum
+                LOGGER.info('Visitation sum for this farm site: %s', visitation_sum)
 
 
 def build_uri(directory, basename, suffix=[]):
@@ -296,24 +295,19 @@ def build_uri(directory, basename, suffix=[]):
     return os.path.join(directory, new_filepath)
 
 
-def get_point(raster_uri, shapefile_uri):
+def get_point(raster_uri, point):
     raster = gdal.Open(raster_uri)
     raster_gt = raster.GetGeoTransform()
     raster_band = raster.GetRasterBand(1)
 
-    shapes = ogr.Open(shapefile_uri)
-    layer = shapes.GetLayer(0)
-    point_vals = []
-    for point in layer:
-        geometry = point.GetGeometryRef()
-        mx, my = geometry.GetX(), geometry.GetY()  # Coordinates in map units
+    geometry = point.GetGeometryRef()
+    mx, my = geometry.GetX(), geometry.GetY()  # Coordinates in map units
 
-        # Convert from map to pixel coordinates
-        px = int((mx - raster_gt[0]) / (raster_gt[1]))
-        py = int((my - raster_gt[3]) / (raster_gt[5]))
-        structval = raster_band.ReadRaster(px, py, 1, 1,
-            buf_type=gdal.GDT_Float32)
-        intval = struct.unpack('f', structval)
-        point_vals.append(intval[0])
+    # Convert from map to pixel coordinates
+    px = int((mx - raster_gt[0]) / (raster_gt[1]))
+    py = int((my - raster_gt[3]) / (raster_gt[5]))
+    structval = raster_band.ReadRaster(px, py, 1, 1,
+        buf_type=gdal.GDT_Float32)
+    intval = struct.unpack('f', structval)
 
-    return point_vals
+    return intval
