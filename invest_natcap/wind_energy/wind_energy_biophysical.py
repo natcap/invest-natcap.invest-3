@@ -3,6 +3,7 @@ import logging
 import os
 import csv
 import json
+import struct
 
 from osgeo import gdal
 from osgeo import ogr
@@ -27,7 +28,8 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
-        args[wind_data_uri] - a text file where each row is a location with at
+        args[wind_data_uri] - a uri to a binary file that has been packed with 
+            4 byte floats using big indian '<'. Each row is a location with at
             least the Longitude, Latitude, Scale and Shape parameters (required)
         args[aoi_uri] - a uri to an OGR datasource that is of type polygon and 
             projected in linear units of meters. The polygon specifies the 
@@ -106,7 +108,7 @@ def execute(args):
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Read wind data from text file')
-    wind_data = read_wind_data(str(args['wind_data_uri']), wind_data_field_list)
+    wind_data = read_binary_wind_data(str(args['wind_data_uri']), wind_data_field_list)
 
     try:
         LOGGER.info('Trying to open the AOI')
@@ -248,50 +250,10 @@ def execute(args):
 
     LOGGER.info('Leaving Wind_Energy_Biophysical')
 
-def read_wind_data(wind_data_uri, field_list):
-    """Unpack the wind data into a dictionary
-
-        wind_data_uri - a uri for the wind data text file
-        field_list - a list of strings referring to the column headers from
-            the text file that are to be included in the dictionary
-
-        returns - a dictionary where the keys are lat/long tuples which point
-            to dictionaries that hold wind data at that location"""
-
-    LOGGER.debug('Entering read_wind_data')
-    
-    # The 'rU' flag is to mark ensure the file is open as read only and with
-    # Universal newline support
-    wind_file = open(wind_data_uri, 'rU')
-    
-    # Read in the file as a CSV in dictionary format such that the first row of
-    # the file is treated as the list of keys for the respective values on the
-    # following rows
-    file_reader = csv.DictReader(wind_file)
-    
-    wind_dict = {}
-    
-    for row in file_reader:
-        # Create the key for the dictionary based on the unique lat/long
-        # coordinate
-        key = (row['LATI'], row['LONG'])
-        wind_dict[key] = {}
-        
-        for row_key in row:
-            # Only add the values specified in the list to the dictionary. This
-            # allows some flexibility in removing columns that are not cared
-            # about 
-            if row_key in field_list:
-                wind_dict[key][row_key] = row[row_key]
-
-    wind_file.close()
-
-    LOGGER.debug('Leaving read_wind_data')
-    return wind_dict
 def read_binary_wind_data(wind_data_uri, field_list):
-    """Unpack the wind data into a dictionary
+    """Unpack the binary wind data into a dictionary
 
-        wind_data_uri - a uri for the wind data text file
+        wind_data_uri - a uri for the binary wind data file
         field_list - a list of strings referring to the column headers from
             the text file that are to be included in the dictionary
 
@@ -300,25 +262,45 @@ def read_binary_wind_data(wind_data_uri, field_list):
 
     LOGGER.debug('Entering read_wind_data')
    
-    column_header_list = [
+    wind_dict = {}
+
+    # This is the expected column header list for the binary wind energy file.
+    # It is expected that the data will be in this order so that we can properly
+    # unpack the information into a dictionary
+    param_list = [
             "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
             "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
             "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
     
+    # Open the file in reading and binary mode
     wind_file = open(wind_data_uri, 'rb')
     
-    for row in file_reader:
-        # Create the key for the dictionary based on the unique lat/long
-        # coordinate
-        key = (row['LATI'], row['LONG'])
-        wind_dict[key] = {}
+    # Get the length of the expected parameter list to use in unpacking
+    param_list_length = len(param_list)
+
+    # For every line in the file, unpack
+    while True:
+        # Read in line by line where each piece of data is 4 bytes
+        line = wind_file.read(4*param_list_length)
         
-        for row_key in row:
-            # Only add the values specified in the list to the dictionary. This
-            # allows some flexibility in removing columns that are not cared
-            # about 
-            if row_key in field_list:
-                wind_dict[key][row_key] = row[row_key]
+        # If we have reached the end of the file, quit
+        if len(line) == 0:
+            break
+        
+        # Unpack the data. We are assuming the binary data was packed using the
+        # big indian ordering '<' and that the values are floats.
+        values_list = struct.unpack('<'+'f'*param_list_length, line)
+
+        # The key of the output dictionary will be a tuple of the latitude,
+        # longitude
+        key = (values_list[1], values_list[0])
+        wind_dict[key] = {}
+
+        for index in range(param_list_length):
+            # Only add the field and values we are interested in using
+            if param_list[index] in field_list:
+                # Build up the dictionary with values
+                wind_dict[key][param_list[index]] = values_list[index]
 
     wind_file.close()
 
