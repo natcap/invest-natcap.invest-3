@@ -232,34 +232,34 @@ def execute(args):
             LOGGER.debug('crop fields:%s', crop_fields)
 
             # Create a new field for each crop in the copied shapefile.
+            crops = []
             for crop in crop_fields:
-                crop_name = crop[4:]  # trim the 'crp_' off the front.
-                field_name = crop_name + '_sum'
+                crop_name = crop[4:]  # Trim off the 'crp_'
+                abbrev_crop_name = crop_name[:4]
+                field_name = abbrev_crop_name + '_sum'
                 new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
                 farms_copy.GetLayer(0).CreateField(new_field)
-                LOGGER.debug('Created crop sum field: %s', crop_name)
+                crops.append((crop, field_name))
+                LOGGER.debug('Created crop sum field "%s" for "%s"',
+                    field_name, crop)
 
+            LOGGER.info('Starting to aggregate by available farm sites')
             farms_layer = farms_copy.GetLayer(0)
             for farm_site in farms_layer:
-                LOGGER.debug('farm_site:%s', farm_site)
-                visitation_sum = 0
-                visiting_species = {}  # for tracking crops and species summed
-                fields = iui_validator.get_fields(farm_site)
-                LOGGER.debug('fields=%s', fields)
-
-                for fieldname, field_value in fields.iteritems():
+                for crop, fieldname in crops:
+                    crop_is_present = farm_site.GetField(crop)
+                    crop_sum = 0
 
                     # The field value is often stored as either 0 or
                     # some other value, but not necessarily 1.  So here,
                     # I need to compare the value against 0, not vs. 1.
-                    if fieldname[0:4].lower() == 'crp_' and field_value != 0:
-                        visiting_species[fieldname] = []
-                        crop_sum = 0
+                    if crop_is_present != 0:
+                        visiting_species = []
                         for species in guilds_handler.table:
                             species_name = species['species']
 
                             try:
-                                species_crop = species[fieldname]
+                                species_crop = species[crop]
                             except KeyError:
                                 LOGGER.warn('Crop "%s" found in the farms '
                                     'shapefile, but not found in guilds,',
@@ -267,19 +267,20 @@ def execute(args):
                                 species_crop = 0
 
                             if species_crop == 1:
-                                visiting_species[fieldname].append(species_name)
+                                visiting_species.append(species_name)
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
                                 LOGGER.debug('Supply raster URI="%s"', supply_uri)
                                 pixel_value = get_point(supply_uri, farm_site)[0]
                                 LOGGER.debug('Crop="%s", species="%s", pixel_value=%s',
-                                            fieldname, species_name, pixel_value)
+                                            crop, species_name, pixel_value)
                                 crop_sum += pixel_value
-                        LOGGER.debug('Species sum for crop "%s": %s', fieldname,
-                            crop_sum)
-                visitation_sum += crop_sum
-                LOGGER.info('Visiting species on this farm site: %s',
-                            visiting_species)
-                LOGGER.info('Visitation sum for this farm site: %s', visitation_sum)
+
+                    LOGGER.info('Sum across %s for crop "%s": %s',
+                        visiting_species, crop, crop_sum)
+                    field_index = farm_site.GetFieldIndex(fieldname)
+                    farm_site.SetField(field_index, crop_sum)
+                    farms_layer.SetFeature(farm_site)
+
 
 
 def build_uri(directory, basename, suffix=[]):
