@@ -11,6 +11,7 @@ from osgeo import gdal
 from invest_natcap import raster_utils
 
 from libcpp.stack cimport stack
+from libcpp.queue cimport queue
 from libc.math cimport atan
 from libc.math cimport tan
 from libc.math cimport sqrt
@@ -611,14 +612,21 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
 
     dem_dataset = gdal.Open(dem_uri)
     cdef float dem_nodata
-    dem_band, dem_nodata, dem_array = raster_utils.extract_band_and_nodata(
-        dem_dataset, get_array=True)
+    dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
+
+    dem_memory_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = raster_utils.load_memory_mapped_array(
+        dem_uri, dem_memory_file, array_type=numpy.float32)
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, osgeo.gdalconst.GA_Update)
     cdef float flow_direction_nodata
-    flow_direction_band, flow_direction_nodata, flow_direction_array = \
-        raster_utils.extract_band_and_nodata(
-        flow_direction_dataset, get_array=True)
+    flow_direction_band, flow_direction_nodata  = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
+
+    flow_direction_memory_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
+        flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
+
 
     cdef int n_cols = dem_dataset.RasterXSize
     cdef int n_rows = dem_dataset.RasterYSize
@@ -642,7 +650,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cdef double* angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
 
     cdef int row_index, col_index, neighbor_index, neighbor_row, neighbor_col, min_direction
-    cdef double dem_value, flow_direction_value, min_distance, neighbor_distance
+    cdef double dem_value, flow_direction_value, min_distance, neighbor_distance, dem_neighbor_value
     cdef char dem_neighbors_valid
 
 
