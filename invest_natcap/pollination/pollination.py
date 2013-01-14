@@ -231,6 +231,14 @@ def execute(args):
 
             LOGGER.debug('crop fields:%s', crop_fields)
 
+            # Create a new field for each crop in the copied shapefile.
+            for crop in crop_fields:
+                crop_name = crop[4:]  # trim the 'crp_' off the front.
+                field_name = crop_name + '_sum'
+                new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+                farms_copy.GetLayer(0).CreateField(new_field)
+                LOGGER.debug('Created crop sum field: %s', crop_name)
+
             farms_layer = farms_copy.GetLayer(0)
             for farm_site in farms_layer:
                 LOGGER.debug('farm_site:%s', farm_site)
