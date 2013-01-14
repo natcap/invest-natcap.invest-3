@@ -237,11 +237,19 @@ def execute(args):
                 crop_name = crop[4:]  # Trim off the 'crp_'
                 abbrev_crop_name = crop_name[:4]
                 field_name = abbrev_crop_name + '_sum'
-                new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
-                farms_copy.GetLayer(0).CreateField(new_field)
+
+                # Only create a new field if it doesn't exist already.
+                field_index = farms_copy.GetLayer(0).GetFieldIndex(field_name)
+                if field_index == -1:
+                    new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+                    farms_copy.GetLayer(0).CreateField(new_field)
+                    LOGGER.debug('Created crop sum field "%s" for "%s"',
+                        field_name, crop)
+
+                # Regardless of whether it needs to be created, we still need to
+                # keep track of it for later on, when the value of the cell will
+                # be set.
                 crops.append((crop, field_name))
-                LOGGER.debug('Created crop sum field "%s" for "%s"',
-                    field_name, crop)
 
             LOGGER.info('Starting to aggregate by available farm sites')
             farms_layer = farms_copy.GetLayer(0)
@@ -277,11 +285,12 @@ def execute(args):
 
                     LOGGER.info('Sum across %s for crop "%s": %s',
                         visiting_species, crop, crop_sum)
+
+                    # Actually set the correct field value in the copied farms
+                    # shapefile using the crop sum.
                     field_index = farm_site.GetFieldIndex(fieldname)
                     farm_site.SetField(field_index, crop_sum)
                     farms_layer.SetFeature(farm_site)
-
-
 
 def build_uri(directory, basename, suffix=[]):
     """Take the input directory and basename, inserting the provided suffixes
