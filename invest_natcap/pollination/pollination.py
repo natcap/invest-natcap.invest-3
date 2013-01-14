@@ -235,6 +235,7 @@ def execute(args):
             for farm_site in farms_layer:
                 LOGGER.debug('farm_site:%s', farm_site)
                 visitation_sum = 0
+                visiting_species = {}  # for tracking crops and species summed
                 fields = iui_validator.get_fields(farm_site)
                 LOGGER.debug('fields=%s', fields)
 
@@ -244,6 +245,7 @@ def execute(args):
                     # some other value, but not necessarily 1.  So here,
                     # I need to compare the value against 0, not vs. 1.
                     if fieldname[0:4].lower() == 'crp_' and field_value != 0:
+                        visiting_species[fieldname] = []
                         crop_sum = 0
                         for species in guilds_handler.table:
                             species_name = species['species']
@@ -257,6 +259,7 @@ def execute(args):
                                 species_crop = 0
 
                             if species_crop == 1:
+                                visiting_species[fieldname].append(species_name)
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
                                 LOGGER.debug('Supply raster URI="%s"', supply_uri)
                                 pixel_value = get_point(supply_uri, farm_site)[0]
@@ -266,6 +269,8 @@ def execute(args):
                         LOGGER.debug('Species sum for crop "%s": %s', fieldname,
                             crop_sum)
                 visitation_sum += crop_sum
+                LOGGER.info('Visiting species on this farm site: %s',
+                            visiting_species)
                 LOGGER.info('Visitation sum for this farm site: %s', visitation_sum)
 
 
