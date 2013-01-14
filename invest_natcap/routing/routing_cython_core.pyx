@@ -572,7 +572,6 @@ def calculate_flow_graph(
     return sink_cell_set, source_cell_set
 
 
-
 def calculate_flow_direction(dem_uri, flow_direction_uri):
     """Calculates the flow direction of a landscape given its dem
 
@@ -587,12 +586,6 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     LOGGER.info('Calculate flow direction')
     start = time.clock()
-
-    #We need to open the dem so we can create the dataset to hold the output
-    #flow direction raster
-    dem_dataset = gdal.Open(dem_uri)
-    dem_band = dem_dataset.GetRasterBand(1)
-    n_rows, n_cols = dem_band.YSize, dem_band.XSize
 
     #Calcualte the d infinity flow direction
     flow_direction_inf(dem_uri, flow_direction_uri)
@@ -617,18 +610,20 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
         returns nothing"""
 
     dem_dataset = gdal.Open(dem_uri)
+    cdef float dem_nodata
     dem_band, dem_nodata, dem_array = raster_utils.extract_band_and_nodata(
         dem_dataset, get_array=True)
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, osgeo.gdalconst.GA_Update)
+    cdef float flow_direction_nodata
     flow_direction_band, flow_direction_nodata, flow_direction_array = \
         raster_utils.extract_band_and_nodata(
         flow_direction_dataset, get_array=True)
 
-    n_cols = dem_dataset.RasterXSize
-    n_rows = dem_dataset.RasterYSize
+    cdef int n_cols = dem_dataset.RasterXSize
+    cdef int n_rows = dem_dataset.RasterYSize
 
-    distance_array = numpy.empty((n_rows, n_cols), dtype=numpy.float32)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] distance_array = numpy.empty((n_rows, n_cols), dtype=numpy.float32)
     distance_array[:] = -1.0
 
 
@@ -637,14 +632,18 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     # 4 x 0
     # 5 6 7
 
-    row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int* row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int* col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
 
     cells_to_process = collections.deque()
     current_distance = collections.deque()
 
-    angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+    cdef double* angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+
+    cdef int row_index, col_index, neighbor_index, neighbor_row, neighbor_col, min_direction
+    cdef double dem_value, flow_direction_value, min_distance, neighbor_distance
+    cdef char dem_neighbors_valid
 
 
     #Build an initial list of cells to depth first search through to find
@@ -694,7 +693,9 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     
     
     #Distance to a cell if linear or diagonal
-    distance_lookup = [1.0, 1.4142135623730951]
+    cdef double *distance_lookup = [1.0, 1.4142135623730951]
+
+    cdef int current_index
 
     LOGGER.info('resolving directions')
     while len(cells_to_process) > 0:
