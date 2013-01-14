@@ -69,6 +69,8 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
         c_out_uri = os.path.join(inter_dir, h + '_' + s + 'C_Risk_Raster.tif')
         e_out_uri = os.path.join(inter_dir, h + '_' + s + 'E_Risk_Raster.tif')
 
+        #For E/C, want to return a numpy array so that it's easier to work with
+        #for risk calc.
         #E will only need to take in stressor subdictionary data
         E = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
                         denoms['Risk']['s'][s])
@@ -76,6 +78,11 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
         C = calc_C_raster(c_out_uri, crit_lists['Risk']['h-s'][pair], 
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
+
+        #Function that we call now will depend on what the risk calculation
+        #equation desired is.
+        if risk_eq == 'Multiplicative':
+            
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -103,8 +110,9 @@ def calc_E_raster(out_uri, s_list, s_denom):
     e_raster = raster_utils.vectorize_rasters(s_list, add_e_pix, aoi = None,
                             raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
-
-    return e_ratser
+    e_array = e_raster.GetRasterBand(1).ReadAsArray()
+        
+    return e_array
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom)
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -134,6 +142,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom)
     c_raster = raster_utils.vectorize_rasters(tot_crit_list, add_c_pix, aoi = None,
                             raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
+    c_array = c_raster.GetRasterBand(1).ReadAsArray()
     return c_ratser
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
