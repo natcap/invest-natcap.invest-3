@@ -81,3 +81,13 @@ def route_flux(
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
+
+def flow_accumulation(dem_uri, flux_output_uri):
+    """A helper function to calculate flow accumulation, also returns
+        intermediate rasters for future calculation.
+
+        dem_uri - a uri to a gdal dataset representing a DEM
+        flux_output_uri - location to dump the raster represetning flow
+            accumulation"""
+
+    pass
