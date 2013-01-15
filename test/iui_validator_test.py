@@ -359,6 +359,10 @@ class CSVCheckerTester(CheckerTester):
                 'validation', 'Guild_bad_numbers.csv')
             self.assertError()
 
+            # Try default numeric validation on the bad guilds file.
+            self.validate_as['restrictions'][0]['validateAs'] = {'type': 'number'}
+            self.assertNoError()
+
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
     def setUp(self):
@@ -454,5 +458,4 @@ class NumberCheckerTester(CheckerTester):
         self.validate_as['gteq'] = 5
         self.validate_as['greaterThan'] = 4
         self.assertNoError()
-
 
