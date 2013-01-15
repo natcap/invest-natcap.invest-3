@@ -181,6 +181,7 @@
                     "id": "aggregate_by_farms",
                     "args_id": "farms_shapefile",
                     "type": "hideableFileEntry",
+                    "defaultValue": "../Pollination/Input/farms.shp",
                     "label": "Aggregate results by farm sites",
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {
