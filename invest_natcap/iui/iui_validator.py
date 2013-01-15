@@ -462,8 +462,8 @@ class TableChecker(FileChecker, ValidationAssembler):
 
     def verify_restrictions(self, restriction_list):
         table = self._build_table()
+        fieldnames = self._get_fieldnames()
         for restriction in restriction_list:
-            fieldnames = self._get_fieldnames()
 
             # If the field is statically defined, check that the field exists
             # and move on, raising an error if it does not exist.
@@ -847,7 +847,7 @@ class PrimitiveChecker(Checker):
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
         # Set numeric default regexp.  Used if user does not provide a regex
-        self.default_regexp = '[0-9]*(\\.[0-9]*)?'
+        self.default_regexp = '^\\s*[0-9]*(\.[0-9]*)?\\s*$'
 
         PrimitiveChecker.__init__(self)
         updates = {'gteq': self.greater_than_equal_to,

@@ -357,7 +357,7 @@ class CSVCheckerTester(CheckerTester):
 
             self.validate_as['value'] = os.path.join(TEST_DATA, 'iui',
                 'validation', 'Guild_bad_numbers.csv')
-            self.assertError()
+            self.assertNoError()
 
             # Try default numeric validation on the bad guilds file.
             self.validate_as['restrictions'][0]['validateAs'] = {'type': 'number'}
@@ -459,3 +459,13 @@ class NumberCheckerTester(CheckerTester):
         self.validate_as['greaterThan'] = 4
         self.assertNoError()
 
+    def test_default_regex(self):
+        """Assert that NumberChecker has proper default validation."""
+        self.validate_as['value'] = ' 5 '
+        self.assertNoError()
+
+        self.validate_as['value'] = 'aaa5b'
+        self.assertError()
+
+        self.validate_as['value'] = ' 5gg'
+        self.assertError()
