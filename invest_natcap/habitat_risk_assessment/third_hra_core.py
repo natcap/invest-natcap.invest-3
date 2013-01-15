@@ -110,15 +110,34 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
 
     return risk_rasters
 
-def make_risk_mult(E_array, C_array):
+def make_risk_mult(base, e_array, c_array):
 
-    
+    risk_rast =  base* e_array * c_array
 
-    return E_array * C_array
+    return risk_rast
 
-def make_risk_euc(E_array, C_array):
+def make_risk_euc(base, e_array, c_array):
 
-    
+    #Want to make sure that the decay is applied to E first, then that product
+    #is what is used as the new E
+    e_array = e_array * base
+
+    #Only want to perform these operation if there is data in the cell, else
+    #we end up with false positive data when we subtract 1.
+    e_array[e_array != 0 ] -= 1
+    e_array = e_array * 2
+
+    c_array[c_array != 0] -= 1
+    c_array = c_array ** 2
+
+    #Only want to add E and C if there was originally no data in that pixel.
+    e_mask = np.make_mask(e_array)
+    c_array = e_mask * c_array
+
+    risk_array = c_array + e_array
+    risk_array = risk_array ** .5
+
+    return risk_array
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
