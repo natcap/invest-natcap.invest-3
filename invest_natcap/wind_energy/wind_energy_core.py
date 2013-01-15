@@ -225,7 +225,10 @@ def biophysical(args):
     bio_turbine_dict = args['biophysical_turbine_dict']
     exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
     num_days = args['num_days']
-    rated_power = float(bio_turbine_dict['turbine_rated_pwr'])
+    # The rated power is expressed in units of MW but the harvested energy
+    # equation calls for it in terms of Wh. Thus we multiply by a million to get
+    # to Wh.
+    rated_power = float(bio_turbine_dict['turbine_rated_pwr']) * 1000000
     air_density_standard = float(bio_turbine_dict['air_density'])
     v_rate = float(bio_turbine_dict['rated_wspd'])
     v_out = float(bio_turbine_dict['cut_out_wspd'])
@@ -234,7 +237,6 @@ def biophysical(args):
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
-    LOGGER.debug('mean_air_density : %s', mean_air_density)
 
     # Fractional coefficient that lives outside the intregation for computing
     # the harvested wind energy
@@ -533,8 +535,14 @@ def valuation(args):
     time = int(turbine_dict['time_period'])
 
     number_turbines = args['number_of_machines']
+    
+    # The total mega watt compacity of the wind farm where mega watt is the
+    # turbines rated power
     total_mega_watt = mega_watt * number_turbines
-    dollar_per_kwh = args['dollar_per_kWh']
+    
+    # The price per kWh for energy converted to units of millions of dollars to
+    # correspond to the units for valuation costs
+    mill_dollar_per_kwh = args['dollar_per_kWh'] / 1000000
     
     wind_energy_points = args['biophysical_data']
    
@@ -640,15 +648,19 @@ def valuation(args):
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_turbines
     LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
+    
     # Total foundation cost
     total_foundation_cost = (foundation_cost + unit_cost) * number_turbines
     LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
+    
     # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
     cap_less_dist = infield_cable_cost + total_foundation_cost
     LOGGER.debug('cap_less_dist : %s', cap_less_dist)
+    
     # Discount rate plus one to get that constant
     disc_const = discount_rate + 1.0
     LOGGER.debug('discount_rate : %s', disc_const)
+    
     # Discount constant raised to the total time, a constant found in the NPV
     # calculation (1+i)^T
     disc_time = disc_const**time
@@ -672,7 +684,7 @@ def valuation(args):
         l2g_index = feat.GetFieldIndex('L2G')
         
         # The energy value converted from Wh (Watt hours as output from CK's
-        # biophysical model equations) to kWh
+        # biophysical model equations) to kWh for the valuation model
         energy_val = feat.GetField(energy_index) / 1000.0
         o2l_val = feat.GetField(o2l_index)
         l2g_val = feat.GetField(l2g_index)
@@ -698,30 +710,46 @@ def valuation(args):
         # costs (capex)
         capex = cap / (1.0 - install_cost - misc_capex_cost) 
 
+        # The ongoing cost of the farm
         ongoing_capex = op_maint_cost * capex
+        
+        # The cost to decommission the farm
         decommish_capex = decom * capex / disc_time
-        npv = 0
-        levelized_cost_num = 0
+        
+        # The revenue in millions of dollars for the wind farm. The energy_val
+        # is in kWh for a single turbine.
+        rev = energy_val * number_turbines * mill_dollar_per_kwh
+        comp_one_sum = 0
+        levelized_cost_sum = 0
         levelized_cost_denom = 0
+        
         # Calculate the total NPV summation over the lifespan of the wind farm
         # as well as the levelized cost
         for year in range(1, time + 1):
-            # The revenue in the current time period
-            rev = energy_val * dollar_per_kwh
-            # Calcuate the first component of the NPV equation
-            comp_one = (rev - ongoing_capex) / disc_const**year
-            # Add this years NPV value to the running total
-            npv = npv + (comp_one - decommish_capex - capex)
-            # Calculate the numerator value for levelized cost of energy
-            levelized_cost_num = levelized_cost_num + (
-                    (ongoing_capex / disc_const**year) + 
-                    decommish_capex + capex)
-            # Calculate the denominator value for levelized cost of energy
-            levelized_cost_denom = levelized_cost_denom + (energy_val /
-                    disc_const**year) 
+            # Calcuate the first component summation of the NPV equation
+            comp_one_sum = \
+                    comp_one_sum + (rev - ongoing_capex) / disc_const**year
+            
+            # Calculate the numerator summation value for levelized
+            # cost of energy
+            levelized_cost_sum = levelized_cost_sum + (
+                    (ongoing_capex / disc_const**year))
+            
+            # Calculate the denominator summation value for levelized
+            # cost of energy
+            levelized_cost_denom = levelized_cost_denom + ((energy_val *
+                    number_turbines) / disc_const**year) 
+        
+        # Add this years NPV value to the running total
+        npv = comp_one_sum - decommish_capex - capex
         
         # Calculate the levelized cost of energy
-        levelized_cost = levelized_cost_num / levelized_cost_denom
+        levelized_cost = ((levelized_cost_sum + decommish_capex + capex) /
+                levelized_cost_denom)
+        
+        # Levelized cost of energy converted from millions of dollars to dollars
+        levelized_cost = levelized_cost * 1000000
+        
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
         carbon_coef = float(turbine_dict['carbon_coefficient']) 
