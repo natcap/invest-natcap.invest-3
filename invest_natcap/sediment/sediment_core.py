@@ -12,6 +12,7 @@ import numpy as np
 from osgeo import gdal
 
 import invest_cython_core
+from invest_natcap.routing import routing
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('sediment_core')
@@ -72,12 +73,6 @@ def biophysical(args):
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
     
-    #Calculate flow
-    LOGGER.info("calculating flow direction")
-    bounding_box = [0, 0, n_cols, n_rows]
-    invest_cython_core.flow_direction_inf(dem_dataset, bounding_box, 
-        args['flow_direction'])
-
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_dataset = raster_utils.calculate_slope(dem_dataset, args['slope_uri'])
