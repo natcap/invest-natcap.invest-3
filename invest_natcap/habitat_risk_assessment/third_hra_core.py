@@ -22,6 +22,31 @@ def execute(args):
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_list = make_cum_risk_raster(maps_dir, risk_dict)
 
+    #Now, combine all of the habitat rasters unto one overall ecosystem
+    #rasterusing the DS's from the previous function.
+    make_ecosys_risk_raster(maps_dir, h_risk_list)
+
+
+def make_ecosys_risk_raster(dir, h_list):
+
+    out_uri = os.path.join(dir, 'ecosys_risk.tif')
+
+    def add_e_pixels(*pixels):
+             '''Sum all habitat pixels for ecosystem raster.'''
+     
+             pixel_sum = 0.0
+     
+             for p in pixels:
+     
+                 pixel_sum += p
+     
+             return pixel_sum
+     
+         raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
+                         raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                         nodata = 0)
+
+
 def make_cum_risk_raster(dir, risk_dict):
     
     def add_risk_pixels(*pixels):
