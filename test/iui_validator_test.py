@@ -325,6 +325,38 @@ class CSVCheckerTester(CheckerTester):
                 'validation', 'semicolon-delimited.csv')
             self.assertNoError()
 
+        def test_guilds_table(self):
+            self.validate_as = {
+                "type": "CSV",
+                "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
+                "restrictions": [{"field": "ALPHA",
+                                 "validateAs": {"type": "number",
+                                                "allowedValues": {"pattern": "^\\s*[0-9]*\\.[0-9]*\\s*$"}}
+                                },
+                                {"field": {"pattern": "NS_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
+                                },
+                                {"field": {"pattern": "FS_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "gteq": 0.0,
+                                     "lteq": 1.0}
+                                },
+                                {"field": {"pattern": "crp_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
+                                }]}
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
+                 'samp_input', 'Guild_with_crops.csv')
+            self.assertNoError()
+
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'iui',
+                'validation', 'Guild_bad_numbers.csv')
+            self.assertError()
+
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
     def setUp(self):
