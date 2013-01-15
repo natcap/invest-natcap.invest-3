@@ -846,10 +846,10 @@ class PrimitiveChecker(Checker):
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
+        PrimitiveChecker.__init__(self)
+
         # Set numeric default regexp.  Used if user does not provide a regex
         self.default_regexp = '^\\s*[0-9]*(\.[0-9]*)?\\s*$'
-
-        PrimitiveChecker.__init__(self)
         updates = {'gteq': self.greater_than_equal_to,
                    'greaterThan': self.greater_than,
                    'lteq':  self.less_than_equal_to,
