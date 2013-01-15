@@ -30,6 +30,7 @@ import logging
 import collections
 import time
 import tempfile
+import shutil
 
 from osgeo import gdal
 import osgeo.gdalconst
@@ -90,7 +91,22 @@ def flow_accumulation(dem_uri, flux_output_uri):
         flux_output_uri - location to dump the raster represetning flow
             accumulation"""
 
-    pass
+    constant_flux_source_file = tempfile.NamedTemporaryFile()
+    zero_absorption_source_file = tempfile.NamedTemporaryFile()
+    loss_file = tempfile.NamedTemporaryFile()
+
+    make_constant_raster_from_base(dem_uri, 1.0, constant_flux_source_file.name)
+    make_constant_raster_from_base(dem_uri, 0.0, zero_absorption_source_file.name)
+
+    workspace_dir = tempfile.mkdtemp()
+
+    route_flux(
+        dem_uri, constant_flux_source_file.name,
+        zero_absorption_source_file.name, loss_file.name, flux_output_uri,
+        workspace_dir)
+
+    shutil.rmtree(workspace_dir)
+
 
 def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
     """A helper function that creates a new gdal raster from base, and fills
