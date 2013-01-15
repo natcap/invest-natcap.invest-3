@@ -6,16 +6,20 @@ def execute(args):
     crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h-s'],
                                     args['habitats'], args['stressors'])
 
-    risk_dict = make_risk_rasters(inter_dir, crit_lists, denoms, 
+    #Need to have h-s in there so that we can use the DS for each H-S pair to
+    #multiply against the E/C rasters in the case of decay.
+    risk_dict = make_risk_rasters(args['h-s'], inter_dir, crit_lists, denoms, 
                                     args['risk_eq'])
 
-def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
+def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselven. The way in which the E/C rasters
     are combined depends on the risk equation desired.
 
     Input:
+        h_s- Args dictionary containing much of the H-S overlap data in
+            addition to the H-S base rasters.
         inter_dir- Intermediate directory in which the H_S risk-burned rasters
             can be placed.
         crit_lists- A dictionary containing pre-burned criteria which can be
@@ -79,10 +83,6 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
 
-        #HEY, LISTEN!
-        #USE THE H-S DS AS THE BASE FOR THE NEW RASTER, FLESH IT OUT BEFORE
-        #PASSING IT ON TO THE RISK EQ AS A BLANK RASTER TO BE FILLED FROM THE
-        #ARRAYS THAT YOU'RE PASSING IN.
         #Assume that there will be at least one raster.
         old_ds = crit_lists['Risk']['h-s'][pair][0]
         risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif'
@@ -94,10 +94,15 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
 
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
+
+        #Want to get the relevant ds for this H-S pair
+        base_ds = h_s[pair]['DS']
+        base_array = base_ds.GetRasterBand(1).ReadAsArray()
+        
         if risk_eq == 'Multiplicative':
-            mod_array = make_risk_mult(E, C)
+            mod_array = make_risk_mult(base_array, E, C)
         elif risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(E, C)
+            mod_array = make_risk_euc(base_array, E, C)
 
         band.WriteArray(mod_array)
 
@@ -106,6 +111,8 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
     return risk_rasters
 
 def make_risk_mult(E_array, C_array):
+
+    
 
     return E_array * C_array
 
