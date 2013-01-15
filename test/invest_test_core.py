@@ -51,7 +51,6 @@ def assertTwoDatasetsEqual(unitTest, a, b):
                          + str(a.RasterCount) + 
                          ", b = " + str(b.RasterCount))
 
-    logger.debug("a.RasterCount %s", a.RasterCount)
     for bandNumber in range(1, a.RasterCount + 1):
         bandA = a.GetRasterBand(bandNumber)
         bandB = b.GetRasterBand(bandNumber)
