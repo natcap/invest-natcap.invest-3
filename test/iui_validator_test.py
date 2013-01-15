@@ -3,6 +3,8 @@ invest_natcap.iui.iui_validator."""
 
 import unittest
 import os
+import pdb
+
 
 from invest_natcap.iui import iui_validator
 

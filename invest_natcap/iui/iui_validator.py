@@ -890,8 +890,6 @@ class CSVChecker(TableChecker):
             #big issues about it.  See the following for details:
             #http://code.google.com/p/invest-natcap/issues/detail?id=1076
             self.file = csv.DictReader(open(self.uri, 'rU'))
-            fieldnames = self._get_fieldnames()
-            table = self._build_table()
         except IOError as e:
             return str("IOError: %s" % str(e))
         except (csv.Error, ValueError) as e:
