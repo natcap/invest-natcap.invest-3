@@ -91,3 +91,20 @@ def flow_accumulation(dem_uri, flux_output_uri):
             accumulation"""
 
     pass
+
+def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
+    """A helper function that creates a new gdal raster from base, and fills
+        it with the constant value provided.
+
+        base_dataset_uri - the gdal base raster
+        constant_value - the value to set the new base raster to
+        out_uri - the uri of the output raster
+
+        returns nothing"""
+
+    base_dataset = gdal.Open(base_dataset_uri)
+    out_dataset = raster_utils.new_raster_from_base(
+        base_dataset, out_uri, 'GTiff', constant_value - 1,
+        gdal.GDT_Float32)
+    out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
+    out_band.Fill(constant_value)
