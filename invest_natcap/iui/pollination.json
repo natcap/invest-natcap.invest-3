@@ -202,7 +202,7 @@
                                     }
                             }
                         ]
-                    }
+                    },
                     "helpText": "This shapefile input is optional.  If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
                 },
                 {
