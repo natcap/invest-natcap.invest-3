@@ -44,7 +44,11 @@ class UnifiedPollinationTest(unittest.TestCase):
         """This function is called at the end of each test.  For
             pollination_valuation, this function removes the workspace directory
             from the filesystem."""
-        shutil.rmtree(self.workspace_dir)
+        try:
+            shutil.rmtree(self.workspace_dir)
+        except OSError:
+            # Thrown when self.workspace_dir was not created.
+            pass
 
     def test_regression_biophysical(self):
         pollination.execute(self.args)
@@ -194,6 +198,13 @@ class UnifiedPollinationTest(unittest.TestCase):
         self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
             'Guild_with_crops.csv')
         pollination.execute(self.args)
+
+        regression_file = os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'farms_abundance', 'farms.shp')
+        test_file = os.path.join(self.workspace_dir, 'output', 'farms_abundance',
+            'farms.shp')
+        invest_test_core.assertTwoShapesEqualURI(self, regression_file,
+            test_file)
 
 
 class PollinationSmokeTest(unittest.TestCase):
