@@ -5,11 +5,13 @@ import logging
 
 import numpy
 cimport numpy
+import osgeo
 from osgeo import gdal
 
 from invest_natcap import raster_utils
 
 from libcpp.stack cimport stack
+from libcpp.queue cimport queue
 from libc.math cimport atan
 from libc.math cimport tan
 from libc.math cimport sqrt
@@ -569,3 +571,190 @@ def calculate_flow_graph(
     LOGGER.info('Done calculating flow path elapsed time %ss' % \
                     (time.clock()-start))
     return sink_cell_set, source_cell_set
+
+
+def calculate_flow_direction(dem_uri, flow_direction_uri):
+    """Calculates the flow direction of a landscape given its dem
+
+        dem_uri - a URI to a GDAL dataset to the DEM that will be used to
+            determine flow direction.
+        flow_direction_uri - a URI to create a dataset that will be used
+            to store the flow direction.
+        inflow_direction_uri - a URI to a byte GDAL raster that's used
+            to determine which neighbors inflow into the current cell
+
+        returns nothing"""
+
+    LOGGER.info('Calculate flow direction')
+    start = time.clock()
+
+    #Calcualte the d infinity flow direction
+    flow_direction_inf(dem_uri, flow_direction_uri)
+
+    resolve_undefined_flow_directions(dem_uri, flow_direction_uri)
+
+    LOGGER.info(
+        'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
+
+
+def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
+    """Take a raster that has flow directions already defined and fill in
+        the undefined ones.
+
+        dem_uri - the path to a DEM GDAL dataset
+        flow_direction_uri - the path to a flow direction dataset whose
+            flow directions have already been defined, but may have undefined
+            flow directions due to plateaus.  The value of this raster will
+            be modified where flow directions that were previously undefined
+            will be resolved.
+
+        returns nothing"""
+
+    dem_dataset = gdal.Open(dem_uri)
+    cdef float dem_nodata
+    dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
+
+    dem_memory_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = raster_utils.load_memory_mapped_array(
+        dem_uri, dem_memory_file, array_type=numpy.float32)
+
+    flow_direction_dataset = gdal.Open(flow_direction_uri, osgeo.gdalconst.GA_Update)
+    cdef float flow_direction_nodata
+    flow_direction_band, flow_direction_nodata  = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
+
+    flow_direction_memory_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
+        flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
+
+
+    cdef int n_cols = dem_dataset.RasterXSize
+    cdef int n_rows = dem_dataset.RasterYSize
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] distance_array = numpy.empty((n_rows, n_cols), dtype=numpy.float32)
+    distance_array[:] = -1.0
+
+
+    ### Grid cell direction reference
+    # 3 2 1
+    # 4 x 0
+    # 5 6 7
+
+    cdef int* row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int* col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    cdef queue[int] cells_to_process
+
+    cdef double* angle_to_neighbor = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+
+    cdef int row_index, col_index, neighbor_index, neighbor_row, neighbor_col, min_direction
+    cdef double dem_value, flow_direction_value, min_distance, neighbor_distance, dem_neighbor_value
+    cdef char dem_neighbors_valid
+
+
+    #Build an initial list of cells to depth first search through to find
+    #minimum distances
+    LOGGER.info('Building initial list of edge plateau pixels')
+    for row_index in xrange(n_rows):
+        for col_index in xrange(n_cols):
+            dem_value = dem_array[row_index, col_index]
+            if dem_value == dem_nodata:
+                continue
+
+            flow_direction_value = flow_direction_array[row_index, col_index]
+            if flow_direction_value != flow_direction_nodata:
+                continue
+            
+            dem_neighbors_valid = True
+            flow_direction_neighbors_valid = False
+
+            for neighbor_index in xrange(8):
+                neighbor_row = row_index + row_offsets[neighbor_index]
+                neighbor_col = col_index + col_offsets[neighbor_index]
+                
+                if neighbor_row < 0 or neighbor_row >= n_rows or \
+                        neighbor_col < 0 or neighbor_col >= n_cols:
+                    #we're out of range, no way is the dem valid
+                    dem_neighbors_valid = False
+                    break
+
+                dem_neighbor_value = dem_array[neighbor_row, neighbor_col]
+
+                if dem_neighbor_value == dem_nodata:
+                    dem_neighbors_valid = False
+                    break
+
+                if flow_direction_array[neighbor_row, neighbor_col] != \
+                        flow_direction_nodata and dem_neighbor_value <= dem_value:
+                    #Here we found a flow direction that is valid
+                    #we can build from here
+                    flow_direction_neighbors_valid = True
+                
+            if dem_neighbors_valid and flow_direction_neighbors_valid:
+                #Then we can define a valid direction
+                cells_to_process.push(row_index * n_cols + col_index)
+                distance_array[row_index, col_index] = 0.0
+    
+    #Distance to a cell if linear or diagonal
+    cdef double *distance_lookup = [1.0, 1.4142135623730951]
+
+    cdef int current_index
+
+    LOGGER.info('resolving directions')
+    while cells_to_process.size() > 0:
+        current_index = cells_to_process.front()
+        cells_to_process.pop()
+
+        row_index = current_index / n_cols
+        col_index = current_index % n_cols
+
+        dem_value = dem_array[row_index, col_index]
+        if dem_value == dem_nodata:
+            continue
+
+        flow_direction_value = flow_direction_array[row_index, col_index]
+        if flow_direction_value != flow_direction_nodata:
+            continue
+        
+        min_distance = -1.0
+        min_direction = -1
+
+        dem_nodata_neighbor = False
+
+        for neighbor_index in xrange(8):
+            neighbor_row = row_index + row_offsets[neighbor_index]
+            neighbor_col = col_index + col_offsets[neighbor_index]
+
+            if neighbor_row < 0 or neighbor_row >= n_rows or \
+                    neighbor_col < 0 or neighbor_col >= n_cols:
+                #we're out of range, no way is the dem valid
+                continue
+            
+            if dem_array[neighbor_row, neighbor_col] == dem_nodata:
+                dem_nodata_neighbor = True
+                continue
+
+        if dem_nodata_neighbor:
+            continue
+
+        for neighbor_index in xrange(8):
+            neighbor_row = row_index + row_offsets[neighbor_index]
+            neighbor_col = col_index + col_offsets[neighbor_index]
+
+            if neighbor_row < 0 or neighbor_row >= n_rows or \
+                    neighbor_col < 0 or neighbor_col >= n_cols:
+                #we're out of range, no way is the dem valid
+                continue
+            
+            if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
+                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
+            elif dem_array[neighbor_row, neighbor_col] <= dem_value:
+                neighbor_distance = distance_array[neighbor_row, neighbor_col]
+                if neighbor_distance < min_distance or min_direction == -1:
+                    min_direction = neighbor_index
+                    min_distance = neighbor_distance
+
+        flow_direction_array[row_index, col_index] = angle_to_neighbor[min_direction]
+        distance_array[row_index, col_index] = min_distance + distance_lookup[neighbor_index % 2]
+
+    flow_direction_band.WriteArray(flow_direction_array)
