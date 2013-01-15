@@ -124,3 +124,39 @@ def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
         gdal.GDT_Float32)
     out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
     out_band.Fill(constant_value)
+
+
+def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
+    """Creates a raster of accumulated flow to each cell.
+    
+        flow_accumulation_data - (input) A flow accumulation dataset of type
+            floating point
+        flow_threshold - (input) a number indicating the threshold to declare
+            a pixel a stream or no
+        stream_uri - (input) the uri of the output stream dataset
+        
+        returns nothing"""
+
+    flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
+    stream_nodata = 255
+    stream_dataset = raster_utils.new_raster_from_base(flow_accumulation_dataset, 
+        stream_uri, 'GTiff', stream_nodata, gdal.GDT_Byte)
+    stream_band = stream_dataset.GetRasterBand(1)
+    stream_band.Fill(stream_nodata)
+    stream_data_file = tempfile.TemporaryFile()
+    stream_array = raster_utils.load_memory_mapped_array(
+        stream_uri, stream_data_file)
+    stream_array[:] = stream_nodata
+
+    flow_accumulation_data_file = tempfile.TemporaryFile()
+    flow_accumulation_array = raster_utils.load_memory_mapped_array(
+        flow_accumulation_uri, flow_accumulation_data_file)
+    
+    flow_accumulation_band, flow_accumulation_nodata = raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
+
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
+                     (flow_accumulation_array >= float(flow_threshold))] = 1
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
+                     (flow_accumulation_array < float(flow_threshold))] = 0
+
+    stream_band.WriteArray(stream_array)
