@@ -173,6 +173,33 @@
                     "helpText": "A space-separated list of agricultural land cover classes.<br/><br/>Example:<br/>3 7 34 35 68<br/><br/>This input is optional.  If you do not provide agricultural classes here, the entire land cover raster will be considered to be agricultural."
                 },
                 {
+                    "id": "aggregate_by_farms",
+                    "args_id": "farms_shapefile",
+                    "type": "hideableFileEntry",
+                    "label": "Aggregate results by farm sites",
+                    "returns": {"ifEmpty": "pass"},
+                    "validateAs": {
+                        "type": "OGR",
+                        "fieldsExist": ["ID"],
+                        "layers": [
+                            {
+                                "name": {"inheritFrom": "file"},
+                                "type": "points"
+                            }
+                        ],
+                        "restrictions": [
+                            {
+                                "field": {"pattern": "crp_.*", "flag": "ignoreCase"},
+                                "validateAs":
+                                    {
+                                        "type": "number",
+                                        "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}
+                                    }
+                            }
+                        ]
+                    }
+                },
+                {
                     "id" : "results_suffix",
                     "type": "text",
                     "label": "Results suffix",
