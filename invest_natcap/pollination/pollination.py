@@ -336,6 +336,14 @@ def build_uri(directory, basename, suffix=[]):
 
 
 def get_point(raster_uri, point):
+    """Get the value of the point at the raster located at raster_uri.  This
+    operation is completed without using numpy.
+
+        raster_uri - a URI that GDAL can open.
+        point - an OGR Feature to use to extract a raster value.
+
+    Returns the value at the point on the raster."""
+
     raster = gdal.Open(raster_uri)
     raster_gt = raster.GetGeoTransform()
     raster_band = raster.GetRasterBand(1)
