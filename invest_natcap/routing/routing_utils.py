@@ -30,6 +30,7 @@ import logging
 import collections
 import time
 import tempfile
+import shutil
 
 from osgeo import gdal
 import osgeo.gdalconst
@@ -81,3 +82,45 @@ def route_flux(
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
+
+def flow_accumulation(dem_uri, flux_output_uri):
+    """A helper function to calculate flow accumulation, also returns
+        intermediate rasters for future calculation.
+
+        dem_uri - a uri to a gdal dataset representing a DEM
+        flux_output_uri - location to dump the raster represetning flow
+            accumulation"""
+
+    constant_flux_source_file = tempfile.NamedTemporaryFile()
+    zero_absorption_source_file = tempfile.NamedTemporaryFile()
+    loss_file = tempfile.NamedTemporaryFile()
+
+    make_constant_raster_from_base(dem_uri, 1.0, constant_flux_source_file.name)
+    make_constant_raster_from_base(dem_uri, 0.0, zero_absorption_source_file.name)
+
+    workspace_dir = tempfile.mkdtemp()
+
+    route_flux(
+        dem_uri, constant_flux_source_file.name,
+        zero_absorption_source_file.name, loss_file.name, flux_output_uri,
+        workspace_dir)
+
+    shutil.rmtree(workspace_dir)
+
+
+def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
+    """A helper function that creates a new gdal raster from base, and fills
+        it with the constant value provided.
+
+        base_dataset_uri - the gdal base raster
+        constant_value - the value to set the new base raster to
+        out_uri - the uri of the output raster
+
+        returns nothing"""
+
+    base_dataset = gdal.Open(base_dataset_uri)
+    out_dataset = raster_utils.new_raster_from_base(
+        base_dataset, out_uri, 'GTiff', constant_value - 1,
+        gdal.GDT_Float32)
+    out_band, _ = raster_utils.extract_band_and_nodata(out_dataset)
+    out_band.Fill(constant_value)

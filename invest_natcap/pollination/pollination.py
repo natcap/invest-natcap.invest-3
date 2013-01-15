@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 import shutil
+import struct
 
 from osgeo import gdal
 from osgeo import ogr
@@ -206,6 +207,7 @@ def execute(args):
         # If the user provided a farms shapefile input, aggregate the
         # biophysical species abundance data according to the farms table.
         if 'farms_shapefile' in args:
+            LOGGER.info('Starting to aggregate by farms')
             encoding = sys.getfilesystemencoding()
             base_shapefile = args['farms_shapefile'].encode(encoding)
             shapefile_folder = os.path.join(out_dir, 'farms_abundance')
@@ -213,61 +215,99 @@ def execute(args):
             # Delete the old shapefile folder if it already exists.
             try:
                 shutil.rmtree(shapefile_folder)
+                LOGGER.debug('Removed old farms folder at %s',
+                     shapefile_folder)
             except OSError:
                 # The shapefile folder does not exist.  We need to make it
                 # anyways, so we really don't care.
-                pass
+                LOGGER.debug('Farms folder did not exist previously')
 
             # Make the shapefile folder to contain the farms shapefile.
             os.makedirs(shapefile_folder)
+            LOGGER.debug('Farms shapefile will be saved to %s',
+                 shapefile_folder)
 
             farms_file = ogr.Open(base_shapefile, 0)
             ogr_driver = ogr.GetDriverByName('ESRI Shapefile')
-            farms_copy = ogr_driver.CopyDataSource(farms_file, shapefile_folder)
+            farms_copy = ogr_driver.CopyDataSource(farms_file,
+               shapefile_folder.encode('UTF-8'))
 
-            crop_fields = [r for r in guilds_handler.get_fieldnames() if
+            guilds_crop_fields = [r for r in guilds_handler.get_fieldnames() if
                 r[0:4] == 'crp_']
+            LOGGER.debug('Crop fields from Guilds table:%s', guilds_crop_fields)
 
-#            crop_fields = [name for row in guilds_handler.table for
-#                name in row.keys() if name[0:4].lower() == 'crp_']
-            LOGGER.debug('crop fields:%s', crop_fields)
+            # Create a new field for each crop in the copied shapefile.
+            LOGGER.debug('Starting to create necessary crop sum fields in '
+                'the copied shapefile')
+            crops = []
+            for crop in guilds_crop_fields:
+                crop_name = crop[4:]  # Trim off the 'crp_'
+                abbrev_crop_name = crop_name[:4]
+                field_name = abbrev_crop_name + '_sum'
 
+                # Only create a new field if it doesn't exist already.
+                field_index = farms_copy.GetLayer(0).GetFeature(0).GetFieldIndex(field_name)
+                if field_index == -1:
+                    new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+                    farms_copy.GetLayer(0).CreateField(new_field)
+                    LOGGER.debug('Created crop sum field "%s" for "%s"',
+                        field_name, crop)
+                else:
+                    LOGGER.debug('Field "%s" already exists.  Skipping',
+                         field_name)
 
-            farm_sites = nutrient_core.split_datasource(farms_copy,
-                include_fields=crop_fields)
+                # Regardless of whether it needs to be created, we still need to
+                # keep track of it for later on, when the value of the cell will
+                # be set.
+                crops.append((crop, field_name))
+            LOGGER.debug('Crops/fields: %s', crops)
 
-            for farm_site in farm_sites:
-                LOGGER.debug('farm_site:%s', farm_site)
-                layer = farm_site.GetLayer(0)
-                farm_centroid = layer.GetFeature(0)
-                LOGGER.debug('Centroid=%s', farm_centroid)
-                visitation_sum = 0
-                fields = iui_validator.get_fields(farm_centroid)
-                LOGGER.debug('fields=%s', fields)
-
-                for fieldname, field_value in fields.iteritems():
-                    print fieldname, field_value, fieldname[0:4].lower()
+            LOGGER.info('Starting to aggregate by available farm sites')
+            farms_layer = farms_copy.GetLayer(0)
+            for farm_site in farms_layer:
+                for crop, fieldname in crops:
+                    crop_is_present = farm_site.GetField(crop)
+                    LOGGER.debug('Crop is present: %s', crop_is_present)
+                    LOGGER.debug('Resetting the crop sum to 0')
+                    LOGGER.debug('Resetting the visiting species list to []')
+                    crop_sum = 0
+                    visiting_species = []
 
                     # The field value is often stored as either 0 or
                     # some other value, but not necessarily 1.  So here,
                     # I need to compare the value against 0, not vs. 1.
-                    if fieldname[0:4].lower() == 'crp_' and field_value != 0:
-                        print fieldname, fieldname[0:4].lower(), field_value
-                        crop_sum = 0
+                    if crop_is_present != 0:
+                        LOGGER.info('Processing crop %s', crop)
                         for species in guilds_handler.table:
                             species_name = species['species']
+                            LOGGER.info('Processing species %s', species_name)
 
-                            if species[fieldname] == 1:
+                            try:
+                                species_crop = species[crop]
+                            except KeyError:
+                                LOGGER.warn('Crop "%s" found in the farms '
+                                    'shapefile, but not found in guilds,',
+                                    fieldname)
+                                species_crop = 0
+
+                            if species_crop == 1:
+                                visiting_species.append(species_name)
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
-                                LOGGER.debug('Supply raster URI=%s', supply_uri)
-                                supply_raster = gdal.Open(supply_uri)
-                                #pixel_value = nutrient_core.get_raster_stat_under_polygon(
-                                #    supply_raster, farm_site, stat='sum')
-                                pixel_value = raster_utils.aggregate_raster_values(supply_raster,
-                                        farm_site, 'id', 'sum')
-                                LOGGER.debug('species_name=%s, pixel_value=%s',
-                                            species_name, pixel_value)
+                                LOGGER.debug('Supply raster URI="%s"', supply_uri)
+                                pixel_value = get_point(supply_uri, farm_site)[0]
+                                LOGGER.debug('Crop="%s", species="%s", pixel_value=%s',
+                                            crop, species_name, pixel_value)
+                                crop_sum += pixel_value
 
+                    LOGGER.info('Sum across %s for crop "%s": %s',
+                        visiting_species, crop, crop_sum)
+
+                    # Actually set the correct field value in the copied farms
+                    # shapefile using the crop sum.
+                    field_index = farm_site.GetFieldIndex(fieldname)
+                    farm_site.SetField(field_index, crop_sum)
+                    farms_layer.SetFeature(farm_site)
+                    LOGGER.info('Sum saved to the shapefile.')
 
 def build_uri(directory, basename, suffix=[]):
     """Take the input directory and basename, inserting the provided suffixes
@@ -293,3 +333,29 @@ def build_uri(directory, basename, suffix=[]):
 
     new_filepath = file_base + suffix + extension
     return os.path.join(directory, new_filepath)
+
+
+def get_point(raster_uri, point):
+    """Get the value of the point at the raster located at raster_uri.  This
+    operation is completed without using numpy.
+
+        raster_uri - a URI that GDAL can open.
+        point - an OGR Feature to use to extract a raster value.
+
+    Returns the value at the point on the raster."""
+
+    raster = gdal.Open(raster_uri)
+    raster_gt = raster.GetGeoTransform()
+    raster_band = raster.GetRasterBand(1)
+
+    geometry = point.GetGeometryRef()
+    mx, my = geometry.GetX(), geometry.GetY()  # Coordinates in map units
+
+    # Convert from map to pixel coordinates
+    px = int((mx - raster_gt[0]) / (raster_gt[1]))
+    py = int((my - raster_gt[3]) / (raster_gt[5]))
+    structval = raster_band.ReadRaster(px, py, 1, 1,
+        buf_type=gdal.GDT_Float32)
+    intval = struct.unpack('f', structval)
+
+    return intval
