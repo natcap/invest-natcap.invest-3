@@ -162,7 +162,7 @@
                                                          "type": "number",
                                                          "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
                                                     }]},
-                    "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table."
+                    "helpText": "This table must be a CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table.<br/><br/><b>Optional:</b><br/>If you are aggregating by crops, your table should contain fields matching 'crp_*', where the value is either 1 or 0.  For each crop column in this table, the 'Aggregate by Farms' shapefile (below) must also have a field with a matching name."
                 },
                 {
                     "id" : "ag_classes",
@@ -203,6 +203,7 @@
                             }
                         ]
                     }
+                    "helpText": "This shapefile input is optional.  If provided, it must contain points representing data collection points on the landscape.  This table must contain crop fields matching those in the Guilds table, with a value of 1 indicating that this crop is present at this farm site and a 0 indicating that the crop is not present.  Values are then aggregated per farm site based on which species visit which crops using the corresponding fields in the Guilds table."
                 },
                 {
                     "id" : "results_suffix",
