@@ -10,7 +10,7 @@ from osgeo import gdal
 from nose.plugins.skip import SkipTest
 import numpy
 
-from invest_natcap.routing import routing
+from invest_natcap.routing import routing_utils
 import invest_test_core
 from invest_natcap import raster_utils
 
@@ -49,13 +49,13 @@ class TestRasterUtils(unittest.TestCase):
         flux_uri = os.path.join(base_dir, 'flux.tif')
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
-        routing.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
+        routing_utils.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
 
         invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
 
         flux_uri = os.path.join(base_dir, 'flux_2.tif')
-        routing.flow_accumulation(dem_uri, flux_uri)
+        routing_utils.flow_accumulation(dem_uri, flux_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
 
 
