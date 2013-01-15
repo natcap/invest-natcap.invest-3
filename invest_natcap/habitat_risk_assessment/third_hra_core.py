@@ -6,16 +6,20 @@ def execute(args):
     crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h-s'],
                                     args['habitats'], args['stressors'])
 
-    risk_dict = make_risk_rasters(inter_dir, crit_lists, denoms, 
+    #Need to have h-s in there so that we can use the DS for each H-S pair to
+    #multiply against the E/C rasters in the case of decay.
+    risk_dict = make_risk_rasters(args['h-s'], inter_dir, crit_lists, denoms, 
                                     args['risk_eq'])
 
-def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
+def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselven. The way in which the E/C rasters
     are combined depends on the risk equation desired.
 
     Input:
+        h_s- Args dictionary containing much of the H-S overlap data in
+            addition to the H-S base rasters.
         inter_dir- Intermediate directory in which the H_S risk-burned rasters
             can be placed.
         crit_lists- A dictionary containing pre-burned criteria which can be
@@ -79,10 +83,6 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
 
-        #HEY, LISTEN!
-        #USE THE H-S DS AS THE BASE FOR THE NEW RASTER, FLESH IT OUT BEFORE
-        #PASSING IT ON TO THE RISK EQ AS A BLANK RASTER TO BE FILLED FROM THE
-        #ARRAYS THAT YOU'RE PASSING IN.
         #Assume that there will be at least one raster.
         old_ds = crit_lists['Risk']['h-s'][pair][0]
         risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif'
@@ -94,16 +94,50 @@ def make_risk_rasters(inter_dir, crit_lists, denoms, risk_eq):
 
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
+
+        #Want to get the relevant ds for this H-S pair
+        base_ds = h_s[pair]['DS']
+        base_array = base_ds.GetRasterBand(1).ReadAsArray()
+        
         if risk_eq == 'Multiplicative':
-            mod_array = make_risk_mult(E, C)
+            mod_array = make_risk_mult(base_array, E, C)
         elif risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(E, C)
+            mod_array = make_risk_euc(base_array, E, C)
 
         band.WriteArray(mod_array)
 
         risk_rasters[pair] = new_ds
 
     return risk_rasters
+
+def make_risk_mult(base, e_array, c_array):
+
+    risk_rast =  base* e_array * c_array
+
+    return risk_rast
+
+def make_risk_euc(base, e_array, c_array):
+
+    #Want to make sure that the decay is applied to E first, then that product
+    #is what is used as the new E
+    e_array = e_array * base
+
+    #Only want to perform these operation if there is data in the cell, else
+    #we end up with false positive data when we subtract 1.
+    e_array[e_array != 0 ] -= 1
+    e_array = e_array * 2
+
+    c_array[c_array != 0] -= 1
+    c_array = c_array ** 2
+
+    #Only want to add E and C if there was originally no data in that pixel.
+    e_mask = np.make_mask(e_array)
+    c_array = e_mask * c_array
+
+    risk_array = c_array + e_array
+    risk_array = risk_array ** .5
+
+    return risk_array
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -258,8 +292,13 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             band, nodata = raster_utils.extract_band_and_nodata(c_ds)
             band.Fill(nodata)
 
-            i_burned_array = base_array * crit_rate_numerator
-            band.WriteArray(i_burned_array)
+            #This will not be spatially explicit, since we need to add the
+            #others in first before multiplying against the decayed raster.
+            #Instead, want to only have the crit_rate_numerator where data
+            #exists, but don't want to multiply it.
+            i_array = base_array
+            i_array[i_array != nodata] = crit_rate_numerator
+            band.WriteArray(i_array)
 
             #Add the burned ds containing only the numerator burned ratings to
             #the list in which all rasters will reside
@@ -268,6 +307,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             #H-S dictionary, Raster Criteria: should output multiple rasters, each
             #of which is reburned with the pixel value r, as r/dq*w.
             for crit in h_s[pair]['Crit_Rasters']:
+                crit_raster = crit['DS']
+                crit_band = crit_raster.GetRasterBand(1)
+                crit_array = crit_band.ReadAsArray()
                 dq = crit['DQ']
                 w = crit['Weight']
                 denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
@@ -279,7 +321,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 band, nodata = raster_utils.extract_band_and_nodata(c_ds)
                 band.Fill(nodata)
 
-                edited_array = base_array / float(dq * w)
+                edited_array = crit_array / float(dq * w)
                 band.WriteArray(edited_array)
                 crit_lists['Risk']['h_s'][pair].append(c_ds)
     
@@ -321,7 +363,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         band, nodata = raster_utils.extract_band_and_nodata(c_ds)
         band.Fill(nodata)
 
-        i_burned_array = base_array * risk_crit_rate_numerator
+        i_burned_array = base_array
+        i_burned_array[i_burned_array != nodata] = risk_crit_rate_numerator
         band.WriteArray(i_burned_array)
 
         crit_lists['Risk']['h'][h].append(c_ds)
@@ -334,7 +377,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         band, nodata = raster_utils.extract_band_and_nodata(c_ds)
         band.Fill(nodata)
 
-        i_burned_array = base_array * rec_crit_rate_numerator
+        i_burned_array[i_burned_array != nodata] = rec_crit_rate_numerator
+        band.WriteArray(i_burned_array)
         band.WriteArray(i_burned_array)
 
         crit_lists['Recovery'][h].append(c_ds)
@@ -344,7 +388,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit in h_s[pair]['Crit_Rasters']:
             dq = crit['DQ']
             w = crit['Weight']
-            
+            crit_ds = crit['DS']
+            crit_band = crit_ds.GetRasterBand(1)
+            crit_array = crit_band.ReadAsArray()
+
             denoms['Risk']['h'][h] += 1/ float(dq * w)
             denoms['Recovery'][h] += 1/ float(dq)
 
@@ -356,7 +403,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             band, nodata = raster_utils.extract_band_and_nodata(c_ds)
             band.Fill(nodata)
 
-            edited_array = base_array / float(dq * w)
+            edited_array = crit_array / float(dq * w)
             band.WriteArray(edited_array)
             crit_lists['Risk']['h'][h].append(c_ds)
             
@@ -368,7 +415,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             band, nodata = raster_utils.extract_band_and_nodata(r_ds)
             band.Fill(nodata)
 
-            edited_array = base_array / float(dq)
+            edited_array = crit_array / float(dq)
             band.WriteArray(edited_array)
             crit_lists['Recovery'][h].append(r_ds)
 
@@ -413,7 +460,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             band, nodata = raster_utils.extract_band_and_nodata(e_ds)
             band.Fill(nodata)
 
-            i_burned_array = base_array * crit_rate_numerator
+            i_burned_array = base_array
+            i_burned_array[i_burned_array != nodata] = crit_rate_numerator
             band.WriteArray(i_burned_array)
 
             #Add the burned ds containing only the numerator burned ratings to
@@ -423,6 +471,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             #H-S dictionary, Raster Criteria: should output multiple rasters, each
             #of which is reburned with the pixel value r, as r/dq*w.
             for crit in stress[s]['Crit_Rasters']:
+                crit_ds = crit['DS']
+                crit_band = crit_ds.GetRasterBand(1)
+                crit_array = crit_band.ReadAsArray()
                 dq = crit['DQ']
                 w = crit['Weight']
                 denoms['Risk']['s'][s] += 1/ float(dq * w)
@@ -434,7 +485,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 band, nodata = raster_utils.extract_band_and_nodata(e_ds)
                 band.Fill(nodata)
 
-                edited_array = base_array / float(dq * w)
+                edited_array = crit_array / float(dq * w)
                 band.WriteArray(edited_array)
                 crit_lists['Risk']['s'][s].append(e_ds)
 
