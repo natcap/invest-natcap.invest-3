@@ -23,6 +23,17 @@ def execute(args):
     h_risk_list = make_cum_risk_raster(maps_dir, risk_dict)
 
 def make_cum_risk_raster(dir, risk_dict):
+    
+    def add_risk_pixels(*pixels):
+          '''Sum all risk pixels to make a single habitat raster out of all the 
+          h-s overlap rasters.'''
+          pixel_sum = 0.0
+
+          for p in pixels:
+              pixel_sum += p
+
+          return pixel_sum
+
 
     #This will give up two np lists where we have only the unique habs and
     #stress for the system.
@@ -34,7 +45,27 @@ def make_cum_risk_raster(dir, risk_dict):
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
 
+    #List to store the completed h rasters in. Will be passed on to the
+    #ecosystem raster function to be used in vectorize_raster.
+    h_rasters = []
 
+    #Run through all potential pairings, and make lists for the ones that
+    #share the same habitat.
+    for h in habitats:
+
+        ds_list = []
+        for s in stressors:
+            
+                ds_list.append(risk_dict[pair])
+
+        #Once we have the complete list, we can pass it to vectorize.
+        out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif'
+
+        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels,
+                                 aoi = None, raster_out_uri = out_uri,
+                                 datatype=gdal.GDT_Float32, nodata = 0)
+
+        h_rasters.append(h_rast)
 
 def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
