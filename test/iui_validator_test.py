@@ -137,7 +137,14 @@ class OGRCheckerTester(CheckerTester):
         """Assert that OGRChecker can validate that fields exist."""
         updates = {'layers': [{'name': 'harv_samp_cur'}],
                    'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp',
-                   'fieldsExist': ['Start_date', 'Cut_cur', 'BCEF_cur']}
+                   'fieldsExist': [
+                       {'field': {'pattern': 'start_date',
+                                  'flag': 'ignoreCase'}},
+                       {'field': {'pattern': 'Cut_cur',
+                                  'flag': 'ignoreCase'}},
+                       {'field': {'pattern': 'BCEF_cur',
+                                  'flag': 'ignoreCase'}}]
+                  }
         self.validate_as.update(updates)
         self.assertNoError()
 
@@ -279,6 +286,17 @@ class CSVCheckerTester(CheckerTester):
             self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
             self.assertNoError()
 
+            self.validate_as['fieldsExist'] = [
+                {'field': {'pattern': "VALUE", "flag": "ignoreCase"},
+                    'required': {'min': 1, 'max': 2}}
+            ]
+            self.assertNoError()
+
+        def test_fields_exist_case_sensitive(self):
+            """Assert that CSVChecker can verify fields exist (case-sens.)"""
+            self.validate_as['fieldsExist'] = ['nAmE', 'VALue', 'NoTE']
+            self.assertNoError()
+
         def test_nonexistent_fields(self):
             """Assert that CSVChecker fails fails if given a bad fieldname."""
             self.validate_as['fieldsExist'].append('nonexistent_field')
@@ -317,7 +335,8 @@ class CSVCheckerTester(CheckerTester):
             self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
                  'samp_input', 'Guild.csv')
             field_restriction = {'field': {'pattern': 'AA_.*', 'flag':
-                                           'ignoreCase'}}
+                                           'ignoreCase'},
+                                 'required': True}
             self.validate_as['restrictions'] = [field_restriction]
             self.assertError()
 
@@ -328,6 +347,7 @@ class CSVCheckerTester(CheckerTester):
             self.assertNoError()
 
         def test_guilds_table(self):
+            """Assert that CSVChecker works when given the pollination example."""
             self.validate_as = {
                 "type": "CSV",
                 "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
