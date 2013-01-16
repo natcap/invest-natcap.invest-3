@@ -10,7 +10,7 @@ from osgeo import gdal
 from nose.plugins.skip import SkipTest
 import numpy
 
-from invest_natcap.routing import routing
+from invest_natcap.routing import routing_utils
 import invest_test_core
 from invest_natcap import raster_utils
 
@@ -31,26 +31,37 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        flux_regression_uri = 'data/routing_regression/flux.tif'
         dem_uri = 'data/sediment_test_data/dem'
-#        dem_uri = 'data/smooth_rasters/smoothleft.tif'
-#        dem_uri = 'data/smooth_rasters/smoothright.tif'
-#        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
-#        dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
-#        dem_uri = 'data/smooth_rasters/random.tif'
+
+        flow_accumulation_uri = os.path.join(base_dir, 'flow_accumulation.tif')
+        routing_utils.flow_accumulation(dem_uri, flow_accumulation_uri)
+
+        flow_accumulation_regression_uri = 'data/routing_regression/flow_accumulation.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, flow_accumulation_uri, flow_accumulation_regression_uri)
+
         source_uri = os.path.join(base_dir, 'source.tif')
         absorption_rate_uri = os.path.join(base_dir, 'absorption.tif')
 
-
         make_constant_raster_from_base(dem_uri, 1.0, source_uri)
-        make_constant_raster_from_base(dem_uri, 0.0, absorption_rate_uri)
+        make_constant_raster_from_base(dem_uri, 0.1, absorption_rate_uri)
 
         loss_uri = os.path.join(base_dir, 'loss.tif')
         flux_uri = os.path.join(base_dir, 'flux.tif')
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
-        routing.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
+        routing_utils.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
 
-#        invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
-        subprocess.Popen(['qgis', flux_uri, 'count.tif', dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
-                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])
+        flux_regression_uri = 'data/routing_regression/flux.tif'
+        loss_regression_uri = 'data/routing_regression/loss.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
+
+        stream_uri = os.path.join(base_dir, 'stream.tif')
+        stream_regression_uri = 'data/routing_regression/stream.tif'
+        routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
+
+#        subprocess.Popen(['qgis', flux_uri, stream_uri])
+
+#        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
+#                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])

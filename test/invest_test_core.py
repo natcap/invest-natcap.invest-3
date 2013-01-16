@@ -25,7 +25,9 @@ def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
         returns True if a and b are equal to each other"""
 
     logger.debug('Asserting datasets A: %s, B: %s', aUri, bUri)
-    assertTwoDatasetsEqual(unitTest, gdal.Open(aUri), gdal.Open(bUri))
+    a_dataset = gdal.Open(aUri)
+    b_dataset = gdal.Open(bUri)
+    assertTwoDatasetsEqual(unitTest, a_dataset, b_dataset)
 
 def assertTwoDatasetsEqual(unitTest, a, b):
     """Tests if datasets a and b are 'almost equal' to each other on a per
@@ -55,12 +57,14 @@ def assertTwoDatasetsEqual(unitTest, a, b):
 
         aArray = bandA.ReadAsArray(0, 0, bandA.XSize, bandA.YSize)
         bArray = bandB.ReadAsArray(0, 0, bandB.XSize, bandB.YSize)
+        
         try:
             np.testing.assert_array_almost_equal(aArray, bArray)
         except AssertionError:
-            for a, b in zip(aArray[0], bArray[0]):
-                unitTest.assertAlmostEqual(a, b, msg=str('%s != %s ... Failed at' +
-                    ' row %s')%(a, b, bandNumber))
+            for row_index in xrange(bandA.YSize):
+                for a, b in zip(aArray[row_index], bArray[row_index]):
+                    unitTest.assertAlmostEqual(
+                        a, b, msg='%s != %s ... Failed at row %s' % (a, b, row_index))
 
 def assertTwoShapesEqualURI(unitTest, aUri, bUri):
     """Tests if shapes a and b are equal to each other on a
@@ -99,6 +103,10 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
         feat_count_regression = layer_regression.GetFeatureCount()
         unitTest.assertEqual(feat_count, feat_count_regression,
                          'The layers DO NOT have the same number of features')
+
+        unitTest.assertEqual(layer.GetGeomType(), layer_regression.GetGeomType(),
+            'The layers do not have the same geometry type')
+
         
         # Get the first features of the layers and loop through all the features
         feat = layer.GetNextFeature()
@@ -111,7 +119,7 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
             field_count_regression = layer_def_regression.GetFieldCount()
             unitTest.assertEqual(field_count, field_count_regression,
                              'The shapes DO NOT have the same number of fields')
-            
+
             for fld_index in range(field_count):
                 # Check that the features have the same field values
                 field = feat.GetField(fld_index)
@@ -124,15 +132,19 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
                     feat_regression.GetFieldDefnRef(fld_index)
                 field_name = field_ref.GetNameRef()
                 field_name_regression = field_ref_regression.GetNameRef()
-                unitTest.assertEqual(field_name, field_name_regression, 
+                unitTest.assertEqual(field_name, field_name_regression,
                                      'The fields DO NOT have the same name')
-            # Check that the features have the same geometry and area
-            geom = feat.GetGeometryRef()    
-            geom_regression = feat_regression.GetGeometryRef()    
-            
-            unitTest.assertTrue(geom.Equals(geom_regression))
-            unitTest.assertEqual(geom.Area(), geom_regression.Area())
-            
+
+            if layer.GetGeomType() != ogr.wkbPoint:
+                # Check that the features have the same geometry and area,
+                # but only if the shapefile's geometry is not a point, since
+                # points don't have area to check.
+                geom = feat.GetGeometryRef()
+                geom_regression = feat_regression.GetGeometryRef()
+
+                unitTest.assertTrue(geom.Equals(geom_regression))
+                unitTest.assertEqual(geom.Area(), geom_regression.Area())
+
             feat = None
             feat_regression = None
             feat = layer.GetNextFeature()

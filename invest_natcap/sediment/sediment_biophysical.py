@@ -94,6 +94,7 @@ def execute(args):
             biophysical_args['watersheds'], clipped_uri)
         LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
                                          biophysical_args[raster_name]))
+
     #check that they have the same projection
     for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
         LOGGER.debug(biophysical_args[raster_name].GetProjection())
