@@ -22,8 +22,8 @@ LOGGER = logging.getLogger('wind_energy_biophysical')
 # __file__ gets us the path dynamic path for this module so that we can get the
 # correct directory path, which allows us to properly find the JSON file
 MODULE_DIR_NAME = os.path.dirname(__file__)
-GLOBAL_WIND_PARAMETERS = os.path.join(MODULE_DIR_NAME,
-    'invest_natcap/wind_energy/global_wind_energy_attributes.json'
+GLOBAL_WIND_PARAMETERS = os.path.join(
+        MODULE_DIR_NAME, 'global_wind_energy_attributes.json')
 
 def execute(args):
     """Takes care of all file handling for the biophysical part of the wind
