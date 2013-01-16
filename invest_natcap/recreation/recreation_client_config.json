@@ -17,6 +17,12 @@
             "regression": "regression.php",
             "results": "results.php"
         },
+        "grid_tmp": {
+            "shp": "grid.shp",
+            "shx": "grid.shx",
+            "dbf": "grid.dbf",
+            "prj": "grid.prj"
+        },         
         "log": "log.txt",
         "results": "results.zip"
     },
