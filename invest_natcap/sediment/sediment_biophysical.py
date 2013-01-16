@@ -98,8 +98,8 @@ def execute(args):
 
     #Calculate LS term
     ls_nodata = -1.0
-    ls_dataset = sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_dataset,
-        flow_direction_uri, ls_uri, ls_nodata)
+    sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
+                                      flow_direction_uri, ls_uri, ls_nodata)
 
     return
 

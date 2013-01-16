@@ -346,8 +346,8 @@ def calculate_effective_retention(flow_direction_dataset,
 
     return effective_retention_dataset
 
-def calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
-                        aspect_dataset, ls_factor_uri, ls_nodata):
+def calculate_ls_factor(flow_accumulation_uri, slope_uri, 
+                        aspect_uri, ls_factor_uri, ls_nodata):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -355,12 +355,12 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         
         (Required that all raster inputs are same dimensions and projections
         and have square cells)
-        flow_accumulation_dataset - a single band raster of type float that 
+        flow_accumulation_uri - a uri to a  single band raster of type float that 
             indicates the contributing area at the inlet of a grid cell
-        slope_dataset - a single band raster of type float that indicates
+        slope_uri - a uri to a single band raster of type float that indicates
             the slope at a pixel given as a proportion (e.g. a value of 0.05
             is a slope of 5%)
-        aspect_dataset - a single band raster of type float that indicates the 
+        aspect_uri - a uri to a single band raster of type float that indicates the 
             direction that slopes are facing in terms of radians east and
             increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
             0 or 2pi is east.
@@ -370,6 +370,10 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         returns nothing"""
     
     #Tease out all the nodata values for reading and setting
+    flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
+    slope_dataset = gdal.Open(slope_uri)
+    aspect_dataset = gdal.Open(aspect_uri)
+
     _, flow_accumulation_nodata = \
         raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
     _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
