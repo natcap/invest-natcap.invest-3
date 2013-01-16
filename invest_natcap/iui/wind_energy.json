@@ -65,6 +65,7 @@
                     "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
                     "required": true,
                     "enabledBy" : "aoi", 
+                    "returns" : {"ifEmpty": "pass"},
                     "requiredIf": ["valuation_container", "distance_container"],
                     "validateAs": {"type": "OGR"},
                     "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
