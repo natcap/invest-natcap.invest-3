@@ -79,15 +79,13 @@ def biophysical(args):
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(args['intermediate_uri'], 
-                                         'flow_accumulation.tif')
-
-    #Calcualte flow accumulation
+    flow_accumulation_uri = os.path.join(
+        args['intermediate_uri'], 'flow_accumulation.tif')
     routing_utils.flow_accumulation(args['dem'], flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset,
+    stream_dataset = routing_utils.stream_threshold(flow_accumulation_dataset,
         args['threshold_flow_accumulation'], args['v_stream_uri'])
 
     #Calculate LS term
