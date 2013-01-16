@@ -317,7 +317,8 @@ class CSVCheckerTester(CheckerTester):
             self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
                  'samp_input', 'Guild.csv')
             field_restriction = {'field': {'pattern': 'AA_.*', 'flag':
-                                           'ignoreCase'}}
+                                           'ignoreCase'},
+                                 'required': True}
             self.validate_as['restrictions'] = [field_restriction]
             self.assertError()
 
