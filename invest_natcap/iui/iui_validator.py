@@ -448,72 +448,108 @@ class TableChecker(FileChecker, ValidationAssembler):
         self.num_checker = NumberChecker()
         self.str_checker = PrimitiveChecker()
 
+    def get_matching_fields(self, field_defn):
+        fieldnames = self._get_fieldnames()
+        # If the field is statically defined, check that the field exists
+        # and move on, raising an error if it does not exist.
+        if field_defn.__class__ in [unicode, str]:
+            if field_defn.upper() not in fieldnames:
+                return []
+            restricted_fields = [field_defn]
+
+        # If the fieldname is defined by a regular expression, we need to go
+        # through all the fieldnames in this table to check if the target
+        # regex matches.
+        else:
+            # Use a list to keep track of the restricted fields that match
+            # the defined regex.
+            restricted_fields = []
+
+            # Loop through all fields to check if the field matches the
+            # target regular expression.  NOTE: restriction['field'] is
+            # allowed the same structure as defined in
+            # PrimitiveChecker.check_regexp().
+            for field in fieldnames:
+                # Create a copy of the restriction dictionary so we don't
+                # cause unwanted side effects.
+                field_regex_dict = {'allowedValues': field_defn.copy()}
+
+                # PrimitiveChecker.check_regexp() needs a value to check, so
+                # set it to the fieldname.
+                field_regex_dict['value'] = field
+
+                # Check whether the fieldname matches the defined field
+                # regular expression by using the logic in
+                # PrimitiveChecker().
+                field_error = self.str_checker.check_regexp(
+                    field_regex_dict)
+
+                # In this case, we want to know whether the regex matches.
+                # When the regex matches, no error is returned.  If no error
+                # is found (so the field matches the regex), track the field
+                # so we can check it later.
+                if field_error in [None, '']:
+                    restricted_fields.append(field)
+        return restricted_fields
+
     def verify_fields_exist(self, field_list):
         """This is a function stub for reimplementation.  field_list is a python
         list of strings where each string in the list is a required fieldname.
         List order is not validated.  Returns the error string if an error is
         found.  Returns None if no error found."""
 
-        available_fields = map(lambda x: x.upper(), self._get_fieldnames())
         for required_field in field_list:
-            required_field = required_field.upper()
-            if required_field not in available_fields:
-                return str('Required field: ' + required_field + ' not found')
+            matching_fields = self.get_matching_fields(required_field)
+
+            # If it's a string, we know that it has to exist.
+            if required_field.__class__ in [unicode, str]:
+                matching_fields = map(lambda x: x.lower(), matching_fields)
+                if required_field.lower() not in matching_fields:
+                    return str('Required field: "%s" not found in %s' %
+                        (required_field, matching_fields))
+            else:
+                # We know it should be a dictionary, so there might be
+                # minimum/maximum existence rules.
+                try:
+                    min_fields = required_field['min']
+                except KeyError:
+                    min_fields = 1
+
+                try:
+                    max_fields = required_field['max']
+                except KeyError:
+                    max_fields = 1000
+
+                pattern = required_field['field']['pattern']
+                num_matches = len(matching_fields)
+                if num_matches < min_fields:
+                    return str('A minimum of %s fields matching the pattern %s '
+                        'must exist, %s found.' % (min_fields, pattern,
+                        num_matches))
+
+                if num_matches > max_fields:
+                    return str('A maximum of %s fields matching the pattern %s '
+                        'may exist, %s found.' % (max_fields, pattern,
+                        num_matches))
 
     def verify_restrictions(self, restriction_list):
         table = self._build_table()
         for restriction in restriction_list:
-            fieldnames = self._get_fieldnames()
+            restricted_fields = self.get_matching_fields(restriction['field'])
 
-            # If the field is statically defined, check that the field exists
-            # and move on, raising an error if it does not exist.
-            if restriction['field'].__class__ in [unicode, str]:
-                if restriction['field'].upper() not in fieldnames:
-                    return 'Field %s is required.' % restriction['field']
-                restricted_fields = [restriction['field']]
+            # If the user has not defined whether the field is required,
+            # assume that the field is not required.  True field existence
+            # enforcement is handled by the 'fieldExists' flag.
+            if 'required' not in restriction:
+                restriction['required'] = False
 
-            # If the fieldname is defined by a regular expression, we need to go
-            # through all the fieldnames in this table to check if the target
-            # regex matches.
-            else:
-                # Use a list to keep track of the restricted fields that match
-                # the defined regex.
-                restricted_fields = []
-
-                # Loop through all fields to check if the field matches the
-                # target regular expression.  NOTE: restriction['field'] is
-                # allowed the same structure as defined in
-                # PrimitiveChecker.check_regexp().
-                for field in fieldnames:
-                    # Create a copy of the restriction dictionary so we don't
-                    # cause unwanted side effects.
-                    field_regex_dict = {'allowedValues':
-                                        restriction['field'].copy()}
-
-                    # PrimitiveChecker.check_regexp() needs a value to check, so
-                    # set it to the fieldname.
-                    field_regex_dict['value'] = field
-
-                    # Check whether the fieldname matches the defined field
-                    # regular expression by using the logic in
-                    # PrimitiveChecker().
-                    field_error = self.str_checker.check_regexp(
-                        field_regex_dict)
-
-                    # In this case, we want to know whether the regex matches.
-                    # When the regex matches, no error is returned.  If no error
-                    # is found (so the field matches the regex), track the field
-                    # so we can check it later.
-                    if field_error in [None, '']:
-                        restricted_fields.append(field)
-
-                # If a restriction is provided, we assume that the field is
-                # required.  If no fields match the regex provided, return an
-                # error message stating as much.
-                if len(restricted_fields) == 0:
-                    return str('This file must have at least one field '
-                        'matching the pattern %s' %
-                        restriction['field']['pattern'])
+            # If the user is required to have some fields matching this
+            # regex but has not met that requirement, return an error
+            # message.
+            if len(restricted_fields) == 0 and restriction['required']:
+                return str('This file must have at least one field '
+                    'matching the pattern %s' %
+                    restriction['field']['pattern'])
 
             for row in table:
                 for field in restricted_fields:
@@ -846,10 +882,10 @@ class PrimitiveChecker(Checker):
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
-        # Set numeric default regexp.  Used if user does not provide a regex
-        self.default_regexp = '[0-9]*(\\.[0-9]*)?'
-
         PrimitiveChecker.__init__(self)
+
+        # Set numeric default regexp.  Used if user does not provide a regex
+        self.default_regexp = '^\\s*[0-9]*(\.[0-9]*)?\\s*$'
         updates = {'gteq': self.greater_than_equal_to,
                    'greaterThan': self.greater_than,
                    'lteq':  self.less_than_equal_to,
@@ -890,8 +926,6 @@ class CSVChecker(TableChecker):
             #big issues about it.  See the following for details:
             #http://code.google.com/p/invest-natcap/issues/detail?id=1076
             self.file = csv.DictReader(open(self.uri, 'rU'))
-            fieldnames = self._get_fieldnames()
-            table = self._build_table()
         except IOError as e:
             return str("IOError: %s" % str(e))
         except (csv.Error, ValueError) as e:

@@ -3,6 +3,8 @@ invest_natcap.iui.iui_validator."""
 
 import unittest
 import os
+import pdb
+
 
 from invest_natcap.iui import iui_validator
 
@@ -135,7 +137,14 @@ class OGRCheckerTester(CheckerTester):
         """Assert that OGRChecker can validate that fields exist."""
         updates = {'layers': [{'name': 'harv_samp_cur'}],
                    'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp',
-                   'fieldsExist': ['Start_date', 'Cut_cur', 'BCEF_cur']}
+                   'fieldsExist': [
+                       {'field': {'pattern': 'start_date',
+                                  'flag': 'ignoreCase'}},
+                       {'field': {'pattern': 'Cut_cur',
+                                  'flag': 'ignoreCase'}},
+                       {'field': {'pattern': 'BCEF_cur',
+                                  'flag': 'ignoreCase'}}]
+                  }
         self.validate_as.update(updates)
         self.assertNoError()
 
@@ -277,6 +286,17 @@ class CSVCheckerTester(CheckerTester):
             self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
             self.assertNoError()
 
+            self.validate_as['fieldsExist'] = [
+                {'field': {'pattern': "VALUE", "flag": "ignoreCase"},
+                    'required': {'min': 1, 'max': 2}}
+            ]
+            self.assertNoError()
+
+        def test_fields_exist_case_sensitive(self):
+            """Assert that CSVChecker can verify fields exist (case-sens.)"""
+            self.validate_as['fieldsExist'] = ['nAmE', 'VALue', 'NoTE']
+            self.assertNoError()
+
         def test_nonexistent_fields(self):
             """Assert that CSVChecker fails fails if given a bad fieldname."""
             self.validate_as['fieldsExist'].append('nonexistent_field')
@@ -315,7 +335,8 @@ class CSVCheckerTester(CheckerTester):
             self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
                  'samp_input', 'Guild.csv')
             field_restriction = {'field': {'pattern': 'AA_.*', 'flag':
-                                           'ignoreCase'}}
+                                           'ignoreCase'},
+                                 'required': True}
             self.validate_as['restrictions'] = [field_restriction]
             self.assertError()
 
@@ -323,6 +344,43 @@ class CSVCheckerTester(CheckerTester):
             """Assert that CSVChecker fails when a CSV is semicolon-delim."""
             self.validate_as['value'] = os.path.join(TEST_DATA, 'iui',
                 'validation', 'semicolon-delimited.csv')
+            self.assertNoError()
+
+        def test_guilds_table(self):
+            """Assert that CSVChecker works when given the pollination example."""
+            self.validate_as = {
+                "type": "CSV",
+                "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
+                "restrictions": [{"field": "ALPHA",
+                                 "validateAs": {"type": "number",
+                                                "allowedValues": {"pattern": "^\\s*[0-9]*\\.[0-9]*\\s*$"}}
+                                },
+                                {"field": {"pattern": "NS_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
+                                },
+                                {"field": {"pattern": "FS_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "gteq": 0.0,
+                                     "lteq": 1.0}
+                                },
+                                {"field": {"pattern": "crp_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
+                                }]}
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
+                 'samp_input', 'Guild_with_crops.csv')
+            self.assertNoError()
+
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'iui',
+                'validation', 'Guild_bad_numbers.csv')
+            self.assertNoError()
+
+            # Try default numeric validation on the bad guilds file.
+            self.validate_as['restrictions'][0]['validateAs'] = {'type': 'number'}
             self.assertNoError()
 
 class PrimitiveCheckerTester(CheckerTester):
@@ -421,4 +479,13 @@ class NumberCheckerTester(CheckerTester):
         self.validate_as['greaterThan'] = 4
         self.assertNoError()
 
+    def test_default_regex(self):
+        """Assert that NumberChecker has proper default validation."""
+        self.validate_as['value'] = ' 5 '
+        self.assertNoError()
 
+        self.validate_as['value'] = 'aaa5b'
+        self.assertError()
+
+        self.validate_as['value'] = ' 5gg'
+        self.assertError()

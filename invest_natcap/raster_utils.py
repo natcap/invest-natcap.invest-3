@@ -607,7 +607,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
 
     return raster
 
-def vectorize_points(shapefile, datasource_field, raster):
+def vectorize_points(shapefile, datasource_field, raster, randomize_points=False):
     """Takes a shapefile of points and a field defined in that shapefile
        and interpolates the values in the points onto the given raster
 
@@ -641,8 +641,11 @@ def vectorize_points(shapefile, datasource_field, raster):
     #get a linear Delauney triangle, the 1e-6 is larger than eps for
     #floating point, but large enough not to cause errors in interpolation.
     delta_difference = 1e-6 * min(abs(gt[1]),abs(gt[5]))
-    random_array = np.random.randn(layer.GetFeatureCount(),2)
-    random_offsets = random_array*delta_difference
+    if randomize_points:
+        random_array = np.random.randn(layer.GetFeatureCount(), 2)
+        random_offsets = random_array*delta_difference
+    else:
+        random_offsets = np.zeros((layer.GetFeatureCount(), 2))
 
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
@@ -994,37 +997,6 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
 
     return flow_accumulation_dataset
 
-def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
-    """Creates a raster of accumulated flow to each cell.
-    
-        flow_accumulation_data - (input) A flow accumulation dataset of type
-            floating point
-        flow_threshold - (input) a number indicating the threshold to declare
-            a pixel a stream or no
-        stream_uri - (input) the uri of the output stream dataset
-        
-        returns stream dataset"""
-
-    stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
-        stream_uri, 'GTiff', 255, gdal.GDT_Byte)
-    stream_band = stream_dataset.GetRasterBand(1)
-    stream_band.Fill(255)
-    stream_array = stream_band.ReadAsArray()
-
-    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
-    flow_accumulation_nodata = flow_accumulation_band.GetNoDataValue()
-    flow_accumulation_array = flow_accumulation_band.ReadAsArray()
-
-    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array >= float(flow_threshold))] = 1
-    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array < float(flow_threshold))] = 0
-
-    stream_band.WriteArray(stream_array)
-    stream_array = None
-    stream_band = None
-
-    return stream_dataset
 
 def calculate_slope(dem_dataset, slope_uri):
     """Generates raster maps of slope.  Follows the algorithm described here:

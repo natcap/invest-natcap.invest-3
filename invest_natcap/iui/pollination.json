@@ -53,8 +53,7 @@
                             "validateAs": {"type": "CSV",
                                            "fieldsExist": ["LULC"],
                                            "restrictions": [{"field": "LULC",
-                                                             "validateAs": {"type": "number",
-                                                                            "allowedValues": {"pattern":"[0-9]*(\\.[0-9]*)?$"}}
+                                                             "validateAs": {"type": "number"}
                                                             },
                                                             {"field": {"pattern": "N_.*", "flag": "ignoreCase"},
                                                              "validateAs": {
@@ -143,8 +142,7 @@
                     "validateAs": {"type": "CSV",
                                    "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
                                    "restrictions": [{"field": "ALPHA",
-                                                     "validateAs": {"type": "number",
-                                                                    "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}
+                                                     "validateAs": {"type": "number"}
                                                     },
                                                     {"field": {"pattern": "NS_.*", "flag": "ignoreCase"},
                                                      "validateAs": {
