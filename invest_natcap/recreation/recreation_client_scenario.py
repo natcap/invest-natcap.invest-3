@@ -166,7 +166,7 @@ def execute(args):
     url = config["server"]+config["files"]["PHP"]["scenario"]
     request = urllib2.Request(url, datagen, headers)
     
-    #opening request and saving session id
+    #opening request and comparing session id
     success,sessid2=urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
     if not success:
@@ -190,7 +190,17 @@ def execute(args):
     url = config["server"]+"/"+config["files"]["PHP"]["regression"]
     datagen, headers = multipart_encode({"sessid": args["sessid"]})
     request = urllib2.Request(url, datagen, headers)
-    urllib2.urlopen(request).read()
+
+    #opening request and comparing session id
+    success,sessid2=urlopen(url,request,config["tries"],config["delay"],LOGGER)
+
+    if not success:
+        LOGGER.error("Failed to restablish sesssion.")
+        raise urllib2.URLError, msg
+
+    if not sessid2==args["sessid"]:
+        LOGGER.error("There was a session id mismatch.")
+        raise ValueError, "The session id unexpectedly changed."
 
     #check log and echo messages while not done
     url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
@@ -200,7 +210,17 @@ def execute(args):
     url = config["server"]+"/"+config["files"]["PHP"]["results"]
     datagen, headers = multipart_encode({"sessid": args["sessid"]})
     request = urllib2.Request(url, datagen, headers)
-    urllib2.urlopen(request).read()
+
+    #opening request and comparing session id
+    success,sessid2=urlopen(url,request,config["tries"],config["delay"],LOGGER)
+
+    if not success:
+        LOGGER.error("Failed to restablish sesssion.")
+        raise urllib2.URLError, msg
+
+    if not sessid2==args["sessid"]:
+        LOGGER.error("There was a session id mismatch.")
+        raise ValueError, "The session id unexpectedly changed."
     
     #download results
     url = config["server"]+config["paths"]["relative"]["data"]+args["sessid"]+"/"+config["files"]["results"]
