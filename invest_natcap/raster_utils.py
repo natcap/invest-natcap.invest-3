@@ -607,7 +607,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
 
     return raster
 
-def vectorize_points(shapefile, datasource_field, raster):
+def vectorize_points(shapefile, datasource_field, raster, randomize_points=False):
     """Takes a shapefile of points and a field defined in that shapefile
        and interpolates the values in the points onto the given raster
 
@@ -641,8 +641,11 @@ def vectorize_points(shapefile, datasource_field, raster):
     #get a linear Delauney triangle, the 1e-6 is larger than eps for
     #floating point, but large enough not to cause errors in interpolation.
     delta_difference = 1e-6 * min(abs(gt[1]),abs(gt[5]))
-    random_array = np.random.randn(layer.GetFeatureCount(),2)
-    random_offsets = random_array*delta_difference
+    if randomize_points:
+        random_array = np.random.randn(layer.GetFeatureCount(), 2)
+        random_offsets = random_array*delta_difference
+    else:
+        random_offsets = np.zeros(layer.GetFeatureCount(), 2)
 
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
