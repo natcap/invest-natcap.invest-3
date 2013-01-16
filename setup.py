@@ -113,8 +113,6 @@ if platform.system() == 'Windows':
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
     data_files.append(('installer', glob.glob('installer/*')))
-    data_files.append(('invest_natcap/wind_energy',
-        ['invest_natcap/wind_energy/global_wind_energy_attributes.json']))
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
@@ -129,6 +127,11 @@ directory = 'invest_natcap/iui/iui_resources'
 for root_dir, sub_folders, file_list in os.walk(directory):
     data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
         os.path.join(root_dir, x), file_list)))
+
+# Adding a json data file for the wind energy module, manually placing it in the
+# correct path. This needs to be done for both Windows and Linux builds
+data_files.append((lib_path + '/invest_natcap/wind_energy/',
+    ['invest_natcap/wind_energy/global_wind_energy_attributes.json']))
 
 #The standard distutils setup command
 setup(name='invest_natcap',

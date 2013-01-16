@@ -14,6 +14,20 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('recreation_client')
 
+def urlopen(url,request,tries=3,delay=15,log=LOGGER):
+    success=False
+    for attempt in range(tries):
+        log.info("Trying URL: %s." % url)
+        try:
+            msg=urllib2.urlopen(request).read().strip()
+            success=True
+            break
+        except urllib2.URLError, msg:
+            log.warn("Encountered error: %s" % msg)
+            if attempt < tries-1:
+                log.info("Waiting %i for retry." % delay)
+                time.sleep(delay)
+                
 def reLOGGER(log,entry):
     timestamp,msgType,msg = entry.split(",")
     if msgType == "INFO":
@@ -28,6 +42,33 @@ def reLOGGER(log,entry):
     else:
         log.warn("Unknown logging message type %s: %s" % (msgType,msg))
 
+def logcheck(url,flag="Dropped intermediate tables.",delay=15,log=LOGGER):    
+    complete = False
+    oldServerLog=""
+    msg=""
+
+    while not complete:
+        severLog = urllib2.urlopen(url).read()
+        serverLogging = severLog[len(oldServerLog):].strip()
+        if len(serverLogging) > 0:
+            serverLogging=serverLogging.split("\n")        
+            if serverLogging[-1][-1] != ".":
+                serverLogging.pop(-1)
+        else:
+            serverLogging=[]
+            
+        for entry in serverLogging:
+            timestamp,msgType,msg = entry.split(",")
+            reLOGGER(log,msgType,msg)
+            
+        oldServerLog=severLog
+
+        if msg==flag:
+            complete = True            
+        else:
+            log.info("Please wait.")
+            time.sleep(delay)
+
 def execute(args):
     # Register the streaming http handlers with urllib2
     register_openers()
@@ -38,25 +79,22 @@ def execute(args):
     configFile=open(configFileName,'r')
     config=json.loads(configFile.read())
     configFile.close()
-    
-    if args["data_dir"][-1] != os.sep:
-        args["data_dir"]=args["data_dir"]+os.sep
 
+    #adding os separator to paths if needed    
     if args["workspace_dir"][-1] != os.sep:
         args["workspace_dir"]=args["workspace_dir"]+os.sep
-        
 
-##    LOGGER.info("Validating grid.")
-##    dirname=os.path.dirname(args["gridFileName"])+os.sep
-##    fileName, fileExtension = os.path.splitext(args["gridFileName"])
-##    gridFileNameSHP = fileName+".shp"
-##    gridFileNameSHX = fileName+".shx"
-##    gridFileNameDBF = fileName+".dbf"
-##    gridFileNamePRJ = fileName+".prj"
-##    
-##    if not os.path.exists(gridFileNamePRJ):
-##        LOGGER.error("The shapefile must have a PRJ file.")
-##        raise IOError, "Missing PRJ file."
+    if args["data_dir"][-1] != os.sep:
+        args["data_dir"]=args["data_dir"]+os.sep        
+
+    LOGGER.info("Validating grid.")
+    dirname=os.path.dirname(args["json"])+os.sep
+    if not (os.path.exists(dirname+config["files"]["grid_tmp"]["shp"]) and \
+            os.path.exists(dirname+config["files"]["grid_tmp"]["shx"]) and \
+            os.path.exists(dirname+config["files"]["grid_tmp"]["dbf"]) and \
+            os.path.exists(dirname+config["files"]["grid_tmp"]["prj"])):
+        LOGGER.error("The grid is missing a shapefile component.")
+        raise ValueError, "The grid is missing a shapefile component."
 
     LOGGER.info("Processing predictors.")
     predictors = []
@@ -93,71 +131,79 @@ def execute(args):
 
     for tsv in userCategorization:
         attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
-        
+
+    #UPLOADING PREDICTORS        
     LOGGER.debug("Uploading predictors.")
     LOGGER.debug ("Attachments: %s" % str(attachments.keys()))
+
+    #constructing upload predictors request    
     datagen, headers = multipart_encode(attachments)
     url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
-    sessid = urllib2.urlopen(request).read().strip()
-    args["sessid"] = sessid
-    LOGGER.debug("Server session %s." % (sessid))
+
+    #opening request and saving session id
+    success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
     
+    if success:
+        args["sessid"]=sessid
+    else:
+        LOGGER.error("Failed to start new sesssion.")
+        raise urllib2.URLError, msg
+    
+    LOGGER.debug("Server session %s." % (sessid))
+
+    #EXECUTING SERVER SIDE PYTHON SCRIPT
+    LOGGER.info("Running server side model.")
+    
+    #aggregating attachments
     attachments = {"json" : json.dumps(args, indent=4),
                    "init" : open(args["json"],'rb'),
                    "comments": args["comments"]}
-    
+
+    #constructing request
     datagen, headers = multipart_encode(attachments)
-    
-    # Create the Request object
     url = config["server"]+config["files"]["PHP"]["scenario"]
     request = urllib2.Request(url, datagen, headers)
     
-    LOGGER.info("Sending request to server.")
-    sessid2 =urllib2.urlopen(request).read().strip()
-    if not sessid == sessid2:
-        LOGGER.error("Session id error.")
-        raise ValueError, "The session id has changed."
-    
-    LOGGER.info("Processing data.")
+    #opening request and saving session id
+    success,sessid2=urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
-    url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["log"]    
-    complete = False
-    oldlog=""
-    msg=""
-    time.sleep(5)
-    while not complete:
-        log = urllib2.urlopen(url).read()
-        serverLogging = log[len(oldlog):].strip()
-        if len(serverLogging) > 0:
-            serverLogging=serverLogging.split("\n")        
-            if serverLogging[-1][-1] != ".":
-                serverLogging.pop(-1)
-        else:
-            serverLogging=[]
-            
-        for entry in serverLogging:
-            reLOGGER(LOGGER,entry)
-            
-        oldlog=log
-        
-        if msg=="Dropped intermediate tables.":
-            complete = True            
-        else:
-            LOGGER.info("Please wait.")
-            time.sleep(15)                    
-                
+    if not success:
+        LOGGER.error("Failed to restablish sesssion.")
+        raise urllib2.URLError, msg
+
+    if not sessid2==args["sessid"]:
+        LOGGER.error("There was a session id mismatch.")
+        raise ValueError, "The session id unexpectedly changed."
+    
+    #check log and echo messages while not done
+    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
+    logcheck(url,"Dropped intermediate tables.",15,LOGGER)
+    
+    LOGGER.info("Finished processing data.")
+
+    #EXECUTING SERVER SIDE R SCRIPT
     LOGGER.info("Running regression.")
-    url = config["server"]+config["files"]["PHP"]["regression"]
-    datagen, headers = multipart_encode({"sessid": sessid})
-    request = urllib2.Request(url, datagen, headers)
-    sessid2 = urllib2.urlopen(request).read().strip()
 
-    if sessid2 != sessid:
-        LOGGER.error("The first session id was %s the second session id was %s." % (repr(sessid2),repr(sessid)))
-        raise ValueError,"Something weird happened the sessid didn't match."
+    #construct server side R script request
+    url = config["server"]+"/"+config["files"]["PHP"]["regression"]
+    datagen, headers = multipart_encode({"sessid": args["sessid"]})
+    request = urllib2.Request(url, datagen, headers)
+    urllib2.urlopen(request).read()
+
+    #check log and echo messages while not done
+    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
+    logcheck(url,"Wrote regression statistics.",15,LOGGER)
+
+    #ZIP SERVER SIDE RESULTS
+    url = config["server"]+"/"+config["files"]["PHP"]["results"]
+    datagen, headers = multipart_encode({"sessid": args["sessid"]})
+    request = urllib2.Request(url, datagen, headers)
+    urllib2.urlopen(request).read()
     
-    url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["results"]
+    #download results
+    url = config["server"]+config["paths"]["relative"]["data"]+args["sessid"]+"/"+config["files"]["results"]
+    LOGGER.info("URL: %s." % url)
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024

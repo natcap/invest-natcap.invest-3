@@ -11,6 +11,7 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
+import routing_cython_core
 from invest_natcap.sediment import sediment_core
 
 
@@ -59,6 +60,16 @@ def execute(args):
 
         returns nothing."""
 
+    csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri']))
+    biophysical_table = {}
+    for row in csv_dict_reader:
+        biophysical_table[int(row['lucode'])] = row
+
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
+
+
+
     intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
@@ -90,10 +101,22 @@ def execute(args):
     stream_dataset = routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
 
+
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
+    ls_uri = os.path.join(intermediate_dir, 'ls.tif')
+    routing_cython_core.flow_direction_inf(args['dem_uri'], flow_direction_uri)
+
     #Calculate LS term
-    usle_nodata = -1.0
-    ls_dataset = sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_dataset,
-        args['flow_direction'], args['ls_uri'], usle_nodata)
+    ls_nodata = -1.0
+    sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
+                                      flow_direction_uri, ls_uri, ls_nodata)
+
+    lulc_dataset = gdal.Open(args['landuse_uri'])
+    retention_uri = os.path.join(intermediate_dir, 'retention.tif')
+
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
 
     return
 
