@@ -292,6 +292,11 @@ class CSVCheckerTester(CheckerTester):
             ]
             self.assertNoError()
 
+        def test_fields_exist_case_sensitive(self):
+            """Assert that CSVChecker can verify fields exist (case-sens.)"""
+            self.validate_as['fieldsExist'] = ['nAmE', 'VALue', 'NoTE']
+            self.assertNoError()
+
         def test_nonexistent_fields(self):
             """Assert that CSVChecker fails fails if given a bad fieldname."""
             self.validate_as['fieldsExist'].append('nonexistent_field')
@@ -342,6 +347,7 @@ class CSVCheckerTester(CheckerTester):
             self.assertNoError()
 
         def test_guilds_table(self):
+            """Assert that CSVChecker works when given the pollination example."""
             self.validate_as = {
                 "type": "CSV",
                 "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
