@@ -27,9 +27,10 @@ def urlopen(url,request,tries=3,delay=15,log=LOGGER):
             if attempt < tries-1:
                 log.info("Waiting %i for retry." % delay)
                 time.sleep(delay)
-                
-def reLOGGER(log,entry):
-    timestamp,msgType,msg = entry.split(",")
+
+    return success, msg
+
+def reLOGGER(log,msgType,msg):
     if msgType == "INFO":
         log.info(msg)
     elif msgType == "DEBUG":
@@ -40,7 +41,7 @@ def reLOGGER(log,entry):
         log.error(msg)
         raise IOError, "Error on server: %s" % (msg)
     else:
-        log.warn("Unknown logging message type %s: %s" % (msgType,msg))
+        log.warn("Unknown logging message type %s: %s" % (msgType,msg))    
 
 def logcheck(url,flag="Dropped intermediate tables.",delay=15,log=LOGGER):    
     complete = False
