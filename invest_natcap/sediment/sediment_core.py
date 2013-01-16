@@ -21,7 +21,7 @@ def biophysical(args):
     """Executes the basic sediment model
 
         args - is a dictionary with at least the following entries:
-        args['dem'] - a digital elevation raster file (required)
+        args['dem_uri'] - a digital elevation raster file (required)
         args['erosivity'] - an input raster describing the 
             rainfall eroisivity index (required)
         args['erodibility'] - an input raster describing soil 
@@ -69,7 +69,7 @@ def biophysical(args):
         args['output_uri'] - A path to store output rasters
         returns nothing"""
 
-    dem_dataset = args['dem']
+    dem_dataset = gdal.Open(args['dem_uri'])
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
     
@@ -81,7 +81,7 @@ def biophysical(args):
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(
         args['intermediate_uri'], 'flow_accumulation.tif')
-    routing_utils.flow_accumulation(args['dem'], flow_accumulation_uri)
+    routing_utils.flow_accumulation(args['dem_uri'], flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
@@ -90,7 +90,7 @@ def biophysical(args):
 
     #Calculate LS term
     usle_nodata = -1.0
-    ls_dataset = calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
+    ls_dataset = calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         args['flow_direction'], args['ls_uri'], usle_nodata)
 
     def lulc_to_retention(lulc_code):
@@ -398,14 +398,14 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         #of the term is to determine the length of the flow path on the
         #pixel, thus we take the absolute value of each trigometric
         #function to keep the computation in the first quadrant
-        xij = abs(np.sin(aspect_angle))+ abs(np.cos(aspect_angle))
-            
+        xij = abs(np.sin(aspect_angle)) + abs(np.cos(aspect_angle))
+
         contributing_area = (flow_accumulation-1) * cell_area
 
         #A placeholder for simplified slope stuff
         slope_in_radians = np.arctan(slope)
-            
-        #From Equation 4 in "Extension and validataion of a geographic 
+
+        #From Equation 4 in "Extension and validataion of a geographic
         #information system ..."
         if slope < 0.09:
             slope_factor =  10.8*np.sin(slope_in_radians)+0.03
