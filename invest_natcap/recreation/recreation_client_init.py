@@ -100,10 +100,9 @@ def execute(args):
     aoiFileNameDBF = fileName+".dbf"
     aoiFileNamePRJ = fileName+".prj"
     
-    if not os.path.exists(aoiFileNamePRJ):
-        LOGGER.debug("File %s is missing." % aoiFileNamePRJ)
-        LOGGER.error("The shapefile must have a PRJ file.")
-        raise IOError, "Missing PRJ file."
+    if not reduce(bool.__and__,map(os.path.exists,[aoiFileNameSHP,aoiFileNameSHX,aoiFileNameDBF,aoiFileNamePRJ])):
+        LOGGER.error("The AOI is missing a shapefile component.")
+        raise ValueError, "The AOI is missing a shapefile component."
 
     #scanning data directory for shapefiles
     LOGGER.info("Processing predictors.")
