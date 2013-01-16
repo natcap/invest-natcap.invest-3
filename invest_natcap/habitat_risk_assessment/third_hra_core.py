@@ -26,6 +26,75 @@ def execute(args):
     #rasterusing the DS's from the previous function.
     make_ecosys_risk_raster(maps_dir, h_risk_list)
 
+    #Recovery potential will use the 'Recovery' subdictionary from the
+    #crit_lists and denoms dictionaries
+    make_recov_potent_raster(maps_dir, crit_lists, denoms)
+
+def make_recov_potent_raster(dir, crit_lists, denoms):
+    '''This will do the same as the individual E/C calculations, but instead
+    will be r/dq for each criteria.
+
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
+
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
+                     }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+        denoms- Dictionary containing the combined denominator for a given
+            H-S overlap. Once all of the rasters are combined, each H-S raster
+            can be divided by this. 
+            
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
+                     }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+    '''
+    #This will give up two np lists where we have only the unique habs and
+    #stress for the system.
+    habitats = map((lambda pair: pair[0], risk_dict)
+    habitats = np.array(habitats)
+    habitats = np.unique(habitats)
+
+    #First, going to try doing everything all at once. For every habitat,
+    #concat the lists of 
+    for h in habitats:
+
+        def add_recov_pix(*pixels):
+
+            value = 0.
+
+            for p in pixels:
+                value += p
+
+            value = value / denoms['Recovery'][h]
+
+        curr_list = crit_list['Recovery'][h]
+
+        out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif'
+
+        raster_utils.vectorize_rasters(curr_list, add_recov_pixels, aoi = None,
+                         raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                         nodata = 0)
+
 
 def make_ecosys_risk_raster(dir, h_list):
 
@@ -42,10 +111,9 @@ def make_ecosys_risk_raster(dir, h_list):
      
              return pixel_sum
      
-         raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
+         raster_utils.vectorize_rasters(h_list, add_e_pixels, aoi = None,
                          raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                          nodata = 0)
-
 
 def make_cum_risk_raster(dir, risk_dict):
     
@@ -123,16 +191,16 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             H-S overlap. Once all of the rasters are combined, each H-S raster
             can be divided by this. 
             
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                                 (hab1, stressB): ...
+            {'Risk': {  'h-s': { (hab1, stressA): 2.0, 
+                                 (hab1, stressB): 1.3
                                },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                        'h':   { hab1: 3.2,
                                 ...
                                },
-                        's':   { stressA: [indiv num raster, ...]
+                        's':   { stressA: 1.2
                                }
                      }
-             'Recovery': { hab1: [indiv num raster, ...],
+             'Recovery': { hab1: 1.6,
                            hab2: ...
                          }
             }
