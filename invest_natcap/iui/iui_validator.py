@@ -507,10 +507,16 @@ class TableChecker(FileChecker, ValidationAssembler):
                     if field_error in [None, '']:
                         restricted_fields.append(field)
 
-                # If a restriction is provided, we assume that the field is
-                # required.  If no fields match the regex provided, return an
-                # error message stating as much.
-                if len(restricted_fields) == 0:
+                # If the user has not defined whether the field is required,
+                # assume that the field is not required.  True field existence
+                # enforcement is handled by the 'fieldExists' flag.
+                if 'required' not in restriction:
+                    restriction['required'] = False
+
+                # If the user is required to have some fields matching this
+                # regex but has not met that requirement, return an error
+                # message.
+                if len(restricted_fields) == 0 and restriction['required']:
                     return str('This file must have at least one field '
                         'matching the pattern %s' %
                         restriction['field']['pattern'])
