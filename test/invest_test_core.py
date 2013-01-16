@@ -25,7 +25,9 @@ def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
         returns True if a and b are equal to each other"""
 
     logger.debug('Asserting datasets A: %s, B: %s', aUri, bUri)
-    assertTwoDatasetsEqual(unitTest, gdal.Open(aUri), gdal.Open(bUri))
+    a_dataset = gdal.Open(aUri)
+    b_dataset = gdal.Open(bUri)
+    assertTwoDatasetsEqual(unitTest, a_dataset, b_dataset)
 
 def assertTwoDatasetsEqual(unitTest, a, b):
     """Tests if datasets a and b are 'almost equal' to each other on a per
@@ -55,12 +57,14 @@ def assertTwoDatasetsEqual(unitTest, a, b):
 
         aArray = bandA.ReadAsArray(0, 0, bandA.XSize, bandA.YSize)
         bArray = bandB.ReadAsArray(0, 0, bandB.XSize, bandB.YSize)
+        
         try:
             np.testing.assert_array_almost_equal(aArray, bArray)
         except AssertionError:
-            for a, b in zip(aArray[0], bArray[0]):
-                unitTest.assertAlmostEqual(a, b, msg=str('%s != %s ... Failed at' +
-                    ' row %s')%(a, b, bandNumber))
+            for row_index in xrange(bandA.YSize):
+                for a, b in zip(aArray[row_index], bArray[row_index]):
+                    unitTest.assertAlmostEqual(
+                        a, b, msg='%s != %s ... Failed at row %s' % (a, b, row_index))
 
 def assertTwoShapesEqualURI(unitTest, aUri, bUri):
     """Tests if shapes a and b are equal to each other on a

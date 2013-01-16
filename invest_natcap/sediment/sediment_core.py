@@ -82,10 +82,8 @@ def biophysical(args):
     flow_accumulation_uri = os.path.join(args['intermediate_uri'], 
                                          'flow_accumulation.tif')
 
+    #Calcualte flow accumulation
     routing_utils.flow_accumulation(args['dem'], flow_accumulation_uri)
-
-    invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
-        args['dem'], bounding_box, flow_accumulation_dataset)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")

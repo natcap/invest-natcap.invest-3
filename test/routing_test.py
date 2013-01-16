@@ -31,14 +31,14 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        flux_regression_uri = 'data/routing_regression/flux.tif'
-        loss_regression_uri = 'data/routing_regression/loss.tif'
         dem_uri = 'data/sediment_test_data/dem'
-#        dem_uri = 'data/smooth_rasters/smoothleft.tif'
-#        dem_uri = 'data/smooth_rasters/smoothright.tif'
-#        dem_uri = 'data/smooth_rasters/smoothbottom_right.tif'
-#        dem_uri = 'data/smooth_rasters/smoothtop_left.tif'
-#        dem_uri = 'data/smooth_rasters/random.tif'
+
+        flow_accumulation_uri = os.path.join(base_dir, 'flow_accumulation.tif')
+        routing_utils.flow_accumulation(dem_uri, flow_accumulation_uri)
+
+        flow_accumulation_regression_uri = 'data/routing_regression/flow_accumulation.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, flow_accumulation_uri, flow_accumulation_regression_uri)
+
         source_uri = os.path.join(base_dir, 'source.tif')
         absorption_rate_uri = os.path.join(base_dir, 'absorption.tif')
 
@@ -51,13 +51,17 @@ class TestRasterUtils(unittest.TestCase):
 
         routing_utils.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
 
+        flux_regression_uri = 'data/routing_regression/flux.tif'
+        loss_regression_uri = 'data/routing_regression/loss.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
 
-        flux_uri = os.path.join(base_dir, 'flux_2.tif')
-        routing_utils.flow_accumulation(dem_uri, flux_uri)
-        invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
+        stream_uri = os.path.join(base_dir, 'stream.tif')
+        stream_regression_uri = 'data/routing_regression/stream.tif'
+        routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
 
+#        subprocess.Popen(['qgis', flux_uri, stream_uri])
 
 #        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
 #                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])
