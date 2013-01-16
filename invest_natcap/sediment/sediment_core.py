@@ -367,8 +367,7 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         ls_factor_uri - (input) a string to the path where the LS raster will 
             be written 
             
-        returns a GDAL dataset that is the ls_raster as the same dimensions as 
-            inputs"""
+        returns nothing"""
     
     #Tease out all the nodata values for reading and setting
     _, flow_accumulation_nodata = \
@@ -446,7 +445,6 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
             nodata=ls_nodata)
 
     raster_utils.calculate_raster_stats(ls_factor_dataset)
-    return ls_factor_dataset
 
 def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset, 
                                   erodibility_dataset, c_dataset, p_dataset,
