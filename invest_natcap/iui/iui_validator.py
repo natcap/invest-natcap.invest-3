@@ -462,8 +462,8 @@ class TableChecker(FileChecker, ValidationAssembler):
 
     def verify_restrictions(self, restriction_list):
         table = self._build_table()
+        fieldnames = self._get_fieldnames()
         for restriction in restriction_list:
-            fieldnames = self._get_fieldnames()
 
             # If the field is statically defined, check that the field exists
             # and move on, raising an error if it does not exist.
@@ -507,10 +507,16 @@ class TableChecker(FileChecker, ValidationAssembler):
                     if field_error in [None, '']:
                         restricted_fields.append(field)
 
-                # If a restriction is provided, we assume that the field is
-                # required.  If no fields match the regex provided, return an
-                # error message stating as much.
-                if len(restricted_fields) == 0:
+                # If the user has not defined whether the field is required,
+                # assume that the field is not required.  True field existence
+                # enforcement is handled by the 'fieldExists' flag.
+                if 'required' not in restriction:
+                    restriction['required'] = False
+
+                # If the user is required to have some fields matching this
+                # regex but has not met that requirement, return an error
+                # message.
+                if len(restricted_fields) == 0 and restriction['required']:
                     return str('This file must have at least one field '
                         'matching the pattern %s' %
                         restriction['field']['pattern'])
@@ -846,10 +852,10 @@ class PrimitiveChecker(Checker):
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
-        # Set numeric default regexp.  Used if user does not provide a regex
-        self.default_regexp = '[0-9]*(\\.[0-9]*)?'
-
         PrimitiveChecker.__init__(self)
+
+        # Set numeric default regexp.  Used if user does not provide a regex
+        self.default_regexp = '^\\s*[0-9]*(\.[0-9]*)?\\s*$'
         updates = {'gteq': self.greater_than_equal_to,
                    'greaterThan': self.greater_than,
                    'lteq':  self.less_than_equal_to,
@@ -890,8 +896,6 @@ class CSVChecker(TableChecker):
             #big issues about it.  See the following for details:
             #http://code.google.com/p/invest-natcap/issues/detail?id=1076
             self.file = csv.DictReader(open(self.uri, 'rU'))
-            fieldnames = self._get_fieldnames()
-            table = self._build_table()
         except IOError as e:
             return str("IOError: %s" % str(e))
         except (csv.Error, ValueError) as e:

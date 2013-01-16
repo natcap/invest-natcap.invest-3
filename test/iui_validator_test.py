@@ -3,6 +3,8 @@ invest_natcap.iui.iui_validator."""
 
 import unittest
 import os
+import pdb
+
 
 from invest_natcap.iui import iui_validator
 
@@ -325,6 +327,42 @@ class CSVCheckerTester(CheckerTester):
                 'validation', 'semicolon-delimited.csv')
             self.assertNoError()
 
+        def test_guilds_table(self):
+            self.validate_as = {
+                "type": "CSV",
+                "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
+                "restrictions": [{"field": "ALPHA",
+                                 "validateAs": {"type": "number",
+                                                "allowedValues": {"pattern": "^\\s*[0-9]*\\.[0-9]*\\s*$"}}
+                                },
+                                {"field": {"pattern": "NS_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
+                                },
+                                {"field": {"pattern": "FS_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "gteq": 0.0,
+                                     "lteq": 1.0}
+                                },
+                                {"field": {"pattern": "crp_.*", "flag": "ignoreCase"},
+                                 "validateAs": {
+                                     "type": "number",
+                                     "allowedValues": {"pattern": "^(1\\.?0*)|(0\\.?0*)$"}}
+                                }]}
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'pollination',
+                 'samp_input', 'Guild_with_crops.csv')
+            self.assertNoError()
+
+            self.validate_as['value'] = os.path.join(TEST_DATA, 'iui',
+                'validation', 'Guild_bad_numbers.csv')
+            self.assertNoError()
+
+            # Try default numeric validation on the bad guilds file.
+            self.validate_as['restrictions'][0]['validateAs'] = {'type': 'number'}
+            self.assertNoError()
+
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
     def setUp(self):
@@ -421,4 +459,13 @@ class NumberCheckerTester(CheckerTester):
         self.validate_as['greaterThan'] = 4
         self.assertNoError()
 
+    def test_default_regex(self):
+        """Assert that NumberChecker has proper default validation."""
+        self.validate_as['value'] = ' 5 '
+        self.assertNoError()
 
+        self.validate_as['value'] = 'aaa5b'
+        self.assertError()
+
+        self.validate_as['value'] = ' 5gg'
+        self.assertError()
