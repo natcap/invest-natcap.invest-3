@@ -24,7 +24,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args = {}
         args['workspace_dir'] = output_dir
         args['wind_data_uri'] = os.path.join(input_dir, 'testing_points.bin')
-        args['bathymetry_uri'] = os.path.join(input_dir, 'testing_dem.tif') 
+        args['bathymetry_uri'] = os.path.join(input_dir, 'testing_bathym.tif') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
         args['distance_container'] = False
