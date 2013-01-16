@@ -645,7 +645,7 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
         random_array = np.random.randn(layer.GetFeatureCount(), 2)
         random_offsets = random_array*delta_difference
     else:
-        random_offsets = np.zeros(layer.GetFeatureCount(), 2)
+        random_offsets = np.zeros((layer.GetFeatureCount(), 2))
 
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
