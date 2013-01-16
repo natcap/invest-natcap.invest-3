@@ -11,6 +11,7 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
+import routing_cython_core
 from invest_natcap.sediment import sediment_core
 
 
@@ -90,10 +91,15 @@ def execute(args):
     stream_dataset = routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
 
+
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
+    ls_uri = os.path.join(intermediate_dir, 'ls.tif')
+    routing_cython_core.flow_direction_inf(args['dem_uri'], flow_direction_uri)
+
     #Calculate LS term
-    usle_nodata = -1.0
+    ls_nodata = -1.0
     ls_dataset = sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_dataset,
-        args['flow_direction'], args['ls_uri'], usle_nodata)
+        flow_direction_uri, ls_uri, ls_nodata)
 
     return
 
