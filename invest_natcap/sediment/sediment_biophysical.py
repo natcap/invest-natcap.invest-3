@@ -65,8 +65,8 @@ def execute(args):
     for row in csv_dict_reader:
         biophysical_table[int(row['lucode'])] = row
 
-    lulc_to_retention_dict = dict([(lulc_code, float(table['sedret_eff'])) for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
 
 
 
@@ -111,13 +111,11 @@ def execute(args):
     sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
                                       flow_direction_uri, ls_uri, ls_nodata)
 
-
-
-    lulc_dataset = gdal.Open(args['lulc_uri'])
-    retention_uri = os.path.join(args['intermediate_uri'], 'retention.tif')
+    lulc_dataset = gdal.Open(args['landuse_uri'])
+    retention_uri = os.path.join(intermediate_dir, 'retention.tif')
 
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_retention_dict, retention_uri, gdal.GDT_Float32,
+        lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     return
