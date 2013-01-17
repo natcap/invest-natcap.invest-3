@@ -93,7 +93,7 @@ def execute(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(intermediate_dir, 'v_stream.tif')
 
-    stream_dataset = routing_utils.stream_threshold(flow_accumulation_uri,
+    routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
 
 
@@ -120,11 +120,20 @@ def execute(args):
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
+    cp_uri = os.path.join(intermediate_dir, 'cp.tif')
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
 
     LOGGER.info('building (1-c)(1-p) raster from lulc')
     lulc_to_inv_cp_dict = dict([(lulc_code, (1.0-float(table['usle_c'])) * (1.0-float(table['usle_p'])))  for (lulc_code, table) in biophysical_table.items()])
 
     LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
+    inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv.tif')
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
 
     return
 
