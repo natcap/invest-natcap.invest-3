@@ -140,6 +140,9 @@ def execute(args):
     for tsv in userCategorization:
         attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
 
+    args["user_predictors"]=len(predictors)
+    args["user_tables"]=len(userCategorization)
+
     #constructing upload predictors request
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)
