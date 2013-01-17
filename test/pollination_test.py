@@ -53,62 +53,52 @@ class UnifiedPollinationTest(unittest.TestCase):
     def test_regression_biophysical(self):
         pollination.execute(self.args)
 
-        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in [
-            [prefix, species, scenario]
-            for prefix in ['frm', 'hf', 'hn','sup']
-            for species in ['Apis', 'Bombus']
-            for scenario in ['cur']]]
+        bio_rasters = ([
+            '%s/intermediate/frm_Apis_cur.tif',
+            '%s/intermediate/hf_Apis_cur.tif',
+            '%s/intermediate/hn_Apis_cur.tif',
+            '%s/intermediate/sup_Apis_cur.tif',
+            '%s/intermediate/frm_Bombus_cur.tif',
+            '%s/intermediate/hf_Bombus_cur.tif',
+            '%s/intermediate/hn_Bombus_cur.tif',
+            '%s/intermediate/sup_Bombus_cur.tif',
+            '%s/output/frm_avg_cur.tif',
+            '%s/output/sup_tot_cur.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'no_ag_classes'))
 
-        # Verify all intermediate files from biophysical
-        LOGGER.debug('Checking intermediate files from biophysical')
-        for filename in intermediate_files:
-            test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'biophysical_output', 'no_ag_classes', 'intermediate', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
-
-        # Build up a list of all output files
-        output_files = ['%s_cur.tif' % (filename) for filename in
-            ['frm_avg', 'sup_tot']]
-
-        # Verify all output files from biophysical
-        LOGGER.debug('Checking output files from biophysical')
-        for filename in output_files:
-            test_file = os.path.join(self.workspace_dir, 'output', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'biophysical_output', 'no_ag_classes', 'output', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+        for raster_list, reg_uri_base in [bio_rasters]:
+            for raster in raster_list:
+                test_file = raster % self.workspace_dir
+                reg_file = raster % reg_uri_base
+                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                    reg_file)
 
     def test_regression_biophysical_ag_classes(self):
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
             ' 83 84 85 88 90 91 92')
         pollination.execute(self.args)
 
-        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in [
-            [prefix, species, scenario]
-            for prefix in ['frm', 'hf', 'hn','sup']
-            for species in ['Apis', 'Bombus']
-            for scenario in ['cur']]]
+        bio_rasters = ([
+            '%s/intermediate/frm_Apis_cur.tif',
+            '%s/intermediate/hf_Apis_cur.tif',
+            '%s/intermediate/hn_Apis_cur.tif',
+            '%s/intermediate/sup_Apis_cur.tif',
+            '%s/intermediate/frm_Bombus_cur.tif',
+            '%s/intermediate/hf_Bombus_cur.tif',
+            '%s/intermediate/hn_Bombus_cur.tif',
+            '%s/intermediate/sup_Bombus_cur.tif',
+            '%s/output/frm_avg_cur.tif',
+            '%s/output/sup_tot_cur.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'with_ag_classes'))
 
-        # Verify all intermediate files from biophysical
-        LOGGER.debug('Checking intermediate files from biophysical')
-        for filename in intermediate_files:
-            test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'biophysical_output', 'with_ag_classes', 'intermediate', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
-
-        # Build up a list of all output files
-        output_files = ['%s_cur.tif' % (filename) for filename in
-            ['frm_avg', 'sup_tot']]
-
-        # Verify all output files from biophysical
-        LOGGER.debug('Checking output files from biophysical')
-        for filename in output_files:
-            test_file = os.path.join(self.workspace_dir, 'output', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'biophysical_output', 'with_ag_classes', 'output', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+        for raster_list, reg_uri_base in [bio_rasters]:
+            for raster in raster_list:
+                test_file = raster % self.workspace_dir
+                reg_file = raster % reg_uri_base
+                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                    reg_file)
 
     def test_regression_valuation(self):
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
@@ -116,52 +106,72 @@ class UnifiedPollinationTest(unittest.TestCase):
         self.args['do_valuation'] = True
         pollination.execute(self.args)
 
-        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in [
-            [prefix, species, scenario]
-            for prefix in ['frm', 'hf', 'hn','sup']
-            for species in ['Apis', 'Bombus']
-            for scenario in ['cur']]]
+        bio_rasters = ([
+            '%s/intermediate/frm_Apis_cur.tif',
+            '%s/intermediate/hf_Apis_cur.tif',
+            '%s/intermediate/hn_Apis_cur.tif',
+            '%s/intermediate/sup_Apis_cur.tif',
+            '%s/intermediate/frm_Bombus_cur.tif',
+            '%s/intermediate/hf_Bombus_cur.tif',
+            '%s/intermediate/hn_Bombus_cur.tif',
+            '%s/intermediate/sup_Bombus_cur.tif',
+            '%s/output/frm_avg_cur.tif',
+            '%s/output/sup_tot_cur.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'with_ag_classes'))
 
-        # Verify all intermediate files from biophysical
-        LOGGER.debug('Checking intermediate files from biophysical')
-        for filename in intermediate_files:
-            test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'biophysical_output', 'with_ag_classes', 'intermediate', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+        val_rasters = ([
+            '%s/intermediate/frm_val_Apis_cur.tif',
+            '%s/intermediate/frm_val_Bombus_cur.tif',
+            '%s/intermediate/frm_val_sum_cur.tif',
+            '%s/output/sup_val_sum_cur.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'valuation_output',
+            'with_ag_classes'))
 
-        # Build up a list of all output files
-        output_files = ['%s_cur.tif' % (filename) for filename in
-            ['frm_avg', 'sup_tot']]
+        for raster_list, reg_uri_base in [bio_rasters, val_rasters]:
+            for raster in raster_list:
+                test_file = raster % self.workspace_dir
+                reg_file = raster % reg_uri_base
+                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                    reg_file)
 
-        # Verify all output files from biophysical
-        LOGGER.debug('Checking output files from valuation')
-        for filename in output_files:
-            test_file = os.path.join(self.workspace_dir, 'output', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'biophysical_output', 'with_ag_classes', 'output', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+    def test_regression_missing_species_weight_ag_classes(self):
+        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
+            ' 83 84 85 88 90 91 92')
+        self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
+            'Guild_no_species_weight.csv')
+        self.args['do_valuation'] = True
+        pollination.execute(self.args)
 
-        val_inter_files = ['frm_val_%s_cur.tif' % part for part in
-            ['Apis', 'Bombus', 'sum']]
-        val_inter_files += ['sup_val_Apis_cur.tif', 'sup_val_Bombus_cur.tif']
-        for filename in val_inter_files:
-            test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'valuation_output', 'with_ag_classes', 'intermediate', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+        bio_rasters = ([
+            '%s/intermediate/frm_Apis_cur.tif',
+            '%s/intermediate/hf_Apis_cur.tif',
+            '%s/intermediate/hn_Apis_cur.tif',
+            '%s/intermediate/sup_Apis_cur.tif',
+            '%s/intermediate/frm_Bombus_cur.tif',
+            '%s/intermediate/hf_Bombus_cur.tif',
+            '%s/intermediate/hn_Bombus_cur.tif',
+            '%s/intermediate/sup_Bombus_cur.tif',
+            '%s/output/frm_avg_cur.tif',
+            '%s/output/sup_tot_cur.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'with_ag_classes'))
 
-        # Build up a list of all output files
-        val_output_files = ['sup_val_%s_cur.tif' % (filename) for filename in
-            ['sum']]
+        val_rasters = ([
+            '%s/intermediate/frm_val_Apis_cur.tif',
+            '%s/intermediate/frm_val_Bombus_cur.tif',
+            '%s/intermediate/frm_val_sum_cur.tif',
+            '%s/output/sup_val_sum_cur.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'valuation_output',
+            'with_ag_classes'))
 
-        # Verify all output files from biophysical
-        LOGGER.debug('Checking output files from valuation')
-        for filename in val_output_files:
-            test_file = os.path.join(self.workspace_dir, 'output', filename)
-            reg_file = os.path.join(REGRESSION_FOLDER_BASE,
-                'valuation_output', 'with_ag_classes', 'output', filename)
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+        for raster_list, reg_uri_base in [bio_rasters, val_rasters]:
+            for raster in raster_list:
+                test_file = raster % self.workspace_dir
+                reg_file = raster % reg_uri_base
+                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                    reg_file)
+
 
     def test_one_species(self):
         # This test exists for the sake of issue 1536.

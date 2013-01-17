@@ -140,8 +140,12 @@
                     "args_id": "guilds_uri",
                     "required": true,
                     "validateAs": {"type": "CSV",
-                                   "fieldsExist": ["SPECIES", "ALPHA", "SPECIES_WEIGHT"],
+                                   "fieldsExist": ["SPECIES", "ALPHA"],
                                    "restrictions": [{"field": "ALPHA",
+                                                     "validateAs": {"type": "number"}
+                                                    },
+                                                    {"field": "SPECIES_WEIGHT",
+                                                     "required": false,
                                                      "validateAs": {"type": "number"}
                                                     },
                                                     {"field": {"pattern": "NS_.*", "flag": "ignoreCase"},

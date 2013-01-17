@@ -11,6 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import csv
+import os
 
 logger = logging.getLogger('invest_core')
 
@@ -25,6 +26,11 @@ def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
         returns True if a and b are equal to each other"""
 
     logger.debug('Asserting datasets A: %s, B: %s', aUri, bUri)
+
+    for uri in [aUri, bUri]:
+        if not os.path.exists(uri):
+            raise IOError('File "%s" not found on disk' % uri)
+
     a_dataset = gdal.Open(aUri)
     b_dataset = gdal.Open(bUri)
     assertTwoDatasetsEqual(unitTest, a_dataset, b_dataset)
