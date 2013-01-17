@@ -65,11 +65,6 @@ def execute(args):
     for row in csv_dict_reader:
         biophysical_table[int(row['lucode'])] = row
 
-    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
-
-
-
     intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
@@ -114,9 +109,20 @@ def execute(args):
     lulc_dataset = gdal.Open(args['landuse_uri'])
     retention_uri = os.path.join(intermediate_dir, 'retention.tif')
 
+    LOGGER.info('building alpha raster from lulc')
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
     raster_utils.reclassify_dataset(
         lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
+
+    
+    LOGGER.info('building cp raster from lulc')
+    lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
+
+    LOGGER.info('building (1-c)(1-p) raster from lulc')
+
 
     return
 
