@@ -521,8 +521,6 @@ def valuation(args):
     decom = float(turbine_dict['decommission_cost'])
     # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict['turbine_rated_pwr'])
-    # The average land cable distance in km
-    avg_grid_distance = float(turbine_dict['avg_grid_distance'])
     # The distance at which AC switches over to DC power
     circuit_break = float(turbine_dict['ac_dc_distance_break'])
     # The coefficients for the AC/DC megawatt and cable cost from the CAP
@@ -556,6 +554,9 @@ def valuation(args):
         # near shore distances
         land_shape_ds = args['land_polygon']
     
+        # The average land cable distance in km
+        avg_grid_distance = float(turbine_dict['avg_grid_distance'])
+        
         # When using the land polygon to conduct distances there is a set
         # constant distance for land point to grid points. The following lines
         # add a new field to each point with that distance

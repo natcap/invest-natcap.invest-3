@@ -21,7 +21,7 @@ def biophysical(args):
     """Executes the basic sediment model
 
         args - is a dictionary with at least the following entries:
-        args['dem'] - a digital elevation raster file (required)
+        args['dem_uri'] - a digital elevation raster file (required)
         args['erosivity'] - an input raster describing the 
             rainfall eroisivity index (required)
         args['erodibility'] - an input raster describing soil 
@@ -69,7 +69,7 @@ def biophysical(args):
         args['output_uri'] - A path to store output rasters
         returns nothing"""
 
-    dem_dataset = args['dem']
+    dem_dataset = gdal.Open(args['dem_uri'])
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
     
@@ -79,20 +79,18 @@ def biophysical(args):
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(args['intermediate_uri'], 
-                                         'flow_accumulation.tif')
-
-    #Calcualte flow accumulation
-    routing_utils.flow_accumulation(args['dem'], flow_accumulation_uri)
+    flow_accumulation_uri = os.path.join(
+        args['intermediate_uri'], 'flow_accumulation.tif')
+    routing_utils.flow_accumulation(args['dem_uri'], flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset,
+    stream_dataset = routing_utils.stream_threshold(flow_accumulation_dataset,
         args['threshold_flow_accumulation'], args['v_stream_uri'])
 
     #Calculate LS term
     usle_nodata = -1.0
-    ls_dataset = calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
+    ls_dataset = calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         args['flow_direction'], args['ls_uri'], usle_nodata)
 
     def lulc_to_retention(lulc_code):
@@ -348,8 +346,8 @@ def calculate_effective_retention(flow_direction_dataset,
 
     return effective_retention_dataset
 
-def calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
-                        aspect_dataset, ls_factor_uri, ls_nodata):
+def calculate_ls_factor(flow_accumulation_uri, slope_uri, 
+                        aspect_uri, ls_factor_uri, ls_nodata):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -357,22 +355,25 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         
         (Required that all raster inputs are same dimensions and projections
         and have square cells)
-        flow_accumulation_dataset - a single band raster of type float that 
+        flow_accumulation_uri - a uri to a  single band raster of type float that 
             indicates the contributing area at the inlet of a grid cell
-        slope_dataset - a single band raster of type float that indicates
+        slope_uri - a uri to a single band raster of type float that indicates
             the slope at a pixel given as a proportion (e.g. a value of 0.05
             is a slope of 5%)
-        aspect_dataset - a single band raster of type float that indicates the 
+        aspect_uri - a uri to a single band raster of type float that indicates the 
             direction that slopes are facing in terms of radians east and
             increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
             0 or 2pi is east.
         ls_factor_uri - (input) a string to the path where the LS raster will 
             be written 
             
-        returns a GDAL dataset that is the ls_raster as the same dimensions as 
-            inputs"""
+        returns nothing"""
     
     #Tease out all the nodata values for reading and setting
+    flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
+    slope_dataset = gdal.Open(slope_uri)
+    aspect_dataset = gdal.Open(aspect_uri)
+
     _, flow_accumulation_nodata = \
         raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
     _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
@@ -400,14 +401,14 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
         #of the term is to determine the length of the flow path on the
         #pixel, thus we take the absolute value of each trigometric
         #function to keep the computation in the first quadrant
-        xij = abs(np.sin(aspect_angle))+ abs(np.cos(aspect_angle))
-            
+        xij = abs(np.sin(aspect_angle)) + abs(np.cos(aspect_angle))
+
         contributing_area = (flow_accumulation-1) * cell_area
 
         #A placeholder for simplified slope stuff
         slope_in_radians = np.arctan(slope)
-            
-        #From Equation 4 in "Extension and validataion of a geographic 
+
+        #From Equation 4 in "Extension and validataion of a geographic
         #information system ..."
         if slope < 0.09:
             slope_factor =  10.8*np.sin(slope_in_radians)+0.03
@@ -448,7 +449,6 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
             nodata=ls_nodata)
 
     raster_utils.calculate_raster_stats(ls_factor_dataset)
-    return ls_factor_dataset
 
 def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset, 
                                   erodibility_dataset, c_dataset, p_dataset,

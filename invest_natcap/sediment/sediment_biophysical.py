@@ -10,7 +10,10 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap import raster_utils
+from invest_natcap.routing import routing_utils
+import routing_cython_core
 from invest_natcap.sediment import sediment_core
+
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -57,6 +60,16 @@ def execute(args):
 
         returns nothing."""
 
+    csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri']))
+    biophysical_table = {}
+    for row in csv_dict_reader:
+        biophysical_table[int(row['lucode'])] = row
+
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
+
+
+
     intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
@@ -65,6 +78,65 @@ def execute(args):
         if not os.path.exists(directory):
             LOGGER.debug('creating directory %s', directory)
             os.makedirs(directory)
+
+
+    dem_dataset = gdal.Open(args['dem_uri'])
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
+    
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    slope_dataset = raster_utils.calculate_slope(dem_dataset, slope_uri)
+
+    #Calcualte flow accumulation
+    LOGGER.info("calculating flow accumulation")
+    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
+    routing_utils.flow_accumulation(args['dem_uri'], flow_accumulation_uri)
+
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    v_stream_uri = os.path.join(intermediate_dir, 'v_stream.tif')
+
+    stream_dataset = routing_utils.stream_threshold(flow_accumulation_uri,
+        float(args['threshold_flow_accumulation']), v_stream_uri)
+
+
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
+    ls_uri = os.path.join(intermediate_dir, 'ls.tif')
+    routing_cython_core.flow_direction_inf(args['dem_uri'], flow_direction_uri)
+
+    #Calculate LS term
+    ls_nodata = -1.0
+    sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
+                                      flow_direction_uri, ls_uri, ls_nodata)
+
+    lulc_dataset = gdal.Open(args['landuse_uri'])
+    retention_uri = os.path.join(intermediate_dir, 'retention.tif')
+
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+    return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     LOGGER.info('Loading data sources')
 

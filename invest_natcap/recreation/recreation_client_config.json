@@ -14,11 +14,19 @@
             "predictor": "predictors.php",
             "recreation": "recreation.php",
             "scenario": "scenario.php",
-            "regression": "regression.php"
+            "regression": "regression.php",
+            "results": "results.php"
         },
+        "grid_tmp": {
+            "shp": "grid.shp",
+            "shx": "grid.shx",
+            "dbf": "grid.dbf",
+            "prj": "grid.prj"
+        },         
         "log": "log.txt",
         "results": "results.zip"
     },
     "timeout": 15,
-    "retries": 3
+    "tries": 3,
+    "delay": 15
 }
