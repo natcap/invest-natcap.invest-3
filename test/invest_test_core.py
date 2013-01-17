@@ -82,6 +82,10 @@ def assertTwoShapesEqualURI(unitTest, aUri, bUri):
     
        returns True if a and b are equal to each other"""
     
+    for uri in [aUri, bUri]:
+        if not os.path.exists(uri):
+            raise IOError('File "%s" not found on disk' % uri)
+    
     assertTwoShapesEqual(unitTest, ogr.Open(aUri), ogr.Open(bUri))
 
 def assertTwoShapesEqual(unitTest, shape, shape_regression):
