@@ -453,6 +453,7 @@ class TableChecker(FileChecker, ValidationAssembler):
         # If the field is statically defined, check that the field exists
         # and move on, raising an error if it does not exist.
         if field_defn.__class__ in [unicode, str]:
+            fieldnames = map(lambda x: x.upper(), fieldnames)
             if field_defn.upper() not in fieldnames:
                 return []
             restricted_fields = [field_defn]

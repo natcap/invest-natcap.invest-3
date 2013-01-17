@@ -256,7 +256,13 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # Once the pollination supply has been calculated, we add it to the
     # total abundance matrix.
     LOGGER.debug('Calculating abundance index')
-    species_weight = guild['species_weight']
+    try:
+        species_weight = float(guild['species_weight'])
+    except KeyError:
+        # If the species_weight field has not been provided, assume that all
+        # species weights should be equal (1.0).
+        species_weight = 1.0
+
     floral_raster = gdal.Open(uris['floral'])
     nesting_raster = gdal.Open(uris['nesting'])
     raster_utils.vectorize_rasters(
