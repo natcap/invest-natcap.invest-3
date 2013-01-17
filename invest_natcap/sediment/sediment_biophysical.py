@@ -122,7 +122,9 @@ def execute(args):
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
 
     LOGGER.info('building (1-c)(1-p) raster from lulc')
+    lulc_to_inv_cp_dict = dict([(lulc_code, (1.0-float(table['usle_c'])) * (1.0-float(table['usle_p'])))  for (lulc_code, table) in biophysical_table.items()])
 
+    LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
 
     return
 
