@@ -63,7 +63,7 @@
                     "type": "file",
                     "label": "Land Polygon to Calculate Distance From",
                     "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
-                    "required": true,
+                    "required": false,
                     "enabledBy" : "aoi", 
                     "returns" : {"ifEmpty": "pass"},
                     "requiredIf": ["valuation_container", "distance_container"],
