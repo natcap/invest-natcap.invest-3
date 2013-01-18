@@ -151,6 +151,9 @@ class OGRCheckerTester(CheckerTester):
         self.validate_as['fieldsExist'].append('nonexistent_field')
         self.assertError()
 
+        self.validate_as['fieldsExist'] = ['StArT_dAtE', 'Cut_cur']
+        self.assertNoError()
+
     def test_projection(self):
         """Assert that OGRChecker can validate projection units."""
         updates = {'layers': [{'name': 'harv_samp_cur',

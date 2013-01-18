@@ -21,8 +21,8 @@ LOGGER = logging.getLogger('wind_energy_valuation')
 # __file__ gets us the path dynamic path for this module so that we can get the
 # correct directory path, which allows us to properly find the JSON file
 MODULE_DIR_NAME = os.path.dirname(__file__)
-GLOBAL_WIND_PARAMETERS = os.path.join(MODULE_DIR_NAME,
-    'invest_natcap/wind_energy/global_wind_energy_attributes.json'
+GLOBAL_WIND_PARAMETERS = os.path.join(
+        MODULE_DIR_NAME, 'global_wind_energy_attributes.json')
 
 def execute(args):
     """Takes care of all file handling for the valuation part of the wind
@@ -84,7 +84,7 @@ def execute(args):
     aoi = ogr.Open(str(args['aoi_uri']))
     
     biophysical_points_uri = os.path.join(
-            out_dir, 'wind_energy_points.shp')
+            out_dir, 'wind_energy_points' + suffix + '.shp')
     # Open the wind energy points from the biophsyical run to be updated and
     # edited
     biophysical_points = ogr.Open(biophysical_points_uri, 1)
@@ -150,8 +150,16 @@ def execute(args):
 
         land_poly = ogr.Open(str(args['land_polygon_uri']))
         
+        land_poly_clipped_uri = os.path.join(
+                inter_dir, 'val_land_poly_clipped' + suffix + '.shp')
+        land_poly_projected_uri = os.path.join(
+                inter_dir, 'val_land_poly_projected' + suffix + '.shp')
+        aoi_proj_to_land_poly_uri = os.path.join(
+                inter_dir, 'val_aoi_proj_to_land_poly' + suffix + '.shp')
+        
         land_poly_proj = clip_and_project_datasource(
-                land_poly, aoi, os.path.join(inter_dir, 'land_poly'))
+                land_poly, aoi, land_poly_clipped_uri, land_poly_projected_uri,
+                aoi_proj_to_land_poly_uri)
 
         valuation_args['land_polygon'] = land_poly_proj
     else:
@@ -178,8 +186,8 @@ def execute(args):
         LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
         LOGGER.debug('Land_Points_Dict : %s', land_dict)
 
-        grid_ds_uri = os.path.join(inter_dir, 'val_grid_points.shp')
-        land_ds_uri = os.path.join(inter_dir, 'val_land_points.shp')
+        grid_ds_uri = os.path.join(inter_dir, 'val_grid_points' + suffix + '.shp')
+        land_ds_uri = os.path.join(inter_dir, 'val_land_points' + suffix + '.shp')
         
         # Create a point shapefile from the grid and land point dictionaries.
         # This makes it easier for future distance calculations and provides a
@@ -192,54 +200,62 @@ def execute(args):
         # shapefiles and then project them to the AOI as well.
         # NOTE: There could be an error here where NO points lie within the AOI,
         # what then????????
+        grid_clipped_uri = os.path.join(
+                inter_dir, 'grid_point_clipped' + suffix + '.shp')
+        grid_projected_uri = os.path.join(
+                inter_dir, 'grid_point_projected' + suffix + '.shp')
+        land_clipped_uri = os.path.join(
+                inter_dir, 'land_point_clipped' + suffix + '.shp')
+        land_projected_uri = os.path.join(
+                inter_dir, 'land_point_projected' + suffix + '.shp')
+        aoi_proj_to_grid_uri = os.path.join(
+                inter_dir, 'aoi_proj_to_grid_points' + suffix + '.shp')
+        aoi_proj_to_land_uri = os.path.join(
+                inter_dir, 'aoi_proj_to_land_points' + suffix + '.shp')
+
         grid_point_prj = clip_and_project_datasource(
-                grid_point_ds, aoi, os.path.join(inter_dir, 'grid_point'))
+                grid_point_ds, aoi, grid_clipped_uri, grid_projected_uri,
+                aoi_proj_to_grid_uri)
         land_point_prj = clip_and_project_datasource(
-                land_point_ds, aoi, os.path.join(inter_dir, 'land_point'))
+                land_point_ds, aoi, land_clipped_uri, land_projected_uri,
+                aoi_proj_to_land_uri)
 
         valuation_args['grid_points'] = grid_point_prj
         valuation_args['land_points'] = land_point_prj
     # call on the core module
     wind_energy_core.valuation(valuation_args)
 
-def clip_and_project_datasource(dsource, aoi, out_uri):
+def clip_and_project_datasource(
+        dsource, aoi, clipped_uri, projected_uri, aoi_proj_to_uri):
     """Clips and reprojects one OGR datasource to another
         
         dsource - an OGR datasource to clip and reproject
         aoi - an OGR datasource to use as the bounds for clipping and
             reprojecting
-        out_uri - a string for the full path of the output, including the
-            directory tree. However, no extension should be provided
+        clipped_uri - a string URI path for the clipped datasource
+        projected_uri - a string URI path for the projected datasource
+        aoi_proj_to_uri - a string URI path for projecting the aoi to the
+            'dsource' in order to clip
 
         returns - dsource clipped and reprojected to aoi, an OGR datasource
-    """
-    # Get the basename and directory name of the uri to help create future uri's
-    basename = os.path.basename(out_uri)
-    dir_name = os.path.dirname(out_uri)
-    
+        """
+    LOGGER.info('Entering clip_and_project_datasource')
+
     dsource_sr = dsource.GetLayer().GetSpatialRef()
     dsource_wkt = dsource_sr.ExportToWkt()
     aoi_sr = aoi.GetLayer().GetSpatialRef()
     aoi_wkt = aoi_sr.ExportToWkt()
-
-    aoi_proj_to_dsource_uri = os.path.join(
-            dir_name, 'val_aoi_proj_to_' + basename + '.shp')
     
     aoi_proj_to_dsource = raster_utils.reproject_datasource(
-            aoi, dsource_wkt, aoi_proj_to_dsource_uri)
+            aoi, dsource_wkt, aoi_proj_to_uri)
 
-    dsource_clipped_uri = os.path.join(
-            dir_name, 'val_' + basename + '_clipped.shp')
-   
     dsource_clipped = wind_energy_biophysical.clip_datasource(
-            aoi_proj_to_dsource, dsource, dsource_clipped_uri)
-
-    dsource_proj_uri = os.path.join(
-            dir_name, 'val_' + basename + '_projected.shp')
+            aoi_proj_to_dsource, dsource, clipped_uri)
 
     dsource_proj = raster_utils.reproject_datasource(
-        dsource_clipped, aoi_wkt, dsource_proj_uri)
+        dsource_clipped, aoi_wkt, projected_uri)
 
+    LOGGER.info('Leaving clip_and_project_datasource')
     return dsource_proj
 
 def dictionary_to_shapefile(dict_data, layer_name, output_uri):
