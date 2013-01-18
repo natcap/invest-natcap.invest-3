@@ -171,5 +171,14 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
 
         returns nothing"""
 
+
+    flow_direction_dataset = gdal.Open(flow_direction_uri)
+    flow_length_nodata = -1.0
+    flow_length_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
+        gdal.GDT_Float32)
+
+
+
     pass
     
