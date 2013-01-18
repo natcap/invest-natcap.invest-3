@@ -235,12 +235,12 @@ class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_valuation_add_field_to_shape_given_list(self):
         """A regression test for adding a field to a shapefile given a list of
             data entries"""
-        raise SkipTest
+        #raise SkipTest
         regression_dir = './data/wind_energy_regression_data/'
-        polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
-        point_ds_uri = os.path.join(
-                regression_dir, 'wind_points_reprojected.shp')
-      
+        points_ds_uri = os.path.join(regression_dir,
+                'wind_energy_core/testing_distance_points.shp')
+        expected_ds_uri = os.path.join(regression_dir,
+                'wind_energy_core/testing_point_fields.shp')
 
         out_dir = './data/test_out/wind_energy/valuation/add_field_to_shape/'
         copy_uri = os.path.join(out_dir, 'wind_points_new_field.shp')
@@ -251,82 +251,26 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         if os.path.isfile(copy_uri):
             os.remove(copy_uri)
 
-        polygon_ds = ogr.Open(polygon_ds_uri)
-        point_ds = ogr.Open(point_ds_uri)
+        points_ds = ogr.Open(points_ds_uri)
 
         copy_drv = ogr.GetDriverByName('ESRI Shapefile')
-        copy_ds = copy_drv.CopyDataSource(point_ds, copy_uri)
+        copy_ds = copy_drv.CopyDataSource(points_ds, copy_uri)
 
-        distances = wind_energy_core.point_to_polygon_distance(
-                polygon_ds, copy_ds)
+        distances = [25.5, 12.4, 9.2] 
 
-        _ = wind_energy_core.add_field_to_shape_given_list(
+        result_ds = wind_energy_core.add_field_to_shape_given_list(
                 copy_ds, distances, 'O2L')
 
-    def test_wind_energy_core_valuation_build_subset_dictionary(self):
-        """A unit test for building a dictionary from another dictionary"""
-        raise SkipTest
+        result_ds = None
 
-        main_dict = {0 : {'lati':42.689, 'long':-70.096, 'height':10,
-                          'K_shape':2.567},
-                     1 : {'lati':42.689, 'long':-69.796, 'height':10,
-                          'K_shape':3.102},
-                     2 : {'lati':42.496, 'long':-69.796, 'height':10,
-                          'K_shape':2.798},
-                     3 : {'lati':42.496, 'long':-70.096, 'height':10,
-                          'K_shape':1.989}}
-
-        expected_dict = {0:2.567, 1:3.102, 2:2.798, 3:1.989}
-
-        result = wind_energy_core.build_subset_dictionary(main_dict)
-
-        self.assertEqual(expected_list, result)
-
-    def test_wind_energy_core_valuation_build_list_points_from_dict(self):
-        """A unit test for building a list of points from a dictionary"""
-        raise SkipTest
-
-        main_dict = {0 : {'lati':42.689, 'long':-70.096, 'height':10,
-                          'K_shape':2.567},
-                     1 : {'lati':42.689, 'long':-69.796, 'height':10,
-                          'K_shape':2.567},
-                     2 : {'lati':42.496, 'long':-69.796, 'height':10,
-                          'K_shape':2.567},
-                     3 : {'lati':42.496, 'long':-70.096, 'height':10,
-                          'K_shape':2.567}}
-
-        expected_list = [[-70.096, 42.689],[-69.796, 42.689],
-                         [-69.796, 42.496],[-70.096, 42.496]]
-
-        result = wind_energy_core.build_list_points_from_dict(main_dict)
-
-        self.assertEqual(expected_list, result)
-
-    def test_wind_energy_core_valuation_distance_kd(self):
-        """A unit test for getting the shortest distances between geometries
-            (two shapefiles) """
-        raise SkipTest
-
-        array_one = np.array([[1,1], [2,4], [13,8], [11, 6]])
-        array_two = np.array([[0,0], [20,14], [9,8], [7, 16]])
-
-        expected_distances = np.array([1.4142, 9.2195, 2.8284, 10])
-        expected_indexes = np.array([0, 2, 3, 2])
-
-        result = wind_energy_core.distance_kd(array_one, array_two)
-
-        LOGGER.debug('kd distances : %s', result)
-
-        for exp, res in zip(expected_distances, result[0]):
-            self.assertAlmostEqual(exp, res, 4)
-
-        self.assertTrue((expected_indexes == result[1]).all()) 
+        invest_test_core.assertTwoShapesEqualURI(
+                self, copy_uri, expected_ds_uri)
 
     def test_wind_energy_core_valuation_get_points_geometries(self):
         """A unit test for properly reading coordinates into a list from a
             point shapefile """
-        raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/'
+        #raise SkipTest
+        regression_dir = './data/wind_energy_regression_data/wind_energy_core'
         datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
 
         datasource = ogr.Open(datasource_uri)
@@ -341,8 +285,8 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
     def test_wind_energy_core_valuation_get_dictionary_from_shape(self):
         """A unit test for building a dictionary from a shapefile"""
-        raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/'
+        #raise SkipTest
+        regression_dir = './data/wind_energy_regression_data/wind_energy_core'
         datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
       
         datasource = ogr.Open(datasource_uri)
