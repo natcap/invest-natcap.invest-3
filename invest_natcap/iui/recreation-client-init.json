@@ -3,7 +3,7 @@
     "label": "Recreation Model - Initial Run",
     "targetScript" : "invest_natcap.recreation.recreation_client_init",
     "modelName" : "recreation_client_init",
-    "localDocURI": "",
+    "localDocURI": "../documentation/recreation.html",
     "height": 600,
     "width" : 700,
     "elements": [

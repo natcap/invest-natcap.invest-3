@@ -498,6 +498,7 @@ def valuation(args):
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
+    suffix = args['suffix']
 
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
@@ -766,13 +767,13 @@ def valuation(args):
 
     # Open the density raster, which is an output of the biophyiscal portion, so
     # that we can properly mask the valuation outputs
-    density_uri = os.path.join(output_dir, 'density.tif')
+    density_uri = os.path.join(output_dir, 'density' + suffix + '.tif')
     density_ds = gdal.Open(density_uri)
     _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
-    npv_uri = os.path.join(output_dir, 'npv.tif')
-    levelized_uri = os.path.join(output_dir, 'levelized.tif')
-    carbon_uri = os.path.join(output_dir, 'carbon_emissions.tif')
+    npv_uri = os.path.join(output_dir, 'npv' + suffix + '.tif')
+    levelized_uri = os.path.join(output_dir, 'levelized' + suffix + '.tif')
+    carbon_uri = os.path.join(output_dir, 'carbon_emissions' + suffix + '.tif')
    
     uri_list = [npv_uri, levelized_uri, carbon_uri]
     field_list = ['NPV', 'LevCost', 'CO2']
@@ -858,7 +859,7 @@ def valuation(args):
     length = (turbines_per_circuit - 1) * spacing_dist
     
     farm_poly_uri = os.path.join(output_dir,
-            'example_size_and_orientation_of_a_possible_wind_farm.shp')
+            'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
     
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
