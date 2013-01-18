@@ -152,8 +152,14 @@ def execute(args):
 
 
     LOGGER.info('calculate the SDR term')
-    sdr_uri = os.path.join(intermediate_dir, 'sdr.tif')
     flow_length_uri = os.path.join(intermediate_dir, 'flow_length.tif')
+    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+
+
+    sdr_uri = os.path.join(intermediate_dir, 'sdr.tif')
+
+
+
     sediment_core.calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri)
 
 

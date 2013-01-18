@@ -1079,10 +1079,8 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
         value_line += str(sed_retained) + '\n'
         table_file.write(value_line)
 
-    
     burn_into_dataset(upret_sm_dataset, watershed_aoi, 'id', id_to_export, upret_sm_uri)
 
-#def burn_values_to_dataset_areas(dataset, aoi, field
 
 def calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri):
     """Function to calculate the SDR component for retention percent
