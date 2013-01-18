@@ -945,11 +945,16 @@ def point_to_polygon_distance(poly_ds, point_ds):
     poly_layer = poly_ds.GetLayer()
     poly_list = []
     for poly_feat in poly_layer:
+        # Get the geometry of the polygon in WKT format
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+        # Load the geometry into shapely making it a shapely object
         shapely_polygon = shapely.wkt.loads(poly_wkt)
+        # Add the shapely polygon geometry to a list, but first simplify the
+        # geometry which smooths the edges making operations a lot faster
         poly_list.append(
                 shapely_polygon.simplify(0.01, preserve_topology=False))
-
+    
+    # Take the union over the list of polygons to get one defined polygon object
     LOGGER.info('Get the collection of polygon geometries by taking the union')
     polygon_collection = shapely.ops.unary_union(poly_list)
 
@@ -957,8 +962,11 @@ def point_to_polygon_distance(poly_ds, point_ds):
     point_layer = point_ds.GetLayer()
     point_list = []
     for point_feat in point_layer:
+        # Get the geometry of the point in WKT format
         point_wkt = point_feat.GetGeometryRef().ExportToWkt()
+        # Load the geometry into shapely making it a shapely object
         shapely_point = shapely.wkt.loads(point_wkt)
+        # Add the point to a list to iterate through
         point_list.append(shapely_point)
 
     LOGGER.info('find distances')
@@ -966,6 +974,7 @@ def point_to_polygon_distance(poly_ds, point_ds):
     for point in point_list:
         # Get the distance in meters and convert to km
         point_dist = point.distance(polygon_collection) / 1000.0
+        # Add the distances to a list
         distances.append(point_dist)
 
     LOGGER.debug('Distance List Length : %s', len(distances))
