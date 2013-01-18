@@ -65,11 +65,6 @@ def execute(args):
     for row in csv_dict_reader:
         biophysical_table[int(row['lucode'])] = row
 
-    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
-
-
-
     intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
@@ -98,7 +93,7 @@ def execute(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(intermediate_dir, 'v_stream.tif')
 
-    stream_dataset = routing_utils.stream_threshold(flow_accumulation_uri,
+    routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
 
 
@@ -107,6 +102,7 @@ def execute(args):
     routing_cython_core.flow_direction_inf(args['dem_uri'], flow_direction_uri)
 
     #Calculate LS term
+    LOGGER.info('calcualte ls term')
     ls_nodata = -1.0
     sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
                                       flow_direction_uri, ls_uri, ls_nodata)
@@ -114,9 +110,51 @@ def execute(args):
     lulc_dataset = gdal.Open(args['landuse_uri'])
     retention_uri = os.path.join(intermediate_dir, 'retention.tif')
 
+    LOGGER.info('building alpha raster from lulc')
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
     raster_utils.reclassify_dataset(
         lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
+
+    
+    LOGGER.info('building cp raster from lulc')
+    lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
+    cp_uri = os.path.join(intermediate_dir, 'cp.tif')
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+    LOGGER.info('building (1-c)(1-p) raster from lulc')
+    lulc_to_inv_cp_dict = dict([(lulc_code, (1.0-float(table['usle_c'])) * (1.0-float(table['usle_p'])))  for (lulc_code, table) in biophysical_table.items()])
+
+    LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
+    inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv.tif')
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+    LOGGER.info('calculating usle')
+    usle_uri = os.path.join(output_dir, 'usle.tif')
+    usle_export_dataset = sediment_core.calculate_potential_soil_loss(
+        ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
+        v_stream_uri, usle_uri)
+
+
+    LOGGER.info('building alpha raster from lulc')
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha']))  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_alpha_dict %s' % lulc_to_alpha_dict)
+    alpha_uri = os.path.join(intermediate_dir, 'alpha.tif')
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_alpha_dict, alpha_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+
+    LOGGER.info('route the sediment flux')
+    #This yields sediment flux, and sediment loss which will be used for valuation
+
+    LOGGER.info('backtrace the sediment reaching the streams')
 
     return
 

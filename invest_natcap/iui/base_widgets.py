@@ -453,7 +453,13 @@ class DynamicPrimitive(DynamicElement):
         satisfied = False
         if state == 'warning' or state == 'pass' or state == None:
             satisfied = True
-        
+
+        # If the current element is not enabled, we do not want to
+        # display the error message until the element is enabled.
+        if not self.isEnabled():
+            satisfied = True
+            state = None
+
         self.setBGcolorSatisfied(satisfied)
         self.error_button.set_error(msg, state)
 
