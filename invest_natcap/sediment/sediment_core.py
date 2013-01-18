@@ -450,36 +450,46 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
     raster_utils.calculate_raster_stats(ls_factor_dataset)
 
-def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset, 
-                                  erodibility_dataset, c_dataset, p_dataset,
-                                  stream_dataset, usle_uri):
+def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri, 
+                                  erodibility_uri, cp_uri,
+                                  stream_uri, usle_uri):
 
     """Calculates per-pixel potential soil loss using the RUSLE (revised 
         universial soil loss equation).
 
-        ls_factor_dataset - GDAL dataset with the LS factor pre-calculated
-        erosivity_dataset - GDAL dataset with per pixel erosivity 
-        erodibility_dataset - GDAL dataset with per pixel erodibility
-        c_dataset - GDAL dataset per pixel crop managment factor
-        p_dataset - GDAL dataset per pixel land management factor
-        stream_dataset - GDAL dataset indicating locations with streams
+        ls_factor_uri - GDAL uri with the LS factor pre-calculated
+        erosivity_uri - GDAL uri with per pixel erosivity 
+        erodibility_uri - GDAL uri with per pixel erodibility
+        c_uri - GDAL uri per pixel crop managment factor
+        p_uri - GDAL uri per pixel land management factor
+        stream_uri - GDAL uri indicating locations with streams
             (0 is no stream, 1 stream)
         usle_uri - string input indicating the path to disk
             for the resulting potential soil loss raster
 
-        return GDAL dataset with potential per pixel soil loss"""
+        returns nothing"""
+
+    ls_factor_dataset = gdal.Open(ls_factor_uri)
+    erosivity_dataset = gdal.Open(erosivity_uri)
+    erodibility_dataset = gdal.Open(erodibility_uri)
+    cp_dataset = gdal.Open(cp_uri)
+    stream_dataset = gdal.Open(stream_uri)
 
 
-    ls_factor_nodata = ls_factor_dataset.GetRasterBand(1).GetNoDataValue()
-    erosivity_nodata = erosivity_dataset.GetRasterBand(1).GetNoDataValue()
-    erodibility_nodata = erodibility_dataset.GetRasterBand(1).GetNoDataValue()
-    c_nodata = c_dataset.GetRasterBand(1).GetNoDataValue()
-    p_nodata = p_dataset.GetRasterBand(1).GetNoDataValue()
-    stream_nodata = stream_dataset.GetRasterBand(1).GetNoDataValue()
+    _, ls_factor_nodata = \
+        raster_utils.extract_band_and_nodata(ls_factor_dataset)
+    _, erosivity_nodata = \
+        raster_utils.extract_band_and_nodata(erosivity_dataset)
+    _, erodibility_nodata = \
+        raster_utils.extract_band_and_nodata(erodibility_dataset)
+    _, cp_nodata = \
+        raster_utils.extract_band_and_nodata(cp_dataset)
+    _, stream_nodata = \
+        raster_utils.extract_band_and_nodata(stream_dataset)
 
     usle_nodata = -1.0
     ls_factor_nodata = -1.0
-    def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, 
+    def usle_function(ls_factor, erosivity, erodibility, usle_cp,
                       v_stream):
         """Calculates the USLE equation
         
@@ -495,20 +505,19 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
             (v_stream)"""
 
         if ls_factor == ls_factor_nodata or erosivity == erosivity_nodata or \
-            erodibility == erodibility_nodata or usle_c == c_nodata or \
-            usle_p == p_nodata or v_stream == stream_nodata:
+            erodibility == erodibility_nodata or usle_cp == cp_nodata or \
+            v_stream == stream_nodata:
             return usle_nodata
         if v_stream == 1:
             return 0.0
-        return ls_factor * erosivity * erodibility * usle_c * usle_p
+        return ls_factor * erosivity * erodibility * usle_cp
 
     dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
-                    c_dataset, p_dataset, stream_dataset]
+                    cp_dataset, stream_dataset]
 
     potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
         usle_function, raster_out_uri = usle_uri, 
         datatype=gdal.GDT_Float32, nodata = usle_nodata)
-
 
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size

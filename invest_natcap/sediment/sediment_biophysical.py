@@ -135,6 +135,12 @@ def execute(args):
         lulc_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
+    LOGGER.info('calculating usle')
+    usle_uri = os.path.join(output_dir, 'usle.tif')
+    usle_export_dataset = sediment_core.calculate_potential_soil_loss(
+        ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
+        v_stream_uri, usle_uri)
+
 
     return
 
