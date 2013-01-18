@@ -142,6 +142,20 @@ def execute(args):
         v_stream_uri, usle_uri)
 
 
+    LOGGER.info('building alpha raster from lulc')
+    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha']))  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_alpha_dict %s' % lulc_to_alpha_dict)
+    alpha_uri = os.path.join(intermediate_dir, 'alpha.tif')
+    raster_utils.reclassify_dataset(
+        lulc_dataset, lulc_to_alpha_dict, alpha_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+
+    LOGGER.info('route the sediment flux')
+    #This yields sediment flux, and sediment loss which will be used for valuation
+
+    LOGGER.info('backtrace the sediment reaching the streams')
+
     return
 
 
