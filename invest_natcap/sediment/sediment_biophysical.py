@@ -102,6 +102,7 @@ def execute(args):
     routing_cython_core.flow_direction_inf(args['dem_uri'], flow_direction_uri)
 
     #Calculate LS term
+    LOGGER.info('calcualte ls term')
     ls_nodata = -1.0
     sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
                                       flow_direction_uri, ls_uri, ls_nodata)
