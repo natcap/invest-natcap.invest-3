@@ -160,3 +160,16 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
                      (flow_accumulation_array < float(flow_threshold))] = 0
 
     stream_band.WriteArray(stream_array)
+
+
+def calculate_flow_length(flow_direction_uri, flow_length_uri):
+    """Calcualte the flow length of a cell given the flow direction
+
+        flow_direction_uri - uri to a gdal dataset that represents the
+            d_inf flow direction of each pixel
+        flow_length_uri - the uri that the output flow length will be put to
+
+        returns nothing"""
+
+    pass
+    
