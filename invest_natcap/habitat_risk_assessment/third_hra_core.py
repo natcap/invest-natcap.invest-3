@@ -239,6 +239,8 @@ def make_cum_risk_raster(dir, risk_dict):
 
         h_rasters.append(h_rast)
 
+    return h_rasters
+
 def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
