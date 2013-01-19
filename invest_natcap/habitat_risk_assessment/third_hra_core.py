@@ -48,15 +48,19 @@ def execute(args):
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
-            rasters.
-        args['stressors'] A structure which will hold exposure and consequence
-            criteria data for criteria which are stressor specific. The
-            dictionary will not contain an open raster dataset, but will
-            otherwise be the same structure as the args['h-s'] dictionary.
+            rasters. In this case, however, the outermost key is by habitat
+            name, and habitats['habitatName']['DS'] points to the rasterized
+            habitat shapefile provided by the user.
+        args['stressors']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by stressor
+            name, and stressors['habitatName']['DS'] points to the rasterized
+            stressor shapefile provided by the user.
 
     Outputs:
         --Intermediate--
-            These should be the temp risk add files for the final output calcs.
+            These should be the temp risk and criteria files needed for the 
+            final output calcs.
         --Output--
             /output/maps/recov_potent_H[habitatname].tif- Raster layer depicting
                 the recovery potential of each individual habitat. 
@@ -65,7 +69,6 @@ def execute(args):
                 habitat.
             /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
                 cumulative risk scores of all habitats for that cell.
-   
             /output/html_plots/output.html- HTML page containing a matlab plot
                 has cumulative exposure value for each habitat, as well as risk
                 of each habitat plotted per stressor.
