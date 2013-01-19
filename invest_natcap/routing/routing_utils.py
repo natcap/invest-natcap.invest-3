@@ -160,3 +160,33 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
                      (flow_accumulation_array < float(flow_threshold))] = 0
 
     stream_band.WriteArray(stream_array)
+
+
+def calculate_flow_length(flow_direction_uri, flow_length_uri):
+    """Calcualte the flow length of a cell given the flow direction
+
+        flow_direction_uri - uri to a gdal dataset that represents the
+            d_inf flow direction of each pixel
+        flow_length_uri - the uri that the output flow length will be put to
+
+        returns nothing"""
+
+
+    flow_direction_dataset = gdal.Open(flow_direction_uri)
+    _, flow_direction_nodata = raster_utils.extract_band_and_nodata(
+        flow_direction_dataset)
+    
+    flow_length_nodata = -1.0
+    flow_length_dataset = raster_utils.new_raster_from_base(
+        flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
+        gdal.GDT_Float32)
+
+    def flow_length(flow_direction):
+        if flow_direction == flow_direction_nodata:
+            return flow_length_nodata
+        return abs(numpy.sin(flow_direction)) + abs(numpy.cos(flow_direction))
+
+    raster_utils.vectorize_rasters(
+        [flow_direction_dataset], flow_length, aoi=None,
+        raster_out_uri=flow_length_uri, datatype=gdal.GDT_Float32,
+        nodata=flow_length_nodata)

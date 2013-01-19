@@ -151,10 +151,25 @@ def execute(args):
         -1.0, exception_flag='values_required')
 
 
+    LOGGER.info('calculate the SDR term')
+    flow_length_uri = os.path.join(intermediate_dir, 'flow_length.tif')
+    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+
+
+    sdr_uri = os.path.join(intermediate_dir, 'sdr.tif')
+
+
+
+    sediment_core.calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri)
+
+
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
 
     LOGGER.info('backtrace the sediment reaching the streams')
+
+
+
 
     return
 
