@@ -3,7 +3,7 @@
     "label": "Recreation Model - Scenario Run",
     "targetScript" : "invest_natcap.recreation.recreation_client_scenario",
     "modelName" : "recreation_client_scenario",
-    "localDocURI": "",
+    "localDocURI": "../documentation/recreation.html",
     "height": 600,
     "width" : 700,
     "elements": [

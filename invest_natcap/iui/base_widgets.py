@@ -453,7 +453,13 @@ class DynamicPrimitive(DynamicElement):
         satisfied = False
         if state == 'warning' or state == 'pass' or state == None:
             satisfied = True
-        
+
+        # If the current element is not enabled, we do not want to
+        # display the error message until the element is enabled.
+        if not self.isEnabled():
+            satisfied = True
+            state = None
+
         self.setBGcolorSatisfied(satisfied)
         self.error_button.set_error(msg, state)
 
@@ -944,8 +950,14 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
     def requirementsMet(self):
         """This function is used to return whether the container is enabled or
-        not.  Used for determining whether other elements should be triggered."""
-        return self.value()
+        not.  Used for determining whether other elements should be triggered.
+
+        If the container is checkable, the check state is returned.  If the
+        container is not checkable, True is returned."""
+        if self.isCheckable():
+            return self.isChecked()
+        else:
+            return True
 
     def value(self):
         return self.isChecked()
