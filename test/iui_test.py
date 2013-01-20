@@ -205,3 +205,21 @@ class ContainerTest(unittest.TestCase, DynamicGroupTemplate):
         # If I check the checkbox, the value should change accordingly
         container.setChecked(True)
         self.assertEqual(container.value(), True)
+
+    @unittest.skip('I think the getLabel() function is being deprecated.')
+    def test_get_label(self):
+        pass
+
+    def test_get_elements_dictionary(self):
+        container = self.ui.allElements['container']
+
+        # the elements dictionary should contain the container and all the
+        # elements it contains.
+        elem_dict = container.getElementsDictionary()
+
+        reg_dictionary = {
+            'container': container,
+            'test_label': self.ui.allElements['test_label']
+        }
+        self.assertEqual(elem_dict, reg_dictionary)
+
