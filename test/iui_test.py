@@ -106,7 +106,7 @@ class DynamicTextTemplate(LabeledElementTemplate):
         raise TestNotImplemented
 
 
-class ContainerTest(unittest.TestCase):
+class ContainerTest(unittest.TestCase, DynamicGroupTemplate):
     def setUp(self):
         container_test = os.path.join(JSON_DIR, 'test_container.json')
 
@@ -155,7 +155,7 @@ class ContainerTest(unittest.TestCase):
         QTest.qWait(1000)  # qWait arg is in ms
         assert_all(True)
 
-    def test_container_return_value(self):
+    def test_requirements_met(self):
         """Test the container c;ass; requirementsmet value"""
         container = self.ui.allElements['container']
         # container from JSON file is collapsible.
@@ -180,3 +180,28 @@ class ContainerTest(unittest.TestCase):
 
         container.setChecked(False)
         self.assertEqual(container.requirementsMet(), True)
+
+    def test_is_required(self):
+        container = self.ui.allElements['container']
+
+        # A container should not be required by default.
+        self.assertEqual(container.isRequired(), False)
+
+
+    def test_get_root(self):
+        container = self.ui.allElements['container']
+        root = self.ui.allElements['test_root']
+
+        # The conainer should be able to retrieve the root element pointer,
+        # which we can also identify by the string id in allElements.
+        self.assertEqual(container.getRoot(), root)
+
+    def test_get_output_value(self):
+        container = self.ui.allElements['container']
+
+        # the container is unchecked by default
+        self.assertEqual(container.value(), False)
+
+        # If I check the checkbox, the value should change accordingly
+        container.setChecked(True)
+        self.assertEqual(container.value(), True)
