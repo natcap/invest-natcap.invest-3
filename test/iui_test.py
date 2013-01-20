@@ -4,6 +4,7 @@ import pdb
 import time
 
 from PyQt4 import QtGui
+from PyQt4.QtTest import QTest as QTest
 
 from invest_natcap.iui import base_widgets as base_widgets
 
@@ -37,20 +38,23 @@ class ContainerTest(unittest.TestCase):
         container = self.ui.allElements['container']
         label = self.ui.allElements['test_label']
         filefield = self.ui.allElements['test_file']
+
+        def assert_all(state):
+            self.assertEqual(filefield.requirementsMet(), state, 'FAIL: %s' % state)
+            self.assertEqual(container.isEnabled(), state, 'FAIL: %s' % state)
+            self.assertEqual(label.isEnabled(), state, 'FAIL: %s' % state)
+
         #pdb.set_trace()
         #print container
-        print 'enabled %s' % container.isEnabled()
         #container.toggleHiding(False)
-        print 'SETTING VALUE'
         filefield.setValue('aaa')
-        time.sleep(1)
-        print 'filefield requirements met: %s' % filefield.requirementsMet()
-        print 'container enabled %s' % container.isEnabled()
-        print 'label enabled: %s' % label.isEnabled()
-        print 'filefield value %s' % filefield.value()
-        print 'SETTING VALUE'
+        QTest.qWait(1000)  # qWait arg is in ms
+        assert_all(True)
+
         filefield.setValue('')
-        time.sleep(1)
-        print 'filefield requirements met: %s' % filefield.requirementsMet()
-        print 'container enabled %s' % container.isEnabled()
-        print 'label enabled: %s' % label.isEnabled()
+        QTest.qWait(1000)  # qWait arg is in ms
+        assert_all(False)
+
+        filefield.setValue('aaa')
+        QTest.qWait(1000)  # qWait arg is in ms
+        assert_all(True)
