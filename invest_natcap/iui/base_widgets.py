@@ -136,6 +136,7 @@ class DynamicElement(QtGui.QWidget):
                 element.setState(state)
 
     def getLabel(self):
+        raise DeprecationWarning
         if 'inheritLabelFrom' in self.attributes:
             target_id = self.attributes['inheritLabelFrom']
             return self.root.allElements[target_id].attributes['label']
