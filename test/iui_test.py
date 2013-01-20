@@ -58,3 +58,29 @@ class ContainerTest(unittest.TestCase):
         filefield.setValue('aaa')
         QTest.qWait(1000)  # qWait arg is in ms
         assert_all(True)
+
+    def test_container_return_value(self):
+        """Test the container c;ass; requirementsmet value"""
+        container = self.ui.allElements['container']
+        # container from JSON file is collapsible.
+
+        # Verify that the container is unchecked by default and that the
+        # container is collapsible
+        self.assertEqual(container.isCheckable(), True)
+        self.assertEqual(container.isChecked(), False)
+
+        # When the container is unchecked, rewuirementsMet should be False
+        self.assertEqual(container.requirementsMet(), False)
+
+        # When I check the container, requirementsMet should be True
+        container.setChecked(True)
+        self.assertEqual(container.requirementsMet(), True)
+
+        # When I make the container non-collapsible (via Qt), requirementsMet
+        # should remain True no matter the check state
+        container.setCheckable(False)
+        container.setChecked(True)
+        self.assertEqual(container.requirementsMet(), True)
+
+        container.setChecked(False)
+        self.assertEqual(container.requirementsMet(), True)
