@@ -26,7 +26,25 @@ def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
 
 
 class TestRasterUtils(unittest.TestCase):
+    def test_resample_dataset(self):
+        base_dir = 'data/test_out/resample_dataset'
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        output_uri = os.path.join(base_dir, 'resampled.tif')
+        base_uri = 'data/sediment_test_data/dem'
+        dataset = gdal.Open(base_uri)
+
+        pixel_size = 1000.0
+
+        raster_utils.resample_dataset(
+            base_uri, pixel_size, output_uri, resample_method=gdal.GRA_Bilinear)
+
+        subprocess.Popen(['qgis', base_uri, output_uri])
+
+
     def test_smoke_routing(self):
+        raise SkipTest
         base_dir = 'data/test_out/routing_test'
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
@@ -61,7 +79,10 @@ class TestRasterUtils(unittest.TestCase):
         routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
 
-#        subprocess.Popen(['qgis', flux_uri, stream_uri])
+        effect_uri = os.path.join(base_dir, 'effect.tif')
+        routing_utils.percent_to_sink(stream_uri, absorption_rate_uri, effect_uri)
+
+        subprocess.Popen(['qgis', stream_uri, effect_uri])
 
 #        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
 #                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])

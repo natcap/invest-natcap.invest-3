@@ -136,6 +136,7 @@ class DynamicElement(QtGui.QWidget):
                 element.setState(state)
 
     def getLabel(self):
+        raise DeprecationWarning
         if 'inheritLabelFrom' in self.attributes:
             target_id = self.attributes['inheritLabelFrom']
             return self.root.allElements[target_id].attributes['label']
@@ -950,8 +951,14 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
     def requirementsMet(self):
         """This function is used to return whether the container is enabled or
-        not.  Used for determining whether other elements should be triggered."""
-        return self.value()
+        not.  Used for determining whether other elements should be triggered.
+
+        If the container is checkable, the check state is returned.  If the
+        container is not checkable, True is returned."""
+        if self.isCheckable():
+            return self.isChecked()
+        else:
+            return True
 
     def value(self):
         return self.isChecked()
