@@ -61,7 +61,10 @@ class TestRasterUtils(unittest.TestCase):
         routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
 
-#        subprocess.Popen(['qgis', flux_uri, stream_uri])
+        effect_uri = os.path.join(base_dir, 'effect.tif')
+        routing_utils.percent_to_sink(stream_uri, absorption_rate_uri, effect_uri)
+
+        subprocess.Popen(['qgis', stream_uri, effect_uri])
 
 #        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
 #                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])

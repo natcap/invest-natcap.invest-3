@@ -75,7 +75,6 @@ def route_flux(
     outflow_weights_uri = os.path.join(workspace_dir, 'outflow_weights.tif')
     outflow_direction_uri = os.path.join(
         workspace_dir, 'outflow_directions.tif')
-
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
@@ -190,3 +189,29 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         [flow_direction_dataset], flow_length, aoi=None,
         raster_out_uri=flow_length_uri, datatype=gdal.GDT_Float32,
         nodata=flow_length_nodata)
+
+
+def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
+    """This function calculates the amount of load from a single pixel
+        to the source pixels given the percent absorption rate per pixel.
+        
+        sink_pixels_uri - the pixels of interest that will receive flux.
+            This may be a set of stream pixels, or a single pixel at a
+            watershed outlet.
+
+        absorption_rate_uri - a GDAL floating point dataset that has a percent
+            of flux absorbed per pixel
+
+        effect_uri - the output GDAL dataset that shows the percent of flux
+            eminating per pixel that will reach any sink pixel
+
+        returns nothing"""
+
+    sink_pixels_dataset = gdal.Open(sink_pixels_uri)
+    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
+
+    effect_nodata = -1.0
+    effect_dataset = raster_utils.new_raster_from_base(
+        sink_pixels_dataset, effect_uri, 'GTiff', effect_nodata,
+        gdal.GDT_Float32)
+
