@@ -82,6 +82,11 @@ def route_flux(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
+
+    outflow_direction_uri, outflow_weights_uri
+
+
+
 def flow_accumulation(dem_uri, flux_output_uri):
     """A helper function to calculate flow accumulation, also returns
         intermediate rasters for future calculation.
@@ -191,7 +196,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         nodata=flow_length_nodata)
 
 
-def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
+def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri):
     """This function calculates the amount of load from a single pixel
         to the source pixels given the percent absorption rate per pixel.
         
@@ -201,6 +206,18 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
 
         absorption_rate_uri - a GDAL floating point dataset that has a percent
             of flux absorbed per pixel
+
+        outflow_direction_uri - a uri to a byte dataset that indicates the
+            first counter clockwise outflow neighbor as an index from the
+            following diagram
+
+            3 2 1
+            4 x 0
+            5 6 7
+
+        outflow_weights_uri - a uri to a float32 dataset whose elements
+            correspond to the percent outflow from the current cell to its
+            first counter-clockwise neighbor
 
         effect_uri - the output GDAL dataset that shows the percent of flux
             eminating per pixel that will reach any sink pixel
@@ -222,6 +239,16 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
     sink_pixels_array = raster_utils.load_memory_mapped_array(
         sink_pixels_uri, sink_pixels_data_file)
     
+
+    outflow_direction_data_file = tempfile.TemporaryFile()
+    outflow_direction_array = raster_utils.load_memory_mapped_array(
+        outflow_direction_uri, outflow_direction_data_file)
+
+    outflow_weights_data_file = tempfile.TemporaryFile()
+    outflow_weights_array = raster_utils.load_memory_mapped_array(
+        outflow_weights_uri, outflow_weights_data_file)
+
+
     absorption_rate_data_file = tempfile.TemporaryFile()
     _, absorption_rate_nodata = raster_utils.extract_band_and_nodata(
         absorption_rate_dataset)
@@ -235,10 +262,51 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
     effect_array = numpy.memmap(effect_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
     effect_array[:] = effect_nodata
 
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+
+    row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+
+
+    process_stack = collections.deque()
+
     for col_index in xrange(n_cols):
         for row_index in xrange(n_rows):
-            if absorption_rate_array[row_index, col_index] != absorption_rate_nodata and \
-                    effect_array[row_index, col_index] == effect_nodata:
-                effect_array[row_index, col_index] = 1.0
+            process_stack.append(row_index * n_cols + col_index)
+            while len(process_stack) > 0:
+                current_index = process_stack.pop()
+                current_row_index = current_index / n_cols
+                current_col_index = current_index % n_cols
+
+                if absorption_rate_array[current_row_index, current_col_index] != absorption_rate_nodata and \
+                        effect_array[current_row_index, current_col_index] == effect_nodata:
+
+                    calculated = True
+
+                    for offset in range(2):
+                        outflow_current_row_index = current_row_index + row_offsets[offset % 8]
+                        if outflow_current_row_index < 0 or outflow_current_row_index >= n_rows:
+                            continue
+
+                        outflow_current_col_index = current_col_index + col_offsets[offset % 8]
+                        if outflow_current_col_index < 0 or outflow_current_col_index >= n_cols:
+                            continue
+                        
+
+
+                        if effect_array[outflow_current_row_index, outflow_current_col_index] == effect_nodata:
+                            calculated = False
+
+                    if not calculated:
+                        #push on the stack
+                        effect_array[current_row_index, current_col_index] = 0.0
+                        pass
+                    else:
+                        effect_array[current_row_index, current_col_index] = 1.0
                 
     effect_band.WriteArray(effect_array, 0, 0)
+
