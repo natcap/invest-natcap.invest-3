@@ -149,6 +149,9 @@ def execute(args):
     url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
 
+    #recording server to model parameters
+    args["server"]=config["server"]
+
     #opening request and saving session id
     success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
