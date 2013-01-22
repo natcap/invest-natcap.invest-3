@@ -215,3 +215,30 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
         sink_pixels_dataset, effect_uri, 'GTiff', effect_nodata,
         gdal.GDT_Float32)
 
+    n_cols = sink_pixels_dataset.RasterXSize
+    n_rows = sink_pixels_dataset.RasterYSize
+
+    sink_pixels_data_file = tempfile.TemporaryFile()
+    sink_pixels_array = raster_utils.load_memory_mapped_array(
+        sink_pixels_uri, sink_pixels_data_file)
+    
+    absorption_rate_data_file = tempfile.TemporaryFile()
+    _, absorption_rate_nodata = raster_utils.extract_band_and_nodata(
+        absorption_rate_dataset)
+    absorption_rate_array = raster_utils.load_memory_mapped_array(
+        absorption_rate_uri, absorption_rate_data_file)
+    
+    effect_band, effect_nodata = raster_utils.extract_band_and_nodata(
+        effect_dataset)
+
+    effect_data_file = tempfile.TemporaryFile()
+    effect_array = numpy.memmap(effect_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
+    effect_array[:] = effect_nodata
+
+    for col_index in xrange(n_cols):
+        for row_index in xrange(n_rows):
+            if absorption_rate_array[row_index, col_index] != absorption_rate_nodata and \
+                    effect_array[row_index, col_index] == effect_nodata:
+                effect_array[row_index, col_index] = 1.0
+                
+    effect_band.WriteArray(effect_array, 0, 0)
