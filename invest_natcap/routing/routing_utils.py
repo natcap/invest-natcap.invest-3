@@ -75,7 +75,6 @@ def route_flux(
     outflow_weights_uri = os.path.join(workspace_dir, 'outflow_weights.tif')
     outflow_direction_uri = os.path.join(
         workspace_dir, 'outflow_directions.tif')
-
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
@@ -207,4 +206,12 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, effect_uri):
             eminating per pixel that will reach any sink pixel
 
         returns nothing"""
-    pass
+
+    sink_pixels_dataset = gdal.Open(sink_pixels_uri)
+    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
+
+    effect_nodata = -1.0
+    effect_dataset = raster_utils.new_raster_from_base(
+        sink_pixels_dataset, effect_uri, 'GTiff', effect_nodata,
+        gdal.GDT_Float32)
+
