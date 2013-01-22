@@ -38,13 +38,14 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         fp.close()
     
     def test_wind_energy_biophysical_wind_data_to_point_shape(self):
-        """Compare the output shapefile created from a known dictionary agaisnt
-            a regression shape file that has been verified correct"""        
-        raise SkipTest
-        regression_shape_uri = \
-            './data/wind_energy_regression_data/wind_data_to_points.shp'
+        """Compare the output shapefile created from a known dictionary against
+            a regression shape file that has been verified correct""" 
+        #raise SkipTest
+        regression_dir = './data/wind_energy_regression_data/biophysical'
+        shape_uri = os.path.join(regression_dir, 'wind_data_to_points.shp')
 
-        output_dir = './data/test_out/wind_energy/wind_data_to_point_shape/'
+        output_dir = \
+                './data/test_out/wind_energy/biophysical/wind_data_to_point_shape/'
         
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -68,21 +69,27 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         points = None
 
         invest_test_core.assertTwoShapesEqualURI(
-                self, regression_shape_uri, out_uri)
+                self, shape_uri, out_uri)
 
     def test_wind_energy_biophysical_clip_datasource(self):
         """Regression test for clipping a shapefile from another shapefile"""
-        raise SkipTest
-
-        original_shape_uri = \
-            './data/wind_energy_regression_data/wind_points_shape.shp'
-
-        aoi = ogr.Open('./data/wind_energy_regression_data/aoi_prj_to_land.shp')
-
-        regression_shape_uri = \
-            './data/wind_energy_regression_data/wind_points_clipped.shp'
+        #raise SkipTest
         
-        output_dir = './data/test_out/wind_energy/clip_datasource/'
+        input_dir = './data/wind_energy_data/'
+        regression_dir = './data/wind_energy_regression_data/'
+        
+        original_shape_uri = os.path.join(
+                input_dir, 'testing_land.shp')
+
+        aoi_uri = os.path.join(
+                regression_dir, 'biophysical/aoi_proj_to_land.shp')
+        
+        aoi = ogr.Open(aoi_uri)
+
+        regression_shape_uri = os.path.join(
+                regression_dir, 'biophysical/land_poly_clipped.shp')
+        
+        output_dir = './data/test_out/wind_energy/biophysical/clip_datasource/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -98,25 +105,25 @@ class TestWindEnergyBiophysical(unittest.TestCase):
             aoi, original_shape, out_uri)
         
         result_shape = None
-
-        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
-
         original_shape = None
         aoi = None
+
+        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
     
     def test_wind_energy_biophysical_clip_datasource2(self):
         """Regression test for clipping a shapefile from another shapefile"""
-        raise SkipTest
+        #raise SkipTest
 
-        original_shape_uri = \
-            './data/wind_energy_regression_data/clip_dsource_orig.shp'
+        regression_dir = './data/wind_energy_regression_data/biophysical'
+        original_shape_uri = os.path.join(
+                regression_dir, 'clip_dsource_orig.shp')
 
-        aoi = ogr.Open('./data/wind_energy_regression_data/clip_dsource_aoi.shp')
+        aoi = ogr.Open(os.path.join(regression_dir, 'clip_dsource_aoi.shp'))
 
-        regression_shape_uri = \
-            './data/wind_energy_regression_data/clip_dsource_result.shp'
+        regression_shape_uri = os.path.join(
+                regression_dir, 'clip_dsource_result.shp')
         
-        output_dir = './data/test_out/wind_energy/clip_datasource/'
+        output_dir = './data/test_out/wind_energy/biophysical/clip_datasource/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -132,5 +139,114 @@ class TestWindEnergyBiophysical(unittest.TestCase):
             aoi, original_shape, out_uri)
         
         result_shape = None
+        original_shape = None
+        aoi = None
 
         invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
+    
+    def test_wind_energy_biophysical_clip_and_reproject_maps_dsource(self):
+        """Regression test for clipping a shapefile from another shapefile and
+            then projecting it to that shapefile"""
+        #raise SkipTest
+
+        regression_dir = \
+              './data/wind_energy_regression_data/biophysical/clip_project_map'
+        input_dir = './data/wind_energy_data/'
+
+        original_shape_uri = os.path.join(
+                input_dir, 'testing_land.shp')
+
+        aoi = ogr.Open(os.path.join(input_dir, 'testing_aoi_proj.shp'))
+
+        regression_proj_uri = os.path.join(
+                regression_dir, 'land_poly_projected.shp')
+        regression_clip_uri = os.path.join(
+                regression_dir, 'land_poly_clipped.shp')
+        regression_aoi_uri = os.path.join(
+                regression_dir, 'aoi_proj_to_land.shp')
+        
+        reg_file_list = [
+                regression_proj_uri, regression_clip_uri, regression_aoi_uri]
+
+        output_dir = './data/test_out/wind_energy/biophysical/clip_project/'
+
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+
+        out_clipped_uri = os.path.join(output_dir, 'clipped.shp')
+        out_projected_uri = os.path.join(output_dir, 'projected.shp')
+        out_aoi_proj_uri = os.path.join(output_dir, 'aoi_to_land.shp')
+       
+        out_file_list = [out_projected_uri, out_clipped_uri, out_aoi_proj_uri]
+
+        for out_uri in out_file_list:
+            if os.path.isfile(out_uri):
+                os.remove(out_uri)
+
+        original_shape = ogr.Open(original_shape_uri)
+        
+        result_shape = wind_energy_biophysical.clip_and_reproject_maps(
+            original_shape, aoi, out_clipped_uri, out_projected_uri,
+            out_aoi_proj_uri)
+        
+        result_shape = None
+        original_shape = None
+        aoi = None
+
+        for reg_uri, out_uri in zip(reg_file_list, out_file_list):
+            invest_test_core.assertTwoShapesEqualURI(self, reg_uri, out_uri)
+
+    def test_wind_energy_biophysical_clip_and_reproject_maps_dset(self):
+        """Regression test for clipping a raster from another shapefile and
+            then projecting it to that shapefiles projection"""
+        #raise SkipTest
+
+        regression_dir = \
+              './data/wind_energy_regression_data/biophysical/clip_project_map'
+        input_dir = './data/wind_energy_data/'
+
+        original_raster_uri = os.path.join(
+                input_dir, 'testing_bathym.tif')
+
+        aoi = ogr.Open(os.path.join(input_dir, 'testing_aoi_proj.shp'))
+
+        regression_proj_uri = os.path.join(
+                regression_dir, 'bathymetry_projected.tif')
+        regression_clip_uri = os.path.join(
+                regression_dir, 'bathymetry_clipped.tif')
+        regression_aoi_uri = os.path.join(
+                regression_dir, 'aoi_proj_to_bath.shp')
+        
+        reg_file_list = [regression_proj_uri, regression_clip_uri]
+
+        output_dir = './data/test_out/wind_energy/biophysical/clip_project/'
+
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+
+        out_clipped_uri = os.path.join(output_dir, 'clipped.tif')
+        out_projected_uri = os.path.join(output_dir, 'projected.tif')
+        out_aoi_proj_uri = os.path.join(output_dir, 'aoi_to_bath.shp')
+       
+        out_file_list = [out_projected_uri, out_clipped_uri]
+
+        for out_uri in out_file_list:
+            if os.path.isfile(out_uri):
+                os.remove(out_uri)
+
+        original_raster = gdal.Open(original_raster_uri)
+        
+        result_raster = wind_energy_biophysical.clip_and_reproject_maps(
+            original_raster, aoi, out_clipped_uri, out_projected_uri,
+            out_aoi_proj_uri)
+        
+        result_raster = None
+        original_raster = None
+        aoi = None
+
+        for reg_uri, out_uri in zip(reg_file_list, out_file_list):
+            invest_test_core.assertTwoDatasetEqualURI(self, reg_uri, out_uri)
+
+        invest_test_core.assertTwoShapesEqualURI(
+                self, regression_aoi_uri, out_aoi_proj_uri)
+        
