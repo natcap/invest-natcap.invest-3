@@ -27,6 +27,7 @@ def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
 
 class TestRasterUtils(unittest.TestCase):
     def test_smoke_routing(self):
+        raise SkipTest
         base_dir = 'data/test_out/routing_test'
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
