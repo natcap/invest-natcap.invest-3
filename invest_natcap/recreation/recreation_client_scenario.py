@@ -123,6 +123,12 @@ def execute(args):
                 LOGGER.info("Found %s categorization." % fileName)
                 userCategorization.append(fileName)
 
+    #making sure there is not landscan categorization
+    if "landscan.tsv" in userCategorization:
+        LOGGER.error("The categorization of the Landscan data is not allowed.")
+        raise ValueError, "The categorization of the Landscan data is not allowed."
+
+    #opening shapefiles
     attachments={}                
     for predictor in predictors:
         attachments[predictor+".shp"]= open(args["data_dir"]+predictor+".shp","rb")
@@ -130,6 +136,7 @@ def execute(args):
         attachments[predictor+".dbf"]= open(args["data_dir"]+predictor+".dbf","rb")
         attachments[predictor+".prj"]= open(args["data_dir"]+predictor+".prj","rb")
 
+    #opening categorization table
     for tsv in userCategorization:
         attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
 
