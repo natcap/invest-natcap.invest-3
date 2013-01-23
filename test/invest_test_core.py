@@ -144,15 +144,16 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
                 field_name_regression = field_ref_regression.GetNameRef()
                 unitTest.assertEqual(field_name, field_name_regression,
                                      'The fields DO NOT have the same name')
+            # Check that the features have the same geometry
+            geom = feat.GetGeometryRef()
+            geom_regression = feat_regression.GetGeometryRef()
 
+            unitTest.assertTrue(geom.Equals(geom_regression))
+            
             if layer.GetGeomType() != ogr.wkbPoint:
-                # Check that the features have the same geometry and area,
+                # Check that the features have the same area,
                 # but only if the shapefile's geometry is not a point, since
                 # points don't have area to check.
-                geom = feat.GetGeometryRef()
-                geom_regression = feat_regression.GetGeometryRef()
-
-                unitTest.assertTrue(geom.Equals(geom_regression))
                 unitTest.assertEqual(geom.Area(), geom_regression.Area())
 
             feat = None
