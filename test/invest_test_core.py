@@ -82,6 +82,10 @@ def assertTwoShapesEqualURI(unitTest, aUri, bUri):
     
        returns True if a and b are equal to each other"""
     
+    for uri in [aUri, bUri]:
+        if not os.path.exists(uri):
+            raise IOError('File "%s" not found on disk' % uri)
+    
     assertTwoShapesEqual(unitTest, ogr.Open(aUri), ogr.Open(bUri))
 
 def assertTwoShapesEqual(unitTest, shape, shape_regression):
@@ -140,15 +144,16 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
                 field_name_regression = field_ref_regression.GetNameRef()
                 unitTest.assertEqual(field_name, field_name_regression,
                                      'The fields DO NOT have the same name')
+            # Check that the features have the same geometry
+            geom = feat.GetGeometryRef()
+            geom_regression = feat_regression.GetGeometryRef()
 
+            unitTest.assertTrue(geom.Equals(geom_regression))
+            
             if layer.GetGeomType() != ogr.wkbPoint:
-                # Check that the features have the same geometry and area,
+                # Check that the features have the same area,
                 # but only if the shapefile's geometry is not a point, since
                 # points don't have area to check.
-                geom = feat.GetGeometryRef()
-                geom_regression = feat_regression.GetGeometryRef()
-
-                unitTest.assertTrue(geom.Equals(geom_regression))
                 unitTest.assertEqual(geom.Area(), geom_regression.Area())
 
             feat = None

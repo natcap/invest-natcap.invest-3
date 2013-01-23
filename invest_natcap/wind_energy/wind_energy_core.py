@@ -498,6 +498,7 @@ def valuation(args):
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
+    suffix = args['suffix']
 
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
@@ -521,8 +522,6 @@ def valuation(args):
     decom = float(turbine_dict['decommission_cost'])
     # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict['turbine_rated_pwr'])
-    # The average land cable distance in km
-    avg_grid_distance = float(turbine_dict['avg_grid_distance'])
     # The distance at which AC switches over to DC power
     circuit_break = float(turbine_dict['ac_dc_distance_break'])
     # The coefficients for the AC/DC megawatt and cable cost from the CAP
@@ -556,6 +555,9 @@ def valuation(args):
         # near shore distances
         land_shape_ds = args['land_polygon']
     
+        # The average land cable distance in km
+        avg_grid_distance = float(turbine_dict['avg_grid_distance'])
+        
         # When using the land polygon to conduct distances there is a set
         # constant distance for land point to grid points. The following lines
         # add a new field to each point with that distance
@@ -765,13 +767,13 @@ def valuation(args):
 
     # Open the density raster, which is an output of the biophyiscal portion, so
     # that we can properly mask the valuation outputs
-    density_uri = os.path.join(output_dir, 'density.tif')
+    density_uri = os.path.join(output_dir, 'density' + suffix + '.tif')
     density_ds = gdal.Open(density_uri)
     _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
-    npv_uri = os.path.join(output_dir, 'npv.tif')
-    levelized_uri = os.path.join(output_dir, 'levelized.tif')
-    carbon_uri = os.path.join(output_dir, 'carbon_emissions.tif')
+    npv_uri = os.path.join(output_dir, 'npv' + suffix + '.tif')
+    levelized_uri = os.path.join(output_dir, 'levelized' + suffix + '.tif')
+    carbon_uri = os.path.join(output_dir, 'carbon_emissions' + suffix + '.tif')
    
     uri_list = [npv_uri, levelized_uri, carbon_uri]
     field_list = ['NPV', 'LevCost', 'CO2']
@@ -857,7 +859,7 @@ def valuation(args):
     length = (turbines_per_circuit - 1) * spacing_dist
     
     farm_poly_uri = os.path.join(output_dir,
-            'example_size_and_orientation_of_a_possible_wind_farm.shp')
+            'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
     
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
@@ -943,11 +945,16 @@ def point_to_polygon_distance(poly_ds, point_ds):
     poly_layer = poly_ds.GetLayer()
     poly_list = []
     for poly_feat in poly_layer:
+        # Get the geometry of the polygon in WKT format
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+        # Load the geometry into shapely making it a shapely object
         shapely_polygon = shapely.wkt.loads(poly_wkt)
+        # Add the shapely polygon geometry to a list, but first simplify the
+        # geometry which smooths the edges making operations a lot faster
         poly_list.append(
                 shapely_polygon.simplify(0.01, preserve_topology=False))
-
+    
+    # Take the union over the list of polygons to get one defined polygon object
     LOGGER.info('Get the collection of polygon geometries by taking the union')
     polygon_collection = shapely.ops.unary_union(poly_list)
 
@@ -955,8 +962,11 @@ def point_to_polygon_distance(poly_ds, point_ds):
     point_layer = point_ds.GetLayer()
     point_list = []
     for point_feat in point_layer:
+        # Get the geometry of the point in WKT format
         point_wkt = point_feat.GetGeometryRef().ExportToWkt()
+        # Load the geometry into shapely making it a shapely object
         shapely_point = shapely.wkt.loads(point_wkt)
+        # Add the point to a list to iterate through
         point_list.append(shapely_point)
 
     LOGGER.info('find distances')
@@ -964,6 +974,7 @@ def point_to_polygon_distance(poly_ds, point_ds):
     for point in point_list:
         # Get the distance in meters and convert to km
         point_dist = point.distance(polygon_collection) / 1000.0
+        # Add the distances to a list
         distances.append(point_dist)
 
     LOGGER.debug('Distance List Length : %s', len(distances))
