@@ -71,12 +71,12 @@ def execute(args):
     for folder_name in ['Output', 'Service', 'Intermediate']:
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
-            os.mkdir(folder_path)
+            os.makedirs(folder_path)
             
     pixel_dir = workspace_dir + os.sep + 'Output/Pixel'
     
     if not os.path.isdir(pixel_dir):
-        os.mkdir(pixel_dir)
+        os.makedirs(pixel_dir)
     
     #Open all of the gdal files and add to the arguments
     water_yield_args['precipitation'] = gdal.Open(args['precipitation_uri'])
