@@ -125,6 +125,11 @@ def execute(args):
                 LOGGER.info("Found %s categorization." % fileName)
                 userCategorization.append(fileName)
 
+    #making sure there is not landscan categorization
+    if "landscan.tsv" in userCategorization:
+        LOGGER.error("The categorization of the Landscan data is not allowed.")
+        raise ValueError, "The categorization of the Landscan data is not allowed."
+
     #UPLOADING PREDICTORS
     LOGGER.info("Opening predictors for uploading.")
     
@@ -148,6 +153,9 @@ def execute(args):
     datagen, headers = multipart_encode(attachments)
     url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
+
+    #recording server to model parameters
+    args["server"]=config["server"]
 
     #opening request and saving session id
     success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
