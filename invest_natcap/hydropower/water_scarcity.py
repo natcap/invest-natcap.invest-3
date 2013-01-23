@@ -66,7 +66,7 @@ def execute(args):
     for folder_name in ['Output', 'Service', 'Intermediate']:
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
-            os.mkdir(folder_path)
+            os.makedirs(folder_path)
     
     water_scarcity_args = {}
     water_scarcity_args['workspace_dir'] = args['workspace_dir']
