@@ -338,7 +338,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                     if neighbor_effect == effect_nodata:
                         neighbors_to_process.append(outflow_row_index * n_cols + outflow_col_index)
                     else:
-                        neighbor_absorption = absorption_rate_array[row_index, col_index]
+                        neighbor_absorption = absorption_rate_array[outflow_row_index, outflow_col_index]
                         total_effect += outflow_percent_list[offset] * neighbor_effect * neighbor_absorption
 
                 if len(neighbors_to_process) > 0:
