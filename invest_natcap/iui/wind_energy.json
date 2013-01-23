@@ -26,7 +26,7 @@
                     "args_id" : "wind_data_uri",
                     "type": "file",
                     "label": "Wind Data Points",
-                    "defaultValue": "../Wind_Energy/Input/wind_data.bin",
+                    "defaultValue": "../Wind_Energy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
                     "required": true,
                     "helpText": "A binary file that represents the wind energy data points. Please see the users guide on how this file was generated."
                 },
@@ -35,7 +35,7 @@
                     "args_id" : "aoi_uri",
                     "type": "file",
                     "label": "Area Of Interest (AOI)",
-                    "defaultValue": "../Wind_Energy/Input/aoi.shp",
+                    "defaultValue": "../Wind_Energy/input/aoi.shp",
                     "required": false,
                     "requiredIf": ["valuation_container", "distance_container"],
                     "returns": {"ifEmpty": "pass"},
@@ -52,7 +52,7 @@
                     "args_id" : "bathymetry_uri",
                     "type": "file",
                     "label": "Bathymetry (DEM)",
-                    "defaultValue": "../Wind_Energy/Input/bathymetry.adf",
+                    "defaultValue": "../Base_Data/Marine/DEMs/global_dem/hdr.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
                     "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
@@ -62,7 +62,7 @@
                     "args_id" : "land_polygon_uri",
                     "type": "file",
                     "label": "Land Polygon to Calculate Distance From",
-                    "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
+                    "defaultValue": "",
                     "required": false,
                     "enabledBy" : "aoi", 
                     "returns" : {"ifEmpty": "pass"},
@@ -112,7 +112,7 @@
                                 "type": "file",
                                 "label": "Turbine Type",
                                 "required": true,
-                                "helpText": "",
+                                "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. Please see the Users Guide for correctly selecting a turbine type. Also see the Users Guide for information pertaining to providing your own turbine type.",
                                 "validateAs": { "type": "CSV"}
                             },
                             {
@@ -125,7 +125,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]+[0]+$"}},
                                 "required": true,
-                                "helpText": "An integer value for the hub height of the turbines, where the height is a multiple of ten. Ex: 40, 50, 60, ... , 110, 120."
+                                "helpText": "An integer value for the hub height of the turbines, where the height is a multiple of ten. Ex: 40, 50, 60, ... , 110, 120. Please see the Users Guide for selecting a proper height in accordance to the turbine type selected above."
                             },
                             {
                                 "id" : "min_depth",
@@ -215,7 +215,7 @@
                             "type": "text",
                             "label": "Cost of the Foundation Type",
                             "required": true,
-                            "helpText": "lots of helpful comments",
+                            "helpText": "A floating point number for the cost of the foundation type (in millions of dollars). Please see the Users Guide to properly select this value.",
                             "validateAs": { "type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}}
                         },
@@ -223,10 +223,11 @@
                             "id" : "number_of_machines",
                             "args_id": "number_of_machines",
                             "type": "text",
-                            "label": "Number Of Machines",
+                            "label": "Number Of Turbines",
                             "defaultValue": "30",
                             "required": true,
-                            "validText": "[0-9]+"
+                            "validText": "[0-9]+",
+                            "helpText" : "An integer value indicating the number of wind turbines in the wind farm."
                         },
                         {
                             "id" : "dollar_per_kWh",
@@ -238,7 +239,7 @@
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": true,
-                            "helpText": ""
+                            "helpText": "The price of energy per kilowatt hour. Please consult the Users Guide for determining this value." 
                         },
                         {        
                             "id" : "grid_points",
@@ -248,6 +249,7 @@
                             "defaultValue": "",
                             "required": false,
                             "returns": {"ifEmpty": "pass"},
+                            "helpText": "An optional CSV file with grid and land points to determine cable distances from. Each point location is represented as a single row with columns being ID, TYPE, LATI, and LONG. The LATI and LONG columns indicate the coordinates for the point. The TYPE column relates to whether it is a land or grid point. The ID column is a simple unique integer. The shortest distance between respective points is used for calculations. Please see the Users Guide for more information.",
                             "validateAs": { "type": "CSV",
                                             "fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
                                             "restrictions": [{"field": "ID",
@@ -276,7 +278,7 @@
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": false,
                             "requiredIf": ["grid_points"],
-                            "helpText": "Lots of helpful information here"
+                            "helpText": "An optional number that is only required if grid points is NOT used in valuation. When running valuation using the land polygon to compute distances, an average distance is needed for connecting landing points to grid points.  See the Users Guide for helpful hints on selecting a good average distance."
                         }
                     ]
                 }
