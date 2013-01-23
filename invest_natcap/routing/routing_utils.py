@@ -44,6 +44,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing')
+EPS = 1e-6
+
 
 def route_flux(
     dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri,
@@ -244,8 +246,6 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
     _, outflow_direction_nodata = raster_utils.extract_band_and_nodata(
         outflow_direction_dataset)
 
-
-
     outflow_weights_data_file = tempfile.TemporaryFile()
     outflow_weights_array = raster_utils.load_memory_mapped_array(
         outflow_weights_uri, outflow_weights_data_file)
@@ -253,7 +253,6 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
     _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
         outflow_weights_dataset)
     
-
     absorption_rate_data_file = tempfile.TemporaryFile()
     absorption_rate_array = raster_utils.load_memory_mapped_array(
         absorption_rate_uri, absorption_rate_data_file)
@@ -288,6 +287,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
             while len(process_stack) > 0:
 #                LOGGER.debug(len(process_stack))
                 index = process_stack.pop()
+#                LOGGER.debug(index)
                 row_index = index / n_cols
                 col_index = index % n_cols
 
@@ -302,6 +302,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
 
                 #if the outflow weight is nodata, then it's not even a valid pixel
                 outflow_weight = outflow_weights_array[row_index, col_index]
+#                LOGGER.debug("outflow_weight %s" % outflow_weight)
                 if outflow_weight == outflow_weights_nodata:
                     continue
                 #Precalculate the outgoing weights
@@ -312,6 +313,10 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                 total_effect = 0.0
 
                 for offset in range(2):
+                    #Make sure that there is outflow 
+                    if abs(outflow_percent_list[offset]) < EPS:
+                        continue
+
                     outflow_direction = outflow_direction_array[row_index, col_index]
                     if outflow_direction == outflow_direction_nodata:
                         continue
@@ -325,8 +330,12 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                     if outflow_col_index < 0 or outflow_col_index >= n_cols:
                         continue
 
+                    neighbor_outflow_weight = outflow_weights_array[outflow_row_index, outflow_col_index]
+                    if neighbor_outflow_weight == outflow_weights_nodata:
+                        continue
+
                     neighbor_effect = effect_array[outflow_row_index, outflow_col_index]
-                    if neighbor_effect  == effect_nodata:
+                    if neighbor_effect == effect_nodata:
                         neighbors_to_process.append(outflow_row_index * n_cols + outflow_col_index)
                     else:
                         neighbor_absorption = absorption_rate_array[row_index, col_index]
@@ -335,6 +344,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                 if len(neighbors_to_process) > 0:
                     process_stack.append(index)
                     process_stack.extend(neighbors_to_process)
+#                    LOGGER.debug("%s %s" % (index, str(neighbors_to_process)))
                     continue
 
                 effect_array[row_index, col_index] = total_effect
