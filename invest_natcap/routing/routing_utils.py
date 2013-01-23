@@ -295,18 +295,29 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                         outflow_current_col_index = current_col_index + col_offsets[offset % 8]
                         if outflow_current_col_index < 0 or outflow_current_col_index >= n_cols:
                             continue
-                        
-
 
                         if effect_array[outflow_current_row_index, outflow_current_col_index] == effect_nodata:
                             calculated = False
 
-                    if not calculated:
+                    if calculated:
                         #push on the stack
                         effect_array[current_row_index, current_col_index] = 0.0
+
+                        for offset in range(2):
+                            outflow_current_row_index = current_row_index + row_offsets[offset % 8]
+                            if outflow_current_row_index < 0 or outflow_current_row_index >= n_rows:
+                                continue
+
+                            outflow_current_col_index = current_col_index + col_offsets[offset % 8]
+                            if outflow_current_col_index < 0 or outflow_current_col_index >= n_cols:
+                                continue
+                            
+                            effect_array[current_row_index, current_col_index] += \
+                                effect_array[outflow_current_row_index, outflow_current_col_index] * \
+                                absorption_rate_array[outflow_current_row_index, outflow_current_col_index] * \
+
                         pass
                     else:
                         effect_array[current_row_index, current_col_index] = 1.0
                 
     effect_band.WriteArray(effect_array, 0, 0)
-
