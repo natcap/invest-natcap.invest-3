@@ -246,6 +246,11 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
     outflow_direction_data_file = tempfile.TemporaryFile()
     outflow_direction_array = raster_utils.load_memory_mapped_array(
         outflow_direction_uri, outflow_direction_data_file)
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    _, outflow_direction_nodata = raster_utils.extract_band_and_nodata(
+        outflow_direction_dataset)
+
+
 
     outflow_weights_data_file = tempfile.TemporaryFile()
     outflow_weights_array = raster_utils.load_memory_mapped_array(
@@ -276,8 +281,6 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
     row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
-
-
     process_stack = collections.deque()
 
     for loop_col_index in xrange(n_cols):
@@ -291,7 +294,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
 
             process_stack.append(loop_row_index * n_cols + loop_col_index)
             while len(process_stack) > 0:
-                LOGGER.debug(len(process_stack))
+#                LOGGER.debug(len(process_stack))
                 index = process_stack.pop()
                 row_index = index / n_cols
                 col_index = index % n_cols
@@ -308,12 +311,19 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                 #Used to see if outflow neighbors already have their effects
                 outflow_effect_calculated = True
                 for offset in range(2):
-                    outflow_row_index = row_index + row_offsets[offset % 8]
+                    outflow_direction = outflow_direction_array[row_index, col_index]
+                    if outflow_direction == outflow_direction_nodata:
+                        continue
+                    #Offset the rotation if necessary
+                    outflow_direction = (outflow_direction + offset) % 8
+
+                    outflow_row_index = row_index + row_offsets[outflow_direction]
                     if outflow_row_index < 0 or outflow_row_index >= n_rows:
                         continue
-                    outflow_col_index = col_index + col_offsets[offset % 8]
+                    outflow_col_index = col_index + col_offsets[outflow_direction]
                     if outflow_col_index < 0 or outflow_col_index >= n_cols:
                         continue
+
                     if effect_array[outflow_row_index, outflow_col_index] == effect_nodata:
                         outflow_effect_calculated = False
 
@@ -324,37 +334,45 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                     outflow_percent_list = [outflow_weight, 1.0 - outflow_weight]
 
                     for offset in range(2):
-                        outflow_row_index = row_index + row_offsets[offset % 8]
+                        outflow_direction = outflow_direction_array[row_index, col_index]
+                        if outflow_direction == outflow_direction_nodata:
+                            continue
+                        #Offset the rotation if necessary
+                        outflow_direction = (outflow_direction + offset) % 8
+
+                        outflow_row_index = row_index + row_offsets[outflow_direction]
                         if outflow_row_index < 0 or outflow_row_index >= n_rows:
                             continue
-                        outflow_col_index = col_index + col_offsets[offset % 8]
+                        outflow_col_index = col_index + col_offsets[outflow_direction]
                         if outflow_col_index < 0 or outflow_col_index >= n_cols:
                             continue
 
-                        #see if neighbor is valid
-                        if absorption_rate_array[outflow_row_index, outflow_col_index] != outflow_weights_nodata:
-                            effect_array[row_index, col_index] += \
-                                effect_array[outflow_row_index, outflow_col_index] * \
-                                absorption_rate_array[outflow_row_index, outflow_col_index] * \
-                                outflow_percent_list[offset]
+                        effect_array[row_index, col_index] += \
+                            effect_array[outflow_row_index, outflow_col_index] * \
+                            absorption_rate_array[outflow_row_index, outflow_col_index] * \
+                            outflow_percent_list[offset]
                 else:
                     #push on the stack
                     process_stack.append(index)
-                    LOGGER.debug('pushing current index to process later %s' % index)
+#                    LOGGER.debug('pushing current index to process later %s' % index)
 
                     for offset in range(2):
-                        outflow_row_index = row_index + row_offsets[offset % 8]
+                        outflow_direction = outflow_direction_array[row_index, col_index]
+                        if outflow_direction == outflow_direction_nodata:
+                            continue
+                        #Offset the rotation if necessary
+                        outflow_direction = (outflow_direction + offset) % 8
+
+                        outflow_row_index = row_index + row_offsets[outflow_direction]
                         if outflow_row_index < 0 or outflow_row_index >= n_rows:
                             continue
-                        outflow_col_index = col_index + col_offsets[offset % 8]
+                        outflow_col_index = col_index + col_offsets[outflow_direction]
                         if outflow_col_index < 0 or outflow_col_index >= n_cols:
                             continue
 
-                        if outflow_weights_array[outflow_row_index, outflow_col_index] != outflow_weights_nodata:
-                            outflow_index = outflow_row_index * n_cols + outflow_col_index
-                            LOGGER.debug('pushing outflow index to process later %s' % outflow_index)
-
-                            process_stack.append(outflow_index)
+                        outflow_index = outflow_row_index * n_cols + outflow_col_index
+#                        LOGGER.debug('pushing outflow index to process later %s' % outflow_index)
+                        process_stack.append(outflow_index)
 
     effect_band.WriteArray(effect_array, 0, 0)
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % (time.clock() - start))
