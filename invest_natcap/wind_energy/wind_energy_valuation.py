@@ -293,10 +293,29 @@ def dictionary_to_shapefile(dict_data, layer_name, output_uri):
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
     LOGGER.debug('field_list : %s', field_list)
+    
+    # Create a dictionary to store what variable types the fields are
+    type_dict = {}
+    for field in field_list:
+        # Get a value from the field
+        val = dict_data[dict_data.keys()[0]][field]
+        
+        if isinstance(val, str):
+            type_dict[field] = 'str'
+        else:
+            type_dict[field] = 'number'
 
     LOGGER.info('Creating fields for the datasource')
     for field in field_list:
-        output_field = ogr.FieldDefn(field, ogr.OFTReal)   
+        field_type = None
+        # Distinguish if the field type is of type String or other. If Other, we
+        # are assuming it to be a float
+        if type_dict[field] == 'str':
+            field_type = ogr.OFTString
+        else:
+            field_type = ogr.OFTReal
+        
+        output_field = ogr.FieldDefn(field, field_type)   
         output_layer.CreateField(output_field)
 
     LOGGER.info('Entering iteration to create and set the features')
