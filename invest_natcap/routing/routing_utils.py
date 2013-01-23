@@ -314,7 +314,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                             
                             effect_array[current_row_index, current_col_index] += \
                                 effect_array[outflow_current_row_index, outflow_current_col_index] * \
-                                absorption_rate_array[outflow_current_row_index, outflow_current_col_index] * \
+                                absorption_rate_array[outflow_current_row_index, outflow_current_col_index] #* \
 
                         pass
                     else:
