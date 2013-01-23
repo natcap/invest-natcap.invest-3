@@ -155,6 +155,7 @@ def execute(args):
     #risk for a habitat would just be this risk value * the number of stressor
     #pairs that apply to it.
     max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
+    hra_args['max_risk'] = max_r
 
     #Take all shapefiles in both the habitats and the stressors folders and
     #make them into rasters of grid_size by grid_size resolution.
