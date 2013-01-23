@@ -42,6 +42,9 @@ def execute(args):
             in calculating risk scores for each H-S overlap cell.
         args['decay_eq']- A string identifying the equation that should be used
             in calculating the decay of stressor buffer influence.
+        args['max_rating']- An int representing the highest potential value that
+            should be represented in rating, data quality, or weight in the
+            CSV table.
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
@@ -146,6 +149,12 @@ def execute(args):
     hra_args['workspace_dir'] = args['workspace_dir']
     
     hra_args['risk_eq'] = args['risk_eq']
+    
+    #Depending on the risk calculation equation, this should return the highest
+    #possible value of risk for any given habitat-stressor pairing. The highest
+    #risk for a habitat would just be this risk value * the number of stressor
+    #pairs that apply to it.
+    max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
 
     #Take all shapefiles in both the habitats and the stressors folders and
     #make them into rasters of grid_size by grid_size resolution.
