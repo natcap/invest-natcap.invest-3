@@ -119,18 +119,30 @@ class ModelUITest(unittest.TestCase):
 
         files_to_check = [
             'Output/tot_C_cur.tif',
-            'Output/sequest.tif'
+            'Output/tot_C_fut.tif',
+            'Output/sequest.tif',
+            'Intermediate/bio_hwp_cur.tif',
+            'Intermediate/bio_hwp_fut.tif',
+            'Intermediate/c_hwp_cur.tif',
+            'Intermediate/c_hwp_fut.tif',
+            'Intermediate/vol_hwp_cur.tif',
+            'Intermediate/vol_hwp_fut.tif'
         ]
         self.click_through_model(model_ui, files_to_check)
 
 
+        # Now that we've run the carbon biophysical model and checked that all
+        # required files exist, do the same steps with carbon valuation.
         file_path = os.path.join(FILE_BASE, 'carbon_valuation.json')
         valuation_ui = modelui.ModelUI(file_path, True)
 
+        # The sequestration file field needs to be set to contain the URI of the
+        # sequestration raster output from the biophysical model.
         sequest_element = valuation_ui.allElements['sequest_uri']
         sequest_element.setValue(os.path.join(TEST_WORKSPACE, 'Output',
             'sequest.tif'))
 
+        # only one output file to check!
         files_to_check = [
             'Output/value_seq.tif'
         ]
