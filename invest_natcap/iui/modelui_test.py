@@ -22,8 +22,6 @@ if platform.system() == 'Windows':
 else:
     FILE_BASE = os.path.dirname(os.path.abspath(__file__))
 
-TEST_WORKSPACE = '/tmp/test_workspace'
-
 # Define a new exception class for when the worspace args_id is not found in the
 # json definition
 class WorkspaceNotFound(Exception): pass
@@ -57,6 +55,14 @@ def locate_workspace_element(ui):
 class ModelUITest(unittest.TestCase):
     """This test class exists to contain click-through tests for all InVEST 3.0
     models that use the ModelUI user interface.
+
+    For each test, the following class-level attributes are created, which might
+    be useful to a tester:
+        self.workspace - the workspace folder that will be used for the model.
+            This folder is created using the tempfile module before each test,
+            and is deleted after each test.
+        self.app - an instance of QtGui.QApplication, required for the
+            functioning of Qt.
 
     Here is an example test, where no user interaction is required:
 
@@ -141,6 +147,7 @@ class ModelUITest(unittest.TestCase):
     difficulty with some component of this test or the UI, email James ... it's
     probably my fault anyways :).
     """
+
     def click_through_model(self, model_ui, files_to_check):
         """Click through a standard modelui interface.
 
@@ -154,7 +161,7 @@ class ModelUITest(unittest.TestCase):
 
         workspace_element = locate_workspace_element(model_ui)
 
-        workspace_element.setValue(TEST_WORKSPACE)
+        workspace_element.setValue(self.workspace)
         QTest.qWait(100)  # Wait for the test workspace to validate
 
         # Assert that the test workspace didn't get a validation error.
@@ -181,7 +188,7 @@ class ModelUITest(unittest.TestCase):
 
         missing_files = []
         for filepath in files_to_check:
-            full_filepath = os.path.join(TEST_WORKSPACE, filepath)
+            full_filepath = os.path.join(self.workspace, filepath)
             if not os.path.exists(full_filepath):
                 missing_files.append(filepath)
 
@@ -191,6 +198,7 @@ class ModelUITest(unittest.TestCase):
     def setUp(self):
         # Before the test is run, we need to move the existing lastrun folder to
         # a temp folder.
+        self.workspace = tempfile.mkdtemp()
         self.settings_folder = invest_natcap.iui.fileio.settings_folder()
         self.settings_folder_name = os.path.basename(self.settings_folder)
         self.temp_folder = tempfile.mkdtemp()
@@ -209,7 +217,7 @@ class ModelUITest(unittest.TestCase):
         self.app = None
         try:
             # Remove the workspace directory for the next test.
-            shutil.rmtree(TEST_WORKSPACE)
+            shutil.rmtree(self.workspace)
         except OSError:
             # Thrown when there's no workspace to remove.
             pass
@@ -273,7 +281,7 @@ class ModelUITest(unittest.TestCase):
         # The sequestration file field needs to be set to contain the URI of the
         # sequestration raster output from the biophysical model.
         sequest_element = valuation_ui.allElements['sequest_uri']
-        sequest_element.setValue(os.path.join(TEST_WORKSPACE, 'Output',
+        sequest_element.setValue(os.path.join(self.workspace, 'Output',
             'sequest.tif'))
 
         # only one output file to check!
