@@ -14,6 +14,7 @@ import codecs
 
 import invest_natcap
 import invest_natcap.iui
+from invest_natcap.iui import fileio as iui_fileio
 from invest_natcap.invest_core import fileio as fileio
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
@@ -406,7 +407,7 @@ class Executor(threading.Thread):
 
         # we want to save this file to the current directory until the model
         # finishes, when we copy the log into the model's workspace
-        settings_folder = invest_natcap.iui.fileio.settings_folder()
+        settings_folder = iui_fileio.settings_folder()
         settings_folder = settings_folder.decode(ENCODING)
         log_file_uri = os.path.abspath(os.path.join(settings_folder,
             filename))
