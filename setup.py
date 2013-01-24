@@ -89,7 +89,8 @@ if platform.system() == 'Windows':
          'invest_overlap_analysis_mz.py',
          'invest_sediment_biophysical.py',
          'invest_habitat_risk_assessment.py',
-         'invest_coastal_vulnerability.py']
+         'invest_coastal_vulnerability.py',
+         'invest_test_all.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory

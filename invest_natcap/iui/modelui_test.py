@@ -6,8 +6,16 @@ from PyQt4.QtCore import Qt
 import modelui
 import shutil
 import os
+import platform
 
-FILE_BASE = os.path.dirname(os.path.abspath(__file__))
+# If we're on Windows, we know that the model JSON files are located in the
+# InVEST root.  If we're on Linux, they're in the iui module, along with this
+# test file.
+if platform.system() == 'Windows':
+    FILE_BASE = '.'
+else:
+    FILE_BASE = os.path.dirname(os.path.abspath(__file__))
+
 TEST_WORKSPACE = '/tmp/test_workspace'
 
 # Define a new exception class for when the worspace args_id is not found in the
