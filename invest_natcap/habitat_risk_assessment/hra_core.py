@@ -122,6 +122,8 @@ def make_risk_shapes(dir, crit_lists, h_list, max_risk):
     percentage of risk over potential risk) are the only existing polygonized
     areas.'''
 
+
+
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same as the individual E/C calculations, but instead
     will be r/dq for each criteria.
@@ -160,14 +162,11 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                          }
             }
     '''
-    #This will give up two np lists where we have only the unique habs and
-    #stress for the system.
-    habitats = map((lambda pair: pair[0], denoms))
-    habitats = np.array(habitats)
-    habitats = np.unique(habitats)
-
+    #Want all of the unique habitat names
+    habitats = denoms['Recovery'].keys()
+    
     #First, going to try doing everything all at once. For every habitat,
-    #concat the lists of 
+    #concat the lists of criteria rasters.
     for h in habitats:
 
         def add_recov_pix(*pixels):
