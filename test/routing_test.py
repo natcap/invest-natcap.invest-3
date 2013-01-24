@@ -63,7 +63,7 @@ class TestRasterUtils(unittest.TestCase):
         outflow_weights_uri = os.path.join(base_dir, 'outflow_weights.tif')
 
         routing_utils.percent_to_sink(stream_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
-        subprocess.Popen(['qgis', stream_uri, effect_uri])
+#        subprocess.Popen(['qgis', stream_uri, effect_uri])
         invest_test_core.assertTwoDatasetEqualURI(self, effect_uri, effect_regression_uri)
 
 

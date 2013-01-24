@@ -93,5 +93,5 @@ class TestWindEnergyValuation(unittest.TestCase):
 
         result = None
 
-        #invest_test_core.assertTwoShapesEqualURI(
-        #self, expected_uri, out_uri)
+        invest_test_core.assertTwoShapesEqualURI(
+                self, expected_uri, out_uri)
