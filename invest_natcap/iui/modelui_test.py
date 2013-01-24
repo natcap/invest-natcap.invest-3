@@ -15,6 +15,14 @@ TEST_WORKSPACE = '/tmp/test_workspace'
 class WorkspaceNotFound(Exception): pass
 
 def locate_workspace_element(ui):
+    """Locate the workspace element, denoted by the args id 'workspace_dir'.
+
+        ui - an instance of invest_natcap.iui.modelui.ModelUI to query.
+
+        Raises a WorkspaceNotFound exception if the workspace is not found.
+        If the workspace is found, returns a pointer to the matching element.
+        """
+
     for element_id, element in ui.allElements.iteritems():
         try:
             args_id = element.attributes['args_id']
@@ -33,7 +41,103 @@ def locate_workspace_element(ui):
 
 
 class ModelUITest(unittest.TestCase):
+    """This test class exists to contain click-through tests for all InVEST 3.0
+    models that use the ModelUI user interface.
+
+    Here is an example test, where no user interaction is required:
+
+    >>> def test_example(self):
+    >>>     # Define a path to the example json file.  If your json file is located
+    >>>     # in the iui directory, use the FILE_BASE folder, defined above.
+    >>>     # If your json file is located elsewhere on disk, you may define the
+    >>>     # file however you like.
+    >>>     file_path_to_json = os.path.join(FILE_BASE, 'example.json')
+    >>>     model_ui = modelui.ModelUI(file_path_to_json, use_gui=True)
+    >>>
+    >>>     # Define a list of files relative to the output path to check once
+    >>>     # the tool has finished running.  All paths in this list will be
+    >>>     # asserted to exist.  This is case-sensitive, as it will be run on
+    >>>     # both Windows and Linux.
+    >>>     files_to_check = [
+    >>>         'output/file_1.tif',
+    >>>         'output/file_2.tif',
+    >>>         'intermediate/file_a.tif',
+    >>>         'intermediate/file_b.tif'
+    >>>     ]
+    >>>     
+    >>>     # Run a helper function to actually click through the modelui and
+    >>>     # check that the required files exist.  An exception will be raised if
+    >>>     # a problem is found.
+    >>>     self.click_through_model(model_ui, files_to_check)
+
+
+
+    If a particular model requires user input, you may need to interact with the
+    `model_ui` object before calling `self.click_through_model()`.  The
+    interaction here will probably differ based on the interaction required.
+
+    Here is an example from the Carbon model's clickthrough test, where an
+    element needs to be selected and its state altered.
+
+    >>> # Define the file path, as needed for the model_ui
+    >>> file_path = os.path.join(FILE_BASE, 'carbon_biophysical.json')
+    >>> model_ui = modelui.ModelUI(file_path, use_gui=True)
+    >>>
+    >>> # since we need to test both carbon biophysical and valuation, we need
+    >>> # to check the checkbox to actually trigger the calculation of
+    >>> # sequestration so that the valuation component can be run.
+    >>> checkbox = model_ui.allElements['calc_sequestration']
+    >>> checkbox.setValue(True)
+    >>> QTest.qWait(500)  # so that validation can finish for enabled elements.
+
+    Let's go into this in detail a bit.
+    ===============================
+    SELECTING AN ELEMENT:
+    >>> checkbox = model_ui.allElements['calc_sequestration']
+
+    In the above example, we can see that the `model_ui` object has an
+    attribute called `allElements`.  This attribute is a flat dictionary
+    mapping {"element_id (from JSON)": element_pointer}.  To locate an
+    element pointer, you must query this dictionary with the element ID
+    specified in the UI's JSON object.
+
+
+    SETTING THE ELEMENT VALUE:
+    >>> checkbox.setValue(True)
+    >>> QTest.qWait(500)  # so that validation can finish for enabled elements.
+
+    Most elements have a `setValue()` function, that takes a sensible input and
+    appropriately sets the value of the widget element.  In the case of a
+    checkbox element, it takes a boolean indicating the check state.  In the
+    case of a file or folder element, it will take a string URI and set the
+    field.  IMPORTANT: affecting the state of the UI will cause a cascade of
+    other elements to in turn be affected, which will frequently cause
+    validation to occur.  When validation happens, the UI is only informed of
+    validation completion once every 50 ms.  So when you set the value of an
+    element, it is CRITICAL that you call `QTest.qWait()` (with a reasonable
+    number of milliseconds as the argument to qWait) to allow validation to
+    complete for all affected elements.
+
+
+    Also note that if you are trying to test multiple UIs in sequence, this is
+    definitely possible to do.  See the `test_carbon()` function, below, for an
+    example of how this can be done.
+
+    Finally, if you have any questions about the UI, or if you're experiencing
+    difficulty with some component of this test or the UI, email James ... it's
+    probably my fault anyways :).
+    """
     def click_through_model(self, model_ui, files_to_check):
+        """Click through a standard modelui interface.
+
+            model_ui - an instance of invest_natcap.iui.modelui.ModelUI
+            files_to_check - a list of strings.  Each string must be a URI
+                relative to the workspace.  All files at these URIs are required
+                to exist.  An AssertionError will be thrown if a file does not
+                exist.
+
+        Returns nothing."""
+
         workspace_element = locate_workspace_element(model_ui)
 
         workspace_element.setValue(TEST_WORKSPACE)
@@ -85,9 +189,7 @@ class ModelUITest(unittest.TestCase):
 
 
     def test_pollination(self):
-        self.skipTest('')
-        file_path = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(file_path, 'pollination.json')
+        file_path = os.path.join(FILE_BASE, 'pollination.json')
         model_ui = modelui.ModelUI(file_path, True)
 
         files_to_check = [
@@ -110,10 +212,10 @@ class ModelUITest(unittest.TestCase):
         model_ui = modelui.ModelUI(file_path, True)
 
         # since we need to test both carbon biophysical and valuation, we need
-        # to check the checox to actually trigger the calculation of
+        # to check the checkbox to actually trigger the calculation of
         # sequestration so that the valuation component can be run.
         checkbox = model_ui.allElements['calc_sequestration']
-        checkbox.setChecked(True)
+        checkbox.setValue(True)
         #QTest.mouseClick(checkbox, Qt.MouseButton(1))
         QTest.qWait(500)  # so that validation can finish for enabled elements.
 
