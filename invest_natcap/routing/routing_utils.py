@@ -27,8 +27,6 @@
 
 import os
 import logging
-import collections
-import time
 import tempfile
 import shutil
 
@@ -183,12 +181,15 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
         gdal.GDT_Float32)
 
+    flow_length_pixel_size = raster_utils.pixel_size(flow_length_dataset)
+
     def flow_length(flow_direction):
         """Function to calculate flow length for vectorize_rasters"""
         if flow_direction == flow_direction_nodata:
             return flow_length_nodata
-        #TODO: fix this calculation
-        return abs(numpy.sin(flow_direction)) + abs(numpy.cos(flow_direction))
+        sin_val = numpy.abs(numpy.sin(flow_direction))
+        cos_val = numpy.abs(numpy.cos(flow_direction))
+        return flow_length_pixel_size/numpy.maximum(sin_val, cos_val)
 
     raster_utils.vectorize_rasters(
         [flow_direction_dataset], flow_length, aoi=None,
