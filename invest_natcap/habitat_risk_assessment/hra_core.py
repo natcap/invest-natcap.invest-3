@@ -101,16 +101,16 @@ def execute(args):
     #We will combine all of the h-s rasters of the same habitat into
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
-    h_risk_list = make_hab_risk_raster(maps_dir, risk_dict)
+    h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
     #Also want to output a polygonized version of high risk areas in each
     #habitat. Will polygonize everything that falls above a certain percentage
     #of the total raster risk.
-    make_risk_shapes(maps_dir, crit_lists, h_risk_list, args['max_risk'])
+    make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
 
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
-    make_ecosys_risk_raster(maps_dir, h_risk_list)
+    make_ecosys_risk_raster(maps_dir, h_risk_dict)
 
     #Recovery potential will use the 'Recovery' subdictionary from the
     #crit_lists and denoms dictionaries
@@ -187,7 +187,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                          nodata = 0)
 
 
-def make_ecosys_risk_raster(dir, h_list):
+def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
 
     Input:
@@ -200,6 +200,9 @@ def make_ecosys_risk_raster(dir, h_list):
 
     Returns nothing.
     '''
+    #Need a straight list of the values from h_dict
+    h_list = map((lambda key: h_dict[key], h_dict.keys()))
+
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
     def add_e_pixels(*pixels):
@@ -233,8 +236,9 @@ def make_hab_risk_raster(dir, risk_dict):
         A cumulative risk raster for every habitat included within the model.
     
     Returns:
-        h_rasters- A list containing open datasets corresponding to all
-            habitats being observed within the model.
+        h_rasters- A dictionary containing habitat names mapped directly to
+            open datasets corresponding to all habitats being observed within 
+            the model.
     '''
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
@@ -259,7 +263,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
     #List to store the completed h rasters in. Will be passed on to the
     #ecosystem raster function to be used in vectorize_raster.
-    h_rasters = []
+    h_rasters = {} 
 
     #Run through all potential pairings, and make lists for the ones that
     #share the same habitat.
@@ -278,7 +282,7 @@ def make_hab_risk_raster(dir, risk_dict):
                                  aoi = None, raster_out_uri = out_uri,
                                  datatype=gdal.GDT_Float32, nodata = 0)
 
-        h_rasters.append(h_rast)
+        h_rasters[h] = h_rast
 
     return h_rasters
 
