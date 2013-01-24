@@ -7,6 +7,7 @@ import modelui
 import shutil
 import os
 
+FILE_BASE = os.path.dirname(os.path.abspath(__file__))
 TEST_WORKSPACE = '/tmp/test_workspace'
 
 # Define a new exception class for when the worspace args_id is not found in the
@@ -32,9 +33,7 @@ def locate_workspace_element(ui):
 
 
 class ModelUITest(unittest.TestCase):
-    def click_through_model(self, json_uri, files_to_check):
-        model_ui = modelui.ModelUI(json_uri, True)
-
+    def click_through_model(self, model_ui, files_to_check):
         workspace_element = locate_workspace_element(model_ui)
 
         workspace_element.setValue(TEST_WORKSPACE)
@@ -75,6 +74,7 @@ class ModelUITest(unittest.TestCase):
         self.app = QtGui.QApplication(sys.argv)
 
     def tearDown(self):
+        self.app.instance().exit()
         try:
             # Remove the workspace directory for the next test.
             shutil.rmtree(TEST_WORKSPACE)
@@ -85,6 +85,7 @@ class ModelUITest(unittest.TestCase):
     def test_pollination(self):
         file_path = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(file_path, 'pollination.json')
+        model_ui = modelui.ModelUI(file_path, True)
 
         files_to_check = [
             'intermediate/frm_Apis_cur.tif',
@@ -99,9 +100,32 @@ class ModelUITest(unittest.TestCase):
             'output/sup_tot_cur.tif'
         ]
 
-        self.click_through_model(file_path, files_to_check)
+        self.click_through_model(model_ui, files_to_check)
+
+    def test_carbon(self):
+        file_path = os.path.join(FILE_BASE, 'carbon_biophysical.json')
+        model_ui = modelui.ModelUI(file_path, True)
+
+        # since we need to test both carbon biophysical and valuation, we need
+        # to check the checox to actually trigger the calculation of
+        # sequestration so that the valuation component can be run.
+        checkbox = model_ui.allElements['calc_sequestration']
+        QTest.mouseClick(checkbox, Qt.MouseButton(1))
+
+        files_to_check = [
+            'Output/tot_C_cur.tif',
+            'Output/sequest.tif'
+        ]
+        self.click_through_model(model_ui, files_to_check)
 
 
+        file_path = os.path.join(FILE_BASE, 'carbon_valuation.json')
+        valuation_ui = modelui.ModelUI(file_path, True)
+
+        files_to_check = [
+            'Output/value_seq.tif'
+        ]
+        self.click_through_model(valuation_ui, files_to_check)
 
 if __name__ == '__main__':
     # This call to unittest.main() runs all unittests in this test suite, much
