@@ -116,7 +116,6 @@ def execute(args):
     raster_utils.reclassify_dataset(
         lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
-
     
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
@@ -141,7 +140,6 @@ def execute(args):
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
         v_stream_uri, usle_uri)
 
-
     LOGGER.info('building alpha raster from lulc')
     lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha']))  for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_alpha_dict %s' % lulc_to_alpha_dict)
@@ -150,25 +148,32 @@ def execute(args):
         lulc_dataset, lulc_to_alpha_dict, alpha_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
-
     LOGGER.info('calculate the SDR term')
     flow_length_uri = os.path.join(intermediate_dir, 'flow_length.tif')
     routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
 
-
     sdr_uri = os.path.join(intermediate_dir, 'sdr.tif')
-
-
-
     sediment_core.calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri)
+
+    effect_uri = os.path.join(intermediate_dir, 'effect.tif')
+
+
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
+    outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights.tif')
+    outflow_direction_uri = os.path.join(
+        intermediate_dir, 'outflow_directions.tif')
+    routing_cython_core.calculate_flow_direction(args['dem_uri'], flow_direction_uri)
+    sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
 
     LOGGER.info('backtrace the sediment reaching the streams')
-
-
+    routing_cython_core.percent_to_sink(
+        v_stream_uri, sdr_uri, outflow_direction_uri, outflow_weights_uri,
+        effect_uri)
 
 
     return
