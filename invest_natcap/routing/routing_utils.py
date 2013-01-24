@@ -318,24 +318,23 @@ def percent_to_sink(
                 neighbors_to_process = collections.deque()
                 total_effect = 0.0
 
+                outflow_direction = \
+                    outflow_direction_array[row_index, col_index]
+
                 for offset in range(2):
                     #Make sure that there is outflow 
                     if abs(outflow_percent_list[offset]) < EPS:
                         continue
 
-                    outflow_direction = \
-                        outflow_direction_array[row_index, col_index]
-                    if outflow_direction == outflow_direction_nodata:
-                        continue
                     #Offset the rotation if necessary
-                    outflow_direction = (outflow_direction + offset) % 8
+                    outflow_direction_offset = (outflow_direction + offset) % 8
 
                     outflow_row_index = \
-                        row_index + row_offsets[outflow_direction]
+                        row_index + row_offsets[outflow_direction_offset]
                     if outflow_row_index < 0 or outflow_row_index >= n_rows:
                         continue
                     outflow_col_index = \
-                        col_index + col_offsets[outflow_direction]
+                        col_index + col_offsets[outflow_direction_offset]
                     if outflow_col_index < 0 or outflow_col_index >= n_cols:
                         continue
 
