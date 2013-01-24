@@ -329,6 +329,7 @@ def percent_to_sink(
                     #Offset the rotation if necessary
                     outflow_direction_offset = (outflow_direction + offset) % 8
 
+                    #Check if outflow cell is in bounds
                     outflow_row_index = \
                         row_index + row_offsets[outflow_direction_offset]
                     if outflow_row_index < 0 or outflow_row_index >= n_rows:
@@ -338,9 +339,16 @@ def percent_to_sink(
                     if outflow_col_index < 0 or outflow_col_index >= n_cols:
                         continue
 
+                    #Make sure outflow neighbor is valid
                     neighbor_outflow_weight = outflow_weights_array[
                         outflow_row_index, outflow_col_index]
                     if neighbor_outflow_weight == outflow_weights_nodata:
+                        #This is an interesting case where the outflow of
+                        #a valid cell validly flows into a cell w/ nodata
+                        #so it gets a 0 contribution to the total_effect
+                        #it seems to happen on the edges and is a defect with
+                        #the d-infinity flow algorithm specifying flows in
+                        #invalid directions
                         continue
 
                     neighbor_effect = \
