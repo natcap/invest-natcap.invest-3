@@ -54,8 +54,6 @@ class TestRasterUtils(unittest.TestCase):
         routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
 
-
-
         effect_uri = os.path.join(base_dir, 'effect.tif')
         effect_regression_uri = 'data/routing_regression/effect.tif'
 
