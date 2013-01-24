@@ -25,6 +25,8 @@ def execute(args):
             risk calculation. Possible risk equations are 'Multiplicative',
             which would multiply E and C, and 'Exponential', which would use
             the equation sqrt((C-1)^2 + (E-1)^2).
+        args['max_risk']- The highest possible risk value for any given pairing
+            of habitat and stressor.
         args['h-s']- A multi-level structure which holds all criteria ratings, 
             both numerical and raster that apply to habitat and stressor 
             overlaps. The structure, whose keys are tuples of 
@@ -101,6 +103,11 @@ def execute(args):
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_list = make_hab_risk_raster(maps_dir, risk_dict)
 
+    #Also want to output a polygonized version of high risk areas in each
+    #habitat. Will polygonize everything that falls above a certain percentage
+    #of the total raster risk.
+    make_risk_shapes(maps_dir, crit_lists, h_risk_list, args['max_risk'])
+
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
     make_ecosys_risk_raster(maps_dir, h_risk_list)
@@ -108,6 +115,12 @@ def execute(args):
     #Recovery potential will use the 'Recovery' subdictionary from the
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
+
+def make_risk_shapes(dir, crit_lists, h_list, max_risk):
+    '''This function will take in the current rasterized risk files for each
+    habitat, and output a shapefile where the areas that are "HIGH RISK" (high
+    percentage of risk over potential risk) are the only existing polygonized
+    areas.'''
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same as the individual E/C calculations, but instead
