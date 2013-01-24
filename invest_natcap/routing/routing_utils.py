@@ -285,9 +285,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
 
             process_stack.append(loop_row_index * n_cols + loop_col_index)
             while len(process_stack) > 0:
-#                LOGGER.debug(len(process_stack))
                 index = process_stack.pop()
-#                LOGGER.debug(index)
                 row_index = index / n_cols
                 col_index = index % n_cols
 
@@ -302,7 +300,6 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
 
                 #if the outflow weight is nodata, then it's not even a valid pixel
                 outflow_weight = outflow_weights_array[row_index, col_index]
-#                LOGGER.debug("outflow_weight %s" % outflow_weight)
                 if outflow_weight == outflow_weights_nodata:
                     continue
                 #Precalculate the outgoing weights
@@ -339,12 +336,11 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                         neighbors_to_process.append(outflow_row_index * n_cols + outflow_col_index)
                     else:
                         neighbor_absorption = absorption_rate_array[outflow_row_index, outflow_col_index]
-                        total_effect += outflow_percent_list[offset] * neighbor_effect * neighbor_absorption
+                        total_effect += outflow_percent_list[offset] * neighbor_effect * (1.0 - neighbor_absorption)
 
                 if len(neighbors_to_process) > 0:
                     process_stack.append(index)
                     process_stack.extend(neighbors_to_process)
-#                    LOGGER.debug("%s %s" % (index, str(neighbors_to_process)))
                     continue
 
                 effect_array[row_index, col_index] = total_effect
