@@ -74,6 +74,29 @@ class ModelUITest(unittest.TestCase):
         # return toe the UI.
         QTest.mouseClick(model_ui.operationDialog.backButton, Qt.MouseButton(1))
 
+        files_to_check = [
+            'intermediate/frm_Apis_cur.tif',
+            'intermediate/hf_Apis_cur.tif',
+            'intermediate/hn_Apis_cur.tif',
+            'intermediate/sup_Apis_cur.tif',
+            'intermediate/frm_Bombus_cur.tif',
+            'intermediate/hf_Bombus_cur.tif',
+            'intermediate/hn_Bombus_cur.tif',
+            'intermediate/sup_Bombus_cur.tif',
+            'output/frm_avg_cur.tif',
+            'output/sup_tot_cur.tif'
+        ]
+
+        missing_files = []
+        for filepath in files_to_check:
+            filepath = os.path.join(TEST_WORKSPACE, filepath)
+            if not os.path.exists(filepath):
+                missing_files.append(filepath)
+
+        self.assertEqual(missing_files, [], 'Some expected files were not '
+            'found: %s' % missing_files)
+
+
 if __name__ == '__main__':
     # This call to unittest.main() runs all unittests in this test suite, much
     # as we would expect Nose to do when we give it a file with tests to run.
