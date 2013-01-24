@@ -89,8 +89,8 @@ class ModelUITest(unittest.TestCase):
 
         missing_files = []
         for filepath in files_to_check:
-            filepath = os.path.join(TEST_WORKSPACE, filepath)
-            if not os.path.exists(filepath):
+            full_filepath = os.path.join(TEST_WORKSPACE, filepath)
+            if not os.path.exists(full_filepath):
                 missing_files.append(filepath)
 
         self.assertEqual(missing_files, [], 'Some expected files were not '
