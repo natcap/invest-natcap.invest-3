@@ -1,12 +1,18 @@
 import unittest
 import sys
-from PyQt4 import QtGui
-from PyQt4.QtTest import QTest
-from PyQt4.QtCore import Qt
-import modelui
 import shutil
 import os
 import platform
+import tempfile
+
+from PyQt4 import QtGui
+from PyQt4.QtTest import QTest
+from PyQt4.QtCore import Qt
+
+import invest_natcap.iui
+from invest_natcap.iui import modelui
+from invest_natcap.iui import fileio
+
 
 # If we're on Windows, we know that the model JSON files are located in the
 # InVEST root.  If we're on Linux, they're in the iui module, along with this
@@ -183,6 +189,19 @@ class ModelUITest(unittest.TestCase):
             'found: %s' % missing_files)
 
     def setUp(self):
+        # Before the test is run, we need to move the existing lastrun folder to
+        # a temp folder.
+        self.settings_folder = invest_natcap.iui.fileio.settings_folder()
+        self.settings_folder_name = os.path.basename(self.settings_folder)
+        self.temp_folder = tempfile.mkdtemp()
+        try:
+            shutil.move(self.settings_folder, self.temp_folder)
+        except IOError:
+            # Thrown when the folder at self.settings_folder does not exist.
+            # Create a sample folder inside self.settings_folder that has the
+            # correct name.
+            os.mkdir(os.path.join(self.temp_folder, self.settings_folder_name))
+
         self.app = QtGui.QApplication(sys.argv)
 
     def tearDown(self):
@@ -195,6 +214,11 @@ class ModelUITest(unittest.TestCase):
             # Thrown when there's no workspace to remove.
             pass
 
+        # Restore the settings folder to its previous location, but only after
+        # we delete the folder that has been created in its place.
+        saved_settings_dir = os.path.join(self.temp_folder, self.settings_folder_name)
+        shutil.rmtree(self.settings_folder)
+        shutil.move(saved_settings_dir, self.settings_folder)
 
     def test_pollination(self):
         file_path = os.path.join(FILE_BASE, 'pollination.json')
