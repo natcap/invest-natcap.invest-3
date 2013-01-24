@@ -116,6 +116,12 @@ def execute(args):
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
+def make_risk_shapes(dir, crit_lists, h_list, max_risk):
+    '''This function will take in the current rasterized risk files for each
+    habitat, and output a shapefile where the areas that are "HIGH RISK" (high
+    percentage of risk over potential risk) are the only existing polygonized
+    areas.'''
+
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same as the individual E/C calculations, but instead
     will be r/dq for each criteria.
