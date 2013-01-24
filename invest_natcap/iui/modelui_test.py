@@ -30,22 +30,10 @@ def locate_workspace_element(ui):
     raise WorkspaceNotFound('The workspace must be identified by the '
         'args_id "workspace_dir"')
 
+
 class ModelUITest(unittest.TestCase):
-    def setUp(self):
-        self.app = QtGui.QApplication(sys.argv)
-
-    def tearDown(self):
-        try:
-            # Remove the workspace directory for the next test.
-            shutil.rmtree(TEST_WORKSPACE)
-        except OSError:
-            # Thrown when there's no workspace to remove.
-            pass
-
-    def test_pollination(self):
-        file_path = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(file_path, 'pollination.json')
-        model_ui = modelui.ModelUI(file_path, True)
+    def click_through_model(self, json_uri, files_to_check):
+        model_ui = modelui.ModelUI(json_uri, True)
 
         workspace_element = locate_workspace_element(model_ui)
 
@@ -74,6 +62,30 @@ class ModelUITest(unittest.TestCase):
         # return toe the UI.
         QTest.mouseClick(model_ui.operationDialog.backButton, Qt.MouseButton(1))
 
+        missing_files = []
+        for filepath in files_to_check:
+            full_filepath = os.path.join(TEST_WORKSPACE, filepath)
+            if not os.path.exists(full_filepath):
+                missing_files.append(filepath)
+
+        self.assertEqual(missing_files, [], 'Some expected files were not '
+            'found: %s' % missing_files)
+
+    def setUp(self):
+        self.app = QtGui.QApplication(sys.argv)
+
+    def tearDown(self):
+        try:
+            # Remove the workspace directory for the next test.
+            shutil.rmtree(TEST_WORKSPACE)
+        except OSError:
+            # Thrown when there's no workspace to remove.
+            pass
+
+    def test_pollination(self):
+        file_path = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(file_path, 'pollination.json')
+
         files_to_check = [
             'intermediate/frm_Apis_cur.tif',
             'intermediate/hf_Apis_cur.tif',
@@ -87,14 +99,8 @@ class ModelUITest(unittest.TestCase):
             'output/sup_tot_cur.tif'
         ]
 
-        missing_files = []
-        for filepath in files_to_check:
-            full_filepath = os.path.join(TEST_WORKSPACE, filepath)
-            if not os.path.exists(full_filepath):
-                missing_files.append(filepath)
+        self.click_through_model(file_path, files_to_check)
 
-        self.assertEqual(missing_files, [], 'Some expected files were not '
-            'found: %s' % missing_files)
 
 
 if __name__ == '__main__':
