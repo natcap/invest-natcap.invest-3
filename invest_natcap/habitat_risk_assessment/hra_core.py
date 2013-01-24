@@ -48,15 +48,19 @@ def execute(args):
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
-            rasters.
-        args['stressors'] A structure which will hold exposure and consequence
-            criteria data for criteria which are stressor specific. The
-            dictionary will not contain an open raster dataset, but will
-            otherwise be the same structure as the args['h-s'] dictionary.
+            rasters. In this case, however, the outermost key is by habitat
+            name, and habitats['habitatName']['DS'] points to the rasterized
+            habitat shapefile provided by the user.
+        args['stressors']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by stressor
+            name, and stressors['habitatName']['DS'] points to the rasterized
+            stressor shapefile provided by the user.
 
     Outputs:
         --Intermediate--
-            These should be the temp risk add files for the final output calcs.
+            These should be the temp risk and criteria files needed for the 
+            final output calcs.
         --Output--
             /output/maps/recov_potent_H[habitatname].tif- Raster layer depicting
                 the recovery potential of each individual habitat. 
@@ -65,7 +69,6 @@ def execute(args):
                 habitat.
             /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
                 cumulative risk scores of all habitats for that cell.
-   
             /output/html_plots/output.html- HTML page containing a matlab plot
                 has cumulative exposure value for each habitat, as well as risk
                 of each habitat plotted per stressor.
@@ -96,7 +99,7 @@ def execute(args):
     #We will combine all of the h-s rasters of the same habitat into
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
-    h_risk_list = make_cum_risk_raster(maps_dir, risk_dict)
+    h_risk_list = make_hab_risk_raster(maps_dir, risk_dict)
 
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
@@ -146,7 +149,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
     '''
     #This will give up two np lists where we have only the unique habs and
     #stress for the system.
-    habitats = map((lambda pair: pair[0], risk_dict))
+    habitats = map((lambda pair: pair[0], denoms))
     habitats = np.array(habitats)
     habitats = np.unique(habitats)
 
@@ -163,17 +166,28 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
             value = value / denoms['Recovery'][h]
 
-        curr_list = crit_list['Recovery'][h]
+        curr_list = crit_lists['Recovery'][h]
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
-        raster_utils.vectorize_rasters(curr_list, add_recov_pixels, aoi = None,
+        raster_utils.vectorize_rasters(curr_list, add_recov_pix, aoi = None,
                          raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                          nodata = 0)
 
 
 def make_ecosys_risk_raster(dir, h_list):
+    '''This will make the compiled raster for all habitats within the ecosystem.
 
+    Input:
+        dir- The directory in which all completed should be placed.
+        h_list- A list of open raster datasets which can be combined to create
+            an overall ecosystem raster.
+    Output:
+        ecosys_risk.tif- An overall risk raster for the ecosystem. It will
+            be placed in the dir folder.
+
+    Returns nothing.
+    '''
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
     def add_e_pixels(*pixels):
@@ -187,12 +201,29 @@ def make_ecosys_risk_raster(dir, h_list):
  
         return pixel_sum
      
-        raster_utils.vectorize_rasters(h_list, add_e_pixels, aoi = None,
-                         raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
-                         nodata = 0)
+    raster_utils.vectorize_rasters(h_list, add_e_pixels, aoi = None,
+                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                     nodata = 0)
 
-def make_cum_risk_raster(dir, risk_dict):
+def make_hab_risk_raster(dir, risk_dict):
+    '''This will create a combined raster for all habitat-stressor pairings
+    within one habitat. It should return a list of open rasters that correspond
+    to all habitats within the model.
+
+    Input:
+        dir- The directory in which all completed habitat rasters should be 
+            placed.
+        risk_dict- A dictionary containing the risk rasters for each pairing of
+            habitat and stressor. The key is the tuple of (habitat, stressor),
+            and the value is the open raster dataset corresponding to that
+            combination.
+    Output:
+        A cumulative risk raster for every habitat included within the model.
     
+    Returns:
+        h_rasters- A list containing open datasets corresponding to all
+            habitats being observed within the model.
+    '''
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
         h-s overlap rasters.'''
@@ -224,7 +255,8 @@ def make_cum_risk_raster(dir, risk_dict):
 
         ds_list = []
         for s in stressors:
-            
+            pair = (h, s)
+
             ds_list.append(risk_dict[pair])
 
         #Once we have the complete list, we can pass it to vectorize.
@@ -235,6 +267,8 @@ def make_cum_risk_raster(dir, risk_dict):
                                  datatype=gdal.GDT_Float32, nodata = 0)
 
         h_rasters.append(h_rast)
+
+    return h_rasters
 
 def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
@@ -282,6 +316,14 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             }
         risk_eq- A string description of the desired equation to use when
             preforming risk calculation. 
+    Output:
+        A new raster file for each overlapping of habitat and stressor. This
+        file will be the overall risk for that pairing from all H/S/H-S 
+        subdictionaries.
+    Returns:
+        risk_rasters- A simple dictionary that maps a tuple of 
+            (Habitat, Stressor) to the risk raster created when the various
+            sub components (H/S/H_S) are combined.
     '''    
     #Create dictionary that we can pass back to execute to be passed along to
     #make_habitat_rasters
@@ -336,13 +378,44 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     return risk_rasters
 
 def make_risk_mult(base, e_array, c_array):
+    '''Combines the E and C rasters according to the multiplicative combination
+    equation.
+
+    Input:
+        base- The h-s overlap raster, including potentially decayed values from
+            the stressor layer.
+        e_array- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run. In this case, we are viewing the raster as
+            an array.
+        c_array- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run. In this case,
+            we are viewing the raster as an array.
+    
+    Returns an array representing the multiplied E array, C array, and 
+    the base array.
+    '''
 
     risk_rast =  base* e_array * c_array
 
     return risk_rast
 
 def make_risk_euc(base, e_array, c_array):
+    '''Combines the E and C rasters according to the euclidean combination
+    equation.
 
+    Input:
+        base- The h-s overlap raster, including potentially decayed values from
+            the stressor layer.
+        e_array- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run. In this case, we are viewing the raster as
+            an array.
+        c_array- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run. In this case,
+            we are viewing the raster as an array.
+    
+    Returns an array representing the euclidean calculated E array, C array, 
+    and the base array.
+    '''
     #Want to make sure that the decay is applied to E first, then that product
     #is what is used as the new E
     e_array = e_array * base
@@ -356,7 +429,7 @@ def make_risk_euc(base, e_array, c_array):
     c_array = c_array ** 2
 
     #Only want to add E and C if there was originally no data in that pixel.
-    e_mask = np.make_mask(e_array)
+    e_mask = np.ma.make_mask(e_array)
     c_array = e_mask * c_array
 
     risk_array = c_array + e_array
@@ -396,7 +469,7 @@ def calc_E_raster(out_uri, s_list, s_denom):
     return e_array
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
-    '''Should return a raster burned with an 'E' raster that is a combination
+    '''Should return a raster burned with a 'C' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
@@ -405,7 +478,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns an 'E' raster that is the sum of all individual r/dq*w burned
+    Returns a 'C' raster that is the sum of all individual r/dq*w burned
     criteria rasters divided by the summed denominator.
     '''
     tot_crit_list = h_s_list + h_list
@@ -425,7 +498,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
                             datatype=gdal.GDT_Float32, nodata = 0)
     c_array = c_raster.GetRasterBand(1).ReadAsArray()
 
-    return c_ratser
+    return c_array
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     '''Want to return two dictionaries in the format of the following:
@@ -611,7 +684,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         
         #Raster Criteria: should output multiple rasters, each
         #of which is reburned with the old pixel value r as r/dq*w.
-        for crit in h_s[pair]['Crit_Rasters']:
+        for crit in hab[h]['Crit_Rasters']:
             dq = crit['DQ']
             w = crit['Weight']
             crit_ds = crit['DS']
@@ -668,8 +741,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         crit_rate_numerator = 0
         #single raster that equals to the sum of r/dq*w for all single number 
-        #criteria in H-S
-        for crit in (h_s[pair]['Crit_Ratings']):
+        #criteria in S
+        for crit in (stress[s]['Crit_Ratings']):
                     
             r = crit['Rating']
             dq = crit['DQ']
@@ -694,7 +767,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #the list in which all rasters will reside
         crit_lists['Risk']['s'][s].append(e_ds)
         
-        #H-S dictionary, Raster Criteria: should output multiple rasters, each
+        #S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
         for crit in stress[s]['Crit_Rasters']:
             crit_ds = crit['DS']
@@ -704,7 +777,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             w = crit['Weight']
             denoms['Risk']['s'][s] += 1/ float(dq * w)
 
-            crit_E_uri = os.path.join(pre_raster_dict, pair + '_' + crit + \
+            crit_E_uri = os.path.join(pre_raster_dict, s + '_' + crit + \
                                                     '_' + 'E_Raster.tif')
             e_ds = raster_utils.new_raster_from_base(base_ds, crit_E_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
