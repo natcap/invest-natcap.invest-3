@@ -7,10 +7,6 @@ import shutil
 import logging
 
 import invest_test_core
-import invest_natcap.pollination.pollination_biophysical as\
-    pollination_biophysical
-import invest_natcap.pollination.pollination_valuation as\
-    pollination_valuation
 import invest_natcap.pollination.pollination as pollination
 import invest_natcap.pollination.pollination_core as pollination_core
 
