@@ -44,6 +44,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing')
+EPS = 1e-6
+
 
 def route_flux(
     dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri,
@@ -81,11 +83,6 @@ def route_flux(
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
-
-
-    outflow_direction_uri, outflow_weights_uri
-
-
 
 def flow_accumulation(dem_uri, flux_output_uri):
     """A helper function to calculate flow accumulation, also returns
@@ -224,8 +221,10 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
 
         returns nothing"""
 
+    LOGGER.info("calculating percent to sink")
+    start_time = time.clock()
+
     sink_pixels_dataset = gdal.Open(sink_pixels_uri)
-    absorption_rate_dataset = gdal.Open(absorption_rate_uri)
 
     effect_nodata = -1.0
     effect_dataset = raster_utils.new_raster_from_base(
@@ -243,15 +242,18 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
     outflow_direction_data_file = tempfile.TemporaryFile()
     outflow_direction_array = raster_utils.load_memory_mapped_array(
         outflow_direction_uri, outflow_direction_data_file)
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    _, outflow_direction_nodata = raster_utils.extract_band_and_nodata(
+        outflow_direction_dataset)
 
     outflow_weights_data_file = tempfile.TemporaryFile()
     outflow_weights_array = raster_utils.load_memory_mapped_array(
         outflow_weights_uri, outflow_weights_data_file)
-
-
+    outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+    _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
+        outflow_weights_dataset)
+    
     absorption_rate_data_file = tempfile.TemporaryFile()
-    _, absorption_rate_nodata = raster_utils.extract_band_and_nodata(
-        absorption_rate_dataset)
     absorption_rate_array = raster_utils.load_memory_mapped_array(
         absorption_rate_uri, absorption_rate_data_file)
     
@@ -270,54 +272,78 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
     row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
-
-
     process_stack = collections.deque()
 
-    for col_index in xrange(n_cols):
-        for row_index in xrange(n_rows):
-            process_stack.append(row_index * n_cols + col_index)
+    for loop_col_index in xrange(n_cols):
+        LOGGER.debug("processing column number %s" % loop_col_index)
+        for loop_row_index in xrange(n_rows):
+
+            #if the outflow weight is nodata, then it's not even a valid pixel
+            outflow_weight = outflow_weights_array[loop_row_index, loop_col_index]
+            if outflow_weight == outflow_weights_nodata:
+                continue
+
+            process_stack.append(loop_row_index * n_cols + loop_col_index)
             while len(process_stack) > 0:
-                current_index = process_stack.pop()
-                current_row_index = current_index / n_cols
-                current_col_index = current_index % n_cols
+                index = process_stack.pop()
+                row_index = index / n_cols
+                col_index = index % n_cols
 
-                if absorption_rate_array[current_row_index, current_col_index] != absorption_rate_nodata and \
-                        effect_array[current_row_index, current_col_index] == effect_nodata:
+                #If we've already calculated the effect on this pixel, skip
+                if effect_array[row_index, col_index] != effect_nodata:
+                    continue
 
-                    calculated = True
+                #If this pixel is a sink, it's got a full effect of 1.0
+                if sink_pixels_array[row_index, col_index] == 1:
+                    effect_array[row_index, col_index] = 1.0
+                    continue
 
-                    for offset in range(2):
-                        outflow_current_row_index = current_row_index + row_offsets[offset % 8]
-                        if outflow_current_row_index < 0 or outflow_current_row_index >= n_rows:
-                            continue
+                #if the outflow weight is nodata, then it's not even a valid pixel
+                outflow_weight = outflow_weights_array[row_index, col_index]
+                if outflow_weight == outflow_weights_nodata:
+                    continue
+                #Precalculate the outgoing weights
+                outflow_percent_list = [outflow_weight, 1.0 - outflow_weight]
 
-                        outflow_current_col_index = current_col_index + col_offsets[offset % 8]
-                        if outflow_current_col_index < 0 or outflow_current_col_index >= n_cols:
-                            continue
+                #Used to see if outflow neighbors already have their effects
+                neighbors_to_process = collections.deque()
+                total_effect = 0.0
 
-                        if effect_array[outflow_current_row_index, outflow_current_col_index] == effect_nodata:
-                            calculated = False
+                for offset in range(2):
+                    #Make sure that there is outflow 
+                    if abs(outflow_percent_list[offset]) < EPS:
+                        continue
 
-                    if calculated:
-                        #push on the stack
-                        effect_array[current_row_index, current_col_index] = 0.0
+                    outflow_direction = outflow_direction_array[row_index, col_index]
+                    if outflow_direction == outflow_direction_nodata:
+                        continue
+                    #Offset the rotation if necessary
+                    outflow_direction = (outflow_direction + offset) % 8
 
-                        for offset in range(2):
-                            outflow_current_row_index = current_row_index + row_offsets[offset % 8]
-                            if outflow_current_row_index < 0 or outflow_current_row_index >= n_rows:
-                                continue
+                    outflow_row_index = row_index + row_offsets[outflow_direction]
+                    if outflow_row_index < 0 or outflow_row_index >= n_rows:
+                        continue
+                    outflow_col_index = col_index + col_offsets[outflow_direction]
+                    if outflow_col_index < 0 or outflow_col_index >= n_cols:
+                        continue
 
-                            outflow_current_col_index = current_col_index + col_offsets[offset % 8]
-                            if outflow_current_col_index < 0 or outflow_current_col_index >= n_cols:
-                                continue
-                            
-                            effect_array[current_row_index, current_col_index] += \
-                                effect_array[outflow_current_row_index, outflow_current_col_index] * \
-                                absorption_rate_array[outflow_current_row_index, outflow_current_col_index] * \
+                    neighbor_outflow_weight = outflow_weights_array[outflow_row_index, outflow_col_index]
+                    if neighbor_outflow_weight == outflow_weights_nodata:
+                        continue
 
-                        pass
+                    neighbor_effect = effect_array[outflow_row_index, outflow_col_index]
+                    if neighbor_effect == effect_nodata:
+                        neighbors_to_process.append(outflow_row_index * n_cols + outflow_col_index)
                     else:
-                        effect_array[current_row_index, current_col_index] = 1.0
-                
+                        neighbor_absorption = absorption_rate_array[outflow_row_index, outflow_col_index]
+                        total_effect += outflow_percent_list[offset] * neighbor_effect * (1.0 - neighbor_absorption)
+
+                if len(neighbors_to_process) > 0:
+                    process_stack.append(index)
+                    process_stack.extend(neighbors_to_process)
+                    continue
+
+                effect_array[row_index, col_index] = total_effect
+
     effect_band.WriteArray(effect_array, 0, 0)
+    LOGGER.info('Done calculating percent to sink elapsed time %ss' % (time.clock() - start_time))
