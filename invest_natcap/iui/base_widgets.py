@@ -2470,7 +2470,11 @@ class ExecRoot(Root):
 
 
     def runProgram(self):
-        self.operationDialog.exec_()
+        # Caling show() here allows the call to be non-blocking, whereas calling
+        # operationDialog.exec_() is a blocking call.  I expect that this may
+        # cause some problems along the way, but it works as I want it to for
+        # testing at least.
+        self.operationDialog.show()
 
         if self.operationDialog.cancelled():
             QtCore.QCoreApplication.instance().exit()
