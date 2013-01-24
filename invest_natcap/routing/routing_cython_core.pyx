@@ -763,17 +763,17 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
 
 
 def percent_to_sink(
-    sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
+    sink_pixels_uri, export_rate_uri, outflow_direction_uri,
     outflow_weights_uri, effect_uri):
     """This function calculates the amount of load from a single pixel
-        to the source pixels given the percent absorption rate per pixel.
+        to the source pixels given the percent export rate per pixel.
         
         sink_pixels_uri - the pixels of interest that will receive flux.
             This may be a set of stream pixels, or a single pixel at a
             watershed outlet.
 
-        absorption_rate_uri - a GDAL floating point dataset that has a percent
-            of flux absorbed per pixel
+        export_rate_uri - a GDAL floating point dataset that has a percent
+            of flux exported per pixel
 
         outflow_direction_uri - a uri to a byte dataset that indicates the
             first counter clockwise outflow neighbor as an index from the
@@ -828,9 +828,9 @@ def percent_to_sink(
     _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
         outflow_weights_dataset)
     
-    absorption_rate_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = raster_utils.load_memory_mapped_array(
-        absorption_rate_uri, absorption_rate_data_file)
+    export_rate_data_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_array = raster_utils.load_memory_mapped_array(
+        export_rate_uri, export_rate_data_file)
     
     effect_band, _ = raster_utils.extract_band_and_nodata(
         effect_dataset)
@@ -852,7 +852,7 @@ def percent_to_sink(
     process_stack = collections.deque()
 
     cdef int loop_col_index, loop_row_index, index, row_index, col_index, outflow_row_index, outflow_col_index, offset, outflow_direction
-    cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_absorption
+    cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
     cdef float outflow_percent_list[2]
 
     for loop_col_index in xrange(n_cols):
@@ -930,10 +930,10 @@ def percent_to_sink(
                         neighbors_to_process.append(
                             outflow_row_index * n_cols + outflow_col_index)
                     else:
-                        neighbor_absorption = absorption_rate_array[
+                        neighbor_export = export_rate_array[
                             outflow_row_index, outflow_col_index]
                         total_effect += outflow_percent_list[offset] * \
-                            neighbor_effect * (1.0 - neighbor_absorption)
+                            neighbor_effect * neighbor_export
 
                 if len(neighbors_to_process) > 0:
                     process_stack.append(index)
