@@ -163,6 +163,7 @@ def interpolate_matrix(x, y, z, newx, newy, degree=1):
     spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
+
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
@@ -1225,6 +1226,50 @@ def gdal_cast(value, gdal_type):
         value = np.float(value)
 
     return value
+
+
+def resample_dataset(
+    original_dataset_uri, pixel_size, output_uri,
+    resample_method=gdal.GRA_Bilinear):
+    """A function to resample a datsaet to larger or smaller pixel sizes
+
+        original_dataset_uri - a GDAL dataset
+        pixel_size - the output pixel size in projected units (usually meters)
+        output_uri - the location of the new resampled GDAL dataset
+        resample_method - (optional) the resampling technique, default is
+            gdal.GRA_Bilinear
+
+        returns nothing"""
+    original_dataset = gdal.Open(original_dataset_uri)
+    original_band, original_nodata = extract_band_and_nodata(original_dataset)
+
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+    geo_t = original_dataset.GetGeoTransform()
+    x_size = original_dataset.RasterXSize # Raster xsize
+    y_size = original_dataset.RasterYSize # Raster ysize
+
+    #create the new x and y size
+    new_x_size = int(x_size * geo_t[1] / pixel_size + 0.5)
+    new_y_size = int(abs(y_size * geo_t[5] / pixel_size) + 0.5)
+
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    output_dataset = gdal_driver.Create(
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+
+    output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
+
+    # Calculate the new geotransform
+    output_geo = (geo_t[0], pixel_size, geo_t[2], geo_t[3], geo_t[4], -pixel_size)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(output_geo)
+    output_dataset.SetProjection(original_sr.ExportToWkt())
+
+    # Perform the projection/resampling 
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), original_sr.ExportToWkt(),
+                        gdal.GRA_Bilinear)
 
 
 def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,

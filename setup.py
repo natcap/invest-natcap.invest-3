@@ -130,7 +130,7 @@ for root_dir, sub_folders, file_list in os.walk(directory):
 
 # Adding a json data file for the wind energy module, manually placing it in the
 # correct path. This needs to be done for both Windows and Linux builds
-data_files.append((lib_path + '/invest_natcap/wind_energy/',
+data_files.append((os.path.join(lib_path, 'invest_natcap', 'wind_energy'),
     ['invest_natcap/wind_energy/global_wind_energy_attributes.json']))
 
 #The standard distutils setup command

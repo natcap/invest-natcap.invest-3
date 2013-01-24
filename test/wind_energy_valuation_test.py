@@ -3,6 +3,7 @@
 import os.path
 import sys
 from osgeo import gdal
+from osgeo import ogr
 import unittest
 from nose.plugins.skip import SkipTest
 
@@ -10,173 +11,87 @@ from invest_natcap.wind_energy import wind_energy_valuation
 import invest_test_core
 
 class TestWindEnergyValuation(unittest.TestCase):
-    def test_wind_energy_valuation_land(self):
-        """A test for the valuation module using land polygon to get
-            distances"""
-        raise SkipTest
+    def test_wind_energy_valuation_clip_and_project_datasource(self):
+        """Regression test for clipping a shapefile from another shapefile and
+            then projecting it to that shapefile"""
+        #raise SkipTest
 
-        out_dir = './data/test_out/wind_energy/valuation/full_land_poly/'
+        regression_dir = \
+              './data/wind_energy_regression_data/valuation/'
         input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/'
 
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
+        original_shape_uri = os.path.join(
+                input_dir, 'testing_land.shp')
 
-        args = {}
-        args['workspace_dir'] = out_dir
-        args['aoi_uri'] = os.path.join(
-                input_dir, 'reprojected_distance_aoi.shp')
-        args['biophysical_data_uri'] = os.path.join(
-                regression_dir, 'wind_points_reprojected.shp')
-        args['turbine_info_uri'] = os.path.join(
-                input_dir, 'turbine_parameters.csv')
-        args['land_polygon_uri'] = os.path.join(
-                regression_dir, 'global_poly_clip.shp')
-        args['number_of_machines'] = 30
-        args['dollar_per_kWh'] = 1.81
-        args['suffix'] = ''
+        aoi = ogr.Open(os.path.join(input_dir, 'testing_aoi_proj.shp'))
+
+        regression_proj_uri = os.path.join(
+                regression_dir, 'val_land_poly_projected.shp')
+        regression_clip_uri = os.path.join(
+                regression_dir, 'val_land_poly_clipped.shp')
+        regression_aoi_uri = os.path.join(
+                regression_dir, 'val_aoi_proj_to_land_poly.shp')
         
-        wind_energy_valuation.execute(args)
+        reg_file_list = [
+                regression_proj_uri, regression_clip_uri, regression_aoi_uri]
 
-        shape_file_names = [
-                'val_aoi_proj_to_bio_points.shp', 'val_bio_points_clipped.shp', 
-                'val_bio_points_projected.shp', 'val_aoi_proj_to_land_poly.shp',
-                'val_land_poly_clipped.shp', 'val_land_poly_projected.shp']
+        output_dir = './data/test_out/wind_energy/valuation/clip_project/'
 
-        raster_file_output_names = [
-                'carbon_emissions.tif', 'levelized.tif', 'npv.tif']
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
 
-        for file_name in shape_file_names:
-            reg_file = os.path.join(
-                    regression_dir, 'val_land_poly/' + file_name)
-            out_file = os.path.join(
-                    out_dir, 'intermediate/' + file_name)
-            invest_test_core.assertTwoShapesEqualURI(
-                    self, reg_file, out_file)
+        out_clipped_uri = os.path.join(output_dir, 'clipped.shp')
+        out_projected_uri = os.path.join(output_dir, 'projected.shp')
+        out_aoi_proj_uri = os.path.join(output_dir, 'aoi_to_land.shp')
+       
+        out_file_list = [out_projected_uri, out_clipped_uri, out_aoi_proj_uri]
 
-        for file_name in raster_file_output_names:
-            reg_file = os.path.join(
-                    regression_dir, 'val_land_poly/' + file_name)
-            out_file = os.path.join(
-                    out_dir, 'output/' + file_name)
-            invest_test_core.assertTwoDatasetEqualURI(
-                    self, reg_file, out_file)
-    
-    def test_wind_energy_valuation_grid(self):
-        """A test for valuation module using land and grid points to compute
-            distances"""
-        raise SkipTest
-        out_dir = './data/test_out/wind_energy/valuation/full_grid/'
-        input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/'
+        for out_uri in out_file_list:
+            if os.path.isfile(out_uri):
+                os.remove(out_uri)
 
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        args = {}
-        args['workspace_dir'] = out_dir
-        args['aoi_uri'] = os.path.join(
-                input_dir, 'reprojected_distance_aoi.shp')
-        args['biophysical_data_uri'] = os.path.join(
-                regression_dir, 'wind_points_reprojected.shp')
-        args['turbine_info_uri'] = os.path.join(
-                input_dir, 'turbine_parameters.csv')
-        args['grid_points_uri'] = os.path.join(
-                input_dir, 'land_grid_points.csv')
-        args['number_of_machines'] = 30
-        args['dollar_per_kWh'] = 1.81
-        args['suffix'] = ''
+        original_shape = ogr.Open(original_shape_uri)
         
-        wind_energy_valuation.execute(args)
+        result_shape = wind_energy_valuation.clip_and_project_datasource(
+            original_shape, aoi, out_clipped_uri, out_projected_uri,
+            out_aoi_proj_uri)
+        
+        result_shape = None
+        original_shape = None
+        aoi = None
 
-        shape_file_names = [
-                'val_aoi_proj_to_bio_points.shp', 
-                'val_aoi_proj_to_grid_point.shp', 
-                'val_aoi_proj_to_land_point.shp',
-                'val_bio_points_clipped.shp', 'val_grid_points.shp',
-                'val_land_points.shp', 'val_grid_point_clipped.shp',
-                'val_grid_point_projected.shp', 'val_land_point_clipped.shp',
-                'val_land_point_projected.shp', 
-                'val_bio_points_projected.shp']
+        for reg_uri, out_uri in zip(reg_file_list, out_file_list):
+            invest_test_core.assertTwoShapesEqualURI(self, reg_uri, out_uri)
 
-        raster_file_output_names = [
-                'carbon_emissions.tif', 'levelized.tif', 'npv.tif']
-
-        for file_name in shape_file_names:
-            reg_file = os.path.join(
-                    regression_dir, 'val_grid/' + file_name)
-            out_file = os.path.join(
-                    out_dir, 'intermediate/' + file_name)
-            invest_test_core.assertTwoShapesEqualURI(
-                    self, reg_file, out_file)
-
-        for file_name in raster_file_output_names:
-            reg_file = os.path.join(
-                    regression_dir, 'val_grid/' + file_name)
-            out_file = os.path.join(
-                    out_dir, 'output/' + file_name)
-            invest_test_core.assertTwoDatasetEqualURI(
-                    self, reg_file, out_file)
-    
-    def test_wind_energy_valuation_clip_and_reproject_datasource(self):
-        """A regression test for clipping and reprojecting a datasource"""
-
-        raise SkipTest
-        out_dir = './data/test_out/wind_energy/valuation/clip_and_reproject/'
-        input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/'
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        aoi = ogr.Open(os.path.join(input_dir, 'reprojected_distance_aoi.shp'))
-        dsource = ogr.Open(os.path.join(regression_dir, 'global_poly_clip.shp'))
-        regression_file_uri = os.path.join(
-                regression_dir, 'projected_land_poly.shp')
-        out_uri = os.path.join(out_dir, 'dsource')
-
-        result = wind_energy_valuation.clip_and_reproject_datasource(
-                dsource, aoi, out_uri)
-
-        result = None
-
-        test_uri = os.path.join(out_dir, 'val_dsource_projected.shp')
-
-        invest_test_core.assertTwoShapesEqualURI(
-                self, regression_file_uri, test_uri)
 
     def test_wind_energy_valuation_dictionary_to_shapefile(self):
-        """A regression test for making a point shapefile from a dictionary"""
+        """A regression test for making a shapefile from a dictionary"""
 
         #raise SkipTest
-        out_dir = './data/test_out/wind_energy/valuation/dictionary_to_shape/'
-        regression_dir = './data/wind_energy_regression_data/'
 
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
+        regression_dir = './data/wind_energy_regression_data/valuation/'
 
-        regression_file_uri = os.path.join(
-                regression_dir, 'dict_to_shape.shp')
+        expected_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
+
+        out_dir = './data/test_out/wind_energy/valuation/dict_to_shape/'
 
         out_uri = os.path.join(out_dir, 'dict_to_shape.shp')
 
-        dict_data = {0 : {'lati':42.689, 'long':-70.096, 'height':10,
-                          'K_shape':2.567},
-                     1 : {'lati':42.689, 'long':-69.796, 'height':10,
-                          'K_shape':2.567},
-                     2 : {'lati':42.496, 'long':-69.796, 'height':10,
-                          'K_shape':2.567},
-                     3 : {'lati':42.496, 'long':-70.096, 'height':10,
-                          'K_shape':2.567}}
-        
-        layer_name = 'layer_one'
-    
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        if os.path.isfile(out_uri):
+            os.remove(out_uri)
+
+        expected_dict = {}
+
+        expected_dict[1] = {'lati':97, 'long':43, 'type':'grid'}
+        expected_dict[2] = {'lati':96, 'long':44, 'type':'land'}
+
         result = wind_energy_valuation.dictionary_to_shapefile(
-                dict_data, layer_name, out_uri)
+                expected_dict, 'tester', out_uri)
 
         result = None
 
         invest_test_core.assertTwoShapesEqualURI(
-                self, regression_file_uri, out_uri)
-
-
+                self, expected_uri, out_uri)

@@ -49,19 +49,27 @@ class TestRasterUtils(unittest.TestCase):
         flux_uri = os.path.join(base_dir, 'flux.tif')
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
-        routing_utils.route_flux(dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri, base_dir, aoi_uri = aoi_uri)
+        stream_uri = os.path.join(base_dir, 'stream.tif')
+        stream_regression_uri = 'data/routing_regression/stream.tif'
+        routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
+
+
+
+        effect_uri = os.path.join(base_dir, 'effect.tif')
+
+        outflow_direction_uri = os.path.join(base_dir, 'outflow_directions.tif')
+        outflow_weights_uri = os.path.join(base_dir, 'outflow_weights.tif')
+
+        routing_utils.percent_to_sink(stream_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
+        subprocess.Popen(['qgis', stream_uri, effect_uri])
+
 
         flux_regression_uri = 'data/routing_regression/flux.tif'
         loss_regression_uri = 'data/routing_regression/loss.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
 
-        stream_uri = os.path.join(base_dir, 'stream.tif')
-        stream_regression_uri = 'data/routing_regression/stream.tif'
-        routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
-        invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
-
-#        subprocess.Popen(['qgis', flux_uri, stream_uri])
 
 #        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
 #                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])
