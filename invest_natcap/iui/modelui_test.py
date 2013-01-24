@@ -2,6 +2,7 @@ import unittest
 import sys
 from PyQt4 import QtGui
 from PyQt4.QtTest import QTest
+from PyQt4.QtCore import Qt
 import modelui
 import shutil
 import os
@@ -53,6 +54,17 @@ class ModelUITest(unittest.TestCase):
 
         # Assert that the test workspace didn't get a validation error.
         self.assertEqual(workspace_element.has_error(), False)
+
+        # Assert that there are no default data validation errors.
+        validation_errors = model_ui.errors_exist()
+        self.assertEqual(validation_errors, [], 'Validation errors '
+            'exist for %s inputs. Errors: %s' % (len(validation_errors),
+            validation_errors))
+
+        # Click the 'Run' button and see what happens now.
+        QTest.mouseClick(model_ui.runButton, Qt.MouseButton(1))
+        QTest.qWait(1000)  # wait for a model dialog to pop up
+
 
 if __name__ == '__main__':
     # This call to unittest.main() runs all unittests in this test suite, much
