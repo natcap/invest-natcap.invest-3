@@ -33,11 +33,9 @@ import tempfile
 import shutil
 
 from osgeo import gdal
-import osgeo.gdalconst
 import numpy
 
 from invest_natcap import raster_utils
-import invest_cython_core
 import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -96,8 +94,10 @@ def flow_accumulation(dem_uri, flux_output_uri):
     zero_absorption_source_file = tempfile.NamedTemporaryFile()
     loss_file = tempfile.NamedTemporaryFile()
 
-    make_constant_raster_from_base(dem_uri, 1.0, constant_flux_source_file.name)
-    make_constant_raster_from_base(dem_uri, 0.0, zero_absorption_source_file.name)
+    make_constant_raster_from_base(
+        dem_uri, 1.0, constant_flux_source_file.name)
+    make_constant_raster_from_base(
+        dem_uri, 0.0, zero_absorption_source_file.name)
 
     workspace_dir = tempfile.mkdtemp()
 
@@ -140,8 +140,9 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
 
     flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
     stream_nodata = 255
-    stream_dataset = raster_utils.new_raster_from_base(flow_accumulation_dataset, 
-        stream_uri, 'GTiff', stream_nodata, gdal.GDT_Byte)
+    stream_dataset = raster_utils.new_raster_from_base(
+        flow_accumulation_dataset, stream_uri, 'GTiff', stream_nodata,
+        gdal.GDT_Byte)
     stream_band = stream_dataset.GetRasterBand(1)
     stream_band.Fill(stream_nodata)
     stream_data_file = tempfile.TemporaryFile()
@@ -153,7 +154,8 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     flow_accumulation_array = raster_utils.load_memory_mapped_array(
         flow_accumulation_uri, flow_accumulation_data_file)
     
-    flow_accumulation_band, flow_accumulation_nodata = raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
+    _, flow_accumulation_nodata = \
+        raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
 
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
                      (flow_accumulation_array >= float(flow_threshold))] = 1
@@ -183,8 +185,10 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         gdal.GDT_Float32)
 
     def flow_length(flow_direction):
+        """Function to calculate flow length for vectorize_rasters"""
         if flow_direction == flow_direction_nodata:
             return flow_length_nodata
+        #TODO: fix this calculation
         return abs(numpy.sin(flow_direction)) + abs(numpy.cos(flow_direction))
 
     raster_utils.vectorize_rasters(
@@ -193,7 +197,9 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         nodata=flow_length_nodata)
 
 
-def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri):
+def percent_to_sink(
+    sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
+    outflow_weights_uri, effect_uri):
     """This function calculates the amount of load from a single pixel
         to the source pixels given the percent absorption rate per pixel.
         
@@ -261,7 +267,9 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
         effect_dataset)
 
     effect_data_file = tempfile.TemporaryFile()
-    effect_array = numpy.memmap(effect_data_file, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
+    effect_array = numpy.memmap(
+        effect_data_file, dtype=numpy.float32, mode='w+',
+        shape=(n_rows, n_cols))
     effect_array[:] = effect_nodata
 
     #Diagonal offsets are based off the following index notation for neighbors
@@ -279,7 +287,8 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
         for loop_row_index in xrange(n_rows):
 
             #if the outflow weight is nodata, then it's not even a valid pixel
-            outflow_weight = outflow_weights_array[loop_row_index, loop_col_index]
+            outflow_weight = \
+                outflow_weights_array[loop_row_index, loop_col_index]
             if outflow_weight == outflow_weights_nodata:
                 continue
 
@@ -298,7 +307,7 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                     effect_array[row_index, col_index] = 1.0
                     continue
 
-                #if the outflow weight is nodata, then it's not even a valid pixel
+                #if the outflow weight is nodata, then not a valid pixel
                 outflow_weight = outflow_weights_array[row_index, col_index]
                 if outflow_weight == outflow_weights_nodata:
                     continue
@@ -314,29 +323,37 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                     if abs(outflow_percent_list[offset]) < EPS:
                         continue
 
-                    outflow_direction = outflow_direction_array[row_index, col_index]
+                    outflow_direction = \
+                        outflow_direction_array[row_index, col_index]
                     if outflow_direction == outflow_direction_nodata:
                         continue
                     #Offset the rotation if necessary
                     outflow_direction = (outflow_direction + offset) % 8
 
-                    outflow_row_index = row_index + row_offsets[outflow_direction]
+                    outflow_row_index = \
+                        row_index + row_offsets[outflow_direction]
                     if outflow_row_index < 0 or outflow_row_index >= n_rows:
                         continue
-                    outflow_col_index = col_index + col_offsets[outflow_direction]
+                    outflow_col_index = \
+                        col_index + col_offsets[outflow_direction]
                     if outflow_col_index < 0 or outflow_col_index >= n_cols:
                         continue
 
-                    neighbor_outflow_weight = outflow_weights_array[outflow_row_index, outflow_col_index]
+                    neighbor_outflow_weight = outflow_weights_array[
+                        outflow_row_index, outflow_col_index]
                     if neighbor_outflow_weight == outflow_weights_nodata:
                         continue
 
-                    neighbor_effect = effect_array[outflow_row_index, outflow_col_index]
+                    neighbor_effect = \
+                        effect_array[outflow_row_index, outflow_col_index]
                     if neighbor_effect == effect_nodata:
-                        neighbors_to_process.append(outflow_row_index * n_cols + outflow_col_index)
+                        neighbors_to_process.append(
+                            outflow_row_index * n_cols + outflow_col_index)
                     else:
-                        neighbor_absorption = absorption_rate_array[outflow_row_index, outflow_col_index]
-                        total_effect += outflow_percent_list[offset] * neighbor_effect * (1.0 - neighbor_absorption)
+                        neighbor_absorption = absorption_rate_array[
+                            outflow_row_index, outflow_col_index]
+                        total_effect += outflow_percent_list[offset] * \
+                            neighbor_effect * (1.0 - neighbor_absorption)
 
                 if len(neighbors_to_process) > 0:
                     process_stack.append(index)
@@ -346,4 +363,5 @@ def percent_to_sink(sink_pixels_uri, absorption_rate_uri, outflow_direction_uri,
                 effect_array[row_index, col_index] = total_effect
 
     effect_band.WriteArray(effect_array, 0, 0)
-    LOGGER.info('Done calculating percent to sink elapsed time %ss' % (time.clock() - start_time))
+    LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
+                    (time.clock() - start_time))
