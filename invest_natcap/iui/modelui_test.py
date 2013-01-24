@@ -63,8 +63,16 @@ class ModelUITest(unittest.TestCase):
 
         # Click the 'Run' button and see what happens now.
         QTest.mouseClick(model_ui.runButton, Qt.MouseButton(1))
-        QTest.qWait(1000)  # wait for a model dialog to pop up
 
+        # Now that the run button has been pressed, we need to check the state
+        # of the operation dialog to see if it has finished completing.  This
+        # check is done at half-secong intervals.
+        while not model_ui.operationDialog.backButton.isEnabled():
+            QTest.qWait(500)
+
+        # Once the test has finished, click the back button on the dialog to
+        # return toe the UI.
+        QTest.mouseClick(model_ui.operationDialog.backButton, Qt.MouseButton(1))
 
 if __name__ == '__main__':
     # This call to unittest.main() runs all unittests in this test suite, much
