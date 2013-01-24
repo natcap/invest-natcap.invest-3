@@ -797,42 +797,46 @@ def percent_to_sink(
 
     sink_pixels_dataset = gdal.Open(sink_pixels_uri)
 
-    effect_nodata = -1.0
+    cdef float effect_nodata = -1.0
     effect_dataset = raster_utils.new_raster_from_base(
         sink_pixels_dataset, effect_uri, 'GTiff', effect_nodata,
         gdal.GDT_Float32)
 
-    n_cols = sink_pixels_dataset.RasterXSize
-    n_rows = sink_pixels_dataset.RasterYSize
+    cdef int n_cols = sink_pixels_dataset.RasterXSize
+    cdef int n_rows = sink_pixels_dataset.RasterYSize
 
     sink_pixels_data_file = tempfile.TemporaryFile()
-    sink_pixels_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_array = raster_utils.load_memory_mapped_array(
         sink_pixels_uri, sink_pixels_data_file)
     
 
     outflow_direction_data_file = tempfile.TemporaryFile()
-    outflow_direction_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = raster_utils.load_memory_mapped_array(
         outflow_direction_uri, outflow_direction_data_file)
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+
+    cdef int outflow_direction_nodata
     _, outflow_direction_nodata = raster_utils.extract_band_and_nodata(
         outflow_direction_dataset)
 
     outflow_weights_data_file = tempfile.TemporaryFile()
-    outflow_weights_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = raster_utils.load_memory_mapped_array(
         outflow_weights_uri, outflow_weights_data_file)
     outflow_weights_dataset = gdal.Open(outflow_weights_uri)
+
+    cdef float outflow_weights_nodata
     _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
         outflow_weights_dataset)
     
     absorption_rate_data_file = tempfile.TemporaryFile()
-    absorption_rate_array = raster_utils.load_memory_mapped_array(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = raster_utils.load_memory_mapped_array(
         absorption_rate_uri, absorption_rate_data_file)
     
-    effect_band, effect_nodata = raster_utils.extract_band_and_nodata(
+    effect_band, _ = raster_utils.extract_band_and_nodata(
         effect_dataset)
 
     effect_data_file = tempfile.TemporaryFile()
-    effect_array = numpy.memmap(
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] effect_array = numpy.memmap(
         effect_data_file, dtype=numpy.float32, mode='w+',
         shape=(n_rows, n_cols))
     effect_array[:] = effect_nodata
@@ -842,13 +846,16 @@ def percent_to_sink(
     #    4 p 0
     #    5 6 7
 
-    row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
 
     process_stack = collections.deque()
 
+    cdef int loop_col_index, loop_row_index, index, row_index, col_index, outflow_row_index, outflow_col_index, offset, outflow_direction
+    cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_absorption
+    cdef float outflow_percent_list[2]
+
     for loop_col_index in xrange(n_cols):
-        LOGGER.debug("processing column number %s" % loop_col_index)
         for loop_row_index in xrange(n_rows):
 
             #if the outflow weight is nodata, then it's not even a valid pixel
@@ -877,7 +884,8 @@ def percent_to_sink(
                 if outflow_weight == outflow_weights_nodata:
                     continue
                 #Precalculate the outgoing weights
-                outflow_percent_list = [outflow_weight, 1.0 - outflow_weight]
+                outflow_percent_list[0] = outflow_weight
+                outflow_percent_list[1] = 1.0 - outflow_weight
 
                 #Used to see if outflow neighbors already have their effects
                 neighbors_to_process = collections.deque()
