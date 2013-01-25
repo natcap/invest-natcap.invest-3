@@ -13,6 +13,7 @@ import numpy
 from invest_natcap.routing import routing_utils
 import invest_test_core
 from invest_natcap import raster_utils
+import routing_cython_core
 
 LOGGER = logging.getLogger('routing_test')
 
@@ -54,22 +55,28 @@ class TestRasterUtils(unittest.TestCase):
         routing_utils.stream_threshold(flow_accumulation_uri, 103.9, stream_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, stream_uri, stream_regression_uri)
 
-
-
         effect_uri = os.path.join(base_dir, 'effect.tif')
+        effect_regression_uri = 'data/routing_regression/effect.tif'
 
         outflow_direction_uri = os.path.join(base_dir, 'outflow_directions.tif')
         outflow_weights_uri = os.path.join(base_dir, 'outflow_weights.tif')
 
-        routing_utils.percent_to_sink(stream_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
-        subprocess.Popen(['qgis', stream_uri, effect_uri])
-
+        routing_cython_core.percent_to_sink(stream_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, effect_uri, effect_regression_uri)
 
         flux_regression_uri = 'data/routing_regression/flux.tif'
         loss_regression_uri = 'data/routing_regression/loss.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
 
+
+        flow_direction_uri = os.path.join(base_dir, 'flow_direction.tif')
+        routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
+
+        flow_length_uri = os.path.join(base_dir, 'flow_length.tif')
+        routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+
+        subprocess.Popen(['qgis', flow_direction_uri, flow_length_uri])
 
 #        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
 #                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])
