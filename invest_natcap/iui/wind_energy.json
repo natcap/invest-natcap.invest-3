@@ -37,7 +37,6 @@
                     "label": "Area Of Interest (AOI)",
                     "defaultValue": "../Wind_Energy/input/North_East_America_Aoi.shp",
                     "required": false,
-                    "requiredIf": ["valuation_container", "distance_container"],
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "file"},
@@ -66,7 +65,6 @@
                     "required": false,
                     "enabledBy" : "aoi", 
                     "returns" : {"ifEmpty": "pass"},
-                    "requiredIf": ["valuation_container", "distance_container"],
                     "validateAs": {"type": "OGR"},
                     "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
                 },
@@ -278,9 +276,8 @@
                             "validText" : "^[0-9]*\\.?[0-9]+$",
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                            "required": false,
-                            "requiredIf": ["grid_points"],
-                            "helpText": "An optional number that is only required if grid points is NOT used in valuation. When running valuation using the land polygon to compute distances, an average distance is needed for connecting landing points to grid points.  See the Users Guide for helpful hints on selecting a good average distance."
+                            "required": true,
+                            "helpText": "An optional number that is only used if grid points is NOT used in valuation. When running valuation using the land polygon to compute distances, an average distance is needed for connecting landing points to grid points.  See the Users Guide for helpful hints on selecting a good average distance."
                         }
                     ]
                 }
