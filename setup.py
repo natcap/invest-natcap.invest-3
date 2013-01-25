@@ -90,6 +90,7 @@ if platform.system() == 'Windows':
          'invest_sediment_biophysical.py',
          'invest_habitat_risk_assessment.py',
          'invest_coastal_vulnerability.py',
+         'invest_wind_energy.py',
          'invest_test_all.py']
 
     #Need to manually bring along the json configuration files to
@@ -110,6 +111,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/overlap_analysis.json',
                'invest_natcap/iui/overlap_analysis_mz.json',
                'invest_natcap/iui/sediment_biophysical.json',
+               'invest_natcap/iui/wind_energy.json',
                'invest_natcap/iui/coastal_vulnerability.json']))
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
