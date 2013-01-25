@@ -71,7 +71,7 @@
                     "args_id": "dem_uri",
                     "type": "file",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "defaultValue": "../Base_Data/Marine/DEMs/global_dem",
+                    "defaultValue": "../Base_Data/Marine/DEMs/global_dem_meters",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },

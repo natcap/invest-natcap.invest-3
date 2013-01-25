@@ -126,7 +126,7 @@ class TestRasterUtils(unittest.TestCase):
             os.makedirs(base_dir)
 
         global_clip_regression_dataset = 'data/clip_data/global_clipped.tif'
-        dem_uri = '../../invest-data/Base_Data/Marine/DEMs/global_dem'
+        dem_uri = '../../invest-data/Base_Data/Marine/DEMs/global_dem_meters'
         aoi_uri = 'data/wind_energy_data/wind_energy_aoi.shp'
         dem = gdal.Open(dem_uri)
         aoi = ogr.Open(aoi_uri)
