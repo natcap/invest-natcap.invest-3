@@ -49,7 +49,7 @@ then
         wave_energy_valuation_test.py
         )
     echo "Testing " ${test_files[*]}
-    nosetests -vs --nologcapture ${test_files[*]}
+    nosetests -vs ${test_files[*]}
 elif [ $1 == 'all' ]
 then
 # If the user specifies all as the first argument, run all tests
