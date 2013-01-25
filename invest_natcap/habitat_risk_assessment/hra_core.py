@@ -4,7 +4,8 @@ calcs, and return the appropriate outputs.
 import logging
 import os
 import numpy as np
- 
+import collections 
+
 from osgeo import gdal
 from invest_natcap import raster_utils
  
@@ -116,12 +117,81 @@ def execute(args):
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
-def make_risk_shapes(dir, crit_lists, h_list, max_risk):
+def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
     percentage of risk over potential risk) are the only existing polygonized
-    areas.'''
+    areas.
+    
+    Since the raster_utils function can only take in ints, want to predetermine
+    what areas are or are not going to be shapefile, and pass in a raster that
+    is only 1 or nodata.
+    
+    Input:
+        dir- Directory in which the completed shapefiles should be placed.
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
 
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
+                     }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+        h_dict- A dictionary that contains open raster datasets corresponding
+            to each of the habitats in the model. The key in this dictionary is
+            the name of the habiat, and it maps to the open dataset.
+        max_risk- Double representing the highest potential value for a single
+            h-s raster. The amount of risk for a given Habitat raster would be
+            SUM(s) for a given h.
+
+     Output:
+        Returns a shapefile for every habitat, showing features only for the
+        areas that are "high risk" within that habitat.        
+     '''
+    #For each h, want  to know how many stressors are associated with it. This
+    #allows us to not have to think about whether or not a h-s pair was zero'd
+    #out by weighting or DQ.
+    num_stress = collections.Counter()
+    for pair in crit_lists['Risk']['h-s']:
+        h, s = pair
+        
+        if h in num_stress:
+            num_stress[h] += 1
+        else:
+            num_stress[h] = 1
+    
+    curr_top_risk = None
+
+    def high_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
+        #areas are.
+        if percent > 50.0:
+            return 1
+        else:
+            return 0
+
+    for h in h_dict:
+            #Want to know the number of stressors for the current habitat        
+            curr_top_risk = num_stress[h] * max_risk
+            old_ds = h_dict[h]
+
+            out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
+            new_ds = raster_utils.new_raster_from_base(old_ds, risk_uri, 'GTiff', 
+                                    0, gdal.GDT_Float32)
+            band, nodata = raster_utils.extract_band_and_nodata(new_ds)
+    
+            #HERE IS WHERE WE WOULD USE THE RASTER UTILS TO SHAPEFILE.
 
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
@@ -192,8 +262,9 @@ def make_ecosys_risk_raster(dir, h_dict):
 
     Input:
         dir- The directory in which all completed should be placed.
-        h_list- A list of open raster datasets which can be combined to create
-            an overall ecosystem raster.
+        h_dict- A dictionary of open raster datasets which can be combined to 
+            create an overall ecosystem raster. The key is the habitat name, 
+            and the value is the open dataset.
     Output:
         ecosys_risk.tif- An overall risk raster for the ecosystem. It will
             be placed in the dir folder.
