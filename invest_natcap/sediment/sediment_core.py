@@ -8,7 +8,7 @@ import tempfile
 
 import scipy.sparse
 import scipy.sparse.linalg
-import numpy as np
+import numpy
 from osgeo import gdal
 
 import invest_cython_core
@@ -241,25 +241,25 @@ def calculate_effective_retention(flow_direction_dataset,
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
-    b_vector = np.zeros(n_rows * n_cols)
+    b_vector = numpy.zeros(n_rows * n_cols)
 
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
-    a_matrix = np.zeros((9, n_rows * n_cols))
-    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+    a_matrix = numpy.zeros((9, n_rows * n_cols))
+    diags = numpy.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
                        1, n_cols-1, n_cols, n_cols+1])
     
     #Determine the outflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    outflow_directions = {( 0, 1): (0.0/4.0 * np.pi, 5, False),
-                          (-1, 1): (1.0/4.0 * np.pi, 2, True),
-                          (-1, 0): (2.0/4.0 * np.pi, 1, False),
-                          (-1,-1): (3.0/4.0 * np.pi, 0, True),
-                          ( 0,-1): (4.0/4.0 * np.pi, 3, False),
-                          ( 1,-1): (5.0/4.0 * np.pi, 6, True),
-                          ( 1, 0): (6.0/4.0 * np.pi, 7, False),
-                          ( 1, 1): (7.0/4.0 * np.pi, 8, True)}
+    outflow_directions = {( 0, 1): (0.0/4.0 * numpy.pi, 5, False),
+                          (-1, 1): (1.0/4.0 * numpy.pi, 2, True),
+                          (-1, 0): (2.0/4.0 * numpy.pi, 1, False),
+                          (-1,-1): (3.0/4.0 * numpy.pi, 0, True),
+                          ( 0,-1): (4.0/4.0 * numpy.pi, 3, False),
+                          ( 1,-1): (5.0/4.0 * numpy.pi, 6, True),
+                          ( 1, 0): (6.0/4.0 * numpy.pi, 7, False),
+                          ( 1, 1): (7.0/4.0 * numpy.pi, 8, True)}
 
     LOGGER.info('Building diagonals for effective retention system.')
     for row_index in range(n_rows):
@@ -296,7 +296,7 @@ def calculate_effective_retention(flow_direction_dataset,
                     #direction, see diagram on pg 36 of Rich's notes
                     delta = abs(local_flow_angle - outflow_angle)
 
-                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                    if delta < numpy.pi/4.0 or (2*numpy.pi - delta) < numpy.pi/4.0:
                         neighbor_retention = \
                             retention_efficiency_array[neighbor_index]
 
@@ -307,11 +307,11 @@ def calculate_effective_retention(flow_direction_dataset,
                             #We want to measure the far side of the unit 
                             #triangle so we measure that angle UP from 
                             #theta = 0 on a unit circle
-                            delta = np.pi/4-delta
+                            delta = numpy.pi/4-delta
 
                         #Taking absolute value because it might be on a 0,-45 
                         #degree angle
-                        outflow_fraction = abs(np.tan(delta))
+                        outflow_fraction = abs(numpy.tan(delta))
                         if not diagonal_outflow:
                             #If not diagonal then we measure the direct flow in
                             #which is the inverse of the tangent function
@@ -401,25 +401,25 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         #of the term is to determine the length of the flow path on the
         #pixel, thus we take the absolute value of each trigometric
         #function to keep the computation in the first quadrant
-        xij = abs(np.sin(aspect_angle)) + abs(np.cos(aspect_angle))
+        xij = abs(numpy.sin(aspect_angle)) + abs(numpy.cos(aspect_angle))
 
         contributing_area = (flow_accumulation-1) * cell_area
 
         #A placeholder for simplified slope stuff
-        slope_in_radians = np.arctan(slope)
+        slope_in_radians = numpy.arctan(slope)
 
         #From Equation 4 in "Extension and validataion of a geographic
         #information system ..."
         if slope < 0.09:
-            slope_factor =  10.8*np.sin(slope_in_radians)+0.03
+            slope_factor =  10.8*numpy.sin(slope_in_radians)+0.03
         else:
-            slope_factor =  16.8*np.sin(slope_in_radians)-0.5
+            slope_factor =  16.8*numpy.sin(slope_in_radians)-0.5
             
         #Set the m value to the lookup table that's from Yonas's handwritten
         #notes.  On the margin it says "Equation 15".  Don't know from
         #where.
-        beta = (np.sin(slope_in_radians) / 0.0896) / \
-            (3*pow(np.sin(slope_in_radians),0.8)+0.56)
+        beta = (numpy.sin(slope_in_radians) / 0.0896) / \
+            (3*pow(numpy.sin(slope_in_radians),0.8)+0.56)
         slope_table = [0.01, 0.035, 0.05, 0.09]
         exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
             
@@ -643,25 +643,25 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
-    b_vector = np.zeros(n_rows * n_cols)
+    b_vector = numpy.zeros(n_rows * n_cols)
 
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
-    a_matrix = np.zeros((9, n_rows * n_cols))
-    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+    a_matrix = numpy.zeros((9, n_rows * n_cols))
+    diags = numpy.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
                        1, n_cols-1, n_cols, n_cols+1])
     
     #Determine the outflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
-                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
-                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
-                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
-                         ( 0,-1): (0.0/4.0 * np.pi, 3, False),
-                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
-                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
-                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+    inflow_directions = {( 0, 1): (4.0/4.0 * numpy.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * numpy.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * numpy.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * numpy.pi, 0, True),
+                         ( 0,-1): (0.0/4.0 * numpy.pi, 3, False),
+                         ( 1,-1): (1.0/4.0 * numpy.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * numpy.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * numpy.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -699,7 +699,7 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
                     #direction, see diagram on pg 36 of Rich's notes
                     delta = abs(local_flow_angle - inflow_angle)
 
-                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                    if delta < numpy.pi/4.0 or (2*numpy.pi - delta) < numpy.pi/4.0:
                         neighbor_retention = \
                             retention_efficiency_array[neighbor_index]
                         neighbor_sediment_loss = \
@@ -713,11 +713,11 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
                             #We want to measure the far side of the unit 
                             #triangle so we measure that angle UP from 
                             #theta = 0 on a unit circle
-                            delta = np.pi/4-delta
+                            delta = numpy.pi/4-delta
 
                         #Taking absolute value because it might be on a 0,-45
                         #degree angle
-                        inflow_fraction = abs(np.tan(delta))
+                        inflow_fraction = abs(numpy.tan(delta))
                         if not diagonal_inflow:
                             #If not diagonal then we measure the direct flow in
                             #which is the inverse of the tangent function
@@ -818,19 +818,19 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
         else:
             return -1
 
-    result = np.zeros(n_rows*n_cols)
+    result = numpy.zeros(n_rows*n_cols)
 
     #Determine the outflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
-                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
-                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
-                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
-                         ( 0,-1): (0.0/4.0 * np.pi, 3, False),
-                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
-                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
-                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+    inflow_directions = {( 0, 1): (4.0/4.0 * numpy.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * numpy.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * numpy.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * numpy.pi, 0, True),
+                         ( 0,-1): (0.0/4.0 * numpy.pi, 3, False),
+                         ( 1,-1): (1.0/4.0 * numpy.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * numpy.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * numpy.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -865,7 +865,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                     #direction, see diagram on pg 36 of Rich's notes
                     delta = abs(local_flow_angle - inflow_angle)
 
-                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                    if delta < numpy.pi/4.0 or (2*numpy.pi - delta) < numpy.pi/4.0:
                         neighbor_retention = \
                             retention_efficiency_array[neighbor_index]
                         if neighbor_retention == retention_efficiency_nodata:
@@ -875,11 +875,11 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                             #We want to measure the far side of the unit 
                             #triangle so we measure that angle UP from 
                             #theta = 0 on a unit circle
-                            delta = np.pi/4-delta
+                            delta = numpy.pi/4-delta
 
                         #Taking absolute value because it might be on a 0,-45 
                         #degree angle
-                        inflow_fraction = abs(np.tan(delta))
+                        inflow_fraction = abs(numpy.tan(delta))
                         if not diagonal_inflow:
                             #If not diagonal then we measure the direct flow in
                             #which is the inverse of the tangent function
@@ -995,7 +995,7 @@ def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
 
         #Set everything that's not valid to 0, then sum
         row_array[~valid_mask] = 0
-        running_sum += np.sum(row_array)
+        running_sum += numpy.sum(row_array)
 
     return running_sum
 
@@ -1091,4 +1091,29 @@ def calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri):
         sdr_uri - uri to write the sdr out to
 
         returns nothing"""
-    pass
+
+    alpha_dataset = gdal.Open(alpha_uri)
+    _, alpha_nodata = raster_utils.extract_band_and_nodata(alpha_dataset)
+
+    flow_length_dataset = gdal.Open(flow_length_uri)
+    _, flow_length_nodata = raster_utils.extract_band_and_nodata(flow_length_dataset)
+
+    slope_dataset = gdal.Open(slope_uri)
+    _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
+
+    sdr_nodata = -1.0
+
+
+    def sdr_calc(flow_length, alpha, slope):
+        """This is the SDR calculation from Yonas's writeup on dropbox called
+            InVEST Sediment Model_modifications_10-01-2012_RS.dcx"""
+        if flow_length == flow_length_nodata or alpha == alpha_nodata or \
+                slope == slope_nodata:
+            return sdr_nodata
+        t_ij = flow_length/(alpha*numpy.sqrt(slope))
+        return numpy.exp(t_ij)
+
+    dataset_list = [flow_length_dataset, alpha_dataset, slope_dataset]
+    raster_utils.vectorize_rasters(
+        dataset_list, sdr_calc, raster_out_uri=sdr_uri,
+        datatype=gdal.GDT_Float32, nodata=sdr_nodata)

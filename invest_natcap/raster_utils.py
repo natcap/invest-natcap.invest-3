@@ -1006,7 +1006,8 @@ def calculate_slope(dem_dataset, slope_uri):
         dem_dataset - (input) a single band raster of z values.
         slope_uri - (input) a path to the output slope uri
             
-        returns GDAL single band raster of the same dimensions as dem whose elements are percent rise"""
+        returns GDAL single band raster of the same dimensions as dem whose
+            elements are percent rise"""
 
     LOGGER = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
@@ -1047,6 +1048,9 @@ def calculate_slope(dem_dataset, slope_uri):
     offsets = [(1, 1), (0, 1), (-1, 1), 
                (1, 0), (-1, 0), (1, -1), 
                (0, -1), (-1, -1)]
+
+    #convert slopes to percentages
+    slope_matrix[:] *= 100.0
 
     #Set everything that's next to the nodata dem also to nodata
     for offset in offsets:
