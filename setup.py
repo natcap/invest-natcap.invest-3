@@ -9,6 +9,8 @@ import datetime
 import time
 import glob
 import subprocess
+import matplotlib
+
 
 import numpy as np
 from Cython.Distutils import build_ext
@@ -63,7 +65,9 @@ if platform.system() == 'Windows':
             #this on a stackoverflow thread that I've now lost
             'includes': ['sip',
                          'invest_natcap',
-                         'scipy.io.matlab.streams'],
+                         'scipy.io.matlab.streams',
+                         'ctypes',
+                         'shapely.geos'],
             'dist_dir': DIST_DIR,
             'packages': packages,
             #http://www.py2exe.org/index.cgi/ListOfOptions
@@ -112,7 +116,9 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/overlap_analysis_mz.json',
                'invest_natcap/iui/sediment_biophysical.json',
                'invest_natcap/iui/wind_energy.json',
-               'invest_natcap/iui/coastal_vulnerability.json']))
+               'invest_natcap/iui/coastal_vulnerability.json',
+              'geos_c.dll']))
+    data_files.extend(matplotlib.get_py2exe_datafiles())
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
     data_files.append(('installer', glob.glob('installer/*')))
