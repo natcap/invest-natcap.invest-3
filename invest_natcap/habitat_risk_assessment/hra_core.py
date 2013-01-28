@@ -301,6 +301,8 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
 def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
+    The ecosystem raster will be a direct sum of each of the included habitat
+    rasters.
 
     Input:
         dir- The directory in which all completed should be placed.
