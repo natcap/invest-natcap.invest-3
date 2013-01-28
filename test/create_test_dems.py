@@ -51,5 +51,3 @@ flow_accumulation_dataset = raster_utils.flow_accumulation_dinf(flow_dataset, de
 raster_utils.calculate_raster_stats(dem)
 raster_utils.calculate_raster_stats(flow_dataset)
 raster_utils.calculate_raster_stats(flow_accumulation_dataset)
-
-subprocess.Popen(["qgis", flow_dem_uri])
