@@ -13,6 +13,7 @@ pushd test
 
 
 echo "STARTING TESTS"
+pwd
 timeout=600
 
 # Can't use multiple processor cores to run tests concurrently since most
