@@ -12,6 +12,8 @@ import numpy as np
 import scipy.ndimage as ndimage
 from scipy import integrate
 from scipy import spatial
+#required for py2exe to build
+from scipy.sparse.csgraph import _validation
 import shapely.wkt
 import shapely.ops
 from shapely import speedups

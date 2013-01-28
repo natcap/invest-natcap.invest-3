@@ -11,10 +11,20 @@ echo 'Activated'
 python setup.py install
 pushd test
 
+timeout=600
+
+# Can't use multiple processor cores to run tests concurrently since most
+# tests write to the same directory.  Use a single process instead.
+# It's necessary to declare a single process, as the process-timeout option
+# only works when we specify how many processes we're using.
+#processes=$(grep "^core id" /proc/cpuinfo | sort -u | wc -l)
+processes=1
+echo $processes
+
 if [ $# -eq 0 ]
 # If there are no arguments, run all tests
 then
-    nosetests -vs --nologcapture
+    nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes
 elif [ $1 == 'release' ]
 then
 # If the first argument is 'release', run the specified tests for released models.
@@ -49,14 +59,14 @@ then
         wave_energy_valuation_test.py
         )
     echo "Testing " ${test_files[*]}
-    nosetests -vs --nologcapture ${test_files[*]}
+    nosetests -vs --process-timeout=$timeout --processes=$processes ${test_files[*]}
 elif [ $1 == 'all' ]
 then
 # If the user specifies all as the first argument, run all tests
-    nosetests -vs --nologcapture
+    nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes
 else
 # Otherwise, take the arguments and pass them to nosetests
-    nosetests -vs --nologcapture $@
+    nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes $@
 fi
 
 popd
