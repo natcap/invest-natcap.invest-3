@@ -11,6 +11,8 @@ echo 'Activated'
 python setup.py install
 pushd test
 
+
+echo "STARTING TESTS"
 timeout=600
 
 # Can't use multiple processor cores to run tests concurrently since most
@@ -70,4 +72,4 @@ else
 fi
 
 popd
-
+deactivate
