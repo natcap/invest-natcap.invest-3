@@ -6,13 +6,9 @@ def after_install(options, home_dir):
         bin = 'Scripts'
     else:
         bin = 'bin'
-    subprocess.call([join('easy_install'),
-                     'numpy'])
-    subprocess.call([join('easy_install'),
-                     'scipy'])
-    subprocess.call([join('easy_install'),
-                     'nose'])
-    subprocess.call([join('easy_install'),
-                     'setuptools'])
+    subprocess.call(['pip', 'numpy'])
+    subprocess.call(['pip', 'scipy'])
+    subprocess.call(['pip', 'nose'])
+    subprocess.call(['pip', 'setuptools'])
 """))
 print output
