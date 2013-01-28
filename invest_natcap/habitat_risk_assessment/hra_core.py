@@ -212,6 +212,8 @@ def raster_to_polygon(raster, out_uri, layer_name, field_name):
         This will be a shapefile in the shape of the raster. The raster being
         passed in will be solely "high risk" areas that conatin data, and
         nodata values for everything else.
+
+    Returns nothing.
     '''
     driver = ogr.GetDriverByName("ESRI Shapefile")
     ds = driver.CreateDataSource(out_uri)
@@ -235,9 +237,16 @@ def raster_to_polygon(raster, out_uri, layer_name, field_name):
     ds.SyncToDisk()
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
-    '''This will do the same as the individual E/C calculations, but instead
-    will be r/dq for each criteria.
+    '''This will do the same h-s calculation as used for the individual E/C 
+    calculations, but instead will use r/dq as the equation for each criteria.
+    The full equation will be:
 
+        SUM HAB CRITS( r/dq )
+        ---------------------
+        SUM HAB CRITS( 1/dq )
+
+    Input:
+        dir- Directory in which the completed raster files should be placed.
         crit_lists- A dictionary containing pre-burned criteria which can be
             combined to get the E/C for that H-S pairing.
 
@@ -256,21 +265,14 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. 
-            
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                                 (hab1, stressB): ...
-                               },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
-                                ...
-                               },
-                        's':   { stressA: [indiv num raster, ...]
-                               }
-                     }
-             'Recovery': { hab1: [indiv num raster, ...],
-                           hab2: ...
-                         }
-            }
+            can be divided by this. This dictionary will be the same structure
+            as crit_lists, but the innermost values will be floats instead of
+            lists.
+    Output:
+        A raster file for each of the habitats included in the model displaying
+            the recovery potential within each potential grid cell.
+
+    Returns nothing.
     '''
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
