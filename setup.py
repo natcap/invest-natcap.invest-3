@@ -61,16 +61,14 @@ if platform.system() == 'Windows':
     import py2exe
     py2exe_args['options'] = \
         {'py2exe':{
-            #Sometimes if I don't include 'sip' it doesn't build, found
-            #this on a stackoverflow thread that I've now lost
             'includes': ['sip',
                          'invest_natcap',
                          'scipy.io.matlab.streams',
                          'ctypes',
-                         'shapely.geos'],
+                         'shapely.geos',
+                         'matplotlib.backends.backend_qt4agg'],
             'dist_dir': DIST_DIR,
             'packages': packages,
-            #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
          }
