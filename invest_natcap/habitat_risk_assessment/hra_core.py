@@ -578,8 +578,9 @@ def calc_E_raster(out_uri, s_list, s_denom):
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns an 'E' raster that is the sum of all individual r/dq*w burned
-    criteria rasters divided by the summed denominator.
+    Returns:
+        An 'E' raster that is the sum of all individual r/dq*w burned
+        criteria rasters divided by the summed denominator.
     '''
     
     def add_e_pix(*pixels):
@@ -609,8 +610,9 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns a 'C' raster that is the sum of all individual r/dq*w burned
-    criteria rasters divided by the summed denominator.
+    Returns:
+        A 'C' raster that is the sum of all individual r/dq*w burned
+        criteria rasters divided by the summed denominator.
     '''
     tot_crit_list = h_s_list + h_list
     tot_denom = h_s_denom + h_denom
