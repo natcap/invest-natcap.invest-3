@@ -191,13 +191,62 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
                                     0, gdal.GDT_Float32)
             band, nodata = raster_utils.extract_band_and_nodata(new_ds)
     
-            #HERE IS WHERE WE WOULD USE THE RASTER UTILS TO SHAPEFILE.
+            #Use gdal.Polygonize to take the raster, which should have only
+            #data where there are high percentage risk values, and turn it into
+            #a shapefile. 
+            raster_to_polygon(new_ds, out_uri, h, 'VALUE')
 
+def raster_to_polygon(raster, out_uri, layer_name, field_name):
+    '''This will take in a raster file, and output a shapefile of the same
+    area and shape.
+
+    Input:
+        raster- The raster that needs to be turned into a shapefile. This is
+            only an open raster, not the band. 
+        out_uri- The desired URI for the new shapefile.
+        layer_name- The name of the layer going into the new shapefile.
+        field-name- The name of the field that will contain the raster pixel
+            value.
+    
+    Output:
+        This will be a shapefile in the shape of the raster. The raster being
+        passed in will be solely "high risk" areas that conatin data, and
+        nodata values for everything else.
+
+    Returns nothing.
+    '''
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+    ds = driver.CreateDataSource(out_uri)
+                
+    spat_ref = osr.SpatialReference()
+    spat_ref.ImportFromWkt(raster.GetProjection())
+                                
+    layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
+
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+
+    layer.CreateField(field_defn)
+
+    band = raster.GetRasterBand(1)
+    mask = band.GetMaskBand()
+
+    gdal.Polygonize(band, mask, layer, 0)
+
+    layer = None
+
+    ds.SyncToDisk()
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
-    '''This will do the same as the individual E/C calculations, but instead
-    will be r/dq for each criteria.
+    '''This will do the same h-s calculation as used for the individual E/C 
+    calculations, but instead will use r/dq as the equation for each criteria.
+    The full equation will be:
 
+        SUM HAB CRITS( r/dq )
+        ---------------------
+        SUM HAB CRITS( 1/dq )
+
+    Input:
+        dir- Directory in which the completed raster files should be placed.
         crit_lists- A dictionary containing pre-burned criteria which can be
             combined to get the E/C for that H-S pairing.
 
@@ -216,21 +265,14 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. 
-            
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                                 (hab1, stressB): ...
-                               },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
-                                ...
-                               },
-                        's':   { stressA: [indiv num raster, ...]
-                               }
-                     }
-             'Recovery': { hab1: [indiv num raster, ...],
-                           hab2: ...
-                         }
-            }
+            can be divided by this. This dictionary will be the same structure
+            as crit_lists, but the innermost values will be floats instead of
+            lists.
+    Output:
+        A raster file for each of the habitats included in the model displaying
+            the recovery potential within each potential grid cell.
+
+    Returns nothing.
     '''
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
@@ -259,6 +301,8 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
 def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
+    The ecosystem raster will be a direct sum of each of the included habitat
+    rasters.
 
     Input:
         dir- The directory in which all completed should be placed.
@@ -534,8 +578,9 @@ def calc_E_raster(out_uri, s_list, s_denom):
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns an 'E' raster that is the sum of all individual r/dq*w burned
-    criteria rasters divided by the summed denominator.
+    Returns:
+        An 'E' raster that is the sum of all individual r/dq*w burned
+        criteria rasters divided by the summed denominator.
     '''
     
     def add_e_pix(*pixels):
@@ -565,8 +610,9 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns a 'C' raster that is the sum of all individual r/dq*w burned
-    criteria rasters divided by the summed denominator.
+    Returns:
+        A 'C' raster that is the sum of all individual r/dq*w burned
+        criteria rasters divided by the summed denominator.
     '''
     tot_crit_list = h_s_list + h_list
     tot_denom = h_s_denom + h_denom
@@ -593,38 +639,67 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     subdictionary and should be pre-summed together to get the numerator
     for that particular raster. )
 
-    crit_lists:
-        #All risk burned rasters are r/dq*w
-        {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                             (hab1, stressB): ...
-                           },
-                    'h':   { hab1: [indiv num raster, raster 1, ...],
-                            ...
-                           },
-                    's':   { stressA: [indiv num raster, ...]
-                           }
-                 }
-         #all recovery potential burned rasters are r/dq
-         'Recovery': { hab1: [indiv num raster, ...],
-                       hab2: ...
-                     }
-        }
+    Input:
+        dir- Directory into which the rasterized criteria can be placed.
+        h_s- A multi-level structure which holds all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            3 outer keys containing numeric-only criteria, raster-based
+            criteria, and a dataset that shows the potentially buffered overlap
+            between the habitat and stressor. The overall structure will be as
+            pictured:
 
-    denoms:
-        #All risk denoms are concatonated 1/dq*w
-        {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                             (hab1, stressB): ...
-                           },
-                    'h':   { hab1: [indiv num raster, raster 1, ...],
-                            ...
-                           },
-                    's':   { stressA: [indiv num raster, ...]
-                           }
-                 }
-         'Recovery': { hab1: [indiv num raster, ...],
-                       hab2: ...
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+        hab- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by habitat
+            name, and habitats['habitatName']['DS'] points to the rasterized
+            habitat shapefile provided by the user.
+        stress- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by stressor
+            name, and stressors['habitatName']['DS'] points to the rasterized
+            stressor shapefile provided by the user.
+    
+    Output:
+        Creates a version of every criteria for every h-s paring that is
+        burned with both a r/dq*w value for risk calculation, as well as a
+        r/dq burned raster for recovery potential calculations.
+    
+    Returns:     
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
+
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
                      }
-        }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+        denoms- Dictionary containing the combined denominator for a given
+            H-S overlap. Once all of the rasters are combined, each H-S raster
+            can be divided by this. This dictionary will be the same structure
+            as crit_lists, but the innermost values will be floats instead of
+            lists.
     '''
     pre_raster_dict = os.path.join(dir, 'Intermediate', 'Crit_Rasters')
     crit_lists = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
