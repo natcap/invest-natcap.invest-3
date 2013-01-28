@@ -639,38 +639,67 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     subdictionary and should be pre-summed together to get the numerator
     for that particular raster. )
 
-    crit_lists:
-        #All risk burned rasters are r/dq*w
-        {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                             (hab1, stressB): ...
-                           },
-                    'h':   { hab1: [indiv num raster, raster 1, ...],
-                            ...
-                           },
-                    's':   { stressA: [indiv num raster, ...]
-                           }
-                 }
-         #all recovery potential burned rasters are r/dq
-         'Recovery': { hab1: [indiv num raster, ...],
-                       hab2: ...
-                     }
-        }
+    Input:
+        dir- Directory into which the rasterized criteria can be placed.
+        h_s- A multi-level structure which holds all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            3 outer keys containing numeric-only criteria, raster-based
+            criteria, and a dataset that shows the potentially buffered overlap
+            between the habitat and stressor. The overall structure will be as
+            pictured:
 
-    denoms:
-        #All risk denoms are concatonated 1/dq*w
-        {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
-                             (hab1, stressB): ...
-                           },
-                    'h':   { hab1: [indiv num raster, raster 1, ...],
-                            ...
-                           },
-                    's':   { stressA: [indiv num raster, ...]
-                           }
-                 }
-         'Recovery': { hab1: [indiv num raster, ...],
-                       hab2: ...
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+        hab- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by habitat
+            name, and habitats['habitatName']['DS'] points to the rasterized
+            habitat shapefile provided by the user.
+        stress- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by stressor
+            name, and stressors['habitatName']['DS'] points to the rasterized
+            stressor shapefile provided by the user.
+    
+    Output:
+        Creates a version of every criteria for every h-s paring that is
+        burned with both a r/dq*w value for risk calculation, as well as a
+        r/dq burned raster for recovery potential calculations.
+    
+    Returns:     
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
+
+            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                                ...
+                               },
+                        's':   { stressA: [indiv num raster, ...]
+                               }
                      }
-        }
+             'Recovery': { hab1: [indiv num raster, ...],
+                           hab2: ...
+                         }
+            }
+        denoms- Dictionary containing the combined denominator for a given
+            H-S overlap. Once all of the rasters are combined, each H-S raster
+            can be divided by this. This dictionary will be the same structure
+            as crit_lists, but the innermost values will be floats instead of
+            lists.
     '''
     pre_raster_dict = os.path.join(dir, 'Intermediate', 'Crit_Rasters')
     crit_lists = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
