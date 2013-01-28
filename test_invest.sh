@@ -25,7 +25,7 @@ if [ $# -eq 0 ]
 # If there are no arguments, run all tests
 then
     nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes
-elif [ $$processes == 'release' ]
+elif [ $1 == 'release' ]
 then
 # If the first argument is 'release', run the specified tests for released models.
     test_files=(
@@ -60,7 +60,7 @@ then
         )
     echo "Testing " ${test_files[*]}
     nosetests -vs --process-timeout=$timeout --processes=$processes ${test_files[*]}
-elif [ $$processes == 'all' ]
+elif [ $1 == 'all' ]
 then
 # If the user specifies all as the first argument, run all tests
     nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes
