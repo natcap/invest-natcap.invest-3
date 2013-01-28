@@ -191,8 +191,48 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
                                     0, gdal.GDT_Float32)
             band, nodata = raster_utils.extract_band_and_nodata(new_ds)
     
-            #HERE IS WHERE WE WOULD USE THE RASTER UTILS TO SHAPEFILE.
+            #Use gdal.Polygonize to take the raster, which should have only
+            #data where there are high percentage risk values, and turn it into
+            #a shapefile. 
+            raster_to_polygon(new_ds, out_uri, h, 'VALUE')
 
+def raster_to_polygon(raster, out_uri, layer_name, field_name):
+    '''This will take in a raster file, and output a shapefile of the same
+    area and shape.
+
+    Input:
+        raster- The raster that needs to be turned into a shapefile. This is
+            only an open raster, not the band. 
+        out_uri- The desired URI for the new shapefile.
+        layer_name- The name of the layer going into the new shapefile.
+        field-name- The name of the field that will contain the raster pixel
+            value.
+    
+    Output:
+        This will be a shapefile in the shape of the raster. The raster being
+        passed in will be solely "high risk" areas that conatin data, and
+        nodata values for everything else.
+    '''
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+    ds = driver.CreateDataSource(out_uri)
+                
+    spat_ref = osr.SpatialReference()
+    spat_ref.ImportFromWkt(raster.GetProjection())
+                                
+    layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
+
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+
+    layer.CreateField(field_defn)
+
+    band = raster.GetRasterBand(1)
+    mask = band.GetMaskBand()
+
+    gdal.Polygonize(band, mask, layer, 0)
+
+    layer = None
+
+    ds.SyncToDisk()
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same as the individual E/C calculations, but instead
