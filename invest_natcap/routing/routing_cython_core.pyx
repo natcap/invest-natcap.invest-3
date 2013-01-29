@@ -848,6 +848,7 @@ def percent_to_sink(
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     process_stack = collections.deque()
 
@@ -855,92 +856,63 @@ def percent_to_sink(
     cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
     cdef float outflow_percent_list[2]
 
-    for loop_col_index in xrange(n_cols):
-        for loop_row_index in xrange(n_rows):
 
-            #if the outflow weight is nodata, then it's not even a valid pixel
-            outflow_weight = \
-                outflow_weights_array[loop_row_index, loop_col_index]
-            if outflow_weight == outflow_weights_nodata:
+    process_queue = collections.deque()
+    #Queue the sinks
+    for col_index in xrange(n_cols):
+        for row_index in xrange(n_rows):
+            if sink_pixels_array[row_index, col_index] == 1:
+                effect_array[row_index, col_index] = 1.0
+                process_queue.appendleft(col_index * n_rows + row_index)
+
+    while len(process_queue) > 0:
+        index = process_queue.pop()
+        row_index = index / n_cols
+        col_index = index % n_cols
+
+        #if the outflow weight is nodata, then not a valid pixel
+        outflow_weight = outflow_weights_array[row_index, col_index]
+        if outflow_weight == outflow_weights_nodata:
+            continue
+
+        for neighbor_index in range(8):
+            neighbor_row_index = row_index + row_offsets[neighbor_index]
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                #out of bounds
                 continue
 
-            process_stack.append(loop_row_index * n_cols + loop_col_index)
-            while len(process_stack) > 0:
-                index = process_stack.pop()
-                row_index = index / n_cols
-                col_index = index % n_cols
+            neighbor_col_index = col_index + col_offsets[neighbor_index]
+            if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                #out of bounds
+                continue
 
-                #If we've already calculated the effect on this pixel, skip
-                if effect_array[row_index, col_index] != effect_nodata:
-                    continue
+            neighbor_outflow_direction = \
+                outflow_direction_array[neighbor_row_index, neighbor_col_index]
+            
+            neighbor_outflow_weight = outflow_weights_array[row_index, col_index]
 
-                #If this pixel is a sink, it's got a full effect of 1.0
-                if sink_pixels_array[row_index, col_index] == 1:
-                    effect_array[row_index, col_index] = 1.0
-                    continue
+            it_flows_here = False
 
-                #if the outflow weight is nodata, then not a valid pixel
-                outflow_weight = outflow_weights_array[row_index, col_index]
-                if outflow_weight == outflow_weights_nodata:
-                    continue
-                #Precalculate the outgoing weights
-                outflow_percent_list[0] = outflow_weight
-                outflow_percent_list[1] = 1.0 - outflow_weight
+            if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
+                #the neighbor flows into this cell
+                it_flows_here = True
 
-                #Used to see if outflow neighbors already have their effects
-                neighbors_to_process = collections.deque()
-                total_effect = 0.0
+            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
+                #the offset neighbor flows into this cell
+                it_flows_here = True
+                neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
+                pass
+                
+            if it_flows_here:
+                #If we haven't processed that effect yet, set it to 0 and append to the queue
+                if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
+                    process_queue.appendleft(neighbor_row_index * n_cols + neighbor_col_index)
+                    effect_array[neighbor_row_index, neighbor_col_index] = 0.0
 
-                outflow_direction = \
-                    outflow_direction_array[row_index, col_index]
-
-                for offset in range(2):
-                    #Make sure that there is outflow 
-                    if abs(outflow_percent_list[offset]) < EPS:
-                        continue
-
-                    #Offset the rotation if necessary
-                    outflow_direction_offset = (outflow_direction + offset) % 8
-
-                    #Check if outflow cell is in bounds
-                    outflow_row_index = \
-                        row_index + row_offsets[outflow_direction_offset]
-                    if outflow_row_index < 0 or outflow_row_index >= n_rows:
-                        continue
-                    outflow_col_index = \
-                        col_index + col_offsets[outflow_direction_offset]
-                    if outflow_col_index < 0 or outflow_col_index >= n_cols:
-                        continue
-
-                    #Make sure outflow neighbor is valid
-                    neighbor_outflow_weight = outflow_weights_array[
-                        outflow_row_index, outflow_col_index]
-                    if neighbor_outflow_weight == outflow_weights_nodata:
-                        #This is an interesting case where the outflow of
-                        #a valid cell validly flows into a cell w/ nodata
-                        #so it gets a 0 contribution to the total_effect
-                        #it seems to happen on the edges and is a defect with
-                        #the d-infinity flow algorithm specifying flows in
-                        #invalid directions
-                        continue
-
-                    neighbor_effect = \
-                        effect_array[outflow_row_index, outflow_col_index]
-                    if neighbor_effect == effect_nodata:
-                        neighbors_to_process.append(
-                            outflow_row_index * n_cols + outflow_col_index)
-                    else:
-                        neighbor_export = export_rate_array[
-                            outflow_row_index, outflow_col_index]
-                        total_effect += outflow_percent_list[offset] * \
-                            neighbor_effect * neighbor_export
-
-                if len(neighbors_to_process) > 0:
-                    process_stack.append(index)
-                    process_stack.extend(neighbors_to_process)
-                    continue
-
-                effect_array[row_index, col_index] = total_effect
+                effect_array[neighbor_row_index, neighbor_col_index] += \
+                    effect_array[row_index, col_index] * \
+                    neighbor_outflow_weight * \
+                    export_rate_array[row_index, col_index]
 
     effect_band.WriteArray(effect_array, 0, 0)
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
