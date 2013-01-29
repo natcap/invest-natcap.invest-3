@@ -20,6 +20,15 @@ class TestHRACore(unittest.TestCase):
 
         args['workspace_dir'] = './data/test_out/HRA'
     
+        #For purposes of running test independently of HRA non-core, need to
+        #delete current intermediate and output folders
+        out_dir = os.path.join(args['workspace_dir'], 'Output')
+
+        if (os.path.exists(out_dir)):
+            shutil.rmtree(out_dir) 
+
+        os.makedirs(out_dir)
+        
         #For the basic runs, include both the 'Crit_Ratings' and 'Crit_Rasters'
         #subdictionaries. For individual tests, remove them each and try.
         args['h-s'] = \
@@ -127,21 +136,14 @@ class TestHRACore(unittest.TestCase):
             }
         self.args = args
 
-    def test_plain_execute(self):
+    def test_euc_execute(self):
        
-        #For purposes of running test independently of HRA non-core, need to
-        #delete current intermediate and output folders
-        out_dir = os.path.join(self.args['workspace_dir'], 'Output')
-
-        if (os.path.exists(out_dir)):
-            shutil.rmtree(out_dir) 
-
-        os.makedirs(out_dir)
-
-        
         #in an average test run, would likely have Euclidean risk, and a max
         #rating of 3. The max risk would therefore be as seen below.
         self.args['risk_eq'] = 'Euclidean'
         self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
-        hra_core.execute(self.args) 
+        hra_core.execute(self.args)
+
+    def test_mult_execute(self):
+
