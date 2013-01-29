@@ -147,3 +147,19 @@ class TestHRACore(unittest.TestCase):
 
     def test_mult_execute(self):
 
+        #Now, do one that uses multiplicative risk. Still want to use a max
+        #rating of 3 as a test.
+        self.args['risk_eq'] = 'Multiplicative'
+        self.args['max_risk'] = 3
+
+        hra_core.execute(self.args)
+
+    def test_diff_num_crits(self):
+
+        #Want to take out a single criteria from one of the habitat-stressor
+        #pairs, in order to make sure that core can run when things have
+        #different numbers of criteria
+        del self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm']\
+                ['temporal_overlap']
+
+        hra_core.execute(self.args)
