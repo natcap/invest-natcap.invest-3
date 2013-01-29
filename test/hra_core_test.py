@@ -46,6 +46,30 @@ class TestHRACore(unittest.TestCase):
                     {},
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                            H[kelp]_S[ShellfishAquacultureComm].tif')
+               },
+           ('eelgrass', 'finfishaquaculturecomm'):
+                {'Crit_Ratings':
+                    {'temporal_overlap':
+                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                     'frequency_of_natural_disturbance':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':
+                    {},
+                 'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
+                           H[kelp]_S[ShellfishAquacultureComm].tif')
+                },
+           ('eelgrass', 'shellfishaquaculturecomm'):
+                {'Crit_Ratings':
+                    {'temporal_overlap':
+                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                     'frequency_of_natural_disturbance':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':
+                    {},
+                 'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
+                           H[kelp]_S[ShellfishAquacultureComm].tif')
                 }
             }
          
@@ -103,7 +127,7 @@ class TestHRACore(unittest.TestCase):
             }
         self.args = args
 
-    def test_execute(self):
+    def test_plain_execute(self):
        
         #For purposes of running test independently of HRA non-core, need to
         #delete current intermediate and output folders
@@ -113,5 +137,11 @@ class TestHRACore(unittest.TestCase):
             shutil.rmtree(out_dir) 
 
         os.makedirs(out_dir)
+
+        
+        #in an average test run, would likely have Euclidean risk, and a max
+        #rating of 3. The max risk would therefore be as seen below.
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
         hra_core.execute(self.args) 
