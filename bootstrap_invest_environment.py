@@ -3,6 +3,7 @@ output = virtualenv.create_bootstrap_script(textwrap.dedent("""
 import os, subprocess, sys
 def after_install(options, home_dir):
     print("Home dir: ", home_dir)
+    print("CWD: ", os.getcwd())
     if sys.platform == 'win32':
         bin = 'Scripts'
     else:
