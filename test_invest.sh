@@ -1,20 +1,35 @@
 #!/bin/bash
 
 ENVDIR=invest_python_environment
-#deactivate
-#rm -rf build  # rebuilding build/ takes a VERY long time.  Don't uncomment.
-#rm -rf $ENVDIR  # revuilding this also takes a VERY long time.
+deactivate
+rm -rf build  # rebuilding build/ takes a VERY long time.  Don't uncomment.
+rm -rf $ENVDIR  # revuilding this also takes a VERY long time.
 python bootstrap_invest_environment.py > setup_environment.py
 python setup_environment.py --clear --system-site-packages $ENVDIR
+ls invest_python_environment/bin
 source $ENVDIR/bin/activate
 echo 'Activated'
 python setup.py install
 pushd test
 
+
+echo "Using python " $(which python)
+echo "STARTING TESTS"
+pwd
+timeout=600
+
+# Can't use multiple processor cores to run tests concurrently since most
+# tests write to the same directory.  Use a single process instead.
+# It's necessary to declare a single process, as the process-timeout option
+# only works when we specify how many processes we're using.
+#processes=$(grep "^core id" /proc/cpuinfo | sort -u | wc -l)
+processes=1
+echo $processes
+
 if [ $# -eq 0 ]
 # If there are no arguments, run all tests
 then
-    nosetests -vs --nologcapture
+    nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes
 elif [ $1 == 'release' ]
 then
 # If the first argument is 'release', run the specified tests for released models.
@@ -49,15 +64,15 @@ then
         wave_energy_valuation_test.py
         )
     echo "Testing " ${test_files[*]}
-    nosetests -vs ${test_files[*]}
+    nosetests -vs --process-timeout=$timeout --processes=$processes ${test_files[*]}
 elif [ $1 == 'all' ]
 then
 # If the user specifies all as the first argument, run all tests
-    nosetests -vs --nologcapture
+    nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes
 else
 # Otherwise, take the arguments and pass them to nosetests
-    nosetests -vs --nologcapture $@
+    nosetests -vs --nologcapture --process-timeout=$timeout --processes=$processes $@
 fi
 
 popd
-
+deactivate
