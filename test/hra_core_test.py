@@ -155,6 +155,11 @@ class TestHRACore(unittest.TestCase):
         hra_core.execute(self.args)
 
     def test_diff_num_crits(self):
+        
+        #Still need to have standard risk calculation in order to get
+        #the whole core to run
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
         #Want to take out a single criteria from one of the habitat-stressor
         #pairs, in order to make sure that core can run when things have
@@ -163,3 +168,13 @@ class TestHRACore(unittest.TestCase):
                 ['temporal_overlap']
 
         hra_core.execute(self.args)
+
+    def test_no_rast_dict(self):
+        
+        #Still need standard risk calc stuff.
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
+
+        #Want to make sure that if we don't have raster criteria, that the core
+        #will still run.
+        del self.args['h-s']['Crit_Rasters']
