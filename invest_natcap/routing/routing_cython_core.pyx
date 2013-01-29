@@ -886,6 +886,10 @@ def percent_to_sink(
                 #out of bounds
                 continue
 
+            if sink_pixels_array[neighbor_row_index, neighbor_col_index] == 1:
+                #it's already a sink
+                continue
+
             neighbor_outflow_direction = \
                 outflow_direction_array[neighbor_row_index, neighbor_col_index]
             
@@ -902,6 +906,10 @@ def percent_to_sink(
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
                 pass
+
+            if neighbor_outflow_weight < EPS:
+                #it doesn't flow here
+                continue
                 
             if it_flows_here:
                 #If we haven't processed that effect yet, set it to 0 and append to the queue
