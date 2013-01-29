@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ENVDIR=invest_python_environment
-#deactivate
-#rm -rf build  # rebuilding build/ takes a VERY long time.  Don't uncomment.
-#rm -rf $ENVDIR  # revuilding this also takes a VERY long time.
+deactivate
+rm -rf build  # rebuilding build/ takes a VERY long time.  Don't uncomment.
+rm -rf $ENVDIR  # revuilding this also takes a VERY long time.
 python bootstrap_invest_environment.py > setup_environment.py
 python setup_environment.py --clear --system-site-packages $ENVDIR
 ls invest_python_environment/bin
