@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/bash -e
 
 ENVDIR=invest_python_environment
-deactivate
+#deactivate
 rm -rf build  # rebuilding build/ takes a VERY long time.  Don't uncomment.
 rm -rf $ENVDIR  # revuilding this also takes a VERY long time.
 python bootstrap_invest_environment.py > setup_environment.py
