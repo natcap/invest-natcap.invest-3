@@ -6,7 +6,7 @@ import os
 import numpy as np
 import collections 
 
-from osgeo import gdal
+from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
  
 LOGGER = logging.getLogger('HRA_CORE')
@@ -57,7 +57,7 @@ def execute(args):
         args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             rasters. In this case, however, the outermost key is by stressor
-            name, and stressors['habitatName']['DS'] points to the rasterized
+            name, and stressors['stressorName']['DS'] points to the rasterized
             stressor shapefile provided by the user.
 
     Outputs:
@@ -72,14 +72,10 @@ def execute(args):
                 habitat.
             /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
                 cumulative risk scores of all habitats for that cell.
-            /output/html_plots/output.html- HTML page containing a matlab plot
-                has cumulative exposure value for each habitat, as well as risk
-                of each habitat plotted per stressor.
-            /output/html_plots/plot_ecosys_risk.html- Plots the ecosystem risk
-                value for each habitat.
-            /output/html_plots/plot_risk.html- Risk value for each habitat
-                plotted on a per-stressor graph.
-            
+            /output/maps/[habitatname]_HIGH_RISK- A raster-shaped shapefile
+                containing only the "high risk" areas of each habitat, defined
+                as being above a certain risk threshold. 
+
     Returns nothing.
     '''
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
@@ -182,19 +178,20 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
             return 0
 
     for h in h_dict:
-            #Want to know the number of stressors for the current habitat        
-            curr_top_risk = num_stress[h] * max_risk
-            old_ds = h_dict[h]
+        #Want to know the number of stressors for the current habitat        
+        curr_top_risk = num_stress[h] * max_risk
+        old_ds = h_dict[h]
 
-            out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
-            new_ds = raster_utils.new_raster_from_base(old_ds, risk_uri, 'GTiff', 
-                                    0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(new_ds)
-    
-            #Use gdal.Polygonize to take the raster, which should have only
-            #data where there are high percentage risk values, and turn it into
-            #a shapefile. 
-            raster_to_polygon(new_ds, out_uri, h, 'VALUE')
+        out_uri_r = os.path.join(dir, h + '_HIGH_RISK.tif') 
+        out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
+        new_ds = raster_utils.vectorize_rasters(old_ds, high_risk_raster,
+                        aoi = None, raster_out_uri = out_uri_r, 
+                        datatype=gdal.GDT_Float32, nodata = 0)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(new_ds, out_uri, h, 'VALUE')
 
 def raster_to_polygon(raster, out_uri, layer_name, field_name):
     '''This will take in a raster file, and output a shapefile of the same
