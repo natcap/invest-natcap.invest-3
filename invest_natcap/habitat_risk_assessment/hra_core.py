@@ -57,7 +57,7 @@ def execute(args):
         args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             rasters. In this case, however, the outermost key is by stressor
-            name, and stressors['habitatName']['DS'] points to the rasterized
+            name, and stressors['stressorName']['DS'] points to the rasterized
             stressor shapefile provided by the user.
 
     Outputs:
@@ -72,10 +72,10 @@ def execute(args):
                 habitat.
             /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
                 cumulative risk scores of all habitats for that cell.
-            /output/html_plots/output.html- HTML page containing a matlab plot
-                has cumulative exposure value for each habitat, as well as risk
-                of each habitat plotted per stressor.
-            
+            /output/maps/[habitatname]_HIGH_RISK- A raster-shaped shapefile
+                containing only the "high risk" areas of each habitat, defined
+                as being above a certain risk threshold. 
+
     Returns nothing.
     '''
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
