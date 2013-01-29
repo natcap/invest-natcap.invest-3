@@ -8,13 +8,13 @@ def after_install(options, home_dir):
         bin = 'Scripts'
     else:
         bin = 'bin'
-    subprocess.call([join(home_dir, bin, 'easy_install'),
+    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
                      'numpy'])
-    subprocess.call([join(home_dir, bin, 'easy_install'),
+    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
                      'scipy'])
-    subprocess.call([join(home_dir, bin, 'easy_install'),
+    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
                      'nose'])
-    subprocess.call([join(home_dir, bin, 'easy_install'),
+    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
                      'setuptools'])
 """))
 print output
