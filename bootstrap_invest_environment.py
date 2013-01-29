@@ -2,6 +2,7 @@ import virtualenv, textwrap
 output = virtualenv.create_bootstrap_script(textwrap.dedent("""
 import os, subprocess
 def after_install(options, home_dir):
+    print("Home dir: ", home_dir)
     if sys.platform == 'win32':
         bin = 'Scripts'
     else:
