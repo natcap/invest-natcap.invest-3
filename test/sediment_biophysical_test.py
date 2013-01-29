@@ -95,9 +95,6 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         sediment_biophysical.execute(args)
 
-        #subprocess.Popen(["qgis"] + map(lambda x: os.path.join(intermediate_dir,x), intermediate_files) \
-            #+ map(lambda x: os.path.join(output_dir,x), output_files))
-
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
             './data/sediment_regression_data/flow_direction_regression.tif')
@@ -234,6 +231,3 @@ class TestSedimentBiophysical(unittest.TestCase):
         raster_utils.calculate_raster_stats(dem)
         raster_utils.calculate_raster_stats(flow_dataset)
         raster_utils.calculate_raster_stats(effective_retention_dataset)
-        
-        #subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri, effective_retention_uri,
-#                          flow_accumulation_uri, stream_uri])

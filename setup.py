@@ -65,7 +65,8 @@ if platform.system() == 'Windows':
                          'scipy.io.matlab.streams',
                          'ctypes',
                          'shapely.geos',
-                         'matplotlib.backends.backend_qt4agg'],
+                         'matplotlib.backends.backend_qt4agg',
+                         'invest_natcap.invest_version'],
             'dist_dir': DIST_DIR,
             'packages': packages,
             'skip_archive': True
