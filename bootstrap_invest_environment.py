@@ -8,13 +8,12 @@ def after_install(options, home_dir):
         bin = 'Scripts'
     else:
         bin = 'bin'
-    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
-                     'numpy'])
-    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
-                     'scipy'])
-    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
-                     'nose'])
-    subprocess.call([join(home_dir, bin, 'easy_install').replace(' ', '\ '),
-                     'setuptools'])
+    easy_install = os.path.abspath(os.path.join(home_dir, bin, 'easy_install')).replace(' ', '\ ')
+    print("easy_install path: ", easy_install)
+    print("easy_insall exists: ", os.path.exists(easy_install))
+    subprocess.call([easy_install, 'numpy'])
+    subprocess.call([easy_install, 'scipy'])
+    subprocess.call([easy_install, 'nose'])
+    subprocess.call([easy_install, 'setuptools'])
 """))
 print output
