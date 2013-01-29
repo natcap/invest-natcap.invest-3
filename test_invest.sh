@@ -26,12 +26,13 @@ timeout=600
 processes=1
 echo $processes
 
-run_tests="nosetests -v --with-xunit --logging-filter=None --process-timeout=$timeout --processes=$processes"
+run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
+test_files=""
 
 if [ $# -eq 0 ]
 # If there are no arguments, run all tests
 then
-    ${run_tests}
+    test_files=""
 elif [ $1 == 'release' ]
 then
 # If the first argument is 'release', run the specified tests for released models.
@@ -66,15 +67,17 @@ then
         wave_energy_valuation_test.py
         )
     echo "Testing " ${test_files[*]}
-    ${run_tests} ${test_files[*]}
+    test_files="${test_files[*]}"
 elif [ $1 == 'all' ]
 then
 # If the user specifies all as the first argument, run all tests
-    ${run_tests}
+    test_files=""
 else
 # Otherwise, take the arguments and pass them to nosetests
-    ${run_tests} $@
+    test_files="$@"
 fi
+
+${run_tests} ${test_files} 2> test_errors.log
 
 popd
 deactivate
