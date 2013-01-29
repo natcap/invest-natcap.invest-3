@@ -6,6 +6,7 @@ ENVDIR=invest_python_environment
 #rm -rf $ENVDIR  # revuilding this also takes a VERY long time.
 python bootstrap_invest_environment.py > setup_environment.py
 python setup_environment.py --clear --system-site-packages $ENVDIR
+ls invest_python_environment/bin
 source $ENVDIR/bin/activate
 echo 'Activated'
 python setup.py install
