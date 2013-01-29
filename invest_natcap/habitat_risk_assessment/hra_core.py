@@ -75,10 +75,6 @@ def execute(args):
             /output/html_plots/output.html- HTML page containing a matlab plot
                 has cumulative exposure value for each habitat, as well as risk
                 of each habitat plotted per stressor.
-            /output/html_plots/plot_ecosys_risk.html- Plots the ecosystem risk
-                value for each habitat.
-            /output/html_plots/plot_risk.html- Risk value for each habitat
-                plotted on a per-stressor graph.
             
     Returns nothing.
     '''
@@ -191,7 +187,6 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         new_ds = raster_utils.vectorize_rasters(old_ds, high_risk_raster,
                         aoi = None, raster_out_uri = out_uri_r, 
                         datatype=gdal.GDT_Float32, nodata = 0)
-        band, nodata = raster_utils.extract_band_and_nodata(new_ds)
 
         #Use gdal.Polygonize to take the raster, which should have only
         #data where there are high percentage risk values, and turn it into
