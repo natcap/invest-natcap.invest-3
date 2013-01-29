@@ -893,7 +893,7 @@ def percent_to_sink(
             neighbor_outflow_direction = \
                 outflow_direction_array[neighbor_row_index, neighbor_col_index]
             
-            neighbor_outflow_weight = outflow_weights_array[row_index, col_index]
+            neighbor_outflow_weight = outflow_weights_array[neighbor_row_index, neighbor_col_index]
 
             it_flows_here = False
 
@@ -916,6 +916,9 @@ def percent_to_sink(
                 if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
                     process_queue.appendleft(neighbor_row_index * n_cols + neighbor_col_index)
                     effect_array[neighbor_row_index, neighbor_col_index] = 0.0
+
+                if effect_array[neighbor_row_index, neighbor_col_index] < 0:
+                    LOGGER.debug("effect_array[neighbor_row_index, neighbor_col_index] %s %s %s" % (effect_array[neighbor_row_index, neighbor_col_index], neighbor_row_index, neighbor_col_index))
 
                 effect_array[neighbor_row_index, neighbor_col_index] += \
                     effect_array[row_index, col_index] * \
