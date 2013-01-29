@@ -75,8 +75,3 @@ class TestRasterUtils(unittest.TestCase):
 
         flow_length_uri = os.path.join(base_dir, 'flow_length.tif')
         routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
-
-        subprocess.Popen(['qgis', flow_direction_uri, flow_length_uri])
-
-#        subprocess.Popen(['qgis', flux_uri, loss_uri, dem_uri, os.path.join(base_dir,'outflow_directions.tif'),
-#                          os.path.join(base_dir,'outflow_weights.tif'), os.path.join(base_dir,'flow_direction.tif')])

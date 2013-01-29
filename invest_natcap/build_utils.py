@@ -46,12 +46,12 @@ def invest_version(uri=None, force_new=False):
                     return get_latest_tag()
                 else:
                     return 'dev%s' % get_build_id()
-        except ValueError:
+        except ValueError as e:
             # Thrown when Mercurial is not found to be installed in the local
             # directory.  This is a band-aid fix for when we import InVEST from
             # within a distributed version of RIOS.
-            # When this happens, just return 'dev' for now.
-            return 'dev'
+            # When this happens, return the exception as a string.
+            return str(e)
 
     if version_info.release == 'None':
         return 'dev%s' % version_info.build_id

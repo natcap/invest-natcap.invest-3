@@ -152,8 +152,3 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
 
         sediment_core.calculate_pixel_retained(pixel_sediment_core_dataset,
             sedret_eff_dataset, flow_dataset, sediment_retained_uri)
-
-        subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 
-                          p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri,
-                          effective_retention_uri, pixel_export_uri, pixel_sediment_flow_uri,
-                          sediment_retained_uri])
