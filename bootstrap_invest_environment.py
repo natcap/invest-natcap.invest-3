@@ -8,7 +8,7 @@ def after_install(options, home_dir):
         bin = 'Scripts'
     else:
         bin = 'bin'
-    easy_install = os.path.abspath(os.path.join(home_dir, bin, 'easy_install')).replace(' ', '\ ')
+    easy_install = os.path.abspath(os.path.join(home_dir, bin, 'easy_install'))
     print("easy_install path: ", easy_install)
     print("easy_insall exists: ", os.path.exists(easy_install))
     subprocess.call([easy_install, 'numpy'])
