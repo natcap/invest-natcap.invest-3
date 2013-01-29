@@ -77,7 +77,7 @@ else
     test_files="$@"
 fi
 
-${run_tests} ${test_files} 2> test_errors.log
+${run_tests} ${test_files} 2> test_errors.log 2>&2
 
 popd
 deactivate
