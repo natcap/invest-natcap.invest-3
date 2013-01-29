@@ -58,8 +58,17 @@ class TestRasterUtils(unittest.TestCase):
         effect_uri = os.path.join(base_dir, 'effect.tif')
         effect_regression_uri = 'data/routing_regression/effect.tif'
 
+        flow_direction_uri = os.path.join(base_dir, 'flow_direction.tif')
+        routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
+
+        flow_length_uri = os.path.join(base_dir, 'flow_length.tif')
+        routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+
         outflow_direction_uri = os.path.join(base_dir, 'outflow_directions.tif')
         outflow_weights_uri = os.path.join(base_dir, 'outflow_weights.tif')
+
+        sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
+            flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
         routing_cython_core.percent_to_sink(stream_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, effect_uri, effect_regression_uri)
@@ -70,8 +79,3 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
 
 
-        flow_direction_uri = os.path.join(base_dir, 'flow_direction.tif')
-        routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
-
-        flow_length_uri = os.path.join(base_dir, 'flow_length.tif')
-        routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
