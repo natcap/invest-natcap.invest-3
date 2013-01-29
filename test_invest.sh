@@ -13,6 +13,7 @@ python setup.py install
 pushd test
 
 
+echo "Using python " $(which python)
 echo "STARTING TESTS"
 pwd
 timeout=600
