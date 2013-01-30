@@ -5,6 +5,7 @@ import logging
 import os
 import numpy as np
 import collections 
+import math
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
