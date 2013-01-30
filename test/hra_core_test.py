@@ -40,7 +40,12 @@ class TestHRACore(unittest.TestCase):
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
                  'Crit_Rasters':
-                    {},
+                    {'change_in_area':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':gdal.Open('./data/test_test_out/HRA/Criteria_Rasters\
+                                   kelp_finfishaquaculturecomm_change_in_area.tif')
+                        }
+                    },
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                             H[kelp]_S[FinfishAquacultureComm].tif')
                 },
@@ -52,7 +57,12 @@ class TestHRACore(unittest.TestCase):
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
                  'Crit_Rasters':
-                    {},
+                    {'change_in_area':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':gdal.Open('./data/test_test_out/HRA/Criteria_Rasters\
+                                   kelp_shellfishaquaculturecomm_change_in_area.tif')
+                        }
+                    },
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                            H[kelp]_S[ShellfishAquacultureComm].tif')
                },
@@ -64,7 +74,12 @@ class TestHRACore(unittest.TestCase):
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
                  'Crit_Rasters':
-                    {},
+                    {'change_in_area':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':gdal.Open('./data/test_test_out/HRA/Criteria_Rasters\
+                                   eelgrass_finfishaquaculturecomm_change_in_area.tif')
+                        }
+                    },
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                            H[kelp]_S[ShellfishAquacultureComm].tif')
                 },
@@ -76,7 +91,12 @@ class TestHRACore(unittest.TestCase):
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
                  'Crit_Rasters':
-                    {},
+                    {'change_in_area':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':gdal.Open('./data/test_test_out/HRA/Criteria_Rasters\
+                                   eelgrass_shellfishaquaculturecomm_change_in_area.tif')
+                        }
+                    },
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                            H[kelp]_S[ShellfishAquacultureComm].tif')
                 }
@@ -90,8 +110,6 @@ class TestHRACore(unittest.TestCase):
                      'conectivity':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
-                 'Crit_Rasters':
-                    {},
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                             Habitat_Rasters/kelp.tif')
                 },
@@ -102,8 +120,6 @@ class TestHRACore(unittest.TestCase):
                      'conectivity':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
-                 'Crit_Rasters':
-                    {},
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
                             Habitat_Rasters/eelgrass.tif')
                 }
@@ -116,10 +132,8 @@ class TestHRACore(unittest.TestCase):
                      'management_strategy_effectiveness':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
-                 'Crit_Rasters':
-                    {},
                  'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
-                            Stressor_Rasters/FinfishAquacultureComm.tif')
+                            Stressor_Rasters/FinfishAquacultureComm_buff.tif')
                 },
             ('shellfishaquaculturecomm'):
                {'Crit_Ratings':
@@ -128,10 +142,8 @@ class TestHRACore(unittest.TestCase):
                      'management_strategy_effectiveness':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
-                'Crit_Rasters':
-                    {},
                 'DS': gdal.Open('./data/test_out/HRA/Intermediate/\
-                            Stressor_Rasters/ShellfishAquacultureComm.tif')
+                            Stressor_Rasters/ShellfishAquacultureComm_buff.tif')
                 } 
             }
         self.args = args
