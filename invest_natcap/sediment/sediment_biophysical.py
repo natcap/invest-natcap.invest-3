@@ -82,7 +82,7 @@ def execute(args):
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    slope_dataset = raster_utils.calculate_slope(dem_dataset, slope_uri)
+    raster_utils.calculate_slope(dem_dataset, slope_uri)
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
