@@ -60,11 +60,13 @@ def execute(args):
             provides a coastline for determining distances from wind farm bins.
             AOI must be selected for this input to be active (optional)
         args[min_distance] - a float value for the minimum distance from shore
-            for offshore wind farm installation (meters) The AOI must be
-            selected for this input to be active (optional)
+            for offshore wind farm installation (meters) The land polygon must 
+            be selected for this input to be active (optional, required for 
+            valuation)
         args[max_distance] - a float value for the maximum distance from shore
-            for offshore wind farm installation (meters) The AOI must be
-            selected for this input to be active (optional)
+            for offshore wind farm installation (meters) The land polygon must
+            be selected for this input to be active (optional, required for 
+            valuation)
 
         returns - nothing"""
     
@@ -177,9 +179,14 @@ def execute(args):
         
         # Try to handle the distance inputs and land datasource if they 
         # are present
-        if args['distance_container']:
-            LOGGER.info('Handling distance parameters')
+        try:
+            biophysical_args['min_distance'] = float(args['min_distance'])
+            biophysical_args['max_distance'] = float(args['max_distance'])
             land_polygon = ogr.Open(str(args['land_polygon_uri']))
+        except KeyError:
+            LOGGER.info('Distance information not provided')
+        else: 
+            LOGGER.info('Handling distance parameters')
 
             # Define the uri's for clipping and reprojecting the land polygon
             # datasource
@@ -196,11 +203,6 @@ def execute(args):
                     aoi_reprojected_land_uri)
 
             biophysical_args['land_polygon'] = projected_land
-            biophysical_args['min_distance'] = float(args['min_distance']) 
-            biophysical_args['max_distance'] = float(args['max_distance'])
-
-        else:
-            LOGGER.info('Distance information not provided')
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
