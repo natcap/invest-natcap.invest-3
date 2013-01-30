@@ -51,7 +51,7 @@
                     "args_id" : "bathymetry_uri",
                     "type": "file",
                     "label": "Bathymetry (DEM)",
-                    "defaultValue": "../Base_Data/Marine/DEMs/global_dem_meters/hdr.adf",
+                    "defaultValue": "../Base_Data/Marine/DEMs/global_dem/hdr.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
                     "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."

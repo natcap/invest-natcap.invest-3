@@ -29,5 +29,3 @@ class TestRasterUtils(unittest.TestCase):
 
         datasets = [gdal.Open(x) for x in dataset_in_uris]
         dataset_list = raster_utils.align_datasets(datasets, dataset_out_uris)
-
-        subprocess.Popen(['qgis'] + dataset_out_uris)

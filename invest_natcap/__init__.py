@@ -15,7 +15,13 @@ import build_utils
 #from osgeo import gdal
 #gdal.UseExceptions()
 
-__version__ = build_utils.invest_version()
+try:
+    import invest_version
+    __version__ = invest_version.release
+    if __version__ == 'None':
+        __version__ = invest_version.build_id
+except ImportError:
+    __version__ = build_utils.invest_version()
 
 def log_model(model_name, model_version=None):
     """Submit a POST request to the defined URL with the modelname passed in as
