@@ -863,7 +863,7 @@ def percent_to_sink(
         for row_index in xrange(n_rows):
             if sink_pixels_array[row_index, col_index] == 1:
                 effect_array[row_index, col_index] = 1.0
-                process_queue.appendleft(col_index * n_rows + row_index)
+                process_queue.appendleft(row_index * n_cols + col_index)
 
     while len(process_queue) > 0:
         index = process_queue.pop()
@@ -901,7 +901,7 @@ def percent_to_sink(
                 #the neighbor flows into this cell
                 it_flows_here = True
 
-            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
+            if (neighbor_outflow_direction - 1) % 8 == inflow_offsets[neighbor_index]:
                 #the offset neighbor flows into this cell
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
