@@ -352,21 +352,21 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
         risk assessments in large watersheds"   
-        
+
         (Required that all raster inputs are same dimensions and projections
         and have square cells)
-        flow_accumulation_uri - a uri to a  single band raster of type float that 
+        flow_accumulation_uri - a uri to a  single band raster of type float that
             indicates the contributing area at the inlet of a grid cell
         slope_uri - a uri to a single band raster of type float that indicates
             the slope at a pixel given as a proportion (e.g. a value of 0.05
             is a slope of 5%)
-        aspect_uri - a uri to a single band raster of type float that indicates the 
+        aspect_uri - a uri to a single band raster of type float that indicates the
             direction that slopes are facing in terms of radians east and
-            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
+            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and
             0 or 2pi is east.
-        ls_factor_uri - (input) a string to the path where the LS raster will 
-            be written 
-            
+        ls_factor_uri - (input) a string to the path where the LS raster will
+            be written
+
         returns nothing"""
     
     #Tease out all the nodata values for reading and setting
