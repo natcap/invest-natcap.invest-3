@@ -20,6 +20,15 @@ class TestHRACore(unittest.TestCase):
 
         args['workspace_dir'] = './data/test_out/HRA'
     
+        #For purposes of running test independently of HRA non-core, need to
+        #delete current intermediate and output folders
+        out_dir = os.path.join(args['workspace_dir'], 'Output')
+
+        if (os.path.exists(out_dir)):
+            shutil.rmtree(out_dir) 
+
+        os.makedirs(out_dir)
+        
         #For the basic runs, include both the 'Crit_Ratings' and 'Crit_Rasters'
         #subdictionaries. For individual tests, remove them each and try.
         args['h-s'] = \
@@ -127,21 +136,45 @@ class TestHRACore(unittest.TestCase):
             }
         self.args = args
 
-    def test_plain_execute(self):
+    def test_euc_execute(self):
        
-        #For purposes of running test independently of HRA non-core, need to
-        #delete current intermediate and output folders
-        out_dir = os.path.join(self.args['workspace_dir'], 'Output')
-
-        if (os.path.exists(out_dir)):
-            shutil.rmtree(out_dir) 
-
-        os.makedirs(out_dir)
-
-        
         #in an average test run, would likely have Euclidean risk, and a max
         #rating of 3. The max risk would therefore be as seen below.
         self.args['risk_eq'] = 'Euclidean'
         self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
-        hra_core.execute(self.args) 
+        hra_core.execute(self.args)
+
+    def test_mult_execute(self):
+
+        #Now, do one that uses multiplicative risk. Still want to use a max
+        #rating of 3 as a test.
+        self.args['risk_eq'] = 'Multiplicative'
+        self.args['max_risk'] = 3
+
+        hra_core.execute(self.args)
+
+    def test_diff_num_crits(self):
+        
+        #Still need to have standard risk calculation in order to get
+        #the whole core to run
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
+
+        #Want to take out a single criteria from one of the habitat-stressor
+        #pairs, in order to make sure that core can run when things have
+        #different numbers of criteria
+        del self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm']\
+                ['temporal_overlap']
+
+        hra_core.execute(self.args)
+
+    def test_no_rast_dict(self):
+        
+        #Still need standard risk calc stuff.
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
+
+        #Want to make sure that if we don't have raster criteria, that the core
+        #will still run.
+        del self.args['h-s']['Crit_Rasters']
