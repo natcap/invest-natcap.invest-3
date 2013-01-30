@@ -37,6 +37,8 @@ elif [ $1 == 'release' ]
 then
 # If the first argument is 'release', run the specified tests for released models.
     test_files=(
+        biodiversity_biophysical_test.py
+        biodiversity_core_test.py
         carbon_biophysical_test.py
         carbon_core_test.py
         carbon_valuation_test.py
@@ -53,7 +55,7 @@ then
         overlap_analysis_test.py
         overlap_analysis_mz_core_test.py
         overlap_analysis_core_test.py
-        pollination_biophysical_test.py
+        pollination_test.py
         raster_utils_test.py
         reclassify_test.py
         sediment_biophysical_test.py
@@ -65,6 +67,10 @@ then
         wave_energy_biophysical_test.py
         wave_energy_core_test.py
         wave_energy_valuation_test.py
+        wind_energy_biophysical_test.py
+        wind_energy_core_test.py
+        wind_energy_valuation_test.py
+        wind_energy_uri_handler_test.py
         )
     echo "Testing " ${test_files[*]}
     test_files="${test_files[*]}"
