@@ -1098,6 +1098,7 @@ def calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri):
     flow_length_dataset = gdal.Open(flow_length_uri)
     _, flow_length_nodata = raster_utils.extract_band_and_nodata(flow_length_dataset)
 
+    LOGGER.debug(slope_uri)
     slope_dataset = gdal.Open(slope_uri)
     _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
 
@@ -1110,8 +1111,10 @@ def calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri):
         if flow_length == flow_length_nodata or alpha == alpha_nodata or \
                 slope == slope_nodata:
             return sdr_nodata
+        if slope == 0.0:
+            return 0.0
         t_ij = flow_length/(alpha*numpy.sqrt(slope))
-        return numpy.exp(t_ij)
+        return numpy.exp(-t_ij)
 
     dataset_list = [flow_length_dataset, alpha_dataset, slope_dataset]
     raster_utils.vectorize_rasters(
