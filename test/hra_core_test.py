@@ -35,7 +35,7 @@ class TestHRACore(unittest.TestCase):
             {('kelp', 'finfishaquaculturecomm'):
                 {'Crit_Ratings':
                     {'temporal_overlap':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'frequency_of_natural_disturbance':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -52,7 +52,7 @@ class TestHRACore(unittest.TestCase):
             ('kelp', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
                     {'temporal_overlap':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'frequency_of_natural_disturbance':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -69,7 +69,7 @@ class TestHRACore(unittest.TestCase):
            ('eelgrass', 'finfishaquaculturecomm'):
                 {'Crit_Ratings':
                     {'temporal_overlap':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'frequency_of_natural_disturbance':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -86,7 +86,7 @@ class TestHRACore(unittest.TestCase):
            ('eelgrass', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
                     {'temporal_overlap':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'frequency_of_natural_disturbance':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -106,7 +106,7 @@ class TestHRACore(unittest.TestCase):
             {('kelp'):
                 {'Crit_Ratings':
                     {'natural_mortality':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'conectivity':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -116,7 +116,7 @@ class TestHRACore(unittest.TestCase):
             ('eelgrass'):
                 {'Crit_Ratings':
                     {'natural_mortality':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'conectivity':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -128,7 +128,7 @@ class TestHRACore(unittest.TestCase):
             {('finfishaquaculturecomm'):
                 {'Crit_Ratings':
                     {'intensity':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'management_strategy_effectiveness':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
@@ -138,7 +138,7 @@ class TestHRACore(unittest.TestCase):
             ('shellfishaquaculturecomm'):
                {'Crit_Ratings':
                     {'intensity':
-                        {'Rating': 1.0, 'DQ' 1.0, 'Weight': 1.0},
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'management_strategy_effectiveness':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
