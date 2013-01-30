@@ -405,21 +405,22 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
         contributing_area = (flow_accumulation-1) * cell_area
 
-        #A placeholder for simplified slope stuff
-        slope_in_radians = numpy.arctan(slope)
+        #To convert to radians, we need to divide the slope by 100 since
+        #it's a percent. :(
+        slope_in_radians = numpy.arctan(slope / 100.0)
 
         #From Equation 4 in "Extension and validataion of a geographic
         #information system ..."
-        if slope < 0.09:
-            slope_factor =  10.8*numpy.sin(slope_in_radians)+0.03
+        if slope < 9:
+            slope_factor =  10.8 * numpy.sin(slope_in_radians) + 0.03
         else:
-            slope_factor =  16.8*numpy.sin(slope_in_radians)-0.5
+            slope_factor =  16.8 * numpy.sin(slope_in_radians) - 0.5
             
-        #Set the m value to the lookup table that's from Yonas's handwritten
-        #notes.  On the margin it says "Equation 15".  Don't know from
-        #where.
+        #Set the m value to the lookup table that's Table 1 in 
+        #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
+        #FT Team dropbox
         beta = (numpy.sin(slope_in_radians) / 0.0896) / \
-            (3*pow(numpy.sin(slope_in_radians),0.8)+0.56)
+            (3 * pow(numpy.sin(slope_in_radians),0.8) + 0.56)
         slope_table = [0.01, 0.035, 0.05, 0.09]
         exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
             
@@ -428,17 +429,16 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         m = exponent_table[bisect.bisect(slope_table, slope)]
 
         #The length part of the ls_factor:
-        ls_factor = ((contributing_area+cell_area)**(m+1)- \
-                         contributing_area**(m+1)) / \
-                         ((cell_size**(m+2))*(xij**m)*(22.13**m))
-                
+        ls_factor = ((contributing_area + cell_area)**(m+1) - \
+                         contributing_area ** (m+1)) / \
+                         ((cell_size ** (m + 2)) * (xij**m) * (22.13**m))
+
         #From the paper "as a final check against exessively long slope
         #length calculations ... cap of 333m"
         if ls_factor > 333:
             ls_factor = 333
                 
         return ls_factor * slope_factor
-
 
     #Call vectorize rasters for ls_factor
     dataset_list = [aspect_dataset, slope_dataset, flow_accumulation_dataset]
