@@ -734,11 +734,11 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
 
-        for crit in (h_s[pair]['Crit_Ratings']):
+        for crit_dict in (h_s[pair]['Crit_Ratings']).values():
                     
-            r = crit['Rating']
-            dq = crit['DQ']
-            w = crit['Weight']
+            r = crit_dict['Rating']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
@@ -765,12 +765,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         
         #H-S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
-        for crit in h_s[pair]['Crit_Rasters']:
-            crit_raster = crit['DS']
+
+        #.iteritems creates a key, value pair for each one.
+        for crit, crit_dict in h_s[pair]['Crit_Rasters'].iteritems():
+            crit_raster = crit_dict['DS']
             crit_band = crit_raster.GetRasterBand(1)
             crit_array = crit_band.ReadAsArray()
-            dq = crit['DQ']
-            w = crit['Weight']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
             denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
 
             crit_C_uri = os.path.join(pre_raster_dict, pair + '_' + crit + \
@@ -802,11 +804,11 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
 
-        for crit in (hab[h]['Crit_Ratings']):
+        for crit_dict in hab[h]['Crit_Ratings'].values():
                     
-            r = crit['Rating']
-            dq = crit['DQ']
-            w = crit['Weight']
+            r = crit_dict['Rating']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
 
             #Explicitly want a float output so as not to lose precision.
             risk_crit_rate_numerator += r / float(dq*w)
@@ -844,10 +846,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         
         #Raster Criteria: should output multiple rasters, each
         #of which is reburned with the old pixel value r as r/dq*w.
-        for crit in hab[h]['Crit_Rasters']:
-            dq = crit['DQ']
-            w = crit['Weight']
-            crit_ds = crit['DS']
+        for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
+            crit_ds = crit_dict['DS']
             crit_band = crit_ds.GetRasterBand(1)
             crit_array = crit_band.ReadAsArray()
 
@@ -902,11 +904,11 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         crit_rate_numerator = 0
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in S
-        for crit in (stress[s]['Crit_Ratings']):
+        for crit_dict in stress[s]['Crit_Ratings'].values():
                     
-            r = crit['Rating']
-            dq = crit['DQ']
-            w = crit['Weight']
+            r = crit_dict['Rating']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
@@ -929,12 +931,12 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         
         #S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
-        for crit in stress[s]['Crit_Rasters']:
-            crit_ds = crit['DS']
+        for crit, crit_dict in stress[s]['Crit_Rasters'].iteritems():
+            crit_ds = crit_dict['DS']
             crit_band = crit_ds.GetRasterBand(1)
             crit_array = crit_band.ReadAsArray()
-            dq = crit['DQ']
-            w = crit['Weight']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
             denoms['Risk']['s'][s] += 1/ float(dq * w)
 
             crit_E_uri = os.path.join(pre_raster_dict, s + '_' + crit + \
