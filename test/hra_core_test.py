@@ -176,7 +176,7 @@ class TestHRACore(unittest.TestCase):
         #Want to take out a single criteria from one of the habitat-stressor
         #pairs, in order to make sure that core can run when things have
         #different numbers of criteria
-        del self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm']\
+        del self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm')]\
                 ['temporal_overlap']
 
         hra_core.execute(self.args)
@@ -194,7 +194,7 @@ class TestHRACore(unittest.TestCase):
         hra_core.execute(self.args)
 
     def test_zero_val_ratings(self):
-       '''We know that the core should never recieve anything with a DQ or W
+        '''We know that the core should never recieve anything with a DQ or W
         of 0, since that would NaN most of the equations. But, want to make
         sure that 0 values in the ratings will be okay. There should
         automagically be some in the rasters, since we will have nodata
@@ -204,8 +204,7 @@ class TestHRACore(unittest.TestCase):
         #STILL ADDING THE DQ/W TO THE CALCULATIONS AS 1/DQ OR 1/DQ*W
 
         #So....this test should never happen. Hypothetically.
-        self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm']\
-                ['temporal_overlap']['Rating'] = 0.0
-
+        self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm')]\
+            ['temporal_overlap']['Rating'] = 0.0
+        
         hra_core.execute(self)
-
