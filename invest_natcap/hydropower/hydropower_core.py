@@ -221,9 +221,11 @@ def water_yield(args):
     #Create area raster so that the volume can be computed.
     area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
 
+    subwatershed_mask_file = tempfile.NamedTemporaryFile()
     subwatershed_mask = \
-        raster_utils.new_raster_from_base(wyield_mean, '', 'MEM', 
-                                             out_nodata, gdal.GDT_Int32)
+        raster_utils.new_raster_from_base(
+        wyield_mean, subwatershed_mask_file.name, 'GTiff', out_nodata,
+        gdal.GDT_Int32)
 
     gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
@@ -530,9 +532,11 @@ def water_scarcity(args):
     out_nodata = -1.0
     
     #Create watershed mask raster
-    ws_mask = \
-        raster_utils.new_raster_from_base(wyield_vol_raster, '', 'MEM', \
-                                             out_nodata, gdal.GDT_Float32)
+    ws_mask_file = tempfile.NamedTemporaryFile()
+
+    ws_mask = raster_utils.new_raster_from_base(
+        wyield_vol_raster, ws_mask_file.name, 'GTiff', out_nodata,
+        gdal.GDT_Int32)
 
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
@@ -927,9 +931,10 @@ def valuation(args):
                          subwatershed_value_table)
     out_nodata = -1.0
 
-    hp_val_watershed_mask = \
-        raster_utils.new_raster_from_base(water_consump, '', \
-            'MEM', out_nodata, gdal.GDT_Float32)
+    hp_val_watershed_mask_file = tempfile.NamedTemporaryFile()
+    hp_val_watershed_mask = raster_utils.new_raster_from_base(
+        water_consump, hp_val_watershed_mask_file.name, 'GTiff', out_nodata,
+        gdal.GDT_Int32)
 
     gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
@@ -939,10 +944,10 @@ def valuation(args):
     raster_utils.reclassify_dataset(
         hp_val_watershed_mask, sws_npv_dict, hp_val_path, gdal.GDT_Float32, out_nodata)
 
-    
-    hp_energy_watershed_mask = \
-        raster_utils.new_raster_from_base(water_consump, '', \
-            'MEM', out_nodata, gdal.GDT_Float32)
+    hp_energy_watershed_mask_file = tempfile.NamedTemporaryFile()
+    hp_energy_watershed_mask = raster_utils.new_raster_from_base(
+        water_consump, hp_energy_watershed_mask_file.name, 'GTiff', out_nodata,
+        gdal.GDT_Int32)
    
     gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
