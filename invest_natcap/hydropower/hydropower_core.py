@@ -936,8 +936,9 @@ def valuation(args):
     
     #create hydropower value raster
     LOGGER.debug('Create Hydropower Value Raster')
-    raster_utils.reclassify_by_dictionary(hp_val_watershed_mask, sws_npv_dict,
-                hp_val_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+    raster_utils.reclassify_dataset(
+        hp_val_watershed_mask, sws_npv_dict, hp_val_path, gdal.GDT_Float32, out_nodata)
+
     
     hp_energy_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, '', \
@@ -948,6 +949,5 @@ def valuation(args):
     
     #create hydropower energy raster
     LOGGER.debug('Create Hydropower Energy Raster')
-    raster_utils.reclassify_by_dictionary(hp_energy_watershed_mask, \
-        sws_energy_dict, hp_energy_path, 'GTiff', out_nodata, \
-        gdal.GDT_Float32) 
+    raster_utils.reclassify_dataset(
+        hp_energy_watershed_mask, sws_energy_dict, hp_energy_path, gdal.GDT_Float32, out_nodata)
