@@ -21,16 +21,18 @@ class TestHRACore(unittest.TestCase):
         
         args = {}
 
-        args['workspace_dir'] = './data/test_out/HRA'
+        args['workspace_dir'] = './data/test_out/HRA/Test1'
     
         #For purposes of running test independently of HRA non-core, need to
         #delete current intermediate and output folders
         out_dir = os.path.join(args['workspace_dir'], 'Output')
+        inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    
+        for folder in [out_dir, inter_dir]:
+            if (os.path.exists(folder)):
+                shutil.rmtree(folder) 
 
-        if (os.path.exists(out_dir)):
-            shutil.rmtree(out_dir) 
-
-        os.makedirs(out_dir)
+            os.makedirs(folder)
         
         #For the basic runs, include both the 'Crit_Ratings' and 'Crit_Rasters'
         #subdictionaries. For individual tests, remove them each and try.
@@ -159,7 +161,7 @@ class TestHRACore(unittest.TestCase):
         self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
         hra_core.execute(self.args)
-
+    
     def test_mult_execute(self):
 
         #Now, do one that uses multiplicative risk. Still want to use a max

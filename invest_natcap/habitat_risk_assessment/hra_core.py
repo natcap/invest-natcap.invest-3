@@ -638,7 +638,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     for that particular raster. )
 
     Input:
-        dir- Directory into which the rasterized criteria can be placed.
+        dir- Directory into which the rasterized criteria can be placed. This
+            will need to have a subfolder added to it specifically to hold the
+            rasterized criteria for now.
         h_s- A multi-level structure which holds all criteria ratings, 
             both numerical and raster that apply to habitat and stressor 
             overlaps. The structure, whose keys are tuples of 
@@ -699,7 +701,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             as crit_lists, but the innermost values will be floats instead of
             lists.
     '''
-    pre_raster_dict = os.path.join(dir, 'Intermediate', 'Crit_Rasters')
+    pre_raster_dir = os.path.join(dir, 'Crit_Rasters')
+
+    os.mkdir(pre_raster_dir)
+
     crit_lists = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
@@ -719,6 +724,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
         base_ds = h_s[pair]['DS']
+        LOGGER.debug(base_ds)
         base_band = base_ds.GetRasterBand(1)
         base_array = base_band.ReadAsArray() 
         #First, want to make a raster of added individual numerator criteria.
@@ -744,7 +750,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             crit_rate_numerator += r / float(dq*w)
             denoms['Risk']['h_s'][pair] += 1 / float(dq*w)
 
-        single_crit_C_uri = os.path.join(pre_raster_dict, h + '_' + s + 
+        single_crit_C_uri = os.path.join(pre_raster_dir, h + '_' + s + 
                                                         '_Indiv_C_Raster.tif')
         c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
                                                  'GTiff', 0, gdal.GDT_Float32)
@@ -775,7 +781,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             w = crit_dict['Weight']
             denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
 
-            crit_C_uri = os.path.join(pre_raster_dict, pair + '_' + crit + \
+            crit_C_uri = os.path.join(pre_raster_dir, pair + '_' + crit + \
                                                     '_' + 'C_Raster.tif')
             c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
@@ -817,7 +823,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             denoms['Recovery'][h] += 1 / dq
 
         #First, burn the crit raster for risk
-        single_crit_C_uri = os.path.join(pre_raster_dict, h + 
+        single_crit_C_uri = os.path.join(pre_raster_dir, h + 
                                                         '_Indiv_C_Raster.tif')
         c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
                                                  'GTiff', 0, gdal.GDT_Float32)
@@ -831,7 +837,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         crit_lists['Risk']['h'][h].append(c_ds)
 
         #Now, burn the recovery potential raster, and add that.
-        single_crit_C_uri = os.path.join(pre_raster_dict, h + 
+        single_crit_C_uri = os.path.join(pre_raster_dir, h + 
                                                   '_Indiv_Recov_Raster.tif')
         c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
                                                  'GTiff', 0, gdal.GDT_Float32)
@@ -857,7 +863,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             denoms['Recovery'][h] += 1/ float(dq)
 
             #First the risk rasters
-            crit_C_uri = os.path.join(pre_raster_dict, h + '_' + crit + \
+            crit_C_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
                                                     '_' + 'C_Raster.tif')
             c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
@@ -869,7 +875,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             crit_lists['Risk']['h'][h].append(c_ds)
             
             #Then the recovery rasters
-            crit_recov_uri = os.path.join(pre_raster_dict, h + '_' + crit + \
+            crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
                                                     '_' + 'Recov_Raster.tif')
             r_ds = raster_utils.new_raster_from_base(base_ds, crit_recov_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
@@ -914,7 +920,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             crit_rate_numerator += r / float(dq*w)
             denoms['Risk']['s'][s] += 1 / float(dq*w)
 
-        single_crit_E_uri = os.path.join(pre_raster_dict, s + 
+        single_crit_E_uri = os.path.join(pre_raster_dir, s + 
                                                      '_Indiv_E_Raster.tif')
         e_ds = raster_utils.new_raster_from_base(base_ds, single_crit_E_uri,
                                                  'GTiff', 0, gdal.GDT_Float32)
@@ -939,7 +945,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             w = crit_dict['Weight']
             denoms['Risk']['s'][s] += 1/ float(dq * w)
 
-            crit_E_uri = os.path.join(pre_raster_dict, s + '_' + crit + \
+            crit_E_uri = os.path.join(pre_raster_dir, s + '_' + crit + \
                                                     '_' + 'E_Raster.tif')
             e_ds = raster_utils.new_raster_from_base(base_ds, crit_E_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
