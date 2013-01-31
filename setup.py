@@ -2,6 +2,7 @@
 
 from distutils.core import setup
 from distutils.extension import Extension
+from distutils.core import Command
 import platform
 import os
 import sys
