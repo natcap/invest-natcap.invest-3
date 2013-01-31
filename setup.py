@@ -22,6 +22,34 @@ VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
+class ZipCommand(Command):
+    description = 'Custom command to recurseively zip a folder'
+    user_options = [
+        ('zip-dir=', None, 'Folder to be zipped up'),
+        ('zip-file=', None, 'Output zip file path')]
+
+    def initialize_options(self):
+        self.zip_dir = None
+        self.zip_file = None
+
+    def finalize_options(self):
+        """This function, though empty, is requred to exist in subclasses of
+        Command."""
+        pass
+
+    def run(self):
+        zip = zipfile.ZipFile(self.zip_file, 'w',
+            compression=zipfile.ZIP_DEFLATED)
+        dir = self.zip_dir
+        root_len = len(os.path.abspath(dir))
+        print dir
+        for root, dirs, files in os.walk(dir):
+            for f in files:
+                fullpath = os.path.join(root, f)
+                print(fullpath)
+                zip.write(fullpath, fullpath, zipfile.ZIP_DEFLATED)
+        zip.close()
+
 console = []
 py2exe_args = {}
 data_files = []
@@ -144,7 +172,8 @@ data_files.append((os.path.join(lib_path, 'invest_natcap', 'wind_energy'),
 setup(name='invest_natcap',
       version=VERSION,
       packages=packages,
-      cmdclass={'build_ext': build_ext},
+      cmdclass={'build_ext': build_ext,
+                'zip': ZipCommand},
       include_dirs = [np.get_include()],
       data_files=data_files,
       ext_modules=cythonize([Extension(name="invest_cython_core",
