@@ -11,6 +11,7 @@ import time
 import glob
 import subprocess
 import matplotlib
+import zipfile
 
 
 import numpy as np
