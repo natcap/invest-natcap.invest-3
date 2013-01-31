@@ -458,6 +458,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     #make_habitat_rasters
     risk_rasters = {}
 
+    LOGGER.debug(crit_lists['Risk'])
     #We will use the h-s pairs as the way of iterrating through everything else.
     for pair in crit_lists['Risk']['h-s']:
 
@@ -705,10 +706,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
     os.mkdir(pre_raster_dir)
 
-    crit_lists = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
+    crit_lists = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
-    denoms = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
+    denoms = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
 
@@ -718,8 +719,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     for pair in h_s:
         h, s = pair
 
-        crit_lists['Risk']['h_s'][pair] = []
-        denoms['Risk']['h_s'][pair] = 0
+        crit_lists['Risk']['h-s'][pair] = []
+        denoms['Risk']['h-s'][pair] = 0
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
@@ -748,7 +749,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
-            denoms['Risk']['h_s'][pair] += 1 / float(dq*w)
+            denoms['Risk']['h-s'][pair] += 1 / float(dq*w)
 
         single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + \
                                                s + ']' + '_Indiv_C_Raster.tif')
@@ -767,7 +768,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
-        crit_lists['Risk']['h_s'][pair].append(c_ds)
+        crit_lists['Risk']['h-s'][pair].append(c_ds)
         
         #H-S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
@@ -780,7 +781,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             crit_array = crit_band.ReadAsArray()
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
-            denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
+            denoms['Risk']['h-s'][pair] += 1/ float(dq * w)
 
             crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
                                         ']_' + crit + '_' + 'C_Raster.tif')
@@ -791,7 +792,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             edited_array = crit_array / float(dq * w)
             band.WriteArray(edited_array)
-            crit_lists['Risk']['h_s'][pair].append(c_ds)
+            crit_lists['Risk']['h-s'][pair].append(c_ds)
     
     #Habitats are a special case, since each raster needs to be burned twice-
     #once for risk (r/dq*w), and once for recovery potential (r/dq).
