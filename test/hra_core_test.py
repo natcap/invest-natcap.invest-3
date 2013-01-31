@@ -162,6 +162,7 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
     
+    @unittest.skip("For later testing.")
     def test_mult_execute(self):
 
         #Now, do one that uses multiplicative risk. Still want to use a max
@@ -171,6 +172,7 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_diff_num_crits(self):
         
         #Still need to have standard risk calculation in order to get
@@ -188,6 +190,7 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_no_rast_dict(self):
         
         #Still need standard risk calc stuff.
@@ -200,6 +203,7 @@ class TestHRACore(unittest.TestCase):
         
         hra_core.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_zero_val_ratings(self):
         '''We know that the core should never recieve anything with a DQ or W
         of 0, since that would NaN most of the equations. But, want to make

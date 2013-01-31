@@ -750,8 +750,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             crit_rate_numerator += r / float(dq*w)
             denoms['Risk']['h_s'][pair] += 1 / float(dq*w)
 
-        single_crit_C_uri = os.path.join(pre_raster_dir, h + '_' + s + 
-                                                        '_Indiv_C_Raster.tif')
+        single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + \
+                                               s + ']' + '_Indiv_C_Raster.tif')
         c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
                                                  'GTiff', 0, gdal.GDT_Float32)
         band, nodata = raster_utils.extract_band_and_nodata(c_ds)
@@ -774,6 +774,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         #.iteritems creates a key, value pair for each one.
         for crit, crit_dict in h_s[pair]['Crit_Rasters'].iteritems():
+
             crit_raster = crit_dict['DS']
             crit_band = crit_raster.GetRasterBand(1)
             crit_array = crit_band.ReadAsArray()
@@ -781,8 +782,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             w = crit_dict['Weight']
             denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
 
-            crit_C_uri = os.path.join(pre_raster_dir, pair + '_' + crit + \
-                                                    '_' + 'C_Raster.tif')
+            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
+                                       + ']_' + crit + '_' + 'C_Raster.tif')
             c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
             band, nodata = raster_utils.extract_band_and_nodata(c_ds)
