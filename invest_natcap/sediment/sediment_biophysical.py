@@ -74,7 +74,6 @@ def execute(args):
             LOGGER.debug('creating directory %s', directory)
             os.makedirs(directory)
 
-
     dem_dataset = gdal.Open(args['dem_uri'])
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
@@ -82,7 +81,7 @@ def execute(args):
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    slope_dataset = raster_utils.calculate_slope(dem_dataset, slope_uri)
+    raster_utils.calculate_slope(dem_dataset, slope_uri)
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
@@ -99,7 +98,7 @@ def execute(args):
 
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
-    routing_cython_core.flow_direction_inf(args['dem_uri'], flow_direction_uri)
+    routing_cython_core.calculate_flow_direction(args['dem_uri'], flow_direction_uri)
 
     #Calculate LS term
     LOGGER.info('calcualte ls term')
@@ -157,15 +156,12 @@ def execute(args):
 
     effect_uri = os.path.join(intermediate_dir, 'effect.tif')
 
-
-    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
     outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights.tif')
     outflow_direction_uri = os.path.join(
         intermediate_dir, 'outflow_directions.tif')
-    routing_cython_core.calculate_flow_direction(args['dem_uri'], flow_direction_uri)
-    sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
+    _, _ = routing_cython_core.calculate_flow_graph(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
