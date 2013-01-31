@@ -783,7 +783,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
 
             crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
-                                       + ']_' + crit + '_' + 'C_Raster.tif')
+                                        ']_' + crit + '_' + 'C_Raster.tif')
             c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
                                             'GTiff', 0, gdal.GDT_Float32)
             band, nodata = raster_utils.extract_band_and_nodata(c_ds)
