@@ -352,21 +352,21 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
         risk assessments in large watersheds"   
-        
+
         (Required that all raster inputs are same dimensions and projections
         and have square cells)
-        flow_accumulation_uri - a uri to a  single band raster of type float that 
+        flow_accumulation_uri - a uri to a  single band raster of type float that
             indicates the contributing area at the inlet of a grid cell
         slope_uri - a uri to a single band raster of type float that indicates
             the slope at a pixel given as a proportion (e.g. a value of 0.05
             is a slope of 5%)
-        aspect_uri - a uri to a single band raster of type float that indicates the 
+        aspect_uri - a uri to a single band raster of type float that indicates the
             direction that slopes are facing in terms of radians east and
-            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
+            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and
             0 or 2pi is east.
-        ls_factor_uri - (input) a string to the path where the LS raster will 
-            be written 
-            
+        ls_factor_uri - (input) a string to the path where the LS raster will
+            be written
+
         returns nothing"""
     
     #Tease out all the nodata values for reading and setting
@@ -405,21 +405,22 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
         contributing_area = (flow_accumulation-1) * cell_area
 
-        #A placeholder for simplified slope stuff
-        slope_in_radians = numpy.arctan(slope)
+        #To convert to radians, we need to divide the slope by 100 since
+        #it's a percent. :(
+        slope_in_radians = numpy.arctan(slope / 100.0)
 
         #From Equation 4 in "Extension and validataion of a geographic
         #information system ..."
-        if slope < 0.09:
-            slope_factor =  10.8*numpy.sin(slope_in_radians)+0.03
+        if slope < 9:
+            slope_factor =  10.8 * numpy.sin(slope_in_radians) + 0.03
         else:
-            slope_factor =  16.8*numpy.sin(slope_in_radians)-0.5
+            slope_factor =  16.8 * numpy.sin(slope_in_radians) - 0.5
             
-        #Set the m value to the lookup table that's from Yonas's handwritten
-        #notes.  On the margin it says "Equation 15".  Don't know from
-        #where.
+        #Set the m value to the lookup table that's Table 1 in 
+        #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
+        #FT Team dropbox
         beta = (numpy.sin(slope_in_radians) / 0.0896) / \
-            (3*pow(numpy.sin(slope_in_radians),0.8)+0.56)
+            (3 * pow(numpy.sin(slope_in_radians),0.8) + 0.56)
         slope_table = [0.01, 0.035, 0.05, 0.09]
         exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
             
@@ -428,17 +429,16 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         m = exponent_table[bisect.bisect(slope_table, slope)]
 
         #The length part of the ls_factor:
-        ls_factor = ((contributing_area+cell_area)**(m+1)- \
-                         contributing_area**(m+1)) / \
-                         ((cell_size**(m+2))*(xij**m)*(22.13**m))
-                
+        ls_factor = ((contributing_area + cell_area)**(m+1) - \
+                         contributing_area ** (m+1)) / \
+                         ((cell_size ** (m + 2)) * (xij**m) * (22.13**m))
+
         #From the paper "as a final check against exessively long slope
         #length calculations ... cap of 333m"
         if ls_factor > 333:
             ls_factor = 333
                 
         return ls_factor * slope_factor
-
 
     #Call vectorize rasters for ls_factor
     dataset_list = [aspect_dataset, slope_dataset, flow_accumulation_dataset]
@@ -1098,6 +1098,7 @@ def calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri):
     flow_length_dataset = gdal.Open(flow_length_uri)
     _, flow_length_nodata = raster_utils.extract_band_and_nodata(flow_length_dataset)
 
+    LOGGER.debug(slope_uri)
     slope_dataset = gdal.Open(slope_uri)
     _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
 
@@ -1110,8 +1111,10 @@ def calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri):
         if flow_length == flow_length_nodata or alpha == alpha_nodata or \
                 slope == slope_nodata:
             return sdr_nodata
+        if slope == 0.0:
+            return 0.0
         t_ij = flow_length/(alpha*numpy.sqrt(slope))
-        return numpy.exp(t_ij)
+        return numpy.exp(-t_ij)
 
     dataset_list = [flow_length_dataset, alpha_dataset, slope_dataset]
     raster_utils.vectorize_rasters(
