@@ -31,8 +31,8 @@ class ZipCommand(Command):
         ('zip-file=', None, 'Output zip file path')]
 
     def initialize_options(self):
-        self.zip_dir = None
-        self.zip_file = None
+        self.zip_dir = VERSION
+        self.zip_file = VERSION + '.zip'
 
     def finalize_options(self):
         """This function, though empty, is requred to exist in subclasses of
