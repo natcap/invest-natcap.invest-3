@@ -21,16 +21,18 @@ class TestHRACore(unittest.TestCase):
         
         args = {}
 
-        args['workspace_dir'] = './data/test_out/HRA'
+        args['workspace_dir'] = './data/test_out/HRA/Test1'
     
         #For purposes of running test independently of HRA non-core, need to
         #delete current intermediate and output folders
         out_dir = os.path.join(args['workspace_dir'], 'Output')
+        inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    
+        for folder in [out_dir, inter_dir]:
+            if (os.path.exists(folder)):
+                shutil.rmtree(folder) 
 
-        if (os.path.exists(out_dir)):
-            shutil.rmtree(out_dir) 
-
-        os.makedirs(out_dir)
+            os.makedirs(folder)
         
         #For the basic runs, include both the 'Crit_Ratings' and 'Crit_Rasters'
         #subdictionaries. For individual tests, remove them each and try.
@@ -113,6 +115,12 @@ class TestHRACore(unittest.TestCase):
                      'conectivity':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
+                 'Crit_Rasters':
+                    {'connectivity_rating':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':
+                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif')                 }
+                    },
                  'DS': 
                     gdal.Open('./data/test_out/HRA/Intermediate/Habitat_Rasters/kelp.tif')
                 },
@@ -122,6 +130,12 @@ class TestHRACore(unittest.TestCase):
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'conectivity':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':
+                    {'connectivity_rating':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':
+                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif')                 }
                     },
                  'DS': 
                     gdal.Open('./data/test_out/HRA/Intermediate/Habitat_Rasters/eelgrass.tif')
@@ -135,6 +149,12 @@ class TestHRACore(unittest.TestCase):
                      'management_strategy_effectiveness':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                     },
+                 'Crit_Rasters':
+                    {'new_stresscrit':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':
+                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif')                 }
+                    },
                  'DS': 
                     gdal.Open('./data/test_out/HRA/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif')
                 },
@@ -144,6 +164,12 @@ class TestHRACore(unittest.TestCase):
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                      'management_strategy_effectiveness':
                         {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':
+                    {'new_stresscrit':
+                        {'Weight': 1.0, 'DQ': 1.0, 
+                        'DS':
+                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif')                 }
                     },
                 'DS': 
                     gdal.Open('./data/test_out/HRA/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif')
@@ -159,7 +185,8 @@ class TestHRACore(unittest.TestCase):
         self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
         hra_core.execute(self.args)
-
+    
+    @unittest.skip("For later testing.")
     def test_mult_execute(self):
 
         #Now, do one that uses multiplicative risk. Still want to use a max
@@ -169,6 +196,7 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_diff_num_crits(self):
         
         #Still need to have standard risk calculation in order to get
@@ -186,6 +214,7 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_no_rast_dict(self):
         
         #Still need standard risk calc stuff.
@@ -198,6 +227,7 @@ class TestHRACore(unittest.TestCase):
         
         hra_core.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_zero_val_ratings(self):
         '''We know that the core should never recieve anything with a DQ or W
         of 0, since that would NaN most of the equations. But, want to make

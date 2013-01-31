@@ -43,14 +43,16 @@ def execute(args):
             (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins.
-            (required if : distance container is selected OR valuation is
-            selected)
+            Enabled by AOI and required if wanting to mask by distances or
+            run valuation
         args[min_distance] - a float value for the minimum distance from shore
-            for offshore wind farm installation (meters) The AOI must be
-            selected for this input to be active (optional)
+            for offshore wind farm installation (meters) The land polygon must
+            be selected for this input to be active (optional, required for 
+            valuation)
         args[max_distance] - a float value for the maximum distance from shore
-            for offshore wind farm installation (meters) The AOI must be
-            selected for this input to be active (optional)
+            for offshore wind farm installation (meters) The land polygon must
+            be selected for this input to be active (optional, required for 
+            valuation)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
         args[foundation_cost] - a float representing how much the foundation

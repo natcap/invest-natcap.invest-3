@@ -149,51 +149,40 @@
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
                                 "helpText": "A floating point value for the maximum depth of the offshore wind farm installation (m)."
+                            },
+                            {
+                                "id" : "min_distance",
+                                "args_id" : "min_distance",
+                                "type" : "text",
+                                "label" : "Minimum Distance for Offshore Wind Farm Installation (m)",
+                                "defaultValue" : "0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required" : false,
+                                "enabledBy" : "land_polygon",
+                                "requiredIf" : ["valuation_container"],
+                                "returns" : {"ifEmpty": "pass"},
+                                "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation."
+                            },
+                            {
+                                "id" : "max_distance",
+                                "args_id" : "max_distance",
+                                "type" : "text",
+                                "label" : "Maximum Distance for Offshore Wind Farm Installation (m)",
+                                "defaultValue" : "200000",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required" : false,
+                                "enabledBy" : "land_polygon",
+                                "requiredIf" : ["valuation_container"],
+                                "returns" : {"ifEmpty": "pass"},
+                                "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation."
                             }
                         ]
                     }
                 ]
-        },
-        {
-            "id" : "distance_container",
-            "args_id" : "distance_container",
-            "type" : "container",
-            "label" : "Use Distances to Determine Wind Farm Locations",
-            "collapsible" : true,
-            "enabledBy": "aoi",
-            "defaultValue" : false,
-            "elements" : [
-                {
-                    "id" : "distance_list",
-                    "type" : "list",
-                    "elements" : [
-                    {
-                        "id" : "min_distance",
-                        "args_id" : "min_distance",
-                        "type" : "text",
-                        "label" : "Minimum Distance (m)",
-                        "defaultValue" : "0",
-                        "validText" : "^[0-9]*\\.?[0-9]+$",
-                        "validateAs" : {"type" : "number",
-                                        "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                        "required" : true,
-                        "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation."
-                    },
-                    {
-                        "id" : "max_distance",
-                        "args_id" : "max_distance",
-                        "type" : "text",
-                        "label" : "Maximum Distance (m)",
-                        "defaultValue" : "200000",
-                        "validText" : "^[0-9]*\\.?[0-9]+$",
-                        "validateAs" : {"type" : "number",
-                                        "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                        "required" : true,
-                        "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation."
-                    }
-                  ]
-                }
-            ]
         },
         {
             "id" : "valuation_container",

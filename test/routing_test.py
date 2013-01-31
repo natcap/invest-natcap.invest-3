@@ -41,10 +41,10 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, flow_accumulation_uri, flow_accumulation_regression_uri)
 
         source_uri = os.path.join(base_dir, 'source.tif')
-        absorption_rate_uri = os.path.join(base_dir, 'absorption.tif')
+        export_rate_uri = os.path.join(base_dir, 'export_rate.tif')
 
         make_constant_raster_from_base(dem_uri, 1.0, source_uri)
-        make_constant_raster_from_base(dem_uri, 0.1, absorption_rate_uri)
+        make_constant_raster_from_base(dem_uri, 0.9, export_rate_uri)
 
         loss_uri = os.path.join(base_dir, 'loss.tif')
         flux_uri = os.path.join(base_dir, 'flux.tif')
@@ -70,12 +70,10 @@ class TestRasterUtils(unittest.TestCase):
         sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
             flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
-        routing_cython_core.percent_to_sink(stream_uri, absorption_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
+        routing_cython_core.percent_to_sink(stream_uri, export_rate_uri, outflow_direction_uri, outflow_weights_uri, effect_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, effect_uri, effect_regression_uri)
 
         flux_regression_uri = 'data/routing_regression/flux.tif'
         loss_regression_uri = 'data/routing_regression/loss.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, flux_uri, flux_regression_uri)
         invest_test_core.assertTwoDatasetEqualURI(self, loss_uri, loss_regression_uri)
-
-

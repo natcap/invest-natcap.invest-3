@@ -20,7 +20,7 @@ try:
     __version__ = invest_version.release
     if __version__ == 'None':
         __version__ = invest_version.build_id
-except ImportError:
+except (ImportError, AttributeError):
     __version__ = build_utils.invest_version()
 
 def log_model(model_name, model_version=None):

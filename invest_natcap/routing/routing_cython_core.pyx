@@ -852,7 +852,7 @@ def percent_to_sink(
 
     process_stack = collections.deque()
 
-    cdef int loop_col_index, loop_row_index, index, row_index, col_index, outflow_row_index, outflow_col_index, offset, outflow_direction
+    cdef int loop_col_index, loop_row_index, index, row_index, col_index, neighbor_row_index, neighbor_col_index, offset, outflow_direction, neighbor_index, neighbor_outflow_direction
     cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
     cdef float outflow_percent_list[2]
 
@@ -863,7 +863,7 @@ def percent_to_sink(
         for row_index in xrange(n_rows):
             if sink_pixels_array[row_index, col_index] == 1:
                 effect_array[row_index, col_index] = 1.0
-                process_queue.appendleft(col_index * n_rows + row_index)
+                process_queue.appendleft(row_index * n_cols + col_index)
 
     while len(process_queue) > 0:
         index = process_queue.pop()
@@ -901,11 +901,10 @@ def percent_to_sink(
                 #the neighbor flows into this cell
                 it_flows_here = True
 
-            if (neighbor_outflow_direction + 1) % 8 == inflow_offsets[neighbor_index]:
+            if (neighbor_outflow_direction - 1) % 8 == inflow_offsets[neighbor_index]:
                 #the offset neighbor flows into this cell
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
-                pass
 
             if neighbor_outflow_weight < EPS:
                 #it doesn't flow here
@@ -916,9 +915,6 @@ def percent_to_sink(
                 if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
                     process_queue.appendleft(neighbor_row_index * n_cols + neighbor_col_index)
                     effect_array[neighbor_row_index, neighbor_col_index] = 0.0
-
-                if effect_array[neighbor_row_index, neighbor_col_index] < 0:
-                    LOGGER.debug("effect_array[neighbor_row_index, neighbor_col_index] %s %s %s" % (effect_array[neighbor_row_index, neighbor_col_index], neighbor_row_index, neighbor_col_index))
 
                 effect_array[neighbor_row_index, neighbor_col_index] += \
                     effect_array[row_index, col_index] * \
