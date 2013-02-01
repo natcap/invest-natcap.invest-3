@@ -890,9 +890,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
+
             crit_ds = crit_dict['DS']
             crit_band = crit_ds.GetRasterBand(1)
-            crit_array = crit_band.ReadAsArray()
+            crit_nodata = crit_band.GetNoDataValue()
 
             denoms['Risk']['h'][h] += 1/ float(dq * w)
             denoms['Recovery'][h] += 1/ float(dq)
@@ -900,25 +901,35 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             #First the risk rasters
             crit_C_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
                                                     '_' + 'C_Raster.tif')
-            c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-            band.Fill(nodata)
+            def burn_numerator_risk(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0
 
-            edited_array = crit_array / float(dq * w)
-            band.WriteArray(edited_array)
+                else:
+                    burn_rating = float(pixel) / (w*dq)
+                    return burn_rating
+
+            c_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator_risk,
+                                raster_out_uri = crit_C_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
             crit_lists['Risk']['h'][h].append(c_ds)
             
             #Then the recovery rasters
             crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
                                                     '_' + 'Recov_Raster.tif')
-            r_ds = raster_utils.new_raster_from_base(base_ds, crit_recov_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(r_ds)
-            band.Fill(nodata)
+            def burn_numerator_rec(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0
 
-            edited_array = crit_array / float(dq)
-            band.WriteArray(edited_array)
+                else:
+                    burn_rating = float(pixel) / dq
+                    return burn_rating
+
+            r_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator_rec,
+                                raster_out_uri = crit_recov_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
             crit_lists['Recovery'][h].append(r_ds)
 
     #And now, loading in all of the stressors. Will just be the standard
