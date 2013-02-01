@@ -5,7 +5,6 @@ import logging
 import os
 import csv
 import math
-import tempfile
 
 import numpy as np
 from osgeo import gdal
@@ -132,17 +131,17 @@ def water_yield(args):
 
     #Create etk raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_etk raster")
-    tmp_etk_raster_file = tempfile.NamedTemporaryFile()
+    tmp_etk_raster_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset(
-        lulc_raster, etk_dict, tmp_etk_raster_file.name, gdal.GDT_Float32, out_nodata)
-    tmp_etk_raster = gdal.Open(tmp_etk_raster_file.name)
+        lulc_raster, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32, out_nodata)
+    tmp_etk_raster = gdal.Open(tmp_etk_raster_uri)
 
     #Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
-    tmp_root_raster_file = tempfile.NamedTemporaryFile()
+    tmp_root_raster_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset(
-        lulc_raster, root_dict, tmp_root_raster_file.name, gdal.GDT_Float32, out_nodata)
-    tmp_root_raster = gdal.Open(tmp_root_raster_file.name)
+        lulc_raster, root_dict, tmp_root_raster_uri, gdal.GDT_Float32, out_nodata)
+    tmp_root_raster = gdal.Open(tmp_root_raster_uri)
 
 
     #Get out_nodata values so that we can avoid any issues when running operations
@@ -221,19 +220,18 @@ def water_yield(args):
     #Create area raster so that the volume can be computed.
     area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
 
-    subwatershed_mask_file = tempfile.NamedTemporaryFile()
-    subwatershed_mask = \
-        raster_utils.new_raster_from_base(
-        wyield_mean, subwatershed_mask_file.name, 'GTiff', out_nodata,
+    subwatershed_mask_uri = raster_utils.temporary_filename()
+    subwatershed_mask = raster_utils.new_raster_from_base(
+        wyield_mean, subwatershed_mask_uri, 'GTiff', out_nodata,
         gdal.GDT_Int32)
 
     gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
 
-    wyield_area_file = tempfile.NamedTemporaryFile()
+    wyield_area_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset(
-        subwatershed_mask, area_dict, wyield_area_file.name, gdal.GDT_Float32, out_nodata)
-    wyield_area = gdal.Open(wyield_area_file.name)
+        subwatershed_mask, area_dict, wyield_area_uri, gdal.GDT_Float32, out_nodata)
+    wyield_area = gdal.Open(wyield_area_uri)
 
     subwatershed_mask = None
     LOGGER.debug('Performing volume operation')
@@ -532,21 +530,18 @@ def water_scarcity(args):
     out_nodata = -1.0
     
     #Create watershed mask raster
-    ws_mask_file = tempfile.NamedTemporaryFile()
-
+    ws_mask_uri = raster_utils.temporary_filename()
     ws_mask = raster_utils.new_raster_from_base(
-        wyield_vol_raster, ws_mask_file.name, 'GTiff', out_nodata,
+        wyield_vol_raster, ws_mask_uri, 'GTiff', out_nodata,
         gdal.GDT_Int32)
 
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
     
-    calib_raster_file = tempfile.NamedTemporaryFile()
+    calib_raster_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset(
-        ws_mask, calib_dict, calib_raster_file.name, gdal.GDT_Float32, out_nodata)
-    calib_raster = gdal.Open(calib_raster_file.name)
-
-
+        ws_mask, calib_dict, calib_raster_uri, gdal.GDT_Float32, out_nodata)
+    calib_raster = gdal.Open(calib_raster_uri)
 
     wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     
@@ -574,10 +569,11 @@ def water_scarcity(args):
                                        nodata=out_nodata)
     
     #Create raster from land use raster, subsituting in demand value
-    clipped_consump_raster_file = tempfile.NamedTemporaryFile()
+    clipped_consump_raster_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset(
-        lulc_raster, demand_dict, clipped_consump_raster_file.name, gdal.GDT_Float32, out_nodata)
-    clipped_consump = gdal.Open(clipped_consump_raster_file.name)
+        lulc_raster, demand_dict, clipped_consump_raster_uri,
+        gdal.GDT_Float32, out_nodata)
+    clipped_consump = gdal.Open(clipped_consump_raster_uri)
 
 
     LOGGER.info('Creating consump_vol raster')
@@ -931,9 +927,9 @@ def valuation(args):
                          subwatershed_value_table)
     out_nodata = -1.0
 
-    hp_val_watershed_mask_file = tempfile.NamedTemporaryFile()
+    hp_val_watershed_mask_uri = raster_utils.temporary_filename()
     hp_val_watershed_mask = raster_utils.new_raster_from_base(
-        water_consump, hp_val_watershed_mask_file.name, 'GTiff', out_nodata,
+        water_consump, hp_val_watershed_mask_uri, 'GTiff', out_nodata,
         gdal.GDT_Int32)
 
     gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
@@ -944,9 +940,9 @@ def valuation(args):
     raster_utils.reclassify_dataset(
         hp_val_watershed_mask, sws_npv_dict, hp_val_path, gdal.GDT_Float32, out_nodata)
 
-    hp_energy_watershed_mask_file = tempfile.NamedTemporaryFile()
+    hp_energy_watershed_mask_uri = raster_utils.temporary_filename()
     hp_energy_watershed_mask = raster_utils.new_raster_from_base(
-        water_consump, hp_energy_watershed_mask_file.name, 'GTiff', out_nodata,
+        water_consump, hp_energy_watershed_mask_uri, 'GTiff', out_nodata,
         gdal.GDT_Int32)
    
     gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
