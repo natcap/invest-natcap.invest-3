@@ -17,14 +17,6 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('wind_energy_biophysical')
 
-# This is the path to the global wind energy parameters that lies within
-# invest_natcap/wind_energy directory that is added by setup.py
-# __file__ gets us the path dynamic path for this module so that we can get the
-# correct directory path, which allows us to properly find the JSON file
-MODULE_DIR_NAME = os.path.dirname(__file__)
-GLOBAL_WIND_PARAMETERS = os.path.join(
-        MODULE_DIR_NAME, 'global_wind_energy_attributes.json')
-
 def execute(args):
     """Takes care of all file handling for the biophysical part of the wind
         energy model
@@ -41,6 +33,9 @@ def execute(args):
             of the land polygon that is of interest (optional)
         args[bathymetry_uri] - a uri to a GDAL dataset that has the depth
             values of the area of interest (required)
+        args[global_wind_parameters_uri] - a uri to a CSV file that holds the
+            global parameter values for both the biophysical and valuation
+            module (required)        
         args[bottom_type_uri] - a uri to an OGR datasource of type polygon
             that depicts the subsurface geology type (optional)
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
@@ -223,14 +218,14 @@ def execute(args):
         if field_value_row[0].lower() in biophysical_params:
             bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
 
-    # Get the global biophysical parameters from the JSON file
-    bio_global_params_file = open(GLOBAL_WIND_PARAMETERS)
 
-    bio_global_params_dict = json.load(bio_global_params_file)
-    for key, val in bio_global_params_dict.iteritems():
+    # Get the global parameters for biophysical from the CSV file
+    global_bio_param_file = open(args['global_wind_parameters_uri'])
+    global_bio_reader = csv.reader(global_bio_param_file)
+    for field_value_row in global_bio_reader:
         # Only get the biophysical parameters and leave out the valuation ones
-        if key.lower() in biophysical_params:
-            bio_turbine_dict[key.lower()] = val
+        if field_value_row[0].lower() in biophysical_params:
+            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
 
     LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
     
