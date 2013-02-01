@@ -458,7 +458,6 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     #make_habitat_rasters
     risk_rasters = {}
 
-    LOGGER.debug(crit_lists['Risk'])
     #We will use the h-s pairs as the way of iterrating through everything else.
     for pair in crit_lists['Risk']['h-s']:
 
@@ -499,6 +498,9 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         if risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(base_array, E, C)
         elif risk_eq == 'Euclidean':
+           
+            LOGGER.debug('-------------------------')
+            LOGGER.debug(pair)
             mod_array = make_risk_euc(base_array, E, C)
 
         band.WriteArray(mod_array)
@@ -596,7 +598,10 @@ def calc_E_raster(out_uri, s_list, s_denom):
                             nodata = 0)
     e_band = e_raster.GetRasterBand(1)
     e_array = e_band.ReadAsArray()
-
+    
+    LOGGER.debug('\nE Raster X Size, E Raster Y Size')
+    LOGGER.debug(str(e_band.XSize) + ', ' + str(e_band.YSize))
+    
     return e_array
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
@@ -628,8 +633,15 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     c_raster = raster_utils.vectorize_rasters(tot_crit_list, add_c_pix, 
                             aoi = None, raster_out_uri = out_uri, 
                             datatype=gdal.GDT_Float32, nodata = 0)
-    c_array = c_raster.GetRasterBand(1).ReadAsArray()
+    c_band = c_raster.GetRasterBand(1)
+    c_array = c_band.ReadAsArray()
 
+
+    LOGGER.debug(tot_crit_list)
+    for ds in tot_crit_list:
+        r = ds.GetRasterBand(1)
+        LOGGER.debug('\nC Raster X Size, C Raster Y Size')
+        LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
     return c_array
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
@@ -725,9 +737,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
         base_ds = h_s[pair]['DS']
-        LOGGER.debug(base_ds)
         base_band = base_ds.GetRasterBand(1)
-        base_array = base_band.ReadAsArray() 
+        base_nodata = base_band.GetNoDataValue()
+        
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep
@@ -753,18 +765,25 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + \
                                                s + ']' + '_Indiv_C_Raster.tif')
-        c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
-                                                 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-        band.Fill(nodata)
 
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.
         #Instead, want to only have the crit_rate_numerator where data
         #exists, but don't want to multiply it.
-        i_array = base_array
-        i_array[i_array != nodata] = crit_rate_numerator
-        band.WriteArray(i_array)
+        
+        #To save memory, want to use vectorize rasters instead of casting to an
+        #array. Anywhere that we have nodata, leave alone. Otherwise, use
+        #crit_rate_numerator as the burn value.
+        def burn_numerator(pixel):
+
+            if pixel == base_nodata:
+                return 0
+            else:
+                return crit_rate_numerator
+
+        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator,
+                                    raster_out_uri = single_crit_C_uri,
+                                    datatype = gdal.GDT_Float32, nodata = [0])
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
