@@ -505,11 +505,9 @@ def make_risk_mult(base, e_rast, c_rast, risk_uri):
         base- The h-s overlap raster, including potentially decayed values from
             the stressor layer.
         e_rast- The r/dq*w burned raster for all stressor-specific criteria
-            in this model run. In this case, we are viewing the raster as
-            an array.
+            in this model run. 
         c_rast- The r/dq*w burned raster for all habitat-specific and
-            habitat-stressor-specific criteria in this model run. In this case,
-            we are viewing the raster as an array.
+            habitat-stressor-specific criteria in this model run. 
         risk_uri- The file path to which we should be burning our new raster.
             
     Returns a raster representing the multiplied E raster, C raster, and 
@@ -552,11 +550,9 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
         base- The h-s overlap raster, including potentially decayed values from
             the stressor layer.
         e_rast- The r/dq*w burned raster for all stressor-specific criteria
-            in this model run. In this case, we are viewing the raster as
-            an array.
+            in this model run.         
         c_rast- The r/dq*w burned raster for all habitat-specific and
-            habitat-stressor-specific criteria in this model run. In this case,
-            we are viewing the raster as an array.
+            habitat-stressor-specific criteria in this model run.
         risk_uri- The file path to which we should be burning our new raster.
 
     Returns a raster representing the euclidean calculated E raster, C raster, 
