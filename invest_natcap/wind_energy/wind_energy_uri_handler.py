@@ -26,6 +26,9 @@ def execute(args):
             masking, required for valuation)
         args[bathymetry_uri] - a uri to a GDAL dataset that has the depth
             values of the area of interest (required)
+        args[global_wind_parameters_uri] - a uri to a CSV file that holds the
+            global parameter values for both the biophysical and valuation
+            module (required)        
         args[bottom_type_uri] - a uri to an OGR datasource of type polygon
             that depicts the subsurface geology type (optional)
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
