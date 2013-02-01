@@ -218,7 +218,6 @@ def execute(args):
         if field_value_row[0].lower() in biophysical_params:
             bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
 
-
     # Get the global parameters for biophysical from the CSV file
     global_bio_param_file = open(args['global_wind_parameters_uri'])
     global_bio_reader = csv.reader(global_bio_param_file)
