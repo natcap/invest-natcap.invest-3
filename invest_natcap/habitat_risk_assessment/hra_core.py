@@ -469,9 +469,10 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         c_out_uri = os.path.join(inter_dir, h + '_' + s + 'C_Risk_Raster.tif')
         e_out_uri = os.path.join(inter_dir, h + '_' + s + 'E_Risk_Raster.tif')
 
-        #For E/C, want to return a numpy array so that it's easier to work with
-        #for risk calc.
+        #E/C should take in all of the subdictionary data, and return a raster
+        #to be used in risk calculation. 
         #E will only need to take in stressor subdictionary data
+        #C will take in both h-s and habitat subdictionary data
         E = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
                         denoms['Risk']['s'][s])
         #C will need to take in both habitat and hab-stress subdictionary data
@@ -596,13 +597,11 @@ def calc_E_raster(out_uri, s_list, s_denom):
     e_raster = raster_utils.vectorize_rasters(s_list, add_e_pix, aoi = None,
                             raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
-    e_band = e_raster.GetRasterBand(1)
-    e_array = e_band.ReadAsArray()
     
     LOGGER.debug('\nE Raster X Size, E Raster Y Size')
     LOGGER.debug(str(e_band.XSize) + ', ' + str(e_band.YSize))
     
-    return e_array
+    return e_raster
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     '''Should return a raster burned with a 'C' raster that is a combination
@@ -633,16 +632,13 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     c_raster = raster_utils.vectorize_rasters(tot_crit_list, add_c_pix, 
                             aoi = None, raster_out_uri = out_uri, 
                             datatype=gdal.GDT_Float32, nodata = 0)
-    c_band = c_raster.GetRasterBand(1)
-    c_array = c_band.ReadAsArray()
-
 
     LOGGER.debug(tot_crit_list)
     for ds in tot_crit_list:
         r = ds.GetRasterBand(1)
         LOGGER.debug('\nC Raster X Size, C Raster Y Size')
         LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
-    return c_array
+    return c_raster
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     '''Want to return two dictionaries in the format of the following:
