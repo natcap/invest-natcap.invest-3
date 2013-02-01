@@ -517,10 +517,34 @@ def make_risk_mult(base, e_array, c_array):
     Returns a raster representing the multiplied E raster, C raster, and 
     the base raster.
     '''
+    #Since we aren't necessarily sure what base nodata is coming in as, just
+    #want to be sure that this will output 0.
+    base_nodata = base.GetNoDataValue()
 
-    risk_rast =  base* e_array * c_array
+    def combine_risk_mult(*pixels):
 
-    return risk_rast
+        #since the E and C are created within this module, we are very sure
+        #that their nodata will be 0. Just need to check base, which we know
+        #was the first ds passed.
+        b_pixel = pixels[0]
+        if b_pixel == base_nodata:
+            return 0       
+
+        #Otherwise, straight multiply all of the pixel values. We assume that
+        #base could potentially be decayed.
+        value = 1.
+ 
+        for p in pixels:
+            value = value * p
+
+        return value
+
+    mod_raster = raster_utils.vectorize_rasters([base, e_array, c_array], 
+                            combine_risk_mult, aoi = None, 
+                            raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                            nodata = 0)
+
+    return mod_raster
 
 def make_risk_euc(base, e_array, c_array):
     '''Combines the E and C rasters according to the euclidean combination
