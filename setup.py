@@ -2,6 +2,7 @@
 
 from distutils.core import setup
 from distutils.extension import Extension
+from distutils.core import Command
 import platform
 import os
 import sys
@@ -10,17 +11,82 @@ import time
 import glob
 import subprocess
 import matplotlib
+import zipfile
+import re
 
 
 import numpy as np
+import Cython
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
+
+
+class DependencyOutOfDate(Exception): pass
+def check_version(required_version, version, module_name):
+    """Compare two version strings of the form xxxx.xxxx.xxxx
+
+        required_version = the minimum required version.
+        version = the version to test against required_version
+        module_name = the string module name to check.
+
+        This function uses cmp() to determine whether the version requirement is
+        satisfied:
+            -1 If version < required_version
+            0  If version == required_version
+            1  If version > required_version.
+
+        This function returns None if the dependency is met.  If the module
+        version dependency is not met, a DependencyOutOfDate exception is
+        raised."""
+
+    def normalize(v):
+        return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
+
+    version_satisfied = cmp(normalize(version), normalize(required_version))
+
+    # If the version is satisfied, just return.  Otherwise, raise an Exception.
+    if version_satisfied in [0, 1]:
+        return
+    raise DependencyOutOfDate('Module %s: version >= %s required, but %s found'
+        % (module_name, required_version, version))
+
+# Verify the Cython version.
+check_version('0.17.1', Cython.__version__, 'Cython')
 
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
     force_new=True)
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
+
+class ZipCommand(Command):
+    description = 'Custom command to recurseively zip a folder'
+    user_options = [
+        ('zip-dir=', None, 'Folder to be zipped up'),
+        ('zip-file=', None, 'Output zip file path')]
+
+    def initialize_options(self):
+        version = 'invest_' + VERSION.replace(':', '_').replace('.', '_')
+        self.zip_dir = version
+        self.zip_file = str(version + '.zip')
+
+    def finalize_options(self):
+        """This function, though empty, is requred to exist in subclasses of
+        Command."""
+        pass
+
+    def run(self):
+        zip = zipfile.ZipFile(self.zip_file, 'w',
+            compression=zipfile.ZIP_DEFLATED)
+        dir = self.zip_dir
+        root_len = len(os.path.abspath(dir))
+        print dir
+        for root, dirs, files in os.walk(dir):
+            for f in files:
+                fullpath = os.path.join(root, f)
+                print(fullpath)
+                zip.write(fullpath, fullpath, zipfile.ZIP_DEFLATED)
+        zip.close()
 
 console = []
 py2exe_args = {}
@@ -144,7 +210,8 @@ data_files.append((os.path.join(lib_path, 'invest_natcap', 'wind_energy'),
 setup(name='invest_natcap',
       version=VERSION,
       packages=packages,
-      cmdclass={'build_ext': build_ext},
+      cmdclass={'build_ext': build_ext,
+                'zip': ZipCommand},
       include_dirs = [np.get_include()],
       data_files=data_files,
       ext_modules=cythonize([Extension(name="invest_cython_core",

@@ -52,9 +52,11 @@ def biophysical(args):
             provides a coastline for determining distances from wind farm bins
             (optional, required if distance parameters have been selected)
         args[min_distance] - a float value for the minimum distance from shore
-            for offshore wind farm installation (meters) (optional)
+            for offshore wind farm installation (meters) (optional, required for 
+            valuation)
         args[max_distance] - a float value for the maximum distance from shore
-            for offshore wind farm installation (meters) (optional)
+            for offshore wind farm installation (meters) (optional, required for
+            valuation)
         
         returns - nothing"""
 

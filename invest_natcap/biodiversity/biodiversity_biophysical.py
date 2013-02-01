@@ -159,13 +159,14 @@ def open_ambiguous_raster(uri):
         be represented.
 
         uri - a python string of the file path that includes the name of the
-              file but not it's extension
+              file but not its extension
 
         return - a gdal dataset or NONE if no file is found with the pre-defined
                  suffixes and 'uri'"""
     # a list of possible suffixes for raster datasets. We currently can handle
     # .tif and directory paths
-    possible_suffixes = ['', '.tif']
+
+    possible_suffixes = ['', '.tif', '.img']
     
     # initialize dataset to None in the case that all paths do not exist
     dataset = None 
