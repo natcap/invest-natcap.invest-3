@@ -599,7 +599,7 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
                             combine_risk_mult, aoi = None, 
                             raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
-    return risk_array
+    return mod_raster
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
