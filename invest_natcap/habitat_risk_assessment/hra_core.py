@@ -494,15 +494,12 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
 
         #Want to get the relevant ds for this H-S pair
         base_ds = h_s[pair]['DS']
-        base_array = base_ds.GetRasterBand(1).ReadAsArray()
         
         if risk_eq == 'Multiplicative':
-            mod_array = make_risk_mult(base_array, E, C)
+            mod_raster = make_risk_mult(base_ds, E, C)
+        
         elif risk_eq == 'Euclidean':
-           
-            LOGGER.debug('-------------------------')
-            LOGGER.debug(pair)
-            mod_array = make_risk_euc(base_array, E, C)
+            mod_raster = make_risk_euc(base_ds, E, C)
 
         band.WriteArray(mod_array)
 
@@ -524,8 +521,8 @@ def make_risk_mult(base, e_array, c_array):
             habitat-stressor-specific criteria in this model run. In this case,
             we are viewing the raster as an array.
     
-    Returns an array representing the multiplied E array, C array, and 
-    the base array.
+    Returns a raster representing the multiplied E raster, C raster, and 
+    the base raster.
     '''
 
     risk_rast =  base* e_array * c_array
