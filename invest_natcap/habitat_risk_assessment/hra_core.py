@@ -25,7 +25,7 @@ def execute(args):
             and intermediate folders will be subfolders of this one.
         args['risk_eq']-  A string representing the equation to be used for
             risk calculation. Possible risk equations are 'Multiplicative',
-            which would multiply E and C, and 'Exponential', which would use
+            which would multiply E and C, and 'Euclidean', which would use
             the equation sqrt((C-1)^2 + (E-1)^2).
         args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
@@ -500,17 +500,17 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
 
     return risk_rasters
 
-def make_risk_mult(base, e_array, c_array):
+def make_risk_mult(base, e_rast, c_rast):
     '''Combines the E and C rasters according to the multiplicative combination
     equation.
 
     Input:
         base- The h-s overlap raster, including potentially decayed values from
             the stressor layer.
-        e_array- The r/dq*w burned raster for all stressor-specific criteria
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
             in this model run. In this case, we are viewing the raster as
             an array.
-        c_array- The r/dq*w burned raster for all habitat-specific and
+        c_rast- The r/dq*w burned raster for all habitat-specific and
             habitat-stressor-specific criteria in this model run. In this case,
             we are viewing the raster as an array.
     
@@ -539,37 +539,64 @@ def make_risk_mult(base, e_array, c_array):
 
         return value
 
-    mod_raster = raster_utils.vectorize_rasters([base, e_array, c_array], 
+    mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
                             combine_risk_mult, aoi = None, 
                             raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
 
     return mod_raster
 
-def make_risk_euc(base, e_array, c_array):
+def make_risk_euc(base, e_rast, c_rast):
     '''Combines the E and C rasters according to the euclidean combination
     equation.
 
     Input:
         base- The h-s overlap raster, including potentially decayed values from
             the stressor layer.
-        e_array- The r/dq*w burned raster for all stressor-specific criteria
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
             in this model run. In this case, we are viewing the raster as
             an array.
-        c_array- The r/dq*w burned raster for all habitat-specific and
+        c_rast- The r/dq*w burned raster for all habitat-specific and
             habitat-stressor-specific criteria in this model run. In this case,
             we are viewing the raster as an array.
     
-    Returns an array representing the euclidean calculated E array, C array, 
-    and the base array.
+    Returns a raster representing the euclidean calculated E raster, C raster, 
+    and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
-    #Want to make sure that the decay is applied to E first, then that product
-    #is what is used as the new E
-    e_array = e_array * base
+    base_nodata = base.GetNoDataValue()
+    e_nodata = e_rast.GetNoDataValue()
 
-    #Only want to perform these operation if there is data in the cell, else
-    #we end up with false positive data when we subtract 1.
-    e_array[e_array != 0 ] -= 1
+    #we need to know very explicitly which rasters are being passed in which
+    #order. However, since it's all within the make_risk_euc function, should
+    #be safe.
+    def combine_risk_euc(b_pix, e_pix, c_pix):
+
+        #Want to make sure we return nodata if there is no base, or no exposure
+        if b_pix == base_nodata or e_pix == e_nodata:
+            return 0.
+        
+        #Want to make sure that the decay is applied to E first, then that product
+        #is what is used as the new E
+        e_val = b_pix * e_pix
+
+        #Only want to perform these operation if there is data in the cell, else
+        #we end up with false positive data when we subtract 1. If we have
+        #gotten here, we know that e_pix != 0. Just need to check for c_pix.
+        if not c_pix == 0:
+            c_val = c_pix - 1
+        else:
+            c_val = 0
+
+        e_val -= 1
+
+        #Now square both.
+        c_val = c_val ** 2
+        e_val = e_val ** 2
+        
+        #Combine, and take the sqrt
+        value = math.sqrt(e_val + c_val)
+
+    e_array[e_array != 0  -= 1
     e_array = e_array * 2
 
     c_array[c_array != 0] -= 1
