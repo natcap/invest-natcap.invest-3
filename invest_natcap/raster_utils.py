@@ -1,4 +1,4 @@
-"""A collection of GDAL dataset and raster utilities"""
+texi"""A collection of GDAL dataset and raster utilities"""
 
 import logging
 import itertools
@@ -8,6 +8,7 @@ import os
 import time
 import tempfile
 import shutil
+import atexit
 
 from osgeo import gdal
 from osgeo import osr
