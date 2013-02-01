@@ -1,4 +1,4 @@
-texi"""A collection of GDAL dataset and raster utilities"""
+"""A collection of GDAL dataset and raster utilities"""
 
 import logging
 import itertools
