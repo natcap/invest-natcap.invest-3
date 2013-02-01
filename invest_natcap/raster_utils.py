@@ -1721,3 +1721,21 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     band.ReadAsArray(buf_obj = memory_array)
 
     return memory_array
+
+
+def temporary_filename():
+    """Returns a temporary filename using mkstemp. The file is deleted
+        on exit using the atexit register.
+
+        returns a unique temporary filename"""
+
+    (file_handle, path) = tempfile.mkstemp()
+    os.close(file_handle)
+
+    def remove_file(path):
+        os.remove(path)
+        LOGGER.debug('removing temporary file ' % path)
+
+    atexit.register(remove_file, path)
+
+    return path
