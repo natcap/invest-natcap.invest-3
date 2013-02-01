@@ -1736,7 +1736,7 @@ def temporary_filename():
         try:
             os.remove(path)
             LOGGER.debug('removing temporary file %s' % (path))
-        except Exception as e
+        except Exception as e:
             LOGGER.debug('tried to removing temporary file %s but got %s ' % (path, e))
 
     atexit.register(remove_file, path)
