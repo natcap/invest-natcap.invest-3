@@ -480,27 +480,24 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
 
-        #Assume that there will be at least one raster.
-        old_ds = crit_lists['Risk']['h-s'][pair][0]
-        risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
-
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
+        risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
 
         #Want to get the relevant ds for this H-S pair
         base_ds = h_s[pair]['DS']
         
         if risk_eq == 'Multiplicative':
-            mod_raster = make_risk_mult(base_ds, E, C)
+            mod_raster = make_risk_mult(base_ds, E, C, risk_uri)
         
         elif risk_eq == 'Euclidean':
-            mod_raster = make_risk_euc(base_ds, E, C)
+            mod_raster = make_risk_euc(base_ds, E, C, risk_uri)
 
         risk_rasters[pair] = mod_raster
 
     return risk_rasters
 
-def make_risk_mult(base, e_rast, c_rast):
+def make_risk_mult(base, e_rast, c_rast, risk_uri):
     '''Combines the E and C rasters according to the multiplicative combination
     equation.
 
@@ -513,7 +510,8 @@ def make_risk_mult(base, e_rast, c_rast):
         c_rast- The r/dq*w burned raster for all habitat-specific and
             habitat-stressor-specific criteria in this model run. In this case,
             we are viewing the raster as an array.
-    
+        risk_uri- The file path to which we should be burning our new raster.
+            
     Returns a raster representing the multiplied E raster, C raster, and 
     the base raster.
     '''
@@ -541,12 +539,12 @@ def make_risk_mult(base, e_rast, c_rast):
 
     mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
                             combine_risk_mult, aoi = None, 
-                            raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
+                            raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
 
     return mod_raster
 
-def make_risk_euc(base, e_rast, c_rast):
+def make_risk_euc(base, e_rast, c_rast, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
     equation.
 
@@ -559,7 +557,8 @@ def make_risk_euc(base, e_rast, c_rast):
         c_rast- The r/dq*w burned raster for all habitat-specific and
             habitat-stressor-specific criteria in this model run. In this case,
             we are viewing the raster as an array.
-    
+        risk_uri- The file path to which we should be burning our new raster.
+
     Returns a raster representing the euclidean calculated E raster, C raster, 
     and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
@@ -596,19 +595,10 @@ def make_risk_euc(base, e_rast, c_rast):
         #Combine, and take the sqrt
         value = math.sqrt(e_val + c_val)
 
-    e_array[e_array != 0  -= 1
-    e_array = e_array * 2
-
-    c_array[c_array != 0] -= 1
-    c_array = c_array ** 2
-
-    #Only want to add E and C if there was originally no data in that pixel.
-    e_mask = np.ma.make_mask(e_array)
-    c_array = e_mask * c_array
-
-    risk_array = c_array + e_array
-    risk_array = risk_array ** .5
-
+    mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
+                            combine_risk_mult, aoi = None, 
+                            raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
+                            nodata = 0)
     return risk_array
 
 def calc_E_raster(out_uri, s_list, s_denom):
