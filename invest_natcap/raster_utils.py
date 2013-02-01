@@ -1,4 +1,4 @@
-"""A collection of GDAL dataset and raster utilities"""
+texi"""A collection of GDAL dataset and raster utilities"""
 
 import logging
 import itertools
@@ -8,6 +8,7 @@ import os
 import time
 import tempfile
 import shutil
+import atexit
 
 from osgeo import gdal
 from osgeo import osr
@@ -1721,3 +1722,24 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     band.ReadAsArray(buf_obj = memory_array)
 
     return memory_array
+
+
+def temporary_filename():
+    """Returns a temporary filename using mkstemp. The file is deleted
+        on exit using the atexit register.
+
+        returns a unique temporary filename"""
+
+    (file_handle, path) = tempfile.mkstemp()
+    os.close(file_handle)
+
+    def remove_file(path):
+        try:
+            os.remove(path)
+            LOGGER.debug('removing temporary file %s' % (path))
+        except Exception as e:
+            LOGGER.debug('tried to removing temporary file %s but got %s ' % (path, e))
+
+    atexit.register(remove_file, path)
+
+    return path
