@@ -934,7 +934,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
     #And now, loading in all of the stressors. Will just be the standard
     #risk equation (r/dq*w)
-
     for s in stress:
 
         crit_lists['Risk']['s'][s] = []
@@ -944,7 +943,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds = stress[s]['DS']
         base_band = base_ds.GetRasterBand(1)
-        base_array = base_band.ReadAsArray() 
+        base_nodata = base_band.GetNoDataValue() 
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep 
@@ -968,14 +967,17 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         single_crit_E_uri = os.path.join(pre_raster_dir, s + 
                                                      '_Indiv_E_Raster.tif')
-        e_ds = raster_utils.new_raster_from_base(base_ds, single_crit_E_uri,
-                                                 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(e_ds)
-        band.Fill(nodata)
+        def burn_numerator(pixel):
+            
+            if pixel == base_nodata:
+                return 0
 
-        i_burned_array = base_array
-        i_burned_array[i_burned_array != nodata] = crit_rate_numerator
-        band.WriteArray(i_burned_array)
+            else:
+                return crit_rate_numerator
+
+        e_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator,
+                                raster_out_uri = single_crit_E_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -986,20 +988,26 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in stress[s]['Crit_Rasters'].iteritems():
             crit_ds = crit_dict['DS']
             crit_band = crit_ds.GetRasterBand(1)
-            crit_array = crit_band.ReadAsArray()
+            crit_nodata = crit_band.GetNoDataValue()
+            
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
             denoms['Risk']['s'][s] += 1/ float(dq * w)
 
             crit_E_uri = os.path.join(pre_raster_dir, s + '_' + crit + \
                                                     '_' + 'E_Raster.tif')
-            e_ds = raster_utils.new_raster_from_base(base_ds, crit_E_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(e_ds)
-            band.Fill(nodata)
+            def burn_numerator(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0
 
-            edited_array = crit_array / float(dq * w)
-            band.WriteArray(edited_array)
+                else:
+                    burn_rating = float(pixel) / (dq*w)
+                    return burn_rating
+
+            e_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator,
+                                raster_out_uri = crit_E_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
             crit_lists['Risk']['s'][s].append(e_ds)
 
     #This might help.
