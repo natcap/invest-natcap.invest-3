@@ -483,11 +483,6 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #Assume that there will be at least one raster.
         old_ds = crit_lists['Risk']['h-s'][pair][0]
         risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
-        new_ds = raster_utils.new_raster_from_base(old_ds, risk_uri, 'GTiff', 
-                                    0, gdal.GDT_Float32)
-
-        band, nodata = raster_utils.extract_band_and_nodata(new_ds)
-        band.Fill(nodata)
 
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
@@ -501,9 +496,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         elif risk_eq == 'Euclidean':
             mod_raster = make_risk_euc(base_ds, E, C)
 
-        band.WriteArray(mod_array)
-
-        risk_rasters[pair] = new_ds
+        risk_rasters[pair] = mod_raster
 
     return risk_rasters
 
