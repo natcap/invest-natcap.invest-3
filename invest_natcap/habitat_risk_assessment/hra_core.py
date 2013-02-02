@@ -830,7 +830,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             def burn_numerator(pixel):
 
-                if pixel = crit_nodata:
+                if pixel == crit_nodata:
                     return 0
 
                 else:
