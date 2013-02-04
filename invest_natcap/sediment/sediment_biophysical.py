@@ -109,11 +109,11 @@ def execute(args):
     lulc_dataset = gdal.Open(args['landuse_uri'])
     retention_uri = os.path.join(intermediate_dir, 'retention.tif')
 
-    LOGGER.info('building alpha raster from lulc')
-    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha'])) for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_alpha_dict)
+    LOGGER.info('building retention fraction raster from lulc')
+    lulc_to_retention_dict = dict([(lulc_code, float(table['sedret_eff'])) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_alpha_dict, retention_uri, gdal.GDT_Float32,
+        lulc_dataset, lulc_to_retention_dict, retention_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building cp raster from lulc')
@@ -139,22 +139,7 @@ def execute(args):
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
         v_stream_uri, usle_uri)
 
-    LOGGER.info('building alpha raster from lulc')
-    lulc_to_alpha_dict = dict([(lulc_code, float(table['alpha']))  for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_alpha_dict %s' % lulc_to_alpha_dict)
-    alpha_uri = os.path.join(intermediate_dir, 'alpha.tif')
-    raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_alpha_dict, alpha_uri, gdal.GDT_Float32,
-        -1.0, exception_flag='values_required')
-
-    LOGGER.info('calculate the SDR term')
-    flow_length_uri = os.path.join(intermediate_dir, 'flow_length.tif')
-    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
-
-    sdr_uri = os.path.join(intermediate_dir, 'sdr.tif')
-    sediment_core.calculate_sdr(alpha_uri, flow_length_uri, slope_uri, sdr_uri)
-
-    effect_uri = os.path.join(intermediate_dir, 'effect.tif')
+    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
 
     outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights.tif')
     outflow_direction_uri = os.path.join(
@@ -168,9 +153,8 @@ def execute(args):
 
     LOGGER.info('backtrace the sediment reaching the streams')
     routing_cython_core.percent_to_sink(
-        v_stream_uri, sdr_uri, outflow_direction_uri, outflow_weights_uri,
-        effect_uri)
-
+        v_stream_uri, retention_uri, outflow_direction_uri, outflow_weights_uri,
+        effective_export_to_stream_uri)
 
     return
 

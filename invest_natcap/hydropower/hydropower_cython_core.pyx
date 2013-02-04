@@ -1,9 +1,9 @@
 import cython
 
-cdef inline float float_min(float a, float b): return a if a >= b else b
+cdef inline float float_min(float a, float b): return a if a <= b else b
 
 @cython.cdivision(True)
-def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant, 
+def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant,
               float etk, float eto, float precip, float root, float soil, float pawc):
     """Function that calculates the fractp (actual evapotranspiration
        fraction of precipitation) raster
