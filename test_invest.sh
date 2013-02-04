@@ -26,7 +26,7 @@ timeout=600
 processes=1
 echo $processes
 
-run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
+run_tests="nosetests -v --with-xunit --logging-filter=None --process-timeout=$timeout --processes=$processes"
 test_files=""
 
 if [ $# -eq 0 ]
