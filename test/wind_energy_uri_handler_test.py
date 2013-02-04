@@ -27,6 +27,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['bathymetry_uri'] = os.path.join(input_dir, 'testing_bathym.tif') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3
@@ -95,6 +97,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         #args['suffix'] = ''
         args['hub_height']  = 70 
         args['num_days'] = 365
@@ -168,6 +172,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3
@@ -248,6 +254,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['min_distance'] = 1000
         args['max_distance'] = 20000
         args['hub_height']  = 70 
@@ -331,6 +339,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3
@@ -416,6 +426,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3
@@ -505,6 +517,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3
@@ -594,6 +608,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3
@@ -687,6 +703,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['aoi_uri'] = os.path.join(input_dir, 'testing_aoi_proj.shp') 
         args['turbine_parameters_uri'] = os.path.join(
                 input_dir, '3_6_turbine.csv') 
+        args['global_wind_parameters_uri'] = os.path.join(
+                input_dir, 'global_wind_energy_parameters.csv') 
         args['hub_height']  = 70 
         args['num_days'] = 365
         args['min_depth'] = 3

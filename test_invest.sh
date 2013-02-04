@@ -9,7 +9,7 @@ python setup_environment.py --clear --system-site-packages $ENVDIR
 ls invest_python_environment/bin
 source $ENVDIR/bin/activate
 echo 'Activated'
-python setup.py install --user
+python setup.py install
 pushd test
 
 

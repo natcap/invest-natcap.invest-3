@@ -155,7 +155,6 @@ if platform.system() == 'Windows':
          'invest_biodiversity_biophysical.py',
          'invest_overlap_analysis.py',
          'invest_overlap_analysis_mz.py',
-         'invest_sediment_biophysical.py',
          'invest_habitat_risk_assessment.py',
          'invest_coastal_vulnerability.py',
          'invest_wind_energy.py',
@@ -200,11 +199,6 @@ directory = 'invest_natcap/iui/iui_resources'
 for root_dir, sub_folders, file_list in os.walk(directory):
     data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
         os.path.join(root_dir, x), file_list)))
-
-# Adding a json data file for the wind energy module, manually placing it in the
-# correct path. This needs to be done for both Windows and Linux builds
-data_files.append((os.path.join(lib_path, 'invest_natcap', 'wind_energy'),
-    ['invest_natcap/wind_energy/global_wind_energy_attributes.json']))
 
 #The standard distutils setup command
 setup(name='invest_natcap',

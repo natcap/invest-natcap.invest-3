@@ -2,7 +2,6 @@
 
 import os
 import sys
-import json
 import pickle
 
 from osgeo import gdal
