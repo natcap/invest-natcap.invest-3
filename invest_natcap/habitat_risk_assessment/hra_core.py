@@ -558,6 +558,8 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
     Returns a raster representing the euclidean calculated E raster, C raster, 
     and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
+    LOGGER.debug("NAME OF RISK CALC FILE.")
+    LOGGER.debug(risk_uri)
     base_nodata = base.GetNoDataValue()
     e_nodata = e_rast.GetNoDataValue()
 
