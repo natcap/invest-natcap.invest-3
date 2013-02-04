@@ -25,7 +25,7 @@ def execute(args):
             and intermediate folders will be subfolders of this one.
         args['risk_eq']-  A string representing the equation to be used for
             risk calculation. Possible risk equations are 'Multiplicative',
-            which would multiply E and C, and 'Exponential', which would use
+            which would multiply E and C, and 'Euclidean', which would use
             the equation sqrt((C-1)^2 + (E-1)^2).
         args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
@@ -469,9 +469,10 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         c_out_uri = os.path.join(inter_dir, h + '_' + s + 'C_Risk_Raster.tif')
         e_out_uri = os.path.join(inter_dir, h + '_' + s + 'E_Risk_Raster.tif')
 
-        #For E/C, want to return a numpy array so that it's easier to work with
-        #for risk calc.
+        #E/C should take in all of the subdictionary data, and return a raster
+        #to be used in risk calculation. 
         #E will only need to take in stressor subdictionary data
+        #C will take in both h-s and habitat subdictionary data
         E = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
                         denoms['Risk']['s'][s])
         #C will need to take in both habitat and hab-stress subdictionary data
@@ -479,92 +480,122 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
 
-        #Assume that there will be at least one raster.
-        old_ds = crit_lists['Risk']['h-s'][pair][0]
-        risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
-        new_ds = raster_utils.new_raster_from_base(old_ds, risk_uri, 'GTiff', 
-                                    0, gdal.GDT_Float32)
-
-        band, nodata = raster_utils.extract_band_and_nodata(new_ds)
-        band.Fill(nodata)
-
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
+        risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
 
         #Want to get the relevant ds for this H-S pair
         base_ds = h_s[pair]['DS']
-        base_array = base_ds.GetRasterBand(1).ReadAsArray()
         
         if risk_eq == 'Multiplicative':
-            mod_array = make_risk_mult(base_array, E, C)
+            mod_raster = make_risk_mult(base_ds, E, C, risk_uri)
+        
         elif risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(base_array, E, C)
+            mod_raster = make_risk_euc(base_ds, E, C, risk_uri)
 
-        band.WriteArray(mod_array)
-
-        risk_rasters[pair] = new_ds
+        risk_rasters[pair] = mod_raster
 
     return risk_rasters
 
-def make_risk_mult(base, e_array, c_array):
+def make_risk_mult(base, e_rast, c_rast, risk_uri):
     '''Combines the E and C rasters according to the multiplicative combination
     equation.
 
     Input:
         base- The h-s overlap raster, including potentially decayed values from
             the stressor layer.
-        e_array- The r/dq*w burned raster for all stressor-specific criteria
-            in this model run. In this case, we are viewing the raster as
-            an array.
-        c_array- The r/dq*w burned raster for all habitat-specific and
-            habitat-stressor-specific criteria in this model run. In this case,
-            we are viewing the raster as an array.
-    
-    Returns an array representing the multiplied E array, C array, and 
-    the base array.
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run. 
+        c_rast- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run. 
+        risk_uri- The file path to which we should be burning our new raster.
+            
+    Returns a raster representing the multiplied E raster, C raster, and 
+    the base raster.
     '''
+    #Since we aren't necessarily sure what base nodata is coming in as, just
+    #want to be sure that this will output 0.
+    base_nodata = base.GetNoDataValue()
 
-    risk_rast =  base* e_array * c_array
+    def combine_risk_mult(*pixels):
 
-    return risk_rast
+        #since the E and C are created within this module, we are very sure
+        #that their nodata will be 0. Just need to check base, which we know
+        #was the first ds passed.
+        b_pixel = pixels[0]
+        if b_pixel == base_nodata:
+            return 0       
 
-def make_risk_euc(base, e_array, c_array):
+        #Otherwise, straight multiply all of the pixel values. We assume that
+        #base could potentially be decayed.
+        value = 1.
+ 
+        for p in pixels:
+            value = value * p
+
+        return value
+
+    mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
+                            combine_risk_mult, aoi = None, 
+                            raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
+                            nodata = 0)
+
+    return mod_raster
+
+def make_risk_euc(base, e_rast, c_rast, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
     equation.
 
     Input:
         base- The h-s overlap raster, including potentially decayed values from
             the stressor layer.
-        e_array- The r/dq*w burned raster for all stressor-specific criteria
-            in this model run. In this case, we are viewing the raster as
-            an array.
-        c_array- The r/dq*w burned raster for all habitat-specific and
-            habitat-stressor-specific criteria in this model run. In this case,
-            we are viewing the raster as an array.
-    
-    Returns an array representing the euclidean calculated E array, C array, 
-    and the base array.
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run.         
+        c_rast- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run.
+        risk_uri- The file path to which we should be burning our new raster.
+
+    Returns a raster representing the euclidean calculated E raster, C raster, 
+    and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
-    #Want to make sure that the decay is applied to E first, then that product
-    #is what is used as the new E
-    e_array = e_array * base
+    base_nodata = base.GetNoDataValue()
+    e_nodata = e_rast.GetNoDataValue()
 
-    #Only want to perform these operation if there is data in the cell, else
-    #we end up with false positive data when we subtract 1.
-    e_array[e_array != 0 ] -= 1
-    e_array = e_array * 2
+    #we need to know very explicitly which rasters are being passed in which
+    #order. However, since it's all within the make_risk_euc function, should
+    #be safe.
+    def combine_risk_euc(b_pix, e_pix, c_pix):
 
-    c_array[c_array != 0] -= 1
-    c_array = c_array ** 2
+        #Want to make sure we return nodata if there is no base, or no exposure
+        if b_pix == base_nodata or e_pix == e_nodata:
+            return 0.
+        
+        #Want to make sure that the decay is applied to E first, then that product
+        #is what is used as the new E
+        e_val = b_pix * e_pix
 
-    #Only want to add E and C if there was originally no data in that pixel.
-    e_mask = np.ma.make_mask(e_array)
-    c_array = e_mask * c_array
+        #Only want to perform these operation if there is data in the cell, else
+        #we end up with false positive data when we subtract 1. If we have
+        #gotten here, we know that e_pix != 0. Just need to check for c_pix.
+        if not c_pix == 0:
+            c_val = c_pix - 1
+        else:
+            c_val = 0
 
-    risk_array = c_array + e_array
-    risk_array = risk_array ** .5
+        e_val -= 1
 
-    return risk_array
+        #Now square both.
+        c_val = c_val ** 2
+        e_val = e_val ** 2
+        
+        #Combine, and take the sqrt
+        value = math.sqrt(e_val + c_val)
+
+    mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
+                            combine_risk_mult, aoi = None, 
+                            raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
+                            nodata = 0)
+    return mod_raster
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -593,10 +624,11 @@ def calc_E_raster(out_uri, s_list, s_denom):
     e_raster = raster_utils.vectorize_rasters(s_list, add_e_pix, aoi = None,
                             raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
-    e_band = e_raster.GetRasterBand(1)
-    e_array = e_band.ReadAsArray()
-
-    return e_array
+    
+    LOGGER.debug('\nE Raster X Size, E Raster Y Size')
+    LOGGER.debug(str(e_band.XSize) + ', ' + str(e_band.YSize))
+    
+    return e_raster
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     '''Should return a raster burned with a 'C' raster that is a combination
@@ -627,9 +659,13 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     c_raster = raster_utils.vectorize_rasters(tot_crit_list, add_c_pix, 
                             aoi = None, raster_out_uri = out_uri, 
                             datatype=gdal.GDT_Float32, nodata = 0)
-    c_array = c_raster.GetRasterBand(1).ReadAsArray()
 
-    return c_array
+    LOGGER.debug(tot_crit_list)
+    for ds in tot_crit_list:
+        r = ds.GetRasterBand(1)
+        LOGGER.debug('\nC Raster X Size, C Raster Y Size')
+        LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
+    return c_raster
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     '''Want to return two dictionaries in the format of the following:
@@ -705,10 +741,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
     os.mkdir(pre_raster_dir)
 
-    crit_lists = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
+    crit_lists = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
-    denoms = {'Risk': {'h_s': {}, 'h':{}, 's':{}},
+    denoms = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
 
@@ -718,15 +754,15 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     for pair in h_s:
         h, s = pair
 
-        crit_lists['Risk']['h_s'][pair] = []
-        denoms['Risk']['h_s'][pair] = 0
+        crit_lists['Risk']['h-s'][pair] = []
+        denoms['Risk']['h-s'][pair] = 0
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
         base_ds = h_s[pair]['DS']
-        LOGGER.debug(base_ds)
         base_band = base_ds.GetRasterBand(1)
-        base_array = base_band.ReadAsArray() 
+        base_nodata = base_band.GetNoDataValue()
+        
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep
@@ -748,26 +784,32 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
-            denoms['Risk']['h_s'][pair] += 1 / float(dq*w)
-
-        single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + \
-                                               s + ']' + '_Indiv_C_Raster.tif')
-        c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
-                                                 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-        band.Fill(nodata)
+            denoms['Risk']['h-s'][pair] += 1 / float(dq*w)
 
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.
         #Instead, want to only have the crit_rate_numerator where data
         #exists, but don't want to multiply it.
-        i_array = base_array
-        i_array[i_array != nodata] = crit_rate_numerator
-        band.WriteArray(i_array)
+        
+        single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + \
+                                               s + ']' + '_Indiv_C_Raster.tif')
+        #To save memory, want to use vectorize rasters instead of casting to an
+        #array. Anywhere that we have nodata, leave alone. Otherwise, use
+        #crit_rate_numerator as the burn value.
+        def burn_numerator(pixel):
+
+            if pixel == base_nodata:
+                return 0
+            else:
+                return crit_rate_numerator
+
+        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator,
+                                    raster_out_uri = single_crit_C_uri,
+                                    datatype = gdal.GDT_Float32, nodata = [0])
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
-        crit_lists['Risk']['h_s'][pair].append(c_ds)
+        crit_lists['Risk']['h-s'][pair].append(c_ds)
         
         #H-S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
@@ -775,24 +817,32 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #.iteritems creates a key, value pair for each one.
         for crit, crit_dict in h_s[pair]['Crit_Rasters'].iteritems():
 
-            crit_raster = crit_dict['DS']
-            crit_band = crit_raster.GetRasterBand(1)
-            crit_array = crit_band.ReadAsArray()
+            crit_ds = crit_dict['DS']
+            crit_band = crit_ds.GetRasterBand(1)
+            crit_nodata = crit_band.GetNoDataValue()
+            
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
-            denoms['Risk']['h_s'][pair] += 1/ float(dq * w)
+            denoms['Risk']['h-s'][pair] += 1/ float(dq * w)
 
             crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
                                         ']_' + crit + '_' + 'C_Raster.tif')
-            c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-            band.Fill(nodata)
 
-            edited_array = crit_array / float(dq * w)
-            band.WriteArray(edited_array)
-            crit_lists['Risk']['h_s'][pair].append(c_ds)
-    
+            def burn_numerator(pixel):
+
+                if pixel == crit_nodata:
+                    return 0
+
+                else:
+                    burn_rating = float(pixel) / (dq * w)
+                    return burn_rating
+            
+            c_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator,
+                                    raster_out_uri = crit_C_uri,
+                                    datatype = gdal.GDT_Float32, nodata = [0])
+
+            crit_lists['Risk']['h-s'][pair].append(c_ds)
+   
     #Habitats are a special case, since each raster needs to be burned twice-
     #once for risk (r/dq*w), and once for recovery potential (r/dq).
     for h in hab:
@@ -806,7 +856,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds = hab[h]['DS']
         base_band = base_ds.GetRasterBand(1)
-        base_array = base_band.ReadAsArray()
+        base_nodata = base_band.GetNoDataValue()
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
@@ -826,39 +876,47 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #First, burn the crit raster for risk
         single_crit_C_uri = os.path.join(pre_raster_dir, h + 
                                                         '_Indiv_C_Raster.tif')
-        c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
-                                                 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-        band.Fill(nodata)
+        def burn_numerator_risk(pixel):
+            
+            if pixel == base_nodata:
+                return 0
 
-        i_burned_array = base_array
-        i_burned_array[i_burned_array != nodata] = risk_crit_rate_numerator
-        band.WriteArray(i_burned_array)
+            else:
+                return risk_crit_rate_numerator
+
+        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator_risk,
+                                raster_out_uri = single_crit_C_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
 
         crit_lists['Risk']['h'][h].append(c_ds)
 
         #Now, burn the recovery potential raster, and add that.
         single_crit_C_uri = os.path.join(pre_raster_dir, h + 
                                                   '_Indiv_Recov_Raster.tif')
-        c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
-                                                 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-        band.Fill(nodata)
 
-        i_burned_array[i_burned_array != nodata] = rec_crit_rate_numerator
-        band.WriteArray(i_burned_array)
-        band.WriteArray(i_burned_array)
+        def burn_numerator_rec(pixel):
+            
+            if pixel == base_nodata:
+                return 0
+
+            else:
+                return rec_crit_rate_numerator
+
+        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator_risk,
+                                raster_out_uri = single_crit_C_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
 
         crit_lists['Recovery'][h].append(c_ds)
         
         #Raster Criteria: should output multiple rasters, each
-        #of which is reburned with the old pixel value r as r/dq*w.
+        #of which is reburned with the old pixel value r as r/dq*w, or r/dq.
         for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
+
             crit_ds = crit_dict['DS']
             crit_band = crit_ds.GetRasterBand(1)
-            crit_array = crit_band.ReadAsArray()
+            crit_nodata = crit_band.GetNoDataValue()
 
             denoms['Risk']['h'][h] += 1/ float(dq * w)
             denoms['Recovery'][h] += 1/ float(dq)
@@ -866,30 +924,39 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             #First the risk rasters
             crit_C_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
                                                     '_' + 'C_Raster.tif')
-            c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(c_ds)
-            band.Fill(nodata)
+            def burn_numerator_risk(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0
 
-            edited_array = crit_array / float(dq * w)
-            band.WriteArray(edited_array)
+                else:
+                    burn_rating = float(pixel) / (w*dq)
+                    return burn_rating
+
+            c_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator_risk,
+                                raster_out_uri = crit_C_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
             crit_lists['Risk']['h'][h].append(c_ds)
             
             #Then the recovery rasters
             crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
                                                     '_' + 'Recov_Raster.tif')
-            r_ds = raster_utils.new_raster_from_base(base_ds, crit_recov_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(r_ds)
-            band.Fill(nodata)
+            def burn_numerator_rec(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0
 
-            edited_array = crit_array / float(dq)
-            band.WriteArray(edited_array)
+                else:
+                    burn_rating = float(pixel) / dq
+                    return burn_rating
+
+            r_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator_rec,
+                                raster_out_uri = crit_recov_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
             crit_lists['Recovery'][h].append(r_ds)
 
     #And now, loading in all of the stressors. Will just be the standard
     #risk equation (r/dq*w)
-
     for s in stress:
 
         crit_lists['Risk']['s'][s] = []
@@ -899,7 +966,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds = stress[s]['DS']
         base_band = base_ds.GetRasterBand(1)
-        base_array = base_band.ReadAsArray() 
+        base_nodata = base_band.GetNoDataValue() 
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep 
@@ -923,14 +990,17 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         single_crit_E_uri = os.path.join(pre_raster_dir, s + 
                                                      '_Indiv_E_Raster.tif')
-        e_ds = raster_utils.new_raster_from_base(base_ds, single_crit_E_uri,
-                                                 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(e_ds)
-        band.Fill(nodata)
+        def burn_numerator(pixel):
+            
+            if pixel == base_nodata:
+                return 0
 
-        i_burned_array = base_array
-        i_burned_array[i_burned_array != nodata] = crit_rate_numerator
-        band.WriteArray(i_burned_array)
+            else:
+                return crit_rate_numerator
+
+        e_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator,
+                                raster_out_uri = single_crit_E_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -941,20 +1011,26 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in stress[s]['Crit_Rasters'].iteritems():
             crit_ds = crit_dict['DS']
             crit_band = crit_ds.GetRasterBand(1)
-            crit_array = crit_band.ReadAsArray()
+            crit_nodata = crit_band.GetNoDataValue()
+            
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
             denoms['Risk']['s'][s] += 1/ float(dq * w)
 
             crit_E_uri = os.path.join(pre_raster_dir, s + '_' + crit + \
                                                     '_' + 'E_Raster.tif')
-            e_ds = raster_utils.new_raster_from_base(base_ds, crit_E_uri, 
-                                            'GTiff', 0, gdal.GDT_Float32)
-            band, nodata = raster_utils.extract_band_and_nodata(e_ds)
-            band.Fill(nodata)
+            def burn_numerator(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0
 
-            edited_array = crit_array / float(dq * w)
-            band.WriteArray(edited_array)
+                else:
+                    burn_rating = float(pixel) / (dq*w)
+                    return burn_rating
+
+            e_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator,
+                                raster_out_uri = crit_E_uri,
+                                datatype = gdal.GDT_Float32, nodata = [0])
             crit_lists['Risk']['s'][s].append(e_ds)
 
     #This might help.

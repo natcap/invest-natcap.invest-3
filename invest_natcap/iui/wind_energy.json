@@ -69,6 +69,16 @@
                     "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
                 },
                 {
+                    "id" : "global_wind_parameters",
+                    "args_id" : "global_wind_parameters_uri",
+                    "type": "file",
+                    "label": "Global Wind Energy Parameters",
+                    "defaultValue": "../WindEnergy/input/global_wind_energy_parameters.csv",
+                    "required": true,
+                    "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the Users Guide. We recommend careful consideration before changing these values and to make a new CSV file so that the default one always remains.",
+                    "validateAs": { "type": "CSV"}
+                },
+                {
                     "id" : "days_harv_wind_energy",
                     "args_id" : "num_days",
                     "type": "text",

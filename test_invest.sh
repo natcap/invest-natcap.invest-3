@@ -9,7 +9,7 @@ python setup_environment.py --clear --system-site-packages $ENVDIR
 ls invest_python_environment/bin
 source $ENVDIR/bin/activate
 echo 'Activated'
-python setup.py install --user
+python setup.py install
 pushd test
 
 
@@ -26,7 +26,7 @@ timeout=600
 processes=1
 echo $processes
 
-run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
+run_tests="python `which nosetests` -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
 test_files=""
 
 if [ $# -eq 0 ]

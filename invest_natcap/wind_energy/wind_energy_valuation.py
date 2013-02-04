@@ -16,14 +16,6 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('wind_energy_valuation')
 
-# This is the path to the global wind energy parameters that lies within
-# invest_natcap/wind_energy directory that is added by setup.py
-# __file__ gets us the path dynamic path for this module so that we can get the
-# correct directory path, which allows us to properly find the JSON file
-MODULE_DIR_NAME = os.path.dirname(__file__)
-GLOBAL_WIND_PARAMETERS = os.path.join(
-        MODULE_DIR_NAME, 'global_wind_energy_attributes.json')
-
 def execute(args):
     """Takes care of all file handling for the valuation part of the wind
         energy model
@@ -39,6 +31,9 @@ def execute(args):
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters 
             (required)
+        args[global_wind_parameters_uri] - a uri to a CSV file that holds the
+            global parameter values for both the biophysical and valuation
+            module (required)        
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
@@ -114,16 +109,19 @@ def execute(args):
     val_turbine_reader = csv.reader(val_turbine_param_file)
     val_turbine_dict = {}
 
+    # Get the valuation turbine parameters from the CSV file
     for field_value_row in val_turbine_reader:
+        # Only get the valuation parameters and leave out the biophysical ones
         if field_value_row[0].lower() in valuation_turbine_params:
             val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
     
-    val_global_params_file = open(GLOBAL_WIND_PARAMETERS)
-
-    val_global_params_dict = json.load(val_global_params_file)
-    for key, val in val_global_params_dict.iteritems():
-        if key.lower() in valuation_global_params:
-            val_turbine_dict[key.lower()] = val
+    # Get the global parameters for valuation from the CSV file
+    global_val_param_file = open(args['global_wind_parameters_uri'])
+    global_val_reader = csv.reader(global_val_param_file)
+    for field_value_row in global_val_reader:
+        # Only get the valuation parameters and leave out the biophysical ones
+        if field_value_row[0].lower() in valuation_global_params:
+            val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
 
     LOGGER.debug('Valuation Turbine Parameters: %s', val_turbine_dict)
     val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
