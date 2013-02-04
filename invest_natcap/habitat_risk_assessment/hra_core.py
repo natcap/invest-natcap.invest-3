@@ -366,7 +366,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
     #This will give up two np lists where we have only the unique habs and
     #stress for the system.
-    habitats = map((lambda pair: pair[0], risk_dict))
+    habitats = map(lambda pair: pair[0], risk_dict)
     habitats = np.array(habitats)
     habitats = np.unique(habitats)
 
