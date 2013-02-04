@@ -245,7 +245,7 @@
                             "args_id" : "discount_rate",
                             "type": "text",
                             "label": "Discount Rate",
-                            "defaultValue": "0.116",
+                            "defaultValue": "",
                             "validText" : "^[0-9]*\\.?[0-9]+$",
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
