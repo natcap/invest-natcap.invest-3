@@ -1730,7 +1730,7 @@ def temporary_filename():
 
         returns a unique temporary filename"""
 
-    (file_handle, path) = tempfile.mkstemp()
+    file_handle, path = tempfile.mkstemp()
     os.close(file_handle)
 
     def remove_file(path):
