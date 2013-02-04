@@ -491,6 +491,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             mod_raster = make_risk_mult(base_ds, E, C, risk_uri)
         
         elif risk_eq == 'Euclidean':
+            
             mod_raster = make_risk_euc(base_ds, E, C, risk_uri)
 
         risk_rasters[pair] = mod_raster
@@ -515,7 +516,7 @@ def make_risk_mult(base, e_rast, c_rast, risk_uri):
     '''
     #Since we aren't necessarily sure what base nodata is coming in as, just
     #want to be sure that this will output 0.
-    base_nodata = base.GetNoDataValue()
+    base_nodata, _ = raster_utils.extract_band_and_nodata(base) 
 
     def combine_risk_mult(*pixels):
 
@@ -560,8 +561,8 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
     '''
     LOGGER.debug("NAME OF RISK CALC FILE.")
     LOGGER.debug(risk_uri)
-    base_nodata = base.GetNoDataValue()
-    e_nodata = e_rast.GetNoDataValue()
+    base_nodata, _ = raster_utils.extract_band_and_nodata(base)
+    e_nodata, _ = raster_utils.extract_band_and_nodata(e_rast)
 
     #we need to know very explicitly which rasters are being passed in which
     #order. However, since it's all within the make_risk_euc function, should
@@ -594,7 +595,7 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
         value = math.sqrt(e_val + c_val)
 
     mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
-                            combine_risk_mult, aoi = None, 
+                            combine_risk_euc, aoi = None, 
                             raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
     return mod_raster
@@ -759,8 +760,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
         base_ds = h_s[pair]['DS']
-        base_band = base_ds.GetRasterBand(1)
-        base_nodata = base_band.GetNoDataValue()
+        base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
         
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
@@ -817,8 +817,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in h_s[pair]['Crit_Rasters'].iteritems():
 
             crit_ds = crit_dict['DS']
-            crit_band = crit_ds.GetRasterBand(1)
-            crit_nodata = crit_band.GetNoDataValue()
+            crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
             
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
@@ -854,8 +853,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
         base_ds = hab[h]['DS']
-        base_band = base_ds.GetRasterBand(1)
-        base_nodata = base_band.GetNoDataValue()
+        base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
@@ -914,8 +912,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             w = crit_dict['Weight']
 
             crit_ds = crit_dict['DS']
-            crit_band = crit_ds.GetRasterBand(1)
-            crit_nodata = crit_band.GetNoDataValue()
+            crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
 
             denoms['Risk']['h'][h] += 1/ float(dq * w)
             denoms['Recovery'][h] += 1/ float(dq)
@@ -964,8 +961,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #The base dataset for all s criteria. Will need to load bases
         #for each of the h/s crits too.
         base_ds = stress[s]['DS']
-        base_band = base_ds.GetRasterBand(1)
-        base_nodata = base_band.GetNoDataValue() 
+        base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds) 
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep 
@@ -1009,8 +1005,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #of which is reburned with the pixel value r, as r/dq*w.
         for crit, crit_dict in stress[s]['Crit_Rasters'].iteritems():
             crit_ds = crit_dict['DS']
-            crit_band = crit_ds.GetRasterBand(1)
-            crit_nodata = crit_band.GetNoDataValue()
+            crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
             
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
