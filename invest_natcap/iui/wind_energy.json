@@ -244,7 +244,7 @@
                             "id" : "grid_points",
                             "args_id" : "grid_points_uri",
                             "type": "file",
-                            "label": "Grid Points",
+                            "label": "Grid Connection Points",
                             "defaultValue": "",
                             "required": false,
                             "returns": {"ifEmpty": "pass"},
