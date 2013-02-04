@@ -107,13 +107,16 @@ def execute(args):
                                       flow_direction_uri, ls_uri, ls_nodata)
 
     lulc_dataset = gdal.Open(args['landuse_uri'])
-    retention_uri = os.path.join(intermediate_dir, 'retention.tif')
+    export_uri = os.path.join(intermediate_dir, 'export.tif')
 
-    LOGGER.info('building retention fraction raster from lulc')
-    lulc_to_retention_dict = dict([(lulc_code, float(table['sedret_eff'])) for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
+    LOGGER.info('building export fraction raster from lulc')
+    #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
+    lulc_to_export_dict = \
+        dict([(lulc_code, 1.0 - float(table['sedret_eff'])/100.0) \
+                  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_export_dict %s' % lulc_to_export_dict)
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_retention_dict, retention_uri, gdal.GDT_Float32,
+        lulc_dataset, lulc_to_export_dict, export_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building cp raster from lulc')
@@ -153,7 +156,7 @@ def execute(args):
 
     LOGGER.info('backtrace the sediment reaching the streams')
     routing_cython_core.percent_to_sink(
-        v_stream_uri, retention_uri, outflow_direction_uri, outflow_weights_uri,
+        v_stream_uri, export_uri, outflow_direction_uri, outflow_weights_uri,
         effective_export_to_stream_uri)
 
     return
