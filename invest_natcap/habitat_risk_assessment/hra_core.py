@@ -561,8 +561,8 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
     '''
     LOGGER.debug("NAME OF RISK CALC FILE.")
     LOGGER.debug(risk_uri)
-    base_nodata, _ = raster_utils.extract_band_and_nodata(base)
-    e_nodata, _ = raster_utils.extract_band_and_nodata(e_rast)
+    _, base_nodata = raster_utils.extract_band_and_nodata(base)
+    _, e_nodata = raster_utils.extract_band_and_nodata(e_rast)
 
     #we need to know very explicitly which rasters are being passed in which
     #order. However, since it's all within the make_risk_euc function, should
