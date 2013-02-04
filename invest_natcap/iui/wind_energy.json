@@ -240,6 +240,18 @@
                             "required": true,
                             "helpText": "The price of energy per kilowatt hour. Please consult the Users Guide for determining this value." 
                         },
+                        {
+                            "id" : "discount_rate",
+                            "args_id" : "discount_rate",
+                            "type": "text",
+                            "label": "Discount Rate",
+                            "defaultValue": "0.116",
+                            "validText" : "^[0-9]*\\.?[0-9]+$",
+                            "validateAs" : {"type" : "number",
+                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                            "required": true,
+                            "helpText": "The discount rate reflects society's preference for immediate benefits over future benefits (e.g., would you rather receive $10 today or $10 five years from now?). Please consult the Users Guide for determining this value." 
+                        },
                         {        
                             "id" : "grid_points",
                             "args_id" : "grid_points_uri",
