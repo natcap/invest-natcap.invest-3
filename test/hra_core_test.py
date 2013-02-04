@@ -86,7 +86,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[kelp]_S[ShellfishAquacultureComm].tif')
+                    gdal.Open('./data/test_out/HRA/Intermediate/H[eelgrass]_S[FinfishAquacultureComm].tif')
                 },
            ('eelgrass', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -103,7 +103,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[kelp]_S[ShellfishAquacultureComm].tif')
+                    gdal.Open('./data/test_out/HRA/Intermediate/H[eelgrass]_S[ShellfishAquacultureComm].tif')
                 }
             }
          
