@@ -64,6 +64,8 @@ def execute(args):
             for the wind farm (required for valuation)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required for valuation)
+        args[discount_rate] - a float value for the discount rate (required for
+            valuation)
         args[avg_grid_distance] - a float for the average distance in kilometers
             from a grid connection point to a land connection point 
             (required for valuation if grid connection points are not provided)
