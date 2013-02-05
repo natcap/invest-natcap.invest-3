@@ -808,7 +808,6 @@ def percent_to_sink(
     sink_pixels_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_array = raster_utils.load_memory_mapped_array(
         sink_pixels_uri, sink_pixels_data_file)
-    
 
     outflow_direction_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = raster_utils.load_memory_mapped_array(
@@ -827,11 +826,11 @@ def percent_to_sink(
     cdef float outflow_weights_nodata
     _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
         outflow_weights_dataset)
-    
+
     export_rate_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_array = raster_utils.load_memory_mapped_array(
         export_rate_uri, export_rate_data_file)
-    
+
     effect_band, _ = raster_utils.extract_band_and_nodata(
         effect_dataset)
 
@@ -855,7 +854,6 @@ def percent_to_sink(
     cdef int loop_col_index, loop_row_index, index, row_index, col_index, neighbor_row_index, neighbor_col_index, offset, outflow_direction, neighbor_index, neighbor_outflow_direction
     cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
     cdef float outflow_percent_list[2]
-
 
     process_queue = collections.deque()
     #Queue the sinks
@@ -892,7 +890,11 @@ def percent_to_sink(
 
             neighbor_outflow_direction = \
                 outflow_direction_array[neighbor_row_index, neighbor_col_index]
-            
+
+            #if the neighbor is no data, don't try to set that
+            if neighbor_outflow_direction == outflow_direction_nodata:
+                continue
+
             neighbor_outflow_weight = outflow_weights_array[neighbor_row_index, neighbor_col_index]
 
             it_flows_here = False

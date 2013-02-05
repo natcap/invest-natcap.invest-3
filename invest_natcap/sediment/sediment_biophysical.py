@@ -162,17 +162,17 @@ def execute(args):
     LOGGER.info('generating report')
 
     #Load the relevant output datasets so we can output them in the report
-    pixel_export_dataset = \
-        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
-    pixel_retained_dataset = \
-        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
+#    pixel_export_dataset = \
+#        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
+#    pixel_retained_dataset = \
+#        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
 
     #Output table for watersheds
-    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
-    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-        biophysical_args['watersheds'], output_table_uri)
+#    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
+#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+#        biophysical_args['watersheds'], output_table_uri)
 
     #Output table for subwatersheds
-    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
-    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-        biophysical_args['subwatersheds'], output_table_uri)
+#    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
+#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+#        biophysical_args['subwatersheds'], output_table_uri)
