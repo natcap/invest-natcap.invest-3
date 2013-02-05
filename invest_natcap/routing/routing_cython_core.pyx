@@ -830,6 +830,11 @@ def percent_to_sink(
     export_rate_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_array = raster_utils.load_memory_mapped_array(
         export_rate_uri, export_rate_data_file)
+    export_rate_dataset = gdal.Open(export_rate_uri)
+    
+    cdef float export_rate_nodata
+    _, export_rate_nodata = raster_utils.extract_band_and_nodata(
+        export_rate_dataset)
 
     effect_band, _ = raster_utils.extract_band_and_nodata(
         effect_dataset)
@@ -868,7 +873,7 @@ def percent_to_sink(
         row_index = index / n_cols
         col_index = index % n_cols
 
-        if effect_array[row_index, col_index] == effect_nodata:
+        if export_rate_array[row_index, col_index] == export_rate_nodata:
             continue
 
         #if the outflow weight is nodata, then not a valid pixel
@@ -921,18 +926,6 @@ def percent_to_sink(
                 if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
                     process_queue.appendleft(neighbor_row_index * n_cols + neighbor_col_index)
                     effect_array[neighbor_row_index, neighbor_col_index] = 0.0
-
-#                if effect_array[row_index, col_index] < 0:
-#                    LOGGER.error("effect_array[row_index, col_index] %s" % effect_array[row_index, col_index])
-#                    raise Exception
-
-#                if neighbor_outflow_weight < 0:
-#                    LOGGER.error("neighbor_outflow_weight %s" % neighbor_outflow_weight)
-#                    raise Exception
-
-#                if export_rate_array[row_index, col_index] < 0:
-#                    LOGGER.error("export_rate_array[row_index, col_index] %s" % export_rate_array[row_index, col_index])
-#                    raise Exception
 
                 effect_array[neighbor_row_index, neighbor_col_index] += \
                     effect_array[row_index, col_index] * \
