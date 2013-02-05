@@ -185,7 +185,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
         out_uri_r = os.path.join(dir, h + '_HIGH_RISK.tif') 
         out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
-        new_ds = raster_utils.vectorize_rasters(old_ds, high_risk_raster,
+        new_ds = raster_utils.vectorize_rasters([old_ds], high_risk_raster,
                         aoi = None, raster_out_uri = out_uri_r, 
                         datatype=gdal.GDT_Float32, nodata = 0)
 
@@ -466,8 +466,8 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #Want to get E and C from the applicable subdictionaries
         #E and C should be rasters of their own that are calc'd using
         #vectorize raster to straight add the pixels and divide by denoms
-        c_out_uri = os.path.join(inter_dir, h + '_' + s + 'C_Risk_Raster.tif')
-        e_out_uri = os.path.join(inter_dir, h + '_' + s + 'E_Risk_Raster.tif')
+        c_out_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
+        e_out_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
         #E/C should take in all of the subdictionary data, and return a raster
         #to be used in risk calculation. 
@@ -558,6 +558,8 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
     Returns a raster representing the euclidean calculated E raster, C raster, 
     and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
+    LOGGER.debug("NAME OF RISK CALC FILE.")
+    LOGGER.debug(risk_uri)
     base_nodata = base.GetNoDataValue()
     e_nodata = e_rast.GetNoDataValue()
 
@@ -624,9 +626,6 @@ def calc_E_raster(out_uri, s_list, s_denom):
     e_raster = raster_utils.vectorize_rasters(s_list, add_e_pix, aoi = None,
                             raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                             nodata = 0)
-    
-    LOGGER.debug('\nE Raster X Size, E Raster Y Size')
-    LOGGER.debug(str(e_band.XSize) + ', ' + str(e_band.YSize))
     
     return e_raster
 
@@ -803,9 +802,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return crit_rate_numerator
 
-        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator,
+        c_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator, aoi = None,
                                     raster_out_uri = single_crit_C_uri,
-                                    datatype = gdal.GDT_Float32, nodata = [0])
+                                    datatype = gdal.GDT_Float32, nodata = 0)
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -837,9 +836,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / (dq * w)
                     return burn_rating
             
-            c_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator,
+            c_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator,
                                     raster_out_uri = crit_C_uri,
-                                    datatype = gdal.GDT_Float32, nodata = [0])
+                                    datatype = gdal.GDT_Float32, nodata = 0)
 
             crit_lists['Risk']['h-s'][pair].append(c_ds)
    
@@ -884,9 +883,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return risk_crit_rate_numerator
 
-        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator_risk,
+        c_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator_risk,
                                 raster_out_uri = single_crit_C_uri,
-                                datatype = gdal.GDT_Float32, nodata = [0])
+                                datatype = gdal.GDT_Float32, nodata = 0)
 
         crit_lists['Risk']['h'][h].append(c_ds)
 
@@ -902,9 +901,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return rec_crit_rate_numerator
 
-        c_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator_risk,
+        c_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator_risk,
                                 raster_out_uri = single_crit_C_uri,
-                                datatype = gdal.GDT_Float32, nodata = [0])
+                                datatype = gdal.GDT_Float32, nodata = 0)
 
         crit_lists['Recovery'][h].append(c_ds)
         
@@ -933,9 +932,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / (w*dq)
                     return burn_rating
 
-            c_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator_risk,
+            c_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator_risk,
                                 raster_out_uri = crit_C_uri,
-                                datatype = gdal.GDT_Float32, nodata = [0])
+                                datatype = gdal.GDT_Float32, nodata = 0)
             crit_lists['Risk']['h'][h].append(c_ds)
             
             #Then the recovery rasters
@@ -950,9 +949,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / dq
                     return burn_rating
 
-            r_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator_rec,
+            r_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator_rec,
                                 raster_out_uri = crit_recov_uri,
-                                datatype = gdal.GDT_Float32, nodata = [0])
+                                datatype = gdal.GDT_Float32, nodata = 0)
             crit_lists['Recovery'][h].append(r_ds)
 
     #And now, loading in all of the stressors. Will just be the standard
@@ -998,9 +997,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return crit_rate_numerator
 
-        e_ds = raster_utils.vectorize_rasters(base_ds, burn_numerator,
+        e_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator,
                                 raster_out_uri = single_crit_E_uri,
-                                datatype = gdal.GDT_Float32, nodata = [0])
+                                datatype = gdal.GDT_Float32, nodata = 0)
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -1028,9 +1027,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / (dq*w)
                     return burn_rating
 
-            e_ds = raster_utils.vectorize_rasters(crit_ds, burn_numerator,
+            e_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator,
                                 raster_out_uri = crit_E_uri,
-                                datatype = gdal.GDT_Float32, nodata = [0])
+                                datatype = gdal.GDT_Float32, nodata = 0)
             crit_lists['Risk']['s'][s].append(e_ds)
 
     #This might help.

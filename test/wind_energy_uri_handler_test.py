@@ -42,6 +42,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         #args['foundation_cost'] = 2
         #args['number_of_machines'] = 60
         #args['dollar_per_kWh'] = .187
+        #args['discount_rate'] = .116
         #args['avg_grid_distance'] = 4
         #args['suffix'] = ''
 
@@ -183,6 +184,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         #args['foundation_cost'] = 2
         #args['number_of_machines'] = 60
         #args['dollar_per_kWh'] = .187
+        #args['discount_rate'] = .116
         #args['avg_grid_distance'] = 4
         #args['suffix'] = ''
         #args['min_distance'] = 
@@ -267,6 +269,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         #args['foundation_cost'] = 2
         #args['number_of_machines'] = 60
         #args['dollar_per_kWh'] = .187
+        #args['discount_rate'] = .116
         #args['avg_grid_distance'] = 4
         #args['suffix'] = ''
 
@@ -349,6 +352,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['foundation_cost'] = 2
         args['number_of_machines'] = 60
         args['dollar_per_kWh'] = .187
+        args['discount_rate'] = .116
         args['avg_grid_distance'] = 4
         #args['suffix'] = ''
         #args['grid_points_uri'] = 
@@ -436,6 +440,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['foundation_cost'] = 2
         args['number_of_machines'] = 60
         args['dollar_per_kWh'] = .187
+        args['discount_rate'] = .116
         args['avg_grid_distance'] = 4
         args['grid_points_uri'] = os.path.join(
                 input_dir, 'testing_grid_points.csv') 
@@ -527,6 +532,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['foundation_cost'] = 2
         args['number_of_machines'] = 60
         args['dollar_per_kWh'] = .187
+        args['discount_rate'] = .116
         args['avg_grid_distance'] = 4
         args['land_polygon_uri'] = os.path.join(input_dir, 'testing_land.shp')
         args['min_distance'] = 1000
@@ -618,6 +624,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['foundation_cost'] = 2
         args['number_of_machines'] = 60
         args['dollar_per_kWh'] = .187
+        args['discount_rate'] = .116
         args['avg_grid_distance'] = 4
         args['land_polygon_uri'] = os.path.join(input_dir, 'testing_land.shp')
         args['min_distance'] = 1000
@@ -713,6 +720,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['foundation_cost'] = 2
         args['number_of_machines'] = 60
         args['dollar_per_kWh'] = .187
+        args['discount_rate'] = .116
         args['avg_grid_distance'] = 4
         args['land_polygon_uri'] = os.path.join(input_dir, 'testing_land.shp')
         args['min_distance'] = 1000
