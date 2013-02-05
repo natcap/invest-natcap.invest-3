@@ -46,11 +46,7 @@ def execute(args):
             should be represented in rating, data quality, or weight in the
             CSV table.
 
-    Output:
-        hra_args- Dictionary containing everything that hra_core will need to
-            complete the rest of the model run. It will contain the following.
-        hra_args['workspace_dir']- Directory in which all data resides. Output
-            and intermediate folders will be supfolders of this one.
+    Intermediate:
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  ex:
@@ -58,76 +54,47 @@ def execute(args):
             {'Stressor 1': 50,
              'Stressor 2': ...,
             }
-        hra_args['h-s']- A structure which holds all exposure and consequence
-            rating for each combination of habitat and stressor. The inner
-            structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples. 
-            {('Habitat A', 'Stressor 1'):
-               {
-                 'E':
-                     {
-                     'Overlap Time Rating':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                     },
-                 'C':
-                     {
-                     'Change in area rating':,
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                     'Change in structure rating':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                     'Frequency of disturbance':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                     }
-                }
-              ('Habitat B', 'Stressor 1'): {}...
-            }
-        hra_args['habitats']- A structure with the same layout as 'h-s', but which
-            contains only criteria specific to habitats. The outer keys, in 
-            turn, will be habitat names. habitats['C'] should explicitly 
-            contain the following criteria names: (Natural Mortality, 
-            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
-            must exist, and must contain 'Rating' and 'DQ' entries within them.
-            These can be 0 values if they are not a desired criteria, but must
-            exist.
-            {'Habitat A':
-                    {
-                    'DQ': 1.0,
-                    'C': 
-                        {
-                        'Natural Mortality':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                        'Recruitment Rate':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                        'Recovery Time':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                        'Connectivity Rate':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        }
-                    },
-             'Habitat B': ...
-             }
-        hra_args['stressors']- A structure wih the same layout as 'h-s', but which
-            contains only criteria specific to stressors. The outer keys will be
-            stressor names.
+    Output:
+        hra_args- Dictionary containing everything that hra_core will need to
+            complete the rest of the model run. It will contain the following.
+        hra_args['workspace_dir']- Directory in which all data resides. Output
+            and intermediate folders will be supfolders of this one.
+        args['h-s']- A multi-level structure which holds all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            3 outer keys containing numeric-only criteria, raster-based
+            criteria, and a dataset that shows the potentially buffered overlap
+            between the habitat and stressor. The overall structure will be as
+            pictured:
 
-            {'Stressor 1':
-                    {
-                    'DQ': 1.0,
-                    'E':
-                        {
-                          'Intensity Rating:':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                          'Management Effectiveness:':
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        }
-                    },
-             'Stressor 2': ...
-             }
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+        args['habitats']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by habitat
+            name, and habitats['habitatName']['DS'] points to the rasterized
+            habitat shapefile provided by the user.
+        args['stressors']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            name, and stressors['stressorName']['DS'] points to the rasterized
+            stressor shapefile provided by the user.
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
             dependent on this.
-
+        args['max_risk']- The highest possible risk value for any given pairing
+            of habitat and stressor.
     Returns nothing.
     '''
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
