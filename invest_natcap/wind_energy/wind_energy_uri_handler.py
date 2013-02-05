@@ -34,8 +34,6 @@ def execute(args):
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters 
             (required)
-        args[hub_height] - an integer value for the hub height of the turbines
-            as a factor of ten (meters) (required)
         args[num_days] - an integer value for the number of days for harvested
             wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
