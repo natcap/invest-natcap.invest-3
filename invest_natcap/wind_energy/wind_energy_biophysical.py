@@ -135,9 +135,9 @@ def execute(args):
         class HubHeightError(Exception):
             """A custom error message for invalid hub heights"""
             pass
-        raise HubHeightError('An Error occurred processing the Hub Height.
-                Please make sure the Hub Height is between the ranges of 10 and
-                150 meters and is a multiple of 10. ex: 10,20,...70,80...')
+        raise HubHeightError('An Error occurred processing the Hub Height. '
+                'Please make sure the Hub Height is between the ranges of 10 '
+                'and 150 meters and is a multiple of 10. ex: 10,20,...70,80...')
 
     scale_key = str(hub_height)
     if len(scale_key) <= 2:
