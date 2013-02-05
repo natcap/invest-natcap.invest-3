@@ -1744,7 +1744,7 @@ def temporary_filename():
 
     return path
 
-def align_datasets(
+def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
     dataset_to_align_index):
     """Take a list of dataset uris and generates a new set that is completely
