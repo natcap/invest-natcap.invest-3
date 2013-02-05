@@ -868,6 +868,9 @@ def percent_to_sink(
         row_index = index / n_cols
         col_index = index % n_cols
 
+        if effect_array[row_index, col_index] == effect_nodata:
+            continue
+
         #if the outflow weight is nodata, then not a valid pixel
         outflow_weight = outflow_weights_array[row_index, col_index]
         if outflow_weight == outflow_weights_nodata:
@@ -890,15 +893,16 @@ def percent_to_sink(
 
             neighbor_outflow_direction = \
                 outflow_direction_array[neighbor_row_index, neighbor_col_index]
-
             #if the neighbor is no data, don't try to set that
             if neighbor_outflow_direction == outflow_direction_nodata:
                 continue
 
             neighbor_outflow_weight = outflow_weights_array[neighbor_row_index, neighbor_col_index]
+            #if the neighbor is no data, don't try to set that
+            if neighbor_outflow_weight == outflow_direction_nodata:
+                continue
 
             it_flows_here = False
-
             if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
                 #the neighbor flows into this cell
                 it_flows_here = True
@@ -908,7 +912,7 @@ def percent_to_sink(
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
 
-            if neighbor_outflow_weight < EPS:
+            if abs(neighbor_outflow_weight) < EPS:
                 #it doesn't flow here
                 continue
                 
@@ -917,6 +921,18 @@ def percent_to_sink(
                 if effect_array[neighbor_row_index, neighbor_col_index] == effect_nodata:
                     process_queue.appendleft(neighbor_row_index * n_cols + neighbor_col_index)
                     effect_array[neighbor_row_index, neighbor_col_index] = 0.0
+
+#                if effect_array[row_index, col_index] < 0:
+#                    LOGGER.error("effect_array[row_index, col_index] %s" % effect_array[row_index, col_index])
+#                    raise Exception
+
+#                if neighbor_outflow_weight < 0:
+#                    LOGGER.error("neighbor_outflow_weight %s" % neighbor_outflow_weight)
+#                    raise Exception
+
+#                if export_rate_array[row_index, col_index] < 0:
+#                    LOGGER.error("export_rate_array[row_index, col_index] %s" % export_rate_array[row_index, col_index])
+#                    raise Exception
 
                 effect_array[neighbor_row_index, neighbor_col_index] += \
                     effect_array[row_index, col_index] * \
