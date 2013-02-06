@@ -17,7 +17,30 @@ LOGGER = logging.getLogger('invest_core')
 
 class TestAlignDatasets(unittest.TestCase):
     def test_resize_and_resample_dataset(self):
-        
+        raster_1 = 'data/align_datasets_data/dem_30m_fill_clip.tif'
+
+        bounding_box = raster_utils.get_bounding_box(raster_1)
+
+        base_dir = 'data/test_out/align_datasets'
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        resized_raster = os.path.join(base_dir, 'resized.tif')
+
+        width = abs(bounding_box[2]-bounding_box[0])
+        height = abs(bounding_box[3]-bounding_box[1])
+
+        bounding_box[0] -= width
+        bounding_box[2] += width
+        bounding_box[1] += height
+        bounding_box[3] -= height
+
+
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 30, resized_raster, "nearest")
+
+
+
+        LOGGER.debug(bounding_box)
 
     def test_assert_datasets_in_same_projection(self):
         raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
