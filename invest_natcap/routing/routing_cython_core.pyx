@@ -808,7 +808,6 @@ def percent_to_sink(
     sink_pixels_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] sink_pixels_array = raster_utils.load_memory_mapped_array(
         sink_pixels_uri, sink_pixels_data_file)
-    
 
     outflow_direction_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = raster_utils.load_memory_mapped_array(
@@ -827,11 +826,16 @@ def percent_to_sink(
     cdef float outflow_weights_nodata
     _, outflow_weights_nodata = raster_utils.extract_band_and_nodata(
         outflow_weights_dataset)
-    
+
     export_rate_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] export_rate_array = raster_utils.load_memory_mapped_array(
         export_rate_uri, export_rate_data_file)
+    export_rate_dataset = gdal.Open(export_rate_uri)
     
+    cdef float export_rate_nodata
+    _, export_rate_nodata = raster_utils.extract_band_and_nodata(
+        export_rate_dataset)
+
     effect_band, _ = raster_utils.extract_band_and_nodata(
         effect_dataset)
 
@@ -856,7 +860,6 @@ def percent_to_sink(
     cdef float total_effect, outflow_weight, neighbor_outflow_weight, neighbor_effect, neighbor_export
     cdef float outflow_percent_list[2]
 
-
     process_queue = collections.deque()
     #Queue the sinks
     for col_index in xrange(n_cols):
@@ -869,6 +872,9 @@ def percent_to_sink(
         index = process_queue.pop()
         row_index = index / n_cols
         col_index = index % n_cols
+
+        if export_rate_array[row_index, col_index] == export_rate_nodata:
+            continue
 
         #if the outflow weight is nodata, then not a valid pixel
         outflow_weight = outflow_weights_array[row_index, col_index]
@@ -892,11 +898,16 @@ def percent_to_sink(
 
             neighbor_outflow_direction = \
                 outflow_direction_array[neighbor_row_index, neighbor_col_index]
-            
+            #if the neighbor is no data, don't try to set that
+            if neighbor_outflow_direction == outflow_direction_nodata:
+                continue
+
             neighbor_outflow_weight = outflow_weights_array[neighbor_row_index, neighbor_col_index]
+            #if the neighbor is no data, don't try to set that
+            if neighbor_outflow_weight == outflow_direction_nodata:
+                continue
 
             it_flows_here = False
-
             if neighbor_outflow_direction == inflow_offsets[neighbor_index]:
                 #the neighbor flows into this cell
                 it_flows_here = True
@@ -906,7 +917,7 @@ def percent_to_sink(
                 it_flows_here = True
                 neighbor_outflow_weight = 1.0 - neighbor_outflow_weight
 
-            if neighbor_outflow_weight < EPS:
+            if abs(neighbor_outflow_weight) < EPS:
                 #it doesn't flow here
                 continue
                 

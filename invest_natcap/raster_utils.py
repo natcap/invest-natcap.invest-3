@@ -1743,3 +1743,37 @@ def temporary_filename():
     atexit.register(remove_file, path)
 
     return path
+
+def align_dataset_list(
+    dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
+    dataset_to_align_index):
+    """Take a list of dataset uris and generates a new set that is completely
+        aligned with identical projections and pixel sizes.
+
+        dataset_uri_list - a list of input dataset uris
+        out_pixel_size - the output pixel size
+        dataset_out_uri_list - a parallel dataset uri list whose positions
+            correspond to entries in dataset_uri_list
+        mode - one of "union" or "intersection" which defines how the output
+            output extents are defined as either the union or intersection
+            of the input datasets
+        dataset_to_align_index - an int that corresponds to the position in
+            one of the dataset_uri_lists that, if positive aligns the output
+            rasters to fix on the upper left hand corner of the output
+            datasets
+
+        returns nothing"""
+
+
+    dataset_list = map(gdal.Open, dataset_uri_list)
+    dataset_epsg_projections = []
+
+    for dataset in dataset_list:
+        dataset_sr = osr.SpatialReference()
+        projection_as_str = dataset.GetProjection()
+        dataset_sr.ImportFromWkt(projection_as_str)
+        if not dataset_sr.IsProjected():
+            raise Exception("dataset is not projected")
+        dataset_epsg_projections.append(':'.join(map(lambda x: dataset_sr.GetAttrValue("AUTHORITY",x), [0,1])))
+
+    LOGGER.debug(dataset_epsg_projections)
