@@ -1769,8 +1769,6 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         dataset_sr.ImportFromWkt(projection_as_str)
         if not dataset_sr.IsProjected():
             unprojected_datasets.add(dataset.GetFileList()[0])
-            raise Exception("dataset is not projected")
-
         dataset_projections[projection_as_str].append(dataset.GetFileList()[0])
 
     if len(unprojected_datasets) > 0:
@@ -1778,13 +1776,12 @@ def assert_datasets_in_same_projection(dataset_uri_list):
             "These datasets are unprojected %s" % (unprojected_datasets))
 
     if len(dataset_projections) > 1:
-        projection_groups = map(str,dataset_projections.values())
         raise DifferentProjections(
-            "Some of the datasets are not in the same projections."
+            "Some of the datasets are not in the same projections. "
             "Here are the groups of datasets, there should be only "
             "one group like ['file1.tif','file2.tif'] lists like "
             "[['file1.tif'],['file2.tif'] indicate file1 and file2 "
-            "are in different projections. %s" % (projection_groups))
+            "are in different projections. %s" % (dataset_projections.values()))
 
     return True
 

@@ -16,6 +16,23 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestAlignDatasets(unittest.TestCase):
+    def test_assert_datasets_in_same_projection(self):
+        raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
+        raster_2 = 'data/align_datasets_data/H[eelgrass]_S[shellfishaquaculturecomm]_Risk.tif'
+
+        #These are in the same projection, so no exception expected
+        raster_utils.assert_datasets_in_same_projection([raster_1, raster_2])
+        
+        raster_3 = 'data/clip_data/global_clipped.tif'
+        #Raster 3 is unprojected, so I expect an unprojected error
+        self.assertRaises(raster_utils.DatasetUnprojected,raster_utils.assert_datasets_in_same_projection,[raster_3])
+
+        raster_4 = 'data/align_datasets_data/dem_30m_fill_clip.tif'
+        #raster 1 and 4 are projected but in different projections..
+        self.assertRaises(raster_utils.DifferentProjections,raster_utils.assert_datasets_in_same_projection,[raster_1, raster_4])
+
+
+
     def test_align_datasets(self):
         data_dir = 'data/align_datasets_data'
         raster_1 = os.path.join(data_dir, 'H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif')
@@ -27,7 +44,6 @@ class TestAlignDatasets(unittest.TestCase):
         raster_1_out = raster_1 + '.out.tif'
         raster_2_out = raster_2 + '.out.tif'
         pixel_size = 1000.0
-        raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection",
-                                        0)
+        raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
 
         #TODO: regression asserts
