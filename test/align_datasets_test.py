@@ -38,6 +38,18 @@ class TestAlignDatasets(unittest.TestCase):
 
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 30, resized_raster, "nearest")
 
+        resized_278_raster = os.path.join(base_dir, 'resized_278.tif')
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, resized_278_raster, "nearest")
+
+        bounding_box = raster_utils.get_bounding_box(raster_1)
+
+        bounding_box[0] += width/4.0
+        bounding_box[2] -= width/4.0
+        bounding_box[1] -= height/4.0
+        bounding_box[3] += height/4.0
+
+        reduced_278_raster = os.path.join(base_dir, 'reduced_278.tif')
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "nearest")
 
 
         LOGGER.debug(bounding_box)
