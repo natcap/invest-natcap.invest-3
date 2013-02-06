@@ -9,6 +9,7 @@ import time
 import tempfile
 import shutil
 import atexit
+import collections
 
 from osgeo import gdal
 from osgeo import osr
@@ -1766,14 +1767,23 @@ def align_dataset_list(
 
 
     dataset_list = map(gdal.Open, dataset_uri_list)
-    dataset_epsg_projections = []
+    dataset_projections = collections.defaultdict(list)
 
     for dataset in dataset_list:
-        dataset_sr = osr.SpatialReference()
         projection_as_str = dataset.GetProjection()
+        dataset_sr = osr.SpatialReference()
         dataset_sr.ImportFromWkt(projection_as_str)
         if not dataset_sr.IsProjected():
             raise Exception("dataset is not projected")
-        dataset_epsg_projections.append(':'.join(map(lambda x: dataset_sr.GetAttrValue("AUTHORITY",x), [0,1])))
 
-    LOGGER.debug(dataset_epsg_projections)
+        dataset_projections[projection_as_str].append(dataset.GetFileList()[0])
+
+    LOGGER.debug(dataset_projections.values())
+
+    if len(dataset_projections) > 1:
+        projection_groups = map(str,dataset_projections.values())
+        raise Exception("Some of the datasets are not in the same projections."
+                        "Here are the groups of datasets, there should be only "
+                        "one group like ['file1.tif','file2.tif'] lists like "
+                        "[['file1.tif'],['file2.tif'] indicate file1 and file2 "
+                        "are in different projections. %s" % (projection_groups))
