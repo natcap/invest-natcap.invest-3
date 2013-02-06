@@ -49,7 +49,7 @@ def execute(args):
     Intermediate:
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
-            rasterized.  ex:
+            rasterized.  This will get unpacked by the hra_preprocessor module.
 
             {'Stressor 1': 50,
              'Stressor 2': ...,
@@ -59,7 +59,7 @@ def execute(args):
             complete the rest of the model run. It will contain the following.
         hra_args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be supfolders of this one.
-        args['h-s']- A multi-level structure which holds all criteria ratings, 
+        hra_args['h-s']- A multi-level structure which holds all criteria ratings, 
             both numerical and raster that apply to habitat and stressor 
             overlaps. The structure, whose keys are tuples of 
             (Habitat, Stressor) names and map to an inner dictionary will have
@@ -88,7 +88,8 @@ def execute(args):
         args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             name, and stressors['stressorName']['DS'] points to the rasterized
-            stressor shapefile provided by the user.
+            stressor shapefile provided by the user that will be buffered by
+            the indicated amount in buffer_dict['stressorName'].
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
@@ -209,7 +210,35 @@ def unpack_over_dict(csv_uri, args):
             should be placed.
     Output:
         A modified args dictionary containing dictionary versions of the CSV
-        tables located in csv_uri.
+        tables located in csv_uri. The dictionaries should be of the forms as
+        follows.
+           
+        h-s- A multi-level structure which will hold all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            2 outer keys containing numeric-only criteria, and raster-based
+            criteria. At this time, we should only have two entries in a
+            criteria raster entry, since we have yet to add the rasterized
+            versions of the criteria.
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            weights and data quality for the rasters.         
+        stressors- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            weights and data quality for the rasters.w
     Returns nothing.
     '''
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
@@ -416,7 +445,9 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
             to their corresponding parts.
     
     Returns an edited version of 'h-s' that contains an open raster
-    datasource correspondoing to the appropriate H-S key for the dictionary.
+    dataset correspondoing to the appropriate H-S key for the dictionary.
+    This dataset should be placed in 'h-s' as 
+        h-s[(HabName, StressName)]['DS'] = <Open Raster Dataset>
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
