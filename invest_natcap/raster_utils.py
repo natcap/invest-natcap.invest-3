@@ -1855,6 +1855,8 @@ def resize_and_resample_dataset(
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_dict[resample_method])
 
+    calculate_raster_stats(output_dataset)
+
 
 def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
