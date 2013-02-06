@@ -1792,7 +1792,18 @@ def get_bounding_box(dataset_uri):
 
         returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in projected coordinates"""
 
-    pass
+    dataset = gdal.Open(dataset_uri)
+
+    geotransform = dataset.GetGeoTransform()
+    n_cols = dataset.XSize
+    n_rows = dataset.YSize
+
+    bounding_box = [geotransform[0],
+                    geotransform[3],
+                    geotransform[0] + n_cols * geotransform[1],
+                    geotransform[3] + n_rows * geotransform[5]]
+    
+    return bounding_box
 
 
 def resize_and_resample_dataset(
