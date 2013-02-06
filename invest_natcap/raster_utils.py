@@ -1785,6 +1785,54 @@ def assert_datasets_in_same_projection(dataset_uri_list):
 
     return True
 
+
+def resize_and_resample_dataset(
+    original_dataset_uri, bounding_box, pixel_size, output_uri, 
+    resample_method):
+    """A function to resample a datsaet to larger or smaller pixel sizes
+
+        original_dataset_uri - a GDAL dataset
+        bounding_box - [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        pixel_size - the pixel size in projected linear units
+        output_uri - the location of the new resampled GDAL dataset
+        resample_method - the resampling technique, one of
+            "nearest|bilinear|cubic|cubic_spline|lanczos"
+
+        returns nothing"""
+
+    resample_dict = {
+        "nearest": gdal.GRA_NearestNeighbour,
+        "bilinear": gdal.GRA_Bilinear,
+        "cubic": gdal.GRA_Cubic,
+        "cubic_spline": gdal.GRA_CubicSpline,
+        "lanczos": gdal.GRA_Lanczos
+        }
+
+    original_dataset = gdal.Open(original_dataset_uri)
+    original_band, original_nodata = extract_band_and_nodata(original_dataset)
+
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+
+    output_geo_transform = [bounding_box[0], pixel_size, 0.0, bounding_box[1], 0.0, -pixel_size]
+    new_x_size = abs(int((bounding_box[2] - bounding_box[0]) / pixel_size + 0.5))
+    new_y_size = abs(int((bounding_box[3] - bounding_box[1]) / pixel_size + 0.5))
+
+    #create the new x and y size
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    output_dataset = gdal_driver.Create(
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(output_geo_transform)
+    output_dataset.SetProjection(original_sr.ExportToWkt())
+
+    # Perform the projection/resampling
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), original_sr.ExportToWkt(),
+                        resample_dict[resample_method])
+
+
 def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
     dataset_to_align_index):
@@ -1806,3 +1854,5 @@ def align_dataset_list(
         returns nothing"""
 
     assert_datasets_in_same_projection(dataset_uri_list)
+
+    
