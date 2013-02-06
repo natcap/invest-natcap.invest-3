@@ -1785,6 +1785,15 @@ def assert_datasets_in_same_projection(dataset_uri_list):
 
     return True
 
+def get_bounding_box(dataset_uri):
+    """Returns a bounding box where coordinates are in projected units.
+
+        dataset_uri - a uri to a GDAL dataset
+
+        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in projected coordinates"""
+
+    pass
+
 
 def resize_and_resample_dataset(
     original_dataset_uri, bounding_box, pixel_size, output_uri, 

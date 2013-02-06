@@ -16,6 +16,9 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestAlignDatasets(unittest.TestCase):
+    def test_resize_and_resample_dataset(self):
+        
+
     def test_assert_datasets_in_same_projection(self):
         raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
         raster_2 = 'data/align_datasets_data/H[eelgrass]_S[shellfishaquaculturecomm]_Risk.tif'
