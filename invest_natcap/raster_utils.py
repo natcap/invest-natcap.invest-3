@@ -1795,8 +1795,8 @@ def get_bounding_box(dataset_uri):
     dataset = gdal.Open(dataset_uri)
 
     geotransform = dataset.GetGeoTransform()
-    n_cols = dataset.XSize
-    n_rows = dataset.YSize
+    n_cols = dataset.RasterXSize
+    n_rows = dataset.RasterYSize
 
     bounding_box = [geotransform[0],
                     geotransform[3],
