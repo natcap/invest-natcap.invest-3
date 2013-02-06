@@ -1763,4 +1763,17 @@ def align_dataset_list(
             datasets
 
         returns nothing"""
-    pass
+
+
+    dataset_list = map(gdal.Open, dataset_uri_list)
+    dataset_epsg_projections = []
+
+    for dataset in dataset_list:
+        dataset_sr = osr.SpatialReference()
+        projection_as_str = dataset.GetProjection()
+        dataset_sr.ImportFromWkt(projection_as_str)
+        if not dataset_sr.IsProjected():
+            raise Exception("dataset is not projected")
+        dataset_epsg_projections.append(':'.join(map(lambda x: dataset_sr.GetAttrValue("AUTHORITY",x), [0,1])))
+
+    LOGGER.debug(dataset_epsg_projections)
