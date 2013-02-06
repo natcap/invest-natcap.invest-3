@@ -213,8 +213,8 @@ def biophysical(args):
     wind_points = args['wind_data_points']
     wind_points_layer = wind_points.GetLayer(0)
    
-    density_field_name = 'Density'
-    harvest_field_name = 'HarvEnergy'
+    density_field_name = 'Dens_Wm2'
+    harvest_field_name = 'HarvEn_Wh'
 
     LOGGER.info('Creating Harvest and Density Fields')
     # Create new fields for the density and harvested values
@@ -334,9 +334,9 @@ def biophysical(args):
         else:
             return rasters[0] 
 
-    density_masked_uri = os.path.join(output_dir, 'density' + tif_suffix)
+    density_masked_uri = os.path.join(output_dir, 'density_Wm2' + tif_suffix)
     harvested_masked_uri = os.path.join(
-            output_dir, 'harvested_energy' + tif_suffix)
+            output_dir, 'harvested_energy_Wh' + tif_suffix)
 
     density_mask_list = [density_temp, depth_mask]
     harvest_mask_list = [harvested_temp, depth_mask]
@@ -637,13 +637,13 @@ def valuation(args):
             land_shape_ds, wind_energy_points)
     
     # Add the ocean to land distance value for each point as a new field
-    ocean_to_land_field = 'O2L'
+    ocean_to_land_field = 'O2L_km'
     LOGGER.info('Adding ocean to land distances')
     wind_energy_points = add_field_to_shape_given_list(
             wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
         
     # Add the grid to land distance value for each point as a new field
-    land_to_grid_field = 'L2G'
+    land_to_grid_field = 'L2G_km'
     LOGGER.info('Adding land to grid distances')
     wind_energy_points = add_field_to_shape_given_list(
             wind_energy_points, grid_to_land_dist, land_to_grid_field)
@@ -670,21 +670,25 @@ def valuation(args):
     LOGGER.debug('disc_time : %s', disc_time)
     
     # Create 3 new fields based on the 3 outputs
+    npv_field = 'NPV_$mill'
+    levelized_cost_field = 'Lev_$/kWh'
+    carbon_field = 'CO2_tons'
+    val_field_list = [npv_field, levelized_cost_field, carbon_field]
     wind_energy_layer = wind_energy_points.GetLayer()
     LOGGER.info('Creating new NPV, Levelized Cost and CO2 field')
-    for new_field in ['NPV', 'LevCost', 'CO2']:
+    for new_field in val_field_list:
         field = ogr.FieldDefn(new_field, ogr.OFTReal)
         wind_energy_layer.CreateField(field)
     
     LOGGER.info('Calculating the NPV for each wind farm')
     # Iterate over each point calculating the NPV
     for feat in wind_energy_layer:
-        npv_index = feat.GetFieldIndex('NPV')
-        levelized_index = feat.GetFieldIndex('LevCost')
-        co2_index = feat.GetFieldIndex('CO2')
-        energy_index = feat.GetFieldIndex('HarvEnergy')
-        o2l_index = feat.GetFieldIndex('O2L')
-        l2g_index = feat.GetFieldIndex('L2G')
+        npv_index = feat.GetFieldIndex(npv_field)
+        levelized_index = feat.GetFieldIndex(levelized_cost_field)
+        co2_index = feat.GetFieldIndex(carbon_field)
+        energy_index = feat.GetFieldIndex('HarvEn_Wh')
+        o2l_index = feat.GetFieldIndex(ocean_to_land_field)
+        l2g_index = feat.GetFieldIndex(land_to_grid_field)
         
         # The energy value converted from Wh (Watt hours as output from CK's
         # biophysical model equations) to kWh for the valuation model
@@ -768,19 +772,18 @@ def valuation(args):
 
     # Open the density raster, which is an output of the biophyiscal portion, so
     # that we can properly mask the valuation outputs
-    density_uri = os.path.join(output_dir, 'density' + suffix + '.tif')
+    density_uri = os.path.join(output_dir, 'density_Wm2' + suffix + '.tif')
     density_ds = gdal.Open(density_uri)
     _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
-    npv_uri = os.path.join(output_dir, 'npv' + suffix + '.tif')
-    levelized_uri = os.path.join(output_dir, 'levelized' + suffix + '.tif')
-    carbon_uri = os.path.join(output_dir, 'carbon_emissions' + suffix + '.tif')
+    npv_uri = os.path.join(output_dir, 'npv_$mil' + suffix + '.tif')
+    levelized_uri = os.path.join(output_dir, 'levelized_cost_$_per_kWh' + suffix + '.tif')
+    carbon_uri = os.path.join(output_dir, 'carbon_emissions_tons' + suffix + '.tif')
    
     uri_list = [npv_uri, levelized_uri, carbon_uri]
-    field_list = ['NPV', 'LevCost', 'CO2']
     out_nodata = float(np.finfo(np.float).tiny)
     
-    for uri, field in zip(uri_list, field_list):
+    for uri, field in zip(uri_list, val_field_list):
         # Create a raster for the points to be vectorized to 
         LOGGER.info('Creating Output raster : %s', uri)
         # Creating a temperary uri here because new_raster_from_base requires

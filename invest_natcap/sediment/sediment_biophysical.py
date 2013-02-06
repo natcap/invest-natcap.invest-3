@@ -107,7 +107,7 @@ def execute(args):
                                       flow_direction_uri, ls_uri, ls_nodata)
 
     lulc_dataset = gdal.Open(args['landuse_uri'])
-    export_uri = os.path.join(intermediate_dir, 'export.tif')
+    export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
 
     LOGGER.info('building export fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
@@ -116,7 +116,7 @@ def execute(args):
                   for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_export_dict %s' % lulc_to_export_dict)
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_export_dict, export_uri, gdal.GDT_Float32,
+        lulc_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building cp raster from lulc')
@@ -156,23 +156,23 @@ def execute(args):
 
     LOGGER.info('backtrace the sediment reaching the streams')
     routing_cython_core.percent_to_sink(
-        v_stream_uri, export_uri, outflow_direction_uri, outflow_weights_uri,
+        v_stream_uri, export_rate_uri, outflow_direction_uri, outflow_weights_uri,
         effective_export_to_stream_uri)
 
     LOGGER.info('generating report')
 
     #Load the relevant output datasets so we can output them in the report
-    pixel_export_dataset = \
-        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
-    pixel_retained_dataset = \
-        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
+#    pixel_export_dataset = \
+#        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
+#    pixel_retained_dataset = \
+#        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
 
     #Output table for watersheds
-    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
-    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-        biophysical_args['watersheds'], output_table_uri)
+#    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
+#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+#        biophysical_args['watersheds'], output_table_uri)
 
     #Output table for subwatersheds
-    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
-    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-        biophysical_args['subwatersheds'], output_table_uri)
+#    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
+#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+#        biophysical_args['subwatersheds'], output_table_uri)
