@@ -107,13 +107,16 @@ def execute(args):
                                       flow_direction_uri, ls_uri, ls_nodata)
 
     lulc_dataset = gdal.Open(args['landuse_uri'])
-    retention_uri = os.path.join(intermediate_dir, 'retention.tif')
+    export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
 
-    LOGGER.info('building retention fraction raster from lulc')
-    lulc_to_retention_dict = dict([(lulc_code, float(table['sedret_eff'])) for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
+    LOGGER.info('building export fraction raster from lulc')
+    #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
+    lulc_to_export_dict = \
+        dict([(lulc_code, 1.0 - float(table['sedret_eff'])/100.0) \
+                  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_export_dict %s' % lulc_to_export_dict)
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_retention_dict, retention_uri, gdal.GDT_Float32,
+        lulc_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building cp raster from lulc')
@@ -153,136 +156,23 @@ def execute(args):
 
     LOGGER.info('backtrace the sediment reaching the streams')
     routing_cython_core.percent_to_sink(
-        v_stream_uri, retention_uri, outflow_direction_uri, outflow_weights_uri,
+        v_stream_uri, export_rate_uri, outflow_direction_uri, outflow_weights_uri,
         effective_export_to_stream_uri)
-
-    return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    LOGGER.info('Loading data sources')
-
-    #Load and copy relevant inputs from args into a dictionary that
-    #can be passed to the biophysical core model
-    biophysical_args = {}
-
-    #load shapefiles
-    for shapefile_name in ['watersheds',
-                           'subwatersheds',
-                           'reservoir_locations']:
-        fsencoding = sys.getfilesystemencoding()
-        uri_name = shapefile_name + '_uri'
-        if uri_name in args:
-            biophysical_args[shapefile_name] = \
-                ogr.Open(args[uri_name].encode(fsencoding))
-            LOGGER.debug('load %s as: %s' % (args[uri_name],
-                biophysical_args[shapefile_name]))
-
-    #load and clip rasters
-    for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
-        original_dataset = gdal.Open(args[raster_name + '_uri'],
-                                     gdal.GA_ReadOnly)
-        clipped_uri = os.path.join(intermediate_dir, raster_name + "_clip.tif")
-        biophysical_args[raster_name] = \
-            raster_utils.clip_dataset(original_dataset,
-            biophysical_args['watersheds'], clipped_uri)
-        LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
-                                         biophysical_args[raster_name]))
-
-    #check that they have the same projection
-    for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
-        LOGGER.debug(biophysical_args[raster_name].GetProjection())
-
-    #build up each table into a python dictionary
-    data_tables = [('reservoir_properties', 'id'), 
-                   ('biophysical_table', 'lucode')]
-    for value, column_name in data_tables:
-        try:
-            csv_dict_reader = csv.DictReader(open(args[value + '_uri']))
-            id_table = {}
-            for row in csv_dict_reader:
-                id_table[row[column_name]] = row
-            biophysical_args[value] = id_table
-        except (IOError, KeyError), error:
-            #Get here if file value is not found
-            LOGGER.warning(error)
-
-    #primatives
-    for value in ['threshold_flow_accumulation', 'slope_threshold']:
-        biophysical_args[value] = args[value]
-        LOGGER.debug('%s=%s' % (value, biophysical_args[value]))
-
-    #build output rasters
-    #This defines a dictionary that links output/temporary GDAL/OAL objects
-    #to their locations on disk.  Helpful for creating the objects in the
-    #next step
-    output_uris = {}
-    intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
-                            'ls_factor', 'v_stream']
-    for base_name in intermediate_rasters:
-        output_uris[base_name] = os.path.join(intermediate_dir, base_name + '.tif')
-
-    #Create the output and intermediate rasters to be the same size/format as
-    #the base LULC
-    for raster_name, raster_path in output_uris.iteritems():
-        LOGGER.debug('creating output raster %s', raster_path)
-        biophysical_args[raster_name] = \
-            raster_utils.new_raster_from_base(biophysical_args['dem'],
-                              raster_path, 'GTiff', -5.0, gdal.GDT_Float32)
-
-    #We won't know the size of the output rasters until we vectorize the stack
-    #of input rasters.  So we just pass a uri to its final location to the
-    #biophysical part.
-    output_uris = ['sret_dr', 'sexp_dr', 'slope', 'v_stream', 'ls', 'usle']
-    for raster_id in output_uris:
-        biophysical_args[raster_id + '_uri'] = \
-            os.path.join(output_dir,raster_id + '.tif')
-
-    biophysical_args['intermediate_uri'] = intermediate_dir
-    biophysical_args['output_uri'] = output_dir
-
-    LOGGER.info('starting biophysical model')
-    sediment_core.biophysical(biophysical_args)
-    LOGGER.info('finished biophysical model')
 
     LOGGER.info('generating report')
 
     #Load the relevant output datasets so we can output them in the report
-    pixel_export_dataset = \
-        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
-    pixel_retained_dataset = \
-        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
+#    pixel_export_dataset = \
+#        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
+#    pixel_retained_dataset = \
+#        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
 
     #Output table for watersheds
-    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
-    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-        biophysical_args['watersheds'], output_table_uri)
+#    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
+#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+#        biophysical_args['watersheds'], output_table_uri)
 
     #Output table for subwatersheds
-    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
-    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-        biophysical_args['subwatersheds'], output_table_uri)
-
-
-#This part is for command line invocation and allows json objects to be passed
-#as the argument dictionary
-if __name__ == '__main__':
-    MODULE_NAME, JSON_ARGS = sys.argv
-    MAIN_ARGS = json.loads(JSON_ARGS)
-    execute(MAIN_ARGS)
+#    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
+#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+#        biophysical_args['subwatersheds'], output_table_uri)

@@ -45,6 +45,8 @@ def execute(args):
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
+        args[discount_rate] - a float value for the discount rate (required for
+            valuation)
         args[avg_grid_distance] - a float for the average distance in kilometers
             from a grid connection point to a land connection point 
             (required if grid connection points are not provided)
@@ -96,12 +98,12 @@ def execute(args):
     valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr',
                                 'turbines_per_circuit', 'rotor_diameter']
     valuation_global_params = [
-            'discount_rate', 'time_period', 'infield_cable_cost', 
+            'carbon_coefficient', 'time_period', 'infield_cable_cost', 
             'infield_cable_length', 'installation_cost',
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
             'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
             'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
-            'rotor_diameter_factor', 'carbon_coefficient']
+            'rotor_diameter_factor']
 
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
@@ -136,6 +138,7 @@ def execute(args):
     
     val_turbine_dict['foundation_cost'] = float(args['foundation_cost'])
     val_turbine_dict['avg_grid_distance'] = float(args['avg_grid_distance'])
+    val_turbine_dict['discount_rate'] = float(args['discount_rate'])
     LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
     valuation_args['turbine_dict'] = val_turbine_dict
 

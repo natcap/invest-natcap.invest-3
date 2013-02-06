@@ -26,7 +26,12 @@ timeout=600
 processes=1
 echo $processes
 
-run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
+# I can't output xunit test reports with an individual process timeout.  I
+# assume that the program or programmer running this test file will have a
+# top-level timing mechanism.  It's a known but with nosetests.  See:
+# http://stackoverflow.com/a/13306487
+#run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
+run_tests="nosetests -v --with-xunit --with-coverage --cover-xml --cover-package=invest_natcap  --logging-filter=None"
 test_files=""
 
 if [ $# -eq 0 ]

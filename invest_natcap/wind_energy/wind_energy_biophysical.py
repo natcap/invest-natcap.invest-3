@@ -41,8 +41,6 @@ def execute(args):
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters 
             (required)
-        args[hub_height] - an integer value for the hub height of the turbines
-            as a factor of ten (meters) (required)
         args[num_days] - an integer value for the number of days for harvested
             wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
@@ -91,13 +89,57 @@ def execute(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
-    bathymetry = gdal.Open(str(args['bathymetry_uri']))
-  
+    # Create a list of the biophysical parameters we are looking for from the
+    # input files
+    biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
+                          'hub_height', 'turbine_rated_pwr', 'air_density',
+                          'exponent_power_curve', 'air_density_coefficient']
+    # Get the biophysical turbine parameters from the CSV file
+    bio_turbine_param_file = open(args['turbine_parameters_uri'])
+    bio_turbine_reader = csv.reader(bio_turbine_param_file)
+    bio_turbine_dict = {}
+    for field_value_row in bio_turbine_reader:
+        # Only get the biophysical parameters and leave out the valuation ones
+        if field_value_row[0].lower() in biophysical_params:
+            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+
+    # Get the global parameters for biophysical from the CSV file
+    global_bio_param_file = open(args['global_wind_parameters_uri'])
+    global_bio_reader = csv.reader(global_bio_param_file)
+    for field_value_row in global_bio_reader:
+        # Only get the biophysical parameters and leave out the valuation ones
+        if field_value_row[0].lower() in biophysical_params:
+            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+
+    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
+    
+    # Check that all the necessary input fields from the CSV files have been
+    # collected by comparing the number of dictionary keys to the number of
+    # elements in our known list
+    if len(bio_turbine_dict.keys()) != len(biophysical_params):
+        class FieldError(Exception):
+            """A custom error message for fields that are missing"""
+            pass
+        raise FieldError('An Error occured from reading in a field value from '
+        'either the turbine CSV file or the global parameters JSON file. ' 
+        'Please make sure all the necessary fields are present and spelled '
+        'correctly.')
+    
+    biophysical_args['biophysical_turbine_dict'] = bio_turbine_dict
+    
     # Using the hub height to generate the proper field name for the scale 
     # value that is found in the wind data file
-    hub_height = args['hub_height']
+    hub_height = int(bio_turbine_dict['hub_height'])
 
-    scale_key = str(int(hub_height))
+    if hub_height % 10 != 0:
+        class HubHeightError(Exception):
+            """A custom error message for invalid hub heights"""
+            pass
+        raise HubHeightError('An Error occurred processing the Hub Height. '
+                'Please make sure the Hub Height is between the ranges of 10 '
+                'and 150 meters and is a multiple of 10. ex: 10,20,...70,80...')
+
+    scale_key = str(hub_height)
     if len(scale_key) <= 2:
         scale_key = 'Ram-0' + scale_key + 'm'
     else:
@@ -109,6 +151,10 @@ def execute(args):
     # Read the wind energy data into a dictionary
     LOGGER.info('Read wind data from text file')
     wind_data = read_binary_wind_data(str(args['wind_data_uri']), wind_data_field_list)
+   
+    # Open the bathymetry DEM to projected and clipped depending on the below
+    # conditions
+    bathymetry = gdal.Open(str(args['bathymetry_uri']))
 
     try:
         LOGGER.info('Trying to open the AOI')
@@ -201,43 +247,10 @@ def execute(args):
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
-    biophysical_args['hub_height'] = int(args['hub_height'])
+    biophysical_args['hub_height'] = hub_height
+    biophysical_args['scale_key'] = scale_key
     biophysical_args['num_days'] = int(args['num_days'])
     
-    # Create a list of the biophysical parameters we are looking for from the
-    # input files
-    biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
-                          'turbine_rated_pwr', 'air_density',
-                          'exponent_power_curve', 'air_density_coefficient']
-    # Get the biophysical turbine parameters from the CSV file
-    bio_turbine_param_file = open(args['turbine_parameters_uri'])
-    bio_turbine_reader = csv.reader(bio_turbine_param_file)
-    bio_turbine_dict = {}
-    for field_value_row in bio_turbine_reader:
-        # Only get the biophysical parameters and leave out the valuation ones
-        if field_value_row[0].lower() in biophysical_params:
-            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
-
-    # Get the global parameters for biophysical from the CSV file
-    global_bio_param_file = open(args['global_wind_parameters_uri'])
-    global_bio_reader = csv.reader(global_bio_param_file)
-    for field_value_row in global_bio_reader:
-        # Only get the biophysical parameters and leave out the valuation ones
-        if field_value_row[0].lower() in biophysical_params:
-            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
-
-    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
-    
-    if len(bio_turbine_dict.keys()) != len(biophysical_params):
-        class FieldError(Exception):
-            """A custom error message for fields that are missing"""
-            pass
-        raise FieldError('An Error occured from reading in a field value from '
-        'either the turbine CSV file or the global parameters JSON file. ' 
-        'Please make sure all the necessary fields are present and spelled '
-        'correctly.')
-
-    biophysical_args['biophysical_turbine_dict'] = bio_turbine_dict
     # Pass in the depth values as negative, since it should be a negative
     # elevation
     biophysical_args['min_depth'] = abs(float(args['min_depth'])) * -1.0
