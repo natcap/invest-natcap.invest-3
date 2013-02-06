@@ -9,6 +9,7 @@ import time
 import tempfile
 import shutil
 import atexit
+import collections
 
 from osgeo import gdal
 from osgeo import osr
@@ -1744,6 +1745,46 @@ def temporary_filename():
 
     return path
 
+class DatasetUnprojected(Exception): pass
+class DifferentProjections(Exception): pass
+
+def assert_datasets_in_same_projection(dataset_uri_list):
+    """Tests if datasets represented by their uris are projected and in
+        the same projection and raises an exception if not.
+
+        raises DatasetUnprojected if one of the datasets is unprojected.
+        raises DifferentProjections if at least one of the datasets is in
+            a different projection
+
+        otherwise, returns True"""
+
+    dataset_list = map(gdal.Open, dataset_uri_list)
+    dataset_projections = collections.defaultdict(list)
+
+    unprojected_datasets = set()
+
+    for dataset in dataset_list:
+        projection_as_str = dataset.GetProjection()
+        dataset_sr = osr.SpatialReference()
+        dataset_sr.ImportFromWkt(projection_as_str)
+        if not dataset_sr.IsProjected():
+            unprojected_datasets.add(dataset.GetFileList()[0])
+        dataset_projections[projection_as_str].append(dataset.GetFileList()[0])
+
+    if len(unprojected_datasets) > 0:
+        raise DatasetUnprojected(
+            "These datasets are unprojected %s" % (unprojected_datasets))
+
+    if len(dataset_projections) > 1:
+        raise DifferentProjections(
+            "Some of the datasets are not in the same projections. "
+            "Here are the groups of datasets, there should be only "
+            "one group like ['file1.tif','file2.tif'] lists like "
+            "[['file1.tif'],['file2.tif'] indicate file1 and file2 "
+            "are in different projections. %s" % (dataset_projections.values()))
+
+    return True
+
 def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
     dataset_to_align_index):
@@ -1764,16 +1805,4 @@ def align_dataset_list(
 
         returns nothing"""
 
-
-    dataset_list = map(gdal.Open, dataset_uri_list)
-    dataset_epsg_projections = []
-
-    for dataset in dataset_list:
-        dataset_sr = osr.SpatialReference()
-        projection_as_str = dataset.GetProjection()
-        dataset_sr.ImportFromWkt(projection_as_str)
-        if not dataset_sr.IsProjected():
-            raise Exception("dataset is not projected")
-        dataset_epsg_projections.append(':'.join(map(lambda x: dataset_sr.GetAttrValue("AUTHORITY",x), [0,1])))
-
-    LOGGER.debug(dataset_epsg_projections)
+    assert_datasets_in_same_projection(dataset_uri_list)
