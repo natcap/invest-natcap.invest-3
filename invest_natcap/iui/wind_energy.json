@@ -125,18 +125,6 @@
                                 "validateAs": { "type": "CSV"}
                             },
                             {
-                                "id" : "hub_height",
-                                "args_id" : "hub_height",
-                                "type": "text",
-                                "label": "Hub Height (meters)",
-                                "defaultValue": "",
-                                "validText" : "^[0-9]+[0]+$",
-                                "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]+[0]+$"}},
-                                "required": true,
-                                "helpText": "An integer value for the hub height of the turbines, where the height is a multiple of ten. Ex: 40, 50, 60, ... , 110, 120. Please see the Users Guide for selecting a proper height in accordance to the turbine type selected above."
-                            },
-                            {
                                 "id" : "min_depth",
                                 "args_id" : "min_depth",
                                 "type": "text",

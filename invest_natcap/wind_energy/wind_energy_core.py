@@ -38,6 +38,9 @@ def biophysical(args):
             subsurface geology type (optional)
         args[hub_height] - an integer value for the hub height of the turbines
             as a factor of ten (meters) (required)
+        args[scale_key] -  a String representing an index from which hub height
+            to get the scale coefficient from. The scale key helps dictate the
+            shape of the Weibull curve (required)
         args[biophysical_turbine_dict] - a python dictionary containing the
             following fields: cut_in_wspd, cut_out_wspd, rated_wspd,
             turbine_rated_pwr, air_density, exponent_power_curve (required)
@@ -158,15 +161,9 @@ def biophysical(args):
         LOGGER.info('AOI not provided')
 
     hub_height = args['hub_height']
-
-    # Based on the hub height input construct a String to represent the field
-    # name in the point shapefile to get the scale value for that height
-    scale_key = str(int(hub_height))
-    if len(scale_key) <= 2:
-        scale_key = 'Ram-0' + scale_key + 'm'
-    else:
-        scale_key = 'Ram-' + scale_key + 'm'
+    scale_key = args['scale_key']
     
+    LOGGER.debug('hub_height : %s', hub_height)
     LOGGER.debug('SCALE_key : %s', scale_key)
 
     # The String name for the shape field. So far this is a default from the
