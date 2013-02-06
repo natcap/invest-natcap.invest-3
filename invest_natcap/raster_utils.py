@@ -1842,6 +1842,9 @@ def resize_and_resample_dataset(
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+    output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
+    output_band = output_dataset.GetRasterBand(1)
+    output_band.Fill(original_nodata)
 
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo_transform)
