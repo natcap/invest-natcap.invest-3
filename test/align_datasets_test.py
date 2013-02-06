@@ -51,11 +51,15 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box[1] -= height/4.0
         bounding_box[3] += height/4.0
 
+        #TODO: regression rasters for check this shit
         reduced_278_raster = os.path.join(base_dir, 'reduced_278.tif')
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "nearest")
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "bilinear")
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "cubic")
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "cubic_spline")
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "lanczos")
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 9, reduced_278_raster, "lanczos")
 
-
-        LOGGER.debug(bounding_box)
 
     def test_assert_datasets_in_same_projection(self):
         raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
