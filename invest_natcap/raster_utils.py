@@ -1859,7 +1859,7 @@ def resize_and_resample_dataset(
 
 def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
-    dataset_to_align_index):
+    dataset_to_align_index, resample_method):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -1875,6 +1875,8 @@ def align_dataset_list(
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
+        resample_method - the resampling technique, one of
+            "nearest|bilinear|cubic|cubic_spline|lanczos"
 
         returns nothing"""
 
@@ -1916,5 +1918,13 @@ def align_dataset_list(
             bounding_box[index] = int(
                 (bounding_box[index] - align_bounding_box[index]) / 
                 out_pixel_size) * out_pixel_size + align_bounding_box[index]
+
+
+    for original_dataset_uri, out_dataset_uri in zip(dataset_uri_list,
+                                                     dataset_out_uri_list):
+        LOGGER.debug("resizing and resampling %s to %s" % (original_dataset_uri, out_dataset_uri))
+        resize_and_resample_dataset(
+            original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
+            resample_method)
 
     LOGGER.debug(bounding_box)
