@@ -233,12 +233,34 @@ def make_crit_shape_dict(crit_uri):
         hab_name = parts[0]
         crit_name = parts[1].replace('_', ' ')
 
-        if hab_name not in c_shape_dict:
+        if hab_name not in c_shape_dict['h']:
             c_shape_dict['h'][hab_name] = {}
         
         c_shape_dict['h'][hab_name][crit_name] = ogr.Open(path)
     
-    #Now, want to move on to stressor-centric criteria
+    #Now, want to move on to stressor-centric criteria, but will do much the
+    #same thing. 
+    exps_shps = glob.glob(os.path.join(crit_uri, 'Exposure', '*.shp'))
+   
+    #Now we have a list of all stressor specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exp_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        stress_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if stress_name not in c_shape_dict['s']:
+            c_shape_dict['s'][stress_name] = {}
+        
+        c_shape_dict['s'][stress_name][crit_name] = ogr.Open(path)
 
 
 
