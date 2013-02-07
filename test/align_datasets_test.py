@@ -62,8 +62,11 @@ class TestAlignDatasets(unittest.TestCase):
         
         #This tests if the datasets can be aligned well.
         dataset_uri_list = [raster_1, reduced_278_raster]
+        
         raster_utils.align_dataset_list(
-            dataset_uri_list, 17, map(lambda x: x+"_aligned.tif", dataset_uri_list), "intersection", 0, "cubic")
+            dataset_uri_list, 17, map(lambda x: x+"_union.tif", dataset_uri_list), "union", 0, "cubic")
+        raster_utils.align_dataset_list(
+            dataset_uri_list, 17, map(lambda x: x+"_intersection.tif", dataset_uri_list), "intersection", 0, "cubic")
 
 
 
@@ -95,7 +98,5 @@ class TestAlignDatasets(unittest.TestCase):
         pixel_size = 1000.0
         #raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
         raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0, "lanczos")
-
-        #dink
 
         #TODO: regression asserts

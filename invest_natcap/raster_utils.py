@@ -1914,10 +1914,15 @@ def align_dataset_list(
     if dataset_to_align_index >= 0:
         #bounding box needs alignment
         align_bounding_box = get_bounding_box(dataset_uri_list[dataset_to_align_index])
+        align_pixel_size = pixel_size(gdal.Open(dataset_uri_list[dataset_to_align_index]))
+        LOGGER.debug("align_bounding_box %s" % str(align_bounding_box))
+        LOGGER.debug("bounding_box %s" % str(bounding_box))
+        LOGGER.debug("align_pixel_size %s" % (str(align_pixel_size)))
+        
         for index in [0, 1]:
             bounding_box[index] = int(
                 (bounding_box[index] - align_bounding_box[index]) / 
-                out_pixel_size) * out_pixel_size + align_bounding_box[index]
+                float(align_pixel_size)) * align_pixel_size + align_bounding_box[index]
 
 
     for original_dataset_uri, out_dataset_uri in zip(dataset_uri_list,
