@@ -213,19 +213,14 @@ def make_crit_shape_dict(crit_uri):
     '''
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
 
-    #First, want to get the things in the "habitat-specific" directories,
-    #which will cover both the Habitat and Species parent directories.
-    hab_shps = []
-    hab_dir = os.path.join(crit_uri, 'Species', 'Resiliance')
-    spec_dir = os.path.join(crit_uri, 'Habitats', 'Resiliance')
-    
-    for dir in hab_dir, spec_dir: 
-
-        hab_shps.append(glob.glob(dir, '*.shp'))
-
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resiliance' subfolder
+    #of raster_criteria.
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+   
     #Now we have a list of all habitat specific shapefile criteria. Now we need
     #to parse them out.
-    for path in hab_shps:
+    for path in res_shps:
 
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
@@ -243,6 +238,10 @@ def make_crit_shape_dict(crit_uri):
         
         c_shape_dict['h'][hab_name][crit_name] = ogr.Open(path)
     
+    #Now, want to move on to stressor-centric criteria
+
+
+
 def calc_max_rating(risk_eq, max_rating):
     ''' Should take in the max possible risk, and return the highest possible
     per pixel risk that would be seen on a H-S raster pixel.
