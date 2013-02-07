@@ -1,7 +1,6 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
-import itertools
 import random
 import string
 import os
@@ -9,6 +8,7 @@ import time
 import tempfile
 import shutil
 import atexit
+import collections
 
 from osgeo import gdal
 from osgeo import osr
@@ -17,9 +17,7 @@ import numpy as np
 import scipy.interpolate
 import scipy.sparse
 import scipy.signal
-from scipy.sparse.linalg import spsolve
 import scipy.ndimage
-import pyamg
 
 import raster_cython_utils
 
@@ -1744,6 +1742,121 @@ def temporary_filename():
 
     return path
 
+class DatasetUnprojected(Exception): pass
+class DifferentProjections(Exception): pass
+
+def assert_datasets_in_same_projection(dataset_uri_list):
+    """Tests if datasets represented by their uris are projected and in
+        the same projection and raises an exception if not.
+
+        raises DatasetUnprojected if one of the datasets is unprojected.
+        raises DifferentProjections if at least one of the datasets is in
+            a different projection
+
+        otherwise, returns True"""
+
+    dataset_list = map(gdal.Open, dataset_uri_list)
+    dataset_projections = []
+
+    unprojected_datasets = set()
+
+    for dataset in dataset_list:
+        projection_as_str = dataset.GetProjection()
+        dataset_sr = osr.SpatialReference()
+        dataset_sr.ImportFromWkt(projection_as_str)
+        if not dataset_sr.IsProjected():
+            unprojected_datasets.add(dataset.GetFileList()[0])
+        dataset_projections.append((dataset_sr, dataset.GetFileList()[0]))
+
+    if len(unprojected_datasets) > 0:
+        raise DatasetUnprojected(
+            "These datasets are unprojected %s" % (unprojected_datasets))
+
+    for index in range(len(dataset_projections)-1):
+        if not dataset_projections[index][0].IsSame(dataset_projections[index+1][0]):
+            raise DifferentProjections(
+                "These two datasets are not in the same projection."
+                " The different projections are:\n\n'filename: %s'\n%s\n\nand:\n\n'filename:%s'\n%s\n\n"
+                "Note there may be other files not projected, this function reports the first"
+                " two that have been seen." %
+                (dataset_projections[index][1], dataset_projections[index][0].ExportToPrettyWkt(), 
+                 dataset_projections[index+1][1], dataset_projections[index+1][0].ExportToPrettyWkt()))
+
+    return True
+
+def get_bounding_box(dataset_uri):
+    """Returns a bounding box where coordinates are in projected units.
+
+        dataset_uri - a uri to a GDAL dataset
+
+        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in projected coordinates"""
+
+    dataset = gdal.Open(dataset_uri)
+
+    geotransform = dataset.GetGeoTransform()
+    n_cols = dataset.RasterXSize
+    n_rows = dataset.RasterYSize
+
+    bounding_box = [geotransform[0],
+                    geotransform[3],
+                    geotransform[0] + n_cols * geotransform[1],
+                    geotransform[3] + n_rows * geotransform[5]]
+    
+    return bounding_box
+
+
+def resize_and_resample_dataset(
+    original_dataset_uri, bounding_box, pixel_size, output_uri, 
+    resample_method):
+    """A function to resample a datsaet to larger or smaller pixel sizes
+
+        original_dataset_uri - a GDAL dataset
+        bounding_box - [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        pixel_size - the pixel size in projected linear units
+        output_uri - the location of the new resampled GDAL dataset
+        resample_method - the resampling technique, one of
+            "nearest|bilinear|cubic|cubic_spline|lanczos"
+
+        returns nothing"""
+
+    resample_dict = {
+        "nearest": gdal.GRA_NearestNeighbour,
+        "bilinear": gdal.GRA_Bilinear,
+        "cubic": gdal.GRA_Cubic,
+        "cubic_spline": gdal.GRA_CubicSpline,
+        "lanczos": gdal.GRA_Lanczos
+        }
+
+    original_dataset = gdal.Open(original_dataset_uri)
+    original_band, original_nodata = extract_band_and_nodata(original_dataset)
+
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+
+    output_geo_transform = [bounding_box[0], pixel_size, 0.0, bounding_box[1], 0.0, -pixel_size]
+    new_x_size = abs(int((bounding_box[2] - bounding_box[0]) / pixel_size + 0.5))
+    new_y_size = abs(int((bounding_box[3] - bounding_box[1]) / pixel_size + 0.5))
+
+    #create the new x and y size
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    output_dataset = gdal_driver.Create(
+        output_uri, new_x_size, new_y_size, 1, original_band.DataType)
+    output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
+    output_band = output_dataset.GetRasterBand(1)
+    output_band.Fill(original_nodata)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(output_geo_transform)
+    output_dataset.SetProjection(original_sr.ExportToWkt())
+
+    # Perform the projection/resampling
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), original_sr.ExportToWkt(),
+                        resample_dict[resample_method])
+
+    calculate_raster_stats(output_dataset)
+
+
 def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
     dataset_to_align_index):
@@ -1760,20 +1873,48 @@ def align_dataset_list(
         dataset_to_align_index - an int that corresponds to the position in
             one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
-            datasets
+            datasets.  If negative, the bounding box aligns the intersection/
+            union without adjustment.
 
         returns nothing"""
 
+    #This seems a reasonable precursor for some very common issues, numpy gives
+    #me a precedent for this.
+    assert_datasets_in_same_projection(dataset_uri_list)
+    if mode not in ["union", "intersection"]:
+        raise Exception("Unknown mode %s" % (str(mode)))
+    if dataset_to_align_index >= len(dataset_uri_list):
+        raise Exception(
+            "Alignment index is out of bounds of the datasets index: %s"
+            "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
 
-    dataset_list = map(gdal.Open, dataset_uri_list)
-    dataset_epsg_projections = []
+    def merge_bounding_boxes(bb1, bb2):
+        """Helper function to merge two bounding boxes through union or 
+            intersection"""
+        lt = lambda x, y: x if x <= y else y
+        gt = lambda x, y: x if x >= y else y
 
-    for dataset in dataset_list:
-        dataset_sr = osr.SpatialReference()
-        projection_as_str = dataset.GetProjection()
-        dataset_sr.ImportFromWkt(projection_as_str)
-        if not dataset_sr.IsProjected():
-            raise Exception("dataset is not projected")
-        dataset_epsg_projections.append(':'.join(map(lambda x: dataset_sr.GetAttrValue("AUTHORITY",x), [0,1])))
+        if mode == "union":
+            comparison = [lt, gt, gt, lt]
+        if mode == "intersection":
+            comparison = [gt, lt, lt, gt]
 
-    LOGGER.debug(dataset_epsg_projections)
+        bb_out = [comparison[i](x,y) for i, x, y in zip(range(4), bb1, bb2)]
+        return bb_out
+
+    #get the intersecting or unioned bounding box
+    bounding_box = reduce(merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
+
+    if bounding_box[0] >= bounding_box[2] or \
+            bounding_box[1] <= bounding_box[3] and mode == "intersection":
+        raise Exception("The datasets' intersection is empty (i.e., not all the datasets touch each other).")
+
+    if dataset_to_align_index >= 0:
+        #bounding box needs alignment
+        align_bounding_box = get_bounding_box(dataset_uri_list[dataset_to_align_index])
+        for index in [0, 1]:
+            bounding_box[index] = int(
+                (bounding_box[index] - align_bounding_box[index]) / 
+                out_pixel_size) * out_pixel_size + align_bounding_box[index]
+
+    LOGGER.debug(bounding_box)

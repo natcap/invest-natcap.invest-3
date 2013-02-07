@@ -45,89 +45,60 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
+        args['crit_uri']- The location of the shapefile criteria that we will
+            use in our model. These will be rasterized and added to their
+            approipriate dictionaries.
 
+    Intermediate:
+        hra_args['buffer_dict']- A dictionary that links the string name of each
+            stressor shapefile to the desired buffering for that shape when
+            rasterized.  This will get unpacked by the hra_preprocessor module.
+
+            {'Stressor 1': 50,
+             'Stressor 2': ...,
+            }
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
         hra_args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be supfolders of this one.
-        hra_args['buffer_dict']- A dictionary that links the string name of each
-            stressor shapefile to the desired buffering for that shape when
-            rasterized.  ex:
+        hra_args['h-s']- A multi-level structure which holds all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            3 outer keys containing numeric-only criteria, raster-based
+            criteria, and a dataset that shows the potentially buffered overlap
+            between the habitat and stressor. The overall structure will be as
+            pictured:
 
-            {'Stressor 1': 50,
-             'Stressor 2': ...,
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
             }
-        hra_args['h-s']- A structure which holds all exposure and consequence
-            rating for each combination of habitat and stressor. The inner
-            structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples. 
-            {('Habitat A', 'Stressor 1'):
-               {
-                 'E':
-                     {
-                     'Overlap Time Rating':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                     },
-                 'C':
-                     {
-                     'Change in area rating':,
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                     'Change in structure rating':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                     'Frequency of disturbance':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                     }
-                }
-              ('Habitat B', 'Stressor 1'): {}...
-            }
-        hra_args['habitats']- A structure with the same layout as 'h-s', but which
-            contains only criteria specific to habitats. The outer keys, in 
-            turn, will be habitat names. habitats['C'] should explicitly 
-            contain the following criteria names: (Natural Mortality, 
-            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
-            must exist, and must contain 'Rating' and 'DQ' entries within them.
-            These can be 0 values if they are not a desired criteria, but must
-            exist.
-            {'Habitat A':
-                    {
-                    'DQ': 1.0,
-                    'C': 
-                        {
-                        'Natural Mortality':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                        'Recruitment Rate':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                        'Recovery Time':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                        'Connectivity Rate':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        }
-                    },
-             'Habitat B': ...
-             }
-        hra_args['stressors']- A structure wih the same layout as 'h-s', but which
-            contains only criteria specific to stressors. The outer keys will be
-            stressor names.
-
-            {'Stressor 1':
-                    {
-                    'DQ': 1.0,
-                    'E':
-                        {
-                          'Intensity Rating:':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                          'Management Effectiveness:':
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        }
-                    },
-             'Stressor 2': ...
-             }
+        args['habitats']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            rasters. In this case, however, the outermost key is by habitat
+            name, and habitats['habitatName']['DS'] points to the rasterized
+            habitat shapefile provided by the user.
+        args['stressors']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            name, and stressors['stressorName']['DS'] points to the rasterized
+            stressor shapefile provided by the user that will be buffered by
+            the indicated amount in buffer_dict['stressorName'].
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
             dependent on this.
-
+        args['max_risk']- The highest possible risk value for any given pairing
+            of habitat and stressor.
     Returns nothing.
     '''
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
@@ -135,6 +106,12 @@ def execute(args):
     unpack_over_dict(args['csv_uri'], args)
     LOGGER.debug(args)
     hra_args = {}
+
+    #Want to parse through the file structure and return a dictionary of all of
+    #the open shapefiles. These will be rasterized later and added to their
+    #respective criteria dictionaries. This function can also be called by
+    #hra_preprocessor in order to determine how to fill in the CSVs.
+    c_shape_dict = make_crit_shape_dict(args['crit_uri'])
 
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -203,6 +180,118 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
+def make_crit_shape_dict(crit_uri):
+
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+    Returns:
+        A dictionary containing open shapefiles, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        sturcture will be as follows:
+        
+        {'h-s':
+            {('HabA', 'Stress1'):
+                {'CriteriaName': <Open Shapefile Datasource>, ...}, ...
+            },
+         'h':
+            {'HabA':
+                {'CriteriaName: <Open Shapefile DS>, ...}, ...
+            },
+         's':
+            {'Stress1':
+                {'CriteriaName: <Open Shapefile DS>, ...}, ...
+                   
+            }
+        }
+    '''
+    c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resiliance' subfolder
+    #of raster_criteria.
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+   
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in res_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if hab_name not in c_shape_dict['h']:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = ogr.Open(path)
+    
+    #Now, want to move on to stressor-centric criteria, but will do much the
+    #same thing. 
+    exps_shps = glob.glob(os.path.join(crit_uri, 'Exposure', '*.shp'))
+   
+    #Now we have a list of all stressor specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exp_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        stress_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if stress_name not in c_shape_dict['s']:
+            c_shape_dict['s'][stress_name] = {}
+        
+        c_shape_dict['s'][stress_name][crit_name] = ogr.Open(path)
+    
+    #Finally, want to get all of our pair-centric shape criteria. 
+    sens_shps = glob.glob(os.path.join(crit_uri, 'Sensitivity', '*.shp'))
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h-s']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = ogr.Open(path)
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict
+
+
 def calc_max_rating(risk_eq, max_rating):
     ''' Should take in the max possible risk, and return the highest possible
     per pixel risk that would be seen on a H-S raster pixel.
@@ -242,7 +331,35 @@ def unpack_over_dict(csv_uri, args):
             should be placed.
     Output:
         A modified args dictionary containing dictionary versions of the CSV
-        tables located in csv_uri.
+        tables located in csv_uri. The dictionaries should be of the forms as
+        follows.
+           
+        h-s- A multi-level structure which will hold all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            2 outer keys containing numeric-only criteria, and raster-based
+            criteria. At this time, we should only have two entries in a
+            criteria raster entry, since we have yet to add the rasterized
+            versions of the criteria.
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            weights and data quality for the rasters.         
+        stressors- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            weights and data quality for the rasters.w
     Returns nothing.
     '''
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
@@ -449,7 +566,9 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
             to their corresponding parts.
     
     Returns an edited version of 'h-s' that contains an open raster
-    datasource correspondoing to the appropriate H-S key for the dictionary.
+    dataset correspondoing to the appropriate H-S key for the dictionary.
+    This dataset should be placed in 'h-s' as 
+        h-s[(HabName, StressName)]['DS'] = <Open Raster Dataset>
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
@@ -512,31 +631,6 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
             #that were gleaned from the IUI.
             h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
-            #Additionally, want to add spatial overlap as a criteria into the
-            #dictionary based on our discovery of the percentage overlap of
-            #pixels.
-            '''Spatial Overlap Rating:
-                    HIGH (3): >30% of of the habitat type overlaps with the
-                        stressor
-                    MEDIUM (2): 10% - 30% of the habitat type overlaps with
-                        the stressor
-                    LOW (1): 0% - 10% of the habitat type overlaps with the
-                        stressor
-            '''
-            s_over_pct = (variables['overlap_pix_ct'] / variables['all_pix_ct']) * 100
-            
-            #Should be noted that I am making up the W/DQ here since I don't
-            #know what the "default" for non-user-entered values should be
-            if s_over_pct > 30:
-                h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
-                    {'Rating': 3, 'Weight': 2, 'DQ': 3}
-            elif s_over_pct <= 30 and s_over_pct > 10:
-                h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
-                    {'Rating': 2, 'Weight': 2, 'DQ': 3}
-            elif s_over_pct < 10:
-                h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
-                    {'Rating': 1, 'Weight': 2, 'DQ': 3}
-                
     return h_s
 
 def make_rasters(file_names, dir_path, grid_size):
