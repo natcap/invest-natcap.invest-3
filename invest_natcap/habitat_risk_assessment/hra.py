@@ -45,6 +45,9 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
+        args['crit_uri']- The location of the shapefile criteria that we will
+            use in our model. These will be rasterized and added to their
+            approipriate dictionaries.
 
     Intermediate:
         hra_args['buffer_dict']- A dictionary that links the string name of each
@@ -103,6 +106,12 @@ def execute(args):
     unpack_over_dict(args['csv_uri'], args)
     LOGGER.debug(args)
     hra_args = {}
+
+    #Want to parse through the file structure and return a dictionary of all of
+    #the open shapefiles. These will be rasterized later and added to their
+    #respective criteria dictionaries. This function can also be called by
+    #hra_preprocessor in order to determine how to fill in the CSVs.
+    c_shape_dict = make_crit_shape_dict(args['crit_uri'])
 
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -171,6 +180,69 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
+def make_crit_shape_dict(crit_uri):
+
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+    Returns:
+        A dictionary containing open shapefiles, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        sturcture will be as follows:
+        
+        {'h-s':
+            {('HabA', 'Stress1'):
+                {'CriteriaName': <Open Shapefile Datasource>, ...}, ...
+            },
+         'h':
+            {'HabA':
+                {'CriteriaName: <Open Shapefile DS>, ...}, ...
+            },
+         's':
+            {'Stress1':
+                {'CriteriaName: <Open Shapefile DS>, ...}, ...
+                   
+            }
+        }
+    '''
+    c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+
+    #First, want to get the things in the "habitat-specific" directories,
+    #which will cover both the Habitat and Species parent directories.
+    hab_shps = []
+    hab_dir = os.path.join(crit_uri, 'Species', 'Resiliance')
+    spec_dir = os.path.join(crit_uri, 'Habitats', 'Resiliance')
+    
+    for dir in hab_dir, spec_dir: 
+
+        hab_shps.append(glob.glob(dir, '*.shp'))
+
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in hab_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if hab_name not in c_shape_dict:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = ogr.Open(path)
+    
 def calc_max_rating(risk_eq, max_rating):
     ''' Should take in the max possible risk, and return the highest possible
     per pixel risk that would be seen on a H-S raster pixel.
