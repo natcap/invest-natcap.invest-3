@@ -1879,5 +1879,16 @@ def align_dataset_list(
         returns nothing"""
 
     assert_datasets_in_same_projection(dataset_uri_list)
-
     
+    def merge_bounding_boxes(bb1, bb2):
+        """Helper function to merge two bounding boxes through union or intersection"""
+        lt = lambda x, y: x if x <= y else y
+        gt = lambda x, y: x if x >= y else y
+
+        if mode == "union":
+            comparison = [lt, gt, gt, lt]
+        if mode == "intersection":
+            comparison = [gt, lt, lt, gt]
+
+        bb_out = [comparison[i](x,y) for i, x, y in zip(range(4), bb1, bb2)]
+        return bb_out
