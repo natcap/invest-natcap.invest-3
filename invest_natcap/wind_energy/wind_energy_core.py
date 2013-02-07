@@ -782,8 +782,8 @@ def valuation(args):
     density_ds = gdal.Open(density_uri)
     _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
-    npv_uri = os.path.join(output_dir, 'npv_$mil' + suffix + '.tif')
-    levelized_uri = os.path.join(output_dir, 'levelized_cost_$_per_kWh' + suffix + '.tif')
+    npv_uri = os.path.join(output_dir, 'npv_US_millions' + suffix + '.tif')
+    levelized_uri = os.path.join(output_dir, 'levelized_cost_price_per_kWh' + suffix + '.tif')
     carbon_uri = os.path.join(output_dir, 'carbon_emissions_tons' + suffix + '.tif')
    
     uri_list = [npv_uri, levelized_uri, carbon_uri]

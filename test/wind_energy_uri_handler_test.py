@@ -371,8 +371,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif']
 
         raster_file_output_names = [
-                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv_$mil.tif', 'carbon_emission_tons.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -462,8 +462,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif']
 
         raster_file_output_names = [
-                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv_$mil.tif', 'carbon_emission_tons.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -553,8 +553,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_raster.tif', 'distance_mask.tif']
 
         raster_file_output_names = [
-                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv_$mil.tif', 'carbon_emission_tons.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -647,8 +647,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_raster.tif', 'distance_mask.tif']
 
         raster_file_output_names = [
-                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv_$mil.tif', 'carbon_emission_tons.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -744,8 +744,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         raster_file_output_names = [
                 'harvested_energy_MWhr_per_yr_test.tif', 
-                'density_W_per_m2_test.tif', 'levelized_cost_$_per_kWh_test.tif',
-                'npv_$mil_test.tif', 'carbon_emission_tons.tif']
+                'density_W_per_m2_test.tif', 'levelized_cost_price_per_kWh_test.tif',
+                'npv_US_millions_test.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
