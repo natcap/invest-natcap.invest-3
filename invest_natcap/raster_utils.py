@@ -1895,11 +1895,11 @@ def align_dataset_list(
         gt = lambda x, y: x if x >= y else y
 
         if mode == "union":
-            comparison = [lt, gt, gt, lt]
+            comparison_ops = [lt, gt, gt, lt]
         if mode == "intersection":
-            comparison = [gt, lt, lt, gt]
+            comparison_ops = [gt, lt, lt, gt]
 
-        bb_out = [comparison[i](x,y) for i, x, y in zip(range(4), bb1, bb2)]
+        bb_out = [op(x,y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
 
     #get the intersecting or unioned bounding box
