@@ -372,7 +372,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         raster_file_output_names = [
                 'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv.tif', 'carbon_emission_tons.tif']
+                'npv_$mil.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -463,7 +463,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         raster_file_output_names = [
                 'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv.tif', 'carbon_emission_tons.tif']
+                'npv_$mil.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -554,7 +554,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         raster_file_output_names = [
                 'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv.tif', 'carbon_emission_tons.tif']
+                'npv_$mil.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -648,7 +648,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         raster_file_output_names = [
                 'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_$_per_kWh.tif',
-                'npv.tif', 'carbon_emission_tons.tif']
+                'npv_$mil.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -745,7 +745,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         raster_file_output_names = [
                 'harvested_energy_MWhr_per_yr_test.tif', 
                 'density_W_per_m2_test.tif', 'levelized_cost_$_per_kWh_test.tif',
-                'npv_test.tif', 'carbon_emission_tons.tif']
+                'npv_$mil_test.tif', 'carbon_emission_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
