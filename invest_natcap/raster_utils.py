@@ -1878,8 +1878,12 @@ def align_dataset_list(
 
         returns nothing"""
 
+    #This seems a reasonable precursor for some very common issues, numpy gives
+    #me a precedent for this.
     assert_datasets_in_same_projection(dataset_uri_list)
-    
+    if mode not in ["union", "intersection"]:
+        raise Exception("Unknown mode %s" % (str(mode)))
+
     def merge_bounding_boxes(bb1, bb2):
         """Helper function to merge two bounding boxes through union or intersection"""
         lt = lambda x, y: x if x <= y else y
