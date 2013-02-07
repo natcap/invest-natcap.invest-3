@@ -29,7 +29,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -100,7 +99,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
         #args['suffix'] = ''
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -173,7 +171,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -257,7 +254,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, 'global_wind_energy_parameters.csv') 
         args['min_distance'] = 1000
         args['max_distance'] = 20000
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -340,7 +336,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -427,7 +422,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -518,7 +512,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -609,7 +602,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -704,7 +696,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
