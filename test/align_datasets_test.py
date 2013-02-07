@@ -50,7 +50,7 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box[2] -= width/4.0
         bounding_box[3] += height/4.0
 
-        #TODO: regression rasters for check this shit
+        #TODO: regression rasters for check this stuff
         reduced_278_raster = os.path.join(base_dir, 'reduced_278.tif')
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "nearest")
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "bilinear")
@@ -95,5 +95,7 @@ class TestAlignDatasets(unittest.TestCase):
         pixel_size = 1000.0
         #raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
         raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0)
+
+        #dink
 
         #TODO: regression asserts
