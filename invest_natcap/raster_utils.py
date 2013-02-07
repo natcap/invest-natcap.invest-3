@@ -1905,7 +1905,6 @@ def align_dataset_list(
     #get the intersecting or unioned bounding box
     bounding_box = reduce(merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
 
-    #TODO: check if bounding box overlaps itself/is zero
     if bounding_box[0] >= bounding_box[2] or \
             bounding_box[1] <= bounding_box[3] and mode == "intersection":
         raise Exception("The datasets' intersection is empty (i.e., not all the datasets touch each other).")
