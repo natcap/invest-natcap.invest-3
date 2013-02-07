@@ -107,3 +107,56 @@ def execute(args):
     unpack_over_dict(args['csv_uri'], args)
     LOGGER.debug(args)
     hra_args = {}
+
+def unpack_over_dict(csv_uri, args):
+    '''This throws the dictionary coming from the pre-processor into the
+    equivalent dictionaries in args so that they can be processed before being
+    passed into the core module.
+    
+    Input:
+        csv_uri- Reference to the folder location of the CSV tables containing
+            all habitat and stressor rating information.
+        args- The dictionary into which the individual ratings dictionaries
+            should be placed.
+    Output:
+        A modified args dictionary containing dictionary versions of the CSV
+        tables located in csv_uri. The dictionaries should be of the forms as
+        follows.
+           
+        h-s- A multi-level structure which will hold all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            2 outer keys containing numeric-only criteria, and raster-based
+            criteria. At this time, we should only have two entries in a
+            criteria raster entry, since we have yet to add the rasterized
+            versions of the criteria.
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            weights and data quality for the rasters.         
+        stressors- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            weights and data quality for the rasters.w
+    Returns nothing.
+    '''
+    dicts = hra_preprocessor.parse_hra_tables(csv_uri)
+    LOGGER.debug(csv_uri)
+    LOGGER.debug("DICTIONARIES:")
+    LOGGER.debug(dicts)
+
+
+    for dict_name in dicts:
+     
+       args[dict_name] = dicts[dict_name]
