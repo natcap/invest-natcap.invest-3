@@ -1874,7 +1874,8 @@ def align_dataset_list(
         dataset_to_align_index - an int that corresponds to the position in
             one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
-            datasets
+            datasets.  If negative, the bounding box aligns the intersection/
+            union without adjustment.
 
         returns nothing"""
 
@@ -1883,6 +1884,10 @@ def align_dataset_list(
     assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection"]:
         raise Exception("Unknown mode %s" % (str(mode)))
+    if dataset_to_align_index >= len(dataset_uri_list):
+        raise Exception(
+            "Alignment index is out of bounds of the datasets index: %s"
+            "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
 
     def merge_bounding_boxes(bb1, bb2):
         """Helper function to merge two bounding boxes through union or 
@@ -1899,12 +1904,19 @@ def align_dataset_list(
         return bb_out
 
     #get the intersecting or unioned bounding box
-    bounding_box = reduce(
-        merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
+    bounding_box = reduce(merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
 
     #TODO: check if bounding box overlaps itself/is zero
     if bounding_box[0] >= bounding_box[2] or \
             bounding_box[1] <= bounding_box[3] and mode == "intersection":
         raise Exception("The datasets' intersection is empty (i.e., not all the datasets touch each other).")
+
+    if dataset_to_align_index >= 0:
+        #bounding box needs alignment
+        align_bounding_box = get_bounding_box(dataset_uri_list[dataset_to_align_index])
+        for index in [0, 1]:
+            bounding_box[index] = int(
+                (bounding_box[index] - align_bounding_box[index]) / 
+                out_pixel_size) * out_pixel_size + align_bounding_box[index]
 
     LOGGER.debug(bounding_box)
