@@ -1885,7 +1885,8 @@ def align_dataset_list(
         raise Exception("Unknown mode %s" % (str(mode)))
 
     def merge_bounding_boxes(bb1, bb2):
-        """Helper function to merge two bounding boxes through union or intersection"""
+        """Helper function to merge two bounding boxes through union or 
+            intersection"""
         lt = lambda x, y: x if x <= y else y
         gt = lambda x, y: x if x >= y else y
 
@@ -1896,3 +1897,14 @@ def align_dataset_list(
 
         bb_out = [comparison[i](x,y) for i, x, y in zip(range(4), bb1, bb2)]
         return bb_out
+
+    #get the intersecting or unioned bounding box
+    bounding_box = reduce(
+        merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
+
+    #TODO: check if bounding box overlaps itself/is zero
+    if bounding_box[0] >= bounding_box[2] or \
+            bounding_box[1] <= bounding_box[3] and mode == "intersection":
+        raise Exception("The datasets' intersection is empty (i.e., not all the datasets touch each other).")
+
+    LOGGER.debug(bounding_box)

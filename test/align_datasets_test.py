@@ -89,6 +89,7 @@ class TestAlignDatasets(unittest.TestCase):
         raster_1_out = raster_1 + '.out.tif'
         raster_2_out = raster_2 + '.out.tif'
         pixel_size = 1000.0
-        raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
+        #raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
+        raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0)
 
         #TODO: regression asserts
