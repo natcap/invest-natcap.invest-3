@@ -1,7 +1,6 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
-import itertools
 import random
 import string
 import os
@@ -18,9 +17,7 @@ import numpy as np
 import scipy.interpolate
 import scipy.sparse
 import scipy.signal
-from scipy.sparse.linalg import spsolve
 import scipy.ndimage
-import pyamg
 
 import raster_cython_utils
 
