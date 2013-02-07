@@ -261,7 +261,35 @@ def make_crit_shape_dict(crit_uri):
             c_shape_dict['s'][stress_name] = {}
         
         c_shape_dict['s'][stress_name][crit_name] = ogr.Open(path)
+    
+    #Finally, want to get all of our pair-centric shape criteria. 
+    sens_shps = glob.glob(os.path.join(crit_uri, 'Sensitivity', '*.shp'))
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
 
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h-s']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = ogr.Open(path)
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict
 
 
 def calc_max_rating(risk_eq, max_rating):
