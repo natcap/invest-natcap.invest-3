@@ -1756,7 +1756,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         otherwise, returns True"""
 
     dataset_list = map(gdal.Open, dataset_uri_list)
-    dataset_projections = collections.defaultdict(list)
+    dataset_projections = []
 
     unprojected_datasets = set()
 
@@ -1766,19 +1766,21 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         dataset_sr.ImportFromWkt(projection_as_str)
         if not dataset_sr.IsProjected():
             unprojected_datasets.add(dataset.GetFileList()[0])
-        dataset_projections[projection_as_str].append(dataset.GetFileList()[0])
+        dataset_projections.append((dataset_sr, dataset.GetFileList()[0]))
 
     if len(unprojected_datasets) > 0:
         raise DatasetUnprojected(
             "These datasets are unprojected %s" % (unprojected_datasets))
 
-    if len(dataset_projections) > 1:
-        raise DifferentProjections(
-            "Some of the datasets are not in the same projections. "
-            "Here are the groups of datasets, there should be only "
-            "one group like ['file1.tif','file2.tif'] lists like "
-            "[['file1.tif'],['file2.tif'] indicate file1 and file2 "
-            "are in different projections. %s" % (dataset_projections.values()))
+    for index in range(len(dataset_projections)-1):
+        if not dataset_projections[index][0].IsSame(dataset_projections[index+1][0]):
+            raise DifferentProjections(
+                "These two datasets are not in the same projection."
+                " The different projections are:\n\n'filename: %s'\n%s\n\nand:\n\n'filename:%s'\n%s\n\n"
+                "Note there may be other files not projected, this function reports the first"
+                " two that have been seen." %
+                (dataset_projections[index][1], dataset_projections[index][0].ExportToPrettyWkt(), 
+                 dataset_projections[index+1][1], dataset_projections[index+1][0].ExportToPrettyWkt()))
 
     return True
 
