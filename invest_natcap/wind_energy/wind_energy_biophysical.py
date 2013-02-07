@@ -41,8 +41,6 @@ def execute(args):
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters 
             (required)
-        args[num_days] - an integer value for the number of days for harvested
-            wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -249,7 +247,6 @@ def execute(args):
     biophysical_args['workspace_dir'] = workspace
     biophysical_args['hub_height'] = hub_height
     biophysical_args['scale_key'] = scale_key
-    biophysical_args['num_days'] = int(args['num_days'])
     
     # Pass in the depth values as negative, since it should be a negative
     # elevation

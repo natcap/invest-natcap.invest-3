@@ -117,7 +117,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         # locate the polygon to a known point
         regression_dir = \
             './data/wind_energy_regression_data/uri_handler/val_dist_land_options/output'
-        dataset_uri = os.path.join(regression_dir, 'density.tif')
+        dataset_uri = os.path.join(regression_dir, 'density_W_per_m2.tif')
         # Directory and path to save the created rectangular polygon
         test_dir = \
             './data/test_out/wind_energy/valuation/create_rectangular_polygon'

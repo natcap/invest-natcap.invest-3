@@ -61,7 +61,7 @@
                     "args_id" : "land_polygon_uri",
                     "type": "file",
                     "label": "Land Polygon to Calculate Distance From",
-                    "defaultValue": "",
+                    "defaultValue": "../Base_Data/Marine/Land/global_polygon.shp",
                     "required": false,
                     "enabledBy" : "aoi", 
                     "returns" : {"ifEmpty": "pass"},
@@ -77,18 +77,6 @@
                     "required": true,
                     "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the Users Guide. We recommend careful consideration before changing these values and to make a new CSV file so that the default one always remains.",
                     "validateAs": { "type": "CSV"}
-                },
-                {
-                    "id" : "days_harv_wind_energy",
-                    "args_id" : "num_days",
-                    "type": "text",
-                    "label": "Number of Days for Harvested Wind Energy Calculation (days)",
-                    "defaultValue": "365",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": "An integer value for the number of days for harvested wind energy. 365 days corresponds to yearly calculations and it is suggested to use 30 days for monthly energy outputs."
                 },
                 {
                     "id" : "results_suffix",
