@@ -44,8 +44,6 @@ def biophysical(args):
         args[biophysical_turbine_dict] - a python dictionary containing the
             following fields: cut_in_wspd, cut_out_wspd, rated_wspd,
             turbine_rated_pwr, air_density, exponent_power_curve (required)
-        args[num_days] - an integer value for the number of days for harvested
-            wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -225,7 +223,10 @@ def biophysical(args):
     # Get the inputs needed to compute harvested wind energy
     bio_turbine_dict = args['biophysical_turbine_dict']
     exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
-    num_days = args['num_days']
+    
+    # The harvested energy is on a per year basis
+    num_days = 365 
+    
     # The rated power is expressed in units of MW but the harvested energy
     # equation calls for it in terms of Wh. Thus we multiply by a million to get
     # to Wh.

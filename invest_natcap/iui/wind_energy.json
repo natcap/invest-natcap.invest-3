@@ -79,18 +79,6 @@
                     "validateAs": { "type": "CSV"}
                 },
                 {
-                    "id" : "days_harv_wind_energy",
-                    "args_id" : "num_days",
-                    "type": "text",
-                    "label": "Number of Days for Harvested Wind Energy Calculation (days)",
-                    "defaultValue": "365",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": "An integer value for the number of days for harvested wind energy. 365 days corresponds to yearly calculations and it is suggested to use 30 days for monthly energy outputs."
-                },
-                {
                     "id" : "results_suffix",
                     "args_id" : "suffix",
                     "type": "text",
