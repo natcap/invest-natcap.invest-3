@@ -213,8 +213,8 @@ def biophysical(args):
     wind_points = args['wind_data_points']
     wind_points_layer = wind_points.GetLayer(0)
    
-    density_field_name = 'Dens_Wm2'
-    harvest_field_name = 'HarvEn_Wh'
+    density_field_name = 'Dens_W/m2'
+    harvest_field_name = 'Harv_MWhr'
 
     LOGGER.info('Creating Harvest and Density Fields')
     # Create new fields for the density and harvested values
@@ -281,7 +281,11 @@ def biophysical(args):
         
         # Compute the final harvested wind energy value
         harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
-        
+       
+        # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
+        # 1,000,000
+        harvested_wind_energy = harvested_wind_energy / 1000000.00
+
         # Save the results to their respective fields 
         for field_name, result_value in [(density_field_name, density_results),
                 (harvest_field_name, harvested_wind_energy)]:
@@ -334,9 +338,9 @@ def biophysical(args):
         else:
             return rasters[0] 
 
-    density_masked_uri = os.path.join(output_dir, 'density_Wm2' + tif_suffix)
+    density_masked_uri = os.path.join(output_dir, 'density_W_per_m2' + tif_suffix)
     harvested_masked_uri = os.path.join(
-            output_dir, 'harvested_energy_Wh' + tif_suffix)
+            output_dir, 'harvested_energy_MWhr_per_yr' + tif_suffix)
 
     density_mask_list = [density_temp, depth_mask]
     harvest_mask_list = [harvested_temp, depth_mask]
@@ -686,13 +690,14 @@ def valuation(args):
         npv_index = feat.GetFieldIndex(npv_field)
         levelized_index = feat.GetFieldIndex(levelized_cost_field)
         co2_index = feat.GetFieldIndex(carbon_field)
-        energy_index = feat.GetFieldIndex('HarvEn_Wh')
+        energy_index = feat.GetFieldIndex('Harv_MWhr')
         o2l_index = feat.GetFieldIndex(ocean_to_land_field)
         l2g_index = feat.GetFieldIndex(land_to_grid_field)
         
-        # The energy value converted from Wh (Watt hours as output from CK's
-        # biophysical model equations) to kWh for the valuation model
-        energy_val = feat.GetField(energy_index) / 1000.0
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr for the
+        # valuation model
+        energy_val = feat.GetField(energy_index) * 1000.0
         o2l_val = feat.GetField(o2l_index)
         l2g_val = feat.GetField(l2g_index)
 
@@ -772,7 +777,7 @@ def valuation(args):
 
     # Open the density raster, which is an output of the biophyiscal portion, so
     # that we can properly mask the valuation outputs
-    density_uri = os.path.join(output_dir, 'density_Wm2' + suffix + '.tif')
+    density_uri = os.path.join(output_dir, 'density_W_per_m2' + suffix + '.tif')
     density_ds = gdal.Open(density_uri)
     _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
