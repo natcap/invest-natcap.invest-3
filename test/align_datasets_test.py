@@ -35,7 +35,6 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box[1] += height
         bounding_box[3] -= height
 
-
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 30, resized_raster, "nearest")
 
         resized_278_raster = os.path.join(base_dir, 'resized_278.tif')
@@ -44,7 +43,6 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box = raster_utils.get_bounding_box(raster_1)
         rescaled_278_raster = os.path.join(base_dir, 'rescaled_278.tif')
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, rescaled_278_raster, "nearest")
-
 
         bounding_box[0] += width/4.0
         bounding_box[2] -= width/4.0
@@ -77,7 +75,6 @@ class TestAlignDatasets(unittest.TestCase):
         self.assertRaises(raster_utils.DifferentProjections,raster_utils.assert_datasets_in_same_projection,[raster_1, raster_4])
 
 
-
     def test_align_datasets(self):
         data_dir = 'data/align_datasets_data'
         raster_1 = os.path.join(data_dir, 'H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif')
@@ -93,6 +90,7 @@ class TestAlignDatasets(unittest.TestCase):
         raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0)
 
         #TODO: regression asserts
+
 
     def test_assert_datasets_in_same_projection(self):
         raster_1 = '../../invest-data/Base_Data/Marine/DEMs/claybark_dem'
