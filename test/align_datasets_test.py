@@ -93,3 +93,12 @@ class TestAlignDatasets(unittest.TestCase):
         raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0)
 
         #TODO: regression asserts
+
+    def test_assert_datasets_in_same_projection(self):
+        raster_1 = '../../invest-data/Base_Data/Marine/DEMs/claybark_dem'
+
+        base_dir = 'data/test_out/resample_datasets'
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        raster_utils.resample_dataset(raster_1, 250, os.path.join(base_dir, 'resampled.tif'))
