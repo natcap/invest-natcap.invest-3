@@ -44,9 +44,10 @@ class TestAlignDatasets(unittest.TestCase):
         rescaled_278_raster = os.path.join(base_dir, 'rescaled_278.tif')
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, rescaled_278_raster, "nearest")
 
-        bounding_box[0] += width/4.0
+        pixel_size = raster_utils.pixel_size(gdal.Open(raster_1))
+        bounding_box[0] += 13.5*pixel_size
+        bounding_box[1] -= 1.5*pixel_size
         bounding_box[2] -= width/4.0
-        bounding_box[1] -= height/4.0
         bounding_box[3] += height/4.0
 
         #TODO: regression rasters for check this shit
