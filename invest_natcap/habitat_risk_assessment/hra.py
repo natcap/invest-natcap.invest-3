@@ -101,12 +101,31 @@ def execute(args):
             of habitat and stressor.
     Returns nothing.
     '''
+    hra_args = {}
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+    hra_args['workspace_dir'] = args['workspace_dir']
+
+    #Create intermediate and output folders. Delete old ones, if they exist.
+    for folder in (inter_dir, output_dir):
+        if (os.path.exists(folder)):
+            shutil.rmtree(folder) 
+
+        os.makedirs(folder)
     
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them.
-    unpack_over_dict(args['csv_uri'], args)
-    LOGGER.debug(args)
-    hra_args = {}
+    unpack_over_dict(args['csv_uri'], hra_args)
+
+    hab_list = []
+    for ele in ('habitat_dir', 'species_dir'):
+        if ele in args:
+            hab_list.append(ele)
+        
+    add_hab_rasters(inter_dir, hra_args['habitats'], hab_list, args['grid_size'])
+
+def add_hab_rasters(dir, 
 
 def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
