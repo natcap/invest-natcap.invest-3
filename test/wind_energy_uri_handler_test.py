@@ -29,7 +29,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -52,7 +51,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         raster_file_intermediate_names = [
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif']
 
-        raster_file_output_names = ['harvested_energy.tif', 'density.tif']
+        raster_file_output_names = ['harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif']
 
         for file_name in shape_file_names:
             reg_file = os.path.join(
@@ -100,7 +99,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
         #args['suffix'] = ''
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -117,7 +115,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif',
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif']
 
-        raster_file_output_names = ['harvested_energy.tif', 'density.tif']
+        raster_file_output_names = ['harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -173,7 +171,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -199,7 +196,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif',
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif']
 
-        raster_file_output_names = ['harvested_energy.tif', 'density.tif']
+        raster_file_output_names = ['harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -257,7 +254,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, 'global_wind_energy_parameters.csv') 
         args['min_distance'] = 1000
         args['max_distance'] = 20000
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -284,7 +280,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif',
                 'aoi_raster.tif']
 
-        raster_file_output_names = ['harvested_energy.tif', 'density.tif']
+        raster_file_output_names = ['harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -340,7 +336,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -371,8 +366,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif']
 
         raster_file_output_names = [
-                'harvested_energy.tif', 'density.tif', 'levelized.tif',
-                'npv.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emissions_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -427,7 +422,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -462,8 +456,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'bathymetry_clipped.tif', 'bathymetry_projected.tif']
 
         raster_file_output_names = [
-                'harvested_energy.tif', 'density.tif', 'levelized.tif',
-                'npv.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emissions_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -518,7 +512,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -553,8 +546,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_raster.tif', 'distance_mask.tif']
 
         raster_file_output_names = [
-                'harvested_energy.tif', 'density.tif', 'levelized.tif',
-                'npv.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emissions_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -609,7 +602,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -647,8 +639,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_raster.tif', 'distance_mask.tif']
 
         raster_file_output_names = [
-                'harvested_energy.tif', 'density.tif', 'levelized.tif',
-                'npv.tif']
+                'harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif', 'levelized_cost_price_per_kWh.tif',
+                'npv_US_millions.tif', 'carbon_emissions_tons.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(
@@ -704,7 +696,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        args['num_days'] = 365
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = True
@@ -743,8 +734,9 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_raster_test.tif', 'distance_mask_test.tif']
 
         raster_file_output_names = [
-                'harvested_energy_test.tif', 'density_test.tif', 'levelized_test.tif',
-                'npv_test.tif']
+                'harvested_energy_MWhr_per_yr_test.tif', 
+                'density_W_per_m2_test.tif', 'levelized_cost_price_per_kWh_test.tif',
+                'npv_US_millions_test.tif', 'carbon_emissions_tons_test.tif']
 
         for file_name in shape_file_intermediate_names:
             reg_file = os.path.join(

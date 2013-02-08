@@ -44,8 +44,6 @@ def biophysical(args):
         args[biophysical_turbine_dict] - a python dictionary containing the
             following fields: cut_in_wspd, cut_out_wspd, rated_wspd,
             turbine_rated_pwr, air_density, exponent_power_curve (required)
-        args[num_days] - an integer value for the number of days for harvested
-            wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -213,8 +211,8 @@ def biophysical(args):
     wind_points = args['wind_data_points']
     wind_points_layer = wind_points.GetLayer(0)
    
-    density_field_name = 'Dens_Wm2'
-    harvest_field_name = 'HarvEn_Wh'
+    density_field_name = 'Dens_W/m2'
+    harvest_field_name = 'Harv_MWhr'
 
     LOGGER.info('Creating Harvest and Density Fields')
     # Create new fields for the density and harvested values
@@ -225,7 +223,10 @@ def biophysical(args):
     # Get the inputs needed to compute harvested wind energy
     bio_turbine_dict = args['biophysical_turbine_dict']
     exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
-    num_days = args['num_days']
+    
+    # The harvested energy is on a per year basis
+    num_days = 365 
+    
     # The rated power is expressed in units of MW but the harvested energy
     # equation calls for it in terms of Wh. Thus we multiply by a million to get
     # to Wh.
@@ -281,7 +282,11 @@ def biophysical(args):
         
         # Compute the final harvested wind energy value
         harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
-        
+       
+        # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
+        # 1,000,000
+        harvested_wind_energy = harvested_wind_energy / 1000000.00
+
         # Save the results to their respective fields 
         for field_name, result_value in [(density_field_name, density_results),
                 (harvest_field_name, harvested_wind_energy)]:
@@ -334,9 +339,9 @@ def biophysical(args):
         else:
             return rasters[0] 
 
-    density_masked_uri = os.path.join(output_dir, 'density_Wm2' + tif_suffix)
+    density_masked_uri = os.path.join(output_dir, 'density_W_per_m2' + tif_suffix)
     harvested_masked_uri = os.path.join(
-            output_dir, 'harvested_energy_Wh' + tif_suffix)
+            output_dir, 'harvested_energy_MWhr_per_yr' + tif_suffix)
 
     density_mask_list = [density_temp, depth_mask]
     harvest_mask_list = [harvested_temp, depth_mask]
@@ -686,13 +691,14 @@ def valuation(args):
         npv_index = feat.GetFieldIndex(npv_field)
         levelized_index = feat.GetFieldIndex(levelized_cost_field)
         co2_index = feat.GetFieldIndex(carbon_field)
-        energy_index = feat.GetFieldIndex('HarvEn_Wh')
+        energy_index = feat.GetFieldIndex('Harv_MWhr')
         o2l_index = feat.GetFieldIndex(ocean_to_land_field)
         l2g_index = feat.GetFieldIndex(land_to_grid_field)
         
-        # The energy value converted from Wh (Watt hours as output from CK's
-        # biophysical model equations) to kWh for the valuation model
-        energy_val = feat.GetField(energy_index) / 1000.0
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr for the
+        # valuation model
+        energy_val = feat.GetField(energy_index) * 1000.0
         o2l_val = feat.GetField(o2l_index)
         l2g_val = feat.GetField(l2g_index)
 
@@ -772,12 +778,12 @@ def valuation(args):
 
     # Open the density raster, which is an output of the biophyiscal portion, so
     # that we can properly mask the valuation outputs
-    density_uri = os.path.join(output_dir, 'density_Wm2' + suffix + '.tif')
+    density_uri = os.path.join(output_dir, 'density_W_per_m2' + suffix + '.tif')
     density_ds = gdal.Open(density_uri)
     _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
 
-    npv_uri = os.path.join(output_dir, 'npv_$mil' + suffix + '.tif')
-    levelized_uri = os.path.join(output_dir, 'levelized_cost_$_per_kWh' + suffix + '.tif')
+    npv_uri = os.path.join(output_dir, 'npv_US_millions' + suffix + '.tif')
+    levelized_uri = os.path.join(output_dir, 'levelized_cost_price_per_kWh' + suffix + '.tif')
     carbon_uri = os.path.join(output_dir, 'carbon_emissions_tons' + suffix + '.tif')
    
     uri_list = [npv_uri, levelized_uri, carbon_uri]

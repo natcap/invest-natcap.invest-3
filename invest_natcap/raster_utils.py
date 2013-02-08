@@ -1,7 +1,6 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
-import itertools
 import random
 import string
 import os
@@ -18,9 +17,7 @@ import numpy as np
 import scipy.interpolate
 import scipy.sparse
 import scipy.signal
-from scipy.sparse.linalg import spsolve
 import scipy.ndimage
-import pyamg
 
 import raster_cython_utils
 
@@ -1759,7 +1756,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         otherwise, returns True"""
 
     dataset_list = map(gdal.Open, dataset_uri_list)
-    dataset_projections = collections.defaultdict(list)
+    dataset_projections = []
 
     unprojected_datasets = set()
 
@@ -1769,19 +1766,21 @@ def assert_datasets_in_same_projection(dataset_uri_list):
         dataset_sr.ImportFromWkt(projection_as_str)
         if not dataset_sr.IsProjected():
             unprojected_datasets.add(dataset.GetFileList()[0])
-        dataset_projections[projection_as_str].append(dataset.GetFileList()[0])
+        dataset_projections.append((dataset_sr, dataset.GetFileList()[0]))
 
     if len(unprojected_datasets) > 0:
         raise DatasetUnprojected(
             "These datasets are unprojected %s" % (unprojected_datasets))
 
-    if len(dataset_projections) > 1:
-        raise DifferentProjections(
-            "Some of the datasets are not in the same projections. "
-            "Here are the groups of datasets, there should be only "
-            "one group like ['file1.tif','file2.tif'] lists like "
-            "[['file1.tif'],['file2.tif'] indicate file1 and file2 "
-            "are in different projections. %s" % (dataset_projections.values()))
+    for index in range(len(dataset_projections)-1):
+        if not dataset_projections[index][0].IsSame(dataset_projections[index+1][0]):
+            raise DifferentProjections(
+                "These two datasets are not in the same projection."
+                " The different projections are:\n\n'filename: %s'\n%s\n\nand:\n\n'filename:%s'\n%s\n\n"
+                "Note there may be other files not projected, this function reports the first"
+                " two that have been seen." %
+                (dataset_projections[index][1], dataset_projections[index][0].ExportToPrettyWkt(), 
+                 dataset_projections[index+1][1], dataset_projections[index+1][0].ExportToPrettyWkt()))
 
     return True
 
@@ -1860,7 +1859,7 @@ def resize_and_resample_dataset(
 
 def align_dataset_list(
     dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
-    dataset_to_align_index):
+    dataset_to_align_index, resample_method):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -1874,7 +1873,10 @@ def align_dataset_list(
         dataset_to_align_index - an int that corresponds to the position in
             one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
-            datasets
+            datasets.  If negative, the bounding box aligns the intersection/
+            union without adjustment.
+        resample_method - the resampling technique, one of
+            "nearest|bilinear|cubic|cubic_spline|lanczos"
 
         returns nothing"""
 
@@ -1883,6 +1885,10 @@ def align_dataset_list(
     assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection"]:
         raise Exception("Unknown mode %s" % (str(mode)))
+    if dataset_to_align_index >= len(dataset_uri_list):
+        raise Exception(
+            "Alignment index is out of bounds of the datasets index: %s"
+            "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
 
     def merge_bounding_boxes(bb1, bb2):
         """Helper function to merge two bounding boxes through union or 
@@ -1891,20 +1897,39 @@ def align_dataset_list(
         gt = lambda x, y: x if x >= y else y
 
         if mode == "union":
-            comparison = [lt, gt, gt, lt]
+            comparison_ops = [lt, gt, gt, lt]
         if mode == "intersection":
-            comparison = [gt, lt, lt, gt]
+            comparison_ops = [gt, lt, lt, gt]
 
-        bb_out = [comparison[i](x,y) for i, x, y in zip(range(4), bb1, bb2)]
+        bb_out = [op(x,y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
 
     #get the intersecting or unioned bounding box
-    bounding_box = reduce(
-        merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
+    bounding_box = reduce(merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
 
-    #TODO: check if bounding box overlaps itself/is zero
     if bounding_box[0] >= bounding_box[2] or \
             bounding_box[1] <= bounding_box[3] and mode == "intersection":
         raise Exception("The datasets' intersection is empty (i.e., not all the datasets touch each other).")
+
+    if dataset_to_align_index >= 0:
+        #bounding box needs alignment
+        align_bounding_box = get_bounding_box(dataset_uri_list[dataset_to_align_index])
+        align_pixel_size = pixel_size(gdal.Open(dataset_uri_list[dataset_to_align_index]))
+        LOGGER.debug("align_bounding_box %s" % str(align_bounding_box))
+        LOGGER.debug("bounding_box %s" % str(bounding_box))
+        LOGGER.debug("align_pixel_size %s" % (str(align_pixel_size)))
+        
+        for index in [0, 1]:
+            bounding_box[index] = int(
+                (bounding_box[index] - align_bounding_box[index]) / 
+                float(align_pixel_size)) * align_pixel_size + align_bounding_box[index]
+
+
+    for original_dataset_uri, out_dataset_uri in zip(dataset_uri_list,
+                                                     dataset_out_uri_list):
+        LOGGER.debug("resizing and resampling %s to %s" % (original_dataset_uri, out_dataset_uri))
+        resize_and_resample_dataset(
+            original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
+            resample_method)
 
     LOGGER.debug(bounding_box)
