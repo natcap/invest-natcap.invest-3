@@ -68,8 +68,6 @@ class TestAlignDatasets(unittest.TestCase):
         raster_utils.align_dataset_list(
             dataset_uri_list, 17, map(lambda x: x+"_intersection.tif", dataset_uri_list), "intersection", 0, "cubic")
 
-
-
     def test_assert_datasets_in_same_projection(self):
         raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
         raster_2 = 'data/align_datasets_data/H[eelgrass]_S[shellfishaquaculturecomm]_Risk.tif'
@@ -93,8 +91,8 @@ class TestAlignDatasets(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        raster_1_out = raster_1 + '.out.tif'
-        raster_2_out = raster_2 + '.out.tif'
+        raster_1_out = os.path.join(base_dir, os.path.basename(raster_1) + '.out.tif')
+        raster_2_out = os.path.join(base_dir, os.path.basename(raster_2) + '.out.tif')
         pixel_size = 1000.0
         #raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
         raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0, "lanczos")
