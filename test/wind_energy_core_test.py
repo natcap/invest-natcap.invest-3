@@ -138,10 +138,17 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         if os.path.isfile(out_uri):
             os.remove(out_uri)
 
+        # Open the wind energy points datasource to use its spatial reference
+        # and to get a starting location for the wind farm
         datasource = ogr.Open(datasource_uri)
         wind_energy_layer = datasource.GetLayer()
+        # Get the feature count to know how many points we have
         feature_count = int(wind_energy_layer.GetFeatureCount())
-        feature = wind_energy_layer.GetFeature(long(math.ceil(feature_count / 2)))
+        # Select a feature to get the starting location from. This is done by
+        # grabbing the feature whos index is half the feature count. For some
+        # reason OGR requires the type for the index to be a LONG
+        feature = wind_energy_layer.GetFeature(
+                    long(math.ceil(feature_count / 2)))
         pt_geometry = feature.GetGeometryRef()
         center_x = pt_geometry.GetX()
         center_y = pt_geometry.GetY()
