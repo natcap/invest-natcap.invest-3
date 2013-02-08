@@ -1965,7 +1965,6 @@ def align_dataset_list(
             bounding_box[index] = \
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
-
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
         resize_and_resample_dataset(

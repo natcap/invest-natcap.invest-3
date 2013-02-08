@@ -89,9 +89,17 @@ class TestAlignDatasets(unittest.TestCase):
         pixel_size=60.0
         raster_utils.align_dataset_list([precip, lulc_samp_cur], [precip_out, lulc_samp_cur_out], ["nearest", "nearest"], pixel_size, "intersection", 1)
 
-        aoi_uri = os.path.join('data', 'hydropower_data', 'test_input', 'watersheds.shp')
+        lulc_samp_cur_regression = 'data/align_regression/lulc_samp_cur.align.tif'
+        precip_regression = 'data/align_regression/precip.align.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, precip_out, precip_regression)
+        invest_test_core.assertTwoDatasetEqualURI(self, lulc_samp_cur_out, lulc_samp_cur_regression)
 
+        aoi_uri = os.path.join('data', 'hydropower_data', 'test_input', 'watersheds.shp')
         precip_aoi_out = os.path.join(out_dir, os.path.basename(precip)+'.aoi_align.tif')
         lulc_samp_cur_aoi_out = os.path.join(out_dir, os.path.basename(lulc_samp_cur)+'.aoi_align.tif')
-
         raster_utils.align_dataset_list([precip, lulc_samp_cur], [precip_aoi_out, lulc_samp_cur_aoi_out], ["nearest", "nearest"], pixel_size, "intersection", 1, aoi_uri=aoi_uri)
+
+        lulc_samp_cur_aoi_regression = 'data/align_regression/lulc_samp_cur.aoi_align.tif'
+        precip_aoi_regression = 'data/align_regression/precip.aoi_align.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, precip_aoi_out, precip_aoi_regression)
+        invest_test_core.assertTwoDatasetEqualURI(self, lulc_samp_cur_aoi_out, lulc_samp_cur_aoi_regression)
