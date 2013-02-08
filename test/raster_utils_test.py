@@ -125,15 +125,15 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        global_clip_regression_dataset = 'data/clip_data/global_clipped.tif'
-        dem_uri = '../../invest-data/Base_Data/Marine/DEMs/global_dem'
-        aoi_uri = 'data/wind_energy_data/wind_energy_aoi.shp'
+        clip_regression_dataset = 'data/clip_data/lulc_clipped.tif'
+        dem_uri = 'data/base_data/terrestrial/lulc_samp_fut'
+        aoi_uri = 'data/hydropower_data/test_input/watersheds.shp'
         dem = gdal.Open(dem_uri)
         aoi = ogr.Open(aoi_uri)
         
-        global_clip_dataset = os.path.join(base_dir, 'global_clipped.tif')
-        raster_utils.clip_dataset(dem, aoi, global_clip_dataset)
-        invest_test_core.assertTwoDatasetEqualURI(self, global_clip_dataset, global_clip_regression_dataset)
+        clip_dataset = os.path.join(base_dir, 'lulc_clipped.tif')
+        raster_utils.clip_dataset(dem, aoi, clip_dataset)
+        invest_test_core.assertTwoDatasetEqualURI(self, clip_dataset, clip_regression_dataset)
 
     def test_calculate_slope(self):
         dem_points = {
