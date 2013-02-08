@@ -59,15 +59,6 @@ class TestAlignDatasets(unittest.TestCase):
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "lanczos")
         raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 9, reduced_278_raster, "lanczos")
 
-        
-        #This tests if the datasets can be aligned well.
-        dataset_uri_list = [raster_1, reduced_278_raster]
-        
-        raster_utils.align_dataset_list(
-            dataset_uri_list, 17, map(lambda x: x+"_union.tif", dataset_uri_list), "union", 0, "cubic")
-        raster_utils.align_dataset_list(
-            dataset_uri_list, 17, map(lambda x: x+"_intersection.tif", dataset_uri_list), "intersection", 0, "cubic")
-
     def test_assert_datasets_in_same_projection(self):
         raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
         raster_2 = 'data/align_datasets_data/H[eelgrass]_S[shellfishaquaculturecomm]_Risk.tif'
@@ -83,23 +74,7 @@ class TestAlignDatasets(unittest.TestCase):
         #raster 1 and 4 are projected but in different projections..
         self.assertRaises(raster_utils.DifferentProjections,raster_utils.assert_datasets_in_same_projection,[raster_1, raster_4])
 
-    def test_align_datasets(self):
-        data_dir = 'data/align_datasets_data'
-        raster_1 = os.path.join(data_dir, 'H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif')
-        raster_2 = os.path.join(data_dir, 'H[eelgrass]_S[shellfishaquaculturecomm]_Risk.tif')
-        base_dir = 'data/test_out/align_datasets'
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-
-        raster_1_out = os.path.join(base_dir, os.path.basename(raster_1) + '.out.tif')
-        raster_2_out = os.path.join(base_dir, os.path.basename(raster_2) + '.out.tif')
-        pixel_size = 1000.0
-        #raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "intersection", 0)
-        raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0, "lanczos")
-
-        #TODO: regression asserts
-
-    def test_align_terrestrial(self):
+    def test_align_dataset_list(self):
         base_data = 'data/base_data'
         precip = os.path.join(base_data, 'Freshwater', 'precip')
         lulc_samp_cur = os.path.join(base_data, 'terrestrial', 'lulc_samp_cur')
@@ -112,4 +87,4 @@ class TestAlignDatasets(unittest.TestCase):
         lulc_samp_cur_out = os.path.join(out_dir, os.path.basename(lulc_samp_cur)+'.align.tif')
 
         pixel_size=60.0
-        raster_utils.align_dataset_list([precip, lulc_samp_cur], pixel_size, [precip_out, lulc_samp_cur_out], "intersection", 0, "nearest")
+        raster_utils.align_dataset_list([precip, lulc_samp_cur], [precip_out, lulc_samp_cur_out], ["nearest", "nearest"], pixel_size, "intersection", 0)
