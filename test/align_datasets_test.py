@@ -50,14 +50,15 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box[2] -= width/4.0
         bounding_box[3] += height/4.0
 
-        #TODO: regression rasters for check this stuff
-        reduced_278_raster = os.path.join(base_dir, 'reduced_278.tif')
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "nearest")
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "bilinear")
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "cubic")
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "cubic_spline")
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_278_raster, "lanczos")
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 9, reduced_278_raster, "lanczos")
+        reduced_raster = os.path.join(base_dir, 'reduced.tif')
+        regression_dir = 'data/resize_resample_regression'
+        #call through each interpolation scheme to make sure it works
+        for interpolation_type in ["nearest", "bilinear", "cubic", "cubic_spline", "lanczos"]:
+            reduced_raster = os.path.join(base_dir, 'reduced'+interpolation_type+'.tif')
+            raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, reduced_raster, interpolation_type)
+            invest_test_core.assertTwoDatasetEqualURI(self, reduced_raster, os.path.join(regression_dir, os.path.basename(reduced_raster)))
+
+
 
     def test_assert_datasets_in_same_projection(self):
         raster_1 = 'data/align_datasets_data/H[eelgrass]_S[finfishaquaculturecomm]_Risk.tif'
