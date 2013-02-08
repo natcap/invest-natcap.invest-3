@@ -98,3 +98,18 @@ class TestAlignDatasets(unittest.TestCase):
         raster_utils.align_dataset_list([raster_1, raster_2], 100.0, [raster_1_out, raster_2_out], "union", 0, "lanczos")
 
         #TODO: regression asserts
+
+    def test_align_terrestrial(self):
+        base_data = 'data/base_data'
+        precip = os.path.join(base_data, 'Freshwater', 'precip')
+        lulc_samp_cur = os.path.join(base_data, 'terrestrial', 'lulc_samp_cur')
+
+        out_dir = 'data/test_out/align_terrestrial/'
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+
+        precip_out = os.path.join(out_dir, os.path.basename(precip)+'.align.tif')
+        lulc_samp_cur_out = os.path.join(out_dir, os.path.basename(lulc_samp_cur)+'.align.tif')
+
+        pixel_size=60.0
+        raster_utils.align_dataset_list([precip, lulc_samp_cur], pixel_size, [precip_out, lulc_samp_cur_out], "intersection", 0, "nearest")
