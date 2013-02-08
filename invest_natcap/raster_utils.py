@@ -8,7 +8,6 @@ import time
 import tempfile
 import shutil
 import atexit
-import collections
 import functools
 
 from osgeo import gdal
@@ -1743,8 +1742,12 @@ def temporary_filename():
 
     return path
 
-class DatasetUnprojected(Exception): pass
-class DifferentProjections(Exception): pass
+class DatasetUnprojected(Exception): 
+    """An exception in case a dataset is unprojected"""
+    pass
+class DifferentProjections(Exception): 
+    """An exception in case a set of datasets are not in the same projection"""
+    pass
 
 def assert_datasets_in_same_projection(dataset_uri_list):
     """Tests if datasets represented by their uris are projected and in
@@ -1824,13 +1827,13 @@ def get_datasource_bounding_box(datasource_uri):
 
 
 def resize_and_resample_dataset(
-    original_dataset_uri, bounding_box, pixel_size, output_uri, 
+    original_dataset_uri, bounding_box, out_pixel_size, output_uri, 
     resample_method):
     """A function to resample a datsaet to larger or smaller pixel sizes
 
         original_dataset_uri - a GDAL dataset
         bounding_box - [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
-        pixel_size - the pixel size in projected linear units
+        out_pixel_size - the pixel size in projected linear units
         output_uri - the location of the new resampled GDAL dataset
         resample_method - the resampling technique, one of
             "nearest|bilinear|cubic|cubic_spline|lanczos"
@@ -1851,9 +1854,9 @@ def resize_and_resample_dataset(
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
 
-    output_geo_transform = [bounding_box[0], pixel_size, 0.0, bounding_box[1], 0.0, -pixel_size]
-    new_x_size = abs(int((bounding_box[2] - bounding_box[0]) / pixel_size + 0.5))
-    new_y_size = abs(int((bounding_box[3] - bounding_box[1]) / pixel_size + 0.5))
+    output_geo_transform = [bounding_box[0], out_pixel_size, 0.0, bounding_box[1], 0.0, -out_pixel_size]
+    new_x_size = abs(int((bounding_box[2] - bounding_box[0]) / out_pixel_size + 0.5))
+    new_y_size = abs(int((bounding_box[3] - bounding_box[1]) / out_pixel_size + 0.5))
 
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
@@ -1915,37 +1918,45 @@ def align_dataset_list(
     def merge_bounding_boxes(bb1, bb2, mode):
         """Helper function to merge two bounding boxes through union or 
             intersection"""
-        lt = lambda x, y: x if x <= y else y
-        gt = lambda x, y: x if x >= y else y
+        lte = lambda x, y: x if x <= y else y
+        gte = lambda x, y: x if x >= y else y
 
         if mode == "union":
-            comparison_ops = [lt, gt, gt, lt]
+            comparison_ops = [lte, gte, gte, lte]
         if mode == "intersection":
-            comparison_ops = [gt, lt, lt, gt]
+            comparison_ops = [gte, lte, lte, gte]
 
-        bb_out = [op(x,y) for op, x, y in zip(comparison_ops, bb1, bb2)]
+        bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
 
     #get the intersecting or unioned bounding box
-    bounding_box = reduce(functools.partial(merge_bounding_boxes,mode=mode), map(get_bounding_box, dataset_uri_list))
+    bounding_box = reduce(
+        functools.partial(merge_bounding_boxes,mode=mode), 
+        map(get_bounding_box, dataset_uri_list))
 
     if aoi_uri != None:
-        bounding_box = merge_bounding_boxes(bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
+        bounding_box = merge_bounding_boxes(
+            bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
 
 
     if bounding_box[0] >= bounding_box[2] or \
             bounding_box[1] <= bounding_box[3] and mode == "intersection":
-        raise Exception("The datasets' intersection is empty (i.e., not all the datasets touch each other).")
+        raise Exception("The datasets' intersection is empty "
+                        "(i.e., not all the datasets touch each other).")
 
     if dataset_to_align_index >= 0:
         #bounding box needs alignment
-        align_bounding_box = get_bounding_box(dataset_uri_list[dataset_to_align_index])
-        align_pixel_size = pixel_size(gdal.Open(dataset_uri_list[dataset_to_align_index]))
+        align_bounding_box = get_bounding_box(
+            dataset_uri_list[dataset_to_align_index])
+        align_pixel_size = pixel_size(
+            gdal.Open(dataset_uri_list[dataset_to_align_index]))
         
         for index in [0, 1]:
-            bounding_box[index] = int(
+            n_pixels = int(
                 (bounding_box[index] - align_bounding_box[index]) / 
-                float(align_pixel_size)) * align_pixel_size + align_bounding_box[index]
+                float(align_pixel_size))
+            bounding_box[index] = \
+                n_pixels * align_pixel_size + align_bounding_box[index]
 
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
