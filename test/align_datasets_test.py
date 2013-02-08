@@ -35,15 +35,12 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box[1] += height
         bounding_box[3] -= height
 
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 30, resized_raster, "nearest")
+        regression_dir = 'data/resize_resample_regression'
 
-        resized_278_raster = os.path.join(base_dir, 'resized_278.tif')
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, resized_278_raster, "nearest")
+        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 17, resized_raster, "nearest")
+        invest_test_core.assertTwoDatasetEqualURI(self, resized_raster, os.path.join(regression_dir, os.path.basename(resized_raster)))
 
         bounding_box = raster_utils.get_bounding_box(raster_1)
-        rescaled_278_raster = os.path.join(base_dir, 'rescaled_278.tif')
-        raster_utils.resize_and_resample_dataset(raster_1, bounding_box, 278, rescaled_278_raster, "nearest")
-
         pixel_size = raster_utils.pixel_size(gdal.Open(raster_1))
         bounding_box[0] += 13.5*pixel_size
         bounding_box[1] -= 1.5*pixel_size
@@ -51,7 +48,6 @@ class TestAlignDatasets(unittest.TestCase):
         bounding_box[3] += height/4.0
 
         reduced_raster = os.path.join(base_dir, 'reduced.tif')
-        regression_dir = 'data/resize_resample_regression'
         #call through each interpolation scheme to make sure it works
         for interpolation_type in ["nearest", "bilinear", "cubic", "cubic_spline", "lanczos"]:
             reduced_raster = os.path.join(base_dir, 'reduced'+interpolation_type+'.tif')
