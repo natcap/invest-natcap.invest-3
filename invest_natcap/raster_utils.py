@@ -9,6 +9,7 @@ import tempfile
 import shutil
 import atexit
 import collections
+import functools
 
 from osgeo import gdal
 from osgeo import osr
@@ -1804,6 +1805,23 @@ def get_bounding_box(dataset_uri):
     
     return bounding_box
 
+def get_datasource_bounding_box(datasource_uri):
+    """Returns a bounding box where coordinates are in projected units.
+
+        dataset_uri - a uri to a GDAL dataset
+
+        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in projected coordinates"""
+
+    datasource = ogr.Open(datasource_uri)
+    layer = datasource.GetLayer(0)
+    extent = layer.GetExtent()
+    #Reindex datasource extents into the upper left/lower right coordinates
+    bounding_box = [extent[0],
+                    extent[3],
+                    extent[1],
+                    extent[2]]
+    return bounding_box
+
 
 def resize_and_resample_dataset(
     original_dataset_uri, bounding_box, pixel_size, output_uri, 
@@ -1894,7 +1912,7 @@ def align_dataset_list(
             "Alignment index is out of bounds of the datasets index: %s"
             "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
 
-    def merge_bounding_boxes(bb1, bb2):
+    def merge_bounding_boxes(bb1, bb2, mode):
         """Helper function to merge two bounding boxes through union or 
             intersection"""
         lt = lambda x, y: x if x <= y else y
@@ -1909,7 +1927,11 @@ def align_dataset_list(
         return bb_out
 
     #get the intersecting or unioned bounding box
-    bounding_box = reduce(merge_bounding_boxes, map(get_bounding_box, dataset_uri_list))
+    bounding_box = reduce(functools.partial(merge_bounding_boxes,mode=mode), map(get_bounding_box, dataset_uri_list))
+
+    if aoi_uri != None:
+        bounding_box = merge_bounding_boxes(bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
+
 
     if bounding_box[0] >= bounding_box[2] or \
             bounding_box[1] <= bounding_box[3] and mode == "intersection":
