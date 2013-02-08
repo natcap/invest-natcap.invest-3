@@ -840,20 +840,30 @@ def valuation(args):
     # Get the geotransform for the output dataset as well as the x and y size of
     # the raster so that we can determine the center coordinates of the dataset.
     # This is where the farm polygon will be placed in space
-    npv_ds = gdal.Open(npv_uri)
-    npv_band = npv_ds.GetRasterBand(1)
-    geo_transform = npv_ds.GetGeoTransform()
-    xsize = npv_band.XSize
-    ysize = npv_band.YSize
-    # Find the center x and y points by indexing into the grid
-    center_x = (xsize / 2) * geo_transform[1] + geo_transform[0]
-    center_y = (ysize / 2) * geo_transform[5] + geo_transform[3]
+#   npv_ds = gdal.Open(npv_uri)
+#   npv_band = npv_ds.GetRasterBand(1)
+#   geo_transform = npv_ds.GetGeoTransform()
+#   xsize = npv_band.XSize
+#   ysize = npv_band.YSize
+#   # Find the center x and y points by indexing into the grid
+#   center_x = (xsize / 2) * geo_transform[1] + geo_transform[0]
+#   center_y = (ysize / 2) * geo_transform[5] + geo_transform[3]
+#   start_point = (center_x, center_y)
+#   # Get the projection of the dataset
+#   raster_wkt = npv_ds.GetProjection()
+#   # Make a spatial reference from the projection to use for the farm polygon
+#   spat_ref = osr.SpatialReference()
+#   spat_ref.ImportFromWkt(raster_wkt)
+
+    wind_energy_layer.ResetReading()
+    feature_count = int(wind_energy_layer.GetFeatureCount())
+    feature = wind_energy_layer.GetFeature(long(math.ceil(feature_count / 2)))
+    pt_geometry = feature.GetGeometryRef()
+    center_x = pt_geometry.GetX()
+    center_y = pt_geometry.GetY()
     start_point = (center_x, center_y)
-    # Get the projection of the dataset
-    raster_wkt = npv_ds.GetProjection()
-    # Make a spatial reference from the projection to use for the farm polygon
-    spat_ref = osr.SpatialReference()
-    spat_ref.ImportFromWkt(raster_wkt)
+    spat_ref = wind_energy_layer.GetSpatialRef()
+
 
     # Calculate the number of circuits there will be based on the number of
     # turbines and the number of turbines per circuit. If a fractional value is
