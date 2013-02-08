@@ -837,24 +837,6 @@ def valuation(args):
     # apart the turbines should be spaced
     rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
 
-    # Get the geotransform for the output dataset as well as the x and y size of
-    # the raster so that we can determine the center coordinates of the dataset.
-    # This is where the farm polygon will be placed in space
-    npv_ds = gdal.Open(npv_uri)
-    npv_band = npv_ds.GetRasterBand(1)
-    geo_transform = npv_ds.GetGeoTransform()
-    xsize = npv_band.XSize
-    ysize = npv_band.YSize
-    # Find the center x and y points by indexing into the grid
-    center_x = (xsize / 2) * geo_transform[1] + geo_transform[0]
-    center_y = (ysize / 2) * geo_transform[5] + geo_transform[3]
-    start_point = (center_x, center_y)
-    # Get the projection of the dataset
-    raster_wkt = npv_ds.GetProjection()
-    # Make a spatial reference from the projection to use for the farm polygon
-    spat_ref = osr.SpatialReference()
-    spat_ref.ImportFromWkt(raster_wkt)
-
     # Calculate the number of circuits there will be based on the number of
     # turbines and the number of turbines per circuit. If a fractional value is
     # returned we want to round up and error on the side of having the farm be
@@ -868,34 +850,53 @@ def valuation(args):
     # Calculate the length 
     length = (turbines_per_circuit - 1) * spacing_dist
     
+    # Use the wind energy points datasource to determine the wind farms spatial
+    # reference and location. This is in hopes that the farm will thus be
+    # located over ocean, although this is not guaranteed
+    wind_energy_layer.ResetReading()
+    # Get the feature count or how many points exist
+    feature_count = int(wind_energy_layer.GetFeatureCount())
+    # Select the feature from which to get the location for the wind farm by
+    # indexing into the features by the half the feature count. OGR requires
+    # this index to be of type LONG
+    feature = wind_energy_layer.GetFeature(
+                long(math.ceil(feature_count / 2)))
+    pt_geometry = feature.GetGeometryRef()
+    # Get the X and Y location for the selected wind farm point. These
+    # coordinates will be the starting point of which to create the farm lines
+    center_x = pt_geometry.GetX()
+    center_y = pt_geometry.GetY()
+    start_point = (center_x, center_y)
+    spat_ref = wind_energy_layer.GetSpatialRef()
+    
     farm_poly_uri = os.path.join(output_dir,
             'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
     
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
 
-    _ = create_rectangular_polygon(
+    _ = create_wind_farm_box(
             spat_ref, start_point, width, length, farm_poly_uri)
     
     LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Valuation Core')
 
-def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri): 
-    """Create an OGR shapefile where the geometry is a rectangular polygon
+def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
+    """Create an OGR shapefile where the geometry is a set of lines 
 
         spat_ref - a SpatialReference to use in creating the output shapefile
             (required)
-        start_point - a tuple of floats indicating the bottom left corner of
-            where the rectangular polygon will be placed in space (required)
-        x_len - an integer value for the length of the rectangular polygon in
+        start_point - a tuple of floats indicating the first vertice of the 
+            line (required)
+        x_len - an integer value for the length of the line segment in
             the X direction (required)
-        y_len - an integer value for the length of the rectangular polygon in
+        y_len - an integer value for the length of the line segment in
             the Y direction (required)
         out_uri - a string representing the file path to disk for the new
             shapefile (required)
     
         return - an OGR shapefile"""
-    LOGGER.info('Entering create_rectangular_polygon')
+    LOGGER.info('Entering create_wind_farm_box')
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     datasource = driver.CreateDataSource(out_uri)
@@ -904,33 +905,27 @@ def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri):
     uri_basename = os.path.basename(out_uri)
     layer_name = os.path.splitext(uri_basename)[0]
     
-    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
+    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbLineString)
 
     # Add a single ID field
     field = ogr.FieldDefn('id', ogr.OFTReal)
     layer.CreateField(field)
 
-    # Create the 3 other points that will make up the rectangular polygon 
+    # Create the 3 other points that will make up the vertices for the lines 
     top_left = (start_point[0], start_point[1] + y_len)
     top_right = (start_point[0] + x_len, start_point[1] + y_len)
     bottom_right = (start_point[0] + x_len, start_point[1])
-    
-    # Create a ring geometry from the points which will be the geometry that
-    # gets added to the polygon geometry
-    ring = ogr.Geometry(ogr.wkbLinearRing)
-    ring.AddPoint(start_point[0], start_point[1])
-    ring.AddPoint(top_left[0], top_left[1])
-    ring.AddPoint(top_right[0], top_right[1])
-    ring.AddPoint(bottom_right[0], bottom_right[1])
-    ring.CloseRings()
-
-    poly = ogr.Geometry(ogr.wkbPolygon)
-    poly.AddGeometry(ring)
-    LOGGER.debug('Wind Farm Area: %s', poly.Area())
 
     # Create a new feature, setting the field and geometry
+    line = ogr.Geometry(ogr.wkbLineString)
+    line.AddPoint(start_point[0], start_point[1])
+    line.AddPoint(top_left[0], top_left[1])
+    line.AddPoint(top_right[0], top_right[1])
+    line.AddPoint(bottom_right[0], bottom_right[1])
+    line.AddPoint(start_point[0], start_point[1])
+    
     feature = ogr.Feature(layer.GetLayerDefn())
-    feature.SetGeometry(poly)
+    feature.SetGeometry(line)
     feature.SetField(0, 1)
     layer.CreateFeature(feature)
 
@@ -938,7 +933,7 @@ def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri):
     layer = None
 
     datasource.SyncToDisk()
-    LOGGER.info('Leaving create_rectangular_polygon')
+    LOGGER.info('Leaving create_wind_farm_box')
     return datasource
 
 def point_to_polygon_distance(poly_ds, point_ds):
