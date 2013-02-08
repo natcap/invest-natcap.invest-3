@@ -125,7 +125,7 @@ def execute(args):
         
     add_hab_rasters(inter_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
-def add_hab_rasters(dir, 
+#def add_hab_rasters(dir, 
 
 def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
