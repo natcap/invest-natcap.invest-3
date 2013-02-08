@@ -109,19 +109,19 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
         dataset = None
 
-    def test_wind_energy_core_create_rectangular_polygon(self):
-        """A regression test for create_rectangular_polygon function"""
+    def test_wind_energy_core_create_wind_farm_box(self):
+        """A regression test for create_wind_farm_box function"""
         #raise SkipTest
 
         # Dataset from regression directory is used for its projection and to
-        # locate the polygon to a known point
+        # locate the linestring to a known point
         regression_dir = \
             './data/wind_energy_regression_data/uri_handler/val_dist_land_options/output'
         dataset_uri = os.path.join(regression_dir, 'density_W_per_m2.tif')
         # Directory and path to save the created rectangular polygon
         test_dir = \
-            './data/test_out/wind_energy/valuation/create_rectangular_polygon'
-        out_uri = os.path.join(test_dir, 'wind_farm_poly.shp')
+            './data/test_out/wind_energy/valuation/create_wind_farm_box'
+        out_uri = os.path.join(test_dir, 'wind_farm_box.shp')
         # The regression file to test against
         reg_uri = os.path.join(
                 regression_dir,
@@ -162,18 +162,9 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         x_len = 5243 
         y_len = 5243
 
-        # What the area should be
-        expected_area = 27489049
-
-        wind_farm = wind_energy_core.create_rectangular_polygon(
+        wind_farm = wind_energy_core.create_wind_farm_box(
                         spat_ref, start_point, x_len, y_len, out_uri)
 
-        layer = wind_farm.GetLayer()
-        feat = layer.GetFeature(0)
-        geom = feat.GetGeometryRef()
-
-        # Check that the areas are the same
-        self.assertEqual(geom.Area(), expected_area)
         # Do a general check that the shapefiles are the same
         invest_test_core.assertTwoShapesEqual(self, wind_farm, reg_ds)
 
