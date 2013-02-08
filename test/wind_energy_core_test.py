@@ -1,3 +1,4 @@
+import math
 import os, sys
 import unittest
 import random
@@ -113,11 +114,11 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         """A regression test for create_wind_farm_box function"""
         #raise SkipTest
 
-        # Dataset from regression directory is used for its projection and to
+        # Datasource from regression directory is used for its projection and to
         # locate the linestring to a known point
         regression_dir = \
             './data/wind_energy_regression_data/uri_handler/val_dist_land_options/output'
-        dataset_uri = os.path.join(regression_dir, 'density_W_per_m2.tif')
+        datasource_uri = os.path.join(regression_dir, 'wind_energy_points.shp')
         # Directory and path to save the created rectangular polygon
         test_dir = \
             './data/test_out/wind_energy/valuation/create_wind_farm_box'
@@ -137,24 +138,15 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         if os.path.isfile(out_uri):
             os.remove(out_uri)
 
-        # Open the dataset and gets its projection as well known text, then make
-        # that into a spatial reference
-        dataset = gdal.Open(dataset_uri)
-        dataset_wkt = dataset.GetProjection()
-        spat_ref = osr.SpatialReference()
-        spat_ref.ImportFromWkt(dataset_wkt)
-
-        # To make sure we stay within the same projection scope, get the center
-        # point of the raster to be our starting point. This should also ensure
-        # the two shapefiles being tested are in the same location
-        band = dataset.GetRasterBand(1)
-        gt = dataset.GetGeoTransform()
-        xsize = band.XSize
-        ysize = band.YSize
-        point_x = (xsize / 2 ) * gt[1] + gt[0]
-        point_y = (ysize / 2 ) * gt[5] + gt[3]
-
-        start_point = (point_x, point_y)
+        datasource = ogr.Open(datasource_uri)
+        wind_energy_layer = datasource.GetLayer()
+        feature_count = int(wind_energy_layer.GetFeatureCount())
+        feature = wind_energy_layer.GetFeature(long(math.ceil(feature_count / 2)))
+        pt_geometry = feature.GetGeometryRef()
+        center_x = pt_geometry.GetX()
+        center_y = pt_geometry.GetY()
+        start_point = (center_x, center_y)
+        spat_ref = wind_energy_layer.GetSpatialRef()
         
         LOGGER.debug('Starting Point : %s', start_point)
         
