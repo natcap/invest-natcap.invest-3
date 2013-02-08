@@ -837,34 +837,6 @@ def valuation(args):
     # apart the turbines should be spaced
     rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
 
-    # Get the geotransform for the output dataset as well as the x and y size of
-    # the raster so that we can determine the center coordinates of the dataset.
-    # This is where the farm polygon will be placed in space
-#   npv_ds = gdal.Open(npv_uri)
-#   npv_band = npv_ds.GetRasterBand(1)
-#   geo_transform = npv_ds.GetGeoTransform()
-#   xsize = npv_band.XSize
-#   ysize = npv_band.YSize
-#   # Find the center x and y points by indexing into the grid
-#   center_x = (xsize / 2) * geo_transform[1] + geo_transform[0]
-#   center_y = (ysize / 2) * geo_transform[5] + geo_transform[3]
-#   start_point = (center_x, center_y)
-#   # Get the projection of the dataset
-#   raster_wkt = npv_ds.GetProjection()
-#   # Make a spatial reference from the projection to use for the farm polygon
-#   spat_ref = osr.SpatialReference()
-#   spat_ref.ImportFromWkt(raster_wkt)
-
-    wind_energy_layer.ResetReading()
-    feature_count = int(wind_energy_layer.GetFeatureCount())
-    feature = wind_energy_layer.GetFeature(long(math.ceil(feature_count / 2)))
-    pt_geometry = feature.GetGeometryRef()
-    center_x = pt_geometry.GetX()
-    center_y = pt_geometry.GetY()
-    start_point = (center_x, center_y)
-    spat_ref = wind_energy_layer.GetSpatialRef()
-
-
     # Calculate the number of circuits there will be based on the number of
     # turbines and the number of turbines per circuit. If a fractional value is
     # returned we want to round up and error on the side of having the farm be
@@ -877,6 +849,25 @@ def valuation(args):
     width = (num_circuits - 1) * spacing_dist
     # Calculate the length 
     length = (turbines_per_circuit - 1) * spacing_dist
+    
+    # Use the wind energy points datasource to determine the wind farms spatial
+    # reference and location. This is in hopes that the farm will thus be
+    # located over ocean, although this is not guaranteed
+    wind_energy_layer.ResetReading()
+    # Get the feature count or how many points exist
+    feature_count = int(wind_energy_layer.GetFeatureCount())
+    # Select the feature from which to get the location for the wind farm by
+    # indexing into the features by the half the feature count. OGR requires
+    # this index to be of type LONG
+    feature = wind_energy_layer.GetFeature(
+                long(math.ceil(feature_count / 2)))
+    pt_geometry = feature.GetGeometryRef()
+    # Get the X and Y location for the selected wind farm point. These
+    # coordinates will be the starting point of which to create the farm lines
+    center_x = pt_geometry.GetX()
+    center_y = pt_geometry.GetY()
+    start_point = (center_x, center_y)
+    spat_ref = wind_energy_layer.GetSpatialRef()
     
     farm_poly_uri = os.path.join(output_dir,
             'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
