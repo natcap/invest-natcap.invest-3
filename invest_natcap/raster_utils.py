@@ -1858,25 +1858,26 @@ def resize_and_resample_dataset(
 
 
 def align_dataset_list(
-    dataset_uri_list, out_pixel_size, dataset_out_uri_list, mode,
-    dataset_to_align_index, resample_method):
+    dataset_uri_list, dataset_out_uri_list, resample_method_list,
+    out_pixel_size, mode, dataset_to_align_index):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
         dataset_uri_list - a list of input dataset uris
-        out_pixel_size - the output pixel size
         dataset_out_uri_list - a parallel dataset uri list whose positions
             correspond to entries in dataset_uri_list
+        resample_method_list - a list of resampling methods for each output uri
+            in dataset_out_uri list.  Each element must be one of
+            "nearest|bilinear|cubic|cubic_spline|lanczos"
+        out_pixel_size - the output pixel size
         mode - one of "union" or "intersection" which defines how the output
             output extents are defined as either the union or intersection
-            of the input datasets
+            of the input datasets.
         dataset_to_align_index - an int that corresponds to the position in
             one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
-        resample_method - the resampling technique, one of
-            "nearest|bilinear|cubic|cubic_spline|lanczos"
 
         returns nothing"""
 
@@ -1922,9 +1923,8 @@ def align_dataset_list(
                 float(align_pixel_size)) * align_pixel_size + align_bounding_box[index]
 
 
-    for original_dataset_uri, out_dataset_uri in zip(dataset_uri_list,
-                                                     dataset_out_uri_list):
+    for original_dataset_uri, out_dataset_uri, resample_method in zip(
+        dataset_uri_list, dataset_out_uri_list, resample_method_list):
         resize_and_resample_dataset(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
-
