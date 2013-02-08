@@ -1859,7 +1859,7 @@ def resize_and_resample_dataset(
 
 def align_dataset_list(
     dataset_uri_list, dataset_out_uri_list, resample_method_list,
-    out_pixel_size, mode, dataset_to_align_index):
+    out_pixel_size, mode, dataset_to_align_index, aoi_uri=None):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -1878,6 +1878,9 @@ def align_dataset_list(
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
+        aoi_uri - (optional) a URI to an OGR datasource to be used for the 
+            aoi.  Irrespective of the `mode` input, the aoi will be used
+            to intersect the final bounding box.
 
         returns nothing"""
 
