@@ -1766,7 +1766,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
 
         otherwise, returns True"""
 
-    dataset_list = map(gdal.Open, dataset_uri_list)
+    dataset_list = [gdal.Open(dataset_uri) for dataset_uri in dataset_uri_list]
     dataset_projections = []
 
     unprojected_datasets = set()
@@ -1939,7 +1939,7 @@ def align_dataset_list(
     #get the intersecting or unioned bounding box
     bounding_box = reduce(
         functools.partial(merge_bounding_boxes,mode=mode), 
-        map(get_bounding_box, dataset_uri_list))
+        [get_bounding_box(dataset_uri) for dataset_uri in dataset_uri_list])
 
     if aoi_uri != None:
         bounding_box = merge_bounding_boxes(
