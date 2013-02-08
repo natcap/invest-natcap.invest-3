@@ -1732,22 +1732,29 @@ def temporary_filename():
     os.close(file_handle)
 
     def remove_file(path):
+        """Function to remove a file and handle exceptions to register
+            in atexit"""
         try:
             os.remove(path)
             LOGGER.debug('removing temporary file %s' % (path))
-        except OSError as e:
-            LOGGER.debug('tried to removing temporary file %s but got %s ' % (path, e))
+        except OSError as exception:
+            LOGGER.debug(
+                'tried to removing temporary file %s but got %s '
+                % (path, exception))
 
     atexit.register(remove_file, path)
-
     return path
+
 
 class DatasetUnprojected(Exception): 
     """An exception in case a dataset is unprojected"""
     pass
+
+
 class DifferentProjections(Exception): 
     """An exception in case a set of datasets are not in the same projection"""
     pass
+
 
 def assert_datasets_in_same_projection(dataset_uri_list):
     """Tests if datasets represented by their uris are projected and in
