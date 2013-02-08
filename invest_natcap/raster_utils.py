@@ -1970,3 +1970,7 @@ def align_dataset_list(
         resize_and_resample_dataset(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
+
+
+def vectorize_datasets():
+    pass
