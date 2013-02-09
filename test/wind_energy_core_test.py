@@ -1,3 +1,4 @@
+import math
 import os, sys
 import unittest
 import random
@@ -109,19 +110,19 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
         dataset = None
 
-    def test_wind_energy_core_create_rectangular_polygon(self):
-        """A regression test for create_rectangular_polygon function"""
+    def test_wind_energy_core_create_wind_farm_box(self):
+        """A regression test for create_wind_farm_box function"""
         #raise SkipTest
 
-        # Dataset from regression directory is used for its projection and to
-        # locate the polygon to a known point
+        # Datasource from regression directory is used for its projection and to
+        # locate the linestring to a known point
         regression_dir = \
             './data/wind_energy_regression_data/uri_handler/val_dist_land_options/output'
-        dataset_uri = os.path.join(regression_dir, 'density_W_per_m2.tif')
+        datasource_uri = os.path.join(regression_dir, 'wind_energy_points.shp')
         # Directory and path to save the created rectangular polygon
         test_dir = \
-            './data/test_out/wind_energy/valuation/create_rectangular_polygon'
-        out_uri = os.path.join(test_dir, 'wind_farm_poly.shp')
+            './data/test_out/wind_energy/valuation/create_wind_farm_box'
+        out_uri = os.path.join(test_dir, 'wind_farm_box.shp')
         # The regression file to test against
         reg_uri = os.path.join(
                 regression_dir,
@@ -137,24 +138,22 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         if os.path.isfile(out_uri):
             os.remove(out_uri)
 
-        # Open the dataset and gets its projection as well known text, then make
-        # that into a spatial reference
-        dataset = gdal.Open(dataset_uri)
-        dataset_wkt = dataset.GetProjection()
-        spat_ref = osr.SpatialReference()
-        spat_ref.ImportFromWkt(dataset_wkt)
-
-        # To make sure we stay within the same projection scope, get the center
-        # point of the raster to be our starting point. This should also ensure
-        # the two shapefiles being tested are in the same location
-        band = dataset.GetRasterBand(1)
-        gt = dataset.GetGeoTransform()
-        xsize = band.XSize
-        ysize = band.YSize
-        point_x = (xsize / 2 ) * gt[1] + gt[0]
-        point_y = (ysize / 2 ) * gt[5] + gt[3]
-
-        start_point = (point_x, point_y)
+        # Open the wind energy points datasource to use its spatial reference
+        # and to get a starting location for the wind farm
+        datasource = ogr.Open(datasource_uri)
+        wind_energy_layer = datasource.GetLayer()
+        # Get the feature count to know how many points we have
+        feature_count = int(wind_energy_layer.GetFeatureCount())
+        # Select a feature to get the starting location from. This is done by
+        # grabbing the feature whos index is half the feature count. For some
+        # reason OGR requires the type for the index to be a LONG
+        feature = wind_energy_layer.GetFeature(
+                    long(math.ceil(feature_count / 2)))
+        pt_geometry = feature.GetGeometryRef()
+        center_x = pt_geometry.GetX()
+        center_y = pt_geometry.GetY()
+        start_point = (center_x, center_y)
+        spat_ref = wind_energy_layer.GetSpatialRef()
         
         LOGGER.debug('Starting Point : %s', start_point)
         
@@ -162,18 +161,9 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         x_len = 5243 
         y_len = 5243
 
-        # What the area should be
-        expected_area = 27489049
-
-        wind_farm = wind_energy_core.create_rectangular_polygon(
+        wind_farm = wind_energy_core.create_wind_farm_box(
                         spat_ref, start_point, x_len, y_len, out_uri)
 
-        layer = wind_farm.GetLayer()
-        feat = layer.GetFeature(0)
-        geom = feat.GetGeometryRef()
-
-        # Check that the areas are the same
-        self.assertEqual(geom.Area(), expected_area)
         # Do a general check that the shapefiles are the same
         invest_test_core.assertTwoShapesEqual(self, wind_farm, reg_ds)
 
