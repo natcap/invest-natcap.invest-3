@@ -4,6 +4,7 @@ import unittest
 import os
 import subprocess
 import logging
+import glob
 
 from osgeo import gdal
 from osgeo import ogr
@@ -21,11 +22,10 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        dataset_uri_list = ['data/base_data/terrestrial/lulc_samp_cur',
-                            'data/base_data/Freshwater/precip']
+        dataset_uri_list = glob.glob('data/vectorize_datasets_data/*.tif')
 
-        def vector_op(lulc, precip):
-            return lulc + precip
+        def vector_op(*pixel_list):
+            return sum(pixel_list)
 
         datatype_out = gdal.GDT_Float32
         nodata_out = -100.0
