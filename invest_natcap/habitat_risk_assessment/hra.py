@@ -57,16 +57,11 @@ def execute(args):
             {'Stressor 1': 50,
              'Stressor 2': ...,
             }
-    Output:
-        hra_args- Dictionary containing everything that hra_core will need to
-            complete the rest of the model run. It will contain the following.
-        hra_args['workspace_dir']- Directory in which all data resides. Output
-            and intermediate folders will be supfolders of this one.
         hra_args['h-s']- A multi-level structure which holds all criteria ratings, 
             both numerical and raster that apply to habitat and stressor 
             overlaps. The structure, whose keys are tuples of 
             (Habitat, Stressor) names and map to an inner dictionary will have
-            3 outer keys containing numeric-only criteria, raster-based
+            2 outer keys containing numeric-only criteria, and raster-based
             criteria, and a dataset that shows the potentially buffered overlap
             between the habitat and stressor. The overall structure will be as
             pictured:
@@ -80,15 +75,43 @@ def execute(args):
                         {'CritName':
                             {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
                         },
-                    'DS':  <Open A-1 Raster Dataset>
                     }
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
+            rasters.         
+        hra_args['stressors']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            name.
+
+   Output:
+        hra_args- Dictionary containing everything that hra_core will need to
+            complete the rest of the model run. It will contain the following.
+        hra_args['workspace_dir']- Directory in which all data resides. Output
+            and intermediate folders will be supfolders of this one.
+        hra_args['h-s']- The same as intermediate/'h-s', but with the addition
+            of a 3rd key 'DS' to the outer dictionary layer. This will map to
+            a dataset that shows the potentially buffered overlap between the 
+            habitat and stressor. The overall structure will be as pictured:
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+        hra_args['habitats']- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat
             name, and habitats['habitatName']['DS'] points to the rasterized
             habitat shapefile provided by the user.
-        args['stressors']- Similar to the h-s dictionary, a multi-level
+        hra_args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             name, and stressors['stressorName']['DS'] points to the rasterized
             stressor shapefile provided by the user that will be buffered by
@@ -99,6 +122,7 @@ def execute(args):
             dependent on this.
         args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
+    
     Returns nothing.
     '''
     hra_args = {}
@@ -138,6 +162,8 @@ def execute(args):
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
     #Stressors
+    add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
+                    args['decay_eq'], 
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
