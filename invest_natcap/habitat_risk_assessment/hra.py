@@ -163,12 +163,31 @@ def execute(args):
 
     #Stressors
     add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
-                    args['decay_eq'], 
+                    hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+
+def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
+                    grid_size):
+    
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
-    them to a raster.'''
+    them to a raster.
     
+    Input:
+        dir- Directory into which all completed habitat rasters should be 
+            placed.
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            rasters.
+        hab_list- File URI's for all shapefile in habitats dir, species dir, or
+            both.
+        grid_size- Int representing the desired pixel dimensions of
+            both intermediate and ouput rasters. 
+
+    Output:
+        A modified version of habitats, into which we have placed a rasterized
+            version of the habitat shapefile.
+   ''' 
     for shape in hab_list:
         
         #The return of os.path.split is a tuple where everything after the final
