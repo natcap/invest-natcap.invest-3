@@ -155,9 +155,20 @@ def execute(args):
     #This yields sediment flux, and sediment loss which will be used for valuation
 
     LOGGER.info('backtrace the sediment reaching the streams')
-    routing_cython_core.percent_to_sink(
-        v_stream_uri, export_rate_uri, outflow_direction_uri, outflow_weights_uri,
-        effective_export_to_stream_uri)
+
+    percent_to_sink_dataset_uri_list = [
+        v_stream_uri, export_rate_uri, outflow_direction_uri, 
+        outflow_weights_uri]
+
+    aligned_dataset_uri_list = [
+        raster_utils.temporary_filename() for _ in
+        percent_to_sink_dataset_uri_list]
+
+    out_pixel_size = raster_utils.pixel_size(gdal.Open(flow_direction_uri))
+    raster_utils.align_dataset_list(
+        percent_to_sink_dataset_uri_list, aligned_dataset_uri_list, 
+        ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
+    routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
 
     LOGGER.info('generating report')
 
