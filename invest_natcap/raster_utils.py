@@ -2026,7 +2026,7 @@ def vectorize_datasets(
     
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
-    dataset_out_uri_list = [temporary_filename for _ in dataset_uri_list]
+    dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
 
     #Handle the cases where optional arguments are passed in
     if resample_method_list == None:
@@ -2049,8 +2049,8 @@ def vectorize_datasets(
         aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
     output_band = output_dataset.GetRasterBand(1)
 
-    n_rows = aligned_datasets.RasterYSize
-    n_cols = aligned_datasets.RasterXSize
+    n_rows = aligned_datasets[0].RasterYSize
+    n_cols = aligned_datasets[0].RasterXSize
 
-    for row_index in n_rows:
+    for row_index in range(n_rows):
         pass
