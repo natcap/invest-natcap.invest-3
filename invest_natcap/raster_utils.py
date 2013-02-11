@@ -1972,5 +1972,55 @@ def align_dataset_list(
             resample_method)
 
 
-def vectorize_datasets():
+def vectorize_datasets(
+    dataset_uri_list, vector_op, dataset_out_uri, datatype_out, nodata_out,
+    pixel_size_out, bounding_box_mode, resample_method_list=None, 
+    dataset_to_align_index=None, aoi_uri=None):
+    """This function applies a user defined function across a stack of
+        datasets.  It has functionality align the output dataset grid
+        with one of the input datasets, output a dataset that is the union
+        or intersection of the input dataset bounding boxes, and control
+        over the interpolation techniques of the input datasets, if
+        necessary.  The datasets in dataset_uri_list must be in the same
+        projection; the function will raise an exception if not.
+
+        dataset_uri_list - a list of file uris that point to files that
+            can be opened with gdal.Open.
+        vector_op - a function that must take in as many arguments as
+            there are elements in dataset_uri_list.  The arguments can
+            be treated as interpolated or actual pixel values from the
+            input datasets and the function should calculate the output
+            value for that pixel stack.  The function is a parallel
+            paradigmn and does not know the spatial position of the
+            pixels in question at the time of the call.  If the
+            `bounding_box_mode` parameter is "union" then the values
+            of input dataset pixels that may be outside their original
+            range will be the nodata values of those datasets.  Known
+            bug: if vector_op does not return a value in some cases
+            the output dataset values are undefined even if the function
+            does not crash or raise an exception.
+        dataset_out_uri - the uri of the output dataset.  The projection
+            will be the same as the datasets in dataset_uri_list.
+        datatype_out - the GDAL output type of the output dataset
+        nodata_out - the nodata value of the output dataset.
+        pixel_size_out - the pixel size of the output dataset in
+            projected coordinates.
+        bounding_box_mode - one of "union" or "intersection". If union
+            the output dataset bounding box will be the union of the
+            input datasets.  Will be the intersection otherwise. An
+            exception is raised if the mode is "intersection" and the
+            input datasets have an empty intersection.
+        resample_method_list - (optional) a list of resampling methods
+            for each output uri in dataset_out_uri list.  Each element
+            must be one of "nearest|bilinear|cubic|cubic_spline|lanczos".
+            If None, the default is "nearest" for all input datasets.
+        dataset_to_align_index - an int that corresponds to the position in
+            one of the dataset_uri_lists that, if positive aligns the output
+            rasters to fix on the upper left hand corner of the output
+            datasets.  If negative, the bounding box aligns the intersection/
+            union without adjustment.
+        aoi_uri - (optional) a URI to an OGR datasource to be used for the 
+            aoi.  Irrespective of the `mode` input, the aoi will be used
+            to intersect the final bounding box."""
+
     pass
