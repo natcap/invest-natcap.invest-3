@@ -2023,8 +2023,34 @@ def vectorize_datasets(
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box."""
 
-
+    
+    #Create a temporary list of filenames whose files delete on the python
+    #interpreter exit
     dataset_out_uri_list = [temporary_filename for _ in dataset_uri_list]
+
+    #Handle the cases where optional arguments are passed in
+    if resample_method_list == None:
+        resample_method_list = ["nearest"] * len(dataset_uri_list)
+    if dataset_to_align_index == None:
+        dataset_to_align_index = -1
+
+
+    #Align and resample the datasets, then load datasets into a list
     align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
-        out_pixel_size, mode, dataset_to_align_index, aoi_uri=None)
+        pixel_size_out, bounding_box_mode, dataset_to_align_index,
+        aoi_uri=aoi_uri)
+    aligned_datasets = [
+        gdal.Open(filename) for filename in dataset_out_uri_list]
+    aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
+
+    #The output dataset will be the same size as any one of the aligned datasets
+    output_dataset = new_raster_from_base(
+        aligned_datasets[0], dataset_out_uri, 'GTiff', nodata_out, datatype_out)
+    output_band = output_dataset.GetRasterBand(1)
+
+    n_rows = aligned_datasets.RasterYSize
+    n_cols = aligned_datasets.RasterXSize
+
+    for row_index in n_rows:
+        pass
