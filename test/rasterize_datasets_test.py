@@ -35,7 +35,9 @@ class TestRasterUtils(unittest.TestCase):
 
         dataset_out_uri = os.path.join(base_dir, 'vectorized_datasets.tif')
 
+        aoi_uri = 'data/vectorize_datasets_data/aoi_test.shp'
+
         raster_utils.vectorize_datasets(
             dataset_uri_list, vector_op, dataset_out_uri, datatype_out, nodata_out,
             pixel_size_out, bounding_box_mode, resample_method_list=None, 
-            dataset_to_align_index=dataset_to_align_index, aoi_uri=None)
+            dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
