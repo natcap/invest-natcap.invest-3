@@ -2023,4 +2023,8 @@ def vectorize_datasets(
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box."""
 
-    pass
+
+    dataset_out_uri_list = [temporary_filename for _ in dataset_uri_list]
+    align_dataset_list(
+        dataset_uri_list, dataset_out_uri_list, resample_method_list,
+        out_pixel_size, mode, dataset_to_align_index, aoi_uri=None)
