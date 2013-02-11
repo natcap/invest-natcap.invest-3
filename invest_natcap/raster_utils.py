@@ -1973,7 +1973,7 @@ def align_dataset_list(
 
 
 def vectorize_datasets(
-    dataset_uri_list, vector_op, dataset_out_uri, datatype_out, nodata_out,
+    dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
     pixel_size_out, bounding_box_mode, resample_method_list=None, 
     dataset_to_align_index=None, aoi_uri=None):
     """This function applies a user defined function across a stack of
@@ -1986,7 +1986,7 @@ def vectorize_datasets(
 
         dataset_uri_list - a list of file uris that point to files that
             can be opened with gdal.Open.
-        vector_op - a function that must take in as many arguments as
+        dataset_pixel_op - a function that must take in as many arguments as
             there are elements in dataset_uri_list.  The arguments can
             be treated as interpolated or actual pixel values from the
             input datasets and the function should calculate the output
@@ -1996,7 +1996,7 @@ def vectorize_datasets(
             `bounding_box_mode` parameter is "union" then the values
             of input dataset pixels that may be outside their original
             range will be the nodata values of those datasets.  Known
-            bug: if vector_op does not return a value in some cases
+            bug: if dataset_pixel_op does not return a value in some cases
             the output dataset values are undefined even if the function
             does not crash or raise an exception.
         dataset_out_uri - the uri of the output dataset.  The projection
@@ -2052,5 +2052,15 @@ def vectorize_datasets(
     n_rows = aligned_datasets[0].RasterYSize
     n_cols = aligned_datasets[0].RasterXSize
 
+    #Try to numpy vectorize the operation
+    try:
+        vectorized_op = np.vectorize(dataset_pixel_op)
+    except ValueError:
+        #it's possible that the operation is already vectorized, so try that
+        vectorized_op = dataset_pixel_op
+
     for row_index in range(n_rows):
-        pass
+        dataset_rows = [
+            dataset.ReadAsArray(0, row_index, n_cols, 1) for dataset in aligned_bands]
+        out_row = vectorized_op(*dataset_rows)
+        output_band.WriteArray(out_row, xoff=0, yoff=row_index)
