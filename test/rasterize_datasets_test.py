@@ -33,11 +33,24 @@ class TestRasterUtils(unittest.TestCase):
         bounding_box_mode = "union"
         dataset_to_align_index = 0
 
-        dataset_out_uri = os.path.join(base_dir, 'vectorized_datasets.tif')
+        aoi_uri = None
+        dataset_noaoi_union_out_uri = os.path.join(base_dir, 'vectorized_union_datasets_noaoi.tif')
+        raster_utils.vectorize_datasets(
+            dataset_uri_list, vector_op, dataset_noaoi_union_out_uri, datatype_out, nodata_out,
+            pixel_size_out, bounding_box_mode, resample_method_list=None, 
+            dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
+
+        dataset_union_out_uri = os.path.join(base_dir, 'vectorized_union_datasets.tif')
 
         aoi_uri = 'data/vectorize_datasets_data/aoi_test.shp'
-
         raster_utils.vectorize_datasets(
-            dataset_uri_list, vector_op, dataset_out_uri, datatype_out, nodata_out,
+            dataset_uri_list, vector_op, dataset_union_out_uri, datatype_out, nodata_out,
+            pixel_size_out, bounding_box_mode, resample_method_list=None, 
+            dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
+
+        bounding_box_mode = "intersection"
+        dataset_intersection_out_uri = os.path.join(base_dir, 'vectorized_intersection_datasets.tif')
+        raster_utils.vectorize_datasets(
+            dataset_uri_list, vector_op, dataset_intersection_out_uri, datatype_out, nodata_out,
             pixel_size_out, bounding_box_mode, resample_method_list=None, 
             dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
