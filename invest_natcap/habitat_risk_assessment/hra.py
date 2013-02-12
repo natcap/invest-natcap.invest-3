@@ -192,6 +192,33 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s):
 
     Returns nothing.
     ''' 
+    
+    for pair in h_s:
+
+        h, s = pair
+
+        #The return of GetFileList is a list. Concat to send into
+        #vectorize_datasets
+        h_ds_uri = habitats[h]['DS'].GetFileList()
+        s_ds_uri = stressors[s]['DS'].GetFileList()
+
+        _, s_nodata = raster_utils.extract_band_and_nodata(stresors[s]['DS'])
+        _, h_nodata = raster_utils.extract_band_and_nodata(habitats[h]['DS'])
+ 
+        files = h_ds_uri + s_ds_uri
+
+        def add_h_s_pixels(h_pix, s_pix):
+            '''Since the stressor is buffered, we actually want to make sure to
+            preserve that value. If there is an overlap, return s value.'''
+
+            if h_pix not h_nodata and s_pix not s_nodata:
+                
+                return s_pix
+            else:
+                return 0
+        
+
+
 
 def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
                     grid_size):
