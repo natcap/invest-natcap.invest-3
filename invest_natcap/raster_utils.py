@@ -188,8 +188,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         
         returns a single band current_dataset"""
 
-    LOGGER.info('starting vectorize_rasters')
-
+    LOGGER.warn('vectorize_rasters is DEPRECATED.  use vectorize_datasets '
+                'and refactor the code that is calling this function.')
     #We need to ensure that the type of nodata is the same as the raster type so
     #we don't encounter bugs where we return an int nodata for a float raster or
     #vice versa
@@ -1736,7 +1736,6 @@ def temporary_filename():
             in atexit"""
         try:
             os.remove(path)
-            LOGGER.debug('removing temporary file %s' % (path))
         except OSError as exception:
             LOGGER.debug(
                 'tried to removing temporary file %s but got %s '
