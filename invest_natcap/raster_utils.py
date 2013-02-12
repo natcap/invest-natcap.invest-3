@@ -13,7 +13,7 @@ import functools
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
-import numpy as np
+import numpy
 import scipy.interpolate
 import scipy.sparse
 import scipy.signal
@@ -22,13 +22,13 @@ import scipy.ndimage
 import raster_cython_utils
 
 GDAL_TO_NUMPY_TYPE = {
-    gdal.GDT_Byte: np.byte,
-    gdal.GDT_Int16: np.int16,
-    gdal.GDT_Int32: np.int32,
-    gdal.GDT_UInt16: np.uint16,
-    gdal.GDT_UInt32: np.uint32,
-    gdal.GDT_Float32: np.float32,
-    gdal.GDT_Float64: np.float64
+    gdal.GDT_Byte: numpy.byte,
+    gdal.GDT_Int16: numpy.int16,
+    gdal.GDT_Int32: numpy.int32,
+    gdal.GDT_UInt16: numpy.uint16,
+    gdal.GDT_UInt32: numpy.uint32,
+    gdal.GDT_Float32: numpy.float32,
+    gdal.GDT_Float64: numpy.float64
     }
 
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
@@ -215,8 +215,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Together with the AOI and min pixel size we define the output dataset's 
     #columns and out_n_rows
-    out_n_cols = int(np.round((aoi_box[2] - aoi_box[0]) / pixel_width))
-    out_n_rows = int(np.round((aoi_box[3] - aoi_box[1]) / pixel_height))
+    out_n_cols = int(numpy.round((aoi_box[2] - aoi_box[0]) / pixel_width))
+    out_n_rows = int(numpy.round((aoi_box[3] - aoi_box[1]) / pixel_height))
 
     #out_geotransform order: 
     #1) left coordinate of top left corner
@@ -252,12 +252,12 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     out_right_coord = out_left_coord + out_gt[1] * out_band.XSize
 
     #These are the output coordinates for the interpolator
-    out_col_coordinates = np.arange(out_n_cols, dtype=np.float)
+    out_col_coordinates = numpy.arange(out_n_cols, dtype=numpy.float)
     out_col_coordinates *= out_gt[1]
     out_col_coordinates += out_gt[0]
 
     try:
-        vectorized_op = np.vectorize(op)
+        vectorized_op = numpy.vectorize(op)
     except ValueError:
         #it's possible that the operation is already vectorized, so try that
         vectorized_op = op
@@ -325,17 +325,17 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #out left edget to current left edge and dividing by the width
             #of current pixel.
             current_left_index = \
-                int(np.round((out_left_coord - current_gt[0])/current_gt[1]))
+                int(numpy.round((out_left_coord - current_gt[0])/current_gt[1]))
             current_right_index = \
-                int(np.round((out_right_coord - current_gt[0])/current_gt[1]))
+                int(numpy.round((out_right_coord - current_gt[0])/current_gt[1]))
 
             current_top_index = \
-                int(np.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
+                int(numpy.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
 
             #The +1 ensures the count of indexes are correct otherwise subtracting
             #top and bottom index that differ by 1 are always 0 and sometimes -1
             current_bottom_index = \
-                int(np.ceil((out_row_coord - current_gt[3])/current_gt[5]))+1
+                int(numpy.ceil((out_row_coord - current_gt[3])/current_gt[5]))+1
 
             #We might be at the top or bottom edge, so shift the window up or down
             #We need at least 3 rows because the interpolator requires it.
@@ -363,17 +363,17 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                 current_gt[3] + current_top_index * current_gt[5]
 
             #Equivalent of
-            #    np.array([current_left_coordinate + index * current_gt[1] \
+            #    numpy.array([current_left_coordinate + index * current_gt[1] \
             #         for index in range(current_col_steps)])
-            current_col_coordinates = np.arange(current_col_steps, dtype=np.float)
+            current_col_coordinates = numpy.arange(current_col_steps, dtype=numpy.float)
             current_col_coordinates *= current_gt[1]
             current_col_coordinates += current_left_coordinate
             
 
             #Equivalent of
-            #    np.array([current_top_coordinate + index * current_gt[5] \
+            #    numpy.array([current_top_coordinate + index * current_gt[5] \
             #         for index in range(current_row_steps)])
-            current_row_coordinates = np.arange(current_row_steps, dtype=np.float)
+            current_row_coordinates = numpy.arange(current_row_steps, dtype=numpy.float)
             current_row_coordinates *= current_gt[5]
             current_row_coordinates += current_top_coordinate
 
@@ -386,16 +386,16 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #This interpolation scheme comes from a StackOverflow thread
             #http://stackoverflow.com/questions/11144513/numpy-cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points#comment14610953_11144513
             input_points = \
-                np.transpose([np.repeat(current_row_coordinates, 
+                numpy.transpose([numpy.repeat(current_row_coordinates, 
                                       len(current_col_coordinates)),
-                              np.tile(current_col_coordinates, 
+                              numpy.tile(current_col_coordinates, 
                                         len(current_row_coordinates))])
 
             nearest_interpolator = \
                 scipy.interpolate.NearestNDInterpolator(input_points, 
                                                         current_array.flatten())
             output_points = \
-                np.transpose([np.repeat(out_row_coord, len(out_col_coordinates)),
+                numpy.transpose([numpy.repeat(out_row_coord, len(out_col_coordinates)),
                               out_col_coordinates])
 
             interpolated_row = nearest_interpolator(output_points)
@@ -579,8 +579,8 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
                     shp_extent = list(feature_extent)
 
     #shp_extent = [xmin, xmax, ymin, ymax]
-    tiff_width = int(np.ceil(abs(shp_extent[1] - shp_extent[0]) / xRes))
-    tiff_height = int(np.ceil(abs(shp_extent[3] - shp_extent[2]) / yRes))
+    tiff_width = int(numpy.ceil(abs(shp_extent[1] - shp_extent[0]) / xRes))
+    tiff_height = int(numpy.ceil(abs(shp_extent[3] - shp_extent[2]) / yRes))
 
     if rasterFile != None:
         driver = gdal.GetDriverByName('GTiff')
@@ -642,10 +642,10 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     #floating point, but large enough not to cause errors in interpolation.
     delta_difference = 1e-6 * min(abs(gt[1]),abs(gt[5]))
     if randomize_points:
-        random_array = np.random.randn(layer.GetFeatureCount(), 2)
+        random_array = numpy.random.randn(layer.GetFeatureCount(), 2)
         random_offsets = random_array*delta_difference
     else:
-        random_offsets = np.zeros((layer.GetFeatureCount(), 2))
+        random_offsets = numpy.zeros((layer.GetFeatureCount(), 2))
 
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
@@ -658,8 +658,8 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
             point_list.append([point[1]+random_offsets[feature_id,1],
                                point[0]+random_offsets[feature_id,0]])
             value_list.append(value)
-    point_array = np.array(point_list)
-    value_array = np.array(value_list)
+    point_array = numpy.array(point_list)
+    value_array = numpy.array(value_list)
 
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
@@ -670,7 +670,7 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     #Make as an integer grid then divide subtract by bounding box parts
     #so we don't get a roundoff error and get off by one pixel one way or 
     #the other
-    grid_y, grid_x = np.mgrid[0:band.YSize, 0:band.XSize]
+    grid_y, grid_x = numpy.mgrid[0:band.YSize, 0:band.XSize]
     grid_y = grid_y * gt[5] + bounding_box[1]
     grid_x = grid_x * gt[1] + bounding_box[0]
 
@@ -746,7 +746,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
         clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
 
 
-        for attribute_id in np.unique(mask_array):
+        for attribute_id in numpy.unique(mask_array):
             #ignore masked values
             if attribute_id == mask_nodata:
                 continue
@@ -756,12 +756,12 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             if ignore_nodata:
                 #Only consider values which are not nodata values
                 masked_values = masked_values[masked_values != raster_nodata]
-                attribute_sum = np.sum(masked_values)
+                attribute_sum = numpy.sum(masked_values)
             else:
                 #We leave masked_values alone, but only sum the non-nodata 
                 #values
                 attribute_sum = \
-                    np.sum(masked_values[masked_values != raster_nodata])
+                    numpy.sum(masked_values[masked_values != raster_nodata])
 
             try:
                 aggregate_dict_values[attribute_id] += attribute_sum
@@ -790,7 +790,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             except:
                 return raster_nodata
 
-        vop = np.vectorize(aggregate_map_function)
+        vop = numpy.vectorize(aggregate_map_function)
 
         aggregate_dataset = new_raster_from_base(clipped_raster, aggregate_uri,
             'GTiff', raster_nodata, gdal.GDT_Float32)
@@ -905,25 +905,25 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
-    b_vector = np.zeros(n_rows * n_cols)
+    b_vector = numpy.zeros(n_rows * n_cols)
 
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
-    a_matrix = np.zeros((9, n_rows * n_cols))
-    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+    a_matrix = numpy.zeros((9, n_rows * n_cols))
+    diags = numpy.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
                        1, n_cols-1, n_cols, n_cols+1])
     
     #Determine the inflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
-                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
-                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
-                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
+    inflow_directions = {( 0, 1): (4.0/4.0 * numpy.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * numpy.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * numpy.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * numpy.pi, 0, True),
                          ( 0,-1): (0.0, 3, False),
-                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
-                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
-                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+                         ( 1,-1): (1.0/4.0 * numpy.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * numpy.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * numpy.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -957,16 +957,16 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
                     #direction, see diagram on pg 36 of Rich's notes
                     delta = abs(flow_angle - inflow_angle)
 
-                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                    if delta < numpy.pi/4.0 or (2*numpy.pi - delta) < numpy.pi/4.0:
                         if diagonal_inflow:
                             #We want to measure the far side of the unit triangle
                             #so we measure that angle UP from theta = 0 on a unit
                             #circle
-                            delta = np.pi/4-delta
+                            delta = numpy.pi/4-delta
 
                         #Taking absolute value because it might be on a 0,-45 
                         #degree angle
-                        inflow_fraction = abs(np.tan(delta))
+                        inflow_fraction = abs(numpy.tan(delta))
                         if not diagonal_inflow:
                             #If not diagonal then we measure the direct flow in
                             #which is the inverse of the tangent function
@@ -1020,14 +1020,14 @@ def calculate_slope(dem_dataset, slope_uri):
     LOGGER.debug('building kernels')
     #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
     dzdy_kernel = \
-        np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64) / \
+        numpy.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=numpy.float64) / \
         (8 * cell_size)
     dzdx_kernel = dzdy_kernel.transpose().copy()
 
     LOGGER.debug('doing convolution')
     dzdx = scipy.signal.convolve2d(dem_matrix, dzdx_kernel, 'same')
     dzdy = scipy.signal.convolve2d(dem_matrix, dzdy_kernel, 'same')
-    slope_matrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+    slope_matrix = numpy.sqrt(dzdx ** 2 + dzdy ** 2)
 
     def shift_matrix(M, x, y):
         """Shifts M along the given x and y axis.
@@ -1039,7 +1039,7 @@ def calculate_slope(dem_dataset, slope_uri):
         returns M rolled x and y elements along the x and y axis"""
 
         LOGGER.debug('shifting by %s %s' % (x, y))
-        return np.roll(np.roll(M, x, axis=1), y, axis=0)
+        return numpy.roll(numpy.roll(M, x, axis=1), y, axis=0)
 
     slope_nodata = -1.0
     nodata_mask = dem_matrix == dem_nodata
@@ -1130,15 +1130,15 @@ def calculate_value_not_in_array(array):
             ideally calculated in the middle of the maximum delta between any two
             consecutive numbers in the array"""
 
-    sorted_array = np.sort(np.unique(array.flatten()))
+    sorted_array = numpy.sort(numpy.unique(array.flatten()))
     #Make sure we don't have a single unique value, if we do just go + or - 
     #1 at the end
     if len(sorted_array) > 1:
         array_type = type(sorted_array[0])
-        diff_array = np.array([-1,1])
+        diff_array = numpy.array([-1,1])
         deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
     
-        max_delta_index = np.argmax(deltas)
+        max_delta_index = numpy.argmax(deltas)
 
         #Try to return the average of the maximum delta
         if deltas[max_delta_index] > 0:
@@ -1224,9 +1224,9 @@ def gdal_cast(value, gdal_type):
                         gdal.GDT_Float64, gdal.GDT_Float32]
 
     if gdal_type in gdal_int_types:
-        value = np.int(value)
+        value = numpy.int(value)
     if gdal_type in gdal_float_types:
-        value = np.float(value)
+        value = numpy.float(value)
 
     return value
 
@@ -1436,7 +1436,7 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
     dem_array = (dem_array - contour_value) < 0
 
     #difference filter to subtract neighboring values from the center
-    difference_kernel = np.array([[-1, -1, -1],
+    difference_kernel = numpy.array([[-1, -1, -1],
                                   [-1, 8, -1],
                                   [-1, -1, -1]])
     contour_array = scipy.signal.convolve(
@@ -1459,11 +1459,11 @@ def unique_raster_values(dataset):
 
     band, nodata = extract_band_and_nodata(dataset)
     n_rows = band.YSize
-    unique_values = np.array([])
+    unique_values = numpy.array([])
     for row_index in xrange(n_rows):
         array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
-        array = np.append(array, unique_values)
-        unique_values = np.unique(array)
+        array = numpy.append(array, unique_values)
+        unique_values = numpy.unique(array)
 
     unique_list = list(unique_values)
     if nodata in unique_list:
@@ -1550,13 +1550,13 @@ def gaussian_filter_dataset(
     LOGGER.info('shape %s' % str(shape))
 
     LOGGER.info('make the source memmap at %s' % source_filename)
-    source_array = np.memmap(
+    source_array = numpy.memmap(
         source_filename, dtype='float32', mode='w+', shape=shape)
     LOGGER.info('make the mask memmap at %s' % mask_filename)
-    mask_array = np.memmap(
+    mask_array = numpy.memmap(
         mask_filename, dtype='bool', mode='w+', shape=shape)
     LOGGER.info('make the dest memmap at %s' % dest_filename)
-    dest_array = np.memmap(
+    dest_array = numpy.memmap(
         dest_filename, dtype='float32', mode='w+', shape=shape)
 
     LOGGER.info('load dataset into source array')
@@ -1635,7 +1635,7 @@ def reclassify_dataset(
     valid_set = set(value_map.keys())
     map_array_size = max(dataset_max, max(valid_set)) + 2
     valid_set.add(map_array_size - 1) #add the index for nodata
-    map_array = np.empty((1,map_array_size), dtype = type(value_map.values()[0]))
+    map_array = numpy.empty((1,map_array_size), dtype = type(value_map.values()[0]))
     map_array[:] = out_nodata
 
     for key, value in value_map.iteritems():
@@ -1658,7 +1658,7 @@ def reclassify_dataset(
                     "The following values were in the raster but not in the "
                     "value_map %s" % (undefined_set))
 
-        row_array = map_array[np.ix_([0],row_array[0])]
+        row_array = map_array[numpy.ix_([0],row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
 
     LOGGER.info('Flushing the cache and exiting reclassification')
@@ -1714,7 +1714,7 @@ def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     else:
         dtype = array_type
 
-    memory_array = np.memmap(
+    memory_array = numpy.memmap(
         memory_file, dtype = dtype, mode = 'w+', shape = (n_rows, n_cols))
 
     band.ReadAsArray(buf_obj = memory_array)
@@ -2054,13 +2054,32 @@ def vectorize_datasets(
 
     #Try to numpy vectorize the operation
     try:
-        vectorized_op = np.vectorize(dataset_pixel_op)
+        vectorized_op = numpy.vectorize(dataset_pixel_op)
     except ValueError:
         #it's possible that the operation is already vectorized, so try that
         vectorized_op = dataset_pixel_op
 
+    #If there's an AOI, mask it out
+    if aoi_uri != None:
+        mask_uri = temporary_filename()
+        mask_dataset = new_raster_from_base(
+            aligned_datasets[0], mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+        mask_band = mask_dataset.GetRasterBand(1)
+        mask_band.Fill(0)
+        aoi_datasource = ogr.Open(aoi_uri)
+        aoi_layer = aoi_datasource.GetLayer()
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
+        mask_array = numpy.zeros((1, n_cols))
+
+    dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
     for row_index in range(n_rows):
-        dataset_rows = [
-            dataset.ReadAsArray(0, row_index, n_cols, 1) for dataset in aligned_bands]
+        for dataset_index in range(len(aligned_bands)):
+            aligned_bands[dataset_index].ReadAsArray(
+                0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
         out_row = vectorized_op(*dataset_rows)
+        #Mask out the row if there is a mask
+        if aoi_uri != None:
+            mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
+            out_row[mask_array == 0] = nodata_out
         output_band.WriteArray(out_row, xoff=0, yoff=row_index)
+
