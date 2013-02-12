@@ -169,6 +169,29 @@ def execute(args):
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s']) 
 
+def make_add_overlap_rasters(dir, habitats, stressors, h_s):
+    '''For every pair in h_s, want to get the corresponding habitat and
+    stressor raster, and return the overlap of the two. Should add that as the
+    'DS' entry within each (h, s) pair key in h_s.
+
+    Input:
+        dir- Directory into which all completed h-s overlap files shoudl be
+            placed.
+        habitats- A multi-level dictionary containing all habitat-specific 
+            criteria ratings and rasters. In this case, however, the outermost
+            key is by habitat name, and habitats['habitatName']['DS'] points to
+            the rasterized habitat shapefile provided by the user.
+        stressors- A multi-level dictionary containing all stressor-specific 
+            criteria ratings and name, and stressors['stressorName']['DS'] 
+            points to the rasterized and buffered stressor shapefile.
+        h_s- A multi level dictionary similar to habitats and stressors, but
+            which does not yet contain the 'DS' entry for a h-s raster.
+    Output:
+        A modified version of h_s which contains a 'DS' entry within each
+            (Habitat, Stressor) subdictionary. 
+
+    Returns nothing.
+    ''' 
 
 def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
                     grid_size):
