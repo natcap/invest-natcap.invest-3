@@ -88,7 +88,7 @@ def execute(args):
         hra_args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
         hra_args['workspace_dir']- Directory in which all data resides. Output
-            and intermediate folders will be supfolders of this one.
+            and intermediate folders will be subfolders of this one.
         hra_args['h-s']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
             a dataset that shows the potentially buffered overlap between the 
@@ -139,15 +139,16 @@ def execute(args):
         os.makedirs(folder)
     
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
-    #to use the pre-process module to unpack them.
+    #to use the pre-process module to unpack them and put them into the
+    #hra_args dict. Then can modify that within the rest of the code.
     unpack_over_dict(args['csv_uri'], hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
     stress_dir = os.path.join(inter_dir, 'Stressor_Rasters')
-    burned_crit_dir = os.path.join(inter_dir, 'Temp_Burned_Criteria')
+    overlap_dir = os.path.join(inter_dir, 'Overlap_Rasters')
 
-    for folder in (hab_dir, stress_dir, burned_crit_dir):
+    for folder in (hab_dir, stress_dir, overlap_dir):
         if (os.path.exists(folder)):
             shutil.rmtree(folder) 
 
@@ -164,6 +165,10 @@ def execute(args):
     #Stressors
     add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
                     hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
+                    hra_args['stressors'], hra_args['h-s']) 
+
 
 def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
                     grid_size):
