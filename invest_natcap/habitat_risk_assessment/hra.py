@@ -57,13 +57,11 @@ def execute(args):
             {'Stressor 1': 50,
              'Stressor 2': ...,
             }
-        hra_args['h-s']- A multi-level structure which holds all criteria ratings, 
-            both numerical and raster that apply to habitat and stressor 
-            overlaps. The structure, whose keys are tuples of 
-            (Habitat, Stressor) names and map to an inner dictionary will have
-            2 outer keys containing numeric-only criteria, and raster-based
-            criteria, and a dataset that shows the potentially buffered overlap
-            between the habitat and stressor. The overall structure will be as
+        hra_args['h-s']- A multi-level structure which holds numerical criteria
+            ratings, as well as weights and data qualities for criteria rasters.
+            h-s will hold only criteria that apply to habitat and stressor 
+            overlaps. The structure's outermost keys are tuples of 
+            (Habitat, Stressor) names. The overall structure will be as 
             pictured:
 
             {(Habitat A, Stressor 1): 
@@ -73,16 +71,16 @@ def execute(args):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                            {'Weight': 1.0, 'DQ': 1.0}
                         },
                     }
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
-            rasters.         
+            raster information. The outermost keys are habitat names.
         hra_args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
-            name.
+            raster information. The outermost keys are stressor names.
 
    Output:
         hra_args- Dictionary containing everything that hra_core will need to
@@ -92,7 +90,9 @@ def execute(args):
         hra_args['h-s']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
             a dataset that shows the potentially buffered overlap between the 
-            habitat and stressor. The overall structure will be as pictured:
+            habitat and stressor. Additionally, any raster criteria will
+            be placed in their criteria name subdictionary. The overall 
+            structure will be as pictured:
 
             {(Habitat A, Stressor 1): 
                     {'Crit_Ratings': 
