@@ -157,8 +157,8 @@ def execute(args):
 
     #Criteria
     c_shape_dict = make_crit_shape_dict(args['crit_uri'])
-    add_crit_rasters(c_shape_dict, hra_args['habitats'], hra_argsi['stressors'],
-                    hra_args['h-s'])
+    add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
+                hra_args['stressors'], hra_args['h-s'])
 
     #Habitats
     hab_list = []
@@ -175,6 +175,63 @@ def execute(args):
     #H-S Overlap
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+
+def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s):
+    '''This will take in the dictionary of criteria shapefiles, rasterize them,
+    and add the URI of that raster to the proper subdictionary within h/s/h-s.
+
+    Input:
+        dir- Directory into which the raserized criteria shapefiles should be
+            placed.
+        crit_dict- A multi-level dictionary of criteria shapefiles. The 
+            outermost keys refer to the dictionary they belong with. The
+            structure will be as follows:
+            
+            {'h-s':
+                {('HabA', 'Stress1'):
+                    {'CriteriaName': "Shapefile Datasource URI", ...}, ...
+                },
+             'h':
+                {'HabA':
+                    {'CriteriaName: "Shapefile Datasource URI"...}, ...
+                },
+             's':
+                {'Stress1':
+                    {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+                }
+            }
+        h_s- A multi-level structure which holds numerical criteria
+            ratings, as well as weights and data qualities for criteria rasters.
+            h-s will hold only criteria that apply to habitat and stressor 
+            overlaps. The structure's outermost keys are tuples of 
+            (Habitat, Stressor) names. The overall structure will be as 
+            pictured:
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            raster information. The outermost keys are habitat names.
+        stressors- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            raster information. The outermost keys are stressor names.
+            
+    Output:
+        A set of rasterized criteria files. The criteria shapefiles will be
+            burned based on their 'Rating' attribute. These will be placed in
+            the 'dir' folder.
+
+    Returns nothing.
+    '''
 
 def make_crit_shape_dict(crit_uri):
     '''This will take in the location of the file structure, and will return
