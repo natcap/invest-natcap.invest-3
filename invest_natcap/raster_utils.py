@@ -607,7 +607,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
 
     return raster
 
-def vectorize_points(shapefile, datasource_field, raster, randomize_points=False):
+def vectorize_points(shapefile, datasource_field, raster, randomize_points=False, mask_convex_hull=False):
     """Takes a shapefile of points and a field defined in that shapefile
        and interpolates the values in the points onto the given raster
 
@@ -681,9 +681,11 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), 'nearest', nodata)
     #This will mask out the interpolation so everything is nodata outside the convex hull
-    mask_array = scipy.interpolate.griddata(point_array,
-        value_array, (grid_y, grid_x), 'linear', nodata)
-    raster_out_array[mask_array == nodata] = nodata
+    if mask_convex_hull:
+        LOGGER.info("Masking out convex hull")
+        mask_array = scipy.interpolate.griddata(
+            point_array, value_array, (grid_y, grid_x), 'linear', nodata)
+        raster_out_array[mask_array == nodata] = nodata
     LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
