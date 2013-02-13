@@ -17,6 +17,10 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('wind_energy_biophysical')
 
+# A custom error message for a hub height that is not supported in
+# the current wind data
+class HubHeightError(Exception): pass
+
 def execute(args):
     """Takes care of all file handling for the biophysical part of the wind
         energy model
@@ -294,13 +298,9 @@ def read_binary_wind_data(wind_data_uri, field_list):
     scale_key = field_list[2]
     
     if scale_key not in param_list:
-        class HubHeightError(Exception):
-            """A custom error message for a hub height that is not supported in
-                the current wind data"""
-            pass
-        raise HubHeightError('The Hub Height is not supported by the current',
-                ' wind data. Please make sure the Hub Height falls between',
-                ' 10 meters and a 150 meters.')
+        raise HubHeightError('The Hub Height is not supported by the current '
+                'wind point data. Please make sure the hub height lies '
+                'between 10 and 150 meters')
 
     # Open the file in reading and binary mode
     wind_file = open(wind_data_uri, 'rb')

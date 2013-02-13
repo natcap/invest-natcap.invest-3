@@ -36,6 +36,22 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         fp.close()
     
+    def test_wind_energy_biophysical_read_binary_wind_data_exception(self):
+        """Unit test that should raise a HubHeightException based on an invalid
+            scale key"""
+        #raise SkipTest
+
+        wind_data_uri = './data/wind_energy_data/ECNA_EEZ_WEBPAR_Aug27_2012.bin'
+        regression_dir = './data/wind_energy_regression_data/biophysical'
+        expected_uri = os.path.join(regression_dir, 'testing_binary_dict.pick')
+
+        field_list = ['LATI', 'LONG', 'Ram-250m', 'K-010m']
+
+        self.assertRaises(
+               wind_energy_biophysical.HubHeightError,
+               wind_energy_biophysical.read_binary_wind_data, 
+               wind_data_uri, field_list) 
+    
     def test_wind_energy_biophysical_wind_data_to_point_shape(self):
         """Compare the output shapefile created from a known dictionary against
             a regression shape file that has been verified correct""" 
