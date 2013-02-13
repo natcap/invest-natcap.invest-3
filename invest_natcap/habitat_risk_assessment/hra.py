@@ -89,7 +89,7 @@ def execute(args):
             and intermediate folders will be subfolders of this one.
         hra_args['h-s']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
-            a dataset that shows the potentially buffered overlap between the 
+            a dataset URI that shows the potentially buffered overlap between the 
             habitat and stressor. Additionally, any raster criteria will
             be placed in their criteria name subdictionary. The overall 
             structure will be as pictured:
@@ -101,20 +101,20 @@ def execute(args):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                            {'DS': "CritName Raster", 'Weight': 1.0, 'DQ': 1.0}
                         },
-                    'DS':  <Open A-1 Raster Dataset>
+                    'DS':  "A-1 Dataset URI"
                     }
             }
         hra_args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat
             name, and habitats['habitatName']['DS'] points to the rasterized
-            habitat shapefile provided by the user.
+            habitat shapefile URI provided by the user.
         hra_args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             name, and stressors['stressorName']['DS'] points to the rasterized
-            stressor shapefile provided by the user that will be buffered by
+            stressor shapefile URI provided by the user that will be buffered by
             the indicated amount in buffer_dict['stressorName'].
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
@@ -197,15 +197,10 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
 
         h, s = pair
 
-        #The return of GetFileList is a list. Concat to send into
-        #vectorize_datasets
-        h_ds_uri = habitats[h]['DS'].GetFileList()
-        s_ds_uri = stressors[s]['DS'].GetFileList()
-
-        _, s_nodata = raster_utils.extract_band_and_nodata(stresors[s]['DS'])
-        _, h_nodata = raster_utils.extract_band_and_nodata(habitats[h]['DS'])
+        _, s_nodata = raster_utils.extract_band_and_nodata(gdal.Open(stresors[s]['DS']))
+        _, h_nodata = raster_utils.extract_band_and_nodata(gdal.Open(habitats[h]['DS']))
  
-        files = h_ds_uri + s_ds_uri
+        files = [habitats[h]['DS'], stressors[s]['DS']]
 
         def add_h_s_pixels(h_pix, s_pix):
             '''Since the stressor is buffered, we actually want to make sure to
@@ -313,7 +308,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
 
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
-        stressors[name]['DS'] = new_dataset
+        stressors[name]['DS'] = new_buff_uri
 
 def make_lin_decay_array(dist_array, buff, nodata):
     '''Should create an array where the area around land is a function of 
@@ -407,8 +402,8 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             both intermediate and ouput rasters. 
 
     Output:
-        A modified version of habitats, into which we have placed a rasterized
-            version of the habitat shapefile. It will be placed at
+        A modified version of habitats, into which we have placed the URI to the
+            rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
    ''' 
     for shape in hab_list:
