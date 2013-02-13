@@ -77,16 +77,24 @@ def execute(args):
             os.makedirs(directory)
 
     dem_dataset = gdal.Open(args['dem_uri'])
+    _, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
     
+    clipped_dem_uri = raster_utils.temporary_filename()
+
+    raster_utils.vectorize_datasets(
+        [args['dem_uri']], lambda x: float(x), clipped_dem_uri,
+        gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    raster_utils.calculate_slope(args['dem_uri'], slope_uri, aoi_uri=args['watersheds_uri'])
+    raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
-    routing_utils.flow_accumulation(args['dem_uri'], flow_accumulation_uri)
+    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
@@ -97,7 +105,7 @@ def execute(args):
 
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
-    routing_cython_core.calculate_flow_direction(args['dem_uri'], flow_direction_uri)
+    routing_cython_core.calculate_flow_direction(clipped_dem_uri, flow_direction_uri)
 
     #Calculate LS term
     LOGGER.info('calcualte ls term')
