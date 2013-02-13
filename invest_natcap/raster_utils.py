@@ -678,8 +678,12 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     nodata = band.GetNoDataValue()
 
     LOGGER.info("Writing interpolating with griddata")
-    raster_out_array = scipy.interpolate.griddata(point_array, 
+    raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), 'nearest', nodata)
+    #This will mask out the interpolation so everything is nodata outside the convex hull
+    mask_array = scipy.interpolate.griddata(point_array,
+        value_array, (grid_y, grid_x), 'linear', nodata)
+    raster_out_array[mask_array == nodata] = nodata
     LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
