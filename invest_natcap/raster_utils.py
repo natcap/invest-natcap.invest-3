@@ -1012,8 +1012,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
         slope_uri - (input) a path to the output slope uri
         aoi_uri - (optional) a uri to an AOI input
 
-        returns GDAL single band raster of the same dimensions as dem whose
-            elements are percent rise"""
+        returns nothing"""
 
     LOGGER = logging.getLogger('calculateSlope')
     LOGGER.debug(dem_dataset_uri)
@@ -1021,68 +1020,25 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     LOGGER.debug(out_pixel_size)
 
     dem_small_uri = temporary_filename()
-
-    LOGGER.debug("align datasets")
+    LOGGER.debug("align and clip dem dataset")
     align_dataset_list(
         [dem_dataset_uri], [dem_small_uri], ["nearest"], out_pixel_size, "intersection",
         0, aoi_uri=aoi_uri)
 
+    LOGGER.debug("calculate slope")
 
-
-    #Read the DEM directly into an array
+    #Make a slope dataset for the cython utiliity
     dem_small_dataset = gdal.Open(dem_small_uri)
-    dem_band, dem_nodata = extract_band_and_nodata(dem_small_dataset)
-    dem_matrix = dem_band.ReadAsArray()
 
-    gp = dem_small_dataset.GetGeoTransform()
-    cell_size = gp[1] #assume square cells
+    slope_nodata = -1.e30 #make a big negative slope for nodata
+    _ = new_raster_from_base(
+        dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
 
-    LOGGER.debug('building kernels')
-    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
-    dzdy_kernel = \
-        numpy.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=numpy.float64) / \
-        (8 * cell_size)
-    dzdx_kernel = dzdy_kernel.transpose().copy()
+    raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
-    LOGGER.debug('doing convolution')
-    dzdx = scipy.signal.convolve2d(dem_matrix, dzdx_kernel, 'same')
-    dzdy = scipy.signal.convolve2d(dem_matrix, dzdy_kernel, 'same')
-    slope_matrix = numpy.sqrt(dzdx ** 2 + dzdy ** 2)
-
-    def shift_matrix(M, x, y):
-        """Shifts M along the given x and y axis.
-    
-        M - a 2D numpy array
-        x - the number of elements x-wise to shift M
-        y - the number of elements y-wise to shift M
-    
-        returns M rolled x and y elements along the x and y axis"""
-
-        LOGGER.debug('shifting by %s %s' % (x, y))
-        return numpy.roll(numpy.roll(M, x, axis=1), y, axis=0)
-
-    slope_nodata = -1.0
-    nodata_mask = dem_matrix == dem_nodata
-    slope_matrix[nodata_mask] = slope_nodata
-    offsets = [(1, 1), (0, 1), (-1, 1), 
-               (1, 0), (-1, 0), (1, -1), 
-               (0, -1), (-1, -1)]
-
-    #convert slopes to percentages
-    slope_matrix[:] *= 100.0
-
-    #Set everything that's next to the nodata dem also to nodata
-    for offset in offsets:
-        slope_matrix[shift_matrix(nodata_mask, *offset)] = \
-            slope_nodata
-
-    slope_dataset = new_raster_from_base(dem_small_dataset, slope_uri, 'GTiff', 
-                                         slope_nodata, gdal.GDT_Float32)
-    slope_band = slope_dataset.GetRasterBand(1)
-    slope_band.WriteArray(slope_matrix)
+    slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
     calculate_raster_stats(slope_dataset)
 
-    return slope_dataset
 
 def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     """This function will clip source_dataset to the bounding box of the 

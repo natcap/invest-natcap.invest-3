@@ -3,6 +3,8 @@ import numpy
 cimport cython
 from libcpp.map cimport map
 
+from osgeo import gdal
+
 @cython.boundscheck(False)
 def reclassify_by_dictionary(dataset, rules, output_uri, format,
     float default_value, datatype, output_dataset):
@@ -50,3 +52,73 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format,
     output_dataset.FlushCache()
     
     return output_dataset
+
+
+def _cython_calculate_slope(dem_dataset_uri, slope_uri):
+    """Generates raster maps of slope.  Follows the algorithm described here:
+        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        
+        dem_dataset_uri - (input) a URI to a  single band raster of z values.
+        slope_uri - (input) a path to the output slope uri
+        aoi_uri - (optional) a uri to an AOI input
+
+        returns GDAL single band raster of the same dimensions as dem whose
+            elements are percent rise"""
+
+    #Read the DEM directly into an array
+    cdef float a,b,c,d,e,f,g,h,i,dem_nodata, dxdz, dxdy
+    cdef int row_index, col_index, n_rows, n_cols
+
+    dem_dataset = gdal.Open(dem_dataset_uri)
+    dem_band = dem_dataset.GetRasterBand(1)
+    dem_nodata = dem_band.GetNoDataValue()
+
+    slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
+    slope_band = slope_dataset.GetRasterBand(1)
+    slope_nodata = slope_band.GetNoDataValue()
+
+    gt = dem_dataset.GetGeoTransform()
+    cdef float cell_size_times_8 = gt[1] * 8
+
+    n_rows = dem_band.YSize
+    n_cols = dem_band.XSize
+
+    cdef numpy.ndarray[numpy.float_t, ndim=2] dem_array = numpy.empty((3, n_cols))
+    cdef numpy.ndarray[numpy.float_t, ndim=2] slope_array = numpy.empty((1, n_cols))
+
+    #Fill the top and bottom row of the slope since we won't touch it in this loop
+    slope_array[0, :] = slope_nodata
+    slope_band.WriteArray(slope_array, 0, 0)
+    slope_band.WriteArray(slope_array, 0, n_rows - 1)
+    for row_index in xrange(1, n_rows - 1):
+        #Loop through the dataset 3 rows at a time
+        dem_array = dem_band.ReadAsArray(0, row_index - 1, n_cols, 3, buf_obj=dem_array)
+        slope_array[0, :] = slope_nodata
+        for col_index in xrange(1, n_cols - 1):
+            # abc
+            # def
+            # ghi
+
+            a = dem_array[0, col_index - 1]
+            if a == dem_nodata: continue
+            b = dem_array[0, col_index]
+            if b == dem_nodata: continue
+            c = dem_array[0, col_index + 1]
+            if c == dem_nodata: continue
+            d = dem_array[1, col_index - 1]
+            if d == dem_nodata: continue
+            e = dem_array[1, col_index]
+            if e == dem_nodata: continue
+            f = dem_array[1, col_index + 1]
+            if f == dem_nodata: continue
+            g = dem_array[2, col_index - 1]
+            if g == dem_nodata: continue
+            h = dem_array[0, col_index]
+            if h == dem_nodata: continue
+            i = dem_array[0, col_index + 1]
+            if i == dem_nodata: continue
+
+            dzdx = ((c+2*f+i) - (a+2*d+g)) / (cell_size_times_8)
+            dzdy = ((g+2*h+i) - (a+2*b+c)) / (cell_size_times_8)
+            slope_array[0, col_index] = numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2)) * 57.29578
+        slope_band.WriteArray(slope_array, 0, row_index)
