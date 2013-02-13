@@ -60,6 +60,8 @@ def execute(args):
 
         returns nothing."""
 
+    out_pixel_size = raster_utils.pixel_size(gdal.Open(args['landuse_uri']))
+
     csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri']))
     biophysical_table = {}
     for row in csv_dict_reader:
@@ -75,13 +77,11 @@ def execute(args):
             os.makedirs(directory)
 
     dem_dataset = gdal.Open(args['dem_uri'])
-    n_rows = dem_dataset.RasterYSize
-    n_cols = dem_dataset.RasterXSize
     
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    raster_utils.calculate_slope(dem_dataset, slope_uri)
+    raster_utils.calculate_slope(args['dem_uri'], slope_uri, aoi_uri=args['watersheds_uri'])
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
@@ -94,7 +94,6 @@ def execute(args):
 
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
-
 
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
@@ -164,7 +163,6 @@ def execute(args):
         raster_utils.temporary_filename() for _ in
         percent_to_sink_dataset_uri_list]
 
-    out_pixel_size = raster_utils.pixel_size(gdal.Open(flow_direction_uri))
     raster_utils.align_dataset_list(
         percent_to_sink_dataset_uri_list, aligned_dataset_uri_list, 
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)

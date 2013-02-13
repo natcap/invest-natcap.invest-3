@@ -151,10 +151,9 @@ class TestRasterUtils(unittest.TestCase):
             os.makedirs(base_dir)
 
         dem_uri = 'data/raster_slope_regression_data/raster_dem.tif'
-        dem_dataset = gdal.Open(dem_uri)
         
-        slope_uri = os.path.join(base_dir,'raster_slope.tif')
-        raster_utils.calculate_slope(dem_dataset, slope_uri)
+        slope_uri = os.path.join(base_dir, 'raster_slope.tif')
+        raster_utils.calculate_slope(dem_uri, slope_uri)
 
         slope_regression_uri = 'data/raster_slope_regression_data/raster_slope.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, slope_uri, slope_regression_uri)
