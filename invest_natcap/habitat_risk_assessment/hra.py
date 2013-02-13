@@ -101,7 +101,7 @@ def execute(args):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': "CritName Raster", 'Weight': 1.0, 'DQ': 1.0}
+                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
                         },
                     'DS':  "A-1 Dataset URI"
                     }
@@ -144,15 +144,21 @@ def execute(args):
     unpack_over_dict(args['csv_uri'], hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
+    crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
     stress_dir = os.path.join(inter_dir, 'Stressor_Rasters')
     overlap_dir = os.path.join(inter_dir, 'Overlap_Rasters')
 
-    for folder in (hab_dir, stress_dir, overlap_dir):
+    for folder in (crit_dir, hab_dir, stress_dir, overlap_dir):
         if (os.path.exists(folder)):
             shutil.rmtree(folder) 
 
         os.makedirs(folder)
+
+    #Criteria
+    c_shape_dict = make_crit_shape_dict(args['crit_uri'])
+    add_crit_rasters(c_shape_dict, hra_args['habitats'], hra_argsi['stressors'],
+                    hra_args['h-s'])
 
     #Habitats
     hab_list = []
@@ -164,10 +170,121 @@ def execute(args):
 
     #Stressors
     add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
-                    hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+                  hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
 
+    #H-S Overlap
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+
+def make_crit_shape_dict(crit_uri):
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+    Returns:
+        A dictionary containing shapefile URI's, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        structure will be as follows:
+        
+        {'h-s':
+            {('HabA', 'Stress1'):
+                {'CriteriaName': "Shapefile Datasource URI", ...}, ...
+            },
+         'h':
+            {'HabA':
+                {'CriteriaName: "Shapefile Datasource URI"...}, ...
+            },
+         's':
+            {'Stress1':
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            }
+        }
+    '''
+    c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resiliance' subfolder
+    #of raster_criteria.
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+   
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in res_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if hab_name not in c_shape_dict['h']:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = path
+                   
+    
+    #Now, want to move on to stressor-centric criteria, but will do much the
+    #same thing. 
+    exps_shps = glob.glob(os.path.join(crit_uri, 'Exposure', '*.shp'))
+   
+    #Now we have a list of all stressor specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exp_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        stress_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if stress_name not in c_shape_dict['s']:
+            c_shape_dict['s'][stress_name] = {}
+        
+        c_shape_dict['s'][stress_name][crit_name] = path
+    
+    #Finally, want to get all of our pair-centric shape criteria. 
+    sens_shps = glob.glob(os.path.join(crit_uri, 'Sensitivity', '*.shp'))
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h-s']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = path
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict
 
 def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
     '''For every pair in h_s, want to get the corresponding habitat and
