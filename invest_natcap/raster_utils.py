@@ -1844,8 +1844,8 @@ def resize_and_resample_dataset(
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)
-    output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
     output_band = output_dataset.GetRasterBand(1)
+    output_band.SetNoDataValue(original_nodata)
     output_band.Fill(original_nodata)
 
     # Set the geotransform
@@ -1856,7 +1856,6 @@ def resize_and_resample_dataset(
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_dict[resample_method])
-
     calculate_raster_stats(output_dataset)
 
 
@@ -2016,7 +2015,7 @@ def vectorize_datasets(
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
         aoi_uri=aoi_uri)
     aligned_datasets = [
-        gdal.Open(filename) for filename in dataset_out_uri_list]
+        gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
 
     #The output dataset will be the same size as any one of the aligned datasets
@@ -2057,4 +2056,3 @@ def vectorize_datasets(
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
             out_row[mask_array == 0] = nodata_out
         output_band.WriteArray(out_row, xoff=0, yoff=row_index)
-
