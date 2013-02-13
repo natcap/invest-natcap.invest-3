@@ -30,7 +30,7 @@ def biophysical(args):
             LULC indexes correspond to indexs in the biophysical table input.
             Used for determining soil retention and other biophysical 
             properties of the landscape.  (required)
-        args['watersheds'] - an input shapefile of the watersheds
+        args['watersheds_uri'] - an input shapefile of the watersheds
             of interest as polygons. (required)
         args['subwatersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
@@ -113,10 +113,9 @@ def biophysical(args):
 
     LOGGER.info("Mapping lulc to sed retention values")
     retention_uri = os.path.join(args['intermediate_uri'],'retention.tif')
-    raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention, 
-                                   raster_out_uri = retention_uri, 
+    raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention,
+                                   raster_out_uri = retention_uri,
                                    datatype=gdal.GDT_Float32, nodata=-1.0)
-
 
     def lulc_to_c_or_p(key, lulc_code):
         """This is a helper function that's used to map an LULC code to the

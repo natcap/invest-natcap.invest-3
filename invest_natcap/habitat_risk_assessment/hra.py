@@ -57,13 +57,11 @@ def execute(args):
             {'Stressor 1': 50,
              'Stressor 2': ...,
             }
-        hra_args['h-s']- A multi-level structure which holds all criteria ratings, 
-            both numerical and raster that apply to habitat and stressor 
-            overlaps. The structure, whose keys are tuples of 
-            (Habitat, Stressor) names and map to an inner dictionary will have
-            2 outer keys containing numeric-only criteria, and raster-based
-            criteria, and a dataset that shows the potentially buffered overlap
-            between the habitat and stressor. The overall structure will be as
+        hra_args['h-s']- A multi-level structure which holds numerical criteria
+            ratings, as well as weights and data qualities for criteria rasters.
+            h-s will hold only criteria that apply to habitat and stressor 
+            overlaps. The structure's outermost keys are tuples of 
+            (Habitat, Stressor) names. The overall structure will be as 
             pictured:
 
             {(Habitat A, Stressor 1): 
@@ -73,26 +71,28 @@ def execute(args):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                            {'Weight': 1.0, 'DQ': 1.0}
                         },
                     }
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
-            rasters.         
+            raster information. The outermost keys are habitat names.
         hra_args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
-            name.
+            raster information. The outermost keys are stressor names.
 
    Output:
         hra_args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
         hra_args['workspace_dir']- Directory in which all data resides. Output
-            and intermediate folders will be supfolders of this one.
+            and intermediate folders will be subfolders of this one.
         hra_args['h-s']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
             a dataset that shows the potentially buffered overlap between the 
-            habitat and stressor. The overall structure will be as pictured:
+            habitat and stressor. Additionally, any raster criteria will
+            be placed in their criteria name subdictionary. The overall 
+            structure will be as pictured:
 
             {(Habitat A, Stressor 1): 
                     {'Crit_Ratings': 
@@ -139,15 +139,16 @@ def execute(args):
         os.makedirs(folder)
     
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
-    #to use the pre-process module to unpack them.
+    #to use the pre-process module to unpack them and put them into the
+    #hra_args dict. Then can modify that within the rest of the code.
     unpack_over_dict(args['csv_uri'], hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
     stress_dir = os.path.join(inter_dir, 'Stressor_Rasters')
-    burned_crit_dir = os.path.join(inter_dir, 'Temp_Burned_Criteria')
+    overlap_dir = os.path.join(inter_dir, 'Overlap_Rasters')
 
-    for folder in (hab_dir, stress_dir, burned_crit_dir):
+    for folder in (hab_dir, stress_dir, overlap_dir):
         if (os.path.exists(folder)):
             shutil.rmtree(folder) 
 
@@ -164,6 +165,68 @@ def execute(args):
     #Stressors
     add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
                     hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
+                    hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+
+def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
+    '''For every pair in h_s, want to get the corresponding habitat and
+    stressor raster, and return the overlap of the two. Should add that as the
+    'DS' entry within each (h, s) pair key in h_s.
+
+    Input:
+        dir- Directory into which all completed h-s overlap files shoudl be
+            placed.
+        habitats- A multi-level dictionary containing all habitat-specific 
+            criteria ratings and rasters. In this case, however, the outermost
+            key is by habitat name, and habitats['habitatName']['DS'] points to
+            the URI of the rasterized habitat shapefile provided by the user.
+        stressors- A multi-level dictionary containing all stressor-specific 
+            criteria ratings and name, and stressors['stressorName']['DS'] 
+            points to the URI of the rasterized and buffered stressor shapefile.
+        h_s- A multi level dictionary similar to habitats and stressors, but
+            which does not yet contain the 'DS' entry for a h-s raster.
+    Output:
+        A modified version of h_s which contains a 'DS' entry within each
+            (Habitat, Stressor) subdictionary. 
+
+    Returns nothing.
+    ''' 
+    
+    for pair in h_s:
+
+        h, s = pair
+
+        #The return of GetFileList is a list. Concat to send into
+        #vectorize_datasets
+        h_ds_uri = habitats[h]['DS'].GetFileList()
+        s_ds_uri = stressors[s]['DS'].GetFileList()
+
+        _, s_nodata = raster_utils.extract_band_and_nodata(stresors[s]['DS'])
+        _, h_nodata = raster_utils.extract_band_and_nodata(habitats[h]['DS'])
+ 
+        files = h_ds_uri + s_ds_uri
+
+        def add_h_s_pixels(h_pix, s_pix):
+            '''Since the stressor is buffered, we actually want to make sure to
+            preserve that value. If there is an overlap, return s value.'''
+
+            if not h_pix == h_nodata and not s_pix == s_nodata:
+                
+                return s_pix
+            else:
+                return 0
+
+        
+        out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
+
+        #For the h-s overlap, want to do intersection, since we will never need
+        #anything outside that bounding box.
+        raster_utils.vectorize_datasets(files, add_h_s_pixels, gdal.GDT_Float32,
+                        grid_size, "intersection", resample_method_list=None, 
+                        dataset_to_align_index=None, aoi_uri=None)
+
+        h_s[pair]['DS'] = out_uri
 
 def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
                     grid_size):
@@ -183,8 +246,8 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             in calculating the decay of stressor buffer influence.
 
     Output:
-        A modified version of stressors, into which have been placed a
-            rasterized version of the stressor shaprefile. It will be placed
+        A modified version of stressors, into which have been placed the URI of
+            rasterized version of the stressor shapefile. It will be placed
             at stressors[stressName]['DS'].
     '''
     stress_list = glob.glob(os.path.join(stressors_dir, '*.shp'))
