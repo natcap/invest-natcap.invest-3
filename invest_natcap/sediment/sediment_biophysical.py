@@ -80,7 +80,6 @@ def execute(args):
     _, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
     
     clipped_dem_uri = raster_utils.temporary_filename()
-
     raster_utils.vectorize_datasets(
         [args['dem_uri']], lambda x: float(x), clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
@@ -113,7 +112,17 @@ def execute(args):
     sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
                                       flow_direction_uri, ls_uri, ls_nodata)
 
+    #Clip the LULC
     lulc_dataset = gdal.Open(args['landuse_uri'])
+    _, lulc_nodata = raster_utils.extract_band_and_nodata(lulc_dataset)
+    lulc_clipped_uri = raster_utils.temporary_filename()
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], lambda x: int(x), lulc_clipped_uri,
+        gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+    lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
+
+
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
 
     LOGGER.info('building export fraction raster from lulc')
@@ -123,7 +132,7 @@ def execute(args):
                   for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_export_dict %s' % lulc_to_export_dict)
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building cp raster from lulc')
@@ -131,7 +140,7 @@ def execute(args):
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
     cp_uri = os.path.join(intermediate_dir, 'cp.tif')
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('building (1-c)(1-p) raster from lulc')
@@ -140,7 +149,7 @@ def execute(args):
     LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
     inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv.tif')
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('calculating usle')
