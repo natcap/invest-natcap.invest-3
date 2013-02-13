@@ -431,7 +431,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
 
-        habitats[name]['DS'] = r_dataset
+        habitats[name]['DS'] = out_uri
 
 def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
