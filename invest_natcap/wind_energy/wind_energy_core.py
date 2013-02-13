@@ -321,7 +321,8 @@ def biophysical(args):
     
     LOGGER.info('Vectorize Harvested Points')
     raster_utils.vectorize_points(
-            wind_points, harvest_field_name, harvested_temp)
+            wind_points, harvest_field_name, harvested_temp,
+            mask_convex_hull=True)
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
