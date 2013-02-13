@@ -158,7 +158,7 @@ def execute(args):
     #Criteria
     c_shape_dict = make_crit_shape_dict(args['crit_uri'])
     add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
-                hra_args['stressors'], hra_args['h-s'])
+                hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
     #Habitats
     hab_list = []
@@ -176,7 +176,7 @@ def execute(args):
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
 
-def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s):
+def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
 
@@ -224,7 +224,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s):
         stressors- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             raster information. The outermost keys are stressor names.
-            
+        grid_size- An int representing the desired pixel size for the criteria
+            rasters. 
     Output:
         A set of rasterized criteria files. The criteria shapefiles will be
             burned based on their 'Rating' attribute. These will be placed in
@@ -232,7 +233,83 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s):
 
     Returns nothing.
     '''
+    #H-S
+    for pair in crit_dict['h-s']:
+        
+        for c_name, c_path in crit_dict['h-s'][pair].iteritems():
 
+            #The path coming in from the criteria should be of the form
+            #dir/h_s_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+             
+            h_s['Crit_Rasters'][c_name]['Rating'] = out_uri
+    
+    #Habs
+    for h in crit_dict['h']:
+        
+        for c_name, c_path in crit_dict['h'][h].iteritems():
+
+            #The path coming in from the criteria should be of the form
+            #dir/h_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+             
+            habitats['Crit_Rasters'][c_name]['Rating'] = out_uri
+
+    #Stressors
+    for s in crit_dict['s']:
+        
+        for c_name, c_path in crit_dict['s'][s].iteritems():
+
+            #The path coming in from the criteria should be of the form
+            #dir/s_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+             
+            stressors['Crit_Rasters'][c_name]['Rating'] = out_uri
 def make_crit_shape_dict(crit_uri):
     '''This will take in the location of the file structure, and will return
     a dictionary containing all the shapefiles that we find. Hypothetically, we
