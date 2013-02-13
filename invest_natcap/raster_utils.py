@@ -1010,24 +1010,26 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
 
     LOGGER = logging.getLogger('calculateSlope')
     LOGGER.debug(dem_dataset_uri)
-    out_pixel_size = pixel_size(gdal.Open(dem_dataset_uri))
+    dem_dataset = gdal.Open(dem_dataset_uri)
+    out_pixel_size = pixel_size(dem_dataset)
     LOGGER.debug(out_pixel_size)
+    _, dem_nodata = extract_band_and_nodata(dem_dataset)
 
     dem_small_uri = temporary_filename()
-    LOGGER.debug("align and clip dem dataset")
-    align_dataset_list(
-        [dem_dataset_uri], [dem_small_uri], ["nearest"], out_pixel_size, "intersection",
-        0, aoi_uri=aoi_uri)
+    #cast the dem to a floating point one if it's not already
+    dem_float_nodata = float(dem_nodata)
+
+    vectorize_datasets(
+        [dem_dataset_uri], lambda x: float(x), dem_small_uri,
+        gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=aoi_uri)
 
     LOGGER.debug("calculate slope")
 
-    #Make a slope dataset for the cython utiliity
-    dem_small_dataset = gdal.Open(dem_small_uri)
-
     slope_nodata = -1.e30 #make a big negative slope for nodata
+    dem_small_dataset = gdal.Open(dem_small_uri)
     _ = new_raster_from_base(
         dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
-
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
     slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
