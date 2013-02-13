@@ -618,6 +618,10 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
        returns nothing
        """
 
+    #TODO: hack to get convex hull
+    if mask_convex_hull: 
+        randomize_points = True
+
     #Define the initial bounding box
     LOGGER.info("vectorizing points")
     gt = raster.GetGeoTransform()
@@ -680,6 +684,7 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), 'nearest', nodata)
+    #TODO: hack to get convex hull
     #This will mask out the interpolation so everything is nodata outside the convex hull
     if mask_convex_hull:
         LOGGER.info("Masking out convex hull")
