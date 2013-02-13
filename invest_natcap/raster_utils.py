@@ -188,8 +188,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         
         returns a single band current_dataset"""
 
-    LOGGER.info('starting vectorize_rasters')
-
+    LOGGER.warn('vectorize_rasters is DEPRECATED.  use vectorize_datasets '
+                'and refactor the code that is calling this function.')
     #We need to ensure that the type of nodata is the same as the raster type so
     #we don't encounter bugs where we return an int nodata for a float raster or
     #vice versa
@@ -998,23 +998,37 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     return flow_accumulation_dataset
 
 
-def calculate_slope(dem_dataset, slope_uri):
+def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
         
-        dem_dataset - (input) a single band raster of z values.
+        dem_dataset_uri - (input) a URI to a  single band raster of z values.
         slope_uri - (input) a path to the output slope uri
-            
+        aoi_uri - (optional) a uri to an AOI input
+
         returns GDAL single band raster of the same dimensions as dem whose
             elements are percent rise"""
 
     LOGGER = logging.getLogger('calculateSlope')
+    LOGGER.debug(dem_dataset_uri)
+    out_pixel_size = pixel_size(gdal.Open(dem_dataset_uri))
+    LOGGER.debug(out_pixel_size)
+
+    dem_small_uri = temporary_filename()
+
+    LOGGER.debug("align datasets")
+    align_dataset_list(
+        [dem_dataset_uri], [dem_small_uri], ["nearest"], out_pixel_size, "intersection",
+        0, aoi_uri=aoi_uri)
+
+
+
     #Read the DEM directly into an array
-    dem_band = dem_dataset.GetRasterBand(1)
-    dem_nodata = dem_band.GetNoDataValue()
+    dem_small_dataset = gdal.Open(dem_small_uri)
+    dem_band, dem_nodata = extract_band_and_nodata(dem_small_dataset)
     dem_matrix = dem_band.ReadAsArray()
 
-    gp = dem_dataset.GetGeoTransform()
+    gp = dem_small_dataset.GetGeoTransform()
     cell_size = gp[1] #assume square cells
 
     LOGGER.debug('building kernels')
@@ -1056,7 +1070,7 @@ def calculate_slope(dem_dataset, slope_uri):
         slope_matrix[shift_matrix(nodata_mask, *offset)] = \
             slope_nodata
 
-    slope_dataset = new_raster_from_base(dem_dataset, slope_uri, 'GTiff', 
+    slope_dataset = new_raster_from_base(dem_small_dataset, slope_uri, 'GTiff', 
                                          slope_nodata, gdal.GDT_Float32)
     slope_band = slope_dataset.GetRasterBand(1)
     slope_band.WriteArray(slope_matrix)
@@ -1736,7 +1750,6 @@ def temporary_filename():
             in atexit"""
         try:
             os.remove(path)
-            LOGGER.debug('removing temporary file %s' % (path))
         except OSError as exception:
             LOGGER.debug(
                 'tried to removing temporary file %s but got %s '
