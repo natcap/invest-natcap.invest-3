@@ -208,12 +208,9 @@ def execute(args):
         for feature_id in xrange(layer.GetFeatureCount()):
             feature = layer.GetFeature(feature_id)
             for field_name in output_field_names:
-                field_id = feature.GetFieldIndex(field_name)
-                LOGGER.info("field_id %s field_name %s" % (field_id, field_name))
-                feature.SetField(field_id, 0.0)
+                feature.SetField(field_name, 0.0)
             #Save back to datasource
             layer.SetFeature(feature)
-
 
         original_datasource.Destroy()
         datasource_copy.Destroy()
