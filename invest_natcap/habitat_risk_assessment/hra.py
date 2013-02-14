@@ -176,6 +176,8 @@ def execute(args):
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
 
+    hra_core.execute(hra_args)
+    
 def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
