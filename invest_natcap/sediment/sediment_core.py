@@ -122,6 +122,7 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
     raster_utils.calculate_raster_stats(ls_factor_dataset)
 
+
 def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri, 
                                   erodibility_uri, cp_uri,
                                   stream_uri, usle_uri):
@@ -211,44 +212,6 @@ def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri,
 
     return potential_soil_loss_dataset
 
-def calculate_per_pixel_export(usle_loss_dataset, 
-                     effective_retention_dataset, pixel_export_uri):
-    """Calculate per pixel export based on potential soil loss and the 
-        effective per pixel retention factor.
-
-        usle_loss_dataset - a gdal dataset with per pixel 
-            potential export in units of tons per pixel
-        effective_retention_dataset - a gdal dataset whose values indicate
-            the amount of potential export from a particular pixel to 
-            the stream
-        pixel_export_uri - the path to disk for the output raster
-
-        returns a dataset that has effective per pixel export to stream"""
-
-    pixel_export_nodata = -1.0
-
-    _, usle_loss_nodata = \
-        raster_utils.extract_band_and_nodata(usle_loss_dataset)
-
-    _, effective_retention_nodata = \
-        raster_utils.extract_band_and_nodata(effective_retention_dataset)
-
-    def pixel_export_op(usle_loss, retention):
-        """This either returns nodata in undefined areas or multplies the
-            sediment export by the effective retention"""
-        if usle_loss == usle_loss_nodata or \
-                retention == effective_retention_nodata:
-            return pixel_export_nodata
-        return usle_loss * retention
-
-    #Still call vectorize rasters for memory and/or interpolation reasons.
-    pixel_export_dataset = \
-        raster_utils.vectorize_rasters([usle_loss_dataset, \
-        effective_retention_dataset], pixel_export_op, \
-        datatype = gdal.GDT_Float32, nodata = pixel_export_nodata, \
-        raster_out_uri = pixel_export_uri)
-
-    return pixel_export_dataset
 
 def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
                         retention_efficiency_dataset, pixel_sediment_flow_uri):
