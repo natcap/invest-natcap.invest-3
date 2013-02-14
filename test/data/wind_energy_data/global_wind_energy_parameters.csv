@@ -15,3 +15,4 @@ time_period,20
 rotor_diameter_factor,7
 carbon_coefficient,6.8956e-4
 air_density_coefficient,1.194e-4
+loss_parameter,.05

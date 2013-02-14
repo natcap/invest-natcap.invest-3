@@ -65,6 +65,23 @@ def calculate_raster_stats(ds):
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
+def calculate_raster_stats_uri(ds_uri):
+    """Calculates and sets the min, max, stdev, and mean for the bands in
+       the raster.
+    
+       ds_uri - a uri to a GDAL raster dataset that will be modified by having its band
+            statistics set
+    
+        returns nothing"""
+
+    ds = gdal.Open(ds_uri, gdal.GA_Update)
+
+    for band_number in range(ds.RasterCount):
+        LOGGER.info('calculate raster stats for band %s' % (band_number+1))
+        band = ds.GetRasterBand(band_number + 1)
+        band.ComputeStatistics(0)
+
+
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
     
