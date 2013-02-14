@@ -197,6 +197,11 @@ def execute(args):
         if os.path.isfile(datasource_copy_uri):
             os.remove(datasource_copy_uri)
         datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
+        layer = datasource_copy.GetLayer()
+        for field_name in ['usle_mean', 'usle_total', 'sed_export', 'upret_mean', 'upret_total']:
+            field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+            layer.CreateField(field_def)
+
         original_datasource.Destroy()
         datasource_copy.Destroy()
 
