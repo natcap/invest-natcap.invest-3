@@ -185,20 +185,20 @@ def execute(args):
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
     routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
 
+    #Create output shapefiles
+    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
+    subwatershed_output_datasource_uri = os.path.join(output_dir, 'subwatershed_outputs.shp')
+
+    #If there is already an existing shapefile with the same name and path, delete it
+    #Copy the input shapefile into the designated output folder
+    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    for datasource_copy_uri, original_datasource in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri'])),
+                           (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']))]:
+        if os.path.isfile(datasource_copy_uri):
+            os.remove(datasource_copy_uri)
+        datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
+        original_datasource.Destroy()
+        datasource_copy.Destroy()
+
     LOGGER.info('generating report')
-
-    #Load the relevant output datasets so we can output them in the report
-#    pixel_export_dataset = \
-#        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
-#    pixel_retained_dataset = \
-#        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
-
-    #Output table for watersheds
-#    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
-#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-#        biophysical_args['watersheds'], output_table_uri)
-
-    #Output table for subwatersheds
-#    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
-#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-#        biophysical_args['subwatersheds'], output_table_uri)
+    #TODO generate report
