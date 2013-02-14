@@ -192,15 +192,28 @@ def execute(args):
     #If there is already an existing shapefile with the same name and path, delete it
     #Copy the input shapefile into the designated output folder
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_field_names = ['usle_mean', 'usle_tot', 'sed_export', 'upret_mean', 'upret_tot']
     for datasource_copy_uri, original_datasource in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri'])),
                            (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']))]:
         if os.path.isfile(datasource_copy_uri):
             os.remove(datasource_copy_uri)
         datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
         layer = datasource_copy.GetLayer()
-        for field_name in ['usle_mean', 'usle_total', 'sed_export', 'upret_mean', 'upret_total']:
+        
+        for field_name in output_field_names:
             field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
             layer.CreateField(field_def)
+            
+        #Initialize each feature field to 0.0
+        for feature_id in xrange(layer.GetFeatureCount()):
+            feature = layer.GetFeature(feature_id)
+            for field_name in output_field_names:
+                field_id = feature.GetFieldIndex(field_name)
+                LOGGER.info("field_id %s field_name %s" % (field_id, field_name))
+                feature.SetField(field_id, 0.0)
+            #Save back to datasource
+            layer.SetFeature(feature)
+
 
         original_datasource.Destroy()
         datasource_copy.Destroy()
