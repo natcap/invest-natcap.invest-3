@@ -51,6 +51,19 @@ LOGGER = logging.getLogger('raster_utils')
 #until we know what's happening
 #gdal.UseExceptions()
 
+def get_nodata_from_uri(ds_uri):
+    """Returns the nodata value for the first band from a gdal dataset
+
+        ds_uri - a uri to a gdal dataset
+
+        returns nodata value for ds band 1"""
+
+    ds = gdal.Open(ds_uri)
+    band = ds.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+    return nodata
+
+
 def calculate_raster_stats(ds):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
