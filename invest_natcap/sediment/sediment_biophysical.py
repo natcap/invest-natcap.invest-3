@@ -201,11 +201,11 @@ def execute(args):
 
     field_summaries = {
         'ws': {
-            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'), 
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'), 
-            'sed_export': {},
-            'upret_mean': {}, 
-            'upret_tot' : {}
+            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
+#            'sed_export': {},
+#            'upret_mean': {}, 
+#            'upret_tot' : {}
             },
         'subws': {}
         }
@@ -225,10 +225,10 @@ def execute(args):
         for feature_id in xrange(layer.GetFeatureCount()):
             feature = layer.GetFeature(feature_id)
             for field_name in output_field_names:
-                if field_name == 'usle_tot':
+                try:
                     ws_id = feature.GetFieldAsInteger('ws_id')
-                    feature.SetField('usle_tot', float(usle_watershed[ws_id]))
-                else:
+                    feature.SetField(field_name, float(field_summaries['ws'][field_name][ws_id]))
+                except KeyError:
                     feature.SetField(field_name, 0.0)
             #Save back to datasource
             layer.SetFeature(feature)
