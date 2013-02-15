@@ -154,7 +154,7 @@ def execute(args):
 
     LOGGER.info('calculating usle')
     usle_uri = os.path.join(output_dir, 'usle.tif')
-    usle_export_dataset = sediment_core.calculate_potential_soil_loss(
+    sediment_core.calculate_potential_soil_loss(
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
         v_stream_uri, usle_uri)
 
@@ -171,7 +171,6 @@ def execute(args):
     #This yields sediment flux, and sediment loss which will be used for valuation
 
     LOGGER.info('backtrace the sediment reaching the streams')
-
     percent_to_sink_dataset_uri_list = [
         v_stream_uri, export_rate_uri, outflow_direction_uri, 
         outflow_weights_uri]
@@ -184,6 +183,27 @@ def execute(args):
         percent_to_sink_dataset_uri_list, aligned_dataset_uri_list, 
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
     routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
+
+    #multiply percent to sink with the usle
+    sediment_export_dataset_list = [usle_uri, v_stream_uri, effective_export_to_stream_uri]
+
+    usle_nodata = raster_utils.get_nodata_from_uri(usle_uri)
+    v_stream_nodata = raster_utils.get_nodata_from_uri(v_stream_uri)
+    export_to_stream_nodata = raster_utils.get_nodata_from_uri(effective_export_to_stream_uri)
+
+    def export_sediment_op(usle, v_stream, export_percent):
+        if usle == usle_nodata or v_stream == v_stream_nodata or export_percent == export_to_stream_nodata:
+            return sed_export_nodata
+        return usle * (1.0-v_stream) * export_percent
+    LOGGER.info("multiplying effective export with usle and v_stream")
+    sed_export_uri = os.path.join(intermediate_dir, 'sed_export.tif')
+    sed_export_nodata = -1.0
+    raster_utils.vectorize_datasets(
+        sediment_export_dataset_list, export_sediment_op, sed_export_uri,
+        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
+        aoi_uri=args['watersheds_uri'])
+
+
 
     #Create output shapefiles
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
