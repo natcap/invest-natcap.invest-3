@@ -80,11 +80,13 @@ def calculate_transport(
         outflow_direction_uri, outflow_direction_data_file)
 
     #TODO: This is hard-coded because load memory mapped array doesn't return a nodata value
-    cdef int outflow_direction_nodata = 9
+    cdef int outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = raster_utils.load_memory_mapped_array(
         outflow_weights_uri, outflow_weights_data_file)
+    cdef float source_nodata = raster_utils.get_nodata_from_uri(source_uri)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = raster_utils.load_memory_mapped_array(
         source_uri, source_data_file)
+    cdef float absorption_nodata = raster_utils.get_nodata_from_uri(absorption_rate_uri)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = raster_utils.load_memory_mapped_array(
         absorption_rate_uri, absorption_rate_data_file)
 
@@ -137,6 +139,11 @@ def calculate_transport(
         cells_to_process.pop()
         current_row = current_index / n_cols
         current_col = current_index % n_cols
+
+        #Ensure we are working on a valid pixel
+        if source_array[current_row, current_col] == source_nodata:
+            flux_array[current_row, current_col] = 0.0
+            loss_array[current_row, current_col] = 0.0
 
         if flux_array[current_row, current_col] == transport_nodata:
             flux_array[current_row, current_col] = source_array[
