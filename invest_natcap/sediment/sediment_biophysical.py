@@ -220,14 +220,15 @@ def execute(args):
     field_summaries = {
         'ws_id': {
             'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
-#            'sed_export': {},
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+            'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id')
 #            'upret_mean': {}, 
 #            'upret_tot' : {}
             },
         'subws_id': {
             'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'mean', 'subws_id'),
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'sum', 'subws_id')
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'sum', 'subws_id'),
+            'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['subwatersheds_uri'], 'sum', 'subws_id')
             }
         }
 
