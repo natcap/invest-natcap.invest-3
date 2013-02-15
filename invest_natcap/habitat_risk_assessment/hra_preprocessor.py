@@ -91,3 +91,38 @@ def execute(args):
     default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
     default_headers = ['', 'Rating', 'DQ', 'Weight']
     default_row = [default_dq_message, default_weight_message]
+
+    #Create habitat-centric output csv's.
+    for habitat_name in hab_list:
+
+        csv_filename = os.path.join(output_dir, habitat_name + '_overlap_ratings.csv')
+        
+        with open(csv_filename, 'wb') as habitat_csv_file:
+            habitat_csv_writer = csv.writer(habitat_csv_file)
+            #Write the habitat name
+            habitat_csv_writer.writerow(['HABITAT NAME', habitat_name])
+            habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
+            habitat_csv_writer.writerow(['Habitat Data Quality:', default_dq_message])
+            habitat_csv_writer.writerow([])
+
+            habitat_csv_writer.writerow(default_table_headers)
+
+            ##### HERE WILL BE WHERE USER INPUT HABITAT CRITERIA GO.####
+
+
+            ##### HERE WILL BE WHERE ALL THE H-S USER INPUT CRITERIA GO.####
+
+    #Making stressor specific tables. 
+    for stressor_name in name_lookup['stressor']:
+        csv_filename = os.path.join(output_dir, stressor_name + '_stressor_ratings.csv')
+        with open(csv_filename, 'wb') as stressor_csv_file:
+            stressor_csv_writer = csv.writer(stressor_csv_file)
+            stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
+            stressor_csv_writer.writerow(['Stressor Data Quality:', default_dq_message])
+            stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
+            stressor_csv_writer.writerow([])
+            stressor_csv_writer.writerow(default_table_headers)
+    
+            #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
+
+
