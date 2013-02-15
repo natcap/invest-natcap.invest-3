@@ -198,6 +198,19 @@ def execute(args):
 
     usle_watershed = sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
     LOGGER.debug(usle_watershed)
+
+    field_summaries = {
+        'ws': {
+            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'), 
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'), 
+            'sed_export': {},
+            'upret_mean': {}, 
+            'upret_tot' : {}
+            },
+        'subws': {}
+        }
+
+
     for datasource_copy_uri, original_datasource in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri']))]:
         if os.path.isfile(datasource_copy_uri):
             os.remove(datasource_copy_uri)
