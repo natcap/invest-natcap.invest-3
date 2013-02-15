@@ -42,9 +42,6 @@ def execute(args):
             properties of the landscape.  (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
-        args['subwatersheds_uri'] - a uri to an input shapefile of the
-            subwatersheds of interest that are contained in the
-            'watersheds_uri' shape provided as input. (required)
         args['reservoir_locations_uri'] - a uri to an input shape file with
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties_uri'] - a uri to an input CSV table
@@ -222,66 +219,42 @@ def execute(args):
         gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
-
-
-    #Create output shapefiles
-    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
-    subwatershed_output_datasource_uri = os.path.join(output_dir, 'subwatershed_outputs.shp')
-
-    #If there is already an existing shapefile with the same name and path, delete it
-    #Copy the input shapefile into the designated output folder
+    LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_field_names = ['usle_mean', 'usle_tot', 'sed_export', 'upret_mean', 'upret_tot']
-
-    usle_watershed = sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
-    LOGGER.debug(usle_watershed)
 
     field_summaries = {
-        'ws_id': {
-            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-            'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-            'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-            'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
-            },
-        'subws_id': {
-            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'mean', 'subws_id'),
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'sum', 'subws_id'),
-            'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['subwatersheds_uri'], 'sum', 'subws_id'),
-            'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['subwatersheds_uri'], 'sum', 'subws_id'),
-            'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['subwatersheds_uri'], 'mean', 'subws_id')
-            }
+        'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
+        'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
         }
 
+    original_datasource = ogr.Open(args['watersheds_uri'])
+    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
+    #If there is already an existing shapefile with the same name and path, delete it
+    #Copy the input shapefile into the designated output folder
+    if os.path.isfile(watershed_output_datasource_uri):
+        os.remove(watershed_output_datasource_uri)
+    datasource_copy = esri_driver.CopyDataSource(original_datasource, watershed_output_datasource_uri)
+    layer = datasource_copy.GetLayer()
 
-    for datasource_copy_uri, original_datasource, watershed_type in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri']), 'ws_id'),
-                           (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']), 'subws_id')]:
-        if os.path.isfile(datasource_copy_uri):
-            os.remove(datasource_copy_uri)
-        datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
-        layer = datasource_copy.GetLayer()
-        
-        for field_name in output_field_names:
-            field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-            layer.CreateField(field_def)
-            
-        #Initialize each feature field to 0.0
-        for feature_id in xrange(layer.GetFeatureCount()):
-            feature = layer.GetFeature(feature_id)
-            for field_name in output_field_names:
-                try:
-                    ws_id = feature.GetFieldAsInteger(watershed_type)
-                    feature.SetField(field_name, float(field_summaries[watershed_type][field_name][ws_id]))
-                except KeyError:
-                    feature.SetField(field_name, 0.0)
-            #Save back to datasource
-            layer.SetFeature(feature)
+    for field_name in field_summaries:
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        layer.CreateField(field_def)
 
-        original_datasource.Destroy()
-        datasource_copy.Destroy()
+    #Initialize each feature field to 0.0
+    for feature_id in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        for field_name in field_summaries:
+            try:
+                ws_id = feature.GetFieldAsInteger('ws_id')
+                feature.SetField(field_name, float(field_summaries[field_name][ws_id]))
+            except KeyError:
+                LOGGER.warning('unknown field %s' % field_name)
+                feature.SetField(field_name, 0.0)
+        #Save back to datasource
+        layer.SetFeature(feature)
 
-    LOGGER.info('generating report')
-
-
-
-    #TODO generate report
+    original_datasource.Destroy()
+    datasource_copy.Destroy()
