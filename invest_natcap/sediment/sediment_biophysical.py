@@ -193,25 +193,27 @@ def execute(args):
     #Copy the input shapefile into the designated output folder
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_field_names = ['usle_mean', 'usle_tot', 'sed_export', 'upret_mean', 'upret_tot']
-#    for datasource_copy_uri, original_datasource in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri'])),
-#                           (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']))]:
 
     usle_watershed = sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
     LOGGER.debug(usle_watershed)
 
     field_summaries = {
-        'ws': {
+        'ws_id': {
             'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
             'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
 #            'sed_export': {},
 #            'upret_mean': {}, 
 #            'upret_tot' : {}
             },
-        'subws': {}
+        'subws_id': {
+            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'mean', 'subws_id'),
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'sum', 'subws_id')
+            }
         }
 
 
-    for datasource_copy_uri, original_datasource in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri']))]:
+    for datasource_copy_uri, original_datasource, watershed_type in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri']), 'ws_id'),
+                           (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']), 'subws_id')]:
         if os.path.isfile(datasource_copy_uri):
             os.remove(datasource_copy_uri)
         datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
@@ -226,8 +228,8 @@ def execute(args):
             feature = layer.GetFeature(feature_id)
             for field_name in output_field_names:
                 try:
-                    ws_id = feature.GetFieldAsInteger('ws_id')
-                    feature.SetField(field_name, float(field_summaries['ws'][field_name][ws_id]))
+                    ws_id = feature.GetFieldAsInteger(watershed_type)
+                    feature.SetField(field_name, float(field_summaries[watershed_type][field_name][ws_id]))
                 except KeyError:
                     feature.SetField(field_name, 0.0)
             #Save back to datasource
