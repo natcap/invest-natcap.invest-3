@@ -17,6 +17,10 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('wind_energy_biophysical')
 
+# A custom error message for a hub height that is not supported in
+# the current wind data
+class HubHeightError(Exception): pass
+
 def execute(args):
     """Takes care of all file handling for the biophysical part of the wind
         energy model
@@ -91,7 +95,8 @@ def execute(args):
     # input files
     biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
                           'hub_height', 'turbine_rated_pwr', 'air_density',
-                          'exponent_power_curve', 'air_density_coefficient']
+                          'exponent_power_curve', 'air_density_coefficient',
+                          'loss_parameter']
     # Get the biophysical turbine parameters from the CSV file
     bio_turbine_param_file = open(args['turbine_parameters_uri'])
     bio_turbine_reader = csv.reader(bio_turbine_param_file)
@@ -260,11 +265,19 @@ def execute(args):
     LOGGER.info('Leaving Wind_Energy_Biophysical')
 
 def read_binary_wind_data(wind_data_uri, field_list):
-    """Unpack the binary wind data into a dictionary
+    """Unpack the binary wind data into a dictionary. This function only reads
+        binary files that are packed using big indian ordering '<'. Each piece
+        of data is 4 bytes long and of type float. Each row of the file has data
+        that corresponds to the following fields:
 
+            "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
+            "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
+            "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"
+        
         wind_data_uri - a uri for the binary wind data file
         field_list - a list of strings referring to the column headers from
-            the text file that are to be included in the dictionary
+            the text file that are to be included in the dictionary.
+            ['LONG', 'LATI', scale_key, 'K-010m']
 
         returns - a dictionary where the keys are lat/long tuples which point
             to dictionaries that hold wind data at that location"""
@@ -280,7 +293,16 @@ def read_binary_wind_data(wind_data_uri, field_list):
             "LONG","LATI","Ram-010m","Ram-020m","Ram-030m","Ram-040m",
             "Ram-050m","Ram-060m","Ram-070m","Ram-080m","Ram-090m","Ram-100m",
             "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"]
+   
+    # Get the scale key from the field list to verify that the hub height given
+    # is indeed a valid height handled in the wind energy point data
+    scale_key = field_list[2]
     
+    if scale_key not in param_list:
+        raise HubHeightError('The Hub Height is not supported by the current '
+                'wind point data. Please make sure the hub height lies '
+                'between 10 and 150 meters')
+
     # Open the file in reading and binary mode
     wind_file = open(wind_data_uri, 'rb')
     

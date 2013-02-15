@@ -65,6 +65,23 @@ def calculate_raster_stats(ds):
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
+def calculate_raster_stats_uri(ds_uri):
+    """Calculates and sets the min, max, stdev, and mean for the bands in
+       the raster.
+    
+       ds_uri - a uri to a GDAL raster dataset that will be modified by having its band
+            statistics set
+    
+        returns nothing"""
+
+    ds = gdal.Open(ds_uri, gdal.GA_Update)
+
+    for band_number in range(ds.RasterCount):
+        LOGGER.info('calculate raster stats for band %s' % (band_number+1))
+        band = ds.GetRasterBand(band_number + 1)
+        band.ComputeStatistics(0)
+
+
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
     
@@ -680,12 +697,6 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), 'nearest', nodata)
-    #This will mask out the interpolation so everything is nodata outside the convex hull
-    if mask_convex_hull:
-        LOGGER.info("Masking out convex hull")
-        mask_array = scipy.interpolate.griddata(
-            point_array, value_array, (grid_y, grid_x), 'linear', nodata)
-        raster_out_array[mask_array == nodata] = nodata
     LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
@@ -1012,77 +1023,35 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
         slope_uri - (input) a path to the output slope uri
         aoi_uri - (optional) a uri to an AOI input
 
-        returns GDAL single band raster of the same dimensions as dem whose
-            elements are percent rise"""
+        returns nothing"""
 
     LOGGER = logging.getLogger('calculateSlope')
     LOGGER.debug(dem_dataset_uri)
-    out_pixel_size = pixel_size(gdal.Open(dem_dataset_uri))
+    dem_dataset = gdal.Open(dem_dataset_uri)
+    out_pixel_size = pixel_size(dem_dataset)
     LOGGER.debug(out_pixel_size)
+    _, dem_nodata = extract_band_and_nodata(dem_dataset)
 
     dem_small_uri = temporary_filename()
+    #cast the dem to a floating point one if it's not already
+    dem_float_nodata = float(dem_nodata)
 
-    LOGGER.debug("align datasets")
-    align_dataset_list(
-        [dem_dataset_uri], [dem_small_uri], ["nearest"], out_pixel_size, "intersection",
-        0, aoi_uri=aoi_uri)
+    vectorize_datasets(
+        [dem_dataset_uri], lambda x: float(x), dem_small_uri,
+        gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=aoi_uri)
 
+    LOGGER.debug("calculate slope")
 
-
-    #Read the DEM directly into an array
+    slope_nodata = -1.e30 #make a big negative slope for nodata
     dem_small_dataset = gdal.Open(dem_small_uri)
-    dem_band, dem_nodata = extract_band_and_nodata(dem_small_dataset)
-    dem_matrix = dem_band.ReadAsArray()
+    _ = new_raster_from_base(
+        dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
+    raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
-    gp = dem_small_dataset.GetGeoTransform()
-    cell_size = gp[1] #assume square cells
-
-    LOGGER.debug('building kernels')
-    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
-    dzdy_kernel = \
-        numpy.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=numpy.float64) / \
-        (8 * cell_size)
-    dzdx_kernel = dzdy_kernel.transpose().copy()
-
-    LOGGER.debug('doing convolution')
-    dzdx = scipy.signal.convolve2d(dem_matrix, dzdx_kernel, 'same')
-    dzdy = scipy.signal.convolve2d(dem_matrix, dzdy_kernel, 'same')
-    slope_matrix = numpy.sqrt(dzdx ** 2 + dzdy ** 2)
-
-    def shift_matrix(M, x, y):
-        """Shifts M along the given x and y axis.
-    
-        M - a 2D numpy array
-        x - the number of elements x-wise to shift M
-        y - the number of elements y-wise to shift M
-    
-        returns M rolled x and y elements along the x and y axis"""
-
-        LOGGER.debug('shifting by %s %s' % (x, y))
-        return numpy.roll(numpy.roll(M, x, axis=1), y, axis=0)
-
-    slope_nodata = -1.0
-    nodata_mask = dem_matrix == dem_nodata
-    slope_matrix[nodata_mask] = slope_nodata
-    offsets = [(1, 1), (0, 1), (-1, 1), 
-               (1, 0), (-1, 0), (1, -1), 
-               (0, -1), (-1, -1)]
-
-    #convert slopes to percentages
-    slope_matrix[:] *= 100.0
-
-    #Set everything that's next to the nodata dem also to nodata
-    for offset in offsets:
-        slope_matrix[shift_matrix(nodata_mask, *offset)] = \
-            slope_nodata
-
-    slope_dataset = new_raster_from_base(dem_small_dataset, slope_uri, 'GTiff', 
-                                         slope_nodata, gdal.GDT_Float32)
-    slope_band = slope_dataset.GetRasterBand(1)
-    slope_band.WriteArray(slope_matrix)
+    slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
     calculate_raster_stats(slope_dataset)
 
-    return slope_dataset
 
 def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     """This function will clip source_dataset to the bounding box of the 
@@ -1888,8 +1857,8 @@ def resize_and_resample_dataset(
     gdal_driver = gdal.GetDriverByName('GTiff')
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)
-    output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
     output_band = output_dataset.GetRasterBand(1)
+    output_band.SetNoDataValue(original_nodata)
     output_band.Fill(original_nodata)
 
     # Set the geotransform
@@ -1900,7 +1869,6 @@ def resize_and_resample_dataset(
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_dict[resample_method])
-
     calculate_raster_stats(output_dataset)
 
 
@@ -2060,7 +2028,7 @@ def vectorize_datasets(
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
         aoi_uri=aoi_uri)
     aligned_datasets = [
-        gdal.Open(filename) for filename in dataset_out_uri_list]
+        gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
 
     #The output dataset will be the same size as any one of the aligned datasets
@@ -2101,4 +2069,3 @@ def vectorize_datasets(
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
             out_row[mask_array == 0] = nodata_out
         output_band.WriteArray(out_row, xoff=0, yoff=row_index)
-

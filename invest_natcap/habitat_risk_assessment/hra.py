@@ -2,7 +2,6 @@
 and pre-processed data from the UI and pass it to the hra_core module.'''
 
 import os
-import re
 import shutil
 import logging
 import glob
@@ -89,7 +88,7 @@ def execute(args):
             and intermediate folders will be subfolders of this one.
         hra_args['h-s']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
-            a dataset that shows the potentially buffered overlap between the 
+            a dataset URI that shows the potentially buffered overlap between the 
             habitat and stressor. Additionally, any raster criteria will
             be placed in their criteria name subdictionary. The overall 
             structure will be as pictured:
@@ -101,20 +100,20 @@ def execute(args):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
                         },
-                    'DS':  <Open A-1 Raster Dataset>
+                    'DS':  "A-1 Dataset URI"
                     }
             }
         hra_args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat
             name, and habitats['habitatName']['DS'] points to the rasterized
-            habitat shapefile provided by the user.
+            habitat shapefile URI provided by the user.
         hra_args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             name, and stressors['stressorName']['DS'] points to the rasterized
-            stressor shapefile provided by the user that will be buffered by
+            stressor shapefile URI provided by the user that will be buffered by
             the indicated amount in buffer_dict['stressorName'].
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
@@ -144,15 +143,21 @@ def execute(args):
     unpack_over_dict(args['csv_uri'], hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
+    crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
     stress_dir = os.path.join(inter_dir, 'Stressor_Rasters')
     overlap_dir = os.path.join(inter_dir, 'Overlap_Rasters')
 
-    for folder in (hab_dir, stress_dir, overlap_dir):
+    for folder in (crit_dir, hab_dir, stress_dir, overlap_dir):
         if (os.path.exists(folder)):
             shutil.rmtree(folder) 
 
         os.makedirs(folder)
+
+    #Criteria
+    c_shape_dict = make_crit_shape_dict(args['crit_uri'])
+    add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
+                hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
     #Habitats
     hab_list = []
@@ -164,10 +169,257 @@ def execute(args):
 
     #Stressors
     add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
-                    hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+                  hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
 
+    #H-S Overlap
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+
+    hra_core.execute(hra_args)
+    
+def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
+    '''This will take in the dictionary of criteria shapefiles, rasterize them,
+    and add the URI of that raster to the proper subdictionary within h/s/h-s.
+
+    Input:
+        dir- Directory into which the raserized criteria shapefiles should be
+            placed.
+        crit_dict- A multi-level dictionary of criteria shapefiles. The 
+            outermost keys refer to the dictionary they belong with. The
+            structure will be as follows:
+            
+            {'h-s':
+                {('HabA', 'Stress1'):
+                    {'CriteriaName': "Shapefile Datasource URI", ...}, ...
+                },
+             'h':
+                {'HabA':
+                    {'CriteriaName: "Shapefile Datasource URI"...}, ...
+                },
+             's':
+                {'Stress1':
+                    {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+                }
+            }
+        h_s- A multi-level structure which holds numerical criteria
+            ratings, as well as weights and data qualities for criteria rasters.
+            h-s will hold only criteria that apply to habitat and stressor 
+            overlaps. The structure's outermost keys are tuples of 
+            (Habitat, Stressor) names. The overall structure will be as 
+            pictured:
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            raster information. The outermost keys are habitat names.
+        stressors- Similar to the h-s dictionary, a multi-level
+            dictionary containing all stressor-specific criteria ratings and
+            raster information. The outermost keys are stressor names.
+        grid_size- An int representing the desired pixel size for the criteria
+            rasters. 
+    Output:
+        A set of rasterized criteria files. The criteria shapefiles will be
+            burned based on their 'Rating' attribute. These will be placed in
+            the 'dir' folder.
+
+    Returns nothing.
+    '''
+    #H-S
+    for pair in crit_dict['h-s']:
+        
+        for c_name, c_path in crit_dict['h-s'][pair].iteritems():
+
+            #The path coming in from the criteria should be of the form
+            #dir/h_s_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+             
+            h_s['Crit_Rasters'][c_name]['Rating'] = out_uri
+    
+    #Habs
+    for h in crit_dict['h']:
+        
+        for c_name, c_path in crit_dict['h'][h].iteritems():
+
+            #The path coming in from the criteria should be of the form
+            #dir/h_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+             
+            habitats['Crit_Rasters'][c_name]['Rating'] = out_uri
+
+    #Stressors
+    for s in crit_dict['s']:
+        
+        for c_name, c_path in crit_dict['s'][s].iteritems():
+
+            #The path coming in from the criteria should be of the form
+            #dir/s_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+             
+            stressors['Crit_Rasters'][c_name]['Rating'] = out_uri
+def make_crit_shape_dict(crit_uri):
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+    Returns:
+        A dictionary containing shapefile URI's, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        structure will be as follows:
+        
+        {'h-s':
+            {('HabA', 'Stress1'):
+                {'CriteriaName': "Shapefile Datasource URI", ...}, ...
+            },
+         'h':
+            {'HabA':
+                {'CriteriaName: "Shapefile Datasource URI"...}, ...
+            },
+         's':
+            {'Stress1':
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            }
+        }
+    '''
+    c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resiliance' subfolder
+    #of raster_criteria.
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+   
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in res_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if hab_name not in c_shape_dict['h']:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = path
+                   
+    
+    #Now, want to move on to stressor-centric criteria, but will do much the
+    #same thing. 
+    exps_shps = glob.glob(os.path.join(crit_uri, 'Exposure', '*.shp'))
+   
+    #Now we have a list of all stressor specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exps_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        stress_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if stress_name not in c_shape_dict['s']:
+            c_shape_dict['s'][stress_name] = {}
+        
+        c_shape_dict['s'][stress_name][crit_name] = path
+    
+    #Finally, want to get all of our pair-centric shape criteria. 
+    sens_shps = glob.glob(os.path.join(crit_uri, 'Sensitivity', '*.shp'))
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h-s']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = path
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict
 
 def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
     '''For every pair in h_s, want to get the corresponding habitat and
@@ -197,15 +449,10 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
 
         h, s = pair
 
-        #The return of GetFileList is a list. Concat to send into
-        #vectorize_datasets
-        h_ds_uri = habitats[h]['DS'].GetFileList()
-        s_ds_uri = stressors[s]['DS'].GetFileList()
-
-        _, s_nodata = raster_utils.extract_band_and_nodata(stresors[s]['DS'])
-        _, h_nodata = raster_utils.extract_band_and_nodata(habitats[h]['DS'])
+        _, s_nodata = raster_utils.extract_band_and_nodata(gdal.Open(stressors[s]['DS']))
+        _, h_nodata = raster_utils.extract_band_and_nodata(gdal.Open(habitats[h]['DS']))
  
-        files = h_ds_uri + s_ds_uri
+        files = [habitats[h]['DS'], stressors[s]['DS']]
 
         def add_h_s_pixels(h_pix, s_pix):
             '''Since the stressor is buffered, we actually want to make sure to
@@ -313,7 +560,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
 
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
-        stressors[name]['DS'] = new_dataset
+        stressors[name]['DS'] = new_buff_uri
 
 def make_lin_decay_array(dist_array, buff, nodata):
     '''Should create an array where the area around land is a function of 
@@ -407,8 +654,8 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             both intermediate and ouput rasters. 
 
     Output:
-        A modified version of habitats, into which we have placed a rasterized
-            version of the habitat shapefile. It will be placed at
+        A modified version of habitats, into which we have placed the URI to the
+            rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
    ''' 
     for shape in hab_list:
@@ -436,7 +683,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
 
-        habitats[name]['DS'] = r_dataset
+        habitats[name]['DS'] = out_uri
 
 def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
@@ -489,4 +736,4 @@ def unpack_over_dict(csv_uri, args):
 
     for dict_name in dicts:
      
-       args[dict_name] = dicts[dict_name]
+        args[dict_name] = dicts[dict_name]

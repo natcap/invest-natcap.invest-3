@@ -236,6 +236,7 @@ def biophysical(args):
     v_out = float(bio_turbine_dict['cut_out_wspd'])
     v_in = float(bio_turbine_dict['cut_in_wspd'])
     air_density_coef = float(bio_turbine_dict['air_density_coefficient'])
+    losses = float(bio_turbine_dict['loss_parameter'])
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
@@ -287,6 +288,11 @@ def biophysical(args):
         # 1,000,000
         harvested_wind_energy = harvested_wind_energy / 1000000.00
 
+        # Now factor in the percent losses due to turbine
+        # downtime (mechanical failure, storm damage, etc.)
+        # and due to electrical resistance in the cables 
+        harvested_wind_energy = (1 - losses) * harvested_wind_energy
+
         # Save the results to their respective fields 
         for field_name, result_value in [(density_field_name, density_results),
                 (harvest_field_name, harvested_wind_energy)]:
@@ -321,7 +327,8 @@ def biophysical(args):
     
     LOGGER.info('Vectorize Harvested Points')
     raster_utils.vectorize_points(
-            wind_points, harvest_field_name, harvested_temp)
+            wind_points, harvest_field_name, harvested_temp,
+            mask_convex_hull=True)
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
