@@ -177,16 +177,17 @@ def execute(args):
     outflow_direction_uri = os.path.join(
         intermediate_dir, 'outflow_directions.tif')
 
-    _, _ = routing_cython_core.calculate_flow_graph(
+    sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
     sed_retention_uri = os.path.join(intermediate_dir, 'sed_ret.tif')
     sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux.tif')
-    routing_utils.route_flux(
-        clipped_dem_uri, usle_uri, retention_rate_uri, sed_retention_uri, sed_flux_uri,
-        args['workspace_dir'], aoi_uri=args['watersheds_uri'])
+
+    routing_cython_core.calculate_transport(
+        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
+        usle_uri, retention_rate_uri, sed_retention_uri, sed_flux_uri)
 
     LOGGER.info('backtrace the sediment reaching the streams')
     percent_to_sink_dataset_uri_list = [
