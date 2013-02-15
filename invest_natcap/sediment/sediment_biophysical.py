@@ -77,16 +77,23 @@ def execute(args):
             os.makedirs(directory)
 
     dem_dataset = gdal.Open(args['dem_uri'])
+    _, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
     
+    clipped_dem_uri = raster_utils.temporary_filename()
+    raster_utils.vectorize_datasets(
+        [args['dem_uri']], lambda x: float(x), clipped_dem_uri,
+        gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+
     #Calculate slope
     LOGGER.info("Calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
-    raster_utils.calculate_slope(args['dem_uri'], slope_uri, aoi_uri=args['watersheds_uri'])
+    raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
-    routing_utils.flow_accumulation(args['dem_uri'], flow_accumulation_uri)
+    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
@@ -97,7 +104,7 @@ def execute(args):
 
     flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
     ls_uri = os.path.join(intermediate_dir, 'ls.tif')
-    routing_cython_core.calculate_flow_direction(args['dem_uri'], flow_direction_uri)
+    routing_cython_core.calculate_flow_direction(clipped_dem_uri, flow_direction_uri)
 
     #Calculate LS term
     LOGGER.info('calcualte ls term')
@@ -105,7 +112,17 @@ def execute(args):
     sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
                                       flow_direction_uri, ls_uri, ls_nodata)
 
+    #Clip the LULC
     lulc_dataset = gdal.Open(args['landuse_uri'])
+    _, lulc_nodata = raster_utils.extract_band_and_nodata(lulc_dataset)
+    lulc_clipped_uri = raster_utils.temporary_filename()
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], lambda x: int(x), lulc_clipped_uri,
+        gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+    lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
+
+
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
 
     LOGGER.info('building export fraction raster from lulc')
@@ -115,7 +132,7 @@ def execute(args):
                   for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_export_dict %s' % lulc_to_export_dict)
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
     LOGGER.info('building cp raster from lulc')
@@ -123,7 +140,7 @@ def execute(args):
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
     cp_uri = os.path.join(intermediate_dir, 'cp.tif')
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('building (1-c)(1-p) raster from lulc')
@@ -132,7 +149,7 @@ def execute(args):
     LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
     inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv.tif')
     raster_utils.reclassify_dataset(
-        lulc_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('calculating usle')
@@ -168,20 +185,61 @@ def execute(args):
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
     routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
 
+    #Create output shapefiles
+    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
+    subwatershed_output_datasource_uri = os.path.join(output_dir, 'subwatershed_outputs.shp')
+
+    #If there is already an existing shapefile with the same name and path, delete it
+    #Copy the input shapefile into the designated output folder
+    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_field_names = ['usle_mean', 'usle_tot', 'sed_export', 'upret_mean', 'upret_tot']
+
+    usle_watershed = sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
+    LOGGER.debug(usle_watershed)
+
+    field_summaries = {
+        'ws_id': {
+            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
+#            'sed_export': {},
+#            'upret_mean': {}, 
+#            'upret_tot' : {}
+            },
+        'subws_id': {
+            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'mean', 'subws_id'),
+            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'sum', 'subws_id')
+            }
+        }
+
+
+    for datasource_copy_uri, original_datasource, watershed_type in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri']), 'ws_id'),
+                           (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']), 'subws_id')]:
+        if os.path.isfile(datasource_copy_uri):
+            os.remove(datasource_copy_uri)
+        datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
+        layer = datasource_copy.GetLayer()
+        
+        for field_name in output_field_names:
+            field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+            layer.CreateField(field_def)
+            
+        #Initialize each feature field to 0.0
+        for feature_id in xrange(layer.GetFeatureCount()):
+            feature = layer.GetFeature(feature_id)
+            for field_name in output_field_names:
+                try:
+                    ws_id = feature.GetFieldAsInteger(watershed_type)
+                    feature.SetField(field_name, float(field_summaries[watershed_type][field_name][ws_id]))
+                except KeyError:
+                    feature.SetField(field_name, 0.0)
+            #Save back to datasource
+            layer.SetFeature(feature)
+
+        original_datasource.Destroy()
+        datasource_copy.Destroy()
+
     LOGGER.info('generating report')
 
-    #Load the relevant output datasets so we can output them in the report
-#    pixel_export_dataset = \
-#        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
-#    pixel_retained_dataset = \
-#        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
 
-    #Output table for watersheds
-#    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
-#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-#        biophysical_args['watersheds'], output_table_uri)
 
-    #Output table for subwatersheds
-#    output_table_uri = os.path.join(output_dir, 'sediment_subwatershed.csv')
-#    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
-#        biophysical_args['subwatersheds'], output_table_uri)
+    #TODO generate report

@@ -2,7 +2,6 @@
 and pre-processed data from the UI and pass it to the hra_core module.'''
 
 import os
-import re
 import shutil
 import logging
 import glob
@@ -176,6 +175,8 @@ def execute(args):
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
 
+    hra_core.execute(hra_args)
+    
 def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
@@ -247,8 +248,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                gdal.GDT_Int32, 0, out_uri, shape)
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
@@ -273,8 +274,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                gdal.GDT_Int32, 0, out_uri, shape)
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
@@ -299,8 +300,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                gdal.GDT_Int32, 0, out_uri, shape)
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
@@ -373,7 +374,7 @@ def make_crit_shape_dict(crit_uri):
    
     #Now we have a list of all stressor specific shapefile criteria. 
     #Now we need to parse them out.
-    for path in exp_shps:
+    for path in exps_shps:
 
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
@@ -448,7 +449,7 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
 
         h, s = pair
 
-        _, s_nodata = raster_utils.extract_band_and_nodata(gdal.Open(stresors[s]['DS']))
+        _, s_nodata = raster_utils.extract_band_and_nodata(gdal.Open(stressors[s]['DS']))
         _, h_nodata = raster_utils.extract_band_and_nodata(gdal.Open(habitats[h]['DS']))
  
         files = [habitats[h]['DS'], stressors[s]['DS']]
@@ -735,4 +736,4 @@ def unpack_over_dict(csv_uri, args):
 
     for dict_name in dicts:
      
-       args[dict_name] = dicts[dict_name]
+        args[dict_name] = dicts[dict_name]
