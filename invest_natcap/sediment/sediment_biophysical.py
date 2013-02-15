@@ -124,6 +124,7 @@ def execute(args):
 
 
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
+    retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate.tif')
 
     LOGGER.info('building export fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
@@ -135,6 +136,18 @@ def execute(args):
         lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
+
+    LOGGER.info('building retention fraction raster from lulc')
+    #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
+    lulc_to_retention_dict = \
+        dict([(lulc_code, float(table['sedret_eff'])/100.0) \
+                  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
+    raster_utils.reclassify_dataset(
+        lulc_clipped_dataset, lulc_to_retention_dict, retention_rate_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
@@ -169,6 +182,11 @@ def execute(args):
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
+    sed_retention_uri = os.path.join(intermediate_dir, 'sed_ret.tif')
+    sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux.tif')
+    routing_utils.route_flux(
+        clipped_dem_uri, usle_uri, retention_rate_uri, sed_retention_uri, sed_flux_uri,
+        args['workspace_dir'], aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('backtrace the sediment reaching the streams')
     percent_to_sink_dataset_uri_list = [
