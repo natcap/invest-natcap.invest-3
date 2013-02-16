@@ -125,4 +125,66 @@ def execute(args):
     
             #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
 
+def parse_hra_tables(worskapce_uri):
+    '''This takes in the directory containing the criteria rating csv's, 
+    and returns a coherent set of dictionaries that can be used to do EVERYTHING
+    in core.
+
+    It will return a massive dictionary containing all of the subdictionaries
+    needed by non core. It will be of the following form:
+
+    {'buffer_dict':
+        {'Stressor 1': 50,
+        'Stressor 2': ...,
+        },
+    'h-s':
+        {(Habitat A, Stressor 1): 
+            {'Crit_Ratings': 
+                {'CritName': 
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                },
+            'Crit_Rasters': 
+                {'CritName':
+                    {'Weight': 1.0, 'DQ': 1.0}
+                },
+            }
+        },
+     'stressors':
+        {Stressor 1: 
+            {'Crit_Ratings': 
+                {'CritName': 
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                },
+            'Crit_Rasters': 
+                {'CritName':
+                    {'Weight': 1.0, 'DQ': 1.0}
+                },
+            }
+        },
+     'habitats':
+        {Habitat A: 
+            {'Crit_Ratings': 
+                {'CritName': 
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                },
+            'Crit_Rasters': 
+                {'CritName':
+                    {'Weight': 1.0, 'DQ': 1.0}
+                },
+            }
+        }
+    }
+    '''
+
+    habitat_paths = os.path.join(uri_to_workspace, '*_overlap_ratings.csv')
+    stressor_paths = os.path.join(uri_to_workspace, '*_stressor_ratings.csv')
+
+    habitat_csvs = glob.glob(habitat_paths)
+    stressor_csvs = glob.glob(stressor_paths)
+    
+    #Parse out stressor names
+    LOGGER.debug(stressor_paths)
+    stressor_names = [re.search('(.*)_stressor_ratings\.csv', os.path.basename(x)).group(1) for x in stressor_csvs]
+    #Parse out habitat names
+    habitat_names = [re.search('(.*)_overlap_ratings\.csv', os.path.basename(x)).group(1) for x in habitat_csvs]
 
