@@ -66,17 +66,13 @@
                     "label": "Watershed Polygons",
                     "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
                     "required": true,
-                    "validateAs": {"type": "OGR"},
-		    "helpText": "Rich, fill this in."
-                },
-		{        
-                    "id" : "subwatersheds_uri",
-                    "args_id" : "subwatersheds_uri",
-                    "type": "file",
-                    "label": "Subwatershed Polygons",
-                    "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
-                    "required": true,
-                    "validateAs": {"type": "OGR"},
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons",
+					       "projection": {"exists": true}
+                                             }],
+                                   "fieldsExist": ["ws_id"]
+                                   },
 		    "helpText": "Rich, fill this in."
                 },
 		{        

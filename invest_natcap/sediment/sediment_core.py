@@ -210,8 +210,6 @@ def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri,
     potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)
     raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
 
-    return potential_soil_loss_dataset
-
 
 def aggregate_raster_values(
     dataset_uri, shapefile_uri, operation, shapefile_id_field, ignore_nodata=True):
