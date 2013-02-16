@@ -188,3 +188,32 @@ def parse_hra_tables(worskapce_uri):
     #Parse out habitat names
     habitat_names = [re.search('(.*)_overlap_ratings\.csv', os.path.basename(x)).group(1) for x in habitat_csvs]
 
+    for stressor_uri in stressor_csvs:
+        LOGGER.debug(stressor_uri)
+        stressor_name = re.search('(.*)_stressor_ratings\.csv', os.path.basename(stressor_uri)).group(1)
+        stressor_dict[stressor_name] = parse_stressor(stressor_uri)
+
+    habitat_dict = {}
+    h_s_dict = {}
+    for habitat_uri in habitat_csvs:
+        LOGGER.debug(habitat_uri)
+        habitat_name = re.search('(.*)_overlap_ratings\.csv', os.path.basename(habitat_uri)).group(1)
+
+        habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
+        habitat_dict[habitat_name] = habitat_parse_dictionary['hab_only']
+        for hab_stress_overlap in habitat_parse_dictionary['overlap']:
+            h_s_dict[hab_stress_overlap] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
+
+    parse_dictionary = {}
+    parse_dictionary['habitats'] = habitat_dict
+    parse_dictionary['h-s'] = h_s_dict
+    parse_dictionary['stressors'] = stressor_dict
+
+    stressor_buf_dict = {}
+    for stressor, stressor_properties in stressor_dict.iteritems():
+        stressor_buf_dict[stressor] = stressor_properties['buffer']
+        del(stressor_properties['buffer'])
+
+    parse_dictionary['buffer_dict'] = stressor_buf_dict
+
+    return parse_dictionary
