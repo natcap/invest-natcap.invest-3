@@ -42,9 +42,6 @@ def execute(args):
             properties of the landscape.  (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
-        args['subwatersheds_uri'] - a uri to an input shapefile of the
-            subwatersheds of interest that are contained in the
-            'watersheds_uri' shape provided as input. (required)
         args['reservoir_locations_uri'] - a uri to an input shape file with
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties_uri'] - a uri to an input CSV table
@@ -124,6 +121,7 @@ def execute(args):
 
 
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
+    retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate.tif')
 
     LOGGER.info('building export fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
@@ -135,6 +133,18 @@ def execute(args):
         lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
+
+    LOGGER.info('building retention fraction raster from lulc')
+    #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
+    lulc_to_retention_dict = \
+        dict([(lulc_code, float(table['sedret_eff'])/100.0) \
+                  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
+    raster_utils.reclassify_dataset(
+        lulc_clipped_dataset, lulc_to_retention_dict, retention_rate_uri, gdal.GDT_Float32,
+        -1.0, exception_flag='values_required')
+
+
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
@@ -154,7 +164,7 @@ def execute(args):
 
     LOGGER.info('calculating usle')
     usle_uri = os.path.join(output_dir, 'usle.tif')
-    usle_export_dataset = sediment_core.calculate_potential_soil_loss(
+    sediment_core.calculate_potential_soil_loss(
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
         v_stream_uri, usle_uri)
 
@@ -164,14 +174,19 @@ def execute(args):
     outflow_direction_uri = os.path.join(
         intermediate_dir, 'outflow_directions.tif')
 
-    _, _ = routing_cython_core.calculate_flow_graph(
+    sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
+    sed_retention_uri = os.path.join(intermediate_dir, 'sed_ret.tif')
+    sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux.tif')
+
+    routing_cython_core.calculate_transport(
+        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
+        usle_uri, retention_rate_uri, sed_retention_uri, sed_flux_uri)
 
     LOGGER.info('backtrace the sediment reaching the streams')
-
     percent_to_sink_dataset_uri_list = [
         v_stream_uri, export_rate_uri, outflow_direction_uri, 
         outflow_weights_uri]
@@ -185,61 +200,61 @@ def execute(args):
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
     routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
 
-    #Create output shapefiles
-    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
-    subwatershed_output_datasource_uri = os.path.join(output_dir, 'subwatershed_outputs.shp')
+    #multiply percent to sink with the usle
+    sediment_export_dataset_list = [usle_uri, v_stream_uri, effective_export_to_stream_uri]
 
-    #If there is already an existing shapefile with the same name and path, delete it
-    #Copy the input shapefile into the designated output folder
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_field_names = ['usle_mean', 'usle_tot', 'sed_export', 'upret_mean', 'upret_tot']
+    usle_nodata = raster_utils.get_nodata_from_uri(usle_uri)
+    v_stream_nodata = raster_utils.get_nodata_from_uri(v_stream_uri)
+    export_to_stream_nodata = raster_utils.get_nodata_from_uri(effective_export_to_stream_uri)
 
-    usle_watershed = sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
-    LOGGER.debug(usle_watershed)
-
-    field_summaries = {
-        'ws_id': {
-            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id')
-#            'sed_export': {},
-#            'upret_mean': {}, 
-#            'upret_tot' : {}
-            },
-        'subws_id': {
-            'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'mean', 'subws_id'),
-            'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['subwatersheds_uri'], 'sum', 'subws_id')
-            }
-        }
-
-
-    for datasource_copy_uri, original_datasource, watershed_type in [(watershed_output_datasource_uri, ogr.Open(args['watersheds_uri']), 'ws_id'),
-                           (subwatershed_output_datasource_uri, ogr.Open(args['subwatersheds_uri']), 'subws_id')]:
-        if os.path.isfile(datasource_copy_uri):
-            os.remove(datasource_copy_uri)
-        datasource_copy = esri_driver.CopyDataSource(original_datasource, datasource_copy_uri)
-        layer = datasource_copy.GetLayer()
-        
-        for field_name in output_field_names:
-            field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-            layer.CreateField(field_def)
-            
-        #Initialize each feature field to 0.0
-        for feature_id in xrange(layer.GetFeatureCount()):
-            feature = layer.GetFeature(feature_id)
-            for field_name in output_field_names:
-                try:
-                    ws_id = feature.GetFieldAsInteger(watershed_type)
-                    feature.SetField(field_name, float(field_summaries[watershed_type][field_name][ws_id]))
-                except KeyError:
-                    feature.SetField(field_name, 0.0)
-            #Save back to datasource
-            layer.SetFeature(feature)
-
-        original_datasource.Destroy()
-        datasource_copy.Destroy()
+    def export_sediment_op(usle, v_stream, export_percent):
+        if usle == usle_nodata or v_stream == v_stream_nodata or export_percent == export_to_stream_nodata:
+            return sed_export_nodata
+        return usle * (1.0-v_stream) * export_percent
+    LOGGER.info("multiplying effective export with usle and v_stream")
+    sed_export_uri = os.path.join(intermediate_dir, 'sed_export.tif')
+    sed_export_nodata = -1.0
+    raster_utils.vectorize_datasets(
+        sediment_export_dataset_list, export_sediment_op, sed_export_uri,
+        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
+        aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('generating report')
+    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
+    field_summaries = {
+        'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
+        'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
+        }
 
+    original_datasource = ogr.Open(args['watersheds_uri'])
+    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
+    #If there is already an existing shapefile with the same name and path, delete it
+    #Copy the input shapefile into the designated output folder
+    if os.path.isfile(watershed_output_datasource_uri):
+        os.remove(watershed_output_datasource_uri)
+    datasource_copy = esri_driver.CopyDataSource(original_datasource, watershed_output_datasource_uri)
+    layer = datasource_copy.GetLayer()
 
-    #TODO generate report
+    for field_name in field_summaries:
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        layer.CreateField(field_def)
+
+    #Initialize each feature field to 0.0
+    for feature_id in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        for field_name in field_summaries:
+            try:
+                ws_id = feature.GetFieldAsInteger('ws_id')
+                feature.SetField(field_name, float(field_summaries[field_name][ws_id]))
+            except KeyError:
+                LOGGER.warning('unknown field %s' % field_name)
+                feature.SetField(field_name, 0.0)
+        #Save back to datasource
+        layer.SetFeature(feature)
+
+    original_datasource.Destroy()
+    datasource_copy.Destroy()
