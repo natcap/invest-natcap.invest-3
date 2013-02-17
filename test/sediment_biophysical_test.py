@@ -71,7 +71,6 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         #shapefile
         args['watersheds_uri'] = '%s/watersheds.shp' % base_dir
-        args['subwatersheds_uri'] = '%s/subwatersheds.shp' % base_dir
         args['reservoir_locations_uri'] = '%s/reservoir_loc.shp' % base_dir
         args['reservoir_properties_uri'] = '%s/reservoir_prop' % base_dir
 
@@ -81,6 +80,8 @@ class TestSedimentBiophysical(unittest.TestCase):
         #primatives
         args['threshold_flow_accumulation'] = 1000
         args['slope_threshold'] = 70.0
+
+        args['sediment_threshold_table_uri'] = os.path.join(base_dir, 'sediment_threshold_table.csv')
 
         intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 

@@ -54,6 +54,9 @@ def execute(args):
             part of a stream.  required if 'v_stream_uri' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
+        args['sediment_threshold_table_uri'] - A uri to a csv that contains
+            fields 'ws_id', 'dr_time', 'dr_deadvol', 'wq_annload' where 'ws_id'
+            correspond to watershed input ids.
 
         returns nothing."""
 
