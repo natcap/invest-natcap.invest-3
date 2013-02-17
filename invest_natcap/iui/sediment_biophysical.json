@@ -84,7 +84,17 @@
                     "required": true,
                     "validateAs": {"type": "CSV"},
 		    "helpText": "Rich, fill this in."
-                },		
+                },
+		{        
+                    "id" : "sediment_threshold_table_uri",
+                    "args_id" : "sediment_threshold_table_uri",
+                    "type": "file",
+                    "label": "Sediment threshold table",
+                    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
+                    "required": true,
+                    "validateAs": {"type": "CSV"},
+		    "helpText": "Rich, fill this in."
+                },
                 {        
                     "id" : "threshold_flow_accumulation",
                     "args_id" : "threshold_flow_accumulation",
