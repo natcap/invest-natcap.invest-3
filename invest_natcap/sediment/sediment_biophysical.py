@@ -238,6 +238,21 @@ def execute(args):
         'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
         }
 
+
+    #Create the service fields
+    field_summaries['sret_sm_dr'] = {}
+    field_summaries['sret_sm_wq'] = {}
+    for ws_id, value in field_summaries['upret_tot'].iteritems():
+        for out_field, threshold_field in [('sret_sm_dr', 'dr_deadvol'), ('sret_sm_wq', 'wq_annload')]:
+            field_summaries[out_field][ws_id] = value - sediment_threshold_table[ws_id][threshold_field]
+            if field_summaries[out_field][ws_id] < 0.0:
+                field_summaries[out_field][ws_id] = 0.0
+    
+#'sret_mn_dr': field_summaries['upret_mean'],
+#'sret_mn_wq': field_summaries['upret_mean'],
+
+
+
     original_datasource = ogr.Open(args['watersheds_uri'])
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
     #If there is already an existing shapefile with the same name and path, delete it
