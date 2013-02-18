@@ -60,6 +60,11 @@ def execute(args):
 
         returns nothing."""
 
+
+    #Load the sediment threshold table
+    sediment_threshold_table = get_sediment_threshold_lookup(
+        args['sediment_threshold_table_uri'])
+
     out_pixel_size = raster_utils.pixel_size(gdal.Open(args['landuse_uri']))
 
     csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri']))
@@ -261,3 +266,29 @@ def execute(args):
 
     original_datasource.Destroy()
     datasource_copy.Destroy()
+
+
+def get_sediment_threshold_lookup(sediment_threshold_table_uri):
+    """Creates a python dictionary to look up sediment threshold values
+        indexed by water id
+
+        sediment_threshold_table_uri - a URI to a csv file containing at
+            least the headers "ws_id,dr_time,dr_deadvol,wq_annload"
+
+        returns a dictionary of the form {ws_id: 
+            {dr_time: .., dr_deadvol: .., wq_annload: ...}, ...}
+            depending on the values of those fields"""
+
+    with open(sediment_threshold_table_uri, 'rU') as sediment_threshold_csv_file:
+        csv_reader = csv.reader(sediment_threshold_csv_file)
+        header_row = csv_reader.next()
+        ws_id_index = header_row.index('ws_id')
+        index_to_field = dict(zip(range(len(header_row)), header_row))
+
+        ws_threshold_lookup = {}
+
+        for line in csv_reader:
+            ws_threshold_lookup[int(line[ws_id_index])] = \
+                dict([(index_to_field[int(index)], float(value)) for index, value in zip(range(len(line)), line)])
+
+        return ws_threshold_lookup
