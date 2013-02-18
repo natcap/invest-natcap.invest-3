@@ -272,9 +272,8 @@ def execute(args):
     field_summaries['sed_val_wq'] = {}
     for ws_id, value in field_summaries['upret_tot'].iteritems():
         for expense_type in ['dr', 'wq']:
-            discount = 1.0
-            for time_index in range(int(sediment_valuation_table[ws_id][expense_type + '_time']) - 1):
-                discount *= 1.0 / (1.0 + sediment_valuation_table[ws_id][expense_type + '_disc'] / 100.0) ** time_index
+            discount = disc(sediment_valuation_table[ws_id][expense_type + '_time'],
+                            sediment_valuation_table[ws_id][expense_type + '_disc'])
             field_summaries['sed_val_' + expense_type][ws_id] = \
                 field_summaries['sret_sm_' + expense_type][ws_id] * \
                 sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
@@ -333,3 +332,18 @@ def get_watershed_lookup(sediment_threshold_table_uri):
                 dict([(index_to_field[int(index)], float(value)) for index, value in zip(range(len(line)), line)])
 
         return ws_threshold_lookup
+
+
+def disc(years, percent_rate):
+    """Calculate discount rate for a given number of years
+    
+        years - an integer number of years
+        percent_rate - a discount rate in percent
+
+        returns the discount rate for the number of years to use in 
+            a calculation like yearly_cost * disc(years, percent_rate)"""
+
+    discount = 0.0
+    for time_index in range(int(years) - 1):
+        discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
+    return discount
