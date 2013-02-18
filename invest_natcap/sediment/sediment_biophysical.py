@@ -55,13 +55,18 @@ def execute(args):
         args['sediment_threshold_table_uri'] - A uri to a csv that contains
             fields 'ws_id', 'dr_time', 'dr_deadvol', 'wq_annload' where 'ws_id'
             correspond to watershed input ids.
+        args['sediment_valuation_table_uri'] - A uri to a csv that contains
+            fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost',
+            'wq_time', 'wq_disc' correspond to watershed input ids.
 
         returns nothing."""
 
 
     #Load the sediment threshold table
-    sediment_threshold_table = get_sediment_threshold_lookup(
+    sediment_threshold_table = get_watershed_lookup(
         args['sediment_threshold_table_uri'])
+    sediment_valuation_table = get_watershed_lookup(
+        args['sediment_valuation_table_uri'])
 
     out_pixel_size = raster_utils.pixel_size(gdal.Open(args['landuse_uri']))
 
@@ -292,7 +297,7 @@ def execute(args):
     datasource_copy.Destroy()
 
 
-def get_sediment_threshold_lookup(sediment_threshold_table_uri):
+def get_watershed_lookup(sediment_threshold_table_uri):
     """Creates a python dictionary to look up sediment threshold values
         indexed by water id
 

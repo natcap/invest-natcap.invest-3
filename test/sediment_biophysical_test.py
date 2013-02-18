@@ -82,6 +82,7 @@ class TestSedimentBiophysical(unittest.TestCase):
         args['slope_threshold'] = 70.0
 
         args['sediment_threshold_table_uri'] = os.path.join(base_dir, 'sediment_threshold_table.csv')
+        args['sediment_valuation_table_uri'] = os.path.join(base_dir, 'sediment_valuation_table.csv')
 
         intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
