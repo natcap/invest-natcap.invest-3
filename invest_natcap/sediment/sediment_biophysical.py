@@ -1,11 +1,9 @@
 """InVEST Sediment biophysical module at the "uri" level"""
 
-import sys
 import os
 import csv
 import logging
 
-import json
 from osgeo import gdal
 from osgeo import ogr
 
@@ -86,7 +84,7 @@ def execute(args):
     
     clipped_dem_uri = raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
-        [args['dem_uri']], lambda x: float(x), clipped_dem_uri,
+        [args['dem_uri']], float, clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
@@ -122,7 +120,7 @@ def execute(args):
     _, lulc_nodata = raster_utils.extract_band_and_nodata(lulc_dataset)
     lulc_clipped_uri = raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
-        [args['landuse_uri']], lambda x: int(x), lulc_clipped_uri,
+        [args['landuse_uri']], int, lulc_clipped_uri,
         gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
     lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
@@ -216,6 +214,7 @@ def execute(args):
     export_to_stream_nodata = raster_utils.get_nodata_from_uri(effective_export_to_stream_uri)
 
     def export_sediment_op(usle, v_stream, export_percent):
+        """Calculates sediment export from the pixel and watches for nodata"""
         if usle == usle_nodata or v_stream == v_stream_nodata or export_percent == export_to_stream_nodata:
             return sed_export_nodata
         return usle * (1.0-v_stream) * export_percent
@@ -243,8 +242,15 @@ def execute(args):
     field_summaries['sret_sm_dr'] = {}
     field_summaries['sret_sm_wq'] = {}
     for ws_id, value in field_summaries['upret_tot'].iteritems():
-        for out_field, threshold_field in [('sret_sm_dr', 'dr_deadvol'), ('sret_sm_wq', 'wq_annload')]:
-            field_summaries[out_field][ws_id] = value - sediment_threshold_table[ws_id][threshold_field]
+        #The 1.26 comes from the InVEST user's guide
+        field_summaries['sret_sm_dr'][ws_id] = value - \
+            sediment_threshold_table[ws_id]['dr_deadvol'] * \
+            1.26 / sediment_threshold_table[ws_id]['dr_time']
+        field_summaries['sret_sm_wq'][ws_id] = value - \
+            sediment_threshold_table[ws_id]['wq_annload']
+
+        #Clamp any negatives to 0
+        for out_field in ['sret_sm_dr', 'sret_sm_wq']:
             if field_summaries[out_field][ws_id] < 0.0:
                 field_summaries[out_field][ws_id] = 0.0
     
@@ -255,11 +261,6 @@ def execute(args):
         n_cells = field_summaries['upret_tot'][ws_id] / field_summaries['upret_mean'][ws_id]
         for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
             field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
-
-#'sret_mn_dr': field_summaries['upret_mean'],
-#'sret_mn_wq': field_summaries['upret_mean'],
-
-
 
     original_datasource = ogr.Open(args['watersheds_uri'])
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
