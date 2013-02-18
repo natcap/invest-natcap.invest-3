@@ -267,6 +267,18 @@ def execute(args):
         for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
             field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
 
+
+    field_summaries['sed_val_dr'] = {}
+    field_summaries['sed_val_wq'] = {}
+    for ws_id, value in field_summaries['upret_tot'].iteritems():
+        for expense_type in ['dr', 'wq']:
+            discount = 1.0
+            for time_index in range(int(sediment_valuation_table[ws_id][expense_type + '_time']) - 1):
+                discount *= 1.0 / (1.0 + sediment_valuation_table[ws_id][expense_type + '_disc'] / 100.0) ** time_index
+            field_summaries['sed_val_' + expense_type][ws_id] = \
+                field_summaries['sret_sm_' + expense_type][ws_id] * \
+                sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
+
     original_datasource = ogr.Open(args['watersheds_uri'])
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
     #If there is already an existing shapefile with the same name and path, delete it
