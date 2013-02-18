@@ -239,7 +239,7 @@ def execute(args):
         }
 
 
-    #Create the service fields
+    #Create the service field sums
     field_summaries['sret_sm_dr'] = {}
     field_summaries['sret_sm_wq'] = {}
     for ws_id, value in field_summaries['upret_tot'].iteritems():
@@ -248,6 +248,14 @@ def execute(args):
             if field_summaries[out_field][ws_id] < 0.0:
                 field_summaries[out_field][ws_id] = 0.0
     
+    #Create the service field means
+    field_summaries['sret_mn_dr'] = {}
+    field_summaries['sret_mn_wq'] = {}
+    for ws_id, value in field_summaries['upret_tot'].iteritems():
+        n_cells = field_summaries['upret_tot'][ws_id] / field_summaries['upret_mean'][ws_id]
+        for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
+            field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
+
 #'sret_mn_dr': field_summaries['upret_mean'],
 #'sret_mn_wq': field_summaries['upret_mean'],
 
