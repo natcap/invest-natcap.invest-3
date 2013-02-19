@@ -16,14 +16,12 @@ from invest_natcap.sediment import sediment_core
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('sediment_biophysical')
+LOGGER = logging.getLogger('sediment')
 
 
 def execute(args):
-    """This function invokes the biophysical part of the sediment model given
-        URI inputs of files. It will do filehandling and open/create
-        appropriate objects to pass to the core sediment biophysical
-        processing function.  It may write log, warning, or error messages to
+    """This function invokes the sediment model given
+        URI inputs of files. It may write log, warning, or error messages to
         stdout.
 
         args - a python dictionary with at the following possible entries:

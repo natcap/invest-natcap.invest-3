@@ -1,4 +1,4 @@
-"""URI level tests for the sediment biophysical module"""
+"""URI level tests for the sediment module"""
 
 import unittest
 import logging
@@ -9,19 +9,19 @@ from osgeo import gdal
 from nose.plugins.skip import SkipTest
 import numpy as np
 
-from invest_natcap.sediment import sediment_biophysical
+from invest_natcap.sediment import sediment
 import invest_cython_core
 import invest_test_core
 from invest_natcap.sediment import sediment_core
 from invest_natcap import raster_utils
 
 
-LOGGER = logging.getLogger('sediment_biophysical_test')
+LOGGER = logging.getLogger('sediment_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class TestSedimentBiophysical(unittest.TestCase):
-    """Main testing class for the biophysical sediment tests"""
+class TestSediment(unittest.TestCase):
+    """Main testing class for the sediment tests"""
     def test_sediment_dinf_flow_dir(self):
         raise SkipTest
         """A test constructed by hand to test the low level dinf direction and
@@ -57,12 +57,12 @@ class TestSedimentBiophysical(unittest.TestCase):
         invest_cython_core.flow_accumulation_dinf(flow_direction,
                                                   flow_accumulation, dem)
 
-    def test_sediment_biophysical_re(self):
-        """Test for sediment_biophysical function running with default InVEST 
+    def test_sediment_re(self):
+        """Test for sediment function running with default InVEST 
            sample input."""
 #        raise SkipTest
         args = {}
-        args['workspace_dir'] = './data/test_out/sediment_biophysical_output'
+        args['workspace_dir'] = './data/test_out/sediment_output'
         args['suffix'] = '_foo'
         base_dir = './data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % base_dir
@@ -96,7 +96,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         output_files = ['usle.tif', 'pixel_export.tif', 'pixel_retained.tif']
 
-        sediment_biophysical.execute(args)
+        sediment.execute(args)
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction%s.tif" % args['suffix'],
@@ -106,7 +106,7 @@ class TestSedimentBiophysical(unittest.TestCase):
             args['workspace_dir'] + os.sep + "/Intermediate/flow_accumulation%s.tif" % args['suffix'],
             './data/sediment_regression_data/flow_accumulation_regression.tif')
 
-    def test_sediment_biophysical_simple_1(self):
+    def test_sediment_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
         raise SkipTest
@@ -133,7 +133,7 @@ class TestSedimentBiophysical(unittest.TestCase):
         #Direction 4.712385 was calculated by hand
         self.assertAlmostEqual(flow_array[0][0], 4.712389)
 
-    def test_sediment_biophysical_simple_2(self):
+    def test_sediment_simple_2(self):
         """This test is a smaller version of a real world case that failed"""
         raise SkipTest
         #Create two 3x3 rasters in memory
@@ -158,7 +158,7 @@ class TestSedimentBiophysical(unittest.TestCase):
         #Direction 5.117281 was calculated by hand
         self.assertAlmostEqual(flowArray[0][0], 5.117281)
 
-    def test_sediment_biophysical_simple_3(self):
+    def test_sediment_simple_3(self):
         """This test is a smaller version of a real world case that failed"""
         raise SkipTest
         #Create two 3x3 rasters in memory
@@ -202,7 +202,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         n = 100
 
-        base_dir = 'data/test_out/sediment_biophysical'
+        base_dir = 'data/test_out/sediment'
 
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
