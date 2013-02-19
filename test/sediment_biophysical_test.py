@@ -63,6 +63,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 #        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/test_out/sediment_biophysical_output'
+        args['suffix'] = '_foo'
         base_dir = './data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % base_dir
         args['erosivity_uri'] = '%s/erosivity' % base_dir
@@ -98,11 +99,11 @@ class TestSedimentBiophysical(unittest.TestCase):
         sediment_biophysical.execute(args)
 
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
+            args['workspace_dir'] + os.sep + "/Intermediate/flow_direction%s.tif" % args['suffix'],
             './data/sediment_regression_data/flow_direction_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + os.sep + "/Intermediate/flow_accumulation.tif",
+            args['workspace_dir'] + os.sep + "/Intermediate/flow_accumulation%s.tif" % args['suffix'],
             './data/sediment_regression_data/flow_accumulation_regression.tif')
 
     def test_sediment_biophysical_simple_1(self):

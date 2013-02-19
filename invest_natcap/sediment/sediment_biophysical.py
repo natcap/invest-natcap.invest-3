@@ -29,6 +29,8 @@ def execute(args):
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
+        args['suffix'] - a string to append to any output file name (required,
+            but can be empty string)
         args['dem_uri'] - a uri to a digital elevation raster file (required)
         args['erosivity_uri'] - a uri to an input raster describing the
             rainfall eroisivity index (required)
@@ -61,6 +63,9 @@ def execute(args):
 
         returns nothing."""
 
+    #append a _ to the suffix if it's not empty and doens't already have one
+    if args['suffix'] != "" and not args['suffix'].startswith('_'):
+        args['suffix'] = '_' + args['suffix']
 
     #Load the sediment threshold table
     sediment_threshold_table = get_watershed_lookup(
@@ -95,23 +100,23 @@ def execute(args):
 
     #Calculate slope
     LOGGER.info("Calculating slope")
-    slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % args['suffix'])
     raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
+    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % args['suffix'])
     routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(intermediate_dir, 'v_stream.tif')
+    v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % args['suffix'])
 
     routing_utils.stream_threshold(flow_accumulation_uri,
         float(args['threshold_flow_accumulation']), v_stream_uri)
 
-    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction.tif')
-    ls_uri = os.path.join(intermediate_dir, 'ls.tif')
+    flow_direction_uri = os.path.join(intermediate_dir, 'flow_direction%s.tif' % args['suffix'])
+    ls_uri = os.path.join(intermediate_dir, 'ls%s.tif' % args['suffix'])
     routing_cython_core.calculate_flow_direction(clipped_dem_uri, flow_direction_uri)
 
     #Calculate LS term
@@ -131,8 +136,8 @@ def execute(args):
     lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
 
 
-    export_rate_uri = os.path.join(intermediate_dir, 'export_rate.tif')
-    retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate.tif')
+    export_rate_uri = os.path.join(intermediate_dir, 'export_rate%s.tif' % args['suffix'])
+    retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate%s.tif' % args['suffix'])
 
     LOGGER.info('building export fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
@@ -159,7 +164,7 @@ def execute(args):
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
     LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
-    cp_uri = os.path.join(intermediate_dir, 'cp.tif')
+    cp_uri = os.path.join(intermediate_dir, 'cp%s.tif' % args['suffix'])
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
@@ -168,30 +173,30 @@ def execute(args):
     lulc_to_inv_cp_dict = dict([(lulc_code, (1.0-float(table['usle_c'])) * (1.0-float(table['usle_p'])))  for (lulc_code, table) in biophysical_table.items()])
 
     LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
-    inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv.tif')
+    inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv%s.tif' % args['suffix'])
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
     LOGGER.info('calculating usle')
-    usle_uri = os.path.join(output_dir, 'usle.tif')
+    usle_uri = os.path.join(output_dir, 'usle%s.tif' % args['suffix'])
     sediment_core.calculate_potential_soil_loss(
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
         v_stream_uri, usle_uri)
 
-    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
+    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream%s.tif' % args['suffix'])
 
-    outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights.tif')
+    outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights%s.tif' % args['suffix'])
     outflow_direction_uri = os.path.join(
-        intermediate_dir, 'outflow_directions.tif')
+        intermediate_dir, 'outflow_directions%s.tif' % args['suffix'])
 
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
-    sed_retention_uri = os.path.join(intermediate_dir, 'sed_ret.tif')
-    sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux.tif')
+    sed_retention_uri = os.path.join(intermediate_dir, 'sed_ret%s.tif' % args['suffix'])
+    sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux%s.tif' % args['suffix'])
 
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
@@ -224,7 +229,7 @@ def execute(args):
             return sed_export_nodata
         return usle * (1.0-v_stream) * export_percent
     LOGGER.info("multiplying effective export with usle and v_stream")
-    sed_export_uri = os.path.join(intermediate_dir, 'sed_export.tif')
+    sed_export_uri = os.path.join(intermediate_dir, 'sed_export%s.tif' % args['suffix'])
     sed_export_nodata = -1.0
     raster_utils.vectorize_datasets(
         sediment_export_dataset_list, export_sediment_op, sed_export_uri,
@@ -279,7 +284,7 @@ def execute(args):
                 sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
 
     original_datasource = ogr.Open(args['watersheds_uri'])
-    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs.shp')
+    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs%s.shp' % args['suffix'])
     #If there is already an existing shapefile with the same name and path, delete it
     #Copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
