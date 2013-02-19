@@ -11,111 +11,138 @@
             "id" : "workspace_list",
             "type": "list",
             "elements":[
-                {
-                    "id" : "workspace",
-                    "args_id" : "workspace_dir",
-                    "type": "folder",
-                    "label": "Workspace",
-                    "defaultValue": "../Sedimentation",
-                    "required": true
-                },          
+		{
+		    "id" : "workspace",
+		    "args_id" : "workspace_dir",
+		    "type": "folder",
+		    "label": "Workspace",
+		    "defaultValue": "../Sedimentation",
+		    "required": true
+		},
 		{        
-                    "id" : "dem_uri",
-                    "args_id" : "dem_uri",
-                    "type": "file",
-                    "label": "DEM Raster",
-                    "defaultValue": "../Base_Data/Freshwater/dem",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
+		    "id" : "dem_uri",
+		    "args_id" : "dem_uri",
+		    "type": "file",
+		    "label": "DEM Raster",
+		    "defaultValue": "../Base_Data/Freshwater/dem",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
 		    "helpText": "Rich, fill this in."
-                },
+		},
 		{        
-                    "id" : "erosivity_uri",
-                    "args_id" : "erosivity_uri",
-                    "type": "file",
-                    "label": "Erosivity Raster",
-                    "defaultValue": "../Base_Data/Freshwater/erosivity",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
+		    "id" : "erosivity_uri",
+		    "args_id" : "erosivity_uri",
+		    "type": "file",
+		    "label": "Erosivity Raster",
+		    "defaultValue": "../Base_Data/Freshwater/erosivity",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
 		    "helpText": "Rich, fill this in."
-                },
+		},
 		{        
-                    "id" : "erodibility_uri",
-                    "args_id" : "erodibility_uri",
-                    "type": "file",
-                    "label": "Erodibility Raster",
-                    "defaultValue": "../Base_Data/Freshwater/erodibility",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
+		    "id" : "erodibility_uri",
+		    "args_id" : "erodibility_uri",
+		    "type": "file",
+		    "label": "Erodibility Raster",
+		    "defaultValue": "../Base_Data/Freshwater/erodibility",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
 		    "helpText": "Rich, fill this in."
-                },
+		},
 		{        
-                    "id" : "landuse_uri",
-                    "args_id" : "landuse_uri",
-                    "type": "file",
-                    "label": "LULC Raster",
-                    "defaultValue": "../Base_Data/Freshwater/landuse_90",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"},
+		    "id" : "landuse_uri",
+		    "args_id" : "landuse_uri",
+		    "type": "file",
+		    "label": "LULC Raster",
+		    "defaultValue": "../Base_Data/Freshwater/landuse_90",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
 		    "helpText": "Rich, fill this in."
-                },
+		},
 		{        
-                    "id" : "watersheds_uri",
-                    "args_id" : "watersheds_uri",
-                    "type": "file",
-                    "label": "Watershed Polygons",
-                    "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
-                    "required": true,
-                    "validateAs": {"type": "OGR",
-                                   "layers": [{"name": {"inheritFrom": "file"}, 
-                                               "type": "polygons",
+		    "id" : "watersheds_uri",
+		    "args_id" : "watersheds_uri",
+		    "type": "file",
+		    "label": "Watershed Polygons",
+		    "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+		    "required": true,
+		    "validateAs": {"type": "OGR",
+				   "layers": [{"name": {"inheritFrom": "file"}, 
+					       "type": "polygons",
 					       "projection": {"exists": true}
-                                             }],
-                                   "fieldsExist": ["ws_id"]
-                                   },
+					      }],
+				   "fieldsExist": ["ws_id"]
+				  },
 		    "helpText": "Rich, fill this in."
-                },
+		},
 		{        
-                    "id" : "biophysical_table_uri",
-                    "args_id" : "biophysical_table_uri",
-                    "type": "file",
-                    "label": "Biophysical Table",
-                    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
-                    "required": true,
-                    "validateAs": {"type": "CSV"},
+		    "id" : "biophysical_table_uri",
+		    "args_id" : "biophysical_table_uri",
+		    "type": "file",
+		    "label": "Biophysical Table",
+		    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
+		    "required": true,
+		    "validateAs": {"type": "CSV"},
 		    "helpText": "Rich, fill this in."
-                },
+		},
 		{        
-                    "id" : "sediment_threshold_table_uri",
-                    "args_id" : "sediment_threshold_table_uri",
-                    "type": "file",
-                    "label": "Sediment threshold table",
-                    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
-                    "required": true,
-                    "validateAs": {"type": "CSV"},
+		    "id" : "sediment_threshold_table_uri",
+		    "args_id" : "sediment_threshold_table_uri",
+		    "type": "file",
+		    "label": "Sediment threshold table",
+		    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
+		    "required": true,
+		    "validateAs": {"type": "CSV"},
 		    "helpText": "Rich, fill this in."
-                },
-                {        
-                    "id" : "threshold_flow_accumulation",
-                    "args_id" : "threshold_flow_accumulation",
-                    "type": "text",
-                    "label": "Threshold Flow Accumluation",
-                    "defaultValue": "1000",
-                    "required": true,
-                    "validText": "^[0-9]+$",
+		},
+		{        
+		    "id" : "threshold_flow_accumulation",
+		    "args_id" : "threshold_flow_accumulation",
+		    "type": "text",
+		    "label": "Threshold Flow Accumluation",
+		    "defaultValue": "1000",
+		    "required": true,
+		    "validText": "^[0-9]+$",
 		    "helpText": "The number of upstream pixels that define a stream pixel."
-                },
+		},
 		{        
-                    "id" : "slope_threshold",
-                    "args_id" : "slope_threshold",
-                    "type": "text",
-                    "label": "Slope Threshold",
-                    "defaultValue": "75",
-                    "required": true,
-                    "validText": "^[0-9]+$",
+		    "id" : "slope_threshold",
+		    "args_id" : "slope_threshold",
+		    "type": "text",
+		    "label": "Slope Threshold",
+		    "defaultValue": "75",
+		    "required": true,
+		    "validText": "^[0-9]+$",
 		    "helpText": "The cutoff slope before we use a different USLE runoff."
-                }
+		}
+	    ]
+	},
+	{
+	    "id" : "valuation_container",
+	    "args_id" : "valuation_container",
+	    "type" : "container",
+	    "label" : "Valuation",
+	    "collapsible" : true,
+	    "defaultValue" : false,
+	    "elements" : [
+		{
+		    "id" : "valuation_list",
+		    "type" : "list",
+		    "elements" : [
+			{        
+			    "id" : "sediment_valuation_table_uri",
+			    "args_id" : "sediment_valuation_table_uri",
+			    "type": "file",
+			    "label": "Sediment valuation table",
+			    "defaultValue": "../Sedimentation/input/sediment_valuation_table.csv",
+			    "required": true,
+			    "validateAs": {"type": "CSV"},
+			    "helpText": "Rich, fill this in."
+			}
+		    ]
+		}
 	    ]
 	}
     ]
 }
+
