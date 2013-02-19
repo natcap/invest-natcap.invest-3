@@ -19,6 +19,18 @@
 		    "defaultValue": "../Sedimentation",
 		    "required": true
 		},
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
+                },
 		{        
 		    "id" : "dem_uri",
 		    "args_id" : "dem_uri",
