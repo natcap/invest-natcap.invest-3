@@ -74,7 +74,6 @@ def calculate_raster_stats(ds):
         returns nothing"""
 
     for band_number in range(ds.RasterCount):
-        LOGGER.info('calculate raster stats for band %s' % (band_number+1))
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
