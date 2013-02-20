@@ -41,18 +41,12 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
         returns nothing"""
     
-    #Tease out all the nodata values for reading and setting
-    flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
-    slope_dataset = gdal.Open(slope_uri)
-    aspect_dataset = gdal.Open(aspect_uri)
-
-    _, flow_accumulation_nodata = \
-        raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
-    _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
-    _, aspect_nodata = raster_utils.extract_band_and_nodata(aspect_dataset)
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    aspect_nodata = raster_utils.get_nodata_from_uri(aspect_uri)
 
     #Assumes that cells are square
-    cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
+    cell_size = raster_utils.get_cell_size_from_uri(flow_accumulation_uri)
     cell_area = cell_size ** 2
 
     def ls_factor_function(aspect_angle, slope, flow_accumulation):
@@ -112,15 +106,11 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
                 
         return ls_factor * slope_factor
 
-    #Call vectorize rasters for ls_factor
-    dataset_list = [aspect_dataset, slope_dataset, flow_accumulation_dataset]
-
-    ls_factor_dataset = \
-        raster_utils.vectorize_rasters(dataset_list, ls_factor_function, \
-            raster_out_uri=ls_factor_uri, datatype=gdal.GDT_Float32, \
-            nodata=ls_nodata)
-
-    raster_utils.calculate_raster_stats(ls_factor_dataset)
+    #Call vectorize datasets to calculate the ls_factor
+    dataset_uri_list = [aspect_uri, slope_uri, flow_accumulation_uri]
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, ls_factor_function, ls_factor_uri, gdal.GDT_Float32,
+            ls_nodata, cell_size, "intersection", dataset_to_align_index=0)
 
 
 def calculate_potential_soil_loss(

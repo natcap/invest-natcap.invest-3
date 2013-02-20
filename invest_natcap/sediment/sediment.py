@@ -89,9 +89,10 @@ def execute(args):
             LOGGER.info('creating directory %s', directory)
             os.makedirs(directory)
 
-    dem_dataset = gdal.Open(args['dem_uri'])
-    _, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
-    
+    dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
+    cell_size = raster_utils.get_cell_size_from_uri(args['dem_uri'])
+
+    #Clip the dem and cast to a float
     clipped_dem_uri = raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
         [args['dem_uri']], float, clipped_dem_uri,
@@ -122,8 +123,8 @@ def execute(args):
     #Calculate LS term
     LOGGER.info('calcualte ls term')
     ls_nodata = -1.0
-    sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
-                                      flow_direction_uri, ls_uri, ls_nodata)
+    sediment_core.calculate_ls_factor(
+        flow_accumulation_uri, slope_uri, flow_direction_uri, ls_uri, ls_nodata)
 
     #Clip the LULC
     lulc_dataset = gdal.Open(args['landuse_uri'])
@@ -134,7 +135,6 @@ def execute(args):
         gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
     lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
-
 
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate%s.tif' % file_suffix)
     retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate%s.tif' % file_suffix)
@@ -148,7 +148,6 @@ def execute(args):
         lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
-
     LOGGER.info('building retention fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
     lulc_to_retention_dict = \
@@ -201,9 +200,21 @@ def execute(args):
     upstream_on_pixel_retention_uri = os.path.join(output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
     sed_flux_uri = raster_utils.temporary_filename() #os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
 
-    routing_cython_core.calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
-        usle_uri, retention_rate_uri, upstream_on_pixel_retention_uri, sed_flux_uri)
+
+    #calculate the upstream_on_pixel_retention
+    #Align the input rasters in case they are different sizes
+    transport_original_uri_list = [
+        outflow_direction_uri, outflow_weights_uri, usle_uri,
+        retention_rate_uri]
+    transport_uri_list = [raster_utils.temporary_filename() for _ in xrange(len(transport_original_uri_list))]
+    raster_utils.align_dataset_list(
+        transport_original_uri_list, transport_uri_list, ["nearest"] * len(transport_original_uri_list),
+        out_pixel_size, "intersection", 0)
+
+    #Pass the list of stacked temporary files to calculate transport
+    transport_arg_list = transport_uri_list[0:2] + [sink_cell_set] + transport_uri_list[2:] + \
+        [upstream_on_pixel_retention_uri, sed_flux_uri]
+    routing_cython_core.calculate_transport(*transport_arg_list)
     upstream_retention_nodata = raster_utils.get_nodata_from_uri(upstream_on_pixel_retention_uri)
 
     #Calculate the retention due to per pixel retention and the cp factor
