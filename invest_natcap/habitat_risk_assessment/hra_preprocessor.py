@@ -251,7 +251,10 @@ def parse_stressor(uri):
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
         stressor_name = csv_reader.next()[1]
-        
+       
+        #Skip empty line
+        csv_reader.next()
+
         stressor_buffer = float(csv_reader.next()[1])
         stressor_dict['buffer'] = stressor_buffer
 
@@ -259,13 +262,16 @@ def parse_stressor(uri):
         csv_reader.next()
         #Get the headers
         headers = csv_reader.next()[1:]
+        
         #Drain the rest of the table
-        stressor_dict['E'] = {}
         for row in csv_reader:
             key = row[0]
-            properties = dict(zip(headers,map(int,row[1:])))
-            stressor_dict['E'][key] = properties
-
+            
+            if row[1] == 'SHAPE':
+                stressor_dict['Crit_Rasters'] = dict(zip(headers[1:2],map(int,row[2:3])))
+            else:
+                stressor_dict['Crit_Ratings'] = dict(zip(headers,map(int,row[1:])))
+                
     return stressor_dict
 
 def parse_habitat_overlap(uri):
