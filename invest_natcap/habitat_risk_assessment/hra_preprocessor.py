@@ -206,9 +206,10 @@ def parse_hra_tables(worskapce_uri):
         habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
         habitat_dict[habitat_name] = habitat_parse_dictionary['hab_only']
     
-        #For all of the overlaps pertaining to this particular habitat
+        #For all of the overlaps pertaining to this particular habitat,
+        #hab_stress_overlap is a stressor name which overlaps our habitat
         for hab_stress_overlap in habitat_parse_dictionary['overlap']:
-            h_s_dict[hab_stress_overlap] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
+            h_s_dict[(habitat_name, hab_stress_overlap)] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
     parse_dictionary = {}
     parse_dictionary['habitats'] = habitat_dict
