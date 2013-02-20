@@ -205,7 +205,7 @@ def execute(args):
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
     upstream_on_pixel_retention_uri = os.path.join(output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
-    sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
+    sed_flux_uri = raster_utils.temporary_file() #os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
 
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
