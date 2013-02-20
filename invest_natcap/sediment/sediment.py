@@ -169,8 +169,8 @@ def execute(args):
         lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
-    LOGGER.info('building (1-c)(1-p) raster from lulc')
-    lulc_to_inv_cp_dict = dict([(lulc_code, (1.0-float(table['usle_c'])) * (1.0-float(table['usle_p'])))  for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.info('building (1-cp) raster from lulc')
+    lulc_to_inv_cp_dict = dict([(lulc_code, 1.0 - (float(table['usle_c']) * float(table['usle_p']))) for (lulc_code, table) in biophysical_table.items()])
 
     LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
     inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv%s.tif' % file_suffix)
@@ -184,6 +184,15 @@ def execute(args):
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
         v_stream_uri, usle_uri)
 
+    #Calculate the retention on the pixel due to the cp factor
+    on_pixel_retention_uri = os.path.join(output_dir, 'on_pixel_retention%s.tif' % file_suffix)
+    sediment_core.calculate_potential_soil_loss(
+        ls_uri, args['erosivity_uri'], args['erodibility_uri'], inv_cp_uri,
+        v_stream_uri, on_pixel_retention_uri)
+    #We know it's -1.0 because it's hard coded
+    #TODO: change to uri based nodata
+    on_pixel_retention_nodata = -1.0
+
     effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream%s.tif' % file_suffix)
 
     outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights%s.tif' % file_suffix)
@@ -195,12 +204,35 @@ def execute(args):
 
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
-    sed_retention_uri = os.path.join(intermediate_dir, 'sed_ret%s.tif' % file_suffix)
+    upstream_on_pixel_retention_uri = os.path.join(output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
     sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
 
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
-        usle_uri, retention_rate_uri, sed_retention_uri, sed_flux_uri)
+        usle_uri, retention_rate_uri, upstream_on_pixel_retention_uri, sed_flux_uri)
+    #We know it's -1.0 because thats hard-coded in calculate transport
+    #TODO: add a raster utils to pull out nodata based on uri
+    upstream_retention_nodata = -1.0
+
+    #Calculate the retention due to per pixel retention and the cp factor
+    sed_retention_uri = os.path.join(output_dir, 'sed_ret%s.tif' % file_suffix)
+    sed_retention_nodata = -1.0
+    def add_upstream_and_on_pixel_retention(upstream_retention, on_pixel_retention):
+        if upstream_retention == upstream_retention_nodata or on_pixel_retention == on_pixel_retention_nodata:
+            return upstream_retention_nodata
+        return upstream_retention + on_pixel_retention
+
+    raster_utils.vectorize_datasets(
+        [upstream_on_pixel_retention_uri, on_pixel_retention_uri], add_upstream_and_on_pixel_retention,
+        sed_retention_uri, gdal.GDT_Float32, sed_retention_nodata,
+        out_pixel_size, "intersection", dataset_to_align_index=0,
+        aoi_uri=args['watersheds_uri'])
+
+    #Account for sediment retention due to c and p factors on USLE.
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], int, lulc_clipped_uri,
+        gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('backtrace the sediment reaching the streams')
     percent_to_sink_dataset_uri_list = [
@@ -229,7 +261,7 @@ def execute(args):
             return sed_export_nodata
         return usle * (1.0-v_stream) * export_percent
     LOGGER.info("multiplying effective export with usle and v_stream")
-    sed_export_uri = os.path.join(intermediate_dir, 'sed_export%s.tif' % file_suffix)
+    sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
     sed_export_nodata = -1.0
     raster_utils.vectorize_datasets(
         sediment_export_dataset_list, export_sediment_op, sed_export_uri,
