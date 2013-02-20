@@ -44,7 +44,7 @@ LOGGER = logging.getLogger('routing')
 
 def route_flux(
     dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri,
-    workspace_dir, aoi_uri=None):
+    aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -59,8 +59,6 @@ def route_flux(
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
             traveling through each pixel
-        workspace_dir - a URI to an existing directory that can be used to
-            write intermediate files to
         aoi_uri - an OGR datasource for an area of interest polygon.
             the routing flux calculation will only occur on those pixels
             and neighboring pixels will either be raw outlets or
@@ -68,10 +66,9 @@ def route_flux(
 
         returns nothing"""
 
-    flow_direction_uri = os.path.join(workspace_dir, 'flow_direction.tif')
-    outflow_weights_uri = os.path.join(workspace_dir, 'outflow_weights.tif')
-    outflow_direction_uri = os.path.join(
-        workspace_dir, 'outflow_directions.tif')
+    flow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_direction_uri = raster_utils.temporary_filename()
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
@@ -87,23 +84,18 @@ def flow_accumulation(dem_uri, flux_output_uri):
         flux_output_uri - location to dump the raster represetning flow
             accumulation"""
 
-    constant_flux_source_file = tempfile.NamedTemporaryFile()
-    zero_absorption_source_file = tempfile.NamedTemporaryFile()
-    loss_file = tempfile.NamedTemporaryFile()
+    constant_flux_source_uri = raster_utils.temporary_filename()
+    zero_absorption_source_uri = raster_utils.temporary_filename()
+    loss_uri = raster_utils.temporary_filename()
 
     make_constant_raster_from_base(
-        dem_uri, 1.0, constant_flux_source_file.name)
+        dem_uri, 1.0, constant_flux_source_uri)
     make_constant_raster_from_base(
-        dem_uri, 0.0, zero_absorption_source_file.name)
-
-    workspace_dir = tempfile.mkdtemp()
+        dem_uri, 0.0, zero_absorption_source_uri)
 
     route_flux(
-        dem_uri, constant_flux_source_file.name,
-        zero_absorption_source_file.name, loss_file.name, flux_output_uri,
-        workspace_dir)
-
-    shutil.rmtree(workspace_dir)
+        dem_uri, constant_flux_source_uri,
+        zero_absorption_source_uri, loss_uri, flux_output_uri)
 
 
 def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):

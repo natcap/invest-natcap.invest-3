@@ -124,7 +124,7 @@ if platform.system() == 'Windows':
          'invest_overlap_analysis_mz.py',
          'invest_habitat_risk_assessment.py',
          'invest_coastal_vulnerability.py',
-         'invest_sediment_biophysical.py',
+         'invest_sediment.py',
          'invest_wind_energy.py',
          'invest_test_all.py']
 
@@ -145,7 +145,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/biodiversity_biophysical.json',
                'invest_natcap/iui/overlap_analysis.json',
                'invest_natcap/iui/overlap_analysis_mz.json',
-               'invest_natcap/iui/sediment_biophysical.json',
+               'invest_natcap/iui/sediment.json',
                'invest_natcap/iui/wind_energy.json',
                'invest_natcap/iui/coastal_vulnerability.json',
               'geos_c.dll']))
@@ -174,7 +174,7 @@ setup(name='invest_natcap',
       packages=packages,
       cmdclass={'build_ext': build_ext,
                 'zip': ZipCommand},
-      requires=['cython (>=0.17.1)', 'scipy (>=0.11.0)', 'nose (>=1.2.1)'],
+      requires=['cython (>=0.17.1)', 'scipy (>=0.11.0)', 'nose (>=1.2.1)', 'osgeo (>=1.9.2)'],
       include_dirs = [np.get_include()],
       data_files=data_files,
       ext_modules=cythonize([Extension(name="invest_cython_core",

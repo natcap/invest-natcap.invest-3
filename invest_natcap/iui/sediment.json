@@ -1,8 +1,8 @@
 {
     "id" : "window",
-    "label": "Sediment Biophysical",
-    "targetScript" : "invest_natcap.sediment.sediment_biophysical",
-    "modelName" : "sediment_biophysical",
+    "label": "Sediment",
+    "targetScript" : "invest_natcap.sediment.sediment",
+    "modelName" : "sediment",
     "localDocURI": "../documentation/sediment_retention.html",
     "height": 500,
     "width" : 700,
