@@ -123,9 +123,9 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
     raster_utils.calculate_raster_stats(ls_factor_dataset)
 
 
-def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri, 
-                                  erodibility_uri, cp_uri,
-                                  stream_uri, usle_uri):
+def calculate_potential_soil_loss(
+    ls_factor_uri, erosivity_uri, erodibility_uri, cp_uri, stream_uri,
+    usle_uri):
 
     """Calculates per-pixel potential soil loss using the RUSLE (revised 
         universial soil loss equation).
@@ -142,26 +142,18 @@ def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri,
 
         returns nothing"""
 
-    ls_factor_dataset = gdal.Open(ls_factor_uri)
-    erosivity_dataset = gdal.Open(erosivity_uri)
-    erodibility_dataset = gdal.Open(erodibility_uri)
-    cp_dataset = gdal.Open(cp_uri)
-    stream_dataset = gdal.Open(stream_uri)
-
-
-    _, ls_factor_nodata = \
-        raster_utils.extract_band_and_nodata(ls_factor_dataset)
-    _, erosivity_nodata = \
-        raster_utils.extract_band_and_nodata(erosivity_dataset)
-    _, erodibility_nodata = \
-        raster_utils.extract_band_and_nodata(erodibility_dataset)
-    _, cp_nodata = \
-        raster_utils.extract_band_and_nodata(cp_dataset)
-    _, stream_nodata = \
-        raster_utils.extract_band_and_nodata(stream_dataset)
+    ls_factor_nodata = raster_utils.get_nodata_from_uri(ls_factor_uri)
+    erosivity_nodata = raster_utils.get_nodata_from_uri(erosivity_uri)
+    erodibility_nodata = raster_utils.get_nodata_from_uri(erodibility_uri)
+    cp_nodata = raster_utils.get_nodata_from_uri(cp_uri)
+    stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
 
     usle_nodata = -1.0
     ls_factor_nodata = -1.0
+
+    cell_size = raster_utils.get_cell_size_from_uri(cp_uri)
+    cell_area = cell_size ** 2
+
     def usle_function(ls_factor, erosivity, erodibility, usle_cp,
                       v_stream):
         """Calculates the USLE equation
@@ -183,32 +175,17 @@ def calculate_potential_soil_loss(ls_factor_uri, erosivity_uri,
             return usle_nodata
         if v_stream == 1:
             return 0.0
-        return ls_factor * erosivity * erodibility * usle_cp
+        #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
+        return ls_factor * erosivity * erodibility * usle_cp * cell_area / 10000.0
 
-    dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
-                    cp_dataset, stream_dataset]
+    dataset_uri_list = [
+        ls_factor_uri, erosivity_uri, erodibility_uri, cp_uri, stream_uri]
 
-    potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
-        usle_function, raster_out_uri = usle_uri, 
-        datatype=gdal.GDT_Float32, nodata = usle_nodata)
-
-    #change units from tons per hectare to tons per cell.  We need to do this
-    #after the vectorize raster operation since we won't know the cell size
-    #until then.
-    cell_area = raster_utils.pixel_area(potential_soil_loss_dataset)
-
-    potential_soil_loss_band = potential_soil_loss_dataset.GetRasterBand(1)
-    potential_soil_loss_matrix = potential_soil_loss_band.ReadAsArray()
-    potential_soil_loss_nodata = potential_soil_loss_band.GetNoDataValue()
-    potential_soil_loss_data_mask = \
-        potential_soil_loss_matrix != potential_soil_loss_nodata
-
-    #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
-    potential_soil_loss_matrix[potential_soil_loss_data_mask] *= \
-        cell_area / 10000.0
-
-    potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)
-    raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
+    #Aligning with index 4 because that's cp and the most likely to be
+    #aligned with LULCs
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, usle_function, usle_uri, gdal.GDT_Float32,
+        usle_nodata, cell_size, "intersection", dataset_to_align_index=4)
 
 
 def aggregate_raster_values(

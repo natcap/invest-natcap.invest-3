@@ -109,6 +109,9 @@ def pixel_area(dataset):
     area_meters = abs(geotransform[1] * geotransform[5] * (linear_units ** 2))
     return area_meters
 
+def get_cell_size_from_uri(dataset_uri):
+    return pixel_size(gdal.Open(dataset_uri))
+
 def pixel_size(dataset):
     """Calculates the average pixel size of the given dataset in m.  Saying
        'average' in case we have non-square pixels.
