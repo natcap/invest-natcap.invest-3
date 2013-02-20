@@ -333,6 +333,9 @@ def parse_habitat_overlap(uri):
         habitat_dict['Crit_Rating'] = {}
         while line[0] != '':
             if line[1] == 'SHAPE':
+                #If we are dealing with a shapefile criteria, we only want  to
+                #add the DQ and the W, and we will add a rasterized version of
+                #the shapefile later.
                 habitat_dict['Crit_Rasters'][line[0]] = dict(zip(headers[1:2], map(int, line[2:3]))) 
             else:
                 habitat_dict['Crit_Rating'][line[0]] = dict(zip(headers, map(int,line[1:3])))
@@ -347,14 +350,18 @@ def parse_habitat_overlap(uri):
                 line = csv_reader.next()
                 LOGGER.debug(line)
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
-                headers = csv_reader.next()[2:]
+                headers = csv_reader.next()[1:]
+
                 #Drain the overlap table
                 line = csv_reader.next()
                 #Drain the habitat dictionary is the first character of the type field
-                habitat_overlap_dict[(hab_name,stressor)] = {'C': {}, 'E': {}}
+                habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
                 while line[0] != '':
-                    stressor_type = line[1][0]
-                    habitat_overlap_dict[(hab_name, stressor)][stressor_type][line[0]] = dict(zip(headers, map(int,line[2:5])))
+                    if line[1] == 'SHAPE':
+                        #Only include DQ and W headers
+                        habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = dict(zip(headers[1:2], map(int,line[2:3])))
+                    else:
+                        habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = dict(zip(headers, map(int,line[1:3])))
                     line = csv_reader.next()
             except StopIteration:
                 break
