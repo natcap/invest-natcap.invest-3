@@ -1056,9 +1056,9 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
 
     LOGGER.debug("calculate slope")
 
-    slope_nodata = -1.e30 #make a big negative slope for nodata
+    slope_nodata = -1.0
     dem_small_dataset = gdal.Open(dem_small_uri)
-    _ = new_raster_from_base(
+    new_raster_from_base(
         dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
