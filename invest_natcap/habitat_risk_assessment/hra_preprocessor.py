@@ -188,6 +188,7 @@ def parse_hra_tables(worskapce_uri):
     #Parse out habitat names
     habitat_names = [re.search('(.*)_overlap_ratings\.csv', os.path.basename(x)).group(1) for x in habitat_csvs]
 
+    stressor_dict = {}
     for stressor_uri in stressor_csvs:
         LOGGER.debug(stressor_uri)
         stressor_name = re.search('(.*)_stressor_ratings\.csv', os.path.basename(stressor_uri)).group(1)
@@ -217,3 +218,47 @@ def parse_hra_tables(worskapce_uri):
     parse_dictionary['buffer_dict'] = stressor_buf_dict
 
     return parse_dictionary
+
+def parse_stressor(uri):
+    """Helper function to parse out a stressor csv file
+
+        uri - path to the csv file
+
+        returns a dictionary with the stressor information in it as:
+           {'Crit_Ratings':
+                {
+                  'Intensity Rating:':
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                  'Management Effectiveness:':
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                }
+            'Crit_Rasters':
+                {'Intensity Rating:':
+                    {'DQ': 1.0, 'Weight': 1.0},
+                  'Management Effectiveness:':
+                    {'DQ': 1.0, 'Weight': 1.0}
+                }
+           }
+    """
+    stressor_dict = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
+
+    with open(uri,'rU') as stressor_file:
+        csv_reader = csv.reader(stressor_file)
+        stressor_name = csv_reader.next()[1]
+        data_quality = int(csv_reader.next()[1])
+        stressor_dict['DQ'] = data_quality
+        stressor_buffer = float(csv_reader.next()[1])
+        stressor_dict['buffer'] = stressor_buffer
+
+        #Ignore the next blank line
+        csv_reader.next()
+        #Get the headers
+        headers = csv_reader.next()[1:]
+        #Drain the rest of the table
+        stressor_dict['E'] = {}
+        for row in csv_reader:
+            key = row[0]
+            properties = dict(zip(headers,map(int,row[1:])))
+            stressor_dict['E'][key] = properties
+
+    return stressor_dict
