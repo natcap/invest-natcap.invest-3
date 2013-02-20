@@ -63,7 +63,7 @@ class TestSediment(unittest.TestCase):
 #        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/test_out/sediment_output'
-        args['suffix'] = '_foo'
+#        args['suffix'] = None
         base_dir = './data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % base_dir
         args['erosivity_uri'] = '%s/erosivity' % base_dir
@@ -85,26 +85,7 @@ class TestSediment(unittest.TestCase):
         args['sediment_threshold_table_uri'] = os.path.join(base_dir, 'sediment_threshold_table.csv')
         args['sediment_valuation_table_uri'] = os.path.join(base_dir, 'sediment_valuation_table.csv')
 
-        intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-
-        intermediate_files = ['dem_clip.tif', 'flow_accumulation.tif', 
-                              'slope.tif', 'ls.tif', 
-                              'flow_direction.tif', 'retention.tif', 'c_factor.tif',
-                              'p_factor.tif', 'v_stream.tif', 'effective_retention.tif',
-                              'sed_ret_eff.tif', 'pixel_sed_flow.tif']
-        output_dir = os.path.join(args['workspace_dir'], 'Output')
-
-        output_files = ['usle.tif', 'pixel_export.tif', 'pixel_retained.tif']
-
         sediment.execute(args)
-
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + os.sep + "/Intermediate/flow_direction%s.tif" % args['suffix'],
-            './data/sediment_regression_data/flow_direction_regression.tif')
-
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + os.sep + "/Intermediate/flow_accumulation%s.tif" % args['suffix'],
-            './data/sediment_regression_data/flow_accumulation_regression.tif')
 
     def test_sediment_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
