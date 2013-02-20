@@ -251,8 +251,7 @@ def parse_stressor(uri):
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
         stressor_name = csv_reader.next()[1]
-        data_quality = int(csv_reader.next()[1])
-        stressor_dict['DQ'] = data_quality
+        
         stressor_buffer = float(csv_reader.next()[1])
         stressor_dict['buffer'] = stressor_buffer
 
