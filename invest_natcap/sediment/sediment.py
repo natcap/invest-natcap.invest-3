@@ -200,9 +200,8 @@ def execute(args):
     upstream_on_pixel_retention_uri = os.path.join(output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
     sed_flux_uri = raster_utils.temporary_filename() #os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
 
-
     #calculate the upstream_on_pixel_retention
-    #Align the input rasters in case they are different sizes
+    #Align the input rasters because they can be different sizes from the vectorize_datasets function
     transport_original_uri_list = [
         outflow_direction_uri, outflow_weights_uri, usle_uri,
         retention_rate_uri]
@@ -211,7 +210,9 @@ def execute(args):
         transport_original_uri_list, transport_uri_list, ["nearest"] * len(transport_original_uri_list),
         out_pixel_size, "intersection", 0)
 
-    #Pass the list of stacked temporary files to calculate transport
+    #Pass the list of stacked temporary files to calculate transport, this is a little tricky
+    #because I want to have the arguments in the right order, but there's a sink_cell_set in the
+    #middle of them, so i have to split transport_uri_list in half.  Sorry about that.
     transport_arg_list = transport_uri_list[0:2] + [sink_cell_set] + transport_uri_list[2:] + \
         [upstream_on_pixel_retention_uri, sed_flux_uri]
     routing_cython_core.calculate_transport(*transport_arg_list)
