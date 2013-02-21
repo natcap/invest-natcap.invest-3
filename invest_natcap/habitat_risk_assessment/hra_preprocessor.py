@@ -184,6 +184,27 @@ def execute(args):
                 habitat_csv_writer.writerow(curr_row)
 
             ##### HERE WILL BE WHERE ALL THE H-S USER INPUT CRITERIA GO.####
+            habitat_csv_writer.writerow([])
+            habitat_csv_writer.writerow(['HABITAT STRESSOR OVERLAP PROPERTIES'])
+            
+            for stressor_name in stress_list:
+                
+                habitat_csv_writer.writerow([])
+                habitat_csv_writer.writerow([habitat_name + '/' + stressor_name + ' OVERLAP'])
+                habitat_csv_writer.writerow(default_table_headers)
+
+                for c_name in sensitivity_crits:
+                
+                    curr_row = default_row
+
+                    if c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]:
+                        curr_row = ['SHAPE'] + curr_row
+                    elif c_name in crit_descriptions:
+                        curr_row = [crit_descriptions[c_name]] + curr_row
+                    else:
+                        curr_row = default_rating + curr_row
+
+                    habitat_csv_writer.writerow(curr_row)
 
     #Making stressor specific tables. 
     for stressor_name in name_lookup['stressor']:
