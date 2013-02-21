@@ -69,12 +69,32 @@ def execute(args):
     """
     #First, want to raise two exceptions if things are wrong.
     #1. Shouldn't be able to run with no species or habitats.
-    #2. There should be criteria of each type (exposure, sensitivity,
-    # resiliance) and in addition, there should be > 4 criteria total.
+    if not args['do_species'] and not args['do_habitats']:
     
-    
-    hra_args = {}
+        raise MissingHabitatOrSpecies("This model requires you to provide \
+                either habitat or species information for comparison against \
+                potential stressors.")
 
+    #2. There should be criteria of each type (exposure, sensitivity,
+    # resiliance).
+    if len(args['exposure_crits']) == 0 or len(args['resiliance_crits']) == 0 or
+            len(args['sensitivity_crits']) == 0:
+
+        raise ImproperCriteriaSpread("This model requires there to be one \
+                criteria in each of the following catagories: Exposure, \
+                Sensitivity, and Resiliance.")
+    
+    #3. There should be > 4 criteria total.
+    total_crits = len(args['exposure_crits']) + len(args['resiliance_crits']) +
+                len(args['sensitivity_crits'])
+   
+    if total_crits < 4:
+        
+        raise NotEnoughCriteria("This model requires you to use at least 4 \
+                criteria in order to display an accurate picture of habitat \
+                risk.")
+
+    #Now we can run the meat of the model. 
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if not os.path.exists(output_dir):
