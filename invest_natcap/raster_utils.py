@@ -74,7 +74,6 @@ def calculate_raster_stats(ds):
         returns nothing"""
 
     for band_number in range(ds.RasterCount):
-        LOGGER.info('calculate raster stats for band %s' % (band_number+1))
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
@@ -109,6 +108,9 @@ def pixel_area(dataset):
     #take absolute value since sometimes negative widths/heights
     area_meters = abs(geotransform[1] * geotransform[5] * (linear_units ** 2))
     return area_meters
+
+def get_cell_size_from_uri(dataset_uri):
+    return pixel_size(gdal.Open(dataset_uri))
 
 def pixel_size(dataset):
     """Calculates the average pixel size of the given dataset in m.  Saying

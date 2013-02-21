@@ -248,7 +248,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     flow_nodata = -1.0
     flow_direction_dataset = raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri, 'GTiff', flow_nodata,
-        gdal.GDT_Float64)
+        gdal.GDT_Float32)
 
     dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
     flow_band = flow_direction_dataset.GetRasterBand(1)

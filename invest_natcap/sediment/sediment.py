@@ -86,12 +86,13 @@ def execute(args):
     #Sets up the intermediate and output directory structure for the workspace
     for directory in [output_dir, intermediate_dir]:
         if not os.path.exists(directory):
-            LOGGER.debug('creating directory %s', directory)
+            LOGGER.info('creating directory %s', directory)
             os.makedirs(directory)
 
-    dem_dataset = gdal.Open(args['dem_uri'])
-    _, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
-    
+    dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
+    cell_size = raster_utils.get_cell_size_from_uri(args['dem_uri'])
+
+    #Clip the dem and cast to a float
     clipped_dem_uri = raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
         [args['dem_uri']], float, clipped_dem_uri,
@@ -122,8 +123,8 @@ def execute(args):
     #Calculate LS term
     LOGGER.info('calcualte ls term')
     ls_nodata = -1.0
-    sediment_core.calculate_ls_factor(flow_accumulation_uri, slope_uri,
-                                      flow_direction_uri, ls_uri, ls_nodata)
+    sediment_core.calculate_ls_factor(
+        flow_accumulation_uri, slope_uri, flow_direction_uri, ls_uri, ls_nodata)
 
     #Clip the LULC
     lulc_dataset = gdal.Open(args['landuse_uri'])
@@ -135,7 +136,6 @@ def execute(args):
         dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
     lulc_clipped_dataset = gdal.Open(lulc_clipped_uri)
 
-
     export_rate_uri = os.path.join(intermediate_dir, 'export_rate%s.tif' % file_suffix)
     retention_rate_uri = os.path.join(intermediate_dir, 'retention_rate%s.tif' % file_suffix)
 
@@ -144,18 +144,15 @@ def execute(args):
     lulc_to_export_dict = \
         dict([(lulc_code, 1.0 - float(table['sedret_eff'])/100.0) \
                   for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_export_dict %s' % lulc_to_export_dict)
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_export_dict, export_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
     
-
     LOGGER.info('building retention fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
     lulc_to_retention_dict = \
         dict([(lulc_code, float(table['sedret_eff'])/100.0) \
                   for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_retention_dict %s' % lulc_to_retention_dict)
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_retention_dict, retention_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
@@ -163,7 +160,6 @@ def execute(args):
 
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
-    LOGGER.debug('lulc_to_cp_dict %s' % lulc_to_cp_dict)
     cp_uri = os.path.join(intermediate_dir, 'cp%s.tif' % file_suffix)
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
@@ -172,7 +168,6 @@ def execute(args):
     LOGGER.info('building (1-cp) raster from lulc')
     lulc_to_inv_cp_dict = dict([(lulc_code, 1.0 - (float(table['usle_c']) * float(table['usle_p']))) for (lulc_code, table) in biophysical_table.items()])
 
-    LOGGER.debug('lulc_to_inv_cp_dict %s' % lulc_to_inv_cp_dict)
     inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv%s.tif' % file_suffix)
     raster_utils.reclassify_dataset(
         lulc_clipped_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
@@ -189,9 +184,7 @@ def execute(args):
     sediment_core.calculate_potential_soil_loss(
         ls_uri, args['erosivity_uri'], args['erodibility_uri'], inv_cp_uri,
         v_stream_uri, on_pixel_retention_uri)
-    #We know it's -1.0 because it's hard coded
-    #TODO: change to uri based nodata
-    on_pixel_retention_nodata = -1.0
+    on_pixel_retention_nodata = raster_utils.get_nodata_from_uri(on_pixel_retention_uri)
 
     effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream%s.tif' % file_suffix)
 
@@ -205,14 +198,25 @@ def execute(args):
     LOGGER.info('route the sediment flux')
     #This yields sediment flux, and sediment loss which will be used for valuation
     upstream_on_pixel_retention_uri = os.path.join(output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
-    sed_flux_uri = os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
+    sed_flux_uri = raster_utils.temporary_filename() #os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
 
-    routing_cython_core.calculate_transport(
-        outflow_direction_uri, outflow_weights_uri, sink_cell_set,
-        usle_uri, retention_rate_uri, upstream_on_pixel_retention_uri, sed_flux_uri)
-    #We know it's -1.0 because thats hard-coded in calculate transport
-    #TODO: add a raster utils to pull out nodata based on uri
-    upstream_retention_nodata = -1.0
+    #calculate the upstream_on_pixel_retention
+    #Align the input rasters because they can be different sizes from the vectorize_datasets function
+    transport_original_uri_list = [
+        outflow_direction_uri, outflow_weights_uri, usle_uri,
+        retention_rate_uri]
+    transport_uri_list = [raster_utils.temporary_filename() for _ in xrange(len(transport_original_uri_list))]
+    raster_utils.align_dataset_list(
+        transport_original_uri_list, transport_uri_list, ["nearest"] * len(transport_original_uri_list),
+        out_pixel_size, "intersection", 0)
+
+    #Pass the list of stacked temporary files to calculate transport, this is a little tricky
+    #because I want to have the arguments in the right order, but there's a sink_cell_set in the
+    #middle of them, so i have to split transport_uri_list in half.  Sorry about that.
+    transport_arg_list = transport_uri_list[0:2] + [sink_cell_set] + transport_uri_list[2:] + \
+        [upstream_on_pixel_retention_uri, sed_flux_uri]
+    routing_cython_core.calculate_transport(*transport_arg_list)
+    upstream_retention_nodata = raster_utils.get_nodata_from_uri(upstream_on_pixel_retention_uri)
 
     #Calculate the retention due to per pixel retention and the cp factor
     sed_retention_uri = os.path.join(output_dir, 'sed_ret%s.tif' % file_suffix)
