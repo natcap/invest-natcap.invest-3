@@ -18,21 +18,36 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
+        args['do_habitats']- Boolean indicating whether or not purely habitat
+            inputs are desired within this model.
         args['habitat_dir'] - A directory of shapefiles that are habitats.
+        args['do_species']- Boolean indication whether species should be used as
+            input to this model run.
         args['species_dir']- Directory which holds all species shapefiles, but
-            may or may not actually exist within args.
-        args['stressor_dir'] - A directory of ArcGIS shapefiles that are stressors
+            may or may not actually exist within args if 'do_species' is false.
+        args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
+        args['exposure_crits']- List containing string names of exposure
+            (stressor-specific) criteria.
+        args['sensitivity-crits']- List containing string names of sensitivity
+            (habitat-stressor overlap specific) criteria.
+        args['resiliance_crits']- List containing string names of resiliance
+            (habitat or species-specific) criteria.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             This needs to be in a VERY specific format, which shall be described
             in the user's guide.
-        Criteria....dictionary....thing? Would somehow be organized by which
-        subcategory they were in, and whether or not they were checked.
+        
 
     Output:
-        hra_args[
+        Creation of a series of CSVs within workspace_dir. There will be one CSV
+            for every stressor, and one for every habitat/species. These files
+            will contain information relevant to each stresor or habitat, 
+            including a stressor buffer, as well as criteria names that apply to
+            each overlap or individual.
 
-        - JSON file containing vars that need to be passed on to hra non-core
-            when that gets run. Should live inside the preprocessor folder.
+        JSON file containing vars that need to be passed on to hra non-core
+          when that gets run. Should live inside the preprocessor folder which
+          will be created in 'workspace_dir'. 
+
     Returns nothing.
     """
 
@@ -52,7 +67,7 @@ def execute(args):
     
     #And all potential stressors
     stress_list = []
-    stress_list.append(glob.glob(os.path.join(args['stressor_dir'], '*.shp')))
+    stress_list.append(glob.glob(os.path.join(args['stressors_dir'], '*.shp')))
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], stress_list)
 
 
