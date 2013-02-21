@@ -63,8 +63,7 @@ then
         pollination_test.py
         raster_utils_test.py
         reclassify_test.py
-        sediment_biophysical_test.py
-        sediment_core_test.py
+        sediment_test.py
         timber_core_test.py
         timber_test.py
         water_scarcity_test.py

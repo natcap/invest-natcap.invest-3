@@ -18,21 +18,36 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
+        args['do_habitats']- Boolean indicating whether or not purely habitat
+            inputs are desired within this model.
         args['habitat_dir'] - A directory of shapefiles that are habitats.
+        args['do_species']- Boolean indication whether species should be used as
+            input to this model run.
         args['species_dir']- Directory which holds all species shapefiles, but
-            may or may not actually exist within args.
-        args['stressor_dir'] - A directory of ArcGIS shapefiles that are stressors
+            may or may not actually exist within args if 'do_species' is false.
+        args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
+        args['exposure_crits']- List containing string names of exposure
+            (stressor-specific) criteria.
+        args['sensitivity-crits']- List containing string names of sensitivity
+            (habitat-stressor overlap specific) criteria.
+        args['resiliance_crits']- List containing string names of resiliance
+            (habitat or species-specific) criteria.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             This needs to be in a VERY specific format, which shall be described
             in the user's guide.
-        Criteria....dictionary....thing? Would somehow be organized by which
-        subcategory they were in, and whether or not they were checked.
+        
 
     Output:
-        hra_args[
+        Creation of a series of CSVs within workspace_dir. There will be one CSV
+            for every stressor, and one for every habitat/species. These files
+            will contain information relevant to each stresor or habitat, 
+            including a stressor buffer, as well as criteria names that apply to
+            each overlap or individual.
 
-        - JSON file containing vars that need to be passed on to hra non-core
-            when that gets run. Should live inside the preprocessor folder.
+        JSON file containing vars that need to be passed on to hra non-core
+          when that gets run. Should live inside the preprocessor folder which
+          will be created in 'workspace_dir'. 
+
     Returns nothing.
     """
 
@@ -52,7 +67,7 @@ def execute(args):
     
     #And all potential stressors
     stress_list = []
-    stress_list.append(glob.glob(os.path.join(args['stressor_dir'], '*.shp')))
+    stress_list.append(glob.glob(os.path.join(args['stressors_dir'], '*.shp')))
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], stress_list)
 
 
@@ -196,14 +211,20 @@ def parse_hra_tables(worskapce_uri):
 
     habitat_dict = {}
     h_s_dict = {}
+
     for habitat_uri in habitat_csvs:
         LOGGER.debug(habitat_uri)
         habitat_name = re.search('(.*)_overlap_ratings\.csv', os.path.basename(habitat_uri)).group(1)
 
+        #Since each habitat CSV has both habitat individual ratings and habitat
+        #overlap ratings, need to subdivide them within the return dictionary
         habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
         habitat_dict[habitat_name] = habitat_parse_dictionary['hab_only']
+    
+        #For all of the overlaps pertaining to this particular habitat,
+        #hab_stress_overlap is a stressor name which overlaps our habitat
         for hab_stress_overlap in habitat_parse_dictionary['overlap']:
-            h_s_dict[hab_stress_overlap] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
+            h_s_dict[(habitat_name, hab_stress_overlap)] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
     parse_dictionary = {}
     parse_dictionary['habitats'] = habitat_dict
@@ -245,8 +266,10 @@ def parse_stressor(uri):
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
         stressor_name = csv_reader.next()[1]
-        data_quality = int(csv_reader.next()[1])
-        stressor_dict['DQ'] = data_quality
+       
+        #Skip empty line
+        csv_reader.next()
+
         stressor_buffer = float(csv_reader.next()[1])
         stressor_dict['buffer'] = stressor_buffer
 
@@ -254,11 +277,117 @@ def parse_stressor(uri):
         csv_reader.next()
         #Get the headers
         headers = csv_reader.next()[1:]
+        
         #Drain the rest of the table
-        stressor_dict['E'] = {}
         for row in csv_reader:
             key = row[0]
-            properties = dict(zip(headers,map(int,row[1:])))
-            stressor_dict['E'][key] = properties
-
+            
+            if row[1] == 'SHAPE':
+                stressor_dict['Crit_Rasters'] = dict(zip(headers[1:2],map(int,row[2:3])))
+            else:
+                stressor_dict['Crit_Ratings'] = dict(zip(headers,map(int,row[1:])))
+                
     return stressor_dict
+
+def parse_habitat_overlap(uri):
+    """Helper function to parse out the habitat stressor table
+        
+    Input:
+        uri - path to the habitat stressor overlap csv table.
+
+    Returns a dictionary of the following form, where any individually named
+        stressors actually represent the overlap between the overarching habitat
+        and that particular stressor:
+        
+        {'hab_only':
+           {'Crit_Ratings':
+                {'Intensity Rating:':
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                  'Management Effectiveness:':
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                }
+            'Crit_Rasters':
+                {'Intensity Rating:':
+                    {'DQ': 1.0, 'Weight': 1.0},
+                  'Management Effectiveness:':
+                    {'DQ': 1.0, 'Weight': 1.0}
+                }
+           },
+       'overlap':
+            {'stressorName':
+               {'Crit_Ratings':
+                    {'Intensity Rating:':
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    }
+                'Crit_Rasters':
+                    {'Intensity Rating:':
+                        {'DQ': 1.0, 'Weight': 1.0}
+                    }
+               },
+            'stressorName2':
+               {'Crit_Ratings':
+                    {'Intensity Rating:':
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    }
+                'Crit_Rasters':
+                    {'Intensity Rating:':
+                        {'DQ': 1.0, 'Weight': 1.0}
+                    }
+               }
+            }
+        }
+    """
+
+    habitat_overlap_dict = {}
+    habitat_dict = {}
+    with open(uri,'rU') as habitat_file:
+        csv_reader = csv.reader(habitat_file)
+        hab_name = csv_reader.next()[1]
+
+        #Drain the next two lines
+        for _ in range(2): csv_reader.next()
+        
+        #Get the headers
+        headers = csv_reader.next()[1:]
+        line = csv_reader.next()
+        #Drain the habitat dictionary
+        habitat_dict['Crit_Rating'] = {}
+        while line[0] != '':
+            if line[1] == 'SHAPE':
+                #If we are dealing with a shapefile criteria, we only want  to
+                #add the DQ and the W, and we will add a rasterized version of
+                #the shapefile later.
+                habitat_dict['Crit_Rasters'][line[0]] = dict(zip(headers[1:2], map(int, line[2:3]))) 
+            else:
+                habitat_dict['Crit_Rating'][line[0]] = dict(zip(headers, map(int,line[1:3])))
+            line = csv_reader.next()
+
+        #Drain the next two lines
+        for _ in range(2): csv_reader.next()
+        #Drain the overlap dictionaries
+        #This is the overlap header
+        while True:
+            try:
+                line = csv_reader.next()
+                LOGGER.debug(line)
+                stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
+                headers = csv_reader.next()[1:]
+
+                #Drain the overlap table
+                line = csv_reader.next()
+                #Drain the habitat dictionary is the first character of the type field
+                habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
+                while line[0] != '':
+                    if line[1] == 'SHAPE':
+                        #Only include DQ and W headers
+                        habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = dict(zip(headers[1:2], map(int,line[2:3])))
+                    else:
+                        habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = dict(zip(headers, map(int,line[1:3])))
+                    line = csv_reader.next()
+            except StopIteration:
+                break
+
+    return {
+        'hab_only': habitat_dict,
+        'overlap': habitat_overlap_dict
+        }
