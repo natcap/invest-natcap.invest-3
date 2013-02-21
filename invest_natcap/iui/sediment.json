@@ -95,8 +95,10 @@
 		    "label": "Biophysical Table",
 		    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
 		    "required": true,
-		    "validateAs": {"type": "CSV"},
-		    "helpText": " A table containing model information corresponding to each of the land use classes. NOTE: these data are attributes of each LULC class, not each cell in the raster map."
+		    "validateAs": {"type": "CSV",
+				  "fieldsExist": ["lucode", "sedret_eff", "usle_c", "usle_p"]
+				  },
+		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment user's guide for more information about these fields."
 		},
 		{        
 		    "id" : "threshold_flow_accumulation",
@@ -125,7 +127,9 @@
 		    "label": "Sediment threshold table",
 		    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
 		    "required": true,
-		    "validateAs": {"type": "CSV"},
+		    "validateAs": {"type": "CSV",
+				   "fieldsExist": ["ws_id", "dr_time", "dr_deadvol", "wq_annload"]
+				  },
 		    "helpText": "A table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the user's guide for the meaning of these fields."
 		}
 	    ]
