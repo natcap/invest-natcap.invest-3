@@ -773,7 +773,7 @@ def valuation(args):
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
         carbon_coef = float(turbine_dict['carbon_coefficient']) 
-        carbon_emissions = carbon_coef * energy_val
+        carbon_emissions = carbon_coef * energy_val * number_turbines
         
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)
