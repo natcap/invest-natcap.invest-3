@@ -114,7 +114,8 @@ def execute(args):
 
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), args['exposure_crits'])
-
+    resiliance_crits = map(lambda name: name.replace('_', ' ').lower(), args['resiliance_crits'])
+    sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), args['sensitivity_crits'])
     '''Want to pull the shapefile criteria from the folder structure specified.
     this function will return a dictionary with the following form:
         {'h-s':
