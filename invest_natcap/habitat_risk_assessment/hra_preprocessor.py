@@ -112,6 +112,8 @@ def execute(args):
     stress_list.append(glob.glob(os.path.join(args['stressors_dir'], '*.shp')))
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], stress_list)
 
+    #Clean up the incoming criteria name strings coming in from the IUI
+    exposure_crits = map(lambda name: name.replace('_', ' ').lower(), args['exposure_crits'])
 
     '''Want to pull the shapefile criteria from the folder structure specified.
     this function will return a dictionary with the following form:
@@ -136,7 +138,7 @@ def execute(args):
         'temporal overlap rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
         
         'frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>',
-        'intensity Rating:': '<enter (3) high, (2) medium, (1) low, (0) no score>',
+        'intensity rating:': '<enter (3) high, (2) medium, (1) low, (0) no score>',
         'management effectiveness:': '<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>',
         'natural mortality': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
         'recruitment rate': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
@@ -146,7 +148,7 @@ def execute(args):
 
     default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
     default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
-    default_headers = ['', 'Rating', 'DQ', 'Weight']
+    default_table_headers = ['', 'Rating', 'DQ', 'Weight']
     default_row = [default_dq_message, default_weight_message]
 
     #Create habitat-centric output csv's.
@@ -158,8 +160,8 @@ def execute(args):
             habitat_csv_writer = csv.writer(habitat_csv_file)
             #Write the habitat name
             habitat_csv_writer.writerow(['HABITAT NAME', habitat_name])
+            habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
-            habitat_csv_writer.writerow(['Habitat Data Quality:', default_dq_message])
             habitat_csv_writer.writerow([])
 
             habitat_csv_writer.writerow(default_table_headers)
@@ -175,7 +177,6 @@ def execute(args):
         with open(csv_filename, 'wb') as stressor_csv_file:
             stressor_csv_writer = csv.writer(stressor_csv_file)
             stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
-            stressor_csv_writer.writerow(['Stressor Data Quality:', default_dq_message])
             stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
             stressor_csv_writer.writerow([])
             stressor_csv_writer.writerow(default_table_headers)

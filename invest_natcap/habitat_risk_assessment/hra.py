@@ -360,7 +360,7 @@ def make_crit_shape_dict(crit_uri):
         #want the second part to all be one piece
         parts = filename.split('_', 1)
         hab_name = parts[0]
-        crit_name = parts[1].replace('_', ' ')
+        crit_name = parts[1].replace('_', ' ').lower()
 
         if hab_name not in c_shape_dict['h']:
             c_shape_dict['h'][hab_name] = {}
