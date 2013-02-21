@@ -292,14 +292,17 @@ def parse_hra_tables(worskapce_uri):
     
     #Parse out stressor names
     LOGGER.debug(stressor_paths)
-    stressor_names = [re.search('(.*)_stressor_ratings\.csv', os.path.basename(x)).group(1) for x in stressor_csvs]
+    stressor_names = [re.search('(.*)_stressor_ratings\.csv', 
+                    os.path.basename(x)).group(1) for x in stressor_csvs]
     #Parse out habitat names
-    habitat_names = [re.search('(.*)_overlap_ratings\.csv', os.path.basename(x)).group(1) for x in habitat_csvs]
+    habitat_names = [re.search('(.*)_overlap_ratings\.csv', 
+                    os.path.basename(x)).group(1) for x in habitat_csvs]
 
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
         LOGGER.debug(stressor_uri)
-        stressor_name = re.search('(.*)_stressor_ratings\.csv', os.path.basename(stressor_uri)).group(1)
+        stressor_name = re.search('(.*)_stressor_ratings\.csv', 
+                                os.path.basename(stressor_uri)).group(1)
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
 
     habitat_dict = {}
@@ -307,7 +310,8 @@ def parse_hra_tables(worskapce_uri):
 
     for habitat_uri in habitat_csvs:
         LOGGER.debug(habitat_uri)
-        habitat_name = re.search('(.*)_overlap_ratings\.csv', os.path.basename(habitat_uri)).group(1)
+        habitat_name = re.search('(.*)_overlap_ratings\.csv', 
+                                os.path.basename(habitat_uri)).group(1)
 
         #Since each habitat CSV has both habitat individual ratings and habitat
         #overlap ratings, need to subdivide them within the return dictionary
@@ -317,12 +321,24 @@ def parse_hra_tables(worskapce_uri):
         #For all of the overlaps pertaining to this particular habitat,
         #hab_stress_overlap is a stressor name which overlaps our habitat
         for hab_stress_overlap in habitat_parse_dictionary['overlap']:
-            h_s_dict[(habitat_name, hab_stress_overlap)] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
+            h_s_dict[(habitat_name, hab_stress_overlap)] = 
+                        habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
     parse_dictionary = {}
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
+
+    #At this point, we want to check for 0 or null values in any of the
+    #subdictionaries subpieces, and if we find any, remove that whole criteria
+    #from the assessment for that subdictionary.
+    for _, subdict in parse_dictionary.iteritems():
+        for _, indivs in subdict.iteritems():
+            for _, kind in indivs.iteritems():
+                for crit_name, crit_dict in kind.iteritems():
+                    for item, value in crit_dict.iteritems():
+                        if value == 0 or value == '':
+                            del(kind[crit_name])
 
     stressor_buf_dict = {}
     for stressor, stressor_properties in stressor_dict.iteritems():
