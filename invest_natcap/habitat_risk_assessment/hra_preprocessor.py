@@ -12,6 +12,23 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('hra_preprocessor')
 
+class MissingHabitatsOrSpecies(Exception):
+    '''An exception to pass if the hra_preprocessor args dictionary being
+    passed is missing a habitats directory or a species directory.'''
+    pass
+
+class NotEnoughCriteria(Exception):
+    '''An exception for hra_preprocessor which can be passed if the number of
+    criteria in the resiliance, exposure, and sensitivity categories all sums
+    to less than 4.'''
+    pass
+
+class ImproperCriteriaSpread(Exception):
+    '''An exception for hra_preprocessor which can be passed if there are not
+    one or more criteria in each of the 3 criteria categories: resiliance,
+    exposure, and sensitivity.'''
+    pass
+
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
@@ -50,7 +67,12 @@ def execute(args):
 
     Returns nothing.
     """
-
+    #First, want to raise two exceptions if things are wrong.
+    #1. Shouldn't be able to run with no species or habitats.
+    #2. There should be criteria of each type (exposure, sensitivity,
+    # resiliance) and in addition, there should be > 4 criteria total.
+    
+    
     hra_args = {}
 
     #Make the workspace directory if it doesn't exist
