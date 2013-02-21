@@ -116,6 +116,7 @@ def execute(args):
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), args['exposure_crits'])
     resiliance_crits = map(lambda name: name.replace('_', ' ').lower(), args['resiliance_crits'])
     sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), args['sensitivity_crits'])
+    
     '''Want to pull the shapefile criteria from the folder structure specified.
     this function will return a dictionary with the following form:
         {'h-s':
@@ -151,6 +152,7 @@ def execute(args):
     default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
     default_table_headers = ['', 'Rating', 'DQ', 'Weight']
     default_row = [default_dq_message, default_weight_message]
+    default_rating = ['<enter (3) high, (2) medium, (1) low, (0) no score>']
 
     #Create habitat-centric output csv's.
     for habitat_name in hab_list:
@@ -168,7 +170,18 @@ def execute(args):
             habitat_csv_writer.writerow(default_table_headers)
 
             ##### HERE WILL BE WHERE USER INPUT HABITAT CRITERIA GO.####
+            for c_name in resiliance_crits:
 
+                curr_row = default_row
+
+                if c_name in crit_shapes['h'][habitat_name]:
+                    curr_row = ['SHAPE'] + curr_row
+                elif c_name in crit_descriptions:
+                    curr_row = [crit_descriptions[c_name]] + curr_row
+                else:
+                    curr_row = default_rating + curr_row
+
+                habitat_csv_writer.writerow(curr_row)
 
             ##### HERE WILL BE WHERE ALL THE H-S USER INPUT CRITERIA GO.####
 
