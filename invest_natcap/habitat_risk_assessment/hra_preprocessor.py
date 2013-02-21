@@ -207,17 +207,32 @@ def execute(args):
                     habitat_csv_writer.writerow(curr_row)
 
     #Making stressor specific tables. 
-    for stressor_name in name_lookup['stressor']:
+    for stressor_name in stress_list:
+
         csv_filename = os.path.join(output_dir, stressor_name + '_stressor_ratings.csv')
-        with open(csv_filename, 'wb') as stressor_csv_file:
+    
+    with open(csv_filename, 'wb') as stressor_csv_file:
             stressor_csv_writer = csv.writer(stressor_csv_file)
             stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
+            stressor_csv_writer.writerow([])
             stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
             stressor_csv_writer.writerow([])
             stressor_csv_writer.writerow(default_table_headers)
     
             #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
+            for c_name in exposure_crits:
+            
+                curr_row = default_row
 
+                if c_name in crit_shapes['s'][stressor_name]:
+                    curr_row = ['SHAPE'] + curr_row
+                elif c_name in crit_descriptions:
+                    curr_row = [crit_descriptions[c_name]] + curr_row
+                else:
+                    curr_row = default_rating + curr_row
+
+                stressor_csv_writer.writerow(curr_row)
+            
 def parse_hra_tables(worskapce_uri):
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
