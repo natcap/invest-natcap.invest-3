@@ -278,10 +278,12 @@ def water_yield(args):
     LOGGER.debug('Performing volume (ha) operation')
         
     #Make ha volume raster
-    wyield_ha_raster = \
-        raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
-                                       raster_out_uri = wyield_ha_path, 
-                                       nodata=out_nodata)
+    raster_utils.vectorize_datasets(
+        [wyield_volume_path, wyield_area_uri], ha_vol, wyield_ha_path,
+        gdal.GDT_Float32, out_nodata, args['out_pixel_size'], 'intersection',
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+    wyield_ha_raster = gdal.Open(wyield_ha_path)
+
     
     def aet_op(fractp, precip):
         """Function to compute the actual evapotranspiration values
