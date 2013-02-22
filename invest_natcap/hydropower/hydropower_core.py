@@ -304,10 +304,12 @@ def water_yield(args):
     
     LOGGER.debug('Performing aet operation')
     
-    aet_raster = \
-        raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
-                                       raster_out_uri = aet_path, 
-                                       nodata=out_nodata)
+    raster_utils.vectorize_datasets(
+        [fractp_uri, args['precipitation_uri']], aet_op,  aet_path,
+        gdal.GDT_Float32, out_nodata, args['out_pixel_size'], 'intersection',
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+
+    aet_raster = gdal.Open(aet_path)
     
     #Create the mean actual evapotranspiration raster
     aet_mn_dict = \
