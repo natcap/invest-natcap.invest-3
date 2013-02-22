@@ -97,9 +97,9 @@ def water_yield(args):
     tmp_root_path = intermediate_dir + os.sep + 'tmp_root' + suffix_tif
     
     #Paths for clipping the fractp/wyield raster to watershed polygons
-    fractp_clipped_path = \
+    fractp_uri = \
         pixel_dir + os.sep + 'fractp' + suffix_tif
-    wyield_clipped_path = \
+    wyield_uri = \
         pixel_dir + os.sep + 'wyield' + suffix_tif
     
     #Paths for the fractp mean and water yield mean, area, and volume rasters
@@ -178,10 +178,10 @@ def water_yield(args):
                    args['soil_depth_uri'], args['pawc_uri']]
 
     raster_utils.vectorize_datasets(
-        raster_uri_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
+        raster_uri_list, fractp_vec, fractp_uri, gdal.GDT_Float32,
         out_nodata, args['out_pixel_size'],
         "intersection", dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
-    fractp_raster = gdal.Open(fractp_clipped_path)
+    fractp_raster = gdal.Open(fractp_uri)
 
     LOGGER.debug('Performing wyield operation')
     
@@ -199,12 +199,13 @@ def water_yield(args):
             return (1.0 - fractp) * precip
     
     #Create the water yield raster 
-    wyield_raster = \
-        raster_utils.vectorize_rasters([fractp_raster, precip_raster], 
-                                       wyield_op,   
-                                       raster_out_uri = wyield_clipped_path, 
-                                       nodata=out_nodata)
-    
+    raster_utils.vectorize_datasets(
+        [fractp_uri, args['precipitation_uri']], wyield_op,
+        wyield_uri, gdal.GDT_Float32, out_nodata, args['out_pixel_size'],
+        "intersection", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+    wyield_raster = gdal.Open(wyield_uri)
+
     #Create mean rasters for fractp and water yield
     fract_mn_dict = \
         raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 
