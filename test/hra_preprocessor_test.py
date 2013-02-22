@@ -53,7 +53,40 @@ class TestHRAPreprocessor(unittest.TestCase):
     MissingHabitatOrSpecies exception.'''
 
         self.args['do_species'] = False
-        self.args['do_habitats'] = True
+        self.args['do_habitats'] = False
 
         self.assertRaises(hra_preprocessor.MissingHabitatOrSpecies,
                         hra_preprocessor.execute, self.args)
+
+    def test_NotEnoughCriteria_exception(self):
+    '''Want to make sure that if we have at least 4 or more criteria passed
+    within our 3 criteria type lists. Should raise a NotEnoughCriteria 
+    exception.'''
+
+        self.args['do_species'] = False
+        self.args['do_habitats'] = True
+        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+
+        #Since we had 6 crits to begin with, remove one from each should leave
+        #us with 3, want to make sure this causes to error.
+        for c_list in (self.args['resiliance_crits'], 
+                    self.args['sensitivity_crits'],
+                    self.args['exposure_crits']):
+
+            c_list.remove(c_list[0])
+
+
+        self.assertRaises(hra_preprocessor.NotEngoughCriteria,
+                        hra_preprocessor.execute, self.args)
+
+    def test_ImproperCriteraSpread_exception(self):
+
+        self.args['do_species'] = False
+        self.args['do_habitats'] = True
+        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+
+        self.args['resiliance_crits'] = []
+
+        self.assertRaises(hra_preprocessor.ImproperCriteriaSpread,
+                        hra_preprocessor.execute, self.args)
+
