@@ -449,13 +449,13 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
-def new_raster_from_base(base, outputURI, format, nodata, datatype):
+def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
         
         base - a the GDAL raster dataset to base output size, and transforms on
-        outputURI - a string URI to the new output raster dataset.
-        format - a string representing the GDAL file format of the 
+        output_uri - a string URI to the new output raster dataset.
+        gdal_format - a string representing the GDAL file format of the 
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
@@ -465,15 +465,27 @@ def new_raster_from_base(base, outputURI, format, nodata, datatype):
             gdal.GDT_Float32.  See the following header file for supported 
             pixel types:
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+        fill_value - (optional) the value to fill in the raster on creation
                 
         returns a new GDAL raster dataset."""
 
-    cols = base.RasterXSize
-    rows = base.RasterYSize
+    n_cols = base.RasterXSize
+    n_rows = base.RasterYSize
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
-    return new_raster(cols, rows, projection, geotransform, format, nodata,
-                     datatype, base.RasterCount, outputURI)
+    driver = gdal.GetDriverByName(gdal_format)
+    new_raster = driver.Create(output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
+    new_raster.SetProjection(projection)
+    new_raster.SetGeoTransform(geotransform)
+    band = new_raster.GetRasterBand(1)
+    band.SetNoDataValue(nodata)
+    if fill_value != None:
+        band.SetNoDataValue(fill_value)
+    else:
+        band.SetNoDataValue(nodata)
+    band = None
+
+    return new_raster
 
 def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI):
