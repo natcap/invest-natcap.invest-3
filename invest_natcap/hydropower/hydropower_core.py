@@ -253,10 +253,12 @@ def water_yield(args):
         else:
             return out_nodata
         
-    wyield_vol_raster = \
-        raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
-                                       raster_out_uri = wyield_volume_path, 
-                                       nodata=out_nodata)
+    raster_utils.vectorize_datasets(
+        [wyield_mean_path, wyield_area_uri], volume_op,  wyield_volume_path,
+        gdal.GDT_Float32, out_nodata, args['out_pixel_size'], 'intersection',
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+
+    wyield_vol_raster = gdal.Open(wyield_volume_path)
 
     def ha_vol(wyield_vol, wyield_area):
         """Function to compute water yield volume in units of ha
