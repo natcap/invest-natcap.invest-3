@@ -71,22 +71,22 @@ def execute(args):
     #1. Shouldn't be able to run with no species or habitats.
     if not args['do_species'] and not args['do_habitats']:
     
-        raise MissingHabitatOrSpecies("This model requires you to provide \
+        raise MissingHabitatsOrSpecies("This model requires you to provide \
                 either habitat or species information for comparison against \
                 potential stressors.")
 
     #2. There should be criteria of each type (exposure, sensitivity,
     # resiliance).
-    if len(args['exposure_crits']) == 0 or len(args['resiliance_crits']) == 0 or
-            len(args['sensitivity_crits']) == 0:
+    if len(args['exposure_crits']) == 0 or len(args['resiliance_crits']) == 0 \
+            or len(args['sensitivity_crits']) == 0:
 
         raise ImproperCriteriaSpread("This model requires there to be one \
                 criteria in each of the following catagories: Exposure, \
                 Sensitivity, and Resiliance.")
     
     #3. There should be > 4 criteria total.
-    total_crits = len(args['exposure_crits']) + len(args['resiliance_crits']) +
-                len(args['sensitivity_crits'])
+    total_crits = len(args['exposure_crits']) + len(args['resiliance_crits']) \
+                + len(args['sensitivity_crits'])
    
     if total_crits < 4:
         
@@ -105,17 +105,23 @@ def execute(args):
     for ele in ('habitat_dir', 'species_dir'):
         if ele in args:
             hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
-            hab_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], hab_list)
+            hab_list = \
+                map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
+                            hab_list)
     
     #And all potential stressors
     stress_list = []
     stress_list.append(glob.glob(os.path.join(args['stressors_dir'], '*.shp')))
-    stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], stress_list)
+    stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
+                        stress_list)
 
     #Clean up the incoming criteria name strings coming in from the IUI
-    exposure_crits = map(lambda name: name.replace('_', ' ').lower(), args['exposure_crits'])
-    resiliance_crits = map(lambda name: name.replace('_', ' ').lower(), args['resiliance_crits'])
-    sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), args['sensitivity_crits'])
+    exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
+                    args['exposure_crits'])
+    resiliance_crits = map(lambda name: name.replace('_', ' ').lower(), \
+                    args['resiliance_crits'])
+    sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), \
+                    args['sensitivity_crits'])
     
     '''Want to pull the shapefile criteria from the folder structure specified.
     this function will return a dictionary with the following form:
@@ -135,21 +141,33 @@ def execute(args):
     crit_shapes = hra.make_crit_shape_dict(args['criteria_dir'])
     
     crit_descriptions = {
-        'change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
-        'change in structure rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
-        'temporal overlap rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
-        
-        'frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>',
-        'intensity rating:': '<enter (3) high, (2) medium, (1) low, (0) no score>',
-        'management effectiveness:': '<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>',
-        'natural mortality': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
-        'recruitment rate': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
-        'recovery time': '<enter (3) >10 yrs, (2) 1-10 yrs, (1) <1 yr, or (0) no score>',
-        'connectivity rate': '<enter (3) <10km, (2) 10-100km, (1) >100km, or (0) no score>'
+        'change in area rating': '<enter (3) 50-100% loss, ' + 
+            '(2) 20-50% loss, (1) 0-20% loss, (0) no score>',
+        'change in structure rating': '<enter (3) 50-100% loss, ' + 
+            '(2) 20-50% loss, (1) 0-20% loss, (0) no score>',
+        'temporal overlap rating': '<enter (3) co-occur 8-12 mo/year, ' + 
+            '(2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
+        'frequency of disturbance': '<enter (3) Annually or less often, ' +
+            '(2) Several times per year, (1) Weekly or more often, ' + \
+            '(0) no score>',
+        'intensity rating:': '<enter (3) high, (2) medium, ' +
+            '(1) low, (0) no score>',
+        'management effectiveness:': '<enter (3) not effective, ' +
+            '(2) somewhat effective, (1) very effective, (0) no score>',
+        'natural mortality': '<enter (3) 0-20%, (2) 20-50%, ' +
+            '(1) >80% mortality, or (0) no score>',
+        'recruitment rate': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, ' +
+            '(1) every <1 yrs, or (0) no score>',
+        'recovery time': '<enter (3) >10 yrs, (2) 1-10 yrs, ' + 
+            '(1) <1 yr, or (0) no score>',
+        'connectivity rate': '<enter (3) <10km, (2) 10-100km, ' +
+            '(1) >100km, or (0) no score>'
         }
 
-    default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
-    default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
+    default_dq_message = '<enter (3) best, (2) adequate, (1) limited, '  + \
+        'or (0) unknown>'
+    default_weight_message = '<enter (3) more important, ' + \
+        '(2) equal importance, (1) less important>'
     default_table_headers = ['', 'Rating', 'DQ', 'Weight']
     default_row = [default_dq_message, default_weight_message]
     default_rating = ['<enter (3) high, (2) medium, (1) low, (0) no score>']
@@ -157,7 +175,8 @@ def execute(args):
     #Create habitat-centric output csv's.
     for habitat_name in hab_list:
 
-        csv_filename = os.path.join(output_dir, habitat_name + '_overlap_ratings.csv')
+        csv_filename = os.path.join(output_dir, habitat_name + \
+            '_overlap_ratings.csv')
         
         with open(csv_filename, 'wb') as habitat_csv_file:
             habitat_csv_writer = csv.writer(habitat_csv_file)
@@ -190,16 +209,20 @@ def execute(args):
             for stressor_name in stress_list:
                 
                 habitat_csv_writer.writerow([])
-                habitat_csv_writer.writerow([habitat_name + '/' + stressor_name + ' OVERLAP'])
+                habitat_csv_writer.writerow([habitat_name + '/' + \
+                        stressor_name + ' OVERLAP'])
                 habitat_csv_writer.writerow(default_table_headers)
 
                 for c_name in sensitivity_crits:
                 
                     curr_row = default_row
 
-                    if c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]:
+                    if c_name in crit_shapes['h-s'][(habitat_name, \
+                            stressor_name)]:
+
                         curr_row = ['SHAPE'] + curr_row
                     elif c_name in crit_descriptions:
+
                         curr_row = [crit_descriptions[c_name]] + curr_row
                     else:
                         curr_row = default_rating + curr_row
@@ -209,31 +232,33 @@ def execute(args):
     #Making stressor specific tables. 
     for stressor_name in stress_list:
 
-        csv_filename = os.path.join(output_dir, stressor_name + '_stressor_ratings.csv')
+        csv_filename = os.path.join(output_dir, stressor_name + \
+                        '_stressor_ratings.csv')
     
     with open(csv_filename, 'wb') as stressor_csv_file:
-            stressor_csv_writer = csv.writer(stressor_csv_file)
-            stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
-            stressor_csv_writer.writerow([])
-            stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
-            stressor_csv_writer.writerow([])
-            stressor_csv_writer.writerow(default_table_headers)
-    
-            #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
-            for c_name in exposure_crits:
-            
-                curr_row = default_row
+        stressor_csv_writer = csv.writer(stressor_csv_file)
+        stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
+        stressor_csv_writer.writerow([])
+        stressor_csv_writer.writerow(['Stressor Buffer (m):', \
+                '<enter a buffer region in meters>'])
+        stressor_csv_writer.writerow([])
+        stressor_csv_writer.writerow(default_table_headers)
 
-                if c_name in crit_shapes['s'][stressor_name]:
-                    curr_row = ['SHAPE'] + curr_row
-                elif c_name in crit_descriptions:
-                    curr_row = [crit_descriptions[c_name]] + curr_row
-                else:
-                    curr_row = default_rating + curr_row
+        #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
+        for c_name in exposure_crits:
+        
+            curr_row = default_row
 
-                stressor_csv_writer.writerow(curr_row)
+            if c_name in crit_shapes['s'][stressor_name]:
+                curr_row = ['SHAPE'] + curr_row
+            elif c_name in crit_descriptions:
+                curr_row = [crit_descriptions[c_name]] + curr_row
+            else:
+                curr_row = default_rating + curr_row
+
+            stressor_csv_writer.writerow(curr_row)
             
-def parse_hra_tables(worskapce_uri):
+def parse_hra_tables(workspace_uri):
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
     in core.
@@ -284,20 +309,12 @@ def parse_hra_tables(worskapce_uri):
     }
     '''
 
-    habitat_paths = os.path.join(uri_to_workspace, '*_overlap_ratings.csv')
-    stressor_paths = os.path.join(uri_to_workspace, '*_stressor_ratings.csv')
+    habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
+    stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
 
     habitat_csvs = glob.glob(habitat_paths)
     stressor_csvs = glob.glob(stressor_paths)
     
-    #Parse out stressor names
-    LOGGER.debug(stressor_paths)
-    stressor_names = [re.search('(.*)_stressor_ratings\.csv', 
-                    os.path.basename(x)).group(1) for x in stressor_csvs]
-    #Parse out habitat names
-    habitat_names = [re.search('(.*)_overlap_ratings\.csv', 
-                    os.path.basename(x)).group(1) for x in habitat_csvs]
-
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
         LOGGER.debug(stressor_uri)
@@ -321,7 +338,7 @@ def parse_hra_tables(worskapce_uri):
         #For all of the overlaps pertaining to this particular habitat,
         #hab_stress_overlap is a stressor name which overlaps our habitat
         for hab_stress_overlap in habitat_parse_dictionary['overlap']:
-            h_s_dict[(habitat_name, hab_stress_overlap)] = 
+            h_s_dict[(habitat_name, hab_stress_overlap)] = \
                         habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
     parse_dictionary = {}
@@ -336,7 +353,7 @@ def parse_hra_tables(worskapce_uri):
         for _, indivs in subdict.iteritems():
             for _, kind in indivs.iteritems():
                 for crit_name, crit_dict in kind.iteritems():
-                    for item, value in crit_dict.iteritems():
+                    for _, value in crit_dict.iteritems():
                         if value == 0 or value == '':
                             del(kind[crit_name])
 
@@ -374,7 +391,6 @@ def parse_stressor(uri):
 
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
-        stressor_name = csv_reader.next()[1]
        
         #Skip empty line
         csv_reader.next()
@@ -392,9 +408,11 @@ def parse_stressor(uri):
             key = row[0]
             
             if row[1] == 'SHAPE':
-                stressor_dict['Crit_Rasters'] = dict(zip(headers[1:2],map(int,row[2:3])))
+                stressor_dict['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:2],map(int,row[2:3])))
             else:
-                stressor_dict['Crit_Ratings'] = dict(zip(headers,map(int,row[1:])))
+                stressor_dict['Crit_Ratings'][key] = \
+                        dict(zip(headers,map(int,row[1:])))
                 
     return stressor_dict
 
@@ -454,7 +472,8 @@ def parse_habitat_overlap(uri):
         hab_name = csv_reader.next()[1]
 
         #Drain the next two lines
-        for _ in range(2): csv_reader.next()
+        for _ in range(2): 
+            csv_reader.next()
         
         #Get the headers
         headers = csv_reader.next()[1:]
@@ -462,17 +481,24 @@ def parse_habitat_overlap(uri):
         #Drain the habitat dictionary
         habitat_dict['Crit_Rating'] = {}
         while line[0] != '':
+            
+            key = line[0]
+
             if line[1] == 'SHAPE':
                 #If we are dealing with a shapefile criteria, we only want  to
                 #add the DQ and the W, and we will add a rasterized version of
                 #the shapefile later.
-                habitat_dict['Crit_Rasters'][line[0]] = dict(zip(headers[1:2], map(int, line[2:3]))) 
+                habitat_dict['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:2], map(int, line[2:3]))) 
             else:
-                habitat_dict['Crit_Rating'][line[0]] = dict(zip(headers, map(int,line[1:3])))
+                habitat_dict['Crit_Rating'][key] = \
+                        dict(zip(headers, map(int,line[1:3])))
             line = csv_reader.next()
 
         #Drain the next two lines
-        for _ in range(2): csv_reader.next()
+        for _ in range(2): 
+            csv_reader.next()
+        
         #Drain the overlap dictionaries
         #This is the overlap header
         while True:
@@ -484,14 +510,18 @@ def parse_habitat_overlap(uri):
 
                 #Drain the overlap table
                 line = csv_reader.next()
-                #Drain the habitat dictionary is the first character of the type field
-                habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
+                #Drain the habitat dictionary is the first character of the
+                #type field
+                habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, \
+                        'Crit_Rasters': {}}
                 while line[0] != '':
                     if line[1] == 'SHAPE':
                         #Only include DQ and W headers
-                        habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = dict(zip(headers[1:2], map(int,line[2:3])))
+                        habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
+                                dict(zip(headers[1:2], map(int,line[2:3])))
                     else:
-                        habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = dict(zip(headers, map(int,line[1:3])))
+                        habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
+                                dict(zip(headers, map(int,line[1:3])))
                     line = csv_reader.next()
             except StopIteration:
                 break
