@@ -127,14 +127,24 @@
 		    "type" : "list",
 		    "elements" : [
 			{        
-			    "id" : "sediment_valuation_table_uri",
-			    "args_id" : "sediment_valuation_table_uri",
+			    "id" : "water_purification_valuation_table_uri",
+			    "args_id" : "water_purification_valuation_table_uri",
 			    "type": "file",
-			    "label": "Sediment valuation table",
-			    "defaultValue": "../Sedimentation/input/sediment_valuation_table.csv",
+			    "label": "Water Purification valuation table",
+			    "defaultValue": "../Nutrient_Retention/water_purification_valuation_table.csv",
 			    "required": true,
 			    "validateAs": {"type": "CSV"},
-			    "helpText": "A table containing valuation information for each of the reservoirs. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost', 'wq_time', wq_disc'. See the user's guide for the meaning of these fields."
+			    "helpText": "RICH FILL THIS IN"
+			},
+			{        
+			    "id" : "water_purification_valuation_table_uri",
+			    "args_id" : "water_purification_valuation_table_uri",
+			    "type": "file",
+			    "label": "Water Purification valuation table",
+			    "defaultValue": "../Nutrient_Retention/water_purification_valuation_table.csv",
+			    "required": true,
+			    "validateAs": {"type": "CSV"},
+			    "helpText": "RICH FILL THIS IN"
 			}
 		    ]
 		}
