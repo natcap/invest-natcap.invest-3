@@ -54,6 +54,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.args['do_species'] = False
         self.args['do_habitats'] = False
+        self.args['do_shapes'] = False
 
         self.assertRaises(hra_preprocessor.MissingHabitatOrSpecies,
                         hra_preprocessor.execute, self.args)
@@ -66,6 +67,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.args['do_species'] = False
         self.args['do_habitats'] = True
         self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['do_shapes'] = False
 
         #Since we had 6 crits to begin with, remove one from each should leave
         #us with 3, want to make sure this causes to error.
@@ -80,13 +82,114 @@ class TestHRAPreprocessor(unittest.TestCase):
                         hra_preprocessor.execute, self.args)
 
     def test_ImproperCriteraSpread_exception(self):
+    '''Want to make sure that we are erroring if we don't have any criteria
+    values in any of the 3 categories.'''
 
         self.args['do_species'] = False
         self.args['do_habitats'] = True
         self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['do_shapes'] = False
 
         self.args['resiliance_crits'] = []
 
         self.assertRaises(hra_preprocessor.ImproperCriteriaSpread,
                         hra_preprocessor.execute, self.args)
 
+    def test_table_parse_regression(self):
+    '''Given a known set of CSV's, want to make a mock up for exactly what the 
+    dictionary should look like, and regression test it.'''
+        
+        self.args['do_species'] = False
+        self.args['do_habitats'] = True
+        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['do_shapes'] = False
+
+        expected_dict = 
+            {'buffer_dict': {'FinfishAquacultureComm': 250,
+                            'ShellfishAquacultureComm': 500},
+            'h-s':
+                {('kelp', 'finfishaquaculturecomm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of natural disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': {}
+                    },
+                ('kelp', 'shellfishaquaculturecomm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of natural disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    },
+                ('eelgrass', 'finfishaquaculturecomm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of natural disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    },
+                ('eelgrass', 'shellfishaquaculturecomm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of natural disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    }
+                }
+            'habitats': 
+                {('kelp'):
+                    {'Crit_Ratings':
+                        {'natural mortality':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                        },
+                     'Crit_Rasters':
+                        {'recruitment rate':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        }
+                    },
+                ('eelgrass'):
+                    {'Crit_Ratings':
+                        {'natural mortality':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                        },
+                     'Crit_Rasters':
+                        {'recruitment rate':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        }
+                    }
+                },
+            'stressors': 
+                {('finfishaquaculturecomm'):
+                    {'Crit_Ratings':
+                        {'intensity':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'management effectiveness':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        }
+                     'Crit_Rasters':{}
+                    },
+                ('shellfishaquaculturecomm'):
+                    {'Crit_Ratings':
+                        {'intensity':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'management_strategy_effectiveness':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters':{}
+                    }
+                }
+        }
+    
+        csv_folder = './data/hra_regression_data'
+        produced_dict = hra_preprocessor.parse_hra_tables(csv_folder)
+
+        self.assertEqual(expected_dict, produced_dict)
