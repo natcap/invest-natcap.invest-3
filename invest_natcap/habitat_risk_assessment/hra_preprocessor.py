@@ -49,6 +49,8 @@ def execute(args):
             (habitat-stressor overlap specific) criteria.
         args['resiliance_crits']- List containing string names of resiliance
             (habitat or species-specific) criteria.
+        args['do_shapes']- Boolean to specify whether or not shapefile criteria
+            should be used in this run of the model.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             This needs to be in a VERY specific format, which shall be described
             in the user's guide.
@@ -122,8 +124,9 @@ def execute(args):
     sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['sensitivity_crits'])
     
-    '''Want to pull the shapefile criteria from the folder structure specified.
-    this function will return a dictionary with the following form:
+    '''If shapefile criteria are desired, want to pull the shapefile criteria 
+    from the folder structure specified. This function will return a dictionary
+    with the following form:
         {'h-s':
             {('HabA', 'Stress1'):
                 {'CritName': "Shapefile URI", ...}
@@ -137,7 +140,8 @@ def execute(args):
                 {'CritName': "Shapefile URI", ...}
         }
     '''
-    crit_shapes = hra.make_crit_shape_dict(args['criteria_dir'])
+    if args['do_shapes']:
+        crit_shapes = hra.make_crit_shape_dict(args['criteria_dir'])
     
     crit_descriptions = {
         'change in area rating': '<enter (3) 50-100% loss, ' + 
@@ -192,7 +196,10 @@ def execute(args):
 
                 curr_row = default_row
 
-                if c_name in crit_shapes['h'][habitat_name]:
+                #Need to first check to make sure that crit_shapes 
+                #was instantiated when 
+                if 'crit_shapes' in locals() and \
+                                    c_name in crit_shapes['h'][habitat_name]:
                     curr_row = ['SHAPE'] + curr_row
                 elif c_name in crit_descriptions:
                     curr_row = [crit_descriptions[c_name]] + curr_row
@@ -216,8 +223,8 @@ def execute(args):
                 
                     curr_row = default_row
 
-                    if c_name in crit_shapes['h-s'][(habitat_name, \
-                            stressor_name)]:
+                    if 'crit_shapes' in locals() and \
+                        c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]:
 
                         curr_row = ['SHAPE'] + curr_row
                     elif c_name in crit_descriptions:
@@ -248,7 +255,9 @@ def execute(args):
         
             curr_row = default_row
 
-            if c_name in crit_shapes['s'][stressor_name]:
+            if 'crit_shapes' in locals() and \
+                        c_name in crit_shapes['s'][stressor_name]:
+
                 curr_row = ['SHAPE'] + curr_row
             elif c_name in crit_descriptions:
                 curr_row = [crit_descriptions[c_name]] + curr_row
