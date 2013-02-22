@@ -349,13 +349,15 @@ def parse_hra_tables(workspace_uri):
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
     #from the assessment for that subdictionary.
-    for _, subdict in parse_dictionary.iteritems():
-        for _, indivs in subdict.iteritems():
-            for _, kind in indivs.iteritems():
+    for subdict in parse_dictionary.values():
+        for indivs in subdict.values():
+            for kind in indivs.values():
                 for crit_name, crit_dict in kind.iteritems():
-                    for _, value in crit_dict.iteritems():
-                        if value == 0 or value == '':
+                    for value in crit_dict.values():
+                        if value in [0, '']:
                             del(kind[crit_name])
+                            #Breaking because crit_dict won't contain crit_name
+                            break
 
     stressor_buf_dict = {}
     for stressor, stressor_properties in stressor_dict.iteritems():
