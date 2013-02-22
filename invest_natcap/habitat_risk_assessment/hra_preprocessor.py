@@ -52,7 +52,6 @@ def execute(args):
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             This needs to be in a VERY specific format, which shall be described
             in the user's guide.
-        
 
     Output:
         Creation of a series of CSVs within workspace_dir. There will be one CSV

@@ -13,11 +13,14 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestHRAPreprocessor(unittest.TestCase):
-    def test_parser(self):
-        
-#For purposes of running test independently of HRA non-core, need to
-        #delete current intermediate and output folders
 
-        uri_to_workspace = os.path.join('data','hra_preprocessor_data')
-        hra_props = hra_preprocessor.parse_hra_tables(uri_to_workspace)
-        LOGGER.debug(hra_props)
+    def setUp(self):
+
+        args = {}
+        args['workspace_dir'] = './data/test_out/HRA' 
+        args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
+        args['exposure_crits' = ['intensity rating', 'management effectiveness']
+        args['sensitivity_crits'] = 'temporal overlap rating', \
+                    'frequency of disturbance']
+        args['resiliance_crits'] = ['natural mortality', 'recruitment rate']
