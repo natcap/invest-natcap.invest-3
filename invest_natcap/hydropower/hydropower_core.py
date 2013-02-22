@@ -174,13 +174,15 @@ def water_yield(args):
     fractp_vec = np.vectorize(fractp_op)
     
     #Create the fractp raster
-    raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
-                   soil_depth_raster, pawc_raster]
-    fractp_raster = \
-        raster_utils.vectorize_rasters(raster_list, fractp_vec, aoi=sheds, 
-                                       raster_out_uri=fractp_clipped_path, 
-                                       nodata=out_nodata)
-    
+    raster_uri_list = [tmp_etk_raster_uri, args['eto_uri'], args['precipitation_uri'], tmp_root_raster_uri,
+                   args['soil_depth_uri'], args['pawc_uri']]
+
+    raster_utils.vectorize_datasets(
+        raster_uri_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
+        out_nodata, args['out_pixel_size'],
+        "intersection", dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+    fractp_raster = gdal.Open(fractp_clipped_path)
+
     LOGGER.debug('Performing wyield operation')
     
     def wyield_op(fractp, precip):
