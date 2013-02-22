@@ -135,16 +135,6 @@
 			    "required": true,
 			    "validateAs": {"type": "CSV"},
 			    "helpText": "RICH FILL THIS IN"
-			},
-			{        
-			    "id" : "water_purification_valuation_table_uri",
-			    "args_id" : "water_purification_valuation_table_uri",
-			    "type": "file",
-			    "label": "Water Purification valuation table",
-			    "defaultValue": "../Nutrient_Retention/water_purification_valuation_table.csv",
-			    "required": true,
-			    "validateAs": {"type": "CSV"},
-			    "helpText": "RICH FILL THIS IN"
 			}
 		    ]
 		}
