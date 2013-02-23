@@ -11,7 +11,8 @@ import math
 from osgeo import gdal, ogr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
-from invest_natcap.habitat_risk_assessment import hra_preprocessor
+#from invest_natcap.habitat_risk_assessment import hra_preprocessor
+import hra_preprocessor
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA')

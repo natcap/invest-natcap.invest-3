@@ -5,7 +5,8 @@ import csv
 import os
 import glob
 import logging
-from invest_natcap.habitat_risk_assessment import hra
+import hra
+#from invest_natcap.habitat_risk_assessment import hra
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
