@@ -208,10 +208,9 @@ def water_yield(args):
 
     #Create mean rasters for fractp and water yield
     fract_mn_dict = \
-        raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 
-                            'subws_id', 'mean', 
-                            aggregate_uri = fractp_mean_path, 
-                            intermediate_directory = intermediate_dir)
+        raster_utils.aggregate_raster_values_uri(
+        fractp_uri, args['watersheds_uri'], 'subws_id', 'mean')
+
     wyield_mn_dict = \
         raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 
                             'subws_id', 'mean', 
