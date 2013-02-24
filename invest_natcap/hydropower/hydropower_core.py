@@ -316,7 +316,6 @@ def water_yield(args):
                             aggregate_uri = aet_mean_path, 
                             intermediate_directory = intermediate_dir)
     
-    
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
     LOGGER.debug('wsr : %s', wsr)
@@ -381,6 +380,7 @@ def water_yield(args):
     LOGGER.debug('Performing CSV table writing')
     write_csv_table(ws_dict, field_list, shed_table_path)
     write_csv_table(sws_dict, sub_field_list, sub_table_path)
+
     
 def sheds_map_subsheds(shape, sub_shape):
     """Stores which sub watersheds belong to which watershed
@@ -570,12 +570,11 @@ def water_scarcity(args):
         
     LOGGER.info('Creating cyield raster')
     #Multiply calibration with wyield_vol raster to get cyield_vol
-
-    raster_utils.vectorize_datasets(
-        [wyield_vol_raster, calib_raster], cyield_vol_op, wyield_calib_path,
-        gdal.GDT_Float32, out_nodata, args['out_pixel_size'],
-        "intersection", dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
-    wyield_calib = gdal.Open(wyield_calib_path)
+    wyield_calib = \
+        raster_utils.vectorize_rasters([wyield_vol_raster, calib_raster], 
+                                       cyield_vol_op, aoi=watersheds, 
+                                       raster_out_uri = wyield_calib_path, 
+                                       nodata=out_nodata)
     
     #Create raster from land use raster, subsituting in demand value
     clipped_consump_raster_uri = raster_utils.temporary_filename()
@@ -630,11 +629,9 @@ def water_scarcity(args):
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
     LOGGER.info('Creating rsupply_vol raster')
     #Make rsupply_vol by wyield_calib minus consump_vol
-    raster_utils.vectorize_datasets(
-        [wyield_calib_uri, sum_raster_uri], rsupply_vol_vec,
-        rsupply_vol_path, gdal.GDT_Float32, out_nodata, args['out_pixel_size'],
-        "intersection", dataset_to_align_index=0, 
-        aoi_uri=args['watersheds_uri'])
+    raster_utils.vectorize_rasters([wyield_calib, sum_raster], rsupply_vol_vec, 
+                                   raster_out_uri=rsupply_vol_path, 
+                                   nodata=rsupply_out_nodata)
     
     wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
