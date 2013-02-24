@@ -570,11 +570,12 @@ def water_scarcity(args):
         
     LOGGER.info('Creating cyield raster')
     #Multiply calibration with wyield_vol raster to get cyield_vol
-    wyield_calib = \
-        raster_utils.vectorize_rasters([wyield_vol_raster, calib_raster], 
-                                       cyield_vol_op, aoi=watersheds, 
-                                       raster_out_uri = wyield_calib_path, 
-                                       nodata=out_nodata)
+
+    raster_utils.vectorize_datasets(
+        [wyield_vol_raster, calib_raster], cyield_vol_op, wyield_calib_path,
+        gdal.GDT_Float32, out_nodata, args['out_pixel_size'],
+        "intersection", dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
+    wyield_calib = gdal.Open(wyield_calib_path)
     
     #Create raster from land use raster, subsituting in demand value
     clipped_consump_raster_uri = raster_utils.temporary_filename()
