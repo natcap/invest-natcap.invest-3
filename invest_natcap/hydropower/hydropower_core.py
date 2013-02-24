@@ -630,9 +630,11 @@ def water_scarcity(args):
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
     LOGGER.info('Creating rsupply_vol raster')
     #Make rsupply_vol by wyield_calib minus consump_vol
-    raster_utils.vectorize_rasters([wyield_calib, sum_raster], rsupply_vol_vec, 
-                                   raster_out_uri=rsupply_vol_path, 
-                                   nodata=rsupply_out_nodata)
+    raster_utils.vectorize_datasets(
+        [wyield_calib_uri, sum_raster_uri], rsupply_vol_vec,
+        rsupply_vol_path, gdal.GDT_Float32, out_nodata, args['out_pixel_size'],
+        "intersection", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
     
     wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
