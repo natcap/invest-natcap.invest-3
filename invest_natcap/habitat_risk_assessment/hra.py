@@ -29,7 +29,7 @@ def execute(args):
             intermediate and output files should be placed.
         args['csv_uri']- The location of the directory containing the CSV files
             of habitat, stressor, and overlap ratings.         
-        args['habitat_dir']- The string describing a directory location of all
+        args['habitats_dir']- The string describing a directory location of all
             habitat shapefiles. These will be parsed though and rasterized to 
             be passed to hra_core module.
         args['stressors_dir']- The string describing a directory location of
@@ -360,7 +360,7 @@ def make_crit_shape_dict(crit_uri):
         #want the second part to all be one piece
         parts = filename.split('_', 1)
         hab_name = parts[0]
-        crit_name = parts[1].replace('_', ' ')
+        crit_name = parts[1].replace('_', ' ').lower()
 
         if hab_name not in c_shape_dict['h']:
             c_shape_dict['h'][hab_name] = {}

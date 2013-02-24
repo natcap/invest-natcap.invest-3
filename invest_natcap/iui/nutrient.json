@@ -1,9 +1,9 @@
 {
     "id" : "window",
-    "label": "Sediment",
-    "targetScript" : "invest_natcap.sediment.sediment",
-    "modelName" : "sediment",
-    "localDocURI": "../documentation/sediment_retention.html",
+    "label": "Nutrient",
+    "targetScript" : "invest_natcap.nutrient.nutrient",
+    "modelName" : "nutrient",
+    "localDocURI": "../documentation/waterpurification.html",
     "height": 500,
     "width" : 700,
     "elements": [
@@ -16,7 +16,7 @@
 		    "args_id" : "workspace_dir",
 		    "type": "folder",
 		    "label": "Workspace",
-		    "defaultValue": "../Sedimentation",
+		    "defaultValue": "../Nutrient_Retention",
 		    "required": true,
                     "helpText":"This is the directory in which the output and intermediate files will be saved."
 		},
@@ -42,27 +42,17 @@
 		    "validateAs": {"type": "GDAL"},
 		    "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when you see unusual streams.) See the Working with the DEM section of the InVEST user's guide for more information."
 		},
-		{        
-		    "id" : "erosivity_uri",
-		    "args_id" : "erosivity_uri",
+		{
+		    "id" : "pixel_yield_uri",
+		    "args_id" : "pixel_yield_uri",
 		    "type": "file",
-		    "label": "Erosivity Raster",
-		    "defaultValue": "../Base_Data/Freshwater/erosivity",
+		    "label": "Water yield (per pixel)",
+		    "defaultValue": "",
 		    "required": true,
 		    "validateAs": {"type": "GDAL"},
-		    "helpText": "A GIS raster dataset, with an erosivity index value for each cell. This variable depends on the intensity and duration of rainfall in the area of interest. The greater the intensity and duration of the rain storm, the higher the erosion potential. The erosivity index is widely used, but in case of its absence, there are methods and equations to help generate a grid using climatic data. The units are MJ*mm/(ha*h*yr)."
+		    "helpText": "RICH FILL THIS IN"
 		},
-		{        
-		    "id" : "erodibility_uri",
-		    "args_id" : "erodibility_uri",
-		    "type": "file",
-		    "label": "Erodibility Raster",
-		    "defaultValue": "../Base_Data/Freshwater/erodibility",
-		    "required": true,
-		    "validateAs": {"type": "GDAL"},
-		    "helpText": "This is a GIS raster dataset, with a soil erodibility value for each cell which is a measure of the susceptibility of soil particles to detachment and transport by rainfall and runoff.  Units are in T*ha*h/(ha*MJ*mm)."
-		},
-		{        
+		{
 		    "id" : "landuse_uri",
 		    "args_id" : "landuse_uri",
 		    "type": "file",
@@ -111,26 +101,16 @@
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
 		},
 		{        
-		    "id" : "slope_threshold",
-		    "args_id" : "slope_threshold",
-		    "type": "text",
-		    "label": "Slope Threshold",
-		    "defaultValue": "75",
-		    "required": true,
-		    "validText": "^[0-9]+$",
-		    "helpText": "An integer slope value describing landscape characteristics such as slope management practices including terracing and slope stabilization techniques.  Internally it is used to determine where we use a different USLE runoff.  See the sediment user's guide for more details."
-		},
-		{        
-		    "id" : "sediment_threshold_table_uri",
-		    "args_id" : "sediment_threshold_table_uri",
+		    "id" : "water_purification_threshold_table_uri",
+		    "args_id" : "water_purification_threshold_table_uri",
 		    "type": "file",
-		    "label": "Sediment threshold table",
-		    "defaultValue": "../Sedimentation/input/sediment_threshold_table.csv",
+		    "label": "Water Purification Threshold Table",
+		    "defaultValue": "../Nutrient_Retention/input/water_purification_threshold_table.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
 				   "fieldsExist": ["ws_id", "dr_time", "dr_deadvol", "wq_annload"]
 				  },
-		    "helpText": "A table containing annual sediment load threshold information for each of the watersheds. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_time', 'dr_deadvol', and 'wq_annload'.  See the user's guide for the meaning of these fields."
+		    "helpText": "RICH FILL THIS IN."
 		}
 	    ]
 	},
@@ -147,14 +127,14 @@
 		    "type" : "list",
 		    "elements" : [
 			{        
-			    "id" : "sediment_valuation_table_uri",
-			    "args_id" : "sediment_valuation_table_uri",
+			    "id" : "water_purification_valuation_table_uri",
+			    "args_id" : "water_purification_valuation_table_uri",
 			    "type": "file",
-			    "label": "Sediment valuation table",
-			    "defaultValue": "../Sedimentation/input/sediment_valuation_table.csv",
+			    "label": "Water Purification valuation table",
+			    "defaultValue": "../Nutrient_Retention/water_purification_valuation_table.csv",
 			    "required": true,
 			    "validateAs": {"type": "CSV"},
-			    "helpText": "A table containing valuation information for each of the reservoirs. There must be one row for each watershed in the Watersheds layer and have the fields 'ws_id', 'dr_cost', 'dr_time', 'dr_disc', 'wq_cost', 'wq_time', wq_disc'. See the user's guide for the meaning of these fields."
+			    "helpText": "RICH FILL THIS IN"
 			}
 		    ]
 		}
@@ -162,4 +142,3 @@
 	}
     ]
 }
-
