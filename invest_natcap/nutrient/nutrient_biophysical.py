@@ -151,16 +151,16 @@ def execute(args):
         os.remove(watershed_output_datasource_uri)
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_datasource = ogr.Open(args['watersheds_uri'])
-    datasource_copy = esri_driver.CopyDataSource(original_datasource, watershed_output_datasource_uri)
-    layer = datasource_copy.GetLayer()
+    output_datasource = esri_driver.CopyDataSource(original_datasource, watershed_output_datasource_uri)
+    output_layer = output_datasource.GetLayer()
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-        layer.CreateField(field_def)
+        output_layer.CreateField(field_def)
 
     #Initialize each feature field to 0.0
-    for feature_id in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_id)
+    for feature_id in xrange(output_layer.GetFeatureCount()):
+        feature = output_layer.GetFeature(feature_id)
         for field_name in field_summaries:
             try:
                 ws_id = feature.GetFieldAsInteger('ws_id')
@@ -169,10 +169,22 @@ def execute(args):
                 LOGGER.warning('unknown field %s' % field_name)
                 feature.SetField(field_name, 0.0)
         #Save back to datasource
-        layer.SetFeature(feature)
+        output_layer.SetFeature(feature)
 
-    original_datasource.Destroy()
-    datasource_copy.Destroy()
+    #Burn the mean runoff values to a raster that matches the watersheds
+    upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
+    mean_runoff_uri = os.path.join(intermediate_dir, 'mean_runoff.tif')
+    mean_runoff_dataset = raster_utils.new_raster_from_base(
+        upstream_water_yield_dataset, mean_runoff_uri, 'GTiff', -1.0,
+        gdal.GDT_Float32, -1.0)
+    upstream_water_yield_dataset = None
+    gdal.RasterizeLayer(
+        mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
+    mean_runoff_dataset = None
+
+    output_datasource.Destroy()
+
+
 
     return
 
