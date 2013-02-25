@@ -235,7 +235,7 @@ def execute(args):
                         curr_row = [c_name] + default_rating + curr_row
 
                     habitat_csv_writer.writerow(curr_row)
-    LOGGER.debug(stress_list)
+    
     #Making stressor specific tables. 
     for stressor_name in stress_list:
 
@@ -402,11 +402,13 @@ def parse_stressor(uri):
 
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
-       
-        #Skip empty line
-        csv_reader.next()
+      
+        #Skip first two lines
+        for _ in range(2): 
+            csv_reader.next()
 
-        stressor_buffer = float(csv_reader.next()[1])
+        #pull the stressor buffer from the second part of the third line
+        stressor_buffer = float(csv_reader.next()[1]
         stressor_dict['buffer'] = stressor_buffer
 
         #Ignore the next blank line
