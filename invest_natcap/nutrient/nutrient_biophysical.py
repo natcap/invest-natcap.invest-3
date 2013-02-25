@@ -203,6 +203,15 @@ def execute(args):
         gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
 
+    #Calculate nutrient retention
+    p_retention_uri = os.path.join(intermediate_dir, 'p_retention.tif')
+    n_retention_uri = os.path.join(intermediate_dir, 'n_retention.tif')
+    p_flux_uri = os.path.join(intermediate_dir, 'p_flux.tif')
+    n_flux_uri = os.path.join(intermediate_dir, 'n_flux.tif')
+
+    routing_utils.route_flux(dem_uri, load_p_uri, eff_p_uri, p_retention_uri, p_flux_uri, aoi_uri=args['watersheds_uri'])
+    routing_utils.route_flux(dem_uri, load_n_uri, eff_n_uri, n_retention_uri, n_flux_uri, aoi_uri=args['watersheds_uri'])
+
     return 
 
 
