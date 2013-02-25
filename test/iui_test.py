@@ -247,6 +247,19 @@ class FileEntryTest(unittest.TestCase):
         self.assertEqual(element.isRequired(), False)
         self.assertEqual(element.error_button.error_state, None)
 
+    def test_requirementsMet(self):
+        attributes = {
+            'id': 'workspace',
+            'label': 'Workspace',
+            'type': 'folder',
+            'defaultValue': '',
+        }
+        element = base_widgets.FileEntry(attributes)
+        self.assertEqual(element.requirementsMet(), False)
+
+        element.setValue('/tmp/')
+        self.assertEqual(element.requirementsMet(), True)
+
     def test_required(self):
         # Now, verify that when the element has the 'required' flag and it is
         # set to True, that the element is required.
@@ -258,10 +271,12 @@ class FileEntryTest(unittest.TestCase):
             'defaultValue': '',
         }
         element = base_widgets.FileEntry(attributes)
+        self.assertEqual(element.has_error(), True)
         self.assertEqual(element.isRequired(), True)
         self.assertEqual(element.error_button.error_state, 'error')
 
         element.setValue('/tmp')
         QTest.qWait(500)
-        self.assertEqual(element.isRequired(), False)
+        self.assertEqual(element.has_error(), True)
+        self.assertEqual(element.isRequired(), True)
         self.assertEqual(element.error_button.error_state, None)
