@@ -101,19 +101,19 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
+    
     #Get the names of all potential habs
     hab_list = []
     for ele in ('habitat_dir', 'species_dir'):
         if ele in args:
-            hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
+            hab_list = hab_list + glob.glob(os.path.join(args[ele], '*.shp'))
             hab_list = \
                 map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                             hab_list)
     
     #And all potential stressors
     stress_list = []
-    stress_list.append(glob.glob(os.path.join(args['stressors_dir'], '*.shp')))
+    stress_list = stress_list + glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
 
@@ -154,9 +154,9 @@ def execute(args):
         'frequency of disturbance': '<enter (3) Annually or less often, ' +
             '(2) Several times per year, (1) Weekly or more often, ' + \
             '(0) no score>',
-        'intensity rating:': '<enter (3) high, (2) medium, ' +
+        'intensity rating': '<enter (3) high, (2) medium, ' +
             '(1) low, (0) no score>',
-        'management effectiveness:': '<enter (3) not effective, ' +
+        'management effectiveness': '<enter (3) not effective, ' +
             '(2) somewhat effective, (1) very effective, (0) no score>',
         'natural mortality': '<enter (3) 0-20%, (2) 20-50%, ' +
             '(1) >80% mortality, or (0) no score>',
@@ -201,11 +201,11 @@ def execute(args):
                 #was instantiated when 
                 if 'crit_shapes' in locals() and \
                                     c_name in crit_shapes['h'][habitat_name]:
-                    curr_row = ['SHAPE'] + curr_row
+                    curr_row = [c_name] + ['SHAPE'] + curr_row
                 elif c_name in crit_descriptions:
-                    curr_row = [crit_descriptions[c_name]] + curr_row
+                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
                 else:
-                    curr_row = default_rating + curr_row
+                    curr_row = [c_name] + default_rating + curr_row
 
                 habitat_csv_writer.writerow(curr_row)
 
@@ -227,12 +227,12 @@ def execute(args):
                     if 'crit_shapes' in locals() and \
                         c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]:
 
-                        curr_row = ['SHAPE'] + curr_row
+                        curr_row = [c_name] + ['SHAPE'] + curr_row
                     elif c_name in crit_descriptions:
 
-                        curr_row = [crit_descriptions[c_name]] + curr_row
+                        curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
                     else:
-                        curr_row = default_rating + curr_row
+                        curr_row = [c_name] + default_rating + curr_row
 
                     habitat_csv_writer.writerow(curr_row)
 
@@ -259,11 +259,11 @@ def execute(args):
             if 'crit_shapes' in locals() and \
                         c_name in crit_shapes['s'][stressor_name]:
 
-                curr_row = ['SHAPE'] + curr_row
+                curr_row = [c_name] + ['SHAPE'] + curr_row
             elif c_name in crit_descriptions:
-                curr_row = [crit_descriptions[c_name]] + curr_row
+                curr_row = c_name + [crit_descriptions[c_name]] + curr_row
             else:
-                curr_row = default_rating + curr_row
+                curr_row = c_name + default_rating + curr_row
 
             stressor_csv_writer.writerow(curr_row)
             
@@ -494,7 +494,7 @@ def parse_habitat_overlap(uri):
         while line[0] != '':
             
             key = line[0]
-
+            
             if line[1] == 'SHAPE':
                 #If we are dealing with a shapefile criteria, we only want  to
                 #add the DQ and the W, and we will add a rasterized version of
