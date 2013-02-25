@@ -261,9 +261,9 @@ def execute(args):
 
                 curr_row = [c_name] + ['SHAPE'] + curr_row
             elif c_name in crit_descriptions:
-                curr_row = c_name + [crit_descriptions[c_name]] + curr_row
+                curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
             else:
-                curr_row = c_name + default_rating + curr_row
+                curr_row = [c_name] + default_rating + curr_row
 
             stressor_csv_writer.writerow(curr_row)
             
