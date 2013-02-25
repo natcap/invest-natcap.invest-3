@@ -91,7 +91,23 @@ def execute(args):
                 parameter_dict[parameter] = float(row[headers.index(parameter)])
             lucode_to_parameters[lucode] = parameter_dict
 
-    LOGGER.debug(lucode_to_parameters)
+    nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
+    load_p_uri = os.path.join(intermediate_dir, 'load_p.tif')
+    load_n_uri = os.path.join(intermediate_dir, 'load_n.tif')
+
+    nodata_load = -1.0
+
+    def map_load_function(load_type):
+        def map_load(lucode):
+            if lucode == nodata_landuse:
+                return nodata_load
+            return lucode_to_parameters[lucode][load_type]
+        return map_load
+
+    for out_uri, load_type in [(load_p_uri, 'load_p'), (load_n_uri, 'load_n')]:
+        raster_utils.vectorize_datasets(
+            [landuse_uri], map_load_function(load_type), out_uri,
+            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
