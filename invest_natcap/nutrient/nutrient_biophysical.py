@@ -97,7 +97,9 @@ def execute(args):
     nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
     load_p_uri = os.path.join(intermediate_dir, 'load_p.tif')
     load_n_uri = os.path.join(intermediate_dir, 'load_n.tif')
-
+    eff_p_uri = os.path.join(intermediate_dir, 'eff_p.tif')
+    eff_n_uri = os.path.join(intermediate_dir, 'eff_n.tif')
+    
     nodata_load = -1.0
 
     def map_load_function(load_type):
@@ -107,7 +109,7 @@ def execute(args):
             return lucode_to_parameters[lucode][load_type]
         return map_load
 
-    for out_uri, load_type in [(load_p_uri, 'load_p'), (load_n_uri, 'load_n')]:
+    for out_uri, load_type in [(load_p_uri, 'load_p'), (load_n_uri, 'load_n'), (eff_p_uri, 'eff_p'), (eff_n_uri, 'eff_n')]:
         raster_utils.vectorize_datasets(
             [landuse_uri], map_load_function(load_type), out_uri,
             gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
