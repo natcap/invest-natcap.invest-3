@@ -184,9 +184,25 @@ def execute(args):
 
     output_datasource.Destroy()
 
+    alv_p_uri = os.path.join(intermediate_dir, 'alv_p.tif')
+    alv_n_uri = os.path.join(intermediate_dir, 'alv_n.tif')
+
+    def alv_calculation(load, runoff_index, mean_runoff_index):
+        if nodata_load in [load, runoff_index, mean_runoff_index]:
+            return nodata_load
+        return load * runoff_index / mean_runoff_index
+
+    raster_utils.vectorize_datasets(
+        [load_p_uri, upstream_water_yield_log_uri, mean_runoff_uri], alv_calculation, alv_p_uri,
+        gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+
+    raster_utils.vectorize_datasets(
+        [load_n_uri, upstream_water_yield_log_uri, mean_runoff_uri], alv_calculation, alv_n_uri,
+        gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
 
-    return
+    return 
+
 
 
     # Open rasters provided in the args dictionary.
