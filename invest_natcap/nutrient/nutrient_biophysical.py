@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import shutil
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -45,7 +46,7 @@ def execute(args):
                 disk representing the user's watersheds.
             'subwatersheds_uri' - a string uri pointing to an OGR shapefile on
                 disk representing the user's subwatersheds.
-            'bio_table_uri' - a string uri to a supported table on disk
+            'biophysical_table_uri' - a string uri to a supported table on disk
                 containing nutrient retention values.
             'threshold_uri' - a string uri to a supported table on disk
                 containing water purification details.
@@ -75,6 +76,22 @@ def execute(args):
         [dem_uri, water_yield_uri, landuse_uri], ['nearest'] * 3,
         out_pixel_size, 'intersection', dataset_to_align_index=2,
         aoi_uri=args['watersheds_uri'])
+
+    #Map the loading factor to the LULC map
+    lucode_to_parameters = {}
+    parameters_to_map = ['load_n', 'eff_n', 'load_p', 'eff_p']
+    with open(args['biophysical_table_uri'], 'rU') as biophysical_table_file:
+        biophysical_table_reader = csv.reader(biophysical_table_file)
+        headers = biophysical_table_reader.next()
+        lucode_index = headers.index('lucode')
+        for row in biophysical_table_reader:
+            lucode = int(row[lucode_index])
+            parameter_dict = {}
+            for parameter in parameters_to_map:
+                parameter_dict[parameter] = float(row[headers.index(parameter)])
+            lucode_to_parameters[lucode] = parameter_dict
+
+    LOGGER.debug(lucode_to_parameters)
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
