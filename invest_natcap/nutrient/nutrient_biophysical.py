@@ -102,6 +102,11 @@ def execute(args):
         [upstream_water_yield_uri], nodata_log, upstream_water_yield_log_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
+    mean_runoff_index = raster_utils.aggregate_raster_values_uri(
+        upstream_water_yield_log_uri, args['watersheds_uri'], 'ws_id', 'mean')
+
+    LOGGER.debug(mean_runoff_index)
+
     return
 
 
