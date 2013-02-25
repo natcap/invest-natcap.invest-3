@@ -9,6 +9,7 @@ import shutil
 
 from osgeo import gdal
 from osgeo import ogr
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_core
@@ -83,16 +84,23 @@ def execute(args):
     routing_utils.make_constant_raster_from_base(
         dem_uri, 0.0, zero_raster_uri)
 
-
-    flux_output_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
-    routing_utils.flow_accumulation(args['dem_uri'], flux_output_uri)
-
-
-
     routing_utils.route_flux(
         dem_uri, water_yield_uri, zero_raster_uri,
         water_loss_uri, upstream_water_yield_uri,
         aoi_uri=args['watersheds_uri'])
+
+    #Calculate the 'log' of the upstream_water_yield raster
+    upstream_water_yield_log_uri = os.path.join(intermediate_dir, 'log_water_yield.tif')
+    nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
+    def nodata_log(value):
+        if value == nodata_upstream:
+            return nodata_upstream
+        if value == 0.0:
+            return 0.0
+        return numpy.log(value)
+    raster_utils.vectorize_datasets(
+        [upstream_water_yield_uri], nodata_log, upstream_water_yield_log_uri,
+        gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
     return
 
