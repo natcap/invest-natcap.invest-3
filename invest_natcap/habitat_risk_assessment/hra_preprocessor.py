@@ -326,7 +326,7 @@ def parse_hra_tables(workspace_uri):
     
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
-        LOGGER.debug(stressor_uri)
+        
         stressor_name = re.search('(.*)_stressor_ratings\.csv', 
                                 os.path.basename(stressor_uri)).group(1)
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
@@ -335,7 +335,7 @@ def parse_hra_tables(workspace_uri):
     h_s_dict = {}
 
     for habitat_uri in habitat_csvs:
-        LOGGER.debug(habitat_uri)
+        
         habitat_name = re.search('(.*)_overlap_ratings\.csv', 
                                 os.path.basename(habitat_uri)).group(1)
 
@@ -354,6 +354,8 @@ def parse_hra_tables(workspace_uri):
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
+    
+    LOGGER.debug(parse_dictionary)
 
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
@@ -408,7 +410,7 @@ def parse_stressor(uri):
             csv_reader.next()
 
         #pull the stressor buffer from the second part of the third line
-        stressor_buffer = float(csv_reader.next()[1]
+        stressor_buffer = float(csv_reader.next()[1])
         stressor_dict['buffer'] = stressor_buffer
 
         #Ignore the next blank line
@@ -422,7 +424,7 @@ def parse_stressor(uri):
             
             if row[1] == 'SHAPE':
                 stressor_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:2],map(int,row[2:3])))
+                        dict(zip(headers[1:2],map(int,row[2:4])))
             else:
                 stressor_dict['Crit_Ratings'][key] = \
                         dict(zip(headers,map(int,row[1:])))
@@ -491,11 +493,10 @@ def parse_habitat_overlap(uri):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
-        LOGGER.debug(line)
 
         #Drain the habitat dictionary
         while line[0] != '':
-            
+            LOGGER.debug(line)        
             key = line[0]
 
             if line[1] == 'SHAPE':
@@ -503,10 +504,10 @@ def parse_habitat_overlap(uri):
                 #add the DQ and the W, and we will add a rasterized version of
                 #the shapefile later.
                 habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:2], map(int, line[2:3]))) 
+                        dict(zip(headers[1:2], map(int, line[2:4]))) 
             else:
                 habitat_dict['Crit_Ratings'][key] = \
-                        dict(zip(headers, map(int,line[1:3])))
+                        dict(zip(headers, map(int,line[1:4])))
             line = csv_reader.next()
 
         #Drain the next two lines
@@ -521,9 +522,10 @@ def parse_habitat_overlap(uri):
                 LOGGER.debug(line)
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
-
+                LOGGER.debug(headers)
                 #Drain the overlap table
                 line = csv_reader.next()
+                LOGGER.debug(line)
                 #Drain the habitat dictionary is the first character of the
                 #type field
                 habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, \
@@ -532,7 +534,7 @@ def parse_habitat_overlap(uri):
                     if line[1] == 'SHAPE':
                         #Only include DQ and W headers
                         habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
-                                dict(zip(headers[1:2], map(int,line[2:3])))
+                                dict(zip(headers[1:3], map(int,line[2:4])))
                     else:
                         habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
                                 dict(zip(headers, map(int,line[1:3])))
