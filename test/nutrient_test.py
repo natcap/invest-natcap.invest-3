@@ -33,7 +33,7 @@ class NutrientBiophysicalTest(unittest.TestCase):
                 os.path.join(NUTR_INPUT, 'watersheds.shp'),
             'subwatersheds_uri': \
                 os.path.join(NUTR_INPUT, 'subwatersheds.shp'),
-            'bio_table_uri': \
+            'biophysical_table_uri': \
                 os.path.join(NUTR_INPUT, 'biophysical_models.csv'),
             'threshold_table_uri': \
                 os.path.join(NUTR_INPUT, 'water_purification_threshold.csv'),
