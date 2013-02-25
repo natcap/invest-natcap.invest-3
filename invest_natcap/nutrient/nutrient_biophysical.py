@@ -13,6 +13,7 @@ from osgeo import ogr
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_core
 from invest_natcap.invest_core import fileio as fileio
+from invest_natcap.routing import routing_utils
 
 LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -61,6 +62,34 @@ def execute(args):
         make_folder(folder)
 
     biophysical_args = {}
+
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+
+    #Align all the input rasters
+    dem_uri = raster_utils.temporary_filename()
+    water_yield_uri = raster_utils.temporary_filename()
+    landuse_uri = raster_utils.temporary_filename()
+    raster_utils.align_dataset_list(
+        [args['dem_uri'], args['pixel_yield_uri'], args['landuse_uri']],
+        [dem_uri, water_yield_uri, landuse_uri], ['nearest'] * 3,
+        out_pixel_size, 'intersection', dataset_to_align_index=2,
+        aoi_uri=args['watersheds_uri'])
+
+    #Calcualte the sum of water yield pixels
+    upstream_water_yield_uri = os.path.join(
+        intermediate_dir, 'upstream_water_yield.tif')
+    water_loss_uri = os.path.join(intermediate_dir, 'water_loss.tif')
+    zero_raster_uri = os.path.join(intermediate_dir, 'zero_raster.tif')
+    routing_utils.make_constant_raster_from_base(
+        dem_uri, 0.0, zero_raster_uri)
+
+    routing_utils.route_flux(
+        dem_uri, water_yield_uri, zero_raster_uri,
+        water_loss_uri, upstream_water_yield_uri,
+        aoi_uri=args['watersheds_uri'])
+
+    return
+
 
     # Open rasters provided in the args dictionary.
     LOGGER.info('Opening user-defined rasters')
