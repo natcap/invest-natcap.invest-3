@@ -60,6 +60,9 @@ def execute(args):
     service_dir = os.path.join(workspace, 'service')
     intermediate_dir = os.path.join(workspace, 'intermediate')
 
+    file_suffix = ''
+
+
     for folder in [workspace, output_dir, service_dir, intermediate_dir]:
         make_folder(folder)
 
@@ -135,10 +138,41 @@ def execute(args):
         [upstream_water_yield_uri], nodata_log, upstream_water_yield_log_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
-    mean_runoff_index = raster_utils.aggregate_raster_values_uri(
-        upstream_water_yield_log_uri, args['watersheds_uri'], 'ws_id', 'mean')
+    field_summaries = {
+        'mn_run_ind': raster_utils.aggregate_raster_values_uri(
+            upstream_water_yield_log_uri, args['watersheds_uri'], 'ws_id', 
+            'mean')
+        }
 
-    LOGGER.debug(mean_runoff_index)
+    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs%s.shp' % file_suffix)
+    #If there is already an existing shapefile with the same name and path, delete it
+    #Copy the input shapefile into the designated output folder
+    if os.path.isfile(watershed_output_datasource_uri):
+        os.remove(watershed_output_datasource_uri)
+    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
+    original_datasource = ogr.Open(args['watersheds_uri'])
+    datasource_copy = esri_driver.CopyDataSource(original_datasource, watershed_output_datasource_uri)
+    layer = datasource_copy.GetLayer()
+
+    for field_name in field_summaries:
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        layer.CreateField(field_def)
+
+    #Initialize each feature field to 0.0
+    for feature_id in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        for field_name in field_summaries:
+            try:
+                ws_id = feature.GetFieldAsInteger('ws_id')
+                feature.SetField(field_name, float(field_summaries[field_name][ws_id]))
+            except KeyError:
+                LOGGER.warning('unknown field %s' % field_name)
+                feature.SetField(field_name, 0.0)
+        #Save back to datasource
+        layer.SetFeature(feature)
+
+    original_datasource.Destroy()
+    datasource_copy.Destroy()
 
     return
 
