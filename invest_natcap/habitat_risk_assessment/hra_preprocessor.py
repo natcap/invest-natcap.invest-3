@@ -477,7 +477,7 @@ def parse_habitat_overlap(uri):
     """
 
     habitat_overlap_dict = {}
-    habitat_dict = {}
+    habitat_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
     with open(uri,'rU') as habitat_file:
         csv_reader = csv.reader(habitat_file)
         hab_name = csv_reader.next()[1]
@@ -490,11 +490,12 @@ def parse_habitat_overlap(uri):
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
         #Drain the habitat dictionary
-        habitat_dict['Crit_Rating'] = {}
         while line[0] != '':
             
             key = line[0]
-            
+            LOGGER.debug("-------PRINTING LINES FROM CSV-----------")
+            LOGGER.debug(line[1])
+
             if line[1] == 'SHAPE':
                 #If we are dealing with a shapefile criteria, we only want  to
                 #add the DQ and the W, and we will add a rasterized version of
@@ -502,7 +503,7 @@ def parse_habitat_overlap(uri):
                 habitat_dict['Crit_Rasters'][key] = \
                         dict(zip(headers[1:2], map(int, line[2:3]))) 
             else:
-                habitat_dict['Crit_Rating'][key] = \
+                habitat_dict['Crit_Ratings'][key] = \
                         dict(zip(headers, map(int,line[1:3])))
             line = csv_reader.next()
 
