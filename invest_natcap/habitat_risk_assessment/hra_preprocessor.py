@@ -235,37 +235,37 @@ def execute(args):
                         curr_row = [c_name] + default_rating + curr_row
 
                     habitat_csv_writer.writerow(curr_row)
-
+    LOGGER.debug(stress_list)
     #Making stressor specific tables. 
     for stressor_name in stress_list:
 
         csv_filename = os.path.join(output_dir, stressor_name + \
                         '_stressor_ratings.csv')
     
-    with open(csv_filename, 'wb') as stressor_csv_file:
-        stressor_csv_writer = csv.writer(stressor_csv_file)
-        stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
-        stressor_csv_writer.writerow([])
-        stressor_csv_writer.writerow(['Stressor Buffer (m):', \
-                '<enter a buffer region in meters>'])
-        stressor_csv_writer.writerow([])
-        stressor_csv_writer.writerow(default_table_headers)
+        with open(csv_filename, 'wb') as stressor_csv_file:
+            stressor_csv_writer = csv.writer(stressor_csv_file)
+            stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
+            stressor_csv_writer.writerow([])
+            stressor_csv_writer.writerow(['Stressor Buffer (m):', \
+                    '<enter a buffer region in meters>'])
+            stressor_csv_writer.writerow([])
+            stressor_csv_writer.writerow(default_table_headers)
 
-        #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
-        for c_name in exposure_crits:
-        
-            curr_row = default_row
+            #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
+            for c_name in exposure_crits:
+            
+                curr_row = default_row
 
-            if 'crit_shapes' in locals() and \
-                        c_name in crit_shapes['s'][stressor_name]:
+                if 'crit_shapes' in locals() and \
+                            c_name in crit_shapes['s'][stressor_name]:
 
-                curr_row = [c_name] + ['SHAPE'] + curr_row
-            elif c_name in crit_descriptions:
-                curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
-            else:
-                curr_row = [c_name] + default_rating + curr_row
+                    curr_row = [c_name] + ['SHAPE'] + curr_row
+                elif c_name in crit_descriptions:
+                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
+                else:
+                    curr_row = [c_name] + default_rating + curr_row
 
-            stressor_csv_writer.writerow(curr_row)
+                stressor_csv_writer.writerow(curr_row)
             
 def parse_hra_tables(workspace_uri):
     '''This takes in the directory containing the criteria rating csv's, 
@@ -489,12 +489,12 @@ def parse_habitat_overlap(uri):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
+        LOGGER.debug(line)
+
         #Drain the habitat dictionary
         while line[0] != '':
             
             key = line[0]
-            LOGGER.debug("-------PRINTING LINES FROM CSV-----------")
-            LOGGER.debug(line[1])
 
             if line[1] == 'SHAPE':
                 #If we are dealing with a shapefile criteria, we only want  to
