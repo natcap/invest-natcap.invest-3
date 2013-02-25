@@ -47,18 +47,19 @@ class NutrientBiophysicalTest(unittest.TestCase):
         }
 
     def tearDown(self):
-        shutil.rmtree(WORKSPACE)
+        #shutil.rmtree(WORKSPACE)
+        pass
 
     def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""
         nutrient_biophysical.execute(self.args)
 
-        dest = '/tmp/Nutrient_workspace'
-        try:
-            shutil.rmtree(dest)
-        except:
-            pass
-        shutil.copytree(WORKSPACE, dest)
+#        dest = '/tmp/Nutrient_workspace'
+#        try:
+#            shutil.rmtree(dest)
+#        except:
+#            pass
+#        shutil.copytree(WORKSPACE, dest)
 
 class NutrientValuationTest(unittest.TestCase):
     def setUp(self):
