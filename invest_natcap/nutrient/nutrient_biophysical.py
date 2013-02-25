@@ -66,8 +66,8 @@ def execute(args):
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
 
     #Align all the input rasters
-    dem_uri = raster_utils.temporary_filename()
-    water_yield_uri = raster_utils.temporary_filename()
+    dem_uri = os.path.join(intermediate_dir, 'dem.tif')
+    water_yield_uri = os.path.join(intermediate_dir, 'water_yield.tif')
     landuse_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
         [args['dem_uri'], args['pixel_yield_uri'], args['landuse_uri']],
@@ -82,6 +82,12 @@ def execute(args):
     zero_raster_uri = os.path.join(intermediate_dir, 'zero_raster.tif')
     routing_utils.make_constant_raster_from_base(
         dem_uri, 0.0, zero_raster_uri)
+
+
+    flux_output_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
+    routing_utils.flow_accumulation(args['dem_uri'], flux_output_uri)
+
+
 
     routing_utils.route_flux(
         dem_uri, water_yield_uri, zero_raster_uri,
