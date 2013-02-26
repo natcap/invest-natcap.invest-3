@@ -177,7 +177,6 @@ def execute(args):
         mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
     mean_runoff_dataset = None
 
-    output_datasource.Destroy()
 
     alv_p_uri = os.path.join(intermediate_dir, 'alv_p.tif')
     alv_n_uri = os.path.join(intermediate_dir, 'alv_n.tif')
@@ -221,3 +220,22 @@ def execute(args):
         dem_uri, stream_uri, eff_n_uri, load_n_uri, n_export_uri,
         aoi_uri=args['watersheds_uri'])
 
+
+    #Calculating net retained
+    output_summaries = ['n_ret_sm', 'n_ret_mn', 'p_ret_sm', 'p_ret_mn']
+    for field_name in output_summaries:
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        output_layer.CreateField(field_def)
+
+    #Initialize each feature field to 0.0
+    for feature_id in xrange(output_layer.GetFeatureCount()):
+        feature = output_layer.GetFeature(feature_id)
+        for field_name in output_summaries:
+            try:
+                ws_id = feature.GetFieldAsInteger('ws_id')
+                feature.SetField(field_name, float(0.0))
+            except KeyError:
+                LOGGER.warning('unknown field %s' % field_name)
+                feature.SetField(field_name, 0.0)
+        #Save back to datasource
+        output_layer.SetFeature(feature)
