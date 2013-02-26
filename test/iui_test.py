@@ -277,6 +277,6 @@ class FileEntryTest(unittest.TestCase):
 
         element.setValue('/tmp')
         QTest.qWait(500)
-        self.assertEqual(element.has_error(), True)
+        self.assertEqual(element.has_error(), False)
         self.assertEqual(element.isRequired(), True)
         self.assertEqual(element.error_button.error_state, None)
