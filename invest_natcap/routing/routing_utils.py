@@ -25,10 +25,8 @@
             the integer division operator and 'mod' is the integer remainder
             operation."""
 
-import os
 import logging
 import tempfile
-import shutil
 
 from osgeo import gdal
 import numpy
@@ -186,3 +184,75 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         [flow_direction_dataset], flow_length, aoi=None,
         raster_out_uri=flow_length_uri, datatype=gdal.GDT_Float32,
         nodata=flow_length_nodata)
+
+
+def pixel_amount_exported(
+    in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri,
+    pixel_export_uri, aoi_uri=None):
+    """Calculates flow and absorption rates to determine the amount of source
+        exported to the stream.  All datasets must be in the same projection.
+        Nothing will be retained on stream pixels.
+    
+        in_dem_uri - a dem dataset used to determine flow directions
+        in_stream_uri - an integer dataset representing stream locations. 
+            0 is no stream 1 is a stream
+        in_retention_rate_uri - a dataset representing per pixel retention rates
+        in_source_uri - a dataset representing per pixel export
+        pixel_export_uri - the output dataset uri to represent the amount
+            of source exported to the stream
+
+        returns nothing"""
+
+    #Align all the input rasters since the cython core requires them to line up
+    out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+    dem_uri = raster_utils.temporary_filename()
+    stream_uri = raster_utils.temporary_filename()
+    retention_rate_uri = raster_utils.temporary_filename()
+    source_uri = raster_utils.temporary_filename()
+    raster_utils.align_dataset_list(
+        [in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri],
+        [dem_uri, stream_uri, retention_rate_uri, source_uri],
+        ["nearest", "nearest", "nearest", "nearest"], out_pixel_size,
+        "intersection", 0, aoi_uri=aoi_uri)
+
+    #Calculate export rate
+    export_rate_uri = raster_utils.temporary_filename()
+    nodata_retention = raster_utils.get_nodata_from_uri(retention_rate_uri)
+    def retention_to_export(retention):
+        """calculates 1.0-input unles it's nodata"""
+        if retention == nodata_retention:
+            return nodata_retention
+        return 1.0 - retention
+    raster_utils.vectorize_datasets(
+        [retention_rate_uri], retention_to_export, export_rate_uri, 
+        gdal.GDT_Float32, nodata_retention, out_pixel_size, "intersection",
+        dataset_to_align_index=0)
+
+    #Calculate flow direction and weights
+    flow_direction_uri = raster_utils.temporary_filename()
+    routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
+    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_direction_uri = raster_utils.temporary_filename()
+    routing_cython_core.calculate_flow_graph(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
+
+    #Calculate the percent to sink
+    effect_uri = raster_utils.temporary_filename()
+    routing_cython_core.percent_to_sink(
+        stream_uri, export_rate_uri, outflow_direction_uri,
+        outflow_weights_uri, effect_uri)
+
+    #Finally multiply the effect by the source
+    nodata_source = raster_utils.get_nodata_from_uri(source_uri)
+    nodata_effect = raster_utils.get_nodata_from_uri(effect_uri)
+    nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
+    def mult_nodata(source, effect, stream):
+        """Does the multiply of source by effect if there's not a stream"""
+        if source == nodata_source or effect == nodata_effect or \
+                stream == nodata_stream:
+            return nodata_source
+        return source * effect * (1 - stream)
+    raster_utils.vectorize_datasets(
+        [source_uri, effect_uri, stream_uri], mult_nodata, pixel_export_uri,
+        gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
+        dataset_to_align_index=0)

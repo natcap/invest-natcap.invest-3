@@ -5,7 +5,8 @@ import csv
 import os
 import glob
 import logging
-from invest_natcap.habitat_risk_assessment import hra
+import hra
+#from invest_natcap.habitat_risk_assessment import hra
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -100,19 +101,19 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-
+    
     #Get the names of all potential habs
     hab_list = []
     for ele in ('habitat_dir', 'species_dir'):
         if ele in args:
-            hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
+            hab_list = hab_list + glob.glob(os.path.join(args[ele], '*.shp'))
             hab_list = \
                 map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                             hab_list)
     
     #And all potential stressors
     stress_list = []
-    stress_list.append(glob.glob(os.path.join(args['stressors_dir'], '*.shp')))
+    stress_list = stress_list + glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
 
@@ -153,9 +154,9 @@ def execute(args):
         'frequency of disturbance': '<enter (3) Annually or less often, ' +
             '(2) Several times per year, (1) Weekly or more often, ' + \
             '(0) no score>',
-        'intensity rating:': '<enter (3) high, (2) medium, ' +
+        'intensity rating': '<enter (3) high, (2) medium, ' +
             '(1) low, (0) no score>',
-        'management effectiveness:': '<enter (3) not effective, ' +
+        'management effectiveness': '<enter (3) not effective, ' +
             '(2) somewhat effective, (1) very effective, (0) no score>',
         'natural mortality': '<enter (3) 0-20%, (2) 20-50%, ' +
             '(1) >80% mortality, or (0) no score>',
@@ -200,11 +201,11 @@ def execute(args):
                 #was instantiated when 
                 if 'crit_shapes' in locals() and \
                                     c_name in crit_shapes['h'][habitat_name]:
-                    curr_row = ['SHAPE'] + curr_row
+                    curr_row = [c_name] + ['SHAPE'] + curr_row
                 elif c_name in crit_descriptions:
-                    curr_row = [crit_descriptions[c_name]] + curr_row
+                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
                 else:
-                    curr_row = default_rating + curr_row
+                    curr_row = [c_name] + default_rating + curr_row
 
                 habitat_csv_writer.writerow(curr_row)
 
@@ -226,45 +227,45 @@ def execute(args):
                     if 'crit_shapes' in locals() and \
                         c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]:
 
-                        curr_row = ['SHAPE'] + curr_row
+                        curr_row = [c_name] + ['SHAPE'] + curr_row
                     elif c_name in crit_descriptions:
 
-                        curr_row = [crit_descriptions[c_name]] + curr_row
+                        curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
                     else:
-                        curr_row = default_rating + curr_row
+                        curr_row = [c_name] + default_rating + curr_row
 
                     habitat_csv_writer.writerow(curr_row)
-
+    
     #Making stressor specific tables. 
     for stressor_name in stress_list:
 
         csv_filename = os.path.join(output_dir, stressor_name + \
                         '_stressor_ratings.csv')
     
-    with open(csv_filename, 'wb') as stressor_csv_file:
-        stressor_csv_writer = csv.writer(stressor_csv_file)
-        stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
-        stressor_csv_writer.writerow([])
-        stressor_csv_writer.writerow(['Stressor Buffer (m):', \
-                '<enter a buffer region in meters>'])
-        stressor_csv_writer.writerow([])
-        stressor_csv_writer.writerow(default_table_headers)
+        with open(csv_filename, 'wb') as stressor_csv_file:
+            stressor_csv_writer = csv.writer(stressor_csv_file)
+            stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
+            stressor_csv_writer.writerow([])
+            stressor_csv_writer.writerow(['Stressor Buffer (m):', \
+                    '<enter a buffer region in meters>'])
+            stressor_csv_writer.writerow([])
+            stressor_csv_writer.writerow(default_table_headers)
 
-        #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
-        for c_name in exposure_crits:
-        
-            curr_row = default_row
+            #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
+            for c_name in exposure_crits:
+            
+                curr_row = default_row
 
-            if 'crit_shapes' in locals() and \
-                        c_name in crit_shapes['s'][stressor_name]:
+                if 'crit_shapes' in locals() and \
+                            c_name in crit_shapes['s'][stressor_name]:
 
-                curr_row = ['SHAPE'] + curr_row
-            elif c_name in crit_descriptions:
-                curr_row = [crit_descriptions[c_name]] + curr_row
-            else:
-                curr_row = default_rating + curr_row
+                    curr_row = [c_name] + ['SHAPE'] + curr_row
+                elif c_name in crit_descriptions:
+                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
+                else:
+                    curr_row = [c_name] + default_rating + curr_row
 
-            stressor_csv_writer.writerow(curr_row)
+                stressor_csv_writer.writerow(curr_row)
             
 def parse_hra_tables(workspace_uri):
     '''This takes in the directory containing the criteria rating csv's, 
@@ -325,7 +326,7 @@ def parse_hra_tables(workspace_uri):
     
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
-        LOGGER.debug(stressor_uri)
+        
         stressor_name = re.search('(.*)_stressor_ratings\.csv', 
                                 os.path.basename(stressor_uri)).group(1)
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
@@ -334,7 +335,7 @@ def parse_hra_tables(workspace_uri):
     h_s_dict = {}
 
     for habitat_uri in habitat_csvs:
-        LOGGER.debug(habitat_uri)
+        
         habitat_name = re.search('(.*)_overlap_ratings\.csv', 
                                 os.path.basename(habitat_uri)).group(1)
 
@@ -353,6 +354,8 @@ def parse_hra_tables(workspace_uri):
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
+    
+    LOGGER.debug(parse_dictionary)
 
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
@@ -360,12 +363,21 @@ def parse_hra_tables(workspace_uri):
     for subdict in parse_dictionary.values():
         for indivs in subdict.values():
             for kind in indivs.values():
-                for crit_name, crit_dict in kind.iteritems():
-                    for value in crit_dict.values():
-                        if value in [0, '']:
-                            del(kind[crit_name])
-                            #Breaking because crit_dict won't contain crit_name
-                            break
+
+                #Since we have the buffer_dict in here as well, occasionally it
+                #will encounter a float value. We just want to let that go, 
+                #since it's not the dictionary that we're concerned with.
+                try:
+                    for crit_name, crit_dict in kind.iteritems():
+                        for value in crit_dict.values():
+                            if value in [0, '']:
+                                del(kind[crit_name])
+                                #Breaking because crit_dict won't contain crit_name
+                                break
+                except AttributeError:
+                    #Can just skip over float values.
+                    pass
+
 
     stressor_buf_dict = {}
     for stressor, stressor_properties in stressor_dict.iteritems():
@@ -401,10 +413,12 @@ def parse_stressor(uri):
 
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
-       
-        #Skip empty line
-        csv_reader.next()
+      
+        #Skip first two lines
+        for _ in range(2): 
+            csv_reader.next()
 
+        #pull the stressor buffer from the second part of the third line
         stressor_buffer = float(csv_reader.next()[1])
         stressor_dict['buffer'] = stressor_buffer
 
@@ -419,7 +433,7 @@ def parse_stressor(uri):
             
             if row[1] == 'SHAPE':
                 stressor_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:2],map(int,row[2:3])))
+                        dict(zip(headers[1:3],map(int,row[2:4])))
             else:
                 stressor_dict['Crit_Ratings'][key] = \
                         dict(zip(headers,map(int,row[1:])))
@@ -476,7 +490,7 @@ def parse_habitat_overlap(uri):
     """
 
     habitat_overlap_dict = {}
-    habitat_dict = {}
+    habitat_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
     with open(uri,'rU') as habitat_file:
         csv_reader = csv.reader(habitat_file)
         hab_name = csv_reader.next()[1]
@@ -488,8 +502,8 @@ def parse_habitat_overlap(uri):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
+
         #Drain the habitat dictionary
-        habitat_dict['Crit_Rating'] = {}
         while line[0] != '':
             
             key = line[0]
@@ -499,10 +513,10 @@ def parse_habitat_overlap(uri):
                 #add the DQ and the W, and we will add a rasterized version of
                 #the shapefile later.
                 habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:2], map(int, line[2:3]))) 
+                        dict(zip(headers[1:3], map(int, line[2:4]))) 
             else:
-                habitat_dict['Crit_Rating'][key] = \
-                        dict(zip(headers, map(int,line[1:3])))
+                habitat_dict['Crit_Ratings'][key] = \
+                        dict(zip(headers, map(int,line[1:4])))
             line = csv_reader.next()
 
         #Drain the next two lines
@@ -514,12 +528,13 @@ def parse_habitat_overlap(uri):
         while True:
             try:
                 line = csv_reader.next()
-                LOGGER.debug(line)
+           
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
-
+                
                 #Drain the overlap table
                 line = csv_reader.next()
+                
                 #Drain the habitat dictionary is the first character of the
                 #type field
                 habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, \
@@ -528,10 +543,10 @@ def parse_habitat_overlap(uri):
                     if line[1] == 'SHAPE':
                         #Only include DQ and W headers
                         habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
-                                dict(zip(headers[1:2], map(int,line[2:3])))
+                                dict(zip(headers[1:3], map(int,line[2:4])))
                     else:
                         habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
-                                dict(zip(headers, map(int,line[1:3])))
+                                dict(zip(headers, map(int,line[1:4])))
                     line = csv_reader.next()
             except StopIteration:
                 break

@@ -478,10 +478,8 @@ class DynamicPrimitive(DynamicElement):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
         else:
-            # If there's no validation for this element but its requirements are
-            # met and it's enabled, we should mark it as not having an error.
-            if self.isEnabled() and self.validator == None:
-                self.set_error(None, None)
+            # Assume that validation passes until we are proven otherwise.
+            self.set_error(None, None)
 
             # If the root element has not yet been set, we should just return since
             # validation will fail anyways.
