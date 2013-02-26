@@ -237,23 +237,27 @@ def execute(args):
             p_threshold_lookup[int(line[ws_id_index])] = float(line[thresh_p_index])
 
     field_summaries = {
-        'p_adjl_sm': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'n_adjl_sm': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        #These are raw load values
+        'p_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'n_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'sum'),
         'p_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'mean'),
         'n_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'mean'),
 
+        #These are the thresholded service values
         'n_ret_sm': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', threshold_amount_list=n_threshold_lookup),
         'n_ret_mn': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', threshold_amount_list=n_threshold_lookup),
         'p_ret_sm': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', threshold_amount_list=p_threshold_lookup),
         'p_ret_mn': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', threshold_amount_list=p_threshold_lookup),
 
-        'n_exp_tot': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'p_exp_tot': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-
-        'nexp_mn': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'nexp_sm': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'pexp_mn': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'pexp_sm': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'sum')
+        #These are the total values
+        'n_exp_tot': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'n_exp_mean': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'p_exp_tot': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'p_exp_mean': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'n_ret_tot': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'n_ret_mean': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'p_ret_tot': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'p_ret_mean': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
         }
 
     for field_name in field_summaries:
