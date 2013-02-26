@@ -215,10 +215,15 @@ def execute(args):
     effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
 
     #TODO: make percent to sink in raster utils
-#    routing_cython_core.percent_to_sink(
-#        [v_stream_uri, export_rate_p, outflow_direction_uri, outflow_weights_uri])
+    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
+    routing_utils.flow_accumulation(dem_uri, flow_accumulation_uri)
+    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
+    routing_utils.stream_threshold(flow_accumulation_uri, args['accum_threshold'], stream_uri)
 
-
+    p_export_uri = os.path.join(output_dir, 'p_export.tif')
+    routing_utils.pixel_amount_exported(
+        dem_uri, stream_uri, eff_p_uri, load_p_uri, p_export_uri,
+        aoi_uri=args['watersheds_uri'])
 
     return 
 
