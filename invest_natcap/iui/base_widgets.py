@@ -488,7 +488,7 @@ class DynamicPrimitive(DynamicElement):
                 return
 
             if self.isEnabled() and self.validator != None and\
-            self.requirementsMet() and self.validator.thread_finished():
+            self.validator.thread_finished():
                 rendered_dict = self.root.assembler.assemble(self.value(),
                     self.attributes['validateAs'])
                 self.validator.validate(rendered_dict)
