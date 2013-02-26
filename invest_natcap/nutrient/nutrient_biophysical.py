@@ -224,6 +224,11 @@ def execute(args):
     routing_utils.pixel_amount_exported(
         dem_uri, stream_uri, eff_p_uri, load_p_uri, p_export_uri,
         aoi_uri=args['watersheds_uri'])
+    n_export_uri = os.path.join(output_dir, 'n_export.tif')
+    routing_utils.pixel_amount_exported(
+        dem_uri, stream_uri, eff_n_uri, load_n_uri, n_export_uri,
+        aoi_uri=args['watersheds_uri'])
+
 
     return 
 
