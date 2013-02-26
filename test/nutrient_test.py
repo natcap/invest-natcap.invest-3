@@ -48,4 +48,4 @@ class NutrientBiophysicalTest(unittest.TestCase):
 
     def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""
-        nutrient_biophysical.execute(self.args)
+        nutrient.execute(self.args)
