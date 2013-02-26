@@ -363,12 +363,21 @@ def parse_hra_tables(workspace_uri):
     for subdict in parse_dictionary.values():
         for indivs in subdict.values():
             for kind in indivs.values():
-                for crit_name, crit_dict in kind.iteritems():
-                    for value in crit_dict.values():
-                        if value in [0, '']:
-                            del(kind[crit_name])
-                            #Breaking because crit_dict won't contain crit_name
-                            break
+
+                #Since we have the buffer_dict in here as well, occasionally it
+                #will encounter a float value. We just want to let that go, 
+                #since it's not the dictionary that we're concerned with.
+                try:
+                    for crit_name, crit_dict in kind.iteritems():
+                        for value in crit_dict.values():
+                            if value in [0, '']:
+                                del(kind[crit_name])
+                                #Breaking because crit_dict won't contain crit_name
+                                break
+                except AttributeError:
+                    #Can just skip over float values.
+                    pass
+
 
     stressor_buf_dict = {}
     for stressor, stressor_properties in stressor_dict.iteritems():
@@ -496,7 +505,7 @@ def parse_habitat_overlap(uri):
 
         #Drain the habitat dictionary
         while line[0] != '':
-            LOGGER.debug(line)        
+            
             key = line[0]
 
             if line[1] == 'SHAPE':
@@ -519,13 +528,13 @@ def parse_habitat_overlap(uri):
         while True:
             try:
                 line = csv_reader.next()
-                LOGGER.debug(line)
+           
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
-                LOGGER.debug(headers)
+                
                 #Drain the overlap table
                 line = csv_reader.next()
-                LOGGER.debug(line)
+                
                 #Drain the habitat dictionary is the first character of the
                 #type field
                 habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, \

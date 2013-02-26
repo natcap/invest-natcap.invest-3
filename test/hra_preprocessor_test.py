@@ -19,7 +19,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
-        args['exposure_crits'] = ['intensity rating', 'management effectiveness']
+        args['exposure_crits'] = ['intensity rating rating', 'management effectiveness']
         args['sensitivity_crits'] = ['temporal overlap rating', \
                     'frequency of disturbance']
         args['resiliance_crits'] = ['natural mortality', 'recruitment rate']
@@ -106,42 +106,42 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.args['do_shapes'] = False
 
         expected_dict = \
-            {'buffer_dict': {'FinfishAquacultureComm': 250,
-                            'ShellfishAquacultureComm': 500},
+            {'buffer_dict': {'FinfishAquacultureComm': 250.0,
+                            'ShellfishAquacultureComm': 500.0},
             'h-s':
-                {('kelp', 'finfishaquaculturecomm'):
+                {('kelp', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of natural disturbance':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                         'frequency of disturbance':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
                         },
                     'Crit_Rasters': {}
                     },
-                ('kelp', 'shellfishaquaculturecomm'):
+                ('kelp', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of natural disturbance':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                         'frequency of disturbance':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
                         },
                      'Crit_Rasters':{}
                     },
-                ('eelgrass', 'finfishaquaculturecomm'):
+                ('eelgrass', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of natural disturbance':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                         'frequency of disturbance':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
                         },
                      'Crit_Rasters':{}
                     },
-                ('eelgrass', 'shellfishaquaculturecomm'):
+                ('eelgrass', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of natural disturbance':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                         'frequency of disturbance':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
                         },
                      'Crit_Rasters':{}
                     }
@@ -150,40 +150,40 @@ class TestHRAPreprocessor(unittest.TestCase):
                 {('kelp'):
                     {'Crit_Ratings':
                         {'natural mortality':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
                         },
                      'Crit_Rasters':
                         {'recruitment rate':
-                            {'Weight': 1.0, 'DQ': 1.0}
+                            {'Weight': 1, 'DQ': 1}
                         }
                     },
                 ('eelgrass'):
                     {'Crit_Ratings':
                         {'natural mortality':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
                         },
                      'Crit_Rasters':
                         {'recruitment rate':
-                            {'Weight': 1.0, 'DQ': 1.0}
+                            {'Weight': 1, 'DQ': 1}
                         }
                     }
                 },
             'stressors': 
-                {('finfishaquaculturecomm'):
+                {('FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'intensity':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                        {'intensity rating':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
                          'management effectiveness':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
                         },
                      'Crit_Rasters':{}
                     },
-                ('shellfishaquaculturecomm'):
+                ('ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'intensity':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'management_strategy_effectiveness':
-                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        {'intensity rating':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                         'management effectiveness':
+                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
                         },
                     'Crit_Rasters':{}
                     }
@@ -192,5 +192,6 @@ class TestHRAPreprocessor(unittest.TestCase):
     
         csv_folder = './data/hra_regression_data'
         produced_dict = hra_preprocessor.parse_hra_tables(csv_folder)
-
+        
+        self.maxDiff=None
         self.assertEqual(expected_dict, produced_dict)
