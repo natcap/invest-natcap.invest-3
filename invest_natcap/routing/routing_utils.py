@@ -186,3 +186,21 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         [flow_direction_dataset], flow_length, aoi=None,
         raster_out_uri=flow_length_uri, datatype=gdal.GDT_Float32,
         nodata=flow_length_nodata)
+
+
+def pixel_amount_exported(dem_uri, stream_uri, retention_rate_uri, source_uri, pixel_export_uri):
+    """Calculates flow and absorption rates to determine the amount of source
+        exported to the stream.  All datasets must be in the same projection
+        and be aligned.
+    
+        dem_uri - a dem dataset used to determine flow directions
+        stream_uri - an integer dataset representing stream locations. 
+            0 is no stream 1 is a stream
+        retention_rate_uri - a dataset representing per pixel retention rates
+        source_uri - a dataset representing per pixel export
+        pixel_export_uri - the output dataset uri to represent the amount
+            of source exported to the stream
+
+        returns nothing"""
+    pass
+    
