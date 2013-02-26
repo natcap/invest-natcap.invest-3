@@ -463,24 +463,19 @@ class DynamicPrimitive(DynamicElement):
 
         self.setBGcolorSatisfied(satisfied)
         self.error_button.set_error(msg, state)
-        print('state=%s' % state, 'msg=%s' % msg)
 
     def has_error(self):
         if self.error_button.error_state == 'error':
             return True
-        print('error_state=%s' % self.error_button.error_state,
-                'button_enabled=%s' % self.error_button.isEnabled())
         return False
 
     def has_warning(self):
-        if self.error_button.error_state == 'warning' and\
-            self.error_button.isEnabled():
+        if self.error_button.error_state == 'warning':
             return True
         return False
 
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
-            print 'setting error'
             self.set_error('Element is required', 'error')
         else:
             # If there's no validation for this element but its requirements are
@@ -776,9 +771,6 @@ class DynamicText(LabeledElement):
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.error_button.deactivate()
         self.validate()
-        self.setState(self.requirementsMet(), includeSelf=False,
-            recursive=True)
-        print(self.requirementsMet(), self.isRequired(), self.has_error())
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
