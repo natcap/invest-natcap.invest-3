@@ -25,10 +25,8 @@
             the integer division operator and 'mod' is the integer remainder
             operation."""
 
-import os
 import logging
 import tempfile
-import shutil
 
 from osgeo import gdal
 import numpy
@@ -202,5 +200,44 @@ def pixel_amount_exported(dem_uri, stream_uri, retention_rate_uri, source_uri, p
             of source exported to the stream
 
         returns nothing"""
-    pass
-    
+
+
+    #Calcualte export rate
+    export_rate_uri = raster_utils.temporary_filename()
+    nodata_retention = raster_utils.get_nodata_from_uri(retention_rate_uri)
+    out_pixel_size = raster_utils.get_cell_size_from_uri(retention_rate_uri)
+    def retention_to_export(retention):
+        if retention == nodata_retention:
+            return nodata_retention
+        return 1.0 - retention
+    raster_utils.vectorize_datasets(
+        [retention_rate_uri], retention_to_export, export_rate_uri, gdal.GDT_Float32,
+        nodata_retention, out_pixel_size, "intersection", 
+        dataset_to_align_index=0)
+
+    #Calcualte flow direction and weights
+    flow_direction_uri = raster_utils.temporary_filename()
+    routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
+    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_direction_uri = raster_utils.temporary_filename()
+    routing_cython_core.calculate_flow_graph(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
+
+    #Calculate the percent to sink
+    effect_uri = raster_utils.temporary_filename()
+    routing_cython_core.percent_to_sink(
+        stream_uri, export_rate_uri, outflow_direction_uri,
+        outflow_weights_uri, effect_uri)
+
+    #Finally multiply the effect by the source
+    nodata_source = raster_utils.get_nodata_from_uri(source_uri)
+    nodata_effect = raster_utils.get_nodata_from_uri(effect_uri)
+    def mult_nodata(source, effect):
+        if source == nodata_source or effect == nodata_effect:
+            return nodata_source
+        return source * effect
+
+    raster_utils.vectorize_datasets(
+        [source_uri, effect_uri], mult_nodata, pixel_export_uri, gdal.GDT_Float32,
+        nodata_source, out_pixel_size, "intersection", 
+        dataset_to_align_index=0)
