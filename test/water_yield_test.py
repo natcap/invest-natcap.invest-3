@@ -17,15 +17,37 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestWaterYield(unittest.TestCase):
     """Main testing class for the water yield tests"""
+    def test_bonnie_water_yield(self):
+        """This is a test that runs the water yield model with the default
+           data given as input."""
+
+        output_base = './data/test_out/bonnie_water_yield_test/'
+        input_dir = '../../InVEST_BLK/'
+        
+        args = {}
+        args['workspace_dir'] = output_base
+        args['lulc_uri'] = input_dir + 'smc_c_15n'
+        args['soil_depth_uri'] = input_dir + 'soildepth_smn1.tif'
+        args['precipitation_uri'] = input_dir + 'precip_663'
+        args['pawc_uri'] = input_dir + 'AWC_SMN.tif'
+        args['eto_uri'] = input_dir + 'pet_1011_4'
+        args['watersheds_uri'] = input_dir + 'Watershed.shp'
+        args['sub_watersheds_uri'] = input_dir + 'SubWatersheds.shp'
+        args['biophysical_table_uri'] = \
+            input_dir + 'biophys_2-22.csv'
+        args['seasonality_constant'] = 79.0
+        args['results_suffix'] = 'aa'
+        
+        water_yield.execute(args)
+
     def test_water_yield_default_inputs(self):
         """This is a test that runs the water yield model with the default
            data given as input."""
 
+        raise SkipTest
+
         output_base = './data/test_out/hydropower_water_yield_default_inputs/'
         input_dir = './data/hydropower_data/test_input/'
-        
-        if not os.path.isdir(output_base):
-            os.mkdir(output_base)
         
         args = {}
         args['workspace_dir'] = output_base
@@ -48,12 +70,13 @@ class TestWaterYield(unittest.TestCase):
            hand calculated input rasters and checks them against hand verified
            regression files."""
 
-
+        raise SkipTest
+        
         output_base = './data/test_out/hydropower_water_yield_uri/'
         input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
         
-        if not os.path.isdir(output_base):
-            os.mkdir(output_base)
+#        if not os.path.isdir(output_base):
+#            os.makedirs(output_base)
         
         args = {}
         args['workspace_dir'] = output_base

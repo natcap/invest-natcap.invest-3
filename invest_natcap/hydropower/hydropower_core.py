@@ -207,18 +207,22 @@ def water_yield(args):
     wyield_raster = gdal.Open(wyield_uri)
 
     #Create mean rasters for fractp and water yield
+    #TODO: i removed fractp raster by using new uri function, should it be added back?
     fract_mn_dict = \
         raster_utils.aggregate_raster_values_uri(
-        fractp_uri, args['watersheds_uri'], 'subws_id', 'mean')
+        fractp_uri, args['watersheds_uri'], 'ws_id', 'mean')
+
+    #TODO: i removed wyield_mean_path raster by using new uri function, should it be added back?
+    #wyield_mn_dict = raster_utils.aggregate_raster_values_uri(
+    #    wyield_uri, args['watersheds_uri'], 'ws_id', 'mean')
+
+    #wyield_mean = gdal.Open(wyield_mean_path)
 
     wyield_mn_dict = \
         raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 
                             'subws_id', 'mean', 
                             aggregate_uri = wyield_mean_path, 
                             intermediate_directory = intermediate_dir)
-
-    wyield_mean = gdal.Open(wyield_mean_path)
-
     #Create area raster so that the volume can be computed.
     area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
 
@@ -311,11 +315,15 @@ def water_yield(args):
     aet_raster = gdal.Open(aet_path)
     
     #Create the mean actual evapotranspiration raster
-    aet_mn_dict = \
-        raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
-                            aggregate_uri = aet_mean_path, 
-                            intermediate_directory = intermediate_dir)
-    
+    aet_mn_dict = raster_utils.aggregate_raster_values(
+        aet_raster, sub_sheds, 'subws_id', 'mean', aggregate_uri=aet_mean_path,
+        intermediate_directory = intermediate_dir)
+
+
+    #TODO: change everything to aggregate via uri
+    #aet_mn_dict = \
+    #    raster_utils.aggregate_raster_values_uri(
+    #    aet_path, args['watersheds_uri'], 'ws_id', 'mean')
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
@@ -381,6 +389,7 @@ def water_yield(args):
     LOGGER.debug('Performing CSV table writing')
     write_csv_table(ws_dict, field_list, shed_table_path)
     write_csv_table(sws_dict, sub_field_list, sub_table_path)
+
     
 def sheds_map_subsheds(shape, sub_shape):
     """Stores which sub watersheds belong to which watershed

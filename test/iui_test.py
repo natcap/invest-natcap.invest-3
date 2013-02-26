@@ -9,6 +9,7 @@ from PyQt4.QtTest import QTest as QTest
 from invest_natcap.iui import base_widgets as base_widgets
 
 JSON_DIR = os.path.join('data', 'iui', 'sample_json')
+QT_APPLICATION = QtGui.QApplication([])
 
 # This is a new exception class to make it extra clear that a test needs to be
 # implemented.
@@ -223,3 +224,59 @@ class ContainerTest(unittest.TestCase, DynamicGroupTemplate):
         }
         self.assertEqual(elem_dict, reg_dictionary)
 
+
+class FileEntryTest(unittest.TestCase):
+    def test_not_required(self):
+        attributes = {
+            'id': 'workspace',
+            'label': 'Workspace',
+            'type': 'folder',
+            'defaultValue': '',
+        }
+        element = base_widgets.FileEntry(attributes)
+
+        # Verify that the element is not required.
+        self.assertEqual(element.isRequired(), False)
+
+        # Verify that no validation error is present.
+        self.assertEqual(element.error_button.error_state, None)
+
+        # Now, change the text, check the error state.
+        QTest.keyClicks(element, '/tmp')
+        QTest.qWait(500)
+        self.assertEqual(element.isRequired(), False)
+        self.assertEqual(element.error_button.error_state, None)
+
+    def test_requirementsMet(self):
+        attributes = {
+            'id': 'workspace',
+            'label': 'Workspace',
+            'type': 'folder',
+            'defaultValue': '',
+        }
+        element = base_widgets.FileEntry(attributes)
+        self.assertEqual(element.requirementsMet(), False)
+
+        element.setValue('/tmp/')
+        self.assertEqual(element.requirementsMet(), True)
+
+    def test_required(self):
+        # Now, verify that when the element has the 'required' flag and it is
+        # set to True, that the element is required.
+        attributes = {
+            'id': 'workspace',
+            'label': 'Workspace',
+            'type': 'folder',
+            'required': True,
+            'defaultValue': '',
+        }
+        element = base_widgets.FileEntry(attributes)
+        self.assertEqual(element.has_error(), True)
+        self.assertEqual(element.isRequired(), True)
+        self.assertEqual(element.error_button.error_state, 'error')
+
+        element.setValue('/tmp')
+        QTest.qWait(500)
+        self.assertEqual(element.has_error(), False)
+        self.assertEqual(element.isRequired(), True)
+        self.assertEqual(element.error_button.error_state, None)

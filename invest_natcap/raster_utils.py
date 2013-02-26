@@ -2084,6 +2084,37 @@ def align_dataset_list(
             resample_method)
 
 
+    #If there's an AOI, mask it out
+    if aoi_uri != None:
+        first_dataset = gdal.Open(dataset_out_uri_list[0])
+        n_rows = first_dataset.RasterYSize
+        n_cols = first_dataset.RasterXSize
+
+        mask_uri = temporary_filename()
+        mask_dataset = new_raster_from_base(
+            first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+        first_dataset = None
+        mask_band = mask_dataset.GetRasterBand(1)
+        mask_band.Fill(0)
+        aoi_datasource = ogr.Open(aoi_uri)
+        aoi_layer = aoi_datasource.GetLayer()
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
+
+        dataset_row = numpy.zeros((1, n_cols))
+        mask_row = numpy.zeros((1, n_cols))
+
+        for out_dataset_uri in dataset_out_uri_list:
+            nodata_out = get_nodata_from_uri(out_dataset_uri)
+            out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
+            out_band = out_dataset.GetRasterBand(1)
+            for row_index in range(n_rows):
+                out_dataset.ReadAsArray(
+                    0, row_index, n_cols, 1, buf_obj=dataset_row)
+                mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_row)
+                dataset_row[mask_row == 0] = nodata_out
+                out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
+
+
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
     pixel_size_out, bounding_box_mode, resample_method_list=None, 

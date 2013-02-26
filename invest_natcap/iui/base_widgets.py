@@ -465,23 +465,16 @@ class DynamicPrimitive(DynamicElement):
         self.error_button.set_error(msg, state)
 
     def has_error(self):
-        if self.error_button.error_state == 'error' and\
-            self.error_button.isEnabled():
+        if self.error_button.error_state == 'error':
             return True
         return False
-        
+
     def has_warning(self):
-        if self.error_button.error_state == 'warning' and\
-            self.error_button.isEnabled():
+        if self.error_button.error_state == 'warning':
             return True
         return False
 
     def validate(self):
-        # If the root element has not yet been set, we should just return since
-        # validation will fail anyways.
-        if self.root == None:
-            return
-
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
         else:
@@ -489,6 +482,12 @@ class DynamicPrimitive(DynamicElement):
             # met and it's enabled, we should mark it as not having an error.
             if self.isEnabled() and self.validator == None:
                 self.set_error(None, None)
+
+            # If the root element has not yet been set, we should just return since
+            # validation will fail anyways.
+            if self.root == None:
+                print "No root defined.  Skipping validation for %s" % self.attributes['id']
+                return
 
             if self.isEnabled() and self.validator != None and\
             self.requirementsMet() and self.validator.thread_finished():
@@ -771,11 +770,7 @@ class DynamicText(LabeledElement):
             returns nothing."""
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.error_button.deactivate()
-        if self.validator != None and self.requirementsMet():
-            self.validate()
-        else:
-            self.setState(self.requirementsMet(), includeSelf=False,
-                recursive=True)
+        self.validate()
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
