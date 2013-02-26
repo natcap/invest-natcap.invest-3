@@ -449,13 +449,13 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
-def new_raster_from_base(base, outputURI, format, nodata, datatype):
+def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
         
         base - a the GDAL raster dataset to base output size, and transforms on
-        outputURI - a string URI to the new output raster dataset.
-        format - a string representing the GDAL file format of the 
+        output_uri - a string URI to the new output raster dataset.
+        gdal_format - a string representing the GDAL file format of the 
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
@@ -465,15 +465,27 @@ def new_raster_from_base(base, outputURI, format, nodata, datatype):
             gdal.GDT_Float32.  See the following header file for supported 
             pixel types:
             http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+        fill_value - (optional) the value to fill in the raster on creation
                 
         returns a new GDAL raster dataset."""
 
-    cols = base.RasterXSize
-    rows = base.RasterYSize
+    n_cols = base.RasterXSize
+    n_rows = base.RasterYSize
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
-    return new_raster(cols, rows, projection, geotransform, format, nodata,
-                     datatype, base.RasterCount, outputURI)
+    driver = gdal.GetDriverByName(gdal_format)
+    new_raster = driver.Create(output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
+    new_raster.SetProjection(projection)
+    new_raster.SetGeoTransform(geotransform)
+    band = new_raster.GetRasterBand(1)
+    band.SetNoDataValue(nodata)
+    if fill_value != None:
+        band.SetNoDataValue(fill_value)
+    else:
+        band.SetNoDataValue(nodata)
+    band = None
+
+    return new_raster
 
 def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI):
@@ -841,6 +853,104 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     os.remove(temporary_mask_filename)
 
     return result_dict
+
+
+def aggregate_raster_values_uri(
+    raster_uri, shapefile_uri, shapefile_field, operation, ignore_nodata=True):
+    """Collect all the raster values that lie in shapefile depending on the value
+        of operation
+
+        raster - a uri to a GDAL dataset of some sort of value
+        shapefile - a uri to a OGR datasource that probably overlaps raster 
+        shapefile_field - a string indicating which key in shapefile to associate
+           the output dictionary values with whose values are associated with ints
+        operation - a string of one of ['mean', 'sum']
+        ignore_nodata - (optional) if operation == 'mean' then it does not account
+            for nodata pixels when determing the average, otherwise all pixels in
+            the AOI are used for calculation of the mean.
+
+        returns a dictionary whose keys are the values in shapefile_field and values
+            are the aggregated values over raster.  If no values are aggregated
+            contains 0."""
+    
+    #Generate a temporary mask filename
+    raster_nodata = get_nodata_from_uri(raster_uri)
+
+    out_pixel_size = get_cell_size_from_uri(raster_uri)
+    clipped_raster_uri = temporary_filename()
+    vectorize_datasets(
+        [raster_uri], float, clipped_raster_uri, gdal.GDT_Float32,
+        raster_nodata, out_pixel_size, "intersection", 
+        dataset_to_align_index=0, aoi_uri=shapefile_uri)
+    clipped_raster = gdal.Open(clipped_raster_uri)
+
+    #This should be a value that's not in shapefile[shapefile_field]
+    mask_nodata = -1
+    temporary_mask_filename = temporary_filename()
+    mask_dataset = new_raster_from_base(
+        clipped_raster, temporary_mask_filename, 'GTiff', mask_nodata,
+        gdal.GDT_Int32, fill_value=mask_nodata)
+
+    shapefile = ogr.Open(shapefile_uri)
+    shapefile_layer = shapefile.GetLayer()
+    gdal.RasterizeLayer(
+        mask_dataset, [1], shapefile_layer, 
+        options=['ATTRIBUTE=%s' % shapefile_field])
+
+    mask_dataset.FlushCache()
+    mask_band = mask_dataset.GetRasterBand(1)
+
+    #This will store the sum/count with index of shapefile attribute
+    aggregate_dict_values = {}
+    aggregate_dict_counts = {}
+
+    #Loop over each row in out_band
+    clipped_band = clipped_raster.GetRasterBand(1)
+    for row_index in range(clipped_band.YSize):
+        mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
+        clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
+
+        for attribute_id in numpy.unique(mask_array):
+            #ignore masked values
+            if attribute_id == mask_nodata:
+                continue
+
+            #Only consider values which lie in the polygon for attribute_id
+            masked_values = clipped_array[mask_array == attribute_id]
+            if ignore_nodata:
+                #Only consider values which are not nodata values
+                masked_values = masked_values[masked_values != raster_nodata]
+                attribute_sum = numpy.sum(masked_values)
+            else:
+                #We leave masked_values alone, but only sum the non-nodata 
+                #values
+                attribute_sum = \
+                    numpy.sum(masked_values[masked_values != raster_nodata])
+
+            try:
+                aggregate_dict_values[attribute_id] += attribute_sum
+                aggregate_dict_counts[attribute_id] += masked_values.size
+            except KeyError:
+                aggregate_dict_values[attribute_id] = attribute_sum
+                aggregate_dict_counts[attribute_id] = masked_values.size
+            
+    result_dict = {}
+    for attribute_id in aggregate_dict_values:
+        if operation == 'sum':
+            result_dict[attribute_id] = aggregate_dict_values[attribute_id]
+        elif operation == 'mean':
+            if aggregate_dict_counts[attribute_id] != 0.0:
+                result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
+                    aggregate_dict_counts[attribute_id]
+            else:
+                result_dict[attribute_id] = 0.0
+        else:
+            LOGGER.warn("%s operation not defined" % operation)
+    
+    mask_band = None
+    mask_dataset = None
+    return result_dict
+
 
 def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     datatype, default_value=None):
@@ -1972,6 +2082,37 @@ def align_dataset_list(
         resize_and_resample_dataset(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
+
+
+    #If there's an AOI, mask it out
+    if aoi_uri != None:
+        first_dataset = gdal.Open(dataset_out_uri_list[0])
+        n_rows = first_dataset.RasterYSize
+        n_cols = first_dataset.RasterXSize
+
+        mask_uri = temporary_filename()
+        mask_dataset = new_raster_from_base(
+            first_dataset, mask_uri, 'GTiff', 255, gdal.GDT_Byte)
+        first_dataset = None
+        mask_band = mask_dataset.GetRasterBand(1)
+        mask_band.Fill(0)
+        aoi_datasource = ogr.Open(aoi_uri)
+        aoi_layer = aoi_datasource.GetLayer()
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
+
+        dataset_row = numpy.zeros((1, n_cols))
+        mask_row = numpy.zeros((1, n_cols))
+
+        for out_dataset_uri in dataset_out_uri_list:
+            nodata_out = get_nodata_from_uri(out_dataset_uri)
+            out_dataset = gdal.Open(out_dataset_uri, gdal.GA_Update)
+            out_band = out_dataset.GetRasterBand(1)
+            for row_index in range(n_rows):
+                out_dataset.ReadAsArray(
+                    0, row_index, n_cols, 1, buf_obj=dataset_row)
+                mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_row)
+                dataset_row[mask_row == 0] = nodata_out
+                out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
 
 
 def vectorize_datasets(

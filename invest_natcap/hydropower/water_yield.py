@@ -8,6 +8,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap.hydropower import hydropower_core
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -64,7 +65,7 @@ def execute(args):
     LOGGER.info('Starting Water Yield File Handling')
     
     workspace_dir = args['workspace_dir']
-    water_yield_args = {}
+    water_yield_args = args.copy()
     water_yield_args['workspace_dir'] = workspace_dir
     
     #Create the output directories
@@ -79,6 +80,7 @@ def execute(args):
         os.makedirs(pixel_dir)
     
     #Open all of the gdal files and add to the arguments
+    water_yield_args['out_pixel_size'] = raster_utils.get_cell_size_from_uri(args['lulc_uri'])
     water_yield_args['precipitation'] = gdal.Open(args['precipitation_uri'])
     water_yield_args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
     water_yield_args['lulc'] = gdal.Open(args['lulc_uri'])
