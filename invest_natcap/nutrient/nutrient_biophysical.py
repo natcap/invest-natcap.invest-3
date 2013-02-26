@@ -238,27 +238,27 @@ def execute(args):
                 }
 
     field_summaries = {
-        'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
-        'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-        'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-        'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-        'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
+        'n_ret_sm': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'n_ret_mn': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'p_ret_sm': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'p_ret_mn': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'nexp_mn': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'nexp_sm': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'pexp_mn': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'pexp_sm': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'sum')
         }
 
-
-
-    output_summaries = ['n_ret_sm', 'n_ret_mn', 'p_ret_sm', 'p_ret_mn']
-    for field_name in output_summaries:
+    for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
 
     #Initialize each feature field to 0.0
     for feature_id in xrange(output_layer.GetFeatureCount()):
         feature = output_layer.GetFeature(feature_id)
-        for field_name in output_summaries:
+        for field_name in field_summaries:
             try:
                 ws_id = feature.GetFieldAsInteger('ws_id')
-                feature.SetField(field_name, float(0.0))
+                feature.SetField(field_name, float(field_summaries[field_name][ws_id]))
             except KeyError:
                 LOGGER.warning('unknown field %s' % field_name)
                 feature.SetField(field_name, 0.0)
