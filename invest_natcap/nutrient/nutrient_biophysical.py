@@ -40,8 +40,8 @@ def execute(args):
                 disk representing the user's subwatersheds.
             'biophysical_table_uri' - a string uri to a supported table on disk
                 containing nutrient retention values.
-            'threshold_uri' - a string uri to a supported table on disk
-                containing water purification details.
+            'water_purification_threshold_table_uri' - a string uri to a
+                csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
             'accum_threshold' - a number representing the flow accumulation.
 
@@ -221,7 +221,22 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
 
-    #Calculating net retained
+    #Load the threshold table and build a lookup ditionary by ws_id
+    with open(args['water_purification_threshold_table_uri'], 'rU') as threshold_csv_file:
+        csv_reader = csv.reader(threshold_csv_file)
+        header_row = csv_reader.next()
+        ws_id_index = header_row.index('ws_id')
+        thresh_n_index = header_row.index('thresh_n')
+        thresh_p_index = header_row.index('thresh_p')
+
+        ws_threshold_lookup = {}
+
+        for line in csv_reader:
+            ws_threshold_lookup[int(line[ws_id_index])] = {
+                'thresh_n': float(line[thresh_n_index]),
+                'thresh_p': float(line[thresh_p_index])
+                }
+
     output_summaries = ['n_ret_sm', 'n_ret_mn', 'p_ret_sm', 'p_ret_mn']
     for field_name in output_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
