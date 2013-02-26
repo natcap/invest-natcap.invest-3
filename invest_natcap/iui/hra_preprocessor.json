@@ -21,14 +21,44 @@
                     "defaultValue": "../hra_preprocess"
                 },
                 {
+                    "id" : "do_habs",
+                    "args_id" : "do_habitats",
+                    "type": "checkbox",
+                    "label": "Habitats",
+                    "defaultValue": true,
+                    "required": true,
+                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."},
+                {
                     "id":"habitat_dir",
+                    "args_id": "habitat_dir",
                     "type": "folder",
                     "label": "Directory to habitat layers",
-                    "required": true,
+                    "required": false,
+                    "requiredIf": ["do_habs"],
+                    "enabledBy": "do_habs",
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "args_id": "habitat_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
+                },
+                {
+                    "id" : "do_species",
+                    "args_id" : "do_species",
+                    "type": "checkbox",
+                    "label": "Species",
+                    "defaultValue": false,
+                    "required": true,
+                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors."},
+                {
+                    "id":"species_dir",
+                    "args_id": "species_dir",
+                    "type": "folder",
+                    "label": "Directory to species layers",
+                    "required": false,
+                    "requiredIf": ["do_species"],
+                    "enabledBy": "do_species",
+                    "validateAs": {"type": "folder",
+		    		  "mustExist": true},
+                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers"
                 },
                 {
                     "id":"stressor_dir",
@@ -37,7 +67,7 @@
                     "required": true,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "args_id": "stressor_dir",
+                    "args_id": "stressors_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
             ]
