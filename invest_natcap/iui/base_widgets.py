@@ -881,10 +881,6 @@ class DynamicText(LabeledElement):
         self.textField.setText(text)
         self.toggle()  # Should cause validation to occur
 
-    def resetValue(self):
-        DynamicPrimitive.resetValue(self)
-        self.setBGcolorSatisfied(True)
-
     def updateLinks(self, rootPointer):
         LabeledElement.updateLinks(self, rootPointer)
         
