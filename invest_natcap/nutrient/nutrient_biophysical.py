@@ -237,6 +237,16 @@ def execute(args):
                 'thresh_p': float(line[thresh_p_index])
                 }
 
+    field_summaries = {
+        'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
+        'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'sum', 'ws_id'),
+        'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
+        }
+
+
+
     output_summaries = ['n_ret_sm', 'n_ret_mn', 'p_ret_sm', 'p_ret_mn']
     for field_name in output_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
