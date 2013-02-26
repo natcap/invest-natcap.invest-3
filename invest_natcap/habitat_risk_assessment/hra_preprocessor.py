@@ -355,8 +355,6 @@ def parse_hra_tables(workspace_uri):
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
     
-    LOGGER.debug(parse_dictionary)
-
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
     #from the assessment for that subdictionary.
