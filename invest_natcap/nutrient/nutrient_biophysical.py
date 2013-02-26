@@ -212,6 +212,14 @@ def execute(args):
     routing_utils.route_flux(dem_uri, load_p_uri, eff_p_uri, p_retention_uri, p_flux_uri, aoi_uri=args['watersheds_uri'])
     routing_utils.route_flux(dem_uri, load_n_uri, eff_n_uri, n_retention_uri, n_flux_uri, aoi_uri=args['watersheds_uri'])
 
+    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
+
+    #TODO: make percent to sink in raster utils
+#    routing_cython_core.percent_to_sink(
+#        [v_stream_uri, export_rate_p, outflow_direction_uri, outflow_weights_uri])
+
+
+
     return 
 
 
