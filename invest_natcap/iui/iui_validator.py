@@ -95,9 +95,12 @@ class Validator(registrar.Registrar):
     def get_error(self):
         """Gets the error message returned by the validator.
 
-        Returns None if no error found.  String error message if an error was
-        found."""
+        Returns a tuple with (error_state, error_message).  Tuple is (None,
+        None) if no error has been found or if the validator thread has not been
+        created."""
 
+        if self.thread == None:
+            return (None, None)
         return self.thread.get_error()
 
     def init_type_checker(self, validator_type):
