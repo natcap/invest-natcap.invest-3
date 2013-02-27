@@ -36,11 +36,7 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
-        args['do_habitats']- Boolean indicating whether or not purely habitat
-            inputs are desired within this model.
         args['habitat_dir'] - A directory of shapefiles that are habitats.
-        args['do_species']- Boolean indication whether species should be used as
-            input to this model run.
         args['species_dir']- Directory which holds all species shapefiles, but
             may or may not actually exist within args if 'do_species' is false.
         args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
@@ -69,9 +65,14 @@ def execute(args):
 
     Returns nothing.
     """
+    #Create two booleans to indicate which of the layers we should be using in
+    #this model run.
+    do_habs = 'habitat_dir' in args
+    do_species 'species_dir' in args
+
     #First, want to raise two exceptions if things are wrong.
     #1. Shouldn't be able to run with no species or habitats.
-    if not args['do_species'] and not args['do_habitats']:
+    if not do_species and not do_habitats:
     
         raise MissingHabitatsOrSpecies("This model requires you to provide \
                 either habitat or species information for comparison against \
