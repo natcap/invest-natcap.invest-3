@@ -488,19 +488,32 @@ class DynamicPrimitive(DynamicElement):
                 return
 
             if self.isEnabled() and self.validator != None and\
-            self.requirementsMet() and self.validator.thread_finished():
-                rendered_dict = self.root.assembler.assemble(self.value(),
-                    self.attributes['validateAs'])
-                self.validator.validate(rendered_dict)
-                self.timer.timeout.connect(self.check_validation_error)
-                self.timer.start(50)
+            self.validator.thread_finished():
+                # We actually only want to validate input if the element's
+                # requirements are met.  If not, we still want to simulate the
+                # completion of the validation thread by performing the
+                # post-completion operations.
+                if self.requirementsMet():
+                    rendered_dict = self.root.assembler.assemble(self.value(),
+                        self.attributes['validateAs'])
+                    self.validator.validate(rendered_dict)
+                    self.timer.timeout.connect(self.check_validation_error)
+                    self.timer.start(50)
+                else:
+                    self.check_validation_error()
 
     def check_validation_error(self):
         if self.validator.thread_finished():
             self.timer.stop()
             error, state = self.validator.get_error()
-            if state == None:
-                state = 'pass'
+
+            # If this element's requirements are not met, no validation status
+            # should be displayed.  Otherwise, set the error as normal.
+            if not self.requirementsMet():
+                state = None
+            else:
+                if state == None:
+                    state = 'pass'
             self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
@@ -868,13 +881,7 @@ class DynamicText(LabeledElement):
         self.textField.setText(text)
         self.toggle()  # Should cause validation to occur
 
-    def resetValue(self):
-        DynamicPrimitive.resetValue(self)
-        self.setBGcolorSatisfied(True)
 
-    def updateLinks(self, rootPointer):
-        LabeledElement.updateLinks(self, rootPointer)
-        
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
         'fieldset'.  It has a Vertical layout, but may be subclassed if a 
@@ -1897,6 +1904,7 @@ class Root(DynamicElement):
         self.allElements = self.body.getElementsDictionary()
 
         self.updateLinksLater = []
+
         for id, element in self.allElements.iteritems():
             try:
                 element.updateLinks(self)
