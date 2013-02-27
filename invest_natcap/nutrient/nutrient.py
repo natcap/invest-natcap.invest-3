@@ -55,8 +55,14 @@ def execute(args):
 
         returns nothing.
     """
-    if args['calc_p'] == False and args['calc_n'] == False:
+    #Make sure all the nutrient inputs are good
+    nutrients_to_process = []
+    for nutrient_id in ['n', 'p']:
+        if args['calc_' + nutrient_id]:
+            nutrients_to_process.append(nutrient_id)
+    if len(nutrients_to_process) == 0:
         raise ValueError("Neither phosphorous nor nitrogen was selected to be processed.  Choose at least one.")
+
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
