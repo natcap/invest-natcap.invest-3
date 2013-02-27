@@ -228,21 +228,18 @@ def execute(args):
         mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
     mean_runoff_dataset = None
 
-    alv_p_uri = os.path.join(intermediate_dir, 'alv_p.tif')
-    alv_n_uri = os.path.join(intermediate_dir, 'alv_n.tif')
-
     def alv_calculation(load, runoff_index, mean_runoff_index):
         if nodata_load in [load, runoff_index, mean_runoff_index]:
             return nodata_load
         return load * runoff_index / mean_runoff_index
 
-    raster_utils.vectorize_datasets(
-        [load_p_uri, upstream_water_yield_log_uri, mean_runoff_uri], alv_calculation, alv_p_uri,
-        gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
-
-    raster_utils.vectorize_datasets(
-        [load_n_uri, upstream_water_yield_log_uri, mean_runoff_uri], alv_calculation, alv_n_uri,
-        gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+    alv_uri = {}
+    for nutrient in nutrients_to_process:
+        alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
+        raster_utils.vectorize_datasets(
+            [load_uri[nutrient], upstream_water_yield_log_uri, mean_runoff_uri],
+            alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection")
 
     #Calculate nutrient retention
     p_retention_uri = os.path.join(intermediate_dir, 'p_retention.tif')
