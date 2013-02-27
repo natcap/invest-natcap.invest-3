@@ -722,6 +722,12 @@ class DynamicText(LabeledElement):
         implements the attribute defaultValue.
         """
 
+    class TextField(QtGui.QLineEdit):
+        def contextMenuEvent(self, event=None):
+            menu = self.createStandardContextMenu()
+            #menu.addAction('Refresh', receiver=self.textChanged)
+            menu.exec_(event.globalPos())
+
     def __init__(self, attributes):
         """Constructor for the DynamicText class.
             The defining features for this class have primarily to do with user
@@ -743,7 +749,8 @@ class DynamicText(LabeledElement):
         #is consistent across all included subclasses of DynamicText, though
         #the way the textfield is used may differ from class to class.
         if not hasattr(self, 'textField'):
-            self.textField = QtGui.QLineEdit()
+            #self.textField = QtGui.QLineEdit()
+            self.textField = self.TextField()
 
         #All subclasses of DynamicText must contain at least these two elements.
         self.addElement(self.textField)
@@ -1123,9 +1130,9 @@ class GridList(DynamicGroup):
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
 
 class FileEntry(DynamicText):
-    class FileField(QtGui.QLineEdit):
+    class FileField(DynamicText.TextField):
         def __init__(self):
-            QtGui.QLineEdit.__init__(self)
+            DynamicText.TextField.__init__(self)
             self.setAcceptDrops(True)
 
         def dragEnterEvent(self, event=None):

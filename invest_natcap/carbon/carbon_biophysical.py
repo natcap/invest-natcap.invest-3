@@ -52,6 +52,13 @@ def execute(args):
     #can be passed to the biophysical core model
     biophysicalArgs = {}
 
+    #map lulc to carbon pool
+#    nodata_carbon = -1.0
+#    cur_carbon_uri = os.path.join(args['workspace_dir'], 'cur_carbon.tif')
+#    raster_utils.reclassify_dataset_uri(
+#        args['lulc_cur_uri'], carbon_pool_map, cur_carbon_uri, gdal.GDT_Float32,
+#        nodata_carbon, exception_flag='values_required')
+
     #lulc_cur is always required
     logger.debug('loading %s', args['lulc_cur_uri'])
     biophysicalArgs['lulc_cur'] = gdal.Open(str(args['lulc_cur_uri']),
@@ -133,7 +140,7 @@ def execute(args):
     logger.info('finished carbon biophysical model')
     
     #Dump some info about total carbon stats
-    carbon_core.calculate_summary(biophysicalArgs)
+#    carbon_core.calculate_summary(biophysicalArgs)
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
