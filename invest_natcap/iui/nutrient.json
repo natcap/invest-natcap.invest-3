@@ -90,6 +90,20 @@
 				  },
 		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment user's guide for more information about these fields."
 		},
+		{
+		    "id" : "calc_p",
+		    "type": "checkbox",
+		    "label": "Calculate phosphorous retention (requires \"p\" values in biophysical table)",
+		    "defaultValue": false,
+		    "required": false
+		},
+		{
+		    "id" : "calc_n",
+		    "type": "checkbox",
+		    "label": "Calculate nitrogen retention (requires \"n\" values in biophysical table)",
+		    "defaultValue": false,
+		    "required": false
+		},
 		{        
 		    "id" : "threshold_flow_accumulation",
 		    "args_id" : "threshold_flow_accumulation",
