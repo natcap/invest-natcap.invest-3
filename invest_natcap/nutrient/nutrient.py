@@ -74,11 +74,23 @@ def execute(args):
     lu_parameter_row = lucode_to_parameters.values()[0]
     threshold_row = threshold_lookup.values()[0]
 
-    missing_headers = []
+    #Build up a list that'll let us iterate through all the input tables
+    #and check for the required rows, and report intelligent errors if something
+    #is wrong.
     row_header_table_list = [
         (lu_parameter_row, ['load_', 'eff_'], args['biophysical_table_uri']),
         (threshold_row, ['thresh_'], args['water_purification_threshold_table_uri'])]
 
+    valuation_lookup = None
+    if 'water_purification_valuation_table_uri' in args:
+        valuation_lookup = raster_utils.get_lookup_from_csv(
+            args['water_purification_valuation_table_uri'], 'ws_id')
+        valuation_row = valuation_lookup.values()[0]
+        row_header_table_list.append(
+            (valuation_row, ['cost_', 'time_span_', 'discount_'],
+             args['biophysical_table_uri']))
+
+    missing_headers = []
     for row, header_prefixes, table_type in row_header_table_list:
         for nutrient_id in nutrients_to_process:
             for header_prefix in header_prefixes:
@@ -88,7 +100,6 @@ def execute(args):
 
     if len(missing_headers) > 0:
         raise ValueError('\n'.join(missing_headers))
-
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
