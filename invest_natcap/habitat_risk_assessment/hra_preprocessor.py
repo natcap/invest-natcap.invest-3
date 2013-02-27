@@ -70,7 +70,7 @@ def execute(args):
     #Create two booleans to indicate which of the layers we should be using in
     #this model run.
     do_habs = 'habitat_dir' in args
-    do_species 'species_dir' in args
+    do_species = 'species_dir' in args
 
     #First, want to raise two exceptions if things are wrong.
     #1. Shouldn't be able to run with no species or habitats.
