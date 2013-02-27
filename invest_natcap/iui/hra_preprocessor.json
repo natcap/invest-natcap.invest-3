@@ -21,44 +21,26 @@
                     "defaultValue": "../hra_preprocess"
                 },
                 {
-                    "id" : "do_habs",
-                    "args_id" : "do_habitats",
-                    "type": "checkbox",
-                    "label": "Habitats",
-                    "defaultValue": true,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."},
-                {
-                    "id":"habitat_dir",
-                    "args_id": "habitat_dir",
-                    "type": "folder",
-                    "label": "Directory to habitat layers",
+                    "id":"habs_dir",
+                    "args_id": "habitats_dir",
+                    "type": "hideableFileEntry",
+                    "label": "Use Habitat Layers?",
                     "required": false,
-                    "requiredIf": ["do_habs"],
-                    "enabledBy": "do_habs",
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
+                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."
                 },
-                {
-                    "id" : "do_species",
-                    "args_id" : "do_species",
-                    "type": "checkbox",
-                    "label": "Species",
-                    "defaultValue": false,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors."},
                 {
                     "id":"species_dir",
                     "args_id": "species_dir",
-                    "type": "folder",
-                    "label": "Directory to species layers",
+                    "type": "hideableFileEntry",
+                    "label": "Use Species Layers?",
                     "required": false,
-                    "requiredIf": ["do_species"],
-                    "enabledBy": "do_species",
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
+                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers",
+                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors."
                 },
                 {
                     "id":"stressor_dir",
@@ -115,25 +97,32 @@
             ]
         },
         {
-            "id" : "do_shapes",
-            "args_id" : "do_shapes",
-            "type": "checkbox",
-            "label": "Use Shapefile Criteria?",
-            "defaultValue": false,
-            "required": true,
-            "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles."
-        },
-        {
-            "id":"crit_dir",
-            "args_id": "crit_dir",
-            "type": "folder",
-            "required": false,
-            "requiredIf": ["do_shapes"],
-            "enabledBy": "do_shapes",
-            "validateAs": {"type": "folder",
-              "mustExist": true},
-            "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
-            "helpText":  "Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+            "id": "hra_preprocess_list",
+            "type": "list",
+            "elements": [
+            {
+                "id" : "do_shapes",
+                "args_id" : "do_shapes",
+                "type": "checkbox",
+                "label": "Use Shapefile Criteria?",
+                "defaultValue": false,
+                "required": true,
+                "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles."
+            },
+            {
+                "id":"crit_dir",
+                "args_id": "crit_dir",
+                "type": "folder",
+                "required": false,
+                "requiredIf": ["do_shapes"],
+                "enabledBy": "do_shapes",
+                "validateAs": {"type": "folder",
+                            "mustExist": true},
+                "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                "label": "Directory to Criteria Layers",
+                "helpText":  "Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+            }
+            ]
         }
     ]
 }
