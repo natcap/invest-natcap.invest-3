@@ -55,5 +55,5 @@ class NutrientBiophysicalTest(unittest.TestCase):
         self.assertRaises(ValueError, nutrient.execute, self.args)
 
         self.args['calc_n'] = True
-        self.args['calc_p'] = True
+        self.args['calc_p'] = False
         nutrient.execute(self.args)

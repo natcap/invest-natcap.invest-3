@@ -161,6 +161,12 @@ def execute(args):
                 return nodata_load
             return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
+    def map_eff_function(load_type):
+        def map_load(lucode):
+            if lucode == nodata_landuse:
+                return nodata_load
+            return lucode_to_parameters[lucode][load_type]
+        return map_load
 
     #Build up the load and efficiency rasters from the landcover map
     load_uri = {}
@@ -168,13 +174,14 @@ def execute(args):
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s.tif' % (nutrient))
+        raster_utils.vectorize_datasets(
+            [landuse_uri], map_load_function('load_%s' % nutrient), load_uri[nutrient],
+            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s.tif' % (nutrient))
-        for out_uri, load_type in [(load_uri[nutrient], 'load_%s' % nutrient), 
-                                   (eff_uri[nutrient], 'eff_%s' % nutrient)]:
-            raster_utils.vectorize_datasets(
-                [landuse_uri], map_load_function(load_type), out_uri,
-                gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+        raster_utils.vectorize_datasets(
+            [landuse_uri], map_eff_function('eff_%s' % nutrient), eff_uri[nutrient],
+            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
@@ -264,12 +271,12 @@ def execute(args):
             intermediate_dir, '%s_retention.tif' % nutrient)
         tmp_flux_uri = raster_utils.temporary_filename()
         routing_utils.route_flux(
-            dem_uri, load_uri[nutrient], eff_uri[nutrient], 
+            dem_uri, alv_uri[nutrient], eff_uri[nutrient], 
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
         export_uri[nutrient] = os.path.join(output_dir, '%s_export.tif' % nutrient)
         routing_utils.pixel_amount_exported(
-            dem_uri, stream_uri, eff_uri[nutrient], load_uri[nutrient],
+            dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'])
 
         field_summaries['%s_adjl_tot' % nutrient] = (
