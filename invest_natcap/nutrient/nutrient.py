@@ -55,14 +55,10 @@ def execute(args):
 
         returns nothing.
     """
-    def _validate_inputs(lucode_to_parameters, threshold_lookup, valuation_lookup):
+    def _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_lookup, valuation_lookup):
         """Validation helper method to organize code"""
 
         #Make sure all the nutrient inputs are good
-        nutrients_to_process = []
-        for nutrient_id in ['n', 'p']:
-            if args['calc_' + nutrient_id]:
-                nutrients_to_process.append(nutrient_id)
         if len(nutrients_to_process) == 0:
             raise ValueError("Neither phosphorous nor nitrogen was selected"
                              " to be processed.  Choose at least one.")
@@ -100,7 +96,22 @@ def execute(args):
         if len(missing_headers) > 0:
             raise ValueError('\n'.join(missing_headers))
 
-    #Make sure that biophysical table has load_* and eff_* headers
+    #Load all the tables for preprocessing
+    workspace = args['workspace_dir']
+    output_dir = os.path.join(workspace, 'output')
+    service_dir = os.path.join(workspace, 'service')
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    file_suffix = ''
+    for folder in [workspace, output_dir, service_dir, intermediate_dir]:
+        if not os.path.exists(folder):
+            LOGGER.debug('Making folder %s', folder)
+            os.makedirs(folder)
+
+    #Build up a list of nutrients to process based on what's checked on 
+    nutrients_to_process = []
+    for nutrient_id in ['n', 'p']:
+        if args['calc_' + nutrient_id]:
+            nutrients_to_process.append(nutrient_id)
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
     threshold_lookup = raster_utils.get_lookup_from_csv(
@@ -109,21 +120,7 @@ def execute(args):
     if 'water_purification_valuation_table_uri' in args:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
-    _validate_inputs(lucode_to_parameters, threshold_lookup, valuation_lookup)
-
-    workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
-    service_dir = os.path.join(workspace, 'service')
-    intermediate_dir = os.path.join(workspace, 'intermediate')
-
-    file_suffix = ''
-
-    for folder in [workspace, output_dir, service_dir, intermediate_dir]:
-        if not os.path.exists(folder):
-            LOGGER.debug('Making folder %s', folder)
-            os.makedirs(folder)
-
-    biophysical_args = {}
+    _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_lookup, valuation_lookup)
 
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
 
@@ -138,11 +135,6 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
     nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
-    load_p_uri = os.path.join(intermediate_dir, 'load_p.tif')
-    load_n_uri = os.path.join(intermediate_dir, 'load_n.tif')
-    eff_p_uri = os.path.join(intermediate_dir, 'eff_p.tif')
-    eff_n_uri = os.path.join(intermediate_dir, 'eff_n.tif')
-    
     nodata_load = -1.0
 
     def map_load_function(load_type):
@@ -152,10 +144,19 @@ def execute(args):
             return lucode_to_parameters[lucode][load_type]
         return map_load
 
-    for out_uri, load_type in [(load_p_uri, 'load_p'), (load_n_uri, 'load_n'), (eff_p_uri, 'eff_p'), (eff_n_uri, 'eff_n')]:
-        raster_utils.vectorize_datasets(
-            [landuse_uri], map_load_function(load_type), out_uri,
-            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+    #Build up the load and efficiency rasters from the landcover map
+    load_uri = {}
+    eff_uri = {}
+    for nutrient in nutrients_to_process:
+        load_uri[nutrient] = os.path.join(
+            intermediate_dir, 'load_%s.tif' % (nutrient))
+        eff_uri[nutrient] = os.path.join(
+            intermediate_dir, 'eff_%s.tif' % (nutrient))
+        for out_uri, load_type in [(load_uri[nutrient], 'load_%s' % nutrient), 
+                                   (eff_uri[nutrient], 'eff_%s' % nutrient)]:
+            raster_utils.vectorize_datasets(
+                [landuse_uri], map_load_function(load_type), out_uri,
+                gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
