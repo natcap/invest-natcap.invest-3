@@ -274,7 +274,7 @@ def execute(args):
     #Do valuation if necessary
 
     if 'water_purification_valuation_table_uri' in args:
-        nutrient_value_lookup = get_watershed_lookup(args['water_purification_valuation_table_uri'])
+        nutrient_value_lookup = raster_utils.get_lookup_from_csv(args['water_purification_valuation_table_uri'], 'ws_id')
 
         field_summaries['p_value'] = {}
         field_summaries['n_value'] = {}
@@ -319,28 +319,3 @@ def disc(years, percent_rate):
     for time_index in range(int(years) - 1):
         discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
     return discount
-
-def get_watershed_lookup(sediment_threshold_table_uri):
-    """Creates a python dictionary to look up sediment threshold values
-        indexed by water id
-
-        sediment_threshold_table_uri - a URI to a csv file containing at
-            least the headers "ws_id,dr_time,dr_deadvol,wq_annload"
-
-        returns a dictionary of the form {ws_id: 
-            {dr_time: .., dr_deadvol: .., wq_annload: ...}, ...}
-            depending on the values of those fields"""
-
-    with open(sediment_threshold_table_uri, 'rU') as sediment_threshold_csv_file:
-        csv_reader = csv.reader(sediment_threshold_csv_file)
-        header_row = csv_reader.next()
-        ws_id_index = header_row.index('ws_id')
-        index_to_field = dict(zip(range(len(header_row)), header_row))
-
-        ws_threshold_lookup = {}
-
-        for line in csv_reader:
-            ws_threshold_lookup[int(line[ws_id_index])] = \
-                dict([(index_to_field[int(index)], float(value)) for index, value in zip(range(len(line)), line)])
-
-        return ws_threshold_lookup

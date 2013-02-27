@@ -52,4 +52,7 @@ class NutrientBiophysicalTest(unittest.TestCase):
         """Smoke test for nutrient retention: biophysical"""
         self.args['calc_p'] = False
         self.args['calc_n'] = False
+        self.assertRaises(ValueError, nutrient.execute, self.args)
+
+        self.args['calc_n'] = True
         nutrient.execute(self.args)
