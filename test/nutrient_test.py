@@ -7,9 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap import raster_utils
-from invest_natcap.nutrient import nutrient_biophysical
-from invest_natcap.nutrient import nutrient_valuation
-from invest_natcap.nutrient import nutrient_core
+from invest_natcap.nutrient import nutrient
 
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')
 NUTR_INPUT = os.path.join('data', 'nutrient', 'input')
@@ -37,6 +35,10 @@ class NutrientBiophysicalTest(unittest.TestCase):
                 os.path.join(NUTR_INPUT, 'biophysical_models.csv'),
             'water_purification_threshold_table_uri': \
                 os.path.join(NUTR_INPUT, 'water_purification_threshold.csv'),
+            'water_purification_valuation_table_uri': \
+                os.path.join(NUTR_INPUT, 'water_purification_valuation.csv'),
+                
+
             'nutrient_type': 'nitrogen',
             'accum_threshold': 1000,
             'folders': {
