@@ -881,9 +881,7 @@ class DynamicText(LabeledElement):
         self.textField.setText(text)
         self.toggle()  # Should cause validation to occur
 
-    def updateLinks(self, rootPointer):
-        LabeledElement.updateLinks(self, rootPointer)
-        
+
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
         'fieldset'.  It has a Vertical layout, but may be subclassed if a 
@@ -1906,6 +1904,7 @@ class Root(DynamicElement):
         self.allElements = self.body.getElementsDictionary()
 
         self.updateLinksLater = []
+
         for id, element in self.allElements.iteritems():
             try:
                 element.updateLinks(self)
