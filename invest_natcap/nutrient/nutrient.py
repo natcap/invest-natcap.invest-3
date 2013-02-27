@@ -238,6 +238,7 @@ def execute(args):
         return load * runoff_index / mean_runoff_index
     alv_uri = {}
     retention_uri = {}
+    export_uri = {}
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
         raster_utils.vectorize_datasets(
@@ -251,15 +252,10 @@ def execute(args):
             dem_uri, load_uri[nutrient], eff_uri[nutrient], 
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
-
-    p_export_uri = os.path.join(output_dir, 'p_export.tif')
-    routing_utils.pixel_amount_exported(
-        dem_uri, stream_uri, eff_p_uri, load_p_uri, p_export_uri,
-        aoi_uri=args['watersheds_uri'])
-    n_export_uri = os.path.join(output_dir, 'n_export.tif')
-    routing_utils.pixel_amount_exported(
-        dem_uri, stream_uri, eff_n_uri, load_n_uri, n_export_uri,
-        aoi_uri=args['watersheds_uri'])
+        export_uri[nutrient] = os.path.join(output_dir, '%s_export.tif' % nutrient)
+        routing_utils.pixel_amount_exported(
+            dem_uri, stream_uri, eff_uri[nutrient], load_uri[nutrient],
+            export_uri[nutrient], aoi_uri=args['watersheds_uri'])
 
     field_summaries = {
         #These are raw load values
