@@ -149,7 +149,7 @@
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required" : false,
                                 "enabledBy" : "land_polygon",
-                                "requiredIf" : ["valuation_container", "land_polygon"],
+                                "requiredIf" : ["valuation_container"],
                                 "returns" : {"ifEmpty": "pass"},
                                 "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation. Required for valuation."
                             },
@@ -164,7 +164,7 @@
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required" : false,
                                 "enabledBy" : "land_polygon",
-                                "requiredIf" : ["valuation_container", "land_polygon"],
+                                "requiredIf" : ["valuation_container"],
                                 "returns" : {"ifEmpty": "pass"},
                                 "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation. Required for valuation."
                             }
