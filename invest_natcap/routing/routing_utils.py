@@ -256,3 +256,21 @@ def pixel_amount_exported(
         [source_uri, effect_uri, stream_uri], mult_nodata, pixel_export_uri,
         gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
         dataset_to_align_index=0)
+
+def calculate_stream(dem_uri, flow_threshold, stream_uri):
+    """A wrapper to calculate streams given a dem and a flow threshold.
+        The function will calcluate the flow accumulation then threshold
+        that to calcualte streams.  Useful to sidestep separate flow
+        accumulation.
+
+        dem_uri - a uri to a gdal dataset describing the dem
+        flow_threshold - the value to determine if a flow pixel is a stream
+            pixel
+        stream_uri - a uri to an output dataset that will have pixels 
+            listed a 0 for no stream or 1 for stream or nodata outside the dem
+
+        returns nothing"""
+
+    flow_accumulation_uri = raster_utils.temporary_filename()
+    flow_accumulation(dem_uri, flow_accumulation_uri)
+    stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)
