@@ -2263,7 +2263,7 @@ def get_lookup_from_csv(csv_table_uri, key_field):
 
     def smart_cast(value):
         """Attempts to cat value to a float, int, or leave it as string"""
-        cast_functions = [float, int]
+        cast_functions = [int, float]
         for fn in cast_functions:
             try:
                 return fn(value)
