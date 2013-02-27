@@ -61,7 +61,25 @@ def execute(args):
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
     if len(nutrients_to_process) == 0:
-        raise ValueError("Neither phosphorous nor nitrogen was selected to be processed.  Choose at least one.")
+        raise ValueError("Neither phosphorous nor nitrogen was selected"
+                         " to be processed.  Choose at least one.")
+
+    #Make sure that biophysical table has load_* and eff_* headers
+    lucode_to_parameters = raster_utils.get_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode')
+    #get 'a' row from the table and make sure load and eff are in it
+    lu_parameter_row = lucode_to_parameters.values()[0]
+    required_header_prefixes = ['load_', 'eff_']
+    missing_headers = []
+    for nutrient_id in nutrients_to_process:
+        for header_prefix in required_header_prefixes:
+            header = header_prefix + nutrient_id
+            if header not in lu_parameter_row:
+                missing_headers.append(header)
+    if len(missing_headers) > 0:
+        raise ValueError(
+            "Missing these headers from the biophysical table %s" % 
+            (str(missing_headers)))
 
 
     workspace = args['workspace_dir']
