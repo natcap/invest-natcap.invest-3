@@ -137,6 +137,10 @@ def execute(args):
     nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
     nodata_load = -1.0
 
+    #Make the streams
+    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
+    routing_utils.calculate_stream(dem_uri, args['accum_threshold'], stream_uri)
+
     def map_load_function(load_type):
         def map_load(lucode):
             if lucode == nodata_landuse:
@@ -232,7 +236,6 @@ def execute(args):
         if nodata_load in [load, runoff_index, mean_runoff_index]:
             return nodata_load
         return load * runoff_index / mean_runoff_index
-
     alv_uri = {}
     retention_uri = {}
     for nutrient in nutrients_to_process:
@@ -249,9 +252,6 @@ def execute(args):
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
 
-    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
-    routing_utils.calculate_stream(dem_uri, args['accum_threshold'], stream_uri)
-
     p_export_uri = os.path.join(output_dir, 'p_export.tif')
     routing_utils.pixel_amount_exported(
         dem_uri, stream_uri, eff_p_uri, load_p_uri, p_export_uri,
@@ -260,7 +260,6 @@ def execute(args):
     routing_utils.pixel_amount_exported(
         dem_uri, stream_uri, eff_n_uri, load_n_uri, n_export_uri,
         aoi_uri=args['watersheds_uri'])
-
 
     field_summaries = {
         #These are raw load values
