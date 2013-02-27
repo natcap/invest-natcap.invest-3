@@ -9,6 +9,7 @@ import tempfile
 import shutil
 import atexit
 import functools
+import csv
 
 from osgeo import gdal
 from osgeo import osr
@@ -2247,3 +2248,42 @@ def vectorize_datasets(
             mask_band.ReadAsArray(0, row_index, n_cols, 1, buf_obj=mask_array)
             out_row[mask_array == 0] = nodata_out
         output_band.WriteArray(out_row, xoff=0, yoff=row_index)
+
+
+def get_lookup_from_csv(csv_table_uri, key_field):
+    """Creates a python dictionary to look up the rest of the fields in a
+        csv table indexed by the given key_field
+
+        csv_table_uri - a URI to a csv file containing at
+            least the header key_field
+
+        returns a dictionary of the form {key_field_0: 
+            {header_1: val_1_0, header_2: val_2_0, etc.}
+            depending on the values of those fields"""
+
+    def smart_cast(value):
+        """Attempts to cat value to a float, int, or leave it as string"""
+        cast_functions = [float, int]
+        for fn in cast_functions:
+            try:
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    with open(csv_table_uri, 'rU') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        header_row = csv_reader.next()
+        key_index = header_row.index(key_field)
+        #This makes a dictionary that maps the headers to the indexes they
+        #represent in the soon to be read lines
+        index_to_field = dict(zip(range(len(header_row)), header_row))
+
+        lookup_dict = {}
+        for line in csv_reader:
+            key_value = smart_cast(line[key_index])
+            #Map an entire row to its lookup values
+            lookup_dict[key_value] = (
+                dict([(index_to_field[index], smart_cast(value)) 
+                      for index, value in zip(range(len(line)), line)]))
+        return lookup_dict
