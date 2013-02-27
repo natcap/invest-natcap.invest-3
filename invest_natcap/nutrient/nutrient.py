@@ -67,19 +67,27 @@ def execute(args):
     #Make sure that biophysical table has load_* and eff_* headers
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
+    threshold_lookup = raster_utils.get_lookup_from_csv(
+        args['water_purification_threshold_table_uri'], 'ws_id')
+
     #get 'a' row from the table and make sure load and eff are in it
     lu_parameter_row = lucode_to_parameters.values()[0]
-    required_header_prefixes = ['load_', 'eff_']
+    threshold_row = threshold_lookup.values()[0]
+
     missing_headers = []
-    for nutrient_id in nutrients_to_process:
-        for header_prefix in required_header_prefixes:
-            header = header_prefix + nutrient_id
-            if header not in lu_parameter_row:
-                missing_headers.append(header)
+    row_header_table_list = [
+        (lu_parameter_row, ['load_', 'eff_'], args['biophysical_table_uri']),
+        (threshold_row, ['thresh_'], args['water_purification_threshold_table_uri'])]
+
+    for row, header_prefixes, table_type in row_header_table_list:
+        for nutrient_id in nutrients_to_process:
+            for header_prefix in header_prefixes:
+                header = header_prefix + nutrient_id
+                if header not in row:
+                    missing_headers.append("Missing header %s from %s" % (header, table_type))
+
     if len(missing_headers) > 0:
-        raise ValueError(
-            "Missing these headers from the biophysical table %s" % 
-            (str(missing_headers)))
+        raise ValueError('\n'.join(missing_headers))
 
 
     workspace = args['workspace_dir']
