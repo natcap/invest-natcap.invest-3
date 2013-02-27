@@ -133,7 +133,10 @@ def execute(args):
         for ws_id, value in threshold_table.iteritems():
             threshold_lookup[nutrient_id][ws_id] = value['thresh_%s' % nutrient_id]
 
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
+    cell_area_ha = landuse_pixel_size ** 2 / 10000.0
+    out_pixel_size = landuse_pixel_size
 
     #Align all the input rasters
     dem_uri = raster_utils.temporary_filename()
@@ -156,7 +159,7 @@ def execute(args):
         def map_load(lucode):
             if lucode == nodata_landuse:
                 return nodata_load
-            return lucode_to_parameters[lucode][load_type]
+            return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
 
     #Build up the load and efficiency rasters from the landcover map
@@ -187,21 +190,21 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the 'log' of the upstream_water_yield raster
-    upstream_water_yield_log_uri = os.path.join(intermediate_dir, 'log_water_yield.tif')
+    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index.tif')
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
         if value == nodata_upstream:
             return nodata_upstream
         if value == 0.0:
             return 0.0
-        return numpy.log(value)
+        return numpy.log(value)/numpy.log(10)
     raster_utils.vectorize_datasets(
-        [upstream_water_yield_uri], nodata_log, upstream_water_yield_log_uri,
+        [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
     field_summaries = {
         'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            upstream_water_yield_log_uri, args['watersheds_uri'], 'ws_id', 
+            runoff_index_uri, args['watersheds_uri'], 'ws_id', 
             'mean')
         }
 
@@ -234,9 +237,9 @@ def execute(args):
 
     #Burn the mean runoff values to a raster that matches the watersheds
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
-    mean_runoff_uri = os.path.join(intermediate_dir, 'mean_runoff.tif')
+    mean_runoff_index_uri = os.path.join(intermediate_dir, 'mean_runoff_index.tif')
     mean_runoff_dataset = raster_utils.new_raster_from_base(
-        upstream_water_yield_dataset, mean_runoff_uri, 'GTiff', -1.0,
+        upstream_water_yield_dataset, mean_runoff_index_uri, 'GTiff', -1.0,
         gdal.GDT_Float32, -1.0)
     upstream_water_yield_dataset = None
     gdal.RasterizeLayer(
@@ -254,7 +257,7 @@ def execute(args):
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], upstream_water_yield_log_uri, mean_runoff_uri],
+            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri],
             alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection")
         retention_uri[nutrient] = os.path.join(
