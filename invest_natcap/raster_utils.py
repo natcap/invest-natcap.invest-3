@@ -858,7 +858,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field, operation, ignore_nodata=True, 
-    threshold_amount_list=None):
+    threshold_amount_lookup=None):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -870,9 +870,9 @@ def aggregate_raster_values_uri(
         ignore_nodata - (optional) if operation == 'mean' then it does not account
             for nodata pixels when determing the average, otherwise all pixels in
             the AOI are used for calculation of the mean.
-        threshold_amount_list - (optional) a dictionary indexing the interger shapefile_fields
-            to threshold amounts to subtract from the aggregate value such that it goes
-            no less than zero.
+        threshold_amount_lookup - (optional) a dictionary indexing the shapefile_field's
+            to threshold amounts to subtract from the aggregate value.  The result
+            will be clamped to zero.
 
         returns a dictionary whose keys are the values in shapefile_field and values
             are the aggregated values over raster.  If no values are aggregated
@@ -942,10 +942,10 @@ def aggregate_raster_values_uri(
             
     result_dict = {}
     for attribute_id in aggregate_dict_values:
-        if threshold_amount_list != None:
+        if threshold_amount_lookup != None:
             adjusted_amount = max(
                 aggregate_dict_values[attribute_id] - 
-                threshold_amount_list[attribute_id], 0.0)
+                threshold_amount_lookup[attribute_id], 0.0)
         else:
             adjusted_amount = aggregate_dict_values[attribute_id]
         if operation == 'sum':
