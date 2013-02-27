@@ -55,51 +55,61 @@ def execute(args):
 
         returns nothing.
     """
-    #Make sure all the nutrient inputs are good
-    nutrients_to_process = []
-    for nutrient_id in ['n', 'p']:
-        if args['calc_' + nutrient_id]:
-            nutrients_to_process.append(nutrient_id)
-    if len(nutrients_to_process) == 0:
-        raise ValueError("Neither phosphorous nor nitrogen was selected"
-                         " to be processed.  Choose at least one.")
+    def _validate_inputs(lucode_to_parameters, threshold_lookup, valuation_lookup):
+        """Validation helper method to organize code"""
+
+        #Make sure all the nutrient inputs are good
+        nutrients_to_process = []
+        for nutrient_id in ['n', 'p']:
+            if args['calc_' + nutrient_id]:
+                nutrients_to_process.append(nutrient_id)
+        if len(nutrients_to_process) == 0:
+            raise ValueError("Neither phosphorous nor nitrogen was selected"
+                             " to be processed.  Choose at least one.")
+
+        #Build up a list that'll let us iterate through all the input tables
+        #and check for the required rows, and report errors if something
+        #is missing.
+        row_header_table_list = []
+
+        lu_parameter_row = lucode_to_parameters.values()[0]
+        row_header_table_list.append(
+            (lu_parameter_row, ['load_', 'eff_'],
+             args['biophysical_table_uri']))
+
+        threshold_row = threshold_lookup.values()[0]
+        row_header_table_list.append(
+            (threshold_row, ['thresh_'],
+             args['water_purification_threshold_table_uri']))
+
+        if valuation_lookup != None:
+            valuation_row = valuation_lookup.values()[0]
+            row_header_table_list.append(
+                (valuation_row, ['cost_', 'time_span_', 'discount_'],
+                 args['biophysical_table_uri']))
+
+        missing_headers = []
+        for row, header_prefixes, table_type in row_header_table_list:
+            for nutrient_id in nutrients_to_process:
+                for header_prefix in header_prefixes:
+                    header = header_prefix + nutrient_id
+                    if header not in row:
+                        missing_headers.append(
+                            "Missing header %s from %s" % (header, table_type))
+
+        if len(missing_headers) > 0:
+            raise ValueError('\n'.join(missing_headers))
 
     #Make sure that biophysical table has load_* and eff_* headers
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
     threshold_lookup = raster_utils.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
-
-    #get 'a' row from the table and make sure load and eff are in it
-    lu_parameter_row = lucode_to_parameters.values()[0]
-    threshold_row = threshold_lookup.values()[0]
-
-    #Build up a list that'll let us iterate through all the input tables
-    #and check for the required rows, and report intelligent errors if something
-    #is wrong.
-    row_header_table_list = [
-        (lu_parameter_row, ['load_', 'eff_'], args['biophysical_table_uri']),
-        (threshold_row, ['thresh_'], args['water_purification_threshold_table_uri'])]
-
     valuation_lookup = None
     if 'water_purification_valuation_table_uri' in args:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
-        valuation_row = valuation_lookup.values()[0]
-        row_header_table_list.append(
-            (valuation_row, ['cost_', 'time_span_', 'discount_'],
-             args['biophysical_table_uri']))
-
-    missing_headers = []
-    for row, header_prefixes, table_type in row_header_table_list:
-        for nutrient_id in nutrients_to_process:
-            for header_prefix in header_prefixes:
-                header = header_prefix + nutrient_id
-                if header not in row:
-                    missing_headers.append("Missing header %s from %s" % (header, table_type))
-
-    if len(missing_headers) > 0:
-        raise ValueError('\n'.join(missing_headers))
+    _validate_inputs(lucode_to_parameters, threshold_lookup, valuation_lookup)
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
