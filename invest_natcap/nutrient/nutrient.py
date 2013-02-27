@@ -234,21 +234,20 @@ def execute(args):
         return load * runoff_index / mean_runoff_index
 
     alv_uri = {}
+    retention_uri = {}
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
         raster_utils.vectorize_datasets(
             [load_uri[nutrient], upstream_water_yield_log_uri, mean_runoff_uri],
             alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection")
-
-    #Calculate nutrient retention
-    p_retention_uri = os.path.join(intermediate_dir, 'p_retention.tif')
-    n_retention_uri = os.path.join(intermediate_dir, 'n_retention.tif')
-    p_flux_uri = os.path.join(intermediate_dir, 'p_flux.tif')
-    n_flux_uri = os.path.join(intermediate_dir, 'n_flux.tif')
-
-    routing_utils.route_flux(dem_uri, load_p_uri, eff_p_uri, p_retention_uri, p_flux_uri, aoi_uri=args['watersheds_uri'])
-    routing_utils.route_flux(dem_uri, load_n_uri, eff_n_uri, n_retention_uri, n_flux_uri, aoi_uri=args['watersheds_uri'])
+        retention_uri[nutrient] = os.path.join(
+            intermediate_dir, '%s_retention.tif' % nutrient)
+        tmp_flux_uri = raster_utils.temporary_filename()
+        routing_utils.route_flux(
+            dem_uri, load_uri[nutrient], eff_uri[nutrient], 
+            retention_uri[nutrient], tmp_flux_uri,
+            aoi_uri=args['watersheds_uri'])
 
     effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
 
