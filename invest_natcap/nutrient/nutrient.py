@@ -114,13 +114,24 @@ def execute(args):
             nutrients_to_process.append(nutrient_id)
     lucode_to_parameters = raster_utils.get_lookup_from_csv(
         args['biophysical_table_uri'], 'lucode')
-    threshold_lookup = raster_utils.get_lookup_from_csv(
+
+    threshold_table = raster_utils.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
     valuation_lookup = None
     if 'water_purification_valuation_table_uri' in args:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
-    _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_lookup, valuation_lookup)
+    _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_table, valuation_lookup)
+
+    #This one is tricky, we want to make a dictionary that indexes by nutrient
+    #id and yields a dicitonary indexed by ws_id to the threshold amount of
+    #that type.  The get_lookup_from_csv only gives us a flat table, so this
+    #processing is working around that.
+    threshold_lookup = {}
+    for nutrient_id in nutrients_to_process:
+        threshold_lookup[nutrient_id] = {}
+        for ws_id, value in threshold_table.iteritems():
+            threshold_lookup[nutrient_id][ws_id] = value['thresh_%s' % nutrient_id]
 
     out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
 
@@ -260,11 +271,11 @@ def execute(args):
 
         field_summaries['%s_adjl_tot' % nutrient] = (
             raster_utils.aggregate_raster_values_uri(
-                alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'))
+                alv_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
         field_summaries['%s_ret_sm' % nutrient] = (
             raster_utils.aggregate_raster_values_uri(
                 retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum', 
-                threshold_amount_list=threshold_lookup[nutrient]))
+                threshold_amount_lookup=threshold_lookup[nutrient]))
         field_summaries['%s_exp_tot' % nutrient] = (
             raster_utils.aggregate_raster_values_uri(
                 export_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
