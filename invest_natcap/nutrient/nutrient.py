@@ -283,6 +283,17 @@ def execute(args):
             raster_utils.aggregate_raster_values_uri(
                 retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
 
+        #Do valuation if necessary
+        if valuation_lookup != None:
+            field_summaries['value_%s' % nutrient] = {}
+            for ws_id, value in field_summaries['%s_ret_sm' % nutrient].iteritems():
+                discount = disc(valuation_lookup[ws_id]['time_span_%s' % nutrient],
+                                valuation_lookup[ws_id]['discount_%s' % nutrient])
+                field_summaries['value_%s' % nutrient][ws_id] = (
+                    field_summaries['%s_ret_sm' % nutrient][ws_id] * 
+                    valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
+
+
 #    field_summaries = {
         #These are raw load values
 #        'p_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
@@ -306,18 +317,6 @@ def execute(args):
 #        'p_ret_tot': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
 #        'p_ret_mean': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
 #        }
-
-    #Do valuation if necessary
-    if valuation_lookup != None:
-        for ws_id, value in field_summaries['p_ret_sm'].iteritems():
-            discount = disc(valuation_lookup[ws_id]['time_span'],
-                            valuation_lookup[ws_id]['discount'])
-            field_summaries['p_value'][ws_id] = (
-                field_summaries['p_ret_sm'][ws_id] * 
-                valuation_lookup[ws_id]['cost'] * discount)
-            field_summaries['n_value'][ws_id] = (
-                field_summaries['n_ret_sm'][ws_id] * 
-                valuation_lookup[ws_id]['cost'] * discount)
 
     #Create an output field for each key in the field summary dictionary
     for field_name in field_summaries:
