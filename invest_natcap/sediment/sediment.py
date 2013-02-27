@@ -248,39 +248,21 @@ def execute(args):
     raster_utils.align_dataset_list(
         percent_to_sink_dataset_uri_list, aligned_dataset_uri_list, 
         ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
-    routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
-
-    #multiply percent to sink with the usle
-    sediment_export_dataset_list = [usle_uri, v_stream_uri, effective_export_to_stream_uri]
-
-    usle_nodata = raster_utils.get_nodata_from_uri(usle_uri)
-    v_stream_nodata = raster_utils.get_nodata_from_uri(v_stream_uri)
-    export_to_stream_nodata = raster_utils.get_nodata_from_uri(effective_export_to_stream_uri)
-
-    def export_sediment_op(usle, v_stream, export_percent):
-        """Calculates sediment export from the pixel and watches for nodata"""
-        if usle == usle_nodata or v_stream == v_stream_nodata or export_percent == export_to_stream_nodata:
-            return sed_export_nodata
-        return usle * (1.0-v_stream) * export_percent
-    LOGGER.info("multiplying effective export with usle and v_stream")
+    #routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
-    sed_export_nodata = -1.0
-    raster_utils.vectorize_datasets(
-        sediment_export_dataset_list, export_sediment_op, sed_export_uri,
-        gdal.GDT_Float32, sed_export_nodata, out_pixel_size, "intersection", dataset_to_align_index=0,
-        aoi_uri=args['watersheds_uri'])
+    routing_utils.pixel_amount_exported(
+        clipped_dem_uri, v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
     field_summaries = {
-        'usle_mean': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'mean', 'ws_id'),
-        'usle_tot': sediment_core.aggregate_raster_values(usle_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-        'sed_export': sediment_core.aggregate_raster_values(sed_export_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-        'upret_tot': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'sum', 'ws_id'),
-        'upret_mean': sediment_core.aggregate_raster_values(sed_retention_uri, args['watersheds_uri'], 'mean', 'ws_id')
+        'usle_mean': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+        'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+        'upret_mean': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
         }
-
 
     #Create the service field sums
     field_summaries['sret_sm_dr'] = {}

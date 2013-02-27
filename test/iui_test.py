@@ -107,7 +107,7 @@ class DynamicTextTemplate(LabeledElementTemplate):
         raise TestNotImplemented
 
 
-class ContainerTest(unittest.TestCase, DynamicGroupTemplate):
+class OldContainerTest(unittest.TestCase, DynamicGroupTemplate):
     def setUp(self):
         container_test = os.path.join(JSON_DIR, 'test_container.json')
 
@@ -280,3 +280,4 @@ class FileEntryTest(unittest.TestCase):
         self.assertEqual(element.has_error(), False)
         self.assertEqual(element.isRequired(), True)
         self.assertEqual(element.error_button.error_state, None)
+

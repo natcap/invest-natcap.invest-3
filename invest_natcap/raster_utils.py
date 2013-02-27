@@ -856,7 +856,8 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
 
 def aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, shapefile_field, operation, ignore_nodata=True):
+    raster_uri, shapefile_uri, shapefile_field, operation, ignore_nodata=True, 
+    threshold_amount_list=None):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -868,11 +869,15 @@ def aggregate_raster_values_uri(
         ignore_nodata - (optional) if operation == 'mean' then it does not account
             for nodata pixels when determing the average, otherwise all pixels in
             the AOI are used for calculation of the mean.
+        threshold_amount_list - (optional) a dictionary indexing the interger shapefile_fields
+            to threshold amounts to subtract from the aggregate value such that it goes
+            no less than zero.
 
         returns a dictionary whose keys are the values in shapefile_field and values
             are the aggregated values over raster.  If no values are aggregated
             contains 0."""
     
+
     #Generate a temporary mask filename
     raster_nodata = get_nodata_from_uri(raster_uri)
 
@@ -936,12 +941,18 @@ def aggregate_raster_values_uri(
             
     result_dict = {}
     for attribute_id in aggregate_dict_values:
+        if threshold_amount_list != None:
+            adjusted_amount = max(
+                aggregate_dict_values[attribute_id] - 
+                threshold_amount_list[attribute_id], 0.0)
+        else:
+            adjusted_amount = aggregate_dict_values[attribute_id]
         if operation == 'sum':
-            result_dict[attribute_id] = aggregate_dict_values[attribute_id]
+            result_dict[attribute_id] = adjusted_amount
         elif operation == 'mean':
             if aggregate_dict_counts[attribute_id] != 0.0:
-                result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
-                    aggregate_dict_counts[attribute_id]
+                result_dict[attribute_id] = (
+                    adjusted_amount / aggregate_dict_counts[attribute_id])
             else:
                 result_dict[attribute_id] = 0.0
         else:
@@ -1708,6 +1719,17 @@ def gaussian_filter_dataset(
 
     out_dataset.FlushCache()
     return out_dataset
+
+def reclassify_dataset_uri(
+    dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
+    exception_flag='none'):
+    """A callthrough for the reclassify_dataset function that is uri only"""
+
+    dataset = gdal.Open(dataset_uri)
+    reclassify_dataset(
+        dataset, value_map, raster_out_uri, out_datatype, out_nodata,
+        exception_flag=exception_flag)
+    
 
 def reclassify_dataset(
     dataset, value_map, raster_out_uri, out_datatype, out_nodata,

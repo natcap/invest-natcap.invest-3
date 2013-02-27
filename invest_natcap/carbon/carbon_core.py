@@ -150,12 +150,30 @@ landscape')
 
         #calculate seq. only after HWP has been added to the storage rasters
         LOGGER.info('calculating carbon sequestration')
-        invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
-                               args['tot_C_cur'].GetRasterBand(1),
-                               args['sequest'].GetRasterBand(1))
+        tot_c_cur_uri = args['tot_C_cur'].GetFileList()[0]
+        tot_c_fut_uri = args['tot_C_fut'].GetFileList()[0]
+        sequest_uri = args['sequest'].GetFileList()[0]
+        args['tot_C_cur'] = None
+        args['tot_C_fut'] = None
+        args['sequest'] = None
+        pixel_size_out = raster_utils.get_cell_size_from_uri(tot_c_cur_uri)
+        nodata_fut_c = raster_utils.get_nodata_from_uri(tot_c_fut_uri)
+        nodata_cur_c = raster_utils.get_nodata_from_uri(tot_c_cur_uri)
+        nodata_sequest = raster_utils.get_nodata_from_uri(sequest_uri)
 
-        LOGGER.info('calculating raster stats for sequest')
-        invest_core.calculateRasterStats(args['sequest'].GetRasterBand(1))
+        def nodata_subtract(fut_c, cur_c):
+            if fut_c == nodata_fut_c or cur_c == nodata_cur_c:
+                return nodata_sequest
+            return fut_c - cur_c
+            
+        raster_utils.vectorize_datasets([tot_c_fut_uri, tot_c_cur_uri], nodata_subtract, sequest_uri, gdal.GDT_Float32, nodata_sequest, pixel_size_out, "intersection", dataset_to_align_index=0)
+
+#        invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
+#                               args['tot_C_cur'].GetRasterBand(1),
+#                               args['sequest'].GetRasterBand(1))
+
+#        LOGGER.info('calculating raster stats for sequest')
+#        invest_core.calculateRasterStats(args['sequest'].GetRasterBand(1))
 
         LOGGER.info('finished calculating carbon sequestration')
 
