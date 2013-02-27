@@ -28,7 +28,7 @@
                     "label": "Wind Data Points",
                     "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
                     "required": true,
-                    "helpText": "A binary file that represents the wind energy data points. Please see the users guide on how this file was generated."
+                    "helpText": "A binary file that represents the wind energy data points. Please see the User's Guide for a description of how this file was generated."
                 },
                 {
                     "id" : "aoi",
@@ -45,7 +45,7 @@
                                                "projection" : {"units": "meters", "exists": true}
                                              }]
                                   },
-                    "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly." 
+                    "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly. An AOI is required for valuation." 
                 },
                 {
                     "id" : "bathymetry",
@@ -55,7 +55,7 @@
                     "defaultValue": "../Base_Data/Marine/DEMs/global_dem/hdr.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
+                    "helpText": "A raster dataset for the elevation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
                 },
                 {
                     "id" : "land_polygon",
@@ -67,7 +67,7 @@
                     "enabledBy" : "aoi", 
                     "returns" : {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
-                    "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
+                    "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission."
                 },
                 {
                     "id" : "global_wind_parameters",
@@ -76,7 +76,7 @@
                     "label": "Global Wind Energy Parameters",
                     "defaultValue": "../WindEnergy/input/global_wind_energy_parameters.csv",
                     "required": true,
-                    "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the Users Guide. We recommend careful consideration before changing these values and to make a new CSV file so that the default one always remains.",
+                    "helpText": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the User's Guide. We recommend careful consideration before changing these values and to make a new CSV file so that the default one always remains.",
                     "validateAs": { "type": "CSV"}
                 },
                 {
@@ -89,7 +89,7 @@
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
                     "required": false,
-                    "helpText":"A String that will be added to the end of the output uris."
+                    "helpText":"A String that will be added to the end of the output URIs."
 
                 }                         
             ]
@@ -110,7 +110,7 @@
                                 "label": "Turbine Type",
                                 "defaultValue": "",
                                 "required": true,
-                                "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. Please see the Users Guide for correctly selecting a turbine type. Also see the Users Guide for information pertaining to providing your own turbine type.",
+                                "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. You may create a new turbine class (or modifying existing classes) by using the existing file format conventions and filling in your own parameters. It is recommended that you do not overwrite the existing default CSV files.",
                                 "validateAs": { "type": "CSV"}
                             },
                             {
@@ -123,7 +123,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": "A floating point value for the minimum depth of the offshore wind farm installation (m)."
+                                "helpText": "A floating point value in meters for the minimum depth of the offshore wind farm installation."
                             },
                             {
                                 "id" : "max_depth", 
@@ -135,7 +135,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": "A floating point value for the maximum depth of the offshore wind farm installation (m)."
+                                "helpText": "A floating point value in meters for the maximum depth of the offshore wind farm installation."
                             },
                             {
                                 "id" : "min_distance",
@@ -150,7 +150,7 @@
                                 "enabledBy" : "land_polygon",
                                 "requiredIf" : ["valuation_container"],
                                 "returns" : {"ifEmpty": "pass"},
-                                "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation."
+                                "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation. Required for valuation."
                             },
                             {
                                 "id" : "max_distance",
@@ -165,7 +165,7 @@
                                 "enabledBy" : "land_polygon",
                                 "requiredIf" : ["valuation_container"],
                                 "returns" : {"ifEmpty": "pass"},
-                                "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation."
+                                "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation. Required for valuation."
                             }
                         ]
                     }
@@ -191,7 +191,7 @@
                             "label": "Cost of the Foundation Type (millions of dollars)",
                             "defaultValue": "",
                             "required": true,
-                            "helpText": "A floating point number for the cost of the foundation type (in millions of dollars). Please see the Users Guide to properly select this value.",
+                            "helpText": "A floating point number for the unit cost of the foundation type (in millions of dollars). The cost of a foundation will depend on the type selected, which itself depends on a variety of factors including depth and turbine choice. Please see the User's Guide for guidance on properly selecting this value.",
                             "validateAs": { "type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}}
                         },
@@ -203,7 +203,7 @@
                             "defaultValue": "",
                             "required": true,
                             "validText": "[0-9]+",
-                            "helpText" : "An integer value indicating the number of wind turbines in the wind farm."
+                            "helpText" : "An integer value indicating the number of wind turbines per wind farm."
                         },
                         {
                             "id" : "dollar_per_kWh",
@@ -215,7 +215,7 @@
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": true,
-                            "helpText": "The price of energy per kilowatt hour. Please consult the Users Guide for determining this value." 
+                            "helpText": "The price of energy per kilowatt hour. Please consult the User's Guide for determining this value." 
                         },
                         {
                             "id" : "discount_rate",
@@ -227,7 +227,7 @@
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": true,
-                            "helpText": "The discount rate reflects society's preference for immediate benefits over future benefits (e.g., would you rather receive $10 today or $10 five years from now?). Please consult the Users Guide for determining this value." 
+                            "helpText": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would you rather receive $10 today or $10 five years from now?). Please consult the User's Guide for guidance on selecting this value." 
                         },
                         {        
                             "id" : "grid_points",
@@ -237,7 +237,7 @@
                             "defaultValue": "",
                             "required": false,
                             "returns": {"ifEmpty": "pass"},
-                            "helpText": "An optional CSV file with grid and land points to determine cable distances from. Each point location is represented as a single row with columns being ID, TYPE, LATI, and LONG. The LATI and LONG columns indicate the coordinates for the point. The TYPE column relates to whether it is a land or grid point. The ID column is a simple unique integer. The shortest distance between respective points is used for calculations. Please see the Users Guide for more information.",
+                            "helpText": "An optional CSV file with grid and land points to determine cable distances from. An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point. The <b>TYPE</b> column relates to whether it is a land or grid point. The <b>ID</b> column is a simple unique integer. The shortest distance between respective points is used for calculations. Please see the User's Guide for more information. ",
                             "validateAs": { "type": "CSV",
                                             "fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
                                             "restrictions": [{"field": "ID",
@@ -265,7 +265,7 @@
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": true,
-                            "helpText": "An optional number that is only used if grid points is NOT used in valuation. When running valuation using the land polygon to compute distances, an average distance is needed for connecting landing points to grid points.  See the Users Guide for helpful hints on selecting a good average distance."
+                            "helpText": "An optional number that is only used if grid points are NOT used in valuation. When running valuation using the land polygon to compute distances, the model uses an average distance to the onshore grid from coastal cable landing points instead of specific grid connection points. -See the User's Guide for a description of the approach and the method used to calculate the default value."
                         }
                     ]
                 }
