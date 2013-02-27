@@ -249,8 +249,6 @@ def execute(args):
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
 
-    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
-
     #TODO: make percent to sink in raster utils
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
     routing_utils.flow_accumulation(dem_uri, flow_accumulation_uri)
