@@ -44,6 +44,9 @@ def execute(args):
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
             'accum_threshold' - a number representing the flow accumulation.
+            'water_purification_valuation_table_uri' - (optional) a uri to a
+                csv used for valuation
+
 
         returns nothing.
     """
@@ -260,6 +263,23 @@ def execute(args):
         'p_ret_mean': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
         }
 
+    #Do valuation if necessary
+
+    if 'water_purification_valuation_table_uri' in args:
+        nutrient_value_lookup = get_watershed_lookup(args['water_purification_valuation_table_uri'])
+
+        field_summaries['p_value'] = {}
+        field_summaries['n_value'] = {}
+        for ws_id, value in field_summaries['p_ret_sm'].iteritems():
+            discount = disc(nutrient_value_lookup[ws_id]['time_span'],
+                            nutrient_value_lookup[ws_id]['discount'])
+            field_summaries['p_value'][ws_id] = (
+                field_summaries['p_ret_sm'][ws_id] * 
+                nutrient_value_lookup[ws_id]['cost'] * discount)
+            field_summaries['n_value'][ws_id] = (
+                field_summaries['n_ret_sm'][ws_id] * 
+                nutrient_value_lookup[ws_id]['cost'] * discount)
+
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
@@ -276,3 +296,43 @@ def execute(args):
                 feature.SetField(field_name, 0.0)
         #Save back to datasource
         output_layer.SetFeature(feature)
+
+
+def disc(years, percent_rate):
+    """Calculate discount rate for a given number of years
+    
+        years - an integer number of years
+        percent_rate - a discount rate in percent
+
+        returns the discount rate for the number of years to use in 
+            a calculation like yearly_cost * disc(years, percent_rate)"""
+
+    discount = 0.0
+    for time_index in range(int(years) - 1):
+        discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
+    return discount
+
+def get_watershed_lookup(sediment_threshold_table_uri):
+    """Creates a python dictionary to look up sediment threshold values
+        indexed by water id
+
+        sediment_threshold_table_uri - a URI to a csv file containing at
+            least the headers "ws_id,dr_time,dr_deadvol,wq_annload"
+
+        returns a dictionary of the form {ws_id: 
+            {dr_time: .., dr_deadvol: .., wq_annload: ...}, ...}
+            depending on the values of those fields"""
+
+    with open(sediment_threshold_table_uri, 'rU') as sediment_threshold_csv_file:
+        csv_reader = csv.reader(sediment_threshold_csv_file)
+        header_row = csv_reader.next()
+        ws_id_index = header_row.index('ws_id')
+        index_to_field = dict(zip(range(len(header_row)), header_row))
+
+        ws_threshold_lookup = {}
+
+        for line in csv_reader:
+            ws_threshold_lookup[int(line[ws_id_index])] = \
+                dict([(index_to_field[int(index)], float(value)) for index, value in zip(range(len(line)), line)])
+
+        return ws_threshold_lookup
