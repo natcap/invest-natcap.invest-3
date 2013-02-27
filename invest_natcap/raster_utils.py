@@ -1720,6 +1720,17 @@ def gaussian_filter_dataset(
     out_dataset.FlushCache()
     return out_dataset
 
+def reclassify_dataset_uri(
+    dataset_uri, value_map, raster_out_uri, out_datatype, out_nodata,
+    exception_flag='none'):
+    """A callthrough for the reclassify_dataset function that is uri only"""
+
+    dataset = gdal.Open(dataset_uri)
+    reclassify_dataset(
+        dataset, value_map, raster_out_uri, out_datatype, out_nodata,
+        exception_flag=exception_flag)
+    
+
 def reclassify_dataset(
     dataset, value_map, raster_out_uri, out_datatype, out_nodata,
     exception_flag='none'):

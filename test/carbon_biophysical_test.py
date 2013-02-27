@@ -3,39 +3,18 @@
 import os, sys
 import unittest
 
+from nose.plugins.skip import SkipTest
+
 from invest_natcap.carbon import carbon_biophysical
 import invest_test_core
 
 class TestCarbonBiophysical(unittest.TestCase):
-    def test_carbon_biophysical_smoke(self):
-        """Smoke test for carbon_biophysical function.  Shouldn't crash with \
-#zero length inputs"""
-
-        args = {}
-        args['workspace_dir'] = './data/carbon_output'
-        args['lulc_cur_uri'] = "./data/base_data/terrestrial/lulc_samp_cur"
-        args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.dbf'
-
-        carbon_biophysical.execute(args)
-
-    def test_carbon_biophysical_sequestration(self):
-        """Test for carbon_biophysical function running with sample input to \
-do sequestration on lulc maps."""
-
-        args = {}
-        args['workspace_dir'] = './data/carbon_output'
-        args['lulc_cur_uri'] = "./data/base_data/terrestrial/lulc_samp_cur"
-        args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
-        args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.dbf'
-
-        carbon_biophysical.execute(args)
-
     def test_carbon_biophysical_sequestration_hwp(self):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
         args = {}
-        args['workspace_dir'] = './data/carbon_output'
+        args['workspace_dir'] = './data/test_out/carbon_output'
         args['lulc_cur_uri'] = "./data/base_data/terrestrial/lulc_samp_cur"
         args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
         args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.dbf'
@@ -83,3 +62,20 @@ do sequestration and harvested wood products on lulc maps."""
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
             './data/carbon_regression_data/vol_hwp_fut_regression.tif')
+
+
+    def test_carbon_biophysical_sequestration_hwp_different_lulcs(self):
+        """Test for carbon_biophysical function running with sample input to \
+do sequestration and harvested wood products on lulc maps."""
+
+        args = {}
+        args['workspace_dir'] = './data/test_out/carbon_uk_output'
+        args['lulc_cur_uri'] = './data/carbon/uk_data/gb_lulc_2000'
+        args['lulc_fut_uri'] = './data/carbon/uk_data/gb_lulc_2007'
+        args['carbon_pools_uri'] = './data/carbon/uk_data/Carbon_pools_conifers.dbf'
+        args['lulc_cur_year'] = 2000
+        args['lulc_fut_year'] = 2007
+        args['hwp_cur_shape_uri'] = "./data/carbon/uk_data/GB_Harvest_rates_cur.shp"
+        args['hwp_fut_shape_uri'] = "./data/carbon/uk_data/GB_Harvest_rates_fut.shp"
+
+        carbon_biophysical.execute(args)
