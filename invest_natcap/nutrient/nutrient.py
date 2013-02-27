@@ -40,6 +40,12 @@ def execute(args):
                 disk representing the user's subwatersheds.
             'biophysical_table_uri' - a string uri to a supported table on disk
                 containing nutrient retention values.
+            'calc_p' - True if phosphorous is meant to be modeled, if True then
+                biophyscial table and threshold table and valuation table must
+                have p fields in them.
+            'calc_n' - True if nitrogen is meant to be modeled, if True then
+                biophyscial table and threshold table and valuation table must
+                have n fields in them.
             'water_purification_threshold_table_uri' - a string uri to a
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
@@ -47,9 +53,11 @@ def execute(args):
             'water_purification_valuation_table_uri' - (optional) a uri to a
                 csv used for valuation
 
-
         returns nothing.
     """
+    if args['calc_p'] == False and args['calc_n'] == False:
+        raise ValueError("Neither phosphorous nor nitrogen was selected to be processed.  Choose at least one.")
+
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     service_dir = os.path.join(workspace, 'service')
