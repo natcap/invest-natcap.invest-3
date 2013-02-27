@@ -288,9 +288,9 @@ def execute(args):
         for out_field, sum_field in [('sret_mn_dr', 'sret_sm_dr'), ('sret_mn_wq', 'sret_sm_wq')]:
             field_summaries[out_field][ws_id] = field_summaries[sum_field][ws_id] / n_cells
 
-    try:
-        sediment_valuation_table = get_watershed_lookup(
-            args['sediment_valuation_table_uri'])
+    if 'sediment_valuation_table_uri' in args:
+        sediment_valuation_table = raster_utils.get_lookup_from_csv(
+            args['sediment_valuation_table_uri'], 'ws_id')
         field_summaries['sed_val_dr'] = {}
         field_summaries['sed_val_wq'] = {}
         for ws_id, value in field_summaries['upret_tot'].iteritems():
@@ -300,10 +300,6 @@ def execute(args):
                 field_summaries['sed_val_' + expense_type][ws_id] = \
                     field_summaries['sret_sm_' + expense_type][ws_id] * \
                     sediment_valuation_table[ws_id][expense_type + '_cost'] * discount
-    except KeyError:
-        #this is okay, valuation is optional
-        pass
-
 
     original_datasource = ogr.Open(args['watersheds_uri'])
     watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs%s.shp' % file_suffix)
