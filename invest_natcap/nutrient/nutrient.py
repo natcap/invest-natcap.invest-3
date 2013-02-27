@@ -137,20 +137,6 @@ def execute(args):
         out_pixel_size, 'intersection', dataset_to_align_index=2,
         aoi_uri=args['watersheds_uri'])
 
-    #Map the loading factor to the LULC map
-    lucode_to_parameters = {}
-    parameters_to_map = ['load_n', 'eff_n', 'load_p', 'eff_p']
-    with open(args['biophysical_table_uri'], 'rU') as biophysical_table_file:
-        biophysical_table_reader = csv.reader(biophysical_table_file)
-        headers = biophysical_table_reader.next()
-        lucode_index = headers.index('lucode')
-        for row in biophysical_table_reader:
-            lucode = int(row[lucode_index])
-            parameter_dict = {}
-            for parameter in parameters_to_map:
-                parameter_dict[parameter] = float(row[headers.index(parameter)])
-            lucode_to_parameters[lucode] = parameter_dict
-
     nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
     load_p_uri = os.path.join(intermediate_dir, 'load_p.tif')
     load_n_uri = os.path.join(intermediate_dir, 'load_n.tif')
@@ -241,7 +227,6 @@ def execute(args):
         mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
     mean_runoff_dataset = None
 
-
     alv_p_uri = os.path.join(intermediate_dir, 'alv_p.tif')
     alv_n_uri = os.path.join(intermediate_dir, 'alv_n.tif')
 
@@ -285,21 +270,6 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
 
-    #Load the threshold table and build a lookup ditionary by ws_id
-    with open(args['water_purification_threshold_table_uri'], 'rU') as threshold_csv_file:
-        csv_reader = csv.reader(threshold_csv_file)
-        header_row = csv_reader.next()
-        ws_id_index = header_row.index('ws_id')
-        thresh_n_index = header_row.index('thresh_n')
-        thresh_p_index = header_row.index('thresh_p')
-
-        p_threshold_lookup = {}
-        n_threshold_lookup = {}
-
-        for line in csv_reader:
-            n_threshold_lookup[int(line[ws_id_index])] = float(line[thresh_n_index])
-            p_threshold_lookup[int(line[ws_id_index])] = float(line[thresh_p_index])
-
     field_summaries = {
         #These are raw load values
         'p_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
@@ -325,27 +295,23 @@ def execute(args):
         }
 
     #Do valuation if necessary
-
-    if 'water_purification_valuation_table_uri' in args:
-        nutrient_value_lookup = raster_utils.get_lookup_from_csv(args['water_purification_valuation_table_uri'], 'ws_id')
-
-        field_summaries['p_value'] = {}
-        field_summaries['n_value'] = {}
+    if valuation_lookup != None:
         for ws_id, value in field_summaries['p_ret_sm'].iteritems():
-            discount = disc(nutrient_value_lookup[ws_id]['time_span'],
-                            nutrient_value_lookup[ws_id]['discount'])
+            discount = disc(valuation_lookup[ws_id]['time_span'],
+                            valuation_lookup[ws_id]['discount'])
             field_summaries['p_value'][ws_id] = (
                 field_summaries['p_ret_sm'][ws_id] * 
-                nutrient_value_lookup[ws_id]['cost'] * discount)
+                valuation_lookup[ws_id]['cost'] * discount)
             field_summaries['n_value'][ws_id] = (
                 field_summaries['n_ret_sm'][ws_id] * 
-                nutrient_value_lookup[ws_id]['cost'] * discount)
+                valuation_lookup[ws_id]['cost'] * discount)
 
+    #Create an output field for each key in the field summary dictionary
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
 
-    #Initialize each feature field to 0.0
+    #Populate the values of those new fields with the ws_id indexed values in the field summary dictionary.
     for feature_id in xrange(output_layer.GetFeatureCount()):
         feature = output_layer.GetFeature(feature_id)
         for field_name in field_summaries:
