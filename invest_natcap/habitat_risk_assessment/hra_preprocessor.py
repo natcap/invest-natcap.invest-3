@@ -62,7 +62,8 @@ def execute(args):
 
         JSON file containing vars that need to be passed on to hra non-core
           when that gets run. Should live inside the preprocessor folder which
-          will be created in 'workspace_dir'. 
+          will be created in 'workspace_dir'. It will contain habitats_dir,
+          species_dir, stressors_dir, and criteria_dir.
 
     Returns nothing.
     """
