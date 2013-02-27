@@ -104,7 +104,20 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
+   
+    #Make the dictionary first, then write the JSON file with the directory
+    #pathnames if they exist in args
+    json_uri = os.path.join(output_dir, 'dir_names.txt')
+
+    json_dict = {'stressors_dir': args['stressors_dir'}
+    for var in ('criteria_dir', 'habitats_dir', 'species_dir'):
+        if var in args:
+            json_dict[var] = args[var]
+
+    with open(json_uri, 'w') as outfile:
+
+        json.dump(json_dict, outfile)
+
     #Get the names of all potential habs
     hab_list = []
     for ele in ('habitat_dir', 'species_dir'):
