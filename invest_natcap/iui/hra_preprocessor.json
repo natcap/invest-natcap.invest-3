@@ -4,7 +4,7 @@
     "targetScript": "invest_natcap.habitat_risk_assessment.hra_preprocessor",
     "modelName": "hra_preprocess",
     "localDocURI": "../documentation/habitat_risk_assessment.html",
-    "height": 300,
+    "height": 1000,
     "width": 700,
     "elements": [
         {
@@ -58,7 +58,7 @@
                     "enabledBy": "do_species",
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers"
+                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
                 },
                 {
                     "id":"stressor_dir",
@@ -67,9 +67,51 @@
                     "required": true,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "args_id": "stressors_dir",
+                    "args_id": "stressor_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
+            ]
+        },
+        {
+            "id" : "cur_lulc_box",
+            "type": "container",
+            "collapsible" : false,
+            "label": "Criteria",
+            "elements": [
+                {
+                    "id": "exp_crit",
+                    "type": "multi",
+                    "args_id": "exposure_crits",
+                    "label": "Exposure",
+                    "sampleElement": {"id": "sample_id",
+                                      "type": "text",
+                                      "label": "Input Criteria",
+                                      "validateAs": {"type": "text"}},
+                    "defaultValue": ["Management Effectiveness", "Intensity"],
+                    "linkText": "Add Another"
+                },  
+                {
+                    "id": "sens_crit",
+                    "type": "multi",
+                    "args_id": "sensitivity_crits",
+                    "label": "Sensitivity",
+                    "sampleElement": {"id": "sample_id",
+                                      "type": "text",
+                                      "label": "Input Criteria",
+                                      "validateAs": {"type": "text"}},
+                    "linkText": "Add Another"
+                },  
+                {
+                    "id": "res_crit",
+                    "type": "multi",
+                    "args_id": "resiliance_crits",
+                    "label": "Resiliance",
+                    "sampleElement": {"id": "sample_id",
+                                      "type": "text",
+                                      "label": "Input Criteria",
+                                      "validateAs": {"type": "text"}},
+                    "linkText": "Add Another"
+                }  
             ]
         }
     ]
