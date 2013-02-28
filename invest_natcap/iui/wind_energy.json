@@ -36,7 +36,6 @@
                     "type": "file",
                     "label": "Area Of Interest (AOI)",
                     "defaultValue": "../WindEnergy/input/New_England_US_Aoi.shp",
-                    "required": false,
                     "requiredIf": ["valuation_container", "land_polygon"],
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR",
@@ -63,12 +62,11 @@
                     "type": "file",
                     "label": "Land Polygon to Calculate Distance From",
                     "defaultValue": "../Base_Data/Marine/Land/global_polygon.shp",
-                    "required": false,
                     "enabledBy" : "aoi", 
                     "requiredIf": ["min_distance", "max_distance", "valuation_container"],
                     "returns" : {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
-                    "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission."
+                    "helpText": "A polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission. This input is required for masking by distance values and for valuation."
                 },
                 {
                     "id" : "global_wind_parameters",
