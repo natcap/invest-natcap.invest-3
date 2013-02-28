@@ -37,6 +37,7 @@ def execute(args):
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table and threshold table and valuation table must
                 have n fields in them.
+            'suffix' - (optional) a text field to append to all output files.
             'water_purification_threshold_table_uri' - a string uri to a
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
@@ -94,10 +95,16 @@ def execute(args):
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
-    service_dir = os.path.join(workspace, 'service')
     intermediate_dir = os.path.join(workspace, 'intermediate')
-    file_suffix = ''
-    for folder in [workspace, output_dir, service_dir, intermediate_dir]:
+
+    try:
+        file_suffix = args['suffix']
+        if not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
+    for folder in [workspace, output_dir, intermediate_dir]:
         if not os.path.exists(folder):
             LOGGER.debug('Making folder %s', folder)
             os.makedirs(folder)
@@ -128,7 +135,7 @@ def execute(args):
         threshold_lookup[nutrient_id] = {}
         for ws_id, value in threshold_table.iteritems():
             threshold_lookup[nutrient_id][ws_id] = (
-                value['thresh_%s' % nutrient_id])
+                value['thresh_%s' % (nutrient_id)])
 
     landuse_pixel_size = raster_utils.get_cell_size_from_uri(
         args['landuse_uri'])
@@ -150,7 +157,7 @@ def execute(args):
     nodata_load = -1.0
 
     #Make the streams
-    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
+    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     routing_utils.calculate_stream(dem_uri, args['accum_threshold'], stream_uri)
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
@@ -178,7 +185,7 @@ def execute(args):
     eff_uri = {}
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
-            intermediate_dir, 'load_%s.tif' % (nutrient))
+            intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [landuse_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
@@ -192,7 +199,7 @@ def execute(args):
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
-        intermediate_dir, 'upstream_water_yield.tif')
+        intermediate_dir, 'upstream_water_yield%s.tif' % file_suffix)
     water_loss_uri = raster_utils.temporary_filename()
     zero_raster_uri = raster_utils.temporary_filename()
     routing_utils.make_constant_raster_from_base(
@@ -204,7 +211,7 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the 'log' of the upstream_water_yield raster
-    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index.tif')
+    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index%s.tif' % file_suffix)
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
         """Calculates the log value whiel handling nodata values correctly"""
@@ -241,7 +248,7 @@ def execute(args):
     #Burn the mean runoff values to a raster that matches the watersheds
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
     mean_runoff_index_uri = os.path.join(
-        intermediate_dir, 'mean_runoff_index.tif')
+        intermediate_dir, 'mean_runoff_index%s.tif' % file_suffix)
     mean_runoff_dataset = raster_utils.new_raster_from_base(
         upstream_water_yield_dataset, mean_runoff_index_uri, 'GTiff', -1.0,
         gdal.GDT_Float32, -1.0)
@@ -263,7 +270,7 @@ def execute(args):
     field_summaries = {}
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(
-            intermediate_dir, 'alv_%s.tif' % nutrient)
+            intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri, 
              stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
@@ -272,7 +279,7 @@ def execute(args):
         #The retention calculation is only interesting to see where nutrient
         # retains on the landscape
         retention_uri[nutrient] = os.path.join(
-            intermediate_dir, '%s_retention.tif' % nutrient)
+            intermediate_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
         tmp_flux_uri = raster_utils.temporary_filename()
         routing_utils.route_flux(
             dem_uri, alv_uri[nutrient], eff_uri[nutrient],
@@ -280,7 +287,7 @@ def execute(args):
             aoi_uri=args['watersheds_uri'])
 
         export_uri[nutrient] = os.path.join(
-            output_dir, '%s_export.tif' % nutrient)
+            output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
         routing_utils.pixel_amount_exported(
             dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'])
