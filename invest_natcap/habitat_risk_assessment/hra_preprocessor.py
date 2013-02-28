@@ -285,6 +285,9 @@ def execute(args):
                 stressor_csv_writer.writerow(curr_row)
             
 def parse_hra_tables(workspace_uri):
+    #It should be noted here that workspace_uri isn't actually the workspace
+    #URI, but is actually the location of the CSV and JSOn files that we need
+    #to parse through.
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
     in non-core and core.
@@ -339,7 +342,16 @@ def parse_hra_tables(workspace_uri):
         }
     }
     '''
+    #Create the dictionary in which everything will be stored.
+    parse_dictionary = {}
 
+    #Get the arguments out of the json file.
+    json_uri = os.path.join(workspace_uri, 'dir_names.txt')
+
+    with open(json_uri, 'rb') as infile:
+        parse_dictionary = json.load(infile)
+
+    #Now we can compile and add the other dictionaries
     habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
     stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
 
@@ -372,7 +384,6 @@ def parse_hra_tables(workspace_uri):
             h_s_dict[(habitat_name, hab_stress_overlap)] = \
                         habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
-    parse_dictionary = {}
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
