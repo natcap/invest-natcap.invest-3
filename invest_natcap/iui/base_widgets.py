@@ -722,6 +722,12 @@ class DynamicText(LabeledElement):
         implements the attribute defaultValue.
         """
 
+    class TextField(QtGui.QLineEdit):
+        def contextMenuEvent(self, event=None):
+            menu = self.createStandardContextMenu()
+            #menu.addAction('Refresh', receiver=self.textChanged)
+            menu.exec_(event.globalPos())
+
     def __init__(self, attributes):
         """Constructor for the DynamicText class.
             The defining features for this class have primarily to do with user
@@ -743,7 +749,8 @@ class DynamicText(LabeledElement):
         #is consistent across all included subclasses of DynamicText, though
         #the way the textfield is used may differ from class to class.
         if not hasattr(self, 'textField'):
-            self.textField = QtGui.QLineEdit()
+            #self.textField = QtGui.QLineEdit()
+            self.textField = self.TextField()
 
         #All subclasses of DynamicText must contain at least these two elements.
         self.addElement(self.textField)
@@ -934,10 +941,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             returns nothing."""
 
         for element in self.elements:
-            if element.isVisible() == True:
-                element.setVisible(False)
-            else:
-                element.setVisible(True)
+            element.setVisible(state)
+            element.setEnabled(state)
 
         self.setMinimumSize(self.sizeHint())
         self.setState(state, includeSelf=False, recursive=True)
@@ -965,6 +970,21 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
     def setValue(self, value):
         self.setChecked(value)
+
+    def setState(self, state, includeSelf=False, recursive=True):
+        """Reimplemented from Container.setState.  When this container is
+        collapsible, we only want to set the state of contained elements when
+        the collapsible container is open.  Otherwise, pass."""
+
+        set_state = False
+        if self.isCheckable():
+            if self.isChecked():
+                set_state = True
+        else:
+            set_state = True
+
+        if set_state:
+            DynamicGroup.setState(self, state, includeSelf, recursive)
 
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
@@ -1023,6 +1043,16 @@ class MultiElement(Container):
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
 
+        if 'defaultValue' in attributes:
+            if not isinstance(attributes['defaultValue'], list):
+                default_list = [attributes['defaultValue']]
+            else:
+                default_list = attributes['defaultValue']
+
+            for default_value in default_list:
+                print(attributes['id'], default_value)
+                self.add_element(default_value)
+
     def add_element_callback(self, event=None):
         """Function wrapper for add_element.  event is expected to be a Qt
         event.  It is ignored."""
@@ -1043,6 +1073,11 @@ class MultiElement(Container):
             sub_widget = sub_item.widget()
             self.multi_widget.layout().removeWidget(sub_widget)
             sub_widget.deleteLater()
+
+        self.multi_widget.layout().setRowMinimumHeight(row_num, 0)
+        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+        self.setMinimumSize(self.sizeHint())
+        self.update()
 
     def add_element(self, default_value=None):
         """Add another element entry using the default element json provided by
@@ -1071,6 +1106,7 @@ class MultiElement(Container):
             new_element.setValue(default_value)
             add_element = True
 
+        print(self.attributes['id'], default_value, add_element)
         if add_element:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
@@ -1083,7 +1119,11 @@ class MultiElement(Container):
                 row_index, 2)
 
             self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.multi_widget.layout().setRowMinimumHeight(row_index - 1, 20)
             self.setMinimumSize(self.sizeHint())
+            self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.multi_widget.update()
+            self.update()
 
     def value(self):
         """Return a python list of the values for all enclosed elements."""
@@ -1123,9 +1163,9 @@ class GridList(DynamicGroup):
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
 
 class FileEntry(DynamicText):
-    class FileField(QtGui.QLineEdit):
+    class FileField(DynamicText.TextField):
         def __init__(self):
-            QtGui.QLineEdit.__init__(self)
+            DynamicText.TextField.__init__(self)
             self.setAcceptDrops(True)
 
         def dragEnterEvent(self, event=None):
@@ -2035,7 +2075,7 @@ class Root(DynamicElement):
         errors = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
-                if element.has_error():
+                if element.isEnabled() and element.has_error():
                     try:
                         error_msg = element.error_button.error_text
                         errors.append((element.attributes['label'], error_msg))

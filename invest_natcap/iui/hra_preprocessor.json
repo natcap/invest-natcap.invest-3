@@ -4,7 +4,7 @@
     "targetScript": "invest_natcap.habitat_risk_assessment.hra_preprocessor",
     "modelName": "hra_preprocess",
     "localDocURI": "../documentation/habitat_risk_assessment.html",
-    "height": 300,
+    "height": 500,
     "width": 700,
     "elements": [
         {
@@ -21,14 +21,26 @@
                     "defaultValue": "../hra_preprocess"
                 },
                 {
-                    "id":"habitat_dir",
-                    "type": "folder",
-                    "label": "Directory to habitat layers",
-                    "required": true,
+                    "id":"habs_dir",
+                    "args_id": "habitats_dir",
+                    "type": "hideableFileEntry",
+                    "label": "Use Habitat Layers?",
+                    "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "args_id": "habitat_dir",
-                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
+                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."
+                },
+                {
+                    "id":"species_dir",
+                    "args_id": "species_dir",
+                    "type": "hideableFileEntry",
+                    "label": "Use Species Layers?",
+                    "required": false,
+                    "validateAs": {"type": "folder",
+		    		  "mustExist": true},
+                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers",
+                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors."
                 },
                 {
                     "id":"stressor_dir",
@@ -40,6 +52,65 @@
                     "args_id": "stressor_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
+            ]
+        },
+        {
+            "id" : "cur_lulc_box",
+            "type": "container",
+            "collapsible" : false,
+            "label": "Criteria",
+            "elements": [
+                {
+                    "id": "exp_crit",
+                    "type": "multi",
+                    "args_id": "exposure_crits",
+                    "label": "Exposure",
+                    "sampleElement": {"id": "sample_id",
+                                      "type": "text",
+                                      "label": "Input Criteria",
+                                      "validateAs": {"type": "text"}},
+                    "defaultValue": ["Management Effectiveness", "Intensity"],
+                    "linkText": "Add Another"
+                },  
+                {
+                    "id": "sens_crit",
+                    "type": "multi",
+                    "args_id": "sensitivity_crits",
+                    "label": "Sensitivity",
+                    "sampleElement": {"id": "sample_id",
+                                      "type": "text",
+                                      "label": "Input Criteria",
+                                      "validateAs": {"type": "text"}},
+                    "linkText": "Add Another"
+                },  
+                {
+                    "id": "res_crit",
+                    "type": "multi",
+                    "args_id": "resiliance_crits",
+                    "label": "Resiliance",
+                    "sampleElement": {"id": "sample_id",
+                                      "type": "text",
+                                      "label": "Input Criteria",
+                                      "validateAs": {"type": "text"}},
+                    "linkText": "Add Another"
+                }  
+            ]
+        },
+        {
+            "id": "hra_preprocess_list",
+            "type": "list",
+            "elements": [
+            {
+                "id" : "crit_dir",
+                "args_id" : "criteria_dir",
+                "type": "hideableFileEntry",
+                "label": "Use Shapefile Criteria?",
+                "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                "validateAs": {"type": "folder",
+                            "mustExist": true},
+                "required": false,
+                "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+            }
             ]
         }
     ]

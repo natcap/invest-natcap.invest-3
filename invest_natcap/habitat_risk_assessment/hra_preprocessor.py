@@ -5,8 +5,9 @@ import csv
 import os
 import glob
 import logging
+import json
+
 import hra
-#from invest_natcap.habitat_risk_assessment import hra
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -36,13 +37,11 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
-        args['do_habitats']- Boolean indicating whether or not purely habitat
-            inputs are desired within this model.
-        args['habitat_dir'] - A directory of shapefiles that are habitats.
-        args['do_species']- Boolean indication whether species should be used as
-            input to this model run.
+        args['habitat_dir'] - A directory of shapefiles that are habitats. This
+            is not required, and may not exist if there is a species layer
+            directory.
         args['species_dir']- Directory which holds all species shapefiles, but
-            may or may not actually exist within args if 'do_species' is false.
+            may or may not exist if there is a habitats layer directory.
         args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
         args['exposure_crits']- List containing string names of exposure
             (stressor-specific) criteria.
@@ -50,11 +49,10 @@ def execute(args):
             (habitat-stressor overlap specific) criteria.
         args['resiliance_crits']- List containing string names of resiliance
             (habitat or species-specific) criteria.
-        args['do_shapes']- Boolean to specify whether or not shapefile criteria
-            should be used in this run of the model.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
-            This needs to be in a VERY specific format, which shall be described
-            in the user's guide.
+            May not exist if the user does not desire criteria shapefiles. This
+            needs to be in a VERY specific format, which shall be described in
+            the user's guide.
 
     Output:
         Creation of a series of CSVs within workspace_dir. There will be one CSV
@@ -65,13 +63,19 @@ def execute(args):
 
         JSON file containing vars that need to be passed on to hra non-core
           when that gets run. Should live inside the preprocessor folder which
-          will be created in 'workspace_dir'. 
+          will be created in 'workspace_dir'. It will contain habitats_dir,
+          species_dir, stressors_dir, and criteria_dir.
 
     Returns nothing.
     """
+    #Create two booleans to indicate which of the layers we should be using in
+    #this model run.
+    do_habs = 'habitat_dir' in args
+    do_species = 'species_dir' in args
+
     #First, want to raise two exceptions if things are wrong.
     #1. Shouldn't be able to run with no species or habitats.
-    if not args['do_species'] and not args['do_habitats']:
+    if not do_species and not do_habitats:
     
         raise MissingHabitatsOrSpecies("This model requires you to provide \
                 either habitat or species information for comparison against \
@@ -101,7 +105,21 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
+   
+    #Make the dictionary first, then write the JSON file with the directory
+    #pathnames if they exist in args
+    json_uri = os.path.join(output_dir, 'dir_names.txt')
+
+    #syntax error: json_dict = {'stressors_dir': args['stressors_dir']]}
+    json_dict = {'stressors_dir': args['stressors_dir']}
+    for var in ('criteria_dir', 'habitats_dir', 'species_dir'):
+        if var in args:
+            json_dict[var] = args[var]
+
+    with open(json_uri, 'w') as outfile:
+
+        json.dump(json_dict, outfile)
+
     #Get the names of all potential habs
     hab_list = []
     for ele in ('habitat_dir', 'species_dir'):
@@ -141,7 +159,7 @@ def execute(args):
                 {'CritName': "Shapefile URI", ...}
         }
     '''
-    if args['do_shapes']:
+    if 'criteria_dir' in args:
         crit_shapes = hra.make_crit_shape_dict(args['criteria_dir'])
     
     crit_descriptions = {
@@ -355,8 +373,6 @@ def parse_hra_tables(workspace_uri):
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
     
-    LOGGER.debug(parse_dictionary)
-
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
     #from the assessment for that subdictionary.

@@ -19,14 +19,6 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
-    def test_bounding_box(self):
-        dem = gdal.Open('./data/sediment_test_data/dem')
-        watersheds = ogr.Open('./data/sediment_test_data/watersheds.shp')
-        watershed_layer = watersheds.GetLayer()
-        watershed_feature = watershed_layer.GetFeature(0)
-        bounding_box = invest_core.bounding_box_index(watershed_feature, dem)
-        self.assertEqual(bounding_box, [198, 0, 253, 351])
-
     def testflowDirectionD8(self):
         """Regression test for flow direction on a DEM"""
         dem = gdal.Open('./data/sediment_test_data/dem')
