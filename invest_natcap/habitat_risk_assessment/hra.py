@@ -43,10 +43,19 @@ def execute(args):
             CSV table.
 
     Intermediate:
-        j_args- A dictionary that holds the various directories containing
-            shapefiles for each of habitats, species, stressors, and criteria.
-            Either habitats or species may not exist, or both may exist. Shape
-            criteria will not necessarily exist.
+        hra_args['habitats_dir']- The directory location of all habitat 
+            shapefiles. These will be parsed though and rasterized to be passed
+            to hra_core module. This may not exist if 'species_dir' exists.
+        hra_args['species_dir']- The directory location of all species
+            shapefiles. These will be parsed though and rasterized to be passed
+            to hra_core module. This may not exist if 'habitats_dir' exists.
+        hra_args['stressors_dir']- The string describing a directory location of
+            all stressor shapefiles. Will be parsed through and rasterized
+            to be passed on to hra_core.
+        args['criteria_dir']- The directory which holds the criteria shapefiles.
+            May not exist if the user does not desire criteria shapefiles. This
+            will be in a VERY specific format, which shall be described in
+            the user's guide.
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  This will get unpacked by the hra_preprocessor module.
@@ -138,6 +147,9 @@ def execute(args):
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them and put them into the
     #hra_args dict. Then can modify that within the rest of the code.
+    #We will also return a dictionary conatining directory locations for all
+    #of the necessary shapefiles. This will be used instead of having users
+    #re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
