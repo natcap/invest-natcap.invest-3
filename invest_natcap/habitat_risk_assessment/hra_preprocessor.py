@@ -287,12 +287,17 @@ def execute(args):
 def parse_hra_tables(workspace_uri):
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
-    in core.
+    in non-core and core.
 
     It will return a massive dictionary containing all of the subdictionaries
-    needed by non core. It will be of the following form:
+    needed by non core, as well as directory URI's. It will be of the following 
+    form:
 
-    {'buffer_dict':
+    {'habitats_dir': 'Habitat Directory URI',
+    'species_dir': 'Species Directory URI',
+    'stressors_dir': 'Stressors Directory URI',
+    'criteria_dir': 'Criteria Directory URI',
+    'buffer_dict':
         {'Stressor 1': 50,
         'Stressor 2': ...,
         },
