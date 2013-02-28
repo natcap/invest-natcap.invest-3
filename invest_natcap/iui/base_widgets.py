@@ -941,10 +941,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             returns nothing."""
 
         for element in self.elements:
-            if element.isVisible() == True:
-                element.setVisible(False)
-            else:
-                element.setVisible(True)
+            element.setVisible(state)
+            element.setEnabled(state)
 
         self.setMinimumSize(self.sizeHint())
         self.setState(state, includeSelf=False, recursive=True)
@@ -972,6 +970,14 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
     def setValue(self, value):
         self.setChecked(value)
+
+    def setState(self, state, includeSelf=False, recursive=True):
+        """Reimplemented from Container.setState.  When this container is
+        collapsible, we only want to set the state of contained elements when
+        the collapsible container is open.  Otherwise, pass."""
+
+        if self.isCheckable() and not self.isChecked():
+            DynamicGroup.setState(self, state, includeSelf, recursive)
 
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
