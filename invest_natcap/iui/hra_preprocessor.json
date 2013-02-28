@@ -101,26 +101,15 @@
             "type": "list",
             "elements": [
             {
-                "id" : "do_shapes",
-                "args_id" : "do_shapes",
-                "type": "checkbox",
+                "id" : "crit_dir",
+                "args_id" : "criteria_dir",
+                "type": "hideableFileEntry",
                 "label": "Use Shapefile Criteria?",
-                "defaultValue": false,
-                "required": true,
-                "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles."
-            },
-            {
-                "id":"crit_dir",
-                "args_id": "crit_dir",
-                "type": "folder",
-                "required": false,
-                "requiredIf": ["do_shapes"],
-                "enabledBy": "do_shapes",
+                "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
                 "validateAs": {"type": "folder",
                             "mustExist": true},
-                "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
-                "label": "Directory to Criteria Layers",
-                "helpText":  "Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                "required": false,
+                "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
             }
             ]
         }
