@@ -28,7 +28,7 @@
                     "label": "Wind Data Points",
                     "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
                     "required": true,
-                    "helpText": "A binary file that represents the wind energy data points. Please see the User's Guide for a description of how this file was generated."
+                    "helpText": "A binary file that represents the wind input data (Weibull parameters). Please see the User's Guide for a description of how this file was generated."
                 },
                 {
                     "id" : "aoi",
@@ -55,7 +55,7 @@
                     "defaultValue": "../Base_Data/Marine/DEMs/global_dem/hdr.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": "A raster dataset for the elevation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
+                    "helpText": "A raster dataset for the elevation values in meters of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
                 },
                 {
                     "id" : "land_polygon",
@@ -90,7 +90,7 @@
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
                     "required": false,
-                    "helpText":"A String that will be added to the end of the output URIs."
+                    "helpText":"A String that will be added to the end of the output file paths."
 
                 }                         
             ]
