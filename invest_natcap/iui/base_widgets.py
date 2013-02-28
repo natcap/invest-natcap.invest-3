@@ -976,7 +976,14 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         collapsible, we only want to set the state of contained elements when
         the collapsible container is open.  Otherwise, pass."""
 
-        if self.isCheckable() and not self.isChecked():
+        set_state = False
+        if self.isCheckable():
+            if self.isChecked():
+                set_state = True
+        else:
+            set_state = True
+
+        if set_state:
             DynamicGroup.setState(self, state, includeSelf, recursive)
 
 class MultiElement(Container):
