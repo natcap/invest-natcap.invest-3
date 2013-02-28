@@ -19,6 +19,20 @@ LOGGER = logging.getLogger('HRA')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class ImproperCriteriaAttributeName(Exception):
+    '''An excepion to pass in hra non core if the criteria provided by the user
+    for use in spatially explicit rating do not contain the proper attribute 
+    name. The attribute should be named 'RATING', and must exist for every shape 
+    in every layer provided.'''
+    pass
+
+class ImproperAOIAttributeNAme(Exception):
+    '''An exception to pass in hra non core if the risk plot AOIs do not
+    contain the proper attribute name for individual indentification. The
+    attribute should be named 'NAME', and must exist for every shape in the
+    AOI layer.'''
+    pass
+
 def execute(args):
     '''This function will prepare files passed from the UI to be sent on to the
     hra_core module.
