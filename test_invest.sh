@@ -55,6 +55,7 @@ then
         invest_core_fileio_test.py
         invest_core_test.py
         invest_cython_core_test.py
+        invest_init_test.py
         iui_validator_test.py
         marine_water_quality_test.py
         overlap_analysis_test.py

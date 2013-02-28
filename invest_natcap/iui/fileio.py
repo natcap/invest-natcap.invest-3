@@ -6,6 +6,7 @@ import os
 import re
 import sys
 
+import invest_natcap
 from dbfpy import dbf
 
 def settings_folder():
@@ -60,12 +61,21 @@ class JSONHandler(object):
         file.writelines(json.dumps(dict))
         file.close()
 
+
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
-        uri = modelname + '_lastrun.json'
+        # If we aren't on a release, use a 'dev' release version for naming the
+        # lastrun json file.
+        if not invest_natcap.is_release():
+            invest_version = 'dev'
+        else:
+            invest_version = invest_natcap.__version__
+
+        uri = '%s_lastrun_%s.json' % (modelname, invest_version)
         set_folder = settings_folder().decode(sys.getfilesystemencoding())
         rendered_path = os.path.join(set_folder, uri)
         JSONHandler.__init__(self, rendered_path)
+
 
 class ResourceManager(object):
     """ResourceManager reconciles overrides supplied by the user against the
