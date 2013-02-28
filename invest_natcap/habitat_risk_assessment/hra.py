@@ -41,6 +41,10 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
+        args['plot_aoi']- A shapefile containing one or more planning regions
+            for a given model. This will be used to get the average risk value
+            over a larger area. Each potential region MUST contain the
+            attribute "NAME" as a way of identifying each individual shape.
 
     Intermediate:
         hra_args['habitats_dir']- The directory location of all habitat 
@@ -52,10 +56,10 @@ def execute(args):
         hra_args['stressors_dir']- The string describing a directory location of
             all stressor shapefiles. Will be parsed through and rasterized
             to be passed on to hra_core.
-        args['criteria_dir']- The directory which holds the criteria shapefiles.
-            May not exist if the user does not desire criteria shapefiles. This
-            will be in a VERY specific format, which shall be described in
-            the user's guide.
+        hra_args['criteria_dir']- The directory which holds the criteria 
+            shapefiles. May not exist if the user does not desire criteria 
+            shapefiles. This will be in a VERY specific format, which shall be
+            described in the user's guide.
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  This will get unpacked by the hra_preprocessor module.
