@@ -1,14 +1,12 @@
 import unittest
 
-import invest_natcap
-
 class InvestCoreInitTest(unittest.TestCase):
-    def setUp(self):
-        # Want to re-import each time here, since I may change some variables as
-        # part of the test.
-        invest_natcap = reload(invest_natcap)
-
     def test_is_release(self):
+        # import invest_natcap here because importing it with all the other
+        # import statements causes an exception to be thrown when I try to
+        # access its __version__attribute below.
+        import invest_natcap
+
         # set the invest_version to something that should not be a release,
         # verify False is returned and reset the invest_natcap module.
         invest_natcap.__version__ = '2.4.5'
