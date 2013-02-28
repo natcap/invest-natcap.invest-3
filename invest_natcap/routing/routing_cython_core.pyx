@@ -192,7 +192,7 @@ def calculate_transport(
                     outflow_weight * in_flux * (1.0 - absorption_rate)
 
                 loss_array[current_row, current_col] += \
-                    in_flux * absorption_rate
+                    outflow_weight * in_flux * absorption_rate
             else:
                 #we need to process the neighbor, remember where we were
                 #then add the neighbor to the process stack
