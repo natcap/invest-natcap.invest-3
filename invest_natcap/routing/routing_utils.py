@@ -41,7 +41,7 @@ LOGGER = logging.getLogger('routing')
 
 
 def route_flux(
-    dem_uri, source_uri, absorption_rate_uri, loss_uri, flux_uri,
+    in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri, flux_uri,
     aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
@@ -64,9 +64,20 @@ def route_flux(
 
         returns nothing"""
 
+    dem_uri = raster_utils.temporary_filename()
+    source_uri = raster_utils.temporary_filename()
+    absorption_rate_uri = raster_utils.temporary_filename()
+    out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+    raster_utils.align_dataset_list(
+        [in_dem_uri, in_source_uri, in_absorption_rate_uri],
+        [dem_uri, source_uri, absorption_rate_uri],
+        ["nearest", "nearest", "nearest"], out_pixel_size,
+        "intersection", 0, aoi_uri=aoi_uri)
+
     flow_direction_uri = raster_utils.temporary_filename()
     outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
+
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
@@ -256,3 +267,21 @@ def pixel_amount_exported(
         [source_uri, effect_uri, stream_uri], mult_nodata, pixel_export_uri,
         gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
         dataset_to_align_index=0)
+
+def calculate_stream(dem_uri, flow_threshold, stream_uri):
+    """A wrapper to calculate streams given a dem and a flow threshold.
+        The function will calcluate the flow accumulation then threshold
+        that to calcualte streams.  Useful to sidestep separate flow
+        accumulation.
+
+        dem_uri - a uri to a gdal dataset describing the dem
+        flow_threshold - the value to determine if a flow pixel is a stream
+            pixel
+        stream_uri - a uri to an output dataset that will have pixels 
+            listed a 0 for no stream or 1 for stream or nodata outside the dem
+
+        returns nothing"""
+
+    flow_accumulation_uri = raster_utils.temporary_filename()
+    flow_accumulation(dem_uri, flow_accumulation_uri)
+    stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)

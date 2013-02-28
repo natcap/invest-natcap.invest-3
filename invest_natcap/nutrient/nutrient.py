@@ -40,6 +40,12 @@ def execute(args):
                 disk representing the user's subwatersheds.
             'biophysical_table_uri' - a string uri to a supported table on disk
                 containing nutrient retention values.
+            'calc_p' - True if phosphorous is meant to be modeled, if True then
+                biophyscial table and threshold table and valuation table must
+                have p fields in them.
+            'calc_n' - True if nitrogen is meant to be modeled, if True then
+                biophyscial table and threshold table and valuation table must
+                have n fields in them.
             'water_purification_threshold_table_uri' - a string uri to a
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
@@ -47,28 +53,94 @@ def execute(args):
             'water_purification_valuation_table_uri' - (optional) a uri to a
                 csv used for valuation
 
-
         returns nothing.
     """
+    def _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_lookup, valuation_lookup):
+        """Validation helper method to organize code"""
+
+        #Make sure all the nutrient inputs are good
+        if len(nutrients_to_process) == 0:
+            raise ValueError("Neither phosphorous nor nitrogen was selected"
+                             " to be processed.  Choose at least one.")
+
+        #Build up a list that'll let us iterate through all the input tables
+        #and check for the required rows, and report errors if something
+        #is missing.
+        row_header_table_list = []
+
+        lu_parameter_row = lucode_to_parameters.values()[0]
+        row_header_table_list.append(
+            (lu_parameter_row, ['load_', 'eff_'],
+             args['biophysical_table_uri']))
+
+        threshold_row = threshold_lookup.values()[0]
+        row_header_table_list.append(
+            (threshold_row, ['thresh_'],
+             args['water_purification_threshold_table_uri']))
+
+        if valuation_lookup != None:
+            valuation_row = valuation_lookup.values()[0]
+            row_header_table_list.append(
+                (valuation_row, ['cost_', 'time_span_', 'discount_'],
+                 args['biophysical_table_uri']))
+
+        missing_headers = []
+        for row, header_prefixes, table_type in row_header_table_list:
+            for nutrient_id in nutrients_to_process:
+                for header_prefix in header_prefixes:
+                    header = header_prefix + nutrient_id
+                    if header not in row:
+                        missing_headers.append(
+                            "Missing header %s from %s" % (header, table_type))
+
+        if len(missing_headers) > 0:
+            raise ValueError('\n'.join(missing_headers))
+
+    #Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     service_dir = os.path.join(workspace, 'service')
     intermediate_dir = os.path.join(workspace, 'intermediate')
-
     file_suffix = ''
-
     for folder in [workspace, output_dir, service_dir, intermediate_dir]:
         if not os.path.exists(folder):
             LOGGER.debug('Making folder %s', folder)
             os.makedirs(folder)
 
-    biophysical_args = {}
+    #Build up a list of nutrients to process based on what's checked on 
+    nutrients_to_process = []
+    for nutrient_id in ['n', 'p']:
+        if args['calc_' + nutrient_id]:
+            nutrients_to_process.append(nutrient_id)
+    lucode_to_parameters = raster_utils.get_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode')
 
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    threshold_table = raster_utils.get_lookup_from_csv(
+        args['water_purification_threshold_table_uri'], 'ws_id')
+    valuation_lookup = None
+    if 'water_purification_valuation_table_uri' in args:
+        valuation_lookup = raster_utils.get_lookup_from_csv(
+            args['water_purification_valuation_table_uri'], 'ws_id')
+    _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_table, valuation_lookup)
+
+    #This one is tricky, we want to make a dictionary that indexes by nutrient
+    #id and yields a dicitonary indexed by ws_id to the threshold amount of
+    #that type.  The get_lookup_from_csv only gives us a flat table, so this
+    #processing is working around that.
+    threshold_lookup = {}
+    for nutrient_id in nutrients_to_process:
+        threshold_lookup[nutrient_id] = {}
+        for ws_id, value in threshold_table.iteritems():
+            threshold_lookup[nutrient_id][ws_id] = value['thresh_%s' % nutrient_id]
+
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
+    cell_area_ha = landuse_pixel_size ** 2 / 10000.0
+    out_pixel_size = landuse_pixel_size
 
     #Align all the input rasters
-    dem_uri = os.path.join(intermediate_dir, 'dem.tif')
-    water_yield_uri = os.path.join(intermediate_dir, 'water_yield.tif')
+    dem_uri = raster_utils.temporary_filename()
+    water_yield_uri = raster_utils.temporary_filename()
     landuse_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
         [args['dem_uri'], args['pixel_yield_uri'], args['landuse_uri']],
@@ -76,45 +148,46 @@ def execute(args):
         out_pixel_size, 'intersection', dataset_to_align_index=2,
         aoi_uri=args['watersheds_uri'])
 
-    #Map the loading factor to the LULC map
-    lucode_to_parameters = {}
-    parameters_to_map = ['load_n', 'eff_n', 'load_p', 'eff_p']
-    with open(args['biophysical_table_uri'], 'rU') as biophysical_table_file:
-        biophysical_table_reader = csv.reader(biophysical_table_file)
-        headers = biophysical_table_reader.next()
-        lucode_index = headers.index('lucode')
-        for row in biophysical_table_reader:
-            lucode = int(row[lucode_index])
-            parameter_dict = {}
-            for parameter in parameters_to_map:
-                parameter_dict[parameter] = float(row[headers.index(parameter)])
-            lucode_to_parameters[lucode] = parameter_dict
-
     nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
-    load_p_uri = os.path.join(intermediate_dir, 'load_p.tif')
-    load_n_uri = os.path.join(intermediate_dir, 'load_n.tif')
-    eff_p_uri = os.path.join(intermediate_dir, 'eff_p.tif')
-    eff_n_uri = os.path.join(intermediate_dir, 'eff_n.tif')
-    
     nodata_load = -1.0
 
+    #Make the streams
+    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
+    routing_utils.calculate_stream(dem_uri, args['accum_threshold'], stream_uri)
+
     def map_load_function(load_type):
+        def map_load(lucode):
+            if lucode == nodata_landuse:
+                return nodata_load
+            return lucode_to_parameters[lucode][load_type] * cell_area_ha
+        return map_load
+    def map_eff_function(load_type):
         def map_load(lucode):
             if lucode == nodata_landuse:
                 return nodata_load
             return lucode_to_parameters[lucode][load_type]
         return map_load
 
-    for out_uri, load_type in [(load_p_uri, 'load_p'), (load_n_uri, 'load_n'), (eff_p_uri, 'eff_p'), (eff_n_uri, 'eff_n')]:
+    #Build up the load and efficiency rasters from the landcover map
+    load_uri = {}
+    eff_uri = {}
+    for nutrient in nutrients_to_process:
+        load_uri[nutrient] = os.path.join(
+            intermediate_dir, 'load_%s.tif' % (nutrient))
         raster_utils.vectorize_datasets(
-            [landuse_uri], map_load_function(load_type), out_uri,
+            [landuse_uri], map_load_function('load_%s' % nutrient), load_uri[nutrient],
+            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+        eff_uri[nutrient] = os.path.join(
+            intermediate_dir, 'eff_%s.tif' % (nutrient))
+        raster_utils.vectorize_datasets(
+            [landuse_uri], map_eff_function('eff_%s' % nutrient), eff_uri[nutrient],
             gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
         intermediate_dir, 'upstream_water_yield.tif')
-    water_loss_uri = os.path.join(intermediate_dir, 'water_loss.tif')
-    zero_raster_uri = os.path.join(intermediate_dir, 'zero_raster.tif')
+    water_loss_uri = raster_utils.temporary_filename()
+    zero_raster_uri = raster_utils.temporary_filename()
     routing_utils.make_constant_raster_from_base(
         dem_uri, 0.0, zero_raster_uri)
 
@@ -124,21 +197,21 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the 'log' of the upstream_water_yield raster
-    upstream_water_yield_log_uri = os.path.join(intermediate_dir, 'log_water_yield.tif')
+    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index.tif')
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
         if value == nodata_upstream:
             return nodata_upstream
         if value == 0.0:
             return 0.0
-        return numpy.log(value)
+        return numpy.log(value)/numpy.log(10)
     raster_utils.vectorize_datasets(
-        [upstream_water_yield_uri], nodata_log, upstream_water_yield_log_uri,
+        [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
 
     field_summaries = {
         'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            upstream_water_yield_log_uri, args['watersheds_uri'], 'ws_id', 
+            runoff_index_uri, args['watersheds_uri'], 'ws_id', 
             'mean')
         }
 
@@ -171,120 +244,96 @@ def execute(args):
 
     #Burn the mean runoff values to a raster that matches the watersheds
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
-    mean_runoff_uri = os.path.join(intermediate_dir, 'mean_runoff.tif')
+    mean_runoff_index_uri = os.path.join(intermediate_dir, 'mean_runoff_index.tif')
     mean_runoff_dataset = raster_utils.new_raster_from_base(
-        upstream_water_yield_dataset, mean_runoff_uri, 'GTiff', -1.0,
+        upstream_water_yield_dataset, mean_runoff_index_uri, 'GTiff', -1.0,
         gdal.GDT_Float32, -1.0)
     upstream_water_yield_dataset = None
     gdal.RasterizeLayer(
         mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
     mean_runoff_dataset = None
 
-
-    alv_p_uri = os.path.join(intermediate_dir, 'alv_p.tif')
-    alv_n_uri = os.path.join(intermediate_dir, 'alv_n.tif')
-
     def alv_calculation(load, runoff_index, mean_runoff_index):
         if nodata_load in [load, runoff_index, mean_runoff_index]:
             return nodata_load
         return load * runoff_index / mean_runoff_index
+    alv_uri = {}
+    retention_uri = {}
+    export_uri = {}
+    field_summaries = {}
+    for nutrient in nutrients_to_process:
+        alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
+        raster_utils.vectorize_datasets(
+            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri],
+            alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection")
+        retention_uri[nutrient] = os.path.join(
+            intermediate_dir, '%s_retention.tif' % nutrient)
+        tmp_flux_uri = raster_utils.temporary_filename()
+        routing_utils.route_flux(
+            dem_uri, alv_uri[nutrient], eff_uri[nutrient], 
+            retention_uri[nutrient], tmp_flux_uri,
+            aoi_uri=args['watersheds_uri'])
+        export_uri[nutrient] = os.path.join(output_dir, '%s_export.tif' % nutrient)
+        routing_utils.pixel_amount_exported(
+            dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
+            export_uri[nutrient], aoi_uri=args['watersheds_uri'])
 
-    raster_utils.vectorize_datasets(
-        [load_p_uri, upstream_water_yield_log_uri, mean_runoff_uri], alv_calculation, alv_p_uri,
-        gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+        field_summaries['%s_adjl_tot' % nutrient] = (
+            raster_utils.aggregate_raster_values_uri(
+                alv_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
+        field_summaries['%s_ret_sm' % nutrient] = (
+            raster_utils.aggregate_raster_values_uri(
+                retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum', 
+                threshold_amount_lookup=threshold_lookup[nutrient]))
+        field_summaries['%s_exp_tot' % nutrient] = (
+            raster_utils.aggregate_raster_values_uri(
+                export_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
+        field_summaries['%s_ret_tot' % nutrient] = (
+            raster_utils.aggregate_raster_values_uri(
+                retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
 
-    raster_utils.vectorize_datasets(
-        [load_n_uri, upstream_water_yield_log_uri, mean_runoff_uri], alv_calculation, alv_n_uri,
-        gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
-
-    #Calculate nutrient retention
-    p_retention_uri = os.path.join(intermediate_dir, 'p_retention.tif')
-    n_retention_uri = os.path.join(intermediate_dir, 'n_retention.tif')
-    p_flux_uri = os.path.join(intermediate_dir, 'p_flux.tif')
-    n_flux_uri = os.path.join(intermediate_dir, 'n_flux.tif')
-
-    routing_utils.route_flux(dem_uri, load_p_uri, eff_p_uri, p_retention_uri, p_flux_uri, aoi_uri=args['watersheds_uri'])
-    routing_utils.route_flux(dem_uri, load_n_uri, eff_n_uri, n_retention_uri, n_flux_uri, aoi_uri=args['watersheds_uri'])
-
-    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream.tif')
-
-    #TODO: make percent to sink in raster utils
-    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation.tif')
-    routing_utils.flow_accumulation(dem_uri, flow_accumulation_uri)
-    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
-    routing_utils.stream_threshold(flow_accumulation_uri, args['accum_threshold'], stream_uri)
-
-    p_export_uri = os.path.join(output_dir, 'p_export.tif')
-    routing_utils.pixel_amount_exported(
-        dem_uri, stream_uri, eff_p_uri, load_p_uri, p_export_uri,
-        aoi_uri=args['watersheds_uri'])
-    n_export_uri = os.path.join(output_dir, 'n_export.tif')
-    routing_utils.pixel_amount_exported(
-        dem_uri, stream_uri, eff_n_uri, load_n_uri, n_export_uri,
-        aoi_uri=args['watersheds_uri'])
+        #Do valuation if necessary
+        if valuation_lookup != None:
+            field_summaries['value_%s' % nutrient] = {}
+            for ws_id, value in field_summaries['%s_ret_sm' % nutrient].iteritems():
+                discount = disc(valuation_lookup[ws_id]['time_span_%s' % nutrient],
+                                valuation_lookup[ws_id]['discount_%s' % nutrient])
+                field_summaries['value_%s' % nutrient][ws_id] = (
+                    field_summaries['%s_ret_sm' % nutrient][ws_id] * 
+                    valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
 
 
-    #Load the threshold table and build a lookup ditionary by ws_id
-    with open(args['water_purification_threshold_table_uri'], 'rU') as threshold_csv_file:
-        csv_reader = csv.reader(threshold_csv_file)
-        header_row = csv_reader.next()
-        ws_id_index = header_row.index('ws_id')
-        thresh_n_index = header_row.index('thresh_n')
-        thresh_p_index = header_row.index('thresh_p')
-
-        p_threshold_lookup = {}
-        n_threshold_lookup = {}
-
-        for line in csv_reader:
-            n_threshold_lookup[int(line[ws_id_index])] = float(line[thresh_n_index])
-            p_threshold_lookup[int(line[ws_id_index])] = float(line[thresh_p_index])
-
-    field_summaries = {
+#    field_summaries = {
         #These are raw load values
-        'p_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'n_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'p_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'n_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+#        'p_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+#        'n_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+#        'p_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+#        'n_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'mean'),
 
         #These are the thresholded service values
-        'n_ret_sm': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', threshold_amount_list=n_threshold_lookup),
-        'n_ret_mn': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', threshold_amount_list=n_threshold_lookup),
-        'p_ret_sm': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', threshold_amount_list=p_threshold_lookup),
-        'p_ret_mn': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', threshold_amount_list=p_threshold_lookup),
+#        'n_ret_sm': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', thre#shold_amount_list=n_threshold_lookup),
+#        'n_ret_mn': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', thr#eshold_amount_list=n_threshold_lookup),
+#        'p_ret_sm': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', threshold_amount_list=p_threshold_lookup),
+#        'p_ret_mn': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', threshold_amount_list=p_threshold_lookup),
 
         #These are the total values
-        'n_exp_tot': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'n_exp_mean': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'p_exp_tot': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'p_exp_mean': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'n_ret_tot': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'n_ret_mean': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'p_ret_tot': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'p_ret_mean': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
-        }
+#        'n_exp_tot': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+#        'n_exp_mean': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+#        'p_exp_tot': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+#        'p_exp_mean': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+#        'n_ret_tot': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+#        'n_ret_mean': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean'),
+#        'p_ret_tot': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
+#        'p_ret_mean': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
+#        }
 
-    #Do valuation if necessary
-
-    if 'water_purification_valuation_table_uri' in args:
-        nutrient_value_lookup = get_watershed_lookup(args['water_purification_valuation_table_uri'])
-
-        field_summaries['p_value'] = {}
-        field_summaries['n_value'] = {}
-        for ws_id, value in field_summaries['p_ret_sm'].iteritems():
-            discount = disc(nutrient_value_lookup[ws_id]['time_span'],
-                            nutrient_value_lookup[ws_id]['discount'])
-            field_summaries['p_value'][ws_id] = (
-                field_summaries['p_ret_sm'][ws_id] * 
-                nutrient_value_lookup[ws_id]['cost'] * discount)
-            field_summaries['n_value'][ws_id] = (
-                field_summaries['n_ret_sm'][ws_id] * 
-                nutrient_value_lookup[ws_id]['cost'] * discount)
-
+    #Create an output field for each key in the field summary dictionary
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
 
-    #Initialize each feature field to 0.0
+    #Populate the values of those new fields with the ws_id indexed values in the field summary dictionary.
     for feature_id in xrange(output_layer.GetFeatureCount()):
         feature = output_layer.GetFeature(feature_id)
         for field_name in field_summaries:
@@ -311,28 +360,3 @@ def disc(years, percent_rate):
     for time_index in range(int(years) - 1):
         discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
     return discount
-
-def get_watershed_lookup(sediment_threshold_table_uri):
-    """Creates a python dictionary to look up sediment threshold values
-        indexed by water id
-
-        sediment_threshold_table_uri - a URI to a csv file containing at
-            least the headers "ws_id,dr_time,dr_deadvol,wq_annload"
-
-        returns a dictionary of the form {ws_id: 
-            {dr_time: .., dr_deadvol: .., wq_annload: ...}, ...}
-            depending on the values of those fields"""
-
-    with open(sediment_threshold_table_uri, 'rU') as sediment_threshold_csv_file:
-        csv_reader = csv.reader(sediment_threshold_csv_file)
-        header_row = csv_reader.next()
-        ws_id_index = header_row.index('ws_id')
-        index_to_field = dict(zip(range(len(header_row)), header_row))
-
-        ws_threshold_lookup = {}
-
-        for line in csv_reader:
-            ws_threshold_lookup[int(line[ws_id_index])] = \
-                dict([(index_to_field[int(index)], float(value)) for index, value in zip(range(len(line)), line)])
-
-        return ws_threshold_lookup
