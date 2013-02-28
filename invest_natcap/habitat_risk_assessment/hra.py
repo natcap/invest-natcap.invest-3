@@ -165,21 +165,25 @@ def execute(args):
         os.makedirs(folder)
 
     #Criteria
-    c_shape_dict = make_crit_shape_dict(args['crit_uri'])
+    c_shape_dict = make_crit_shape_dict(hra_args['criteria_dir'])
     add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
                 hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
     #Habitats
     hab_list = []
-    for ele in ('habitat_dir', 'species_dir'):
-        if ele in args:
+    for ele in ('habitats_dir', 'species_dir'):
+        if ele in hra_args:
             hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
     #Stressors
-    add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
-                  hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+    #OHGODNAMES. stress_dir is the local variable that points to where the
+    #stress rasters should be placed. 'stressors' is the stressors dictionary,
+    #'stressors_dir' is the directory containing the stressors shapefiles.
+    add_stress_rasters(stress_dir, hra_args['stressors'], 
+                hra_args['stressors_dir'], hra_args['buffer_dict'], 
+                args['decay_eq'], args['grid_size'])
 
     #H-S Overlap
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
