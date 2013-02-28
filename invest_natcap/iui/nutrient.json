@@ -94,7 +94,7 @@
 		    "id" : "calc_p",
 		    "args_id": "calc_p",
 		    "type": "checkbox",
-		    "label": "Calculate phosphorous retention (requires \"p\" values in biophysical table)",
+		    "label": "Calculate phosphorous retention",
 		    "defaultValue": false,
 		    "required": false,
 		    "helpText": "Select to simulate phosphorous."
@@ -103,7 +103,7 @@
 		    "id" : "calc_n",
 		    "args_id": "calc_n",
 		    "type": "checkbox",
-		    "label": "Calculate nitrogen retention (requires \"n\" values in biophysical table)",
+		    "label": "Calculate nitrogen retention",
 		    "defaultValue": false,
 		    "required": false,
 		    "helpText": "Select to simulate nitrogen."
