@@ -37,9 +37,11 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
-        args['habitat_dir'] - A directory of shapefiles that are habitats.
+        args['habitat_dir'] - A directory of shapefiles that are habitats. This
+            is not required, and may not exist if there is a species layer
+            directory.
         args['species_dir']- Directory which holds all species shapefiles, but
-            may or may not actually exist within args if 'do_species' is false.
+            may or may not exist if there is a habitats layer directory.
         args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
         args['exposure_crits']- List containing string names of exposure
             (stressor-specific) criteria.
@@ -47,11 +49,10 @@ def execute(args):
             (habitat-stressor overlap specific) criteria.
         args['resiliance_crits']- List containing string names of resiliance
             (habitat or species-specific) criteria.
-        args['do_shapes']- Boolean to specify whether or not shapefile criteria
-            should be used in this run of the model.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
-            This needs to be in a VERY specific format, which shall be described
-            in the user's guide.
+            May not exist if the user does not desire criteria shapefiles. This
+            needs to be in a VERY specific format, which shall be described in
+            the user's guide.
 
     Output:
         Creation of a series of CSVs within workspace_dir. There will be one CSV
@@ -109,7 +110,7 @@ def execute(args):
     #pathnames if they exist in args
     json_uri = os.path.join(output_dir, 'dir_names.txt')
 
-    json_dict = {'stressors_dir': args['stressors_dir']}
+    json_dict = {'stressors_dir': args['stressors_dir']]}
     for var in ('criteria_dir', 'habitats_dir', 'species_dir'):
         if var in args:
             json_dict[var] = args[var]
@@ -157,7 +158,7 @@ def execute(args):
                 {'CritName': "Shapefile URI", ...}
         }
     '''
-    if args['do_shapes']:
+    if 'criteria_dir' in args:
         crit_shapes = hra.make_crit_shape_dict(args['criteria_dir'])
     
     crit_descriptions = {
