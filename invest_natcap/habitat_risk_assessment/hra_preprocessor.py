@@ -75,7 +75,7 @@ def execute(args):
 
     #First, want to raise two exceptions if things are wrong.
     #1. Shouldn't be able to run with no species or habitats.
-    if not do_species and not do_habitats:
+    if not do_species and not do_habs:
     
         raise MissingHabitatsOrSpecies("This model requires you to provide \
                 either habitat or species information for comparison against \
