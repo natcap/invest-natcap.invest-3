@@ -1,0 +1,90 @@
+{
+    "id" : "window",
+    "label": "Aesthetic Quality",
+    "targetScript" : "invest_natcap.aesthetic_quality.aesthetic_quality",
+    "modelName" : "aesthetic_quality",
+    "localDocURI": "../documentation/aesthetic_quality.html",
+    "height": 600,
+    "width" : 700,
+    "elements": [
+            {
+            "id" : "workspace_list",
+            "type": "list",	        
+		    "elements": [
+                                {
+                                    "id" : "workspace_dir",
+                                    "args_id" : "workspace_dir",
+                                    "type": "folder",
+                                    "label": "Workspace",
+                                    "required": true
+                                },                        
+                                {
+                                    "id" : "aoiFileName",
+                                    "args_id" : "aoiFileName",
+                                    "type": "file",
+                                    "label": "Area of Interest",
+                                    "defaultValue": "",
+                                    "validateAs": {"type": "OGR"},
+                                    "required": true
+                                },
+                                {
+                                    "id" : "structureFileName",
+                                    "args_id" : "structureFileName",
+                                    "type": "file",
+                                    "label": "Structures",
+                                    "defaultValue": "",
+                                    "validateAs": {"type": "OGR"},
+                                    "required": true
+                                },
+                                {
+                                    "id" : "structureFileName",
+                                    "args_id" : "structureFileName",
+                                    "type": "file",
+                                    "label": "Digital Elevation Model",
+                                    "defaultValue": "",
+                                    "validateAs": {"type": "GDAL"},
+                                    "required": true
+                                },                                
+                                {
+                                    "id" : "refraction",
+                                    "args_id" : "refraction",
+                                    "type": "text",
+                                    "label": "Refractivity Coefficient",
+                                    "defaultValue": "0.13",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": true
+                                },                                
+                                {
+                                    "id" : "cellSize",
+                                    "args_id" : "cellSize",
+                                    "type": "text",
+                                    "label": "Cell Size (meters)",
+                                    "defaultValue": "500",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": false
+                                },
+                                {
+                                    "id" : "populationFileName",
+                                    "args_id" : "populationFileName",
+                                    "type": "file",
+                                    "label": "Population Raster",
+                                    "defaultValue": "",
+                                    "validateAs": {"type": "GDAL"},
+                                    "required": true
+                                },
+                                {
+                                    "id" : "overlapFileName",
+                                    "args_id" : "overlapFileName",
+                                    "type": "file",
+                                    "label": "Overlap Analysis Features",
+                                    "defaultValue": "",
+                                    "validateAs": {"type": "OGR"},
+                                    "required": false
+                                }
+		   ]
+		   }
+    ]
+}
+                

@@ -19,6 +19,20 @@ LOGGER = logging.getLogger('HRA')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class ImproperCriteriaAttributeName(Exception):
+    '''An excepion to pass in hra non core if the criteria provided by the user
+    for use in spatially explicit rating do not contain the proper attribute 
+    name. The attribute should be named 'RATING', and must exist for every shape 
+    in every layer provided.'''
+    pass
+
+class ImproperAOIAttributeNAme(Exception):
+    '''An exception to pass in hra non core if the risk plot AOIs do not
+    contain the proper attribute name for individual indentification. The
+    attribute should be named 'NAME', and must exist for every shape in the
+    AOI layer.'''
+    pass
+
 def execute(args):
     '''This function will prepare files passed from the UI to be sent on to the
     hra_core module.
@@ -41,6 +55,10 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
+        args['plot_aoi']- A shapefile containing one or more planning regions
+            for a given model. This will be used to get the average risk value
+            over a larger area. Each potential region MUST contain the
+            attribute "NAME" as a way of identifying each individual shape.
 
     Intermediate:
         hra_args['habitats_dir']- The directory location of all habitat 
@@ -52,10 +70,10 @@ def execute(args):
         hra_args['stressors_dir']- The string describing a directory location of
             all stressor shapefiles. Will be parsed through and rasterized
             to be passed on to hra_core.
-        args['criteria_dir']- The directory which holds the criteria shapefiles.
-            May not exist if the user does not desire criteria shapefiles. This
-            will be in a VERY specific format, which shall be described in
-            the user's guide.
+        hra_args['criteria_dir']- The directory which holds the criteria 
+            shapefiles. May not exist if the user does not desire criteria 
+            shapefiles. This will be in a VERY specific format, which shall be
+            described in the user's guide.
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  This will get unpacked by the hra_preprocessor module.
@@ -188,6 +206,12 @@ def execute(args):
     #H-S Overlap
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+
+    #No reason to hold the directory paths in memory since all info is now
+    #within dictionaries. Can remove them here before passing to core.
+    for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
+        if name in hra_args:
+            del hra_args[name]
 
     hra_core.execute(hra_args)
     
