@@ -255,10 +255,10 @@ def execute(args):
         mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
     mean_runoff_dataset = None
 
-    def alv_calculation(load, runoff_index, mean_runoff_index):
-        if nodata_load in [load, runoff_index, mean_runoff_index]:
+    def alv_calculation(load, runoff_index, mean_runoff_index, stream):
+        if nodata_load in [load, runoff_index, mean_runoff_index] or stream == nodata_stream:
             return nodata_load
-        return load * runoff_index / mean_runoff_index
+        return load * runoff_index / mean_runoff_index * (1 - stream)
     alv_uri = {}
     retention_uri = {}
     export_uri = {}
@@ -266,7 +266,7 @@ def execute(args):
     for nutrient in nutrients_to_process:
         alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri],
+            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri, stream_uri],
             alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
             out_pixel_size, "intersection")
         retention_uri[nutrient] = os.path.join(
@@ -281,19 +281,27 @@ def execute(args):
             dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'])
 
-        field_summaries['%s_adjl_tot' % nutrient] = (
+        alv_tot = (
             raster_utils.aggregate_raster_values_uri(
                 alv_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
-        field_summaries['%s_ret_sm' % nutrient] = (
-            raster_utils.aggregate_raster_values_uri(
-                retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum', 
-                threshold_amount_lookup=threshold_lookup[nutrient]))
-        field_summaries['%s_exp_tot' % nutrient] = (
+        export_tot = (
             raster_utils.aggregate_raster_values_uri(
                 export_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
-        field_summaries['%s_ret_tot' % nutrient] = (
-            raster_utils.aggregate_raster_values_uri(
-                retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
+        
+        #Retention is alv-export
+        retention_tot = {}
+        for ws_id in alv_tot:
+            retention_tot[ws_id] = alv_tot[ws_id] - export_tot[ws_id]
+
+        #Threshold export is export - threshold
+        threshold_retention_tot = {}
+        for ws_id in alv_tot:
+            threshold_retention_tot[ws_id] = retention_tot[ws_id] - threshold_lookup[nutrient][ws_id]
+
+        field_summaries['%s_adjl_tot' % nutrient] = alv_tot
+        field_summaries['%s_exp_tot' % nutrient] = export_tot
+        field_summaries['%s_ret_tot' % nutrient] = retention_tot
+        field_summaries['%s_ret_sm' % nutrient] = threshold_retention_tot
 
         #Do valuation if necessary
         if valuation_lookup != None:
