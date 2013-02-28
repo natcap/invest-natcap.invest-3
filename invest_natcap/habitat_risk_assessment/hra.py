@@ -29,13 +29,9 @@ def execute(args):
         args['workspace_dir']- String which points to the directory into which
             intermediate and output files should be placed.
         args['csv_uri']- The location of the directory containing the CSV files
-            of habitat, stressor, and overlap ratings.         
-        args['habitats_dir']- The string describing a directory location of all
-            habitat shapefiles. These will be parsed though and rasterized to 
-            be passed to hra_core module.
-        args['stressors_dir']- The string describing a directory location of
-            all stressor shapefiles. Will be parsed through and rasterized
-            to be passed on to hra_core.'
+            of habitat, stressor, and overlap ratings. Will also contain a .txt
+            JSON file that has directory locations (potentially) for habitats,
+            species, stressors, and criteria.
         args['grid_size']- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
@@ -45,11 +41,12 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
-        args['crit_uri']- The location of the shapefile criteria that we will
-            use in our model. These will be rasterized and added to their
-            approipriate dictionaries.
 
     Intermediate:
+        j_args- A dictionary that holds the various directories containing
+            shapefiles for each of habitats, species, stressors, and criteria.
+            Either habitats or species may not exist, or both may exist. Shape
+            criteria will not necessarily exist.
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  This will get unpacked by the hra_preprocessor module.
