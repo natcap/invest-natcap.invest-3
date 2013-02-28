@@ -1043,6 +1043,16 @@ class MultiElement(Container):
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
 
+        if 'defaultValue' in attributes:
+            if not isinstance(attributes['defaultValue'], list):
+                default_list = [attributes['defaultValue']]
+            else:
+                default_list = attributes['defaultValue']
+
+            for default_value in default_list:
+                print(attributes['id'], default_value)
+                self.add_element(default_value)
+
     def add_element_callback(self, event=None):
         """Function wrapper for add_element.  event is expected to be a Qt
         event.  It is ignored."""
@@ -1096,6 +1106,7 @@ class MultiElement(Container):
             new_element.setValue(default_value)
             add_element = True
 
+        print(self.attributes['id'], default_value, add_element)
         if add_element:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
