@@ -29,13 +29,9 @@ def execute(args):
         args['workspace_dir']- String which points to the directory into which
             intermediate and output files should be placed.
         args['csv_uri']- The location of the directory containing the CSV files
-            of habitat, stressor, and overlap ratings.         
-        args['habitats_dir']- The string describing a directory location of all
-            habitat shapefiles. These will be parsed though and rasterized to 
-            be passed to hra_core module.
-        args['stressors_dir']- The string describing a directory location of
-            all stressor shapefiles. Will be parsed through and rasterized
-            to be passed on to hra_core.'
+            of habitat, stressor, and overlap ratings. Will also contain a .txt
+            JSON file that has directory locations (potentially) for habitats,
+            species, stressors, and criteria.
         args['grid_size']- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
@@ -45,11 +41,21 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
-        args['crit_uri']- The location of the shapefile criteria that we will
-            use in our model. These will be rasterized and added to their
-            approipriate dictionaries.
 
     Intermediate:
+        hra_args['habitats_dir']- The directory location of all habitat 
+            shapefiles. These will be parsed though and rasterized to be passed
+            to hra_core module. This may not exist if 'species_dir' exists.
+        hra_args['species_dir']- The directory location of all species
+            shapefiles. These will be parsed though and rasterized to be passed
+            to hra_core module. This may not exist if 'habitats_dir' exists.
+        hra_args['stressors_dir']- The string describing a directory location of
+            all stressor shapefiles. Will be parsed through and rasterized
+            to be passed on to hra_core.
+        args['criteria_dir']- The directory which holds the criteria shapefiles.
+            May not exist if the user does not desire criteria shapefiles. This
+            will be in a VERY specific format, which shall be described in
+            the user's guide.
         hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  This will get unpacked by the hra_preprocessor module.
@@ -141,6 +147,9 @@ def execute(args):
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them and put them into the
     #hra_args dict. Then can modify that within the rest of the code.
+    #We will also return a dictionary conatining directory locations for all
+    #of the necessary shapefiles. This will be used instead of having users
+    #re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
@@ -156,21 +165,25 @@ def execute(args):
         os.makedirs(folder)
 
     #Criteria
-    c_shape_dict = make_crit_shape_dict(args['crit_uri'])
+    c_shape_dict = make_crit_shape_dict(hra_args['criteria_dir'])
     add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
                 hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
     #Habitats
     hab_list = []
-    for ele in ('habitat_dir', 'species_dir'):
-        if ele in args:
+    for ele in ('habitats_dir', 'species_dir'):
+        if ele in hra_args:
             hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
     #Stressors
-    add_stress_rasters(stress_dir, hra_args['stressors'], args['stressors_dir'],
-                  hra_args['buffer_dict'], args['decay_eq'], args['grid_size'])
+    #OHGODNAMES. stress_dir is the local variable that points to where the
+    #stress rasters should be placed. 'stressors' is the stressors dictionary,
+    #'stressors_dir' is the directory containing the stressors shapefiles.
+    add_stress_rasters(stress_dir, hra_args['stressors'], 
+                hra_args['stressors_dir'], hra_args['buffer_dict'], 
+                args['decay_eq'], args['grid_size'])
 
     #H-S Overlap
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 

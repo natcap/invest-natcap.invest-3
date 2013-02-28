@@ -75,7 +75,7 @@ def execute(args):
 
     #First, want to raise two exceptions if things are wrong.
     #1. Shouldn't be able to run with no species or habitats.
-    if not do_species and not do_habitats:
+    if not do_species and not do_habs:
     
         raise MissingHabitatsOrSpecies("This model requires you to provide \
                 either habitat or species information for comparison against \
@@ -286,14 +286,22 @@ def execute(args):
                 stressor_csv_writer.writerow(curr_row)
             
 def parse_hra_tables(workspace_uri):
+    #It should be noted here that workspace_uri isn't actually the workspace
+    #URI, but is actually the location of the CSV and JSOn files that we need
+    #to parse through.
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
-    in core.
+    in non-core and core.
 
     It will return a massive dictionary containing all of the subdictionaries
-    needed by non core. It will be of the following form:
+    needed by non core, as well as directory URI's. It will be of the following 
+    form:
 
-    {'buffer_dict':
+    {'habitats_dir': 'Habitat Directory URI',
+    'species_dir': 'Species Directory URI',
+    'stressors_dir': 'Stressors Directory URI',
+    'criteria_dir': 'Criteria Directory URI',
+    'buffer_dict':
         {'Stressor 1': 50,
         'Stressor 2': ...,
         },
@@ -335,7 +343,16 @@ def parse_hra_tables(workspace_uri):
         }
     }
     '''
+    #Create the dictionary in which everything will be stored.
+    parse_dictionary = {}
 
+    #Get the arguments out of the json file.
+    json_uri = os.path.join(workspace_uri, 'dir_names.txt')
+
+    with open(json_uri, 'rb') as infile:
+        parse_dictionary = json.load(infile)
+
+    #Now we can compile and add the other dictionaries
     habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
     stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
 
@@ -368,7 +385,6 @@ def parse_hra_tables(workspace_uri):
             h_s_dict[(habitat_name, hab_stress_overlap)] = \
                         habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
-    parse_dictionary = {}
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
