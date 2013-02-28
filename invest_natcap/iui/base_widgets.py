@@ -736,6 +736,8 @@ class DynamicText(LabeledElement):
             is requested before I show the menu."""
             menu = self.createStandardContextMenu()
             refresh_action = QtGui.QAction('Refresh', menu)
+            refresh_action.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+                'refresh.png')))
             refresh_action.triggered.connect(self.emit_textchanged)
             menu.addAction(refresh_action)
             menu.exec_(event.globalPos())
