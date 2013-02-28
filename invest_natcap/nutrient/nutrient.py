@@ -15,9 +15,6 @@ LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class InvalidNutrient(Exception):pass
-
-
 def execute(args):
     """File opening layer for the InVEST nutrient retention model.
 
@@ -158,13 +155,18 @@ def execute(args):
     nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
     def map_load_function(load_type):
+        """Function generator to map arbitrary nutrient type"""
         def map_load(lucode):
+            """converts unit load to total load & handles nodata"""
             if lucode == nodata_landuse:
                 return nodata_load
             return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
     def map_eff_function(load_type):
+        """Function generator to map arbitrary efficiency type"""
         def map_load(lucode, stream):
+            """maps efficiencies from lulcs, handles nodata, and is aware that
+                streams have no retention"""
             if lucode == nodata_landuse or stream == nodata_stream:
                 return nodata_load
             #Retention efficiency is 0 when there's a stream.
@@ -205,11 +207,13 @@ def execute(args):
     runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index.tif')
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
+        """Calculates the log value whiel handling nodata values correctly"""
         if value == nodata_upstream:
             return nodata_upstream
         if value == 0.0:
             return 0.0
-        return numpy.log(value)/numpy.log(10)
+        return numpy.log(value)
+
     raster_utils.vectorize_datasets(
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
@@ -248,7 +252,9 @@ def execute(args):
     mean_runoff_dataset = None
 
     def alv_calculation(load, runoff_index, mean_runoff_index, stream):
-        if nodata_load in [load, runoff_index, mean_runoff_index] or stream == nodata_stream:
+        """Calculates the adjusted loading value index"""
+        if nodata_load in [load, runoff_index, mean_runoff_index] or \
+                stream == nodata_stream:
             return nodata_load
         return load * runoff_index / mean_runoff_index * (1 - stream)
     alv_uri = {}
@@ -256,14 +262,15 @@ def execute(args):
     export_uri = {}
     field_summaries = {}
     for nutrient in nutrients_to_process:
-        alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
+        alv_uri[nutrient] = os.path.join(
+            intermediate_dir, 'alv_%s.tif' % nutrient)
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri, stream_uri],
-            alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
-            out_pixel_size, "intersection")
+            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri, 
+             stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
+            nodata_load, out_pixel_size, "intersection")
 
-        #The retention calculation is only interesting to see where nutrient retains
-        #on the landscape
+        #The retention calculation is only interesting to see where nutrient
+        # retains on the landscape
         retention_uri[nutrient] = os.path.join(
             intermediate_dir, '%s_retention.tif' % nutrient)
         tmp_flux_uri = raster_utils.temporary_filename()
@@ -272,7 +279,8 @@ def execute(args):
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
 
-        export_uri[nutrient] = os.path.join(output_dir, '%s_export.tif' % nutrient)
+        export_uri[nutrient] = os.path.join(
+            output_dir, '%s_export.tif' % nutrient)
         routing_utils.pixel_amount_exported(
             dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'])
@@ -303,9 +311,11 @@ def execute(args):
         #Do valuation if necessary
         if valuation_lookup != None:
             field_summaries['value_%s' % nutrient] = {}
-            for ws_id, value in field_summaries['%s_ret_sm' % nutrient].iteritems():
-                discount = disc(valuation_lookup[ws_id]['time_span_%s' % nutrient],
-                                valuation_lookup[ws_id]['discount_%s' % nutrient])
+            for ws_id, value in \
+                    field_summaries['%s_ret_sm' % nutrient].iteritems():
+                discount = disc(
+                    valuation_lookup[ws_id]['time_span_%s' % nutrient],
+                    valuation_lookup[ws_id]['discount_%s' % nutrient])
                 field_summaries['value_%s' % nutrient][ws_id] = (
                     field_summaries['%s_ret_sm' % nutrient][ws_id] *
                     valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
