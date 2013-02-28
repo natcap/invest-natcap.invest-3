@@ -193,6 +193,12 @@ def execute(args):
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
 
+    #No reason to hold the directory paths in memory since all info is now
+    #within dictionaries. Can remove them here before passing to core.
+    for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
+        if name in hra_args:
+            del hra_args[name]
+
     hra_core.execute(hra_args)
     
 def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
