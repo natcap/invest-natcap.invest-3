@@ -1051,6 +1051,11 @@ class MultiElement(Container):
             self.multi_widget.layout().removeWidget(sub_widget)
             sub_widget.deleteLater()
 
+        self.multi_widget.layout().setRowMinimumHeight(row_num, 0)
+        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+        self.setMinimumSize(self.sizeHint())
+        self.update()
+
     def add_element(self, default_value=None):
         """Add another element entry using the default element json provided by
             the json configuration.  If default_value is not None, the value
@@ -1090,7 +1095,11 @@ class MultiElement(Container):
                 row_index, 2)
 
             self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.multi_widget.layout().setRowMinimumHeight(row_index - 1, 20)
             self.setMinimumSize(self.sizeHint())
+            self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.multi_widget.update()
+            self.update()
 
     def value(self):
         """Return a python list of the values for all enclosed elements."""
