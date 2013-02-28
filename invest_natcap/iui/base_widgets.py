@@ -723,9 +723,21 @@ class DynamicText(LabeledElement):
         """
 
     class TextField(QtGui.QLineEdit):
+        def emit_textchanged(self, state=None):
+            """This is a wrapper function that allows me to emit the textChanged
+            signal more easily.  It simply emits the textChanged signal with the
+            current contents of the textfield."""
+            self.textChanged.emit(self.text())
+
         def contextMenuEvent(self, event=None):
+            """Reimplemented from QtGui.QLineEdit.contextMenuEvent.
+
+            This function allows me to make changes to the context menu when one
+            is requested before I show the menu."""
             menu = self.createStandardContextMenu()
-            #menu.addAction('Refresh', receiver=self.textChanged)
+            refresh_action = QtGui.QAction('Refresh', menu)
+            refresh_action.triggered.connect(self.emit_textchanged)
+            menu.addAction(refresh_action)
             menu.exec_(event.globalPos())
 
     def __init__(self, attributes):
