@@ -154,6 +154,7 @@ def execute(args):
     #Make the streams
     stream_uri = os.path.join(intermediate_dir, 'stream.tif')
     routing_utils.calculate_stream(dem_uri, args['accum_threshold'], stream_uri)
+    nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
     def map_load_function(load_type):
         def map_load(lucode):
@@ -162,10 +163,11 @@ def execute(args):
             return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
     def map_eff_function(load_type):
-        def map_load(lucode):
-            if lucode == nodata_landuse:
+        def map_load(lucode, stream):
+            if lucode == nodata_landuse or stream == nodata_stream:
                 return nodata_load
-            return lucode_to_parameters[lucode][load_type]
+            #Retention efficiency is 0 when there's a stream.
+            return lucode_to_parameters[lucode][load_type] * (1 - stream)
         return map_load
 
     #Build up the load and efficiency rasters from the landcover map
@@ -180,7 +182,7 @@ def execute(args):
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s.tif' % (nutrient))
         raster_utils.vectorize_datasets(
-            [landuse_uri], map_eff_function('eff_%s' % nutrient), eff_uri[nutrient],
+            [landuse_uri, stream_uri], map_eff_function('eff_%s' % nutrient), eff_uri[nutrient],
             gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
 
     #Calcualte the sum of water yield pixels
@@ -271,7 +273,7 @@ def execute(args):
             intermediate_dir, '%s_retention.tif' % nutrient)
         tmp_flux_uri = raster_utils.temporary_filename()
         routing_utils.route_flux(
-            dem_uri, alv_uri[nutrient], eff_uri[nutrient], 
+            dem_uri, alv_uri[nutrient], eff_uri[nutrient],
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
         export_uri[nutrient] = os.path.join(output_dir, '%s_export.tif' % nutrient)
