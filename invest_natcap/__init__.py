@@ -23,6 +23,13 @@ try:
 except (ImportError, AttributeError):
     __version__ = build_utils.invest_version()
 
+def is_release():
+    """Returns a boolean indicating whether this invest release is actually a
+    release or if it's a development release."""
+    if __version__[0:3] == 'dev':
+        return False
+    return True
+
 def log_model(model_name, model_version=None):
     """Submit a POST request to the defined URL with the modelname passed in as
     input.  The InVEST version number is also submitted, retrieved from the

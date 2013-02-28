@@ -110,7 +110,8 @@ def execute(args):
     #pathnames if they exist in args
     json_uri = os.path.join(output_dir, 'dir_names.txt')
 
-    json_dict = {'stressors_dir': args['stressors_dir']]}
+    #syntax error: json_dict = {'stressors_dir': args['stressors_dir']]}
+    json_dict = {'stressors_dir': args['stressors_dir']}
     for var in ('criteria_dir', 'habitats_dir', 'species_dir'):
         if var in args:
             json_dict[var] = args[var]

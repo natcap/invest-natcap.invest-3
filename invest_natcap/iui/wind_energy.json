@@ -35,7 +35,7 @@
                     "args_id" : "aoi_uri",
                     "type": "file",
                     "label": "Area Of Interest (AOI)",
-                    "defaultValue": "../WindEnergy/input/North_East_America_Aoi.shp",
+                    "defaultValue": "../WindEnergy/input/New_England_US_Aoi.shp",
                     "required": false,
                     "requiredIf": ["valuation_container", "land_polygon"],
                     "returns": {"ifEmpty": "pass"},
