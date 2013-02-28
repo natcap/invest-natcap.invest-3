@@ -2064,7 +2064,7 @@ class Root(DynamicElement):
         errors = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
-                if element.has_error():
+                if element.isEnabled() and element.has_error():
                     try:
                         error_msg = element.error_button.error_text
                         errors.append((element.attributes['label'], error_msg))
