@@ -22,12 +22,14 @@ class TestHRA(unittest.TestCase):
         args['workspace_dir'] = './data/test_out/HRA' 
         args['grid_size'] = 500
         args['max_rating'] = 3
+        args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings'
 
         self.args = args
     
-    def test_euc_nodecay_noplots(self):
+    def test_euc_nodecay_noplots_smoke(self):
         
-        self.args['
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
 
         hra.execute(self.args)
 
