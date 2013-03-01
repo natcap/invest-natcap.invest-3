@@ -27,7 +27,11 @@ class TestHRA(unittest.TestCase):
         self.args = args
     
     def test_euc_nodecay_noplots_smoke(self):
-        
+        '''Most simplistic version of the model run. Will use euclidean
+        risk, since that was the original desired eqauation, as well as
+        no decay on the stressors.'''
+
+
         self.args['risk_eq'] = 'Euclidean'
         self.args['decay_eq'] = 'None'
 
