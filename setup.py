@@ -103,7 +103,7 @@ if platform.system() == 'Windows':
             'dist_dir': DIST_DIR,
             'packages': packages,
             'skip_archive': True,
-            'dll_excludes'=['POWERPROF.dll']
+            'dll_excludes': ['POWERPROF.dll']
             }
          }
 
