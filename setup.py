@@ -80,6 +80,7 @@ packages = ['invest_natcap',
             'invest_natcap.coastal_vulnerability',
             'invest_natcap.overlap_analysis',
             'invest_natcap.wind_energy',
+            'invest_natcap.aesthetic_quality',
             'invest_natcap.habitat_risk_assessment',
             'invest_natcap.routing']
 
@@ -102,7 +103,8 @@ if platform.system() == 'Windows':
                          'invest_natcap.invest_version'],
             'dist_dir': DIST_DIR,
             'packages': packages,
-            'skip_archive': True
+            'skip_archive': True,
+            'dll_excludes': ['POWERPROF.dll']
             }
          }
 
@@ -125,6 +127,7 @@ if platform.system() == 'Windows':
          'invest_habitat_risk_assessment.py',
          'invest_coastal_vulnerability.py',
          'invest_sediment.py',
+         'invest_nutrient.py',
          'invest_wind_energy.py',
          'invest_test_all.py']
 
@@ -134,6 +137,7 @@ if platform.system() == 'Windows':
         ('.',['invest_natcap/iui/carbon_biophysical.json',
                'invest_natcap/iui/carbon_valuation.json',
                'invest_natcap/iui/timber.json',
+               'invest_natcap/iui/aesthetic_quality.json',
                'invest_natcap/iui/wave_energy_biophysical.json',
                'invest_natcap/iui/wave_energy_valuation.json',
                'invest_natcap/iui/water_yield.json',
@@ -146,6 +150,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/overlap_analysis.json',
                'invest_natcap/iui/overlap_analysis_mz.json',
                'invest_natcap/iui/sediment.json',
+               'invest_natcap/iui/nutrient.json',
                'invest_natcap/iui/wind_energy.json',
                'invest_natcap/iui/coastal_vulnerability.json',
               'geos_c.dll']))

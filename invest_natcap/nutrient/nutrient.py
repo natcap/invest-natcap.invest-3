@@ -1,28 +1,19 @@
 """Module for the execution of the biophysical component of the InVEST Nutrient
 Retention model."""
 
-import re
 import logging
 import os
-import sys
-import shutil
-import csv
 
 from osgeo import gdal
 from osgeo import ogr
 import numpy
 
 from invest_natcap import raster_utils
-from invest_natcap.nutrient import nutrient_core
-from invest_natcap.invest_core import fileio as fileio
 from invest_natcap.routing import routing_utils
 
 LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-class InvalidNutrient(Exception):pass
-
 
 def execute(args):
     """File opening layer for the InVEST nutrient retention model.
@@ -46,6 +37,7 @@ def execute(args):
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table and threshold table and valuation table must
                 have n fields in them.
+            'suffix' - (optional) a text field to append to all output files.
             'water_purification_threshold_table_uri' - a string uri to a
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
@@ -55,8 +47,12 @@ def execute(args):
 
         returns nothing.
     """
-    def _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_lookup, valuation_lookup):
-        """Validation helper method to organize code"""
+    def _validate_inputs(
+        nutrients_to_process, lucode_to_parameters, threshold_lookup, 
+        valuation_lookup):
+        """Validation helper method to check that table headers are included
+            that are necessary depending on the nutrient type requested by
+            the user"""
 
         #Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
@@ -99,10 +95,16 @@ def execute(args):
     #Load all the tables for preprocessing
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
-    service_dir = os.path.join(workspace, 'service')
     intermediate_dir = os.path.join(workspace, 'intermediate')
-    file_suffix = ''
-    for folder in [workspace, output_dir, service_dir, intermediate_dir]:
+
+    try:
+        file_suffix = args['suffix']
+        if not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
+    for folder in [workspace, output_dir, intermediate_dir]:
         if not os.path.exists(folder):
             LOGGER.debug('Making folder %s', folder)
             os.makedirs(folder)
@@ -121,7 +123,8 @@ def execute(args):
     if 'water_purification_valuation_table_uri' in args:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
-    _validate_inputs(nutrients_to_process, lucode_to_parameters, threshold_table, valuation_lookup)
+    _validate_inputs(nutrients_to_process, lucode_to_parameters,
+                     threshold_table, valuation_lookup)
 
     #This one is tricky, we want to make a dictionary that indexes by nutrient
     #id and yields a dicitonary indexed by ws_id to the threshold amount of
@@ -131,9 +134,11 @@ def execute(args):
     for nutrient_id in nutrients_to_process:
         threshold_lookup[nutrient_id] = {}
         for ws_id, value in threshold_table.iteritems():
-            threshold_lookup[nutrient_id][ws_id] = value['thresh_%s' % nutrient_id]
+            threshold_lookup[nutrient_id][ws_id] = (
+                value['thresh_%s' % (nutrient_id)])
 
-    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(
+        args['landuse_uri'])
     #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = landuse_pixel_size ** 2 / 10000.0
     out_pixel_size = landuse_pixel_size
@@ -152,20 +157,27 @@ def execute(args):
     nodata_load = -1.0
 
     #Make the streams
-    stream_uri = os.path.join(intermediate_dir, 'stream.tif')
+    stream_uri = os.path.join(intermediate_dir, 'stream%s.tif' % file_suffix)
     routing_utils.calculate_stream(dem_uri, args['accum_threshold'], stream_uri)
+    nodata_stream = raster_utils.get_nodata_from_uri(stream_uri)
 
     def map_load_function(load_type):
+        """Function generator to map arbitrary nutrient type"""
         def map_load(lucode):
+            """converts unit load to total load & handles nodata"""
             if lucode == nodata_landuse:
                 return nodata_load
             return lucode_to_parameters[lucode][load_type] * cell_area_ha
         return map_load
     def map_eff_function(load_type):
-        def map_load(lucode):
-            if lucode == nodata_landuse:
+        """Function generator to map arbitrary efficiency type"""
+        def map_load(lucode, stream):
+            """maps efficiencies from lulcs, handles nodata, and is aware that
+                streams have no retention"""
+            if lucode == nodata_landuse or stream == nodata_stream:
                 return nodata_load
-            return lucode_to_parameters[lucode][load_type]
+            #Retention efficiency is 0 when there's a stream.
+            return lucode_to_parameters[lucode][load_type] * (1 - stream)
         return map_load
 
     #Build up the load and efficiency rasters from the landcover map
@@ -173,19 +185,21 @@ def execute(args):
     eff_uri = {}
     for nutrient in nutrients_to_process:
         load_uri[nutrient] = os.path.join(
-            intermediate_dir, 'load_%s.tif' % (nutrient))
+            intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
-            [landuse_uri], map_load_function('load_%s' % nutrient), load_uri[nutrient],
-            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+            [landuse_uri], map_load_function('load_%s' % nutrient),
+            load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            "intersection")
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s.tif' % (nutrient))
         raster_utils.vectorize_datasets(
-            [landuse_uri], map_eff_function('eff_%s' % nutrient), eff_uri[nutrient],
-            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection")
+            [landuse_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
+            eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
+            "intersection")
 
     #Calcualte the sum of water yield pixels
     upstream_water_yield_uri = os.path.join(
-        intermediate_dir, 'upstream_water_yield.tif')
+        intermediate_dir, 'upstream_water_yield%s.tif' % file_suffix)
     water_loss_uri = raster_utils.temporary_filename()
     zero_raster_uri = raster_utils.temporary_filename()
     routing_utils.make_constant_raster_from_base(
@@ -197,14 +211,16 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the 'log' of the upstream_water_yield raster
-    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index.tif')
+    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index%s.tif' % file_suffix)
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
+        """Calculates the log value whiel handling nodata values correctly"""
         if value == nodata_upstream:
             return nodata_upstream
         if value == 0.0:
             return 0.0
-        return numpy.log(value)/numpy.log(10)
+        return numpy.log(value)
+
     raster_utils.vectorize_datasets(
         [upstream_water_yield_uri], nodata_log, runoff_index_uri,
         gdal.GDT_Float32, nodata_upstream, out_pixel_size, "intersection")
@@ -215,136 +231,104 @@ def execute(args):
             'mean')
         }
 
-    watershed_output_datasource_uri = os.path.join(output_dir, 'watershed_outputs%s.shp' % file_suffix)
-    #If there is already an existing shapefile with the same name and path, delete it
-    #Copy the input shapefile into the designated output folder
+    watershed_output_datasource_uri = os.path.join(
+        output_dir, 'watershed_outputs%s.shp' % file_suffix)
+    #If there is already an existing shapefile with the same name and path,
+    #delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
         os.remove(watershed_output_datasource_uri)
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
     original_datasource = ogr.Open(args['watersheds_uri'])
-    output_datasource = esri_driver.CopyDataSource(original_datasource, watershed_output_datasource_uri)
+    output_datasource = esri_driver.CopyDataSource(
+        original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
 
-    for field_name in field_summaries:
-        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-        output_layer.CreateField(field_def)
-
-    #Initialize each feature field to 0.0
-    for feature_id in xrange(output_layer.GetFeatureCount()):
-        feature = output_layer.GetFeature(feature_id)
-        for field_name in field_summaries:
-            try:
-                ws_id = feature.GetFieldAsInteger('ws_id')
-                feature.SetField(field_name, float(field_summaries[field_name][ws_id]))
-            except KeyError:
-                LOGGER.warning('unknown field %s' % field_name)
-                feature.SetField(field_name, 0.0)
-        #Save back to datasource
-        output_layer.SetFeature(feature)
+    add_fields_to_shapefile('ws_id', field_summaries, output_layer)
 
     #Burn the mean runoff values to a raster that matches the watersheds
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
-    mean_runoff_index_uri = os.path.join(intermediate_dir, 'mean_runoff_index.tif')
+    mean_runoff_index_uri = os.path.join(
+        intermediate_dir, 'mean_runoff_index%s.tif' % file_suffix)
     mean_runoff_dataset = raster_utils.new_raster_from_base(
         upstream_water_yield_dataset, mean_runoff_index_uri, 'GTiff', -1.0,
         gdal.GDT_Float32, -1.0)
     upstream_water_yield_dataset = None
     gdal.RasterizeLayer(
-        mean_runoff_dataset, [1], output_layer, options=['ATTRIBUTE=mn_run_ind'])
+        mean_runoff_dataset, [1], output_layer,
+        options=['ATTRIBUTE=mn_run_ind'])
     mean_runoff_dataset = None
 
-    def alv_calculation(load, runoff_index, mean_runoff_index):
-        if nodata_load in [load, runoff_index, mean_runoff_index]:
+    def alv_calculation(load, runoff_index, mean_runoff_index, stream):
+        """Calculates the adjusted loading value index"""
+        if nodata_load in [load, runoff_index, mean_runoff_index] or \
+                stream == nodata_stream:
             return nodata_load
-        return load * runoff_index / mean_runoff_index
+        return load * runoff_index / mean_runoff_index * (1 - stream)
     alv_uri = {}
     retention_uri = {}
     export_uri = {}
     field_summaries = {}
     for nutrient in nutrients_to_process:
-        alv_uri[nutrient] = os.path.join(intermediate_dir, 'alv_%s.tif' % nutrient)
+        alv_uri[nutrient] = os.path.join(
+            intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri],
-            alv_calculation, alv_uri[nutrient], gdal.GDT_Float32, nodata_load,
-            out_pixel_size, "intersection")
+            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri, 
+             stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
+            nodata_load, out_pixel_size, "intersection")
+
+        #The retention calculation is only interesting to see where nutrient
+        # retains on the landscape
         retention_uri[nutrient] = os.path.join(
-            intermediate_dir, '%s_retention.tif' % nutrient)
+            intermediate_dir, '%s_retention%s.tif' % (nutrient, file_suffix))
         tmp_flux_uri = raster_utils.temporary_filename()
         routing_utils.route_flux(
-            dem_uri, alv_uri[nutrient], eff_uri[nutrient], 
+            dem_uri, alv_uri[nutrient], eff_uri[nutrient],
             retention_uri[nutrient], tmp_flux_uri,
             aoi_uri=args['watersheds_uri'])
-        export_uri[nutrient] = os.path.join(output_dir, '%s_export.tif' % nutrient)
+
+        export_uri[nutrient] = os.path.join(
+            output_dir, '%s_export%s.tif' % (nutrient, file_suffix))
         routing_utils.pixel_amount_exported(
             dem_uri, stream_uri, eff_uri[nutrient], alv_uri[nutrient],
             export_uri[nutrient], aoi_uri=args['watersheds_uri'])
 
-        field_summaries['%s_adjl_tot' % nutrient] = (
-            raster_utils.aggregate_raster_values_uri(
-                alv_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
-        field_summaries['%s_ret_sm' % nutrient] = (
-            raster_utils.aggregate_raster_values_uri(
-                retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum', 
-                threshold_amount_lookup=threshold_lookup[nutrient]))
-        field_summaries['%s_exp_tot' % nutrient] = (
-            raster_utils.aggregate_raster_values_uri(
-                export_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
-        field_summaries['%s_ret_tot' % nutrient] = (
-            raster_utils.aggregate_raster_values_uri(
-                retention_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum'))
+        #Summarize the results in terms of watershed:
+        LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
+        alv_tot = raster_utils.aggregate_raster_values_uri(
+            alv_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum')
+        export_tot = raster_utils.aggregate_raster_values_uri(
+            export_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum')
+        
+        #Retention is alv-export
+        retention_tot = {}
+        for ws_id in alv_tot:
+            retention_tot[ws_id] = alv_tot[ws_id] - export_tot[ws_id]
+
+        #Threshold export is export - threshold
+        threshold_retention_tot = {}
+        for ws_id in alv_tot:
+            threshold_retention_tot[ws_id] = (
+                retention_tot[ws_id] - threshold_lookup[nutrient][ws_id])
+
+        field_summaries['%s_adjl_tot' % nutrient] = alv_tot
+        field_summaries['%s_exp_tot' % nutrient] = export_tot
+        field_summaries['%s_ret_tot' % nutrient] = retention_tot
+        field_summaries['%s_ret_sm' % nutrient] = threshold_retention_tot
 
         #Do valuation if necessary
         if valuation_lookup != None:
             field_summaries['value_%s' % nutrient] = {}
-            for ws_id, value in field_summaries['%s_ret_sm' % nutrient].iteritems():
-                discount = disc(valuation_lookup[ws_id]['time_span_%s' % nutrient],
-                                valuation_lookup[ws_id]['discount_%s' % nutrient])
+            for ws_id, value in \
+                    field_summaries['%s_ret_sm' % nutrient].iteritems():
+                discount = disc(
+                    valuation_lookup[ws_id]['time_span_%s' % nutrient],
+                    valuation_lookup[ws_id]['discount_%s' % nutrient])
                 field_summaries['value_%s' % nutrient][ws_id] = (
-                    field_summaries['%s_ret_sm' % nutrient][ws_id] * 
+                    field_summaries['%s_ret_sm' % nutrient][ws_id] *
                     valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
 
-
-#    field_summaries = {
-        #These are raw load values
-#        'p_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-#        'n_adjl_tot': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-#        'p_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_p_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-#        'n_adjl_mn': raster_utils.aggregate_raster_values_uri(alv_n_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-
-        #These are the thresholded service values
-#        'n_ret_sm': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', thre#shold_amount_list=n_threshold_lookup),
-#        'n_ret_mn': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', thr#eshold_amount_list=n_threshold_lookup),
-#        'p_ret_sm': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum', threshold_amount_list=p_threshold_lookup),
-#        'p_ret_mn': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean', threshold_amount_list=p_threshold_lookup),
-
-        #These are the total values
-#        'n_exp_tot': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-#        'n_exp_mean': raster_utils.aggregate_raster_values_uri(n_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-#        'p_exp_tot': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-#        'p_exp_mean': raster_utils.aggregate_raster_values_uri(p_export_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-#        'n_ret_tot': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-#        'n_ret_mean': raster_utils.aggregate_raster_values_uri(n_retention_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-#        'p_ret_tot': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-#        'p_ret_mean': raster_utils.aggregate_raster_values_uri(p_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
-#        }
-
-    #Create an output field for each key in the field summary dictionary
-    for field_name in field_summaries:
-        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
-        output_layer.CreateField(field_def)
-
-    #Populate the values of those new fields with the ws_id indexed values in the field summary dictionary.
-    for feature_id in xrange(output_layer.GetFeatureCount()):
-        feature = output_layer.GetFeature(feature_id)
-        for field_name in field_summaries:
-            try:
-                ws_id = feature.GetFieldAsInteger('ws_id')
-                feature.SetField(field_name, float(field_summaries[field_name][ws_id]))
-            except KeyError:
-                LOGGER.warning('unknown field %s' % field_name)
-                feature.SetField(field_name, 0.0)
-        #Save back to datasource
-        output_layer.SetFeature(feature)
+    LOGGER.info('Writing summaries to output shapefile')
+    add_fields_to_shapefile('ws_id', field_summaries, output_layer)
 
 
 def disc(years, percent_rate):
@@ -360,3 +344,37 @@ def disc(years, percent_rate):
     for time_index in range(int(years) - 1):
         discount += 1.0 / (1.0 + percent_rate / 100.0) ** time_index
     return discount
+
+
+def add_fields_to_shapefile(key_field, field_summaries, output_layer):
+    """Adds fields and their values indexed by key fields to an OGR
+        layer open for writing.
+
+        key_field - name of the key field in the output_layer that
+            uniquely identifies each polygon.
+        field_summaries - a dictionary indexed by the desired field
+            name to place in the polygon that indexes to another
+            dictionary indexed by key_field value to map to that
+            particular polygon.  ex {'field_name_1': {key_val1: value,
+            key_val2: value}, 'field_name_2': {key_val1: value, etc.
+        output_layer - an open writable OGR layer
+
+        returns nothing"""
+
+    for field_name in field_summaries:
+        field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
+        output_layer.CreateField(field_def)
+
+    #Initialize each feature field to 0.0
+    for feature_id in xrange(output_layer.GetFeatureCount()):
+        feature = output_layer.GetFeature(feature_id)
+        for field_name in field_summaries:
+            try:
+                ws_id = feature.GetFieldAsInteger(key_field)
+                feature.SetField(
+                    field_name, float(field_summaries[field_name][ws_id]))
+            except KeyError:
+                LOGGER.warning('unknown field %s' % field_name)
+                feature.SetField(field_name, 0.0)
+        #Save back to datasource
+        output_layer.SetFeature(feature)
