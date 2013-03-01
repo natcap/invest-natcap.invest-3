@@ -102,7 +102,8 @@ if platform.system() == 'Windows':
                          'invest_natcap.invest_version'],
             'dist_dir': DIST_DIR,
             'packages': packages,
-            'skip_archive': True
+            'skip_archive': True,
+            'dll_excludes'=['POWERPROF.dll']
             }
          }
 
