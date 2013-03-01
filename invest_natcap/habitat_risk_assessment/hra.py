@@ -49,9 +49,11 @@ def execute(args):
         args['grid_size']- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
-            in calculating risk scores for each H-S overlap cell.
+            in calculating risk scores for each H-S overlap cell. This will be
+            either 'Euclidean' or 'Multiplicative'.
         args['decay_eq']- A string identifying the equation that should be used
-            in calculating the decay of stressor buffer influence.
+            in calculating the decay of stressor buffer influence. This can be
+            'None', 'Linear', or 'Exponential'.
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
