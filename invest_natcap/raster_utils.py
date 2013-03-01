@@ -2287,3 +2287,9 @@ def get_lookup_from_csv(csv_table_uri, key_field):
                 dict([(index_to_field[index], smart_cast(value)) 
                       for index, value in zip(range(len(line)), line)]))
         return lookup_dict
+
+
+def viewshed(dem_uri, shapefile_uri, z_factor, curvature_correction, refractivity_coefficient, visible_feature_count_uri,
+             out_cell_size=None, aoi_uri=None):
+    """FILL IN"""
+    pass
