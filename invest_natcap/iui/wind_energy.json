@@ -28,15 +28,14 @@
                     "label": "Wind Data Points",
                     "defaultValue": "../WindEnergy/input/ECNA_EEZ_WEBPAR_Aug27_2012.bin",
                     "required": true,
-                    "helpText": "A binary file that represents the wind energy data points. Please see the User's Guide for a description of how this file was generated."
+                    "helpText": "A binary file that represents the wind input data (Weibull parameters). Please see the User's Guide for a description of how this file was generated."
                 },
                 {
                     "id" : "aoi",
                     "args_id" : "aoi_uri",
                     "type": "file",
                     "label": "Area Of Interest (AOI)",
-                    "defaultValue": "../WindEnergy/input/North_East_America_Aoi.shp",
-                    "required": false,
+                    "defaultValue": "../WindEnergy/input/New_England_US_Aoi.shp",
                     "requiredIf": ["valuation_container", "land_polygon"],
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR",
@@ -55,7 +54,7 @@
                     "defaultValue": "../Base_Data/Marine/DEMs/global_dem/hdr.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": "A raster dataset for the elevation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
+                    "helpText": "A raster dataset for the elevation values in meters of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
                 },
                 {
                     "id" : "land_polygon",
@@ -63,12 +62,11 @@
                     "type": "file",
                     "label": "Land Polygon to Calculate Distance From",
                     "defaultValue": "../Base_Data/Marine/Land/global_polygon.shp",
-                    "required": false,
                     "enabledBy" : "aoi", 
                     "requiredIf": ["min_distance", "max_distance", "valuation_container"],
                     "returns" : {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
-                    "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission."
+                    "helpText": "A polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission. This input is required for masking by distance values and for valuation."
                 },
                 {
                     "id" : "global_wind_parameters",
@@ -90,7 +88,7 @@
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
                     "required": false,
-                    "helpText":"A String that will be added to the end of the output URIs."
+                    "helpText":"A String that will be added to the end of the output file paths."
 
                 }                         
             ]

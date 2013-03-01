@@ -4,8 +4,8 @@
     "targetScript" : "invest_natcap.nutrient.nutrient",
     "modelName" : "nutrient",
     "localDocURI": "../documentation/waterpurification.html",
-    "height": 500,
-    "width" : 700,
+    "height": 700,
+    "width" : 900,
     "elements": [
         {
             "id" : "workspace_list",
@@ -32,7 +32,7 @@
                     "required": false,
                     "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
                 },
-		{        
+		{
 		    "id" : "dem_uri",
 		    "args_id" : "dem_uri",
 		    "type": "file",
@@ -47,10 +47,10 @@
 		    "args_id" : "pixel_yield_uri",
 		    "type": "file",
 		    "label": "Water yield (per pixel)",
-		    "defaultValue": "",
+		    "defaultValue": "../WP_Nutrient_Retention/Input/wyield.tif",
 		    "required": true,
 		    "validateAs": {"type": "GDAL"},
-		    "helpText": "RICH FILL THIS IN"
+		    "helpText": "This is the pixel level water yield output from the InVEST hydropower model."
 		},
 		{
 		    "id" : "landuse_uri",
@@ -83,32 +83,34 @@
 		    "args_id" : "biophysical_table_uri",
 		    "type": "file",
 		    "label": "Biophysical Table",
-		    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
+		    "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
-				  "fieldsExist": ["lucode", "sedret_eff", "usle_c", "usle_p"]
+				  "fieldsExist": ["lucode"]
 				  },
-		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST sediment user's guide for more information about these fields."
+		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
 		},
 		{
 		    "id" : "calc_p",
 		    "args_id": "calc_p",
 		    "type": "checkbox",
-		    "label": "Calculate phosphorous retention (requires \"p\" values in biophysical table)",
+		    "label": "Calculate phosphorous retention",
 		    "defaultValue": false,
-		    "required": false
+		    "required": false,
+		    "helpText": "Select to simulate phosphorous."
 		},
 		{
 		    "id" : "calc_n",
 		    "args_id": "calc_n",
 		    "type": "checkbox",
-		    "label": "Calculate nitrogen retention (requires \"n\" values in biophysical table)",
+		    "label": "Calculate nitrogen retention",
 		    "defaultValue": false,
-		    "required": false
+		    "required": false,
+		    "helpText": "Select to simulate nitrogen."
 		},
 		{        
 		    "id" : "threshold_flow_accumulation",
-		    "args_id" : "threshold_flow_accumulation",
+		    "args_id" : "accum_threshold",
 		    "type": "text",
 		    "label": "Threshold Flow Accumluation",
 		    "defaultValue": "1000",
@@ -121,12 +123,12 @@
 		    "args_id" : "water_purification_threshold_table_uri",
 		    "type": "file",
 		    "label": "Water Purification Threshold Table",
-		    "defaultValue": "../Nutrient_Retention/input/water_purification_threshold_table.csv",
+		    "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_threshold.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
-				   "fieldsExist": ["ws_id", "dr_time", "dr_deadvol", "wq_annload"]
+				   "fieldsExist": ["ws_id"]
 				  },
-		    "helpText": "RICH FILL THIS IN."
+		    "helpText": "A table containing annual nutrient load threshold information.  Must have a ws_id index and thres_n (or p) field depending if nitrogen and/or phosphorous is simulated."
 		}
 	    ]
 	},
@@ -147,10 +149,10 @@
 			    "args_id" : "water_purification_valuation_table_uri",
 			    "type": "file",
 			    "label": "Water Purification valuation table",
-			    "defaultValue": "../Nutrient_Retention/water_purification_valuation_table.csv",
+			    "defaultValue": "../WP_Nutrient_Retention/Input/water_purification_valuation.csv",
 			    "required": true,
 			    "validateAs": {"type": "CSV"},
-			    "helpText": "RICH FILL THIS IN"
+			    "helpText": "The table containing valuation information.  It must be indexed by ws_id and contain fields cost_n (or p), time_span_n (or p), discount_n (or p) depending on which nutrients are selected."
 			}
 		    ]
 		}
