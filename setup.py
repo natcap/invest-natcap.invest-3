@@ -125,6 +125,7 @@ if platform.system() == 'Windows':
          'invest_habitat_risk_assessment.py',
          'invest_coastal_vulnerability.py',
          'invest_sediment.py',
+         'invest_nutrient.py',
          'invest_wind_energy.py',
          'invest_test_all.py']
 
