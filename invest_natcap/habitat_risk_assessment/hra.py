@@ -26,7 +26,7 @@ class ImproperCriteriaAttributeName(Exception):
     in every layer provided.'''
     pass
 
-class ImproperAOIAttributeNAme(Exception):
+class ImproperAOIAttributeName(Exception):
     '''An exception to pass in hra non core if the risk plot AOIs do not
     contain the proper attribute name for individual indentification. The
     attribute should be named 'NAME', and must exist for every shape in the
@@ -49,9 +49,11 @@ def execute(args):
         args['grid_size']- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
-            in calculating risk scores for each H-S overlap cell.
+            in calculating risk scores for each H-S overlap cell. This will be
+            either 'Euclidean' or 'Multiplicative'.
         args['decay_eq']- A string identifying the equation that should be used
-            in calculating the decay of stressor buffer influence.
+            in calculating the decay of stressor buffer influence. This can be
+            'None', 'Linear', or 'Exponential'.
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
@@ -99,7 +101,7 @@ def execute(args):
                         },
                     }
             }
-        args['habitats']- Similar to the h-s dictionary, a multi-level
+        hra_args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             raster information. The outermost keys are habitat names.
         hra_args['stressors']- Similar to the h-s dictionary, a multi-level
@@ -144,7 +146,7 @@ def execute(args):
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
             dependent on this.
-        args['max_risk']- The highest possible risk value for any given pairing
+        hra_args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
     
     Returns nothing.
@@ -162,6 +164,23 @@ def execute(args):
 
         os.makedirs(folder)
     
+    #If using risk plots are desired, pass the AOI layer directly to core to be
+    #dealt with there.
+    if 'plot_aoi' in args:
+
+        #Need to check that this shapefile contains the correct attribute name.
+        #Later, this is where the uppercase/lowercase dictionary can be
+        #implimented.
+        shape = ogr.Open(args['plot_aoi'])
+        layer = shape.GetLayer()
+        for feature in layer:
+            if 'name' not in feature.items():
+                raise ImproperAOIAttributeName("Risk plot layer attributes must \
+                    contain the attribute \"name\" in order to be properly used \
+                    within the HRA model run.")
+
+        hra_args['plot_aoi'] = args['plot_aoi']
+
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them and put them into the
     #hra_args dict. Then can modify that within the rest of the code.
@@ -283,6 +302,13 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
+            for feature in layer:
+                if 'rating' not in feature.items():
+                    raise ImproperCriteriaAttributeName("Criteria layer must \
+                        contain the attribute \"rating\" in order to be properly used \
+                        within the HRA model run.")
+                
+
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
@@ -294,7 +320,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             band.Fill(nodata)
 
             gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+                            options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
             h_s['Crit_Rasters'][c_name]['Rating'] = out_uri
     

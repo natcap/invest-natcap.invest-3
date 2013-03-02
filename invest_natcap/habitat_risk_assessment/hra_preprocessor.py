@@ -37,7 +37,7 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
-        args['habitat_dir'] - A directory of shapefiles that are habitats. This
+        args['habitats_dir'] - A directory of shapefiles that are habitats. This
             is not required, and may not exist if there is a species layer
             directory.
         args['species_dir']- Directory which holds all species shapefiles, but
@@ -70,7 +70,7 @@ def execute(args):
     """
     #Create two booleans to indicate which of the layers we should be using in
     #this model run.
-    do_habs = 'habitat_dir' in args
+    do_habs = 'habitats_dir' in args
     do_species = 'species_dir' in args
 
     #First, want to raise two exceptions if things are wrong.
@@ -122,7 +122,7 @@ def execute(args):
 
     #Get the names of all potential habs
     hab_list = []
-    for ele in ('habitat_dir', 'species_dir'):
+    for ele in ('habitats_dir', 'species_dir'):
         if ele in args:
             hab_list = hab_list + glob.glob(os.path.join(args[ele], '*.shp'))
             hab_list = \
