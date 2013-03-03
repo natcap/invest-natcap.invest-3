@@ -189,6 +189,8 @@ def execute(args):
     #re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
 
+    LOGGER.debug(hra_args.keys())
+
     #Where we will store the burned individual habitat and stressor rasters.
     crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
@@ -211,7 +213,7 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
+            hab_list.append(glob.glob(os.path.join(hra_args[ele], '*.shp')))
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
