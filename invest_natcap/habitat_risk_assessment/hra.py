@@ -233,6 +233,8 @@ def execute(args):
         if name in hra_args:
             del hra_args[name]
 
+    LOGGER.debug(hra_args)
+
     hra_core.execute(hra_args)
     
 def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
