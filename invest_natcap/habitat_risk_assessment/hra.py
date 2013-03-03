@@ -189,8 +189,6 @@ def execute(args):
     #re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
 
-    LOGGER.debug(hra_args.keys())
-
     #Where we will store the burned individual habitat and stressor rasters.
     crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
     hab_dir = os.path.join(inter_dir, 'Habitat_Rasters')
@@ -213,7 +211,7 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_list.append(glob.glob(os.path.join(hra_args[ele], '*.shp')))
+            hab_list += glob.glob(os.path.join(hra_args[ele], '*.shp'))
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
@@ -724,7 +722,10 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         A modified version of habitats, into which we have placed the URI to the
             rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
-   ''' 
+   '''
+
+    LOGGER.debug(hab_list)
+
     for shape in hab_list:
         
         #The return of os.path.split is a tuple where everything after the final
@@ -796,10 +797,6 @@ def unpack_over_dict(csv_uri, args):
     Returns nothing.
     '''
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
-    LOGGER.debug(csv_uri)
-    LOGGER.debug("DICTIONARIES:")
-    LOGGER.debug(dicts)
-
 
     for dict_name in dicts:
      
