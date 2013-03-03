@@ -11,7 +11,7 @@ import math
 from osgeo import gdal, ogr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
-#from invest_natcap.habitat_risk_assessment import hra_preprocessor
+from invest_natcap.habitat_risk_assessment import hra_preprocessor
 import hra_preprocessor
 from invest_natcap import raster_utils
 
@@ -201,10 +201,11 @@ def execute(args):
 
         os.makedirs(folder)
 
-    #Criteria
-    c_shape_dict = make_crit_shape_dict(hra_args['criteria_dir'])
-    add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
-                hra_args['stressors'], hra_args['h-s'], args['grid_size'])
+    #Criteria, if they exist.
+    if 'criteria_dir' in hra_args:
+        c_shape_dict = make_crit_shape_dict(hra_args['criteria_dir'])
+        add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
+                    hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
     #Habitats
     hab_list = []
