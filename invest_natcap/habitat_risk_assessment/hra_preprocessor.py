@@ -392,9 +392,6 @@ def parse_hra_tables(workspace_uri):
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
     #from the assessment for that subdictionary.
-    
-    LOGGER.debug(parse_dictionary)
-   
     try:
         for subdict in parse_dictionary.values():
             for indivs in subdict.values():
