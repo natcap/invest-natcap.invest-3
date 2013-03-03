@@ -534,9 +534,10 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
 
         #For the h-s overlap, want to do intersection, since we will never need
         #anything outside that bounding box.
-        raster_utils.vectorize_datasets(files, add_h_s_pixels, gdal.GDT_Float32,
-                        grid_size, "intersection", resample_method_list=None, 
-                        dataset_to_align_index=None, aoi_uri=None)
+        raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
+                        gdal.GDT_Float32, 0, grid_size, "intersection", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
         h_s[pair]['DS'] = out_uri
 
