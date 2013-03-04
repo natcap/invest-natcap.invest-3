@@ -305,7 +305,6 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                     resample_method_list=None, dataset_to_align_index=None,
                     aoi_uri=None)
 
-
 def make_ecosys_risk_raster(dir, h_dict):
     '''This will make the compiled raster for all habitats within the ecosystem.
     The ecosystem raster will be a direct sum of each of the included habitat
@@ -313,9 +312,14 @@ def make_ecosys_risk_raster(dir, h_dict):
 
     Input:
         dir- The directory in which all completed should be placed.
-        h_dict- A dictionary of open raster datasets which can be combined to 
+        h_dict- A dictionary of raster dataset URIs which can be combined to 
             create an overall ecosystem raster. The key is the habitat name, 
-            and the value is the open dataset.
+            and the value is the dataset URI.
+            
+            {'Habitat A': "Overall Habitat A Risk Map URI",
+            'Habitat B': "Overall Habitat B Risk URI"
+             ...
+            }
     Output:
         ecosys_risk.tif- An overall risk raster for the ecosystem. It will
             be placed in the dir folder.
@@ -323,7 +327,7 @@ def make_ecosys_risk_raster(dir, h_dict):
     Returns nothing.
     '''
     #Need a straight list of the values from h_dict
-    h_list = map(lambda key: h_dict[key], h_dict.keys())
+    h_list_open = map(lambda key: gdal.Open(h_dict[key]), h_dict.keys())
 
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
@@ -338,9 +342,10 @@ def make_ecosys_risk_raster(dir, h_dict):
  
         return pixel_sum
      
-    raster_utils.vectorize_rasters(h_list, add_e_pixels, aoi = None,
-                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
-                     nodata = 0)
+    raster_utils.vectorize_datasets(h_list_open, add_e_pixels, out_uri, 
+                gdal.GDT_Float32, 0, pixel_size, "intersection", 
+                resample_method_list=None, dataset_to_align_index=None,
+                aoi_uri=None)
 
 def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
@@ -352,15 +357,24 @@ def make_hab_risk_raster(dir, risk_dict):
             placed.
         risk_dict- A dictionary containing the risk rasters for each pairing of
             habitat and stressor. The key is the tuple of (habitat, stressor),
-            and the value is the open raster dataset corresponding to that
+            and the value is the raster dataset URI corresponding to that
             combination.
+            
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
     Output:
         A cumulative risk raster for every habitat included within the model.
     
     Returns:
-        h_rasters- A dictionary containing habitat names mapped directly to
-            open datasets corresponding to all habitats being observed within 
-            the model.
+        h_rasters- A dictionary containing habitat names mapped to the dataset
+            URI of the overarching habitat risk map for this model run.
+            
+            {'Habitat A': "Overall Habitat A Risk Map URI",
+            'Habitat B': "Overall Habitat B Risk URI"
+             ...
+            }
     '''
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
@@ -383,6 +397,10 @@ def make_hab_risk_raster(dir, risk_dict):
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
 
+    #Want to get an arbitrary element in order to have a pixel size.
+    pixel_size = \
+        raster_utils.pixel_size(gdal.Open(risk_dict[(habitats[0], stressors[0])]))
+
     #List to store the completed h rasters in. Will be passed on to the
     #ecosystem raster function to be used in vectorize_raster.
     h_rasters = {} 
@@ -395,16 +413,17 @@ def make_hab_risk_raster(dir, risk_dict):
         for s in stressors:
             pair = (h, s)
 
-            ds_list.append(risk_dict[pair])
+            ds_list.append(gdal.Open(risk_dict[pair]))
 
         #Once we have the complete list, we can pass it to vectorize.
         out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
 
-        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels,
-                                 aoi = None, raster_out_uri = out_uri,
-                                 datatype=gdal.GDT_Float32, nodata = 0)
+        raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
+                        gdal.GDT_Float32, 0, pixel_size, "intersection", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
-        h_rasters[h] = h_rast
+        h_rasters[h] = out_uri 
 
     return h_rasters
 
@@ -461,8 +480,13 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         subdictionaries.
     Returns:
         risk_rasters- A simple dictionary that maps a tuple of 
-            (Habitat, Stressor) to the risk raster created when the various
-            sub components (H/S/H_S) are combined.
+            (Habitat, Stressor) to the URI for the risk raster created when the 
+            various sub components (H/S/H_S) are combined.
+
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
     '''    
     #Create dictionary that we can pass back to execute to be passed along to
     #make_habitat_rasters
