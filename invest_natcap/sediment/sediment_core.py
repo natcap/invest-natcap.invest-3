@@ -3,16 +3,10 @@
 
 import logging
 import bisect
-import os
-import tempfile
 
-import scipy.sparse
-import scipy.sparse.linalg
 import numpy
 from osgeo import gdal
-from osgeo import ogr
 
-from invest_natcap.routing import routing_utils
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('sediment_core')
@@ -93,12 +87,13 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
             
         #Use the bisect function to do a nifty range 
         #lookup. http://docs.python.org/library/bisect.html#other-examples
-        m = exponent_table[bisect.bisect(slope_table, slope)]
+        m_exp = exponent_table[bisect.bisect(slope_table, slope)]
 
         #The length part of the ls_factor:
-        ls_factor = ((contributing_area + cell_area)**(m+1) - \
-                         contributing_area ** (m+1)) / \
-                         ((cell_size ** (m + 2)) * (xij**m) * (22.13**m))
+        ls_factor = (
+            ((contributing_area + cell_area)**(m_exp+1) - 
+             contributing_area ** (m_exp+1)) / 
+            ((cell_size ** (m_exp + 2)) * (xij**m_exp) * (22.13**m_exp)))
 
         #From the paper "as a final check against exessively long slope
         #length calculations ... cap of 333m"
