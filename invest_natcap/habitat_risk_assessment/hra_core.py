@@ -293,11 +293,17 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         curr_list = crit_lists['Recovery'][h]
         open_curr_list = map(lambda uri: gdal.Open(uri), curr_list)
 
+        #Need to get the arbitrary first element in order to have a pixel size
+        #to use in vectorize_datasets. One hopes that we have at least 1 thing
+        #in here.
+        pixel_size = raster_utils.pixel_size(open_curr_list[0])
+
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
-        raster_utils.vectorize_rasters(open_curr_list, add_recov_pix, aoi = None,
-                         raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
-                         nodata = 0)
+        raster_utils.vectorize_datasets(open_curr_list, add_recov_pix, out_uri, 
+                    gdal.GDT_Float32, 0, pixel_size, "intersection", 
+                    resample_method_list=None, dataset_to_align_index=None,
+                    aoi_uri=None)
 
 
 def make_ecosys_risk_raster(dir, h_dict):
