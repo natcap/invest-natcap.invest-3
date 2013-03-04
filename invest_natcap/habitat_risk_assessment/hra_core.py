@@ -249,16 +249,17 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         crit_lists- A dictionary containing pre-burned criteria which can be
             combined to get the E/C for that H-S pairing.
 
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster URI", 
+                                    "raster 1 URI", ...],
                                  (hab1, stressB): ...
                                },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                        'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
                                 ...
                                },
-                        's':   { stressA: [indiv num raster, ...]
+                        's':   { stressA: ["indiv num raster URI", ...]
                                }
                      }
-             'Recovery': { hab1: [indiv num raster, ...],
+             'Recovery': { hab1: ["indiv num raster URI", ...],
                            hab2: ...
                          }
             }
@@ -290,10 +291,11 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             value = value / denoms['Recovery'][h]
 
         curr_list = crit_lists['Recovery'][h]
+        open_curr_list = map(lambda uri: gdal.Open(uri), curr_list)
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
-        raster_utils.vectorize_rasters(curr_list, add_recov_pix, aoi = None,
+        raster_utils.vectorize_rasters(open_curr_list, add_recov_pix, aoi = None,
                          raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
                          nodata = 0)
 
@@ -315,7 +317,7 @@ def make_ecosys_risk_raster(dir, h_dict):
     Returns nothing.
     '''
     #Need a straight list of the values from h_dict
-    h_list = map((lambda key: h_dict[key], h_dict.keys()))
+    h_list = map(lambda key: h_dict[key], h_dict.keys())
 
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
@@ -414,16 +416,17 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         crit_lists- A dictionary containing pre-burned criteria which can be
             combined to get the E/C for that H-S pairing.
 
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster URI", 
+                                    "raster 1 URI", ...],
                                  (hab1, stressB): ...
                                },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                        'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
                                 ...
                                },
-                        's':   { stressA: [indiv num raster, ...]
+                        's':   { stressA: ["indiv num raster URI", ...]
                                }
                      }
-             'Recovery': { hab1: [indiv num raster, ...],
+             'Recovery': { hab1: ["indiv num raster URI", ...],
                            hab2: ...
                          }
             }
