@@ -486,14 +486,14 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
 
         #Want to get the relevant ds for this H-S pair
-        base_ds = h_s[pair]['DS']
+        base_ds_uri = h_s[pair]['DS']
         
         if risk_eq == 'Multiplicative':
-            mod_raster = make_risk_mult(base_ds, E, C, risk_uri)
+            mod_raster = make_risk_mult(base_ds_uri, E, C, risk_uri)
         
         elif risk_eq == 'Euclidean':
             
-            mod_raster = make_risk_euc(base_ds, E, C, risk_uri)
+            mod_raster = make_risk_euc(base_ds_uri, E, C, risk_uri)
 
         risk_rasters[pair] = mod_raster
 
@@ -694,21 +694,21 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
                         },
-                    'DS':  <Open A-1 Raster Dataset>
+                    'DS':  "A-1 Raster URI"
                     }
             }
         hab- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat
             name, and habitats['habitatName']['DS'] points to the rasterized
-            habitat shapefile provided by the user.
+            habitat shapefile URI provided by the user.
         stress- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
             rasters. In this case, however, the outermost key is by stressor
             name, and stressors['habitatName']['DS'] points to the rasterized
-            stressor shapefile provided by the user.
+            stressor shapefile URI provided by the user.
     
     Output:
         Creates a version of every criteria for every h-s paring that is
@@ -716,19 +716,19 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         r/dq burned raster for recovery potential calculations.
     
     Returns:     
-        crit_lists- A dictionary containing pre-burned criteria which can be
+        crit_lists- A dictionary containing pre-burned criteria URI which can be
             combined to get the E/C for that H-S pairing.
 
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster", "raster 1", ...],
                                  (hab1, stressB): ...
                                },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                        'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
                                 ...
                                },
-                        's':   { stressA: [indiv num raster, ...]
+                        's':   { stressA: ["indiv num raster URI", ...]
                                }
                      }
-             'Recovery': { hab1: [indiv num raster, ...],
+             'Recovery': { hab1: ["indiv num raster URI", ...],
                            hab2: ...
                          }
             }
@@ -760,9 +760,11 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
-        base_ds = h_s[pair]['DS']
+        base_ds_uri = h_s[pair]['DS']
+        base_ds = gdal.Open(base_ds_uri)
         base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
-        
+        base_pixel_size = raster_utils.pixel_size(base_ds)
+
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep
@@ -803,13 +805,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return crit_rate_numerator
 
-        c_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator, aoi = None,
-                                    raster_out_uri = single_crit_C_uri,
-                                    datatype = gdal.GDT_Float32, nodata = 0)
+        raster_utils.vectorize_rasters([base_ds], burn_numerator,
+                        single_crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size,
+                        "intersection", resample_method_list=None, 
+                        dataset_to_align_index=None, aoi_uri=None)
 
-        #Add the burned ds containing only the numerator burned ratings to
+        #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
-        crit_lists['Risk']['h-s'][pair].append(c_ds)
+        crit_lists['Risk']['h-s'][pair].append(single_crit_C_uri)
         
         #H-S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
@@ -817,7 +820,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #.iteritems creates a key, value pair for each one.
         for crit, crit_dict in h_s[pair]['Crit_Rasters'].iteritems():
 
-            crit_ds = crit_dict['DS']
+            crit_ds_uri = crit_dict['DS']
+            crit_ds = gdal.Open(crit_ds_uri)
             crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
             
             dq = crit_dict['DQ']
@@ -836,11 +840,12 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / (dq * w)
                     return burn_rating
             
-            c_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator,
-                                    raster_out_uri = crit_C_uri,
-                                    datatype = gdal.GDT_Float32, nodata = 0)
+            raster_utils.vectorize_datasets([crit_ds], burn_numerator,
+                        crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size,
+                        "intersection", resample_method_list=None, 
+                        dataset_to_align_index=None, aoi_uri=None)
 
-            crit_lists['Risk']['h-s'][pair].append(c_ds)
+            crit_lists['Risk']['h-s'][pair].append(crit_C_uri)
    
     #Habitats are a special case, since each raster needs to be burned twice-
     #once for risk (r/dq*w), and once for recovery potential (r/dq).
@@ -853,8 +858,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
-        base_ds = hab[h]['DS']
+        base_ds_uri = hab[h]['DS']
+        base_ds = gdal.Open(base_ds_uri)
         base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
+        base_pixel_size = raster_utils.pixel_size(base_ds)
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
@@ -882,11 +889,13 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return risk_crit_rate_numerator
 
-        c_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator_risk,
-                                raster_out_uri = single_crit_C_uri,
-                                datatype = gdal.GDT_Float32, nodata = 0)
+        raster_utils.vectorize_datasets([base_ds], burn_numerator_risk,
+                            single_crit_C_uri, gdal.GDT_Float32, 0, 
+                            base_pixel_size, "intersection", 
+                            resample_method_list=None, 
+                            dataset_to_align_index=None, aoi_uri=None)
 
-        crit_lists['Risk']['h'][h].append(c_ds)
+        crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
         #Now, burn the recovery potential raster, and add that.
         single_crit_C_uri = os.path.join(pre_raster_dir, h + 
@@ -900,11 +909,13 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return rec_crit_rate_numerator
 
-        c_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator_risk,
-                                raster_out_uri = single_crit_C_uri,
-                                datatype = gdal.GDT_Float32, nodata = 0)
+        raster_utils.vectorize_datasets([base_ds], burn_numerator_rec,
+                            single_crit_C_uri, gdal.GDT_Float32, 0, 
+                            base_pixel_size, "intersection", 
+                            resample_method_list=None, 
+                            dataset_to_align_index=None, aoi_uri=None)
 
-        crit_lists['Recovery'][h].append(c_ds)
+        crit_lists['Recovery'][h].append(single_crit_C_uri)
         
         #Raster Criteria: should output multiple rasters, each
         #of which is reburned with the old pixel value r as r/dq*w, or r/dq.
@@ -930,10 +941,12 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / (w*dq)
                     return burn_rating
 
-            c_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator_risk,
-                                raster_out_uri = crit_C_uri,
-                                datatype = gdal.GDT_Float32, nodata = 0)
-            crit_lists['Risk']['h'][h].append(c_ds)
+            raster_utils.vectorize_datasets([crit_ds], burn_numerator_risk,
+                                crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                                "intersection", resample_method_list=None, 
+                                dataset_to_align_index=None, aoi_uri=None)
+            
+            crit_lists['Risk']['h'][h].append(crit_C_uri)
             
             #Then the recovery rasters
             crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
@@ -947,10 +960,12 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     burn_rating = float(pixel) / dq
                     return burn_rating
 
-            r_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator_rec,
-                                raster_out_uri = crit_recov_uri,
-                                datatype = gdal.GDT_Float32, nodata = 0)
-            crit_lists['Recovery'][h].append(r_ds)
+            raster_utils.vectorize_datasets([crit_ds], burn_numerator_rec,
+                                crit_recov_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                                "intersection", resample_method_list=None, 
+                                dataset_to_align_index=None, aoi_uri=None)
+            
+            crit_lists['Recovery'][h].append(crit_recov_uri)
 
     #And now, loading in all of the stressors. Will just be the standard
     #risk equation (r/dq*w)
@@ -961,8 +976,10 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
         #The base dataset for all s criteria. Will need to load bases
         #for each of the h/s crits too.
-        base_ds = stress[s]['DS']
+        base_ds_uri = stress[s]['DS']
+        base_ds = base_ds_uri(base_ds)
         base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds) 
+        base_pixel_size = raster_utils.pixel_size(base_ds)
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep 
@@ -994,18 +1011,20 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return crit_rate_numerator
 
-        e_ds = raster_utils.vectorize_rasters([base_ds], burn_numerator,
-                                raster_out_uri = single_crit_E_uri,
-                                datatype = gdal.GDT_Float32, nodata = 0)
+        raster_utils.vectorize_datasets([base_ds], burn_numerator,
+                            single_crit_E_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                            "intersection", resample_method_list=None, 
+                            dataset_to_align_index=None, aoi_uri=None)
 
         #Add the burned ds containing only the numerator burned ratings to
         #the list in which all rasters will reside
-        crit_lists['Risk']['s'][s].append(e_ds)
+        crit_lists['Risk']['s'][s].append(single_crit_E_uri)
         
         #S dictionary, Raster Criteria: should output multiple rasters, each
         #of which is reburned with the pixel value r, as r/dq*w.
         for crit, crit_dict in stress[s]['Crit_Rasters'].iteritems():
-            crit_ds = crit_dict['DS']
+            crit_ds_uri = crit_dict['DS']
+            crit_ds = gdal.Open(crit_ds_uri)
             crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
             
             dq = crit_dict['DQ']
@@ -1022,11 +1041,13 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 else:
                     burn_rating = float(pixel) / (dq*w)
                     return burn_rating
+        
+            raster_utils.vectorize_datasets([crit_ds], burn_numerator,
+                            crit_E_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                            "intersection", resample_method_list=None, 
+                            dataset_to_align_index=None, aoi_uri=None)
 
-            e_ds = raster_utils.vectorize_rasters([crit_ds], burn_numerator,
-                                raster_out_uri = crit_E_uri,
-                                datatype = gdal.GDT_Float32, nodata = 0)
-            crit_lists['Risk']['s'][s].append(e_ds)
+            crit_lists['Risk']['s'][s].append(crit_E_uri)
 
     #This might help.
     return (crit_lists, denoms)
