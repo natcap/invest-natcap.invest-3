@@ -120,6 +120,8 @@ if platform.system() == 'Windows':
          'invest_water_scarcity.py',
          'invest_marine_water_quality_biophysical.py',
          'invest_pollination.py',
+         'invest_recreation_client_init.py',
+         'invest_recreation_client_scenario.py',
          'invest_finfish_aquaculture.py',
          'invest_biodiversity_biophysical.py',
          'invest_overlap_analysis.py',

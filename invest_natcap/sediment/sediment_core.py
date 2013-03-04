@@ -3,16 +3,10 @@
 
 import logging
 import bisect
-import os
-import tempfile
 
-import scipy.sparse
-import scipy.sparse.linalg
 import numpy
 from osgeo import gdal
-from osgeo import ogr
 
-from invest_natcap.routing import routing_utils
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('sediment_core')
@@ -41,7 +35,8 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
         returns nothing"""
     
-    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(
+        flow_accumulation_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     aspect_nodata = raster_utils.get_nodata_from_uri(aspect_uri)
 
@@ -92,12 +87,13 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
             
         #Use the bisect function to do a nifty range 
         #lookup. http://docs.python.org/library/bisect.html#other-examples
-        m = exponent_table[bisect.bisect(slope_table, slope)]
+        m_exp = exponent_table[bisect.bisect(slope_table, slope)]
 
         #The length part of the ls_factor:
-        ls_factor = ((contributing_area + cell_area)**(m+1) - \
-                         contributing_area ** (m+1)) / \
-                         ((cell_size ** (m + 2)) * (xij**m) * (22.13**m))
+        ls_factor = (
+            ((contributing_area + cell_area)**(m_exp+1) - 
+             contributing_area ** (m_exp+1)) / 
+            ((cell_size ** (m_exp + 2)) * (xij**m_exp) * (22.13**m_exp)))
 
         #From the paper "as a final check against exessively long slope
         #length calculations ... cap of 333m"
@@ -113,21 +109,19 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
             ls_nodata, cell_size, "intersection", dataset_to_align_index=0)
 
 
-def calculate_potential_soil_loss(
-    ls_factor_uri, erosivity_uri, erodibility_uri, cp_uri, stream_uri,
-    usle_uri):
+def calculate_rkls(
+    ls_factor_uri, erosivity_uri, erodibility_uri, stream_uri,
+    rkls_uri):
 
-    """Calculates per-pixel potential soil loss using the RUSLE (revised 
-        universial soil loss equation).
+    """Calculates per-pixel potential soil loss using the RKLS (revised 
+        universial soil loss equation with no C or P).
 
         ls_factor_uri - GDAL uri with the LS factor pre-calculated
         erosivity_uri - GDAL uri with per pixel erosivity 
         erodibility_uri - GDAL uri with per pixel erodibility
-        c_uri - GDAL uri per pixel crop managment factor
-        p_uri - GDAL uri per pixel land management factor
         stream_uri - GDAL uri indicating locations with streams
             (0 is no stream, 1 stream)
-        usle_uri - string input indicating the path to disk
+        rkls_uri - string input indicating the path to disk
             for the resulting potential soil loss raster
 
         returns nothing"""
@@ -135,23 +129,18 @@ def calculate_potential_soil_loss(
     ls_factor_nodata = raster_utils.get_nodata_from_uri(ls_factor_uri)
     erosivity_nodata = raster_utils.get_nodata_from_uri(erosivity_uri)
     erodibility_nodata = raster_utils.get_nodata_from_uri(erodibility_uri)
-    cp_nodata = raster_utils.get_nodata_from_uri(cp_uri)
     stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
-
     usle_nodata = -1.0
-    ls_factor_nodata = -1.0
 
-    cell_size = raster_utils.get_cell_size_from_uri(cp_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(ls_factor_uri)
     cell_area = cell_size ** 2
 
-    def usle_function(ls_factor, erosivity, erodibility, usle_cp,
-                      v_stream):
+    def rkls_function(ls_factor, erosivity, erodibility, v_stream):
         """Calculates the USLE equation
         
         ls_factor - length/slope factor
         erosivity - related to peak rainfall events
         erodibility - related to the potential for soil to erode
-        usle_c_p - crop and practice factor which helps to abate soil erosion
         v_stream - 1 or 0 depending if there is a stream there.  If so, no
             potential soil loss due to USLE
         
@@ -159,20 +148,19 @@ def calculate_potential_soil_loss(
             defined, nodata if some are not defined, 0 if in a stream
             (v_stream)"""
 
-        if ls_factor == ls_factor_nodata or erosivity == erosivity_nodata or \
-            erodibility == erodibility_nodata or usle_cp == cp_nodata or \
-            v_stream == stream_nodata:
+        if (ls_factor == ls_factor_nodata or erosivity == erosivity_nodata or 
+            erodibility == erodibility_nodata or v_stream == stream_nodata):
             return usle_nodata
         if v_stream == 1:
             return 0.0
         #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
-        return ls_factor * erosivity * erodibility * usle_cp * cell_area / 10000.0
+        return ls_factor * erosivity * erodibility * cell_area / 10000.0
 
     dataset_uri_list = [
-        ls_factor_uri, erosivity_uri, erodibility_uri, cp_uri, stream_uri]
+        ls_factor_uri, erosivity_uri, erodibility_uri, stream_uri]
 
-    #Aligning with index 4 because that's cp and the most likely to be
+    #Aligning with index 3 that's the stream and the most likely to be
     #aligned with LULCs
     raster_utils.vectorize_datasets(
-        dataset_uri_list, usle_function, usle_uri, gdal.GDT_Float32,
-        usle_nodata, cell_size, "intersection", dataset_to_align_index=4)
+        dataset_uri_list, rkls_function, rkls_uri, gdal.GDT_Float32,
+        usle_nodata, cell_size, "intersection", dataset_to_align_index=3)
