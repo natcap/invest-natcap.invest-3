@@ -180,7 +180,7 @@ def calculate_potential_soil_loss(
         usle_nodata, cell_size, "intersection", dataset_to_align_index=4)
 
 
-def calculate_rkls_soil_loss(
+def calculate_rkls(
     ls_factor_uri, erosivity_uri, erodibility_uri, stream_uri,
     rkls_uri):
 
