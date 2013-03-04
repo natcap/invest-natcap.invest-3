@@ -201,11 +201,8 @@ def calculate_rkls(
     erosivity_nodata = raster_utils.get_nodata_from_uri(erosivity_uri)
     erodibility_nodata = raster_utils.get_nodata_from_uri(erodibility_uri)
     stream_nodata = raster_utils.get_nodata_from_uri(stream_uri)
-
     usle_nodata = -1.0
-    ls_factor_nodata = raster_utils.get_nodata_from_uri(ls_factor_uri)
-    erosivity_uri = raster_utils.get_nodata_from_uri(erosivity_uri)
-    erodibility_uri = raster_utils.get_nodata_from_uri(erodibility_uri)
+
     cell_size = raster_utils.get_cell_size_from_uri(ls_factor_uri)
     cell_area = cell_size ** 2
 
