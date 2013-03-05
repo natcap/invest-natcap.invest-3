@@ -411,7 +411,7 @@ def make_hab_risk_raster(dir, risk_dict):
         raster_utils.pixel_size(gdal.Open(risk_dict[(habitats[0], stressors[0])]))
 
     #List to store the completed h rasters in. Will be passed on to the
-    #ecosystem raster function to be used in vectorize_raster.
+    #ecosystem raster function to be used in vectorize_dataset.
     h_rasters = {} 
 
     #Run through all potential pairings, and make lists for the ones that
