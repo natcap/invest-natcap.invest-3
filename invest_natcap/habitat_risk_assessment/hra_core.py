@@ -162,7 +162,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     #out by weighting or DQ.
     num_stress = collections.Counter()
     for pair in crit_lists['Risk']['h-s']:
-        h, s = pair
+        h, _ = pair
         
         if h in num_stress:
             num_stress[h] += 1
@@ -291,6 +291,9 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
     for h in habitats:
 
         def add_recov_pix(*pixels):
+            '''We will have burned numerator values for the recovery potential
+            equation. Want to add all of the numerators (r/dq), then divide by
+            the denoms added together (1/dq.'''
 
             value = 0.
 
@@ -337,6 +340,7 @@ def make_ecosys_risk_raster(dir, h_dict):
     '''
     #Need a straight list of the values from h_dict
     h_list_open = map(lambda key: gdal.Open(h_dict[key]), h_dict.keys())
+    pixel_size = raster_utils.pixel_size(h_list_open[0])
 
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
@@ -542,7 +546,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
 
     return risk_rasters
 
-def make_risk_mult(base_uri, e_rast, c_rast, risk_uri):
+def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     '''Combines the E and C rasters according to the multiplicative combination
     equation.
 
@@ -643,9 +647,11 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         
         #Combine, and take the sqrt
         value = math.sqrt(e_val + c_val)
+        
+        return value
 
     raster_utils.vectorize_datasets([base, e_rast, c_rast], 
-                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0,
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0, grid_size,
                     resample_method_list=None, dataset_to_align_index=None,
                     aoi_uri=None)
 
@@ -815,7 +821,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds_uri = h_s[pair]['DS']
         base_ds = gdal.Open(base_ds_uri)
-        base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
+        _, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
         base_pixel_size = raster_utils.pixel_size(base_ds)
 
         #First, want to make a raster of added individual numerator criteria.
@@ -875,7 +881,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             crit_ds_uri = crit_dict['DS']
             crit_ds = gdal.Open(crit_ds_uri)
-            crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
+            _, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
             
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
@@ -913,7 +919,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds_uri = hab[h]['DS']
         base_ds = gdal.Open(base_ds_uri)
-        base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
+        _, base_nodata = raster_utils.extract_band_and_nodata(base_ds)
         base_pixel_size = raster_utils.pixel_size(base_ds)
 
         rec_crit_rate_numerator = 0
@@ -977,7 +983,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             w = crit_dict['Weight']
 
             crit_ds = crit_dict['DS']
-            crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
+            _, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
 
             denoms['Risk']['h'][h] += 1/ float(dq * w)
             denoms['Recovery'][h] += 1/ float(dq)
@@ -1031,7 +1037,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds_uri = stress[s]['DS']
         base_ds = base_ds_uri(base_ds)
-        base_band, base_nodata = raster_utils.extract_band_and_nodata(base_ds) 
+        _, base_nodata = raster_utils.extract_band_and_nodata(base_ds) 
         base_pixel_size = raster_utils.pixel_size(base_ds)
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
@@ -1078,7 +1084,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in stress[s]['Crit_Rasters'].iteritems():
             crit_ds_uri = crit_dict['DS']
             crit_ds = gdal.Open(crit_ds_uri)
-            crit_band, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
+            _, crit_nodata = raster_utils.extract_band_and_nodata(crit_ds)
             
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
