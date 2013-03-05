@@ -130,16 +130,17 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         crit_lists- A dictionary containing pre-burned criteria which can be
             combined to get the E/C for that H-S pairing.
 
-            {'Risk': {  'h-s': { (hab1, stressA): [indiv num raster, raster 1, ...],
+            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster URI", 
+                                    "raster 1 URI", ...],
                                  (hab1, stressB): ...
                                },
-                        'h':   { hab1: [indiv num raster, raster 1, ...],
+                        'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
                                 ...
                                },
-                        's':   { stressA: [indiv num raster, ...]
+                        's':   { stressA: ["indiv num raster URI", ...]
                                }
                      }
-             'Recovery': { hab1: [indiv num raster, ...],
+             'Recovery': { hab1: ["indiv num raster URI", ...],
                            hab2: ...
                          }
             }
@@ -152,7 +153,9 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
      Output:
         Returns a shapefile for every habitat, showing features only for the
-        areas that are "high risk" within that habitat.        
+        areas that are "high risk" within that habitat.
+
+     Returns nothing.
      '''
     #For each h, want  to know how many stressors are associated with it. This
     #allows us to not have to think about whether or not a h-s pair was zero'd
@@ -182,26 +185,30 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
         curr_top_risk = num_stress[h] * max_risk
-        old_ds = h_dict[h]
+        old_ds_uri = h_dict[h]
+        old_ds = gdal.Open(old_ds_uri)
+        grid_size = raster_utils.pixel_size(old_ds)
 
         out_uri_r = os.path.join(dir, h + '_HIGH_RISK.tif') 
         out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
-        new_ds = raster_utils.vectorize_rasters([old_ds], high_risk_raster,
-                        aoi = None, raster_out_uri = out_uri_r, 
-                        datatype=gdal.GDT_Float32, nodata = 0)
+        
+        raster_utils.vectorize_datasets([old_ds], high_risk_raster, out_uri_r,
+                        gdal.GDT_Float32, 0, grid_size, "intersection", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
         #Use gdal.Polygonize to take the raster, which should have only
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
-        raster_to_polygon(new_ds, out_uri, h, 'VALUE')
+        raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
 
-def raster_to_polygon(raster, out_uri, layer_name, field_name):
+def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     '''This will take in a raster file, and output a shapefile of the same
     area and shape.
 
     Input:
-        raster- The raster that needs to be turned into a shapefile. This is
-            only an open raster, not the band. 
+        raster_uri- The raster that needs to be turned into a shapefile. This is
+            only the URI to the raster, we will need to get the band. 
         out_uri- The desired URI for the new shapefile.
         layer_name- The name of the layer going into the new shapefile.
         field-name- The name of the field that will contain the raster pixel
@@ -214,6 +221,8 @@ def raster_to_polygon(raster, out_uri, layer_name, field_name):
 
     Returns nothing.
     '''
+    raster = gdal.Open(raster_uri)
+
     driver = ogr.GetDriverByName("ESRI Shapefile")
     ds = driver.CreateDataSource(out_uri)
                 
@@ -849,7 +858,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             else:
                 return crit_rate_numerator
 
-        raster_utils.vectorize_rasters([base_ds], burn_numerator,
+        raster_utils.vectorize_datasets([base_ds], burn_numerator,
                         single_crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size,
                         "intersection", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
