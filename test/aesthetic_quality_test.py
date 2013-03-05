@@ -11,11 +11,11 @@ class AestheticQualityTest(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = 'data/test_out/aq_workspace'
-        args['aoi_uri'] = ''
-        args['structure_uri'] = ''
-        args['dem_uri'] = 'data/wave_energy_data/samp_input/gobal_dem'
+        args['aoi_uri'] = 'data/aesthetic_quality/AOI_WCVI.shp'
+        args['structure_uri'] = 'data/aesthetic_quality/AquaWEM_points.shp'
+        args['dem_uri'] = 'data/wave_energy_data/samp_input/global_dem'
         args['refraction'] = 0.13
         args['cellSize'] = 30
-        args['pop_uri'] = ''
-        args['overlap_uri'] = ''
+        args['pop_uri'] = 'data/aesthetic_quality/aoi_pop'
+        args['overlap_uri'] = 'data/aesthetic_quality/BC_parks.shp'
         aesthetic_quality.execute(args)
