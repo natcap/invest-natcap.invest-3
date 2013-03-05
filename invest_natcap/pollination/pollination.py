@@ -224,7 +224,8 @@ def execute(args):
             except OSError:
                 # The shapefile folder does not exist.  We need to make it
                 # anyways, so we really don't care.
-                LOGGER.debug('Farms folder did not exist previously')
+                LOGGER.debug('Farms folder did not exist previously: %s',
+                    shapefile_folder)
 
             # Make the shapefile folder to contain the farms shapefile.
             os.makedirs(shapefile_folder)
