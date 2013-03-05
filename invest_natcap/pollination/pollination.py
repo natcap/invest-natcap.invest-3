@@ -210,20 +210,23 @@ def execute(args):
 
         # If the user provided a farms shapefile input, aggregate the
         # biophysical species abundance data according to the farms table.
+        # This aggregate score will be stored to a scenario-specific shapefile.
         if 'farms_shapefile' in args:
             LOGGER.info('Starting to aggregate by farms')
             encoding = sys.getfilesystemencoding()
             base_shapefile = args['farms_shapefile'].encode(encoding)
-            shapefile_folder = os.path.join(out_dir, 'farms_abundance')
+            shapefile_folder = build_uri(out_dir, 'farms_abundance', [scenario,
+                suffix])
 
             # Delete the old shapefile folder if it already exists.
             try:
                 shutil.rmtree(shapefile_folder)
                 LOGGER.debug('Removed old farms folder at %s',
                      shapefile_folder)
-            except OSError:
+            except OSError as e:
                 # The shapefile folder does not exist.  We need to make it
                 # anyways, so we really don't care.
+                LOGGER.debug('Exception: %s', e)
                 LOGGER.debug('Farms folder did not exist previously: %s',
                     shapefile_folder)
 
