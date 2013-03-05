@@ -507,12 +507,12 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #to be used in risk calculation. 
         #E will only need to take in stressor subdictionary data
         #C will take in both h-s and habitat subdictionary data
-        E_uri = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
-                        denoms['Risk']['s'][s])
+        calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
+                    denoms['Risk']['s'][s])
         #C will need to take in both habitat and hab-stress subdictionary data
-        C_uri = calc_C_raster(c_out_uri, crit_lists['Risk']['h-s'][pair], 
-                        denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
-                        denoms['Risk']['h'][h])
+        calc_C_raster(c_out_uri, crit_lists['Risk']['h-s'][pair], 
+                    denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
+                    denoms['Risk']['h'][h])
 
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
@@ -522,13 +522,14 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         base_ds_uri = h_s[pair]['DS']
         
         if risk_eq == 'Multiplicative':
-            mod_raster_uri = make_risk_mult(base_ds_uri, E_uri, C_uri, risk_uri)
+            
+            make_risk_mult(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
         
         elif risk_eq == 'Euclidean':
             
-            mod_raster_uri = make_risk_euc(base_ds_uri, E_uri, C_uri, risk_uri)
+            make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
 
-        risk_rasters[pair] = mod_raster_uri
+        risk_rasters[pair] = risk_uri
 
     return risk_rasters
 
@@ -552,7 +553,8 @@ def make_risk_mult(base_uri, e_rast, c_rast, risk_uri):
     #want to be sure that this will output 0.
     base = gdal.Open(base_uri)
     base_nodata, _ = raster_utils.extract_band_and_nodata(base) 
-
+    grid_size = raster_utils.pixel_size(base)
+    
     E = gdal.Open(e_uri)
     C = gdal.Open(c_uri)
 
@@ -579,9 +581,7 @@ def make_risk_mult(base_uri, e_rast, c_rast, risk_uri):
                     resample_method_list=None, dataset_to_align_index=None,
                     aoi_uri=None)
 
-    return risk_uri
-
-def make_risk_euc(base, e_rast, c_rast, risk_uri):
+def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
     equation.
 
@@ -597,10 +597,13 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
     Returns a raster representing the euclidean calculated E raster, C raster, 
     and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
     '''
-    LOGGER.debug("NAME OF RISK CALC FILE.")
-    LOGGER.debug(risk_uri)
+    
+    base = gdal.Open(base_uri)
+    e_rast = gdal.Open(e_uri)
+    c_rast = gdal.Open(c_uri)
     _, base_nodata = raster_utils.extract_band_and_nodata(base)
     _, e_nodata = raster_utils.extract_band_and_nodata(e_rast)
+    grid_size = raster_utils.grid_size(base)
 
     #we need to know very explicitly which rasters are being passed in which
     #order. However, since it's all within the make_risk_euc function, should
@@ -632,17 +635,17 @@ def make_risk_euc(base, e_rast, c_rast, risk_uri):
         #Combine, and take the sqrt
         value = math.sqrt(e_val + c_val)
 
-    mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
-                            combine_risk_euc, aoi = None, 
-                            raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
-                            nodata = 0)
-    return mod_raster
+    raster_utils.vectorize_datasets([base, e_rast, c_rast], 
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0,
+                    resample_method_list=None, dataset_to_align_index=None,
+                    aoi_uri=None)
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
+        out_uri- The location to which the E raster should be burned.
         s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that s.
         s_denom- A double representing the sum total of all applicable criteria
@@ -652,7 +655,9 @@ def calc_E_raster(out_uri, s_list, s_denom):
         An 'E' raster that is the sum of all individual r/dq*w burned
         criteria rasters divided by the summed denominator.
     '''
-    
+    s_list_open = map(lambda uri: gdal.Open(uri), s_list)
+    grid_size = raster_utils.pixel_size(s_list_open[0])
+
     def add_e_pix(*pixels):
         
         value = 0.
@@ -662,11 +667,10 @@ def calc_E_raster(out_uri, s_list, s_denom):
     
         return value / s_denom
 
-    e_raster = raster_utils.vectorize_rasters(s_list, add_e_pix, aoi = None,
-                            raster_out_uri = out_uri, datatype=gdal.GDT_Float32,
-                            nodata = 0)
-    
-    return e_raster
+    raster_utils.vectorize_datasets(s_list_open, add_e_pix, out_uri,
+                        gdal.GDT_Float32, 0, grid_size, "intersection", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     '''Should return a raster burned with a 'C' raster that is a combination
