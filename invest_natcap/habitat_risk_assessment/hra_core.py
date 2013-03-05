@@ -651,9 +651,7 @@ def calc_E_raster(out_uri, s_list, s_denom):
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns:
-        An 'E' raster that is the sum of all individual r/dq*w burned
-        criteria rasters divided by the summed denominator.
+    Returns nothing.
     '''
     s_list_open = map(lambda uri: gdal.Open(uri), s_list)
     grid_size = raster_utils.pixel_size(s_list_open[0])
@@ -677,17 +675,22 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
+        out_uri- The location to which the calculated C raster should be burned.
+        h_s_list- A list of rasters burned with the equation r/dq*w for every
+            criteria applicable for that h, s pair.
+        h_s_denom- A double representing the sum total of all applicable criteria
+            using the equation 1/dq*w.
         s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that s.
         s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
-    Returns:
-        A 'C' raster that is the sum of all individual r/dq*w burned
-        criteria rasters divided by the summed denominator.
+    Returns nothing.
     '''
     tot_crit_list = h_s_list + h_list
+    crit_list_open = map(lambda uri: gdal.Open(uri), tot_crit_list)
     tot_denom = h_s_denom + h_denom
+    grid_size = raster_utils.pixel_size(crit_list_open[0])
 
     def add_c_pix(*pixels):
         
@@ -698,16 +701,16 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     
         return value / tot_denom
 
-    c_raster = raster_utils.vectorize_rasters(tot_crit_list, add_c_pix, 
-                            aoi = None, raster_out_uri = out_uri, 
-                            datatype=gdal.GDT_Float32, nodata = 0)
+    raster_utils.vectorize_datasets(crit_list_open, add_c_pix, out_uri, 
+                        gdal.GDT_Float32, 0, grid_size, "intersection", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
     LOGGER.debug(tot_crit_list)
     for ds in tot_crit_list:
         r = ds.GetRasterBand(1)
         LOGGER.debug('\nC Raster X Size, C Raster Y Size')
         LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
-    return c_raster
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     '''Want to return two dictionaries in the format of the following:
