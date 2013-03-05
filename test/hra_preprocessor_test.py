@@ -30,21 +30,15 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''This will use only the habitats directory as an input to overlap
         stressors, and won't attempt to pull in shapefile criteria.'''
 
-        self.args['do_species'] = False
-        self.args['do_habitats'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        self.args['do_shapes'] = False
+        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
 
     @unittest.skip("For later testing.")
     def test_HabsSpecies_NoShapes_smoke(self):
 
-        self.args['do_species'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/SpeciesLayers'
-        self.args['do_habitats'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        self.args['do_shapes'] = False
+        self.args['species_dir'] = './data/test_out/HRA/Input/SpeciesLayers'
+        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
 
@@ -52,10 +46,6 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''Want to make sure that if neither a habitat or species is selected for
         use in overlap, that it throws an error. Should raise a 
         MissingHabitatOrSpecies exception.'''
-
-        self.args['do_species'] = False
-        self.args['do_habitats'] = False
-        self.args['do_shapes'] = False
 
         self.assertRaises(hra_preprocessor.MissingHabitatsOrSpecies,
                         hra_preprocessor.execute, self.args)
@@ -65,10 +55,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         within our 3 criteria type lists. Should raise a NotEnoughCriteria 
         exception.'''
 
-        self.args['do_species'] = False
-        self.args['do_habitats'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        self.args['do_shapes'] = False
+        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
         #Since we had 6 crits to begin with, remove one from each should leave
         #us with 3, want to make sure this causes to error.
@@ -86,10 +73,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''Want to make sure that we are erroring if we don't have any criteria
         values in any of the 3 categories.'''
 
-        self.args['do_species'] = False
-        self.args['do_habitats'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        self.args['do_shapes'] = False
+        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
         self.args['resiliance_crits'] = []
 
@@ -98,20 +82,11 @@ class TestHRAPreprocessor(unittest.TestCase):
 
     @unittest.skip("This should test both CSV outputs and JSON file, but I'll \
             get to it later.")
-        
-        self.args['do_species'] = False
-        self.args['do_habitats'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        self.args['do_shapes'] = False
-
     def test_table_parse_regression(self):
         '''Given a known set of CSV's, want to make a mock up for exactly what the 
         dictionary should look like, and regression test it.'''
         
-        self.args['do_species'] = False
-        self.args['do_habitats'] = True
-        self.args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        self.args['do_shapes'] = False
+        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
         expected_dict = \
             {'buffer_dict': {'FinfishAquacultureComm': 250.0,

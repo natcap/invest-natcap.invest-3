@@ -23,20 +23,12 @@ def execute(args):
             complete the rest of the model run. It will contain the following.
         args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be subfolders of this one.
-        args['risk_eq']-  A string representing the equation to be used for
-            risk calculation. Possible risk equations are 'Multiplicative',
-            which would multiply E and C, and 'Euclidean', which would use
-            the equation sqrt((C-1)^2 + (E-1)^2).
-        args['max_risk']- The highest possible risk value for any given pairing
-            of habitat and stressor.
-        args['h-s']- A multi-level structure which holds all criteria ratings, 
-            both numerical and raster that apply to habitat and stressor 
-            overlaps. The structure, whose keys are tuples of 
-            (Habitat, Stressor) names and map to an inner dictionary will have
-            3 outer keys containing numeric-only criteria, raster-based
-            criteria, and a dataset that shows the potentially buffered overlap
-            between the habitat and stressor. The overall structure will be as
-            pictured:
+        args['h-s']- The same as intermediate/'h-s', but with the addition
+            of a 3rd key 'DS' to the outer dictionary layer. This will map to
+            a dataset URI that shows the potentially buffered overlap between the 
+            habitat and stressor. Additionally, any raster criteria will
+            be placed in their criteria name subdictionary. The overall 
+            structure will be as pictured:
 
             {(Habitat A, Stressor 1): 
                     {'Crit_Ratings': 
@@ -45,22 +37,31 @@ def execute(args):
                         },
                     'Crit_Rasters': 
                         {'CritName':
-                            {'DS': <CritName Raster>, 'Weight': 1.0, 'DQ': 1.0}
+                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
                         },
-                    'DS':  <Open A-1 Raster Dataset>
+                    'DS':  "A-1 Dataset URI"
                     }
             }
         args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat
             name, and habitats['habitatName']['DS'] points to the rasterized
-            habitat shapefile provided by the user.
+            habitat shapefile URI provided by the user.
         args['stressors']- Similar to the h-s dictionary, a multi-level
             dictionary containing all stressor-specific criteria ratings and
-            rasters. In this case, however, the outermost key is by stressor
             name, and stressors['stressorName']['DS'] points to the rasterized
-            stressor shapefile provided by the user.
-
+            stressor shapefile URI provided by the user that will be buffered by
+            the indicated amount in buffer_dict['stressorName'].
+        args['risk_eq']- String which identifies the equation to be used
+            for calculating risk.  The core module should check for 
+            possibilities, and send to a different function when deciding R 
+            dependent on this.
+        args['max_risk']- The highest possible risk value for any given pairing
+            of habitat and stressor.
+        args['plot_aoi']- May or may not exist within this model run, but if it
+            does, the user desires to have the average risk values plotted by 
+            stressor/habitat using E/C axes for each feature in the AOI layer.
+    
     Outputs:
         --Intermediate--
             These should be the temp risk and criteria files needed for the 

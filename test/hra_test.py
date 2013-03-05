@@ -20,20 +20,21 @@ class TestHRA(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
-        args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
-        args['csv_uri'] = './data/test_out/HRA/habitat_stressor_ratings'
         args['grid_size'] = 500
-        args['risk_eq'] = 'Euclidean'
-        args['decay_eq'] = 'Exponential'
-
-        #Want to have some pairs that don't include some stressors to make sure
-        #that the model can handle some things not being included all of the time.
+        args['max_rating'] = 3
+        args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings'
 
         self.args = args
     
-    def test_run(self):
-        
+    def test_euc_nodecay_noplots_smoke(self):
+        '''Most simplistic version of the model run. Will use euclidean
+        risk, since that was the original desired eqauation, as well as
+        no decay on the stressors.'''
+
+
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
+
         hra.execute(self.args)
 
 #    def test_run_zero_buffer(self):

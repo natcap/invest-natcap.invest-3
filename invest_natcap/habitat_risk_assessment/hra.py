@@ -11,7 +11,7 @@ import math
 from osgeo import gdal, ogr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
-#from invest_natcap.habitat_risk_assessment import hra_preprocessor
+from invest_natcap.habitat_risk_assessment import hra_preprocessor
 import hra_preprocessor
 from invest_natcap import raster_utils
 
@@ -26,7 +26,7 @@ class ImproperCriteriaAttributeName(Exception):
     in every layer provided.'''
     pass
 
-class ImproperAOIAttributeNAme(Exception):
+class ImproperAOIAttributeName(Exception):
     '''An exception to pass in hra non core if the risk plot AOIs do not
     contain the proper attribute name for individual indentification. The
     attribute should be named 'NAME', and must exist for every shape in the
@@ -49,9 +49,11 @@ def execute(args):
         args['grid_size']- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
-            in calculating risk scores for each H-S overlap cell.
+            in calculating risk scores for each H-S overlap cell. This will be
+            either 'Euclidean' or 'Multiplicative'.
         args['decay_eq']- A string identifying the equation that should be used
-            in calculating the decay of stressor buffer influence.
+            in calculating the decay of stressor buffer influence. This can be
+            'None', 'Linear', or 'Exponential'.
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
@@ -99,7 +101,7 @@ def execute(args):
                         },
                     }
             }
-        args['habitats']- Similar to the h-s dictionary, a multi-level
+        hra_args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             raster information. The outermost keys are habitat names.
         hra_args['stressors']- Similar to the h-s dictionary, a multi-level
@@ -144,7 +146,7 @@ def execute(args):
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
             dependent on this.
-        args['max_risk']- The highest possible risk value for any given pairing
+        hra_args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
     
     Returns nothing.
@@ -162,6 +164,23 @@ def execute(args):
 
         os.makedirs(folder)
     
+    #If using risk plots are desired, pass the AOI layer directly to core to be
+    #dealt with there.
+    if 'plot_aoi' in args:
+
+        #Need to check that this shapefile contains the correct attribute name.
+        #Later, this is where the uppercase/lowercase dictionary can be
+        #implimented.
+        shape = ogr.Open(args['plot_aoi'])
+        layer = shape.GetLayer()
+        for feature in layer:
+            if 'name' not in feature.items():
+                raise ImproperAOIAttributeName("Risk plot layer attributes must \
+                    contain the attribute \"name\" in order to be properly used \
+                    within the HRA model run.")
+
+        hra_args['plot_aoi'] = args['plot_aoi']
+
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them and put them into the
     #hra_args dict. Then can modify that within the rest of the code.
@@ -182,16 +201,17 @@ def execute(args):
 
         os.makedirs(folder)
 
-    #Criteria
-    c_shape_dict = make_crit_shape_dict(hra_args['criteria_dir'])
-    add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
-                hra_args['stressors'], hra_args['h-s'], args['grid_size'])
+    #Criteria, if they exist.
+    if 'criteria_dir' in hra_args:
+        c_shape_dict = make_crit_shape_dict(hra_args['criteria_dir'])
+        add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
+                    hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
     #Habitats
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_list.append(glob.glob(os.path.join(args[ele], '*.shp')))
+            hab_list += glob.glob(os.path.join(hra_args[ele], '*.shp'))
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
@@ -212,6 +232,8 @@ def execute(args):
     for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
         if name in hra_args:
             del hra_args[name]
+
+    LOGGER.debug(hra_args)
 
     hra_core.execute(hra_args)
     
@@ -283,6 +305,13 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
+            for feature in layer:
+                if 'rating' not in feature.items():
+                    raise ImproperCriteriaAttributeName("Criteria layer must \
+                        contain the attribute \"rating\" in order to be properly used \
+                        within the HRA model run.")
+                
+
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
@@ -294,7 +323,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             band.Fill(nodata)
 
             gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
+                            options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
             h_s['Crit_Rasters'][c_name]['Rating'] = out_uri
     
@@ -507,9 +536,10 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
 
         #For the h-s overlap, want to do intersection, since we will never need
         #anything outside that bounding box.
-        raster_utils.vectorize_datasets(files, add_h_s_pixels, gdal.GDT_Float32,
-                        grid_size, "intersection", resample_method_list=None, 
-                        dataset_to_align_index=None, aoi_uri=None)
+        raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
+                        gdal.GDT_Float32, 0, grid_size, "intersection", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
         h_s[pair]['DS'] = out_uri
 
@@ -695,7 +725,10 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         A modified version of habitats, into which we have placed the URI to the
             rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
-   ''' 
+   '''
+
+    LOGGER.debug(hab_list)
+
     for shape in hab_list:
         
         #The return of os.path.split is a tuple where everything after the final
@@ -767,10 +800,6 @@ def unpack_over_dict(csv_uri, args):
     Returns nothing.
     '''
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
-    LOGGER.debug(csv_uri)
-    LOGGER.debug("DICTIONARIES:")
-    LOGGER.debug(dicts)
-
 
     for dict_name in dicts:
      

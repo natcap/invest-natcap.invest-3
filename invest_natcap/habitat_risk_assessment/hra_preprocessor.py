@@ -37,7 +37,7 @@ def execute(args):
 
     Input:
         args['workspace_dir'] - The directory to dump the output CSV files to.
-        args['habitat_dir'] - A directory of shapefiles that are habitats. This
+        args['habitats_dir'] - A directory of shapefiles that are habitats. This
             is not required, and may not exist if there is a species layer
             directory.
         args['species_dir']- Directory which holds all species shapefiles, but
@@ -70,7 +70,7 @@ def execute(args):
     """
     #Create two booleans to indicate which of the layers we should be using in
     #this model run.
-    do_habs = 'habitat_dir' in args
+    do_habs = 'habitats_dir' in args
     do_species = 'species_dir' in args
 
     #First, want to raise two exceptions if things are wrong.
@@ -122,7 +122,7 @@ def execute(args):
 
     #Get the names of all potential habs
     hab_list = []
-    for ele in ('habitat_dir', 'species_dir'):
+    for ele in ('habitats_dir', 'species_dir'):
         if ele in args:
             hab_list = hab_list + glob.glob(os.path.join(args[ele], '*.shp'))
             hab_list = \
@@ -392,24 +392,29 @@ def parse_hra_tables(workspace_uri):
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
     #from the assessment for that subdictionary.
-    for subdict in parse_dictionary.values():
-        for indivs in subdict.values():
-            for kind in indivs.values():
+    try:
+        for subdict in parse_dictionary.values():
+            for indivs in subdict.values():
+                for kind in indivs.values():
 
-                #Since we have the buffer_dict in here as well, occasionally it
-                #will encounter a float value. We just want to let that go, 
-                #since it's not the dictionary that we're concerned with.
-                try:
-                    for crit_name, crit_dict in kind.iteritems():
-                        for value in crit_dict.values():
-                            if value in [0, '']:
-                                del(kind[crit_name])
-                                #Breaking because crit_dict won't contain crit_name
-                                break
-                except AttributeError:
-                    #Can just skip over float values.
-                    pass
+                    #Since we have the buffer_dict in here as well, occasionally it
+                    #will encounter a float value. We just want to let that go, 
+                    #since it's not the dictionary that we're concerned with.
+                    try:
+                        for crit_name, crit_dict in kind.iteritems():
+                            for value in crit_dict.values():
+                                if value in [0, '']:
+                                    del(kind[crit_name])
+                                    #Breaking because crit_dict won't contain crit_name
+                                    break
+                    except AttributeError:
+                        #Can just skip over float values.
+                        pass
 
+    except AttributeError:
+        #Since we are passing in unicode strings from the UI, want to just be
+        #able to ignore those and move on to the actual dictionary items.
+        pass
 
     stressor_buf_dict = {}
     for stressor, stressor_properties in stressor_dict.iteritems():
