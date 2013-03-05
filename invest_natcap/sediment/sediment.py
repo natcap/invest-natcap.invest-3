@@ -88,7 +88,6 @@ def execute(args):
             os.makedirs(directory)
 
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
-    cell_size = raster_utils.get_cell_size_from_uri(args['dem_uri'])
 
     #Clip the dem and cast to a float
     clipped_dem_uri = raster_utils.temporary_filename()
@@ -163,62 +162,55 @@ def execute(args):
         lulc_clipped_dataset, lulc_to_cp_dict, cp_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
-    LOGGER.info('building (1-cp) raster from lulc')
-    lulc_to_inv_cp_dict = dict([(lulc_code, 1.0 - (float(table['usle_c']) * float(table['usle_p']))) for (lulc_code, table) in biophysical_table.items()])
+    LOGGER.info('calculating rkls')
+    rkls_uri = os.path.join(output_dir, 'rkls%s.tif' % file_suffix)
+    sediment_core.calculate_rkls(
+        ls_uri, args['erosivity_uri'], args['erodibility_uri'], v_stream_uri,
+        rkls_uri)
 
-    inv_cp_uri = os.path.join(intermediate_dir, 'cp_inv%s.tif' % file_suffix)
-    raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_inv_cp_dict, inv_cp_uri, gdal.GDT_Float32,
-        -1.0, exception_flag='values_required')
-
-    LOGGER.info('calculating usle')
+    LOGGER.info('calculating USLE')
     usle_uri = os.path.join(output_dir, 'usle%s.tif' % file_suffix)
-    sediment_core.calculate_potential_soil_loss(
-        ls_uri, args['erosivity_uri'], args['erodibility_uri'], cp_uri,
-        v_stream_uri, usle_uri)
+    nodata_rkls = raster_utils.get_nodata_from_uri(rkls_uri)
+    nodata_cp = raster_utils.get_nodata_from_uri(cp_uri)
+    nodata_usle = -1.0
+    def mult_rkls_cp(rkls, cp_factor):
+        if rkls == nodata_rkls or cp_factor == nodata_cp:
+            return nodata_usle
+        return rkls * cp_factor
+    raster_utils.vectorize_datasets(
+        [rkls_uri, cp_uri], mult_rkls_cp, usle_uri,
+        gdal.GDT_Float32, nodata_usle, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
-    #Calculate the retention on the pixel due to the cp factor
-    on_pixel_retention_uri = os.path.join(output_dir, 'on_pixel_retention%s.tif' % file_suffix)
-    sediment_core.calculate_potential_soil_loss(
-        ls_uri, args['erosivity_uri'], args['erodibility_uri'], inv_cp_uri,
-        v_stream_uri, on_pixel_retention_uri)
-    on_pixel_retention_nodata = raster_utils.get_nodata_from_uri(on_pixel_retention_uri)
+    LOGGER.info('calculating on pixel retention RKLS-USLE')
+    on_pixel_retention_uri = os.path.join(
+        output_dir, 'on_pixel_retention%s.tif' % file_suffix)
+    on_pixel_retention_nodata = -1.0
+    def sub_rkls_usle(rkls, usle):
+        if rkls == nodata_rkls or usle == nodata_usle:
+            return nodata_usle
+        return rkls * usle
+    raster_utils.vectorize_datasets(
+        [rkls_uri, usle_uri], sub_rkls_usle, on_pixel_retention_uri,
+        gdal.GDT_Float32, nodata_usle, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
 
-    effective_export_to_stream_uri = os.path.join(intermediate_dir, 'effective_export_to_stream%s.tif' % file_suffix)
-
-    outflow_weights_uri = os.path.join(intermediate_dir, 'outflow_weights%s.tif' % file_suffix)
-    outflow_direction_uri = os.path.join(
-        intermediate_dir, 'outflow_directions%s.tif' % file_suffix)
-
-    sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
-
-    LOGGER.info('route the sediment flux')
+    LOGGER.info('route the sediment flux to determine upstream retention')
     #This yields sediment flux, and sediment loss which will be used for valuation
-    upstream_on_pixel_retention_uri = os.path.join(output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
-    sed_flux_uri = raster_utils.temporary_filename() #os.path.join(intermediate_dir, 'sed_flux%s.tif' % file_suffix)
-
-    #calculate the upstream_on_pixel_retention
-    #Align the input rasters because they can be different sizes from the vectorize_datasets function
-    transport_original_uri_list = [
-        outflow_direction_uri, outflow_weights_uri, usle_uri,
-        retention_rate_uri]
-    transport_uri_list = [raster_utils.temporary_filename() for _ in xrange(len(transport_original_uri_list))]
-    raster_utils.align_dataset_list(
-        transport_original_uri_list, transport_uri_list, ["nearest"] * len(transport_original_uri_list),
-        out_pixel_size, "intersection", 0)
-
-    #Pass the list of stacked temporary files to calculate transport, this is a little tricky
-    #because I want to have the arguments in the right order, but there's a sink_cell_set in the
-    #middle of them, so i have to split transport_uri_list in half.  Sorry about that.
-    transport_arg_list = transport_uri_list[0:2] + [sink_cell_set] + transport_uri_list[2:] + \
-        [upstream_on_pixel_retention_uri, sed_flux_uri]
-    routing_cython_core.calculate_transport(*transport_arg_list)
-    upstream_retention_nodata = raster_utils.get_nodata_from_uri(upstream_on_pixel_retention_uri)
+    upstream_on_pixel_retention_uri = os.path.join(
+        output_dir, 'upstream_on_pixel_retention%s.tif' % file_suffix)
+    sed_flux_uri = raster_utils.temporary_filename()
+    routing_utils.route_flux(
+        args['dem_uri'], usle_uri, retention_rate_uri,
+        upstream_on_pixel_retention_uri, sed_flux_uri,
+        aoi_uri=args['watersheds_uri'])
 
     #Calculate the retention due to per pixel retention and the cp factor
+    LOGGER.info("calculating total retention (upstream + CP factor)")
     sed_retention_uri = os.path.join(output_dir, 'sed_ret%s.tif' % file_suffix)
     sed_retention_nodata = -1.0
+    upstream_retention_nodata = raster_utils.get_nodata_from_uri(upstream_on_pixel_retention_uri)
+    on_pixel_retention_nodata = raster_utils.get_nodata_from_uri(on_pixel_retention_uri)
     def add_upstream_and_on_pixel_retention(upstream_retention, on_pixel_retention):
         if upstream_retention == upstream_retention_nodata or on_pixel_retention == on_pixel_retention_nodata:
             return upstream_retention_nodata
@@ -230,28 +222,9 @@ def execute(args):
         out_pixel_size, "intersection", dataset_to_align_index=0,
         aoi_uri=args['watersheds_uri'])
 
-    #Account for sediment retention due to c and p factors on USLE.
-    raster_utils.vectorize_datasets(
-        [args['landuse_uri']], int, lulc_clipped_uri,
-        gdal.GDT_Int32, lulc_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=args['watersheds_uri'])
-
-    LOGGER.info('backtrace the sediment reaching the streams')
-    percent_to_sink_dataset_uri_list = [
-        v_stream_uri, export_rate_uri, outflow_direction_uri, 
-        outflow_weights_uri]
-
-    aligned_dataset_uri_list = [
-        raster_utils.temporary_filename() for _ in
-        percent_to_sink_dataset_uri_list]
-
-    raster_utils.align_dataset_list(
-        percent_to_sink_dataset_uri_list, aligned_dataset_uri_list, 
-        ["nearest", "nearest", "nearest", "nearest"], out_pixel_size, "intersection", 0)
-    #routing_cython_core.percent_to_sink(*(aligned_dataset_uri_list + [effective_export_to_stream_uri]))
     sed_export_uri = os.path.join(output_dir, 'sed_export%s.tif' % file_suffix)
     routing_utils.pixel_amount_exported(
-        clipped_dem_uri, v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
+        args['dem_uri'], v_stream_uri, retention_rate_uri, usle_uri, sed_export_uri, aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('generating report')
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
