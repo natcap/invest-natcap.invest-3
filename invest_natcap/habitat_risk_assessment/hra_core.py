@@ -507,10 +507,10 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #to be used in risk calculation. 
         #E will only need to take in stressor subdictionary data
         #C will take in both h-s and habitat subdictionary data
-        E = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
+        E_uri = calc_E_raster(e_out_uri, crit_lists['Risk']['s'][s],
                         denoms['Risk']['s'][s])
         #C will need to take in both habitat and hab-stress subdictionary data
-        C = calc_C_raster(c_out_uri, crit_lists['Risk']['h-s'][pair], 
+        C_uri = calc_C_raster(c_out_uri, crit_lists['Risk']['h-s'][pair], 
                         denoms['Risk']['h-s'][pair], crit_lists['Risk']['h'][h],
                         denoms['Risk']['h'][h])
 
@@ -522,17 +522,17 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         base_ds_uri = h_s[pair]['DS']
         
         if risk_eq == 'Multiplicative':
-            mod_raster = make_risk_mult(base_ds_uri, E, C, risk_uri)
+            mod_raster_uri = make_risk_mult(base_ds_uri, E_uri, C_uri, risk_uri)
         
         elif risk_eq == 'Euclidean':
             
-            mod_raster = make_risk_euc(base_ds_uri, E, C, risk_uri)
+            mod_raster_uri = make_risk_euc(base_ds_uri, E_uri, C_uri, risk_uri)
 
-        risk_rasters[pair] = mod_raster
+        risk_rasters[pair] = mod_raster_uri
 
     return risk_rasters
 
-def make_risk_mult(base, e_rast, c_rast, risk_uri):
+def make_risk_mult(base_uri, e_rast, c_rast, risk_uri):
     '''Combines the E and C rasters according to the multiplicative combination
     equation.
 
@@ -545,12 +545,16 @@ def make_risk_mult(base, e_rast, c_rast, risk_uri):
             habitat-stressor-specific criteria in this model run. 
         risk_uri- The file path to which we should be burning our new raster.
             
-    Returns a raster representing the multiplied E raster, C raster, and 
-    the base raster.
+    Returns the URI for a raster representing the multiplied E raster, C raster, 
+    and the base raster.
     '''
     #Since we aren't necessarily sure what base nodata is coming in as, just
     #want to be sure that this will output 0.
+    base = gdal.Open(base_uri)
     base_nodata, _ = raster_utils.extract_band_and_nodata(base) 
+
+    E = gdal.Open(e_uri)
+    C = gdal.Open(c_uri)
 
     def combine_risk_mult(*pixels):
 
@@ -570,12 +574,12 @@ def make_risk_mult(base, e_rast, c_rast, risk_uri):
 
         return value
 
-    mod_raster = raster_utils.vectorize_rasters([base, e_rast, c_rast], 
-                            combine_risk_mult, aoi = None, 
-                            raster_out_uri = risk_uri, datatype=gdal.GDT_Float32,
-                            nodata = 0)
+    raster_utils.vectorize_datasets([base, E, C], combine_risk_mult, risk_uri, 
+                    gdal.GDT_Float32, 0, grid_size, "intersection", 
+                    resample_method_list=None, dataset_to_align_index=None,
+                    aoi_uri=None)
 
-    return mod_raster
+    return risk_uri
 
 def make_risk_euc(base, e_rast, c_rast, risk_uri):
     '''Combines the E and C rasters according to the euclidean combination
