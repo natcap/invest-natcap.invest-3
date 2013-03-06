@@ -644,8 +644,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
                     combine_risk_euc, risk_uri, gdal.GDT_Float32, 0, grid_size,
-                    resample_method_list=None, dataset_to_align_index=None,
-                    aoi_uri=None)
+                    "intersection", resample_method_list=None, 
+                    dataset_to_align_index=None, aoi_uri=None)
 
 def calc_E_raster(out_uri, s_list, s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
