@@ -737,6 +737,12 @@ class DynamicText(LabeledElement):
                 self.setTextMargins(0, 0, self.button.sizeHint().width() + 1, 0)
 
         def resizeEvent(self, event):
+            """Reimplemented from QtGui.QLineEdit.resizeEvent.
+
+            This reimplemented function allows me to move around the datatype
+            button when the window is resized, before Qt handles all its normal
+            resize event routines."""
+
             # We only care about moving the button around if the button is
             # visible.  If it isn't visible, we just call down to the
             # QLineEdit's resize event handler.
