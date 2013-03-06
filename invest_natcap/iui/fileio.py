@@ -72,6 +72,7 @@ class LastRunHandler(JSONHandler):
             invest_version = invest_natcap.__version__
 
         uri = '%s_lastrun_%s.json' % (modelname, invest_version)
+        print('lastrun URI:', uri)
         set_folder = settings_folder().decode(sys.getfilesystemencoding())
         rendered_path = os.path.join(set_folder, uri)
         JSONHandler.__init__(self, rendered_path)
