@@ -2292,4 +2292,17 @@ def get_lookup_from_csv(csv_table_uri, key_field):
 def viewshed(dem_uri, shapefile_uri, z_factor, curvature_correction, refractivity_coefficient, visible_feature_count_uri,
              out_cell_size=None, aoi_uri=None):
     """FILL IN"""
-    pass
+
+    viewshed_dataset = gdal.Open(dem_uri)
+    cols = viewshed_dataset.RasterXSize # Raster xsize
+    rows = viewshed_dataset.RasterYSize # Raster ysize
+    projection = viewshed_dataset.GetProjection()
+    geotransform = viewshed_dataset.GetGeoTransform()
+    format = 'GTiff'
+    nodata = 0
+    datatype = gdal.GDT_Float32
+    bands = 1
+    outputURI=visible_feature_count_uri
+    
+    new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
+              bands, outputURI)

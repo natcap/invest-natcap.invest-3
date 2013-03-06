@@ -19,8 +19,8 @@
                                     "required": true
                                 },                        
                                 {
-                                    "id" : "aoiFileName",
-                                    "args_id" : "aoiFileName",
+                                    "id" : "aoi_uri",
+                                    "args_id" : "aoi_uri",
                                     "type": "file",
                                     "label": "Area of Interest",
                                     "defaultValue": "",
@@ -28,8 +28,8 @@
                                     "required": true
                                 },
                                 {
-                                    "id" : "structureFileName",
-                                    "args_id" : "structureFileName",
+                                    "id" : "structure_uri",
+                                    "args_id" : "structure_uri",
                                     "type": "file",
                                     "label": "Structures",
                                     "defaultValue": "",
@@ -37,8 +37,8 @@
                                     "required": true
                                 },
                                 {
-                                    "id" : "structureFileName",
-                                    "args_id" : "structureFileName",
+                                    "id" : "dem_uri",
+                                    "args_id" : "dem_uri",
                                     "type": "file",
                                     "label": "Digital Elevation Model",
                                     "defaultValue": "",
@@ -66,8 +66,8 @@
                                     "required": false
                                 },
                                 {
-                                    "id" : "populationFileName",
-                                    "args_id" : "populationFileName",
+                                    "id" : "pop_uri",
+                                    "args_id" : "pop_uri",
                                     "type": "file",
                                     "label": "Population Raster",
                                     "defaultValue": "",
@@ -75,8 +75,8 @@
                                     "required": true
                                 },
                                 {
-                                    "id" : "overlapFileName",
-                                    "args_id" : "overlapFileName",
+                                    "id" : "overlap_uri",
+                                    "args_id" : "overlap_uri",
                                     "type": "file",
                                     "label": "Overlap Analysis Features",
                                     "defaultValue": "",
