@@ -712,10 +712,10 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
                         aoi_uri=None)
 
     #LOGGER.debug(tot_crit_list)
-    for ds in tot_crit_list:
-        r = ds.GetRasterBand(1)
-     #   LOGGER.debug('\nC Raster X Size, C Raster Y Size')
-     #   LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
+    #for ds in tot_crit_list:
+    #    r = ds.GetRasterBand(1)
+    #   LOGGER.debug('\nC Raster X Size, C Raster Y Size')
+    #   LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
 
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     '''Want to return two dictionaries in the format of the following:
@@ -968,6 +968,11 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
+
+            LOGGER.debug("----------------------\n")
+            LOGGER.debug(crit_dict)
+            LOGGER.debug(crit)
+            LOGGER.debug(h)
 
             crit_ds_uri = crit_dict['DS']
             crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
