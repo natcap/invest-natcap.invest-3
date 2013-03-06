@@ -695,7 +695,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     '''
     tot_crit_list = h_s_list + h_list
     tot_denom = h_s_denom + h_denom
-    grid_size = raster_utils.pixel_size(tot_crit_list[0])
+    grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
 
     def add_c_pix(*pixels):
         
