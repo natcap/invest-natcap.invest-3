@@ -1182,6 +1182,20 @@ class FileEntry(DynamicText):
             DynamicText.TextField.__init__(self)
             self.setAcceptDrops(True)
 
+            self.button = QtGui.QToolButton(self)
+            self.button.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+                'validate-pass.png')))
+            self.button.setStyleSheet('border: 0px; padding: 0px;')
+            self.setTextMargins(0, 0, self.button.sizeHint().width() + 1, 0)
+
+        def resizeEvent(self, event):
+            buttonsize = self.button.sizeHint()
+            framewidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+            self.button.move((self.rect().right() - framewidth -
+                buttonsize.width()), (self.rect().bottom() - buttonsize.height() +
+                1)/2)
+            DynamicText.TextField.resizeEvent(self, event)
+
         def dragEnterEvent(self, event=None):
             """Overriding the default dragEnterEvent function for when a file is
             dragged and dropped onto this qlineedit.  This reimplementation is
