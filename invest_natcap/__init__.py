@@ -16,7 +16,6 @@ import build_utils
 #gdal.UseExceptions()
 
 __version__ = build_utils.invest_version()
-print 'InVEST version %s' % __version__
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
