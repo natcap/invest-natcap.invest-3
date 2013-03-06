@@ -245,6 +245,33 @@ def execute(args):
    #LOGGER.debug(hra_args)
 
     hra_core.execute(hra_args)
+
+def calc_max_rating(risk_eq, max_rating):
+    ''' Should take in the max possible risk, and return the highest possible
+    per pixel risk that would be seen on a H-S raster pixel.
+
+    Input:
+        risk_eq- The equation that will be used to determine risk.
+        max_rating- The highest possible value that could be given as a
+            criteria rating, data quality, or weight.
+    
+    Returns:
+        An int representing the highest possible risk value for any given h-s
+        overlap raster.
+    '''
+    
+    #The max_rating ends up being the simplified result of each of the E and
+    #C equations when the same value is used in R/DQ/W. Thus for E and C, their
+    #max value is equivalent to the max_rating.
+    
+    if risk_eq == 'Multiplicative':
+        max_r = max_rating * max_rating
+
+    elif risk_eq == 'Euclidean':
+        under_rt = (max_rating - 1)**2 + (max_rating - 1)**2
+        max_r = math.sqrt(under_rt)
+
+    return max_r
     
 def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
