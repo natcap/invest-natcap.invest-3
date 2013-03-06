@@ -1,5 +1,6 @@
 import os
 from osgeo import gdal, ogr
+gdal.UseExceptions()
 from invest_natcap import raster_utils
 from invest_natcap.wave_energy import wave_energy_core
 import logging
@@ -17,6 +18,7 @@ def execute(args):
     aq_args=args.copy()
 
     #validate input
+    LOGGER.debug("Validating parameters.")
     dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
     if aq_args['cellSize'] < dem_cell_size:
@@ -26,6 +28,7 @@ def execute(args):
         os.makedirs(args['workspace_dir'])
 
     #local variables
+    LOGGER.debug("Setting local variables.")
     z_factor=1
     curvature_correction=aq_args['refraction']
 
@@ -35,29 +38,28 @@ def execute(args):
     viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
 
     #clip DEM to AOI
-    dem=gdal.Open(aq_args['dem_uri'])
-    aoi=ogr.Open(aq_args['aoi_uri'])
-    
+    LOGGER.debug("Start clip DEM by AOI.")
+
+    LOGGER.debug("Reprojecting AOI to match DEM projection.")
+
+    dem=gdal.Open(aq_args['dem_uri'])    
     projection = dem.GetProjection()
-    geotransform = dem.GetGeoTransform()    
-
-    in_defn=aoi.GetLayer(0).GetLayerDefn()
-    LOGGER.debug("AOI shape type: %s" % in_defn.GetGeomType())
-    shp_ds=wave_energy_core.change_shape_projection(aoi,projection,aoi_prj_uri)
-    shp_ds.Destroy()
-    aoi.Close()
-
-    prj_aoi=ogr.Open(aoi_prj_uri)
-    raster_utils.clip_dataset(dem, aoi, viewshed_dem_uri)
-
-    dem.Close()
-    prj_aoi.Close()
+    aoi=ogr.Open(aq_args['aoi_uri'])
+    raster_utils.reproject_datasource(aoi, projection, aoi_prj_uri)
+    aoi=None
+    
+    LOGGER.debug("Clip DEM by reprojected AOI.")
+    aoi_prj=ogr.Open(aoi_prj_uri)
+    raster_utils.clip_dataset(dem, aoi_prj, viewshed_dem_uri)
+    dem=None
+    aoi_prj=None
     
 
     #portions of the DEM that are below sea-level are converted to a value of "0"
+    LOGGER.debug("Reclass DEM.")
         
     #calculate viewshed
-    LOGGER.debug("Starting viewshed analysis.")
+    LOGGER.debug("Start viewshed analysis.")
     LOGGER.debug("Saving viewshed to: %s" % visible_feature_count_uri)
     raster_utils.viewshed(viewshed_dem_uri,
                           aq_args['structure_uri'],
