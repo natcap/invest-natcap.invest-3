@@ -329,7 +329,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
-            h_s[pair]['Crit_Rasters'][c_name]['Rating'] = out_uri
+            h_s[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
     
     #Habs
     for h in crit_dict['h']:
@@ -355,7 +355,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
             LOGGER.debug(habitats)             
-            habitats[h]['Crit_Rasters'][c_name]['Rating'] = out_uri
+            habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
 
     #Stressors
     for s in crit_dict['s']:
@@ -381,7 +381,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
              
-            stressors[s]['Crit_Rasters'][c_name]['Rating'] = out_uri
+            stressors[s]['Crit_Rasters'][c_name]['DS'] = out_uri
 
 def make_crit_shape_dict(crit_uri):
     '''This will take in the location of the file structure, and will return
