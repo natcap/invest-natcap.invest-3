@@ -907,7 +907,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #for each of the h/s crits too.
         base_ds_uri = hab[h]['DS']
         base_nodata = raster_utils.get_nodata_from_uri(base_ds_uri)
-        base_pixel_size = raster_utils.pixel_size(base_ds)
+        base_pixel_size = raster_utils.get_cell_size_from_uri(base_ds_uri)
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
