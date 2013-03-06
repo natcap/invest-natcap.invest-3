@@ -233,7 +233,7 @@ def execute(args):
         if name in hra_args:
             del hra_args[name]
 
-    LOGGER.debug(hra_args)
+   #LOGGER.debug(hra_args)
 
     hra_core.execute(hra_args)
     
@@ -291,6 +291,10 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
         A set of rasterized criteria files. The criteria shapefiles will be
             burned based on their 'Rating' attribute. These will be placed in
             the 'dir' folder.
+        
+        An appended version of habitats, stressors, and h-s which will include
+        entries for criteria rasters at 'Rating' in the appropriate dictionary.
+        'Rating' will map to the URI of the corresponding criteria dataset.
 
     Returns nothing.
     '''
@@ -325,7 +329,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
-            h_s['Crit_Rasters'][c_name]['Rating'] = out_uri
+            h_s[pair]['Crit_Rasters'][crit_name]['Rating'] = out_uri
     
     #Habs
     for h in crit_dict['h']:
@@ -350,8 +354,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
 
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
-             
-            habitats['Crit_Rasters'][c_name]['Rating'] = out_uri
+            LOGGER.debug(habitats)             
+            habitats[h]['Crit_Rasters'][crit_name]['Rating'] = out_uri
 
     #Stressors
     for s in crit_dict['s']:
@@ -377,7 +381,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
              
-            stressors['Crit_Rasters'][c_name]['Rating'] = out_uri
+            stressors[s]['Crit_Rasters'][c_name]['Rating'] = out_uri
+
 def make_crit_shape_dict(crit_uri):
     '''This will take in the location of the file structure, and will return
     a dictionary containing all the shapefiles that we find. Hypothetically, we
@@ -387,6 +392,7 @@ def make_crit_shape_dict(crit_uri):
     Input:
         crit_uri- Location of the file structure containing all of the shapefile
             criteria.
+
 
     Returns:
         A dictionary containing shapefile URI's, indexed by their criteria name,
@@ -408,7 +414,6 @@ def make_crit_shape_dict(crit_uri):
         }
     '''
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
-
     #First, want to get the things that are either habitat specific or 
     #species specific. These should all be in the 'Resiliance' subfolder
     #of raster_criteria.
@@ -726,8 +731,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
    '''
-
-    LOGGER.debug(hab_list)
 
     for shape in hab_list:
         

@@ -351,7 +351,7 @@ def parse_hra_tables(workspace_uri):
 
     with open(json_uri, 'rb') as infile:
         parse_dictionary = json.load(infile)
-
+    LOGGER.debug(parse_dictionary)
     #Now we can compile and add the other dictionaries
     habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
     stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
