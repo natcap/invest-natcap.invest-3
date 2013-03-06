@@ -206,9 +206,9 @@ class UnifiedPollinationTest(unittest.TestCase):
         pollination.execute(self.args)
 
         regression_file = os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'farms_abundance', 'farms.shp')
-        test_file = os.path.join(self.workspace_dir, 'output', 'farms_abundance',
-            'farms.shp')
+            'farms_abundance_cur', 'farms.shp')
+        test_file = os.path.join(self.workspace_dir, 'output',
+            'farms_abundance_cur', 'farms.shp')
         invest_test_core.assertTwoShapesEqualURI(self, regression_file,
             test_file)
 
