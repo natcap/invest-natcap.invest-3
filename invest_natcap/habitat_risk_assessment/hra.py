@@ -157,6 +157,15 @@ def execute(args):
 
     hra_args['workspace_dir'] = args['workspace_dir']
 
+    hra_args['risk_eq'] = args['risk_eq']
+    
+    #Depending on the risk calculation equation, this should return the highest
+    #possible value of risk for any given habitat-stressor pairing. The highest
+    #risk for a habitat would just be this risk value * the number of stressor
+    #pairs that apply to it.
+    max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
+    hra_args['max_risk'] = max_r
+    
     #Create intermediate and output folders. Delete old ones, if they exist.
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):

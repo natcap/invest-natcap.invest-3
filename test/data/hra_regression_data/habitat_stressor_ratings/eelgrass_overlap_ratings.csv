@@ -2,7 +2,7 @@ HABITAT NAME,eelgrass,,
 ,,,
 HABITAT ONLY PROPERTIES,,,
 ,Rating,DQ,Weight
-recruitment rate,SHAPE,1,1
+recruitment rate,1,1,1
 natural mortality,1,1,1
 ,,,
 HABITAT STRESSOR OVERLAP PROPERTIES,,,
