@@ -5,7 +5,7 @@
     "modelName" : "pollination",
     "localDocURI": "../documentation/croppollination.html",
     "condenseElements": true,
-    "height": 500,
+    "height": 700,
     "width" : 700,
     "elements": [
         {
