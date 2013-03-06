@@ -337,7 +337,7 @@ def make_ecosys_risk_raster(dir, h_dict):
     Returns nothing.
     '''
     #Need a straight list of the values from h_dict
-    h_list = = h_dict.values()
+    h_list = h_dict.values()
     pixel_size = raster_utils.pixel_size(h_list[0])
 
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
