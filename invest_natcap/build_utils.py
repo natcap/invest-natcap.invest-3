@@ -2,6 +2,7 @@ import subprocess
 import imp
 import os
 import logging
+import traceback
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
@@ -20,10 +21,19 @@ def invest_version(uri=None, force_new=False):
     Returns a python bytestring with the version identifier, as appropriate for
     the development version or the release version."""
 
+    def get_file_name(uri):
+        """This function gets the file's basename without the extension."""
+        return os.path.splitext(os.path.basename(uri))[0]
+
+    if uri == None:
+        uri = os.path.join(os.path.dirname(__file__), 'invest_version.py')
+
     LOGGER.debug('Getting the InVEST version for URI=%s' % uri)
     try:
-        name = os.path.splitext(os.path.basename(uri))[0]
+        name = get_file_name(uri)
         version_info = imp.load_source(name, uri)
+        force_new = False
+        LOGGER.debug('Successfully imported version file')
     except (ImportError, IOError, AttributeError, TypeError):
         # ImportError thrown when we can't import the target source
         # IOError thrown if the target source file does not exist on disk
@@ -38,14 +48,9 @@ def invest_version(uri=None, force_new=False):
     # information and return it.
     if force_new:
         try:
-            if uri != None:
-                write_version_file(uri)
-                version_info = imp.load_source(name, uri)
-            else:
-                if get_tag_distance() == 0:
-                    return get_latest_tag()
-                else:
-                    return 'dev%s' % get_build_id()
+            write_version_file(uri)
+            name = get_file_name(uri)
+            version_info = imp.load_source(name, uri)
         except ValueError as e:
             # Thrown when Mercurial is not found to be installed in the local
             # directory.  This is a band-aid fix for when we import InVEST from

@@ -287,7 +287,7 @@ def execute(args):
             
 def parse_hra_tables(workspace_uri):
     #It should be noted here that workspace_uri isn't actually the workspace
-    #URI, but is actually the location of the CSV and JSOn files that we need
+    #URI, but is actually the location of the CSV and JSON files that we need
     #to parse through.
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
@@ -351,7 +351,7 @@ def parse_hra_tables(workspace_uri):
 
     with open(json_uri, 'rb') as infile:
         parse_dictionary = json.load(infile)
-
+    LOGGER.debug(parse_dictionary)
     #Now we can compile and add the other dictionaries
     habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
     stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
