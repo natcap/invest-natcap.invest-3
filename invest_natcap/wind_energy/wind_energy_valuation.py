@@ -34,6 +34,8 @@ def execute(args):
         args[global_wind_parameters_uri] - a uri to a CSV file that holds the
             global parameter values for both the biophysical and valuation
             module (required)        
+        args[number_of_machines] - an integer value for the number of machines
+            for the wind farm (required for valuation)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
@@ -137,6 +139,7 @@ def execute(args):
     val_turbine_dict['discount_rate'] = float(args['discount_rate'])
     LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
     valuation_args['turbine_dict'] = val_turbine_dict
+    valuation_args['number_of_turbines'] = int(args['number_of_machines'])
 
     # Handle Grid Points
     try:
