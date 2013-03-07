@@ -26,14 +26,23 @@ def invest_version(uri=None, force_new=False):
         return os.path.splitext(os.path.basename(uri))[0]
 
     if uri == None:
-        new_uri = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'invest_version.py')
+        new_uri = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+            'invest_version.pyc')
     else:
         new_uri = uri
 
     LOGGER.debug('Getting the InVEST version for URI=%s' % uri)
     try:
         name = get_file_name(new_uri)
-        version_info = imp.load_source(name, new_uri)
+        new_uri_extension = os.path.splitext(new_uri)[1]
+        if new_uri_extension == '.pyc':
+            version_info = imp.load_compiled(name, new_uri)
+        elif new_uri_extension == '.py':
+            version_info = imp.load_source(name, new_uri)
+        elif new_uri_extension == '.pyd':
+            version_info = imp.load_dynamic(name, new_uri)
+        else:
+            raise IOError('Module %s must be importable by python' % new_uri)
 #        print 'imported version'
         LOGGER.debug('Successfully imported version file')
         found_file = True
@@ -55,16 +64,16 @@ def invest_version(uri=None, force_new=False):
             write_version_file(new_uri)
             name = get_file_name(new_uri)
             version_info = imp.load_source(name, new_uri)
-#            print 'Wrote a new version file'
+            print 'Wrote a new version file'
         except ValueError as e:
             # Thrown when Mercurial is not found to be installed in the local
             # directory.  This is a band-aid fix for when we import InVEST from
             # within a distributed version of RIOS.
             # When this happens, return the exception as a string.
             return str(e)
-    else:
-        # Unless the above conditions are met, we just return the build info
-        # from mercurial.
+    elif not found_file and uri == None:
+        # If we have not found the version file and no URI is provided, we need
+        # to get the version info from HG.
 #        print 'getting version from hg'
         return get_version_from_hg()
 
@@ -115,6 +124,7 @@ def build_dev_id(build_id=None):
 def get_version_from_hg():
     """Get the version from mercurial.  If we're on a tag, return that.
     Otherwise, build the dev id and return that instead."""
+    # TODO: Test that Hg exists before getting this information.
     if get_tag_distance() == 0:
         return get_latest_tag()
     else:
