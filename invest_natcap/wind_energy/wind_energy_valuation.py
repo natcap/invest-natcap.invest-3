@@ -41,8 +41,6 @@ def execute(args):
             (required if grid_points_uri is not provided)
         args[foundation_cost] - a float representing how much the foundation
             will cost for the specific type of turbine (required)
-        args[number_of_machines] - an integer value for the number of machines
-            for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
         args[discount_rate] - a float value for the discount rate (required for
@@ -88,8 +86,6 @@ def execute(args):
     
     valuation_args['biophysical_data'] = biophysical_points
     
-    # Number of machines
-    valuation_args['number_of_machines'] = int(args['number_of_machines'])
     # Dollar per kiloWatt hour
     valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
 
