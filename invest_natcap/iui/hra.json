@@ -75,7 +75,7 @@
                     "required": true,
                     "validateAs": {"type": "number"},
                     "dataType": "int",
-                    "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the \'Rating\' column of the habitat, species, and stressor CSV\'s."
+                    "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the Rating column of the habitat, species, and stressor CSVs."
                 },
                 {
                 "id":"plot_aoi",
