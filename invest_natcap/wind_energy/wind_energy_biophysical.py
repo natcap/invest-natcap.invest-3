@@ -40,6 +40,8 @@ def execute(args):
         args[global_wind_parameters_uri] - a uri to a CSV file that holds the
             global parameter values for both the biophysical and valuation
             module (required)        
+        args[number_of_machines] - an integer value for the number of machines
+            for the wind farm (required for valuation)
         args[bottom_type_uri] - a uri to an OGR datasource of type polygon
             that depicts the subsurface geology type (optional)
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
@@ -252,7 +254,8 @@ def execute(args):
     biophysical_args['workspace_dir'] = workspace
     biophysical_args['hub_height'] = hub_height
     biophysical_args['scale_key'] = scale_key
-    
+    biophysical_args['number_of_turbines'] = int(args['number_of_machines']
+
     # Pass in the depth values as negative, since it should be a negative
     # elevation
     biophysical_args['min_depth'] = abs(float(args['min_depth'])) * -1.0
