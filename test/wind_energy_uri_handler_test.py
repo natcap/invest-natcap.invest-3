@@ -54,7 +54,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         raster_file_output_names = ['harvested_energy_MWhr_per_yr.tif', 'density_W_per_m2.tif']
 
-        for file_name in shape_file_names:
+        for file_name in shape_file_output_names:
             reg_file = os.path.join(
                     regression_dir, 'output/' + file_name)
             out_file = os.path.join(
