@@ -637,7 +637,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #itself.
         base_array = band.ReadAsArray()
         buff = buffer_dict[name]
-
+        LOGGER.debug("Buffer size is %s", buff)
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
 
@@ -743,7 +743,7 @@ def make_no_decay_array(dist_array, buff, nodata):
     inner_zone_index = dist_array <= buff
     dist_array[inner_zone_index] = 1
     dist_array[~inner_zone_index] = nodata  
-    
+    LOGGER.debug("Need to make sure we are getting here.") 
     return dist_array 
     
 def add_hab_rasters(dir, habitats, hab_list, grid_size):

@@ -31,24 +31,6 @@
                     "validateAs": {"type": "folder"},
                     "helpText": "A folder containing multiple CSV files. Each file refers to the overlap between a habitat and a stressor pulled from habitat and stressor shapeiles during the run of the HRA Preprocessor.
                     },
-                {
-                    "id" : "habitats_loc",
-                    "args_id" : "habitat_dir",
-                    "type": "folder",
-                    "label": "Habitats Shapefile Directory",
-                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
-                    "required": true,
-                    "helpText": "The location of a folder which contains the shpefile representations of the habitats being used within the assessment."
-                },
-                {
-                    "id" : "stressors_loc",
-                    "args_id" : "stressor_dir",
-                    "type": "folder",
-                    "label": "Stressor Shapefile Directory",
-                    "defaultValue": "../HabitatRiskAssess/Input/StressorLayers",
-                    "required": true,
-                    "helpText": "The location of a folder which contains the shpefile representations of the stressors being used within the assessment."
-                },
 		{
                     "id" : "grid_size",
                     "args_id" : "grid_size",
@@ -83,6 +65,17 @@
                     "returns": "strings",
                     "dataType": "string",
                     "helpText": "Each of these represents an option for decay equations for the buffered stressors. If stressor buffering is desired, these equtions will determine the rate at which stressor data is reduced."
+                },
+                {
+                    "id":"plot_aoi",
+                    "args_id": "plot_aoi",
+                    "type": "hideableFileEntry",
+                    "label": "Use Risk Plots As AOI?",
+                    "required": false,
+                    "validateAs": {"type": "folder",
+		    		  "mustExist": true},
+                    "defaultValue": "../HabitatRiskAssess/Input/Risk_Plot.shp",
+                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."
                 }
             ]
         }
