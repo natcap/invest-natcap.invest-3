@@ -60,7 +60,7 @@
                     "id" : "land_polygon",
                     "args_id" : "land_polygon_uri",
                     "type": "file",
-                    "label": "Land Polygon to Calculate Distance From",
+                    "label": "Land Polygon for Distance Calculation",
                     "defaultValue": "../Base_Data/Marine/Land/global_polygon.shp",
                     "enabledBy" : "aoi", 
                     "requiredIf": ["min_distance", "max_distance", "valuation_container"],
@@ -89,7 +89,6 @@
                     "returns": {"ifEmpty": "pass"},
                     "required": false,
                     "helpText":"A String that will be added to the end of the output file paths."
-
                 }                         
             ]
         },
