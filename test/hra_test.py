@@ -19,7 +19,7 @@ class TestHRA(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = './data/test_out/HRA' 
+        args['workspace_dir'] = './data/test_out/HRA/New_Test' 
         args['grid_size'] = 500
         args['max_rating'] = 3
         args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings'
