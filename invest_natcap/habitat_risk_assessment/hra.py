@@ -151,6 +151,7 @@ def execute(args):
     
     Returns nothing.
     '''
+    LOGGER.debug("Gets here.")
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
