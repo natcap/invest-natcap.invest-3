@@ -15,13 +15,7 @@ import build_utils
 #from osgeo import gdal
 #gdal.UseExceptions()
 
-try:
-    import invest_version
-    __version__ = invest_version.release
-    if __version__ == 'None':
-        __version__ = invest_version.build_id
-except (ImportError, AttributeError):
-    __version__ = build_utils.invest_version()
+__version__ = build_utils.invest_version()
 
 def is_release():
     """Returns a boolean indicating whether this invest release is actually a
