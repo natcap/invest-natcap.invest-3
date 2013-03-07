@@ -614,7 +614,7 @@ def valuation(args):
         args[land_polygon] - an OGR datasource of type polygon, to get the wind
             energy bin distances from if grid points and land points are not
             provided (required if grid_points and land_points are not provided)
-        args[number_of_machines] - an integer value for the number of machines
+        args[number_of_turbines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
@@ -663,7 +663,7 @@ def valuation(args):
 
     time = int(turbine_dict['time_period'])
 
-    number_turbines = args['number_of_machines']
+    number_turbines = args['number_of_turbines']
     
     # The total mega watt compacity of the wind farm where mega watt is the
     # turbines rated power
@@ -854,8 +854,8 @@ def valuation(args):
         decommish_capex = decom * capex / disc_time
         
         # The revenue in millions of dollars for the wind farm. The energy_val
-        # is in kWh for a single turbine.
-        rev = energy_val * number_turbines * mill_dollar_per_kwh
+        # is in kWh the farm.
+        rev = energy_val * mill_dollar_per_kwh
         comp_one_sum = 0
         levelized_cost_sum = 0
         levelized_cost_denom = 0
@@ -874,8 +874,8 @@ def valuation(args):
             
             # Calculate the denominator summation value for levelized
             # cost of energy
-            levelized_cost_denom = levelized_cost_denom + ((energy_val *
-                    number_turbines) / disc_const**year) 
+            levelized_cost_denom = levelized_cost_denom + (
+                    energy_val / disc_const**year) 
         
         # Add this years NPV value to the running total
         npv = comp_one_sum - decommish_capex - capex
@@ -890,7 +890,7 @@ def valuation(args):
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
         carbon_coef = float(turbine_dict['carbon_coefficient']) 
-        carbon_emissions = carbon_coef * energy_val * number_turbines
+        carbon_emissions = carbon_coef * energy_val 
         
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)
