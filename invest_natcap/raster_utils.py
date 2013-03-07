@@ -2035,7 +2035,8 @@ def resize_and_resample_dataset(
 
 def align_dataset_list(
     dataset_uri_list, dataset_out_uri_list, resample_method_list,
-    out_pixel_size, mode, dataset_to_align_index, aoi_uri=None):
+    out_pixel_size, mode, dataset_to_align_index, aoi_uri=None,
+    assert_datasets_projected=True):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -2062,7 +2063,8 @@ def align_dataset_list(
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
-    assert_datasets_in_same_projection(dataset_uri_list)
+    if assert_datasets_projected:
+        assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection"]:
         raise Exception("Unknown mode %s" % (str(mode)))
     if dataset_to_align_index >= len(dataset_uri_list):
@@ -2154,7 +2156,7 @@ def align_dataset_list(
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
     pixel_size_out, bounding_box_mode, resample_method_list=None, 
-    dataset_to_align_index=None, aoi_uri=None):
+    dataset_to_align_index=None, aoi_uri=None, assert_datasets_projected=True):
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
         with one of the input datasets, output a dataset that is the union
@@ -2200,7 +2202,10 @@ def vectorize_datasets(
             union without adjustment.
         aoi_uri - (optional) a URI to an OGR datasource to be used for the 
             aoi.  Irrespective of the `mode` input, the aoi will be used
-            to intersect the final bounding box."""
+            to intersect the final bounding box.
+        assert_datasets_projected - (optional) if True this operation will
+            test if any datasets are not projected and raise an exception
+            if so."""
 
     
     #Create a temporary list of filenames whose files delete on the python
@@ -2218,7 +2223,7 @@ def vectorize_datasets(
     align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
-        aoi_uri=aoi_uri)
+        aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected)
     aligned_datasets = [
         gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
