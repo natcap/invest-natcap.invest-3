@@ -34,6 +34,8 @@ def execute(args):
         args[turbine_parameters_uri] - a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters 
             (required)
+        args[number_of_machines] - an integer value for the number of machines
+            for the wind farm (required for valuation)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -56,8 +58,6 @@ def execute(args):
             and grid point locations (optional)
         args[foundation_cost] - a float representing how much the foundation
             will cost for the specific type of turbine (required for valuation)
-        args[number_of_machines] - an integer value for the number of machines
-            for the wind farm (required for valuation)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required for valuation)
         args[discount_rate] - a float value for the discount rate (required for
