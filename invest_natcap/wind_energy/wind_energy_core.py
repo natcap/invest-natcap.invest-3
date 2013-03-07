@@ -69,6 +69,7 @@ def biophysical(args):
     output_dir = os.path.join(workspace, 'output')
 
     tif_suffix = args['suffix'] + '.tif'
+    shp_suffix = args['suffix'] + '.shp'
 
     bathymetry = args['bathymetry']
     min_depth = args['min_depth']
@@ -384,18 +385,18 @@ def biophysical(args):
     # will be with a rough representation of its dimensions. 
     LOGGER.info('Creating Farm Polygon')
     # The number of turbines allowed per circuit for infield cabling
-    turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
+    turbines_per_circuit = int(bio_turbine_dict['turbines_per_circuit'])
     # The rotor diameter of the turbines
-    rotor_diameter = int(turbine_dict['rotor_diameter'])
+    rotor_diameter = int(bio_turbine_dict['rotor_diameter'])
     # The rotor diameter factor is a rule by which to use in deciding how far
     # apart the turbines should be spaced
-    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
+    rotor_diameter_factor = int(bio_turbine_dict['rotor_diameter_factor'])
 
     # Calculate the number of circuits there will be based on the number of
     # turbines and the number of turbines per circuit. If a fractional value is
     # returned we want to round up and error on the side of having the farm be
     # slightly larger
-    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
+    num_circuits = math.ceil(float(number_of_turbines) / turbines_per_circuit)
     # The distance needed between turbines
     spacing_dist = rotor_diameter * rotor_diameter_factor
 
@@ -407,13 +408,13 @@ def biophysical(args):
     # Use the wind energy points datasource to determine the wind farms spatial
     # reference and location. This is in hopes that the farm will thus be
     # located over ocean, although this is not guaranteed
-    wind_energy_layer.ResetReading()
+    wind_points_layer.ResetReading()
     # Get the feature count or how many points exist
-    feature_count = int(wind_energy_layer.GetFeatureCount())
+    feature_count = int(wind_points_layer.GetFeatureCount())
     # Select the feature from which to get the location for the wind farm by
     # indexing into the features by the half the feature count. OGR requires
     # this index to be of type LONG
-    feature = wind_energy_layer.GetFeature(
+    feature = wind_points_layer.GetFeature(
                 long(math.ceil(feature_count / 2)))
     pt_geometry = feature.GetGeometryRef()
     # Get the X and Y location for the selected wind farm point. These
@@ -421,10 +422,10 @@ def biophysical(args):
     center_x = pt_geometry.GetX()
     center_y = pt_geometry.GetY()
     start_point = (center_x, center_y)
-    spat_ref = wind_energy_layer.GetSpatialRef()
+    spat_ref = wind_points_layer.GetSpatialRef()
     
     farm_poly_uri = os.path.join(output_dir,
-            'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
+            'example_size_and_orientation_of_a_possible_wind_farm' + shp_suffix)
     
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
