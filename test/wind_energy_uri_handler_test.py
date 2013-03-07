@@ -29,6 +29,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
+        args['number_of_machines'] = 60
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
@@ -38,7 +39,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         #args['max_distance'] = 50000
         #args['grid_points_uri'] = 
         #args['foundation_cost'] = 2
-        #args['number_of_machines'] = 60
         #args['dollar_per_kWh'] = .187
         #args['discount_rate'] = .116
         #args['avg_grid_distance'] = 4
@@ -46,7 +46,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
 
         wind_energy_uri_handler.execute(args)
 
-        shape_file_names = ['wind_energy_points.shp']
+        shape_file_output_names = ['wind_energy_points.shp',
+                'example_size_and_orientation_of_a_possible_wind_farm.shp']
         
         raster_file_intermediate_names = [
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif']
@@ -98,10 +99,11 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
-        #args['suffix'] = ''
+        args['number_of_machines'] = 60
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
+        #args['suffix'] = ''
 
         wind_energy_uri_handler.execute(args)
 
@@ -109,7 +111,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_proj_to_bath.shp', 'aoi_proj_to_wind_points.shp', 
                 'wind_energy_points_from_dat.shp', 'wind_points_clipped.shp']
         
-        shape_file_output_names = ['wind_energy_points.shp']
+        shape_file_output_names = ['wind_energy_points.shp',
+                'example_size_and_orientation_of_a_possible_wind_farm.shp']
         
         raster_file_intermediate_names = [
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif',
@@ -171,12 +174,12 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
+        args['number_of_machines'] = 60
         args['min_depth'] = 3
         args['max_depth'] = 100
         args['valuation_container'] = False
         #args['grid_points_uri'] = 
         #args['foundation_cost'] = 2
-        #args['number_of_machines'] = 60
         #args['dollar_per_kWh'] = .187
         #args['discount_rate'] = .116
         #args['avg_grid_distance'] = 4
@@ -190,7 +193,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_proj_to_bath.shp', 'aoi_proj_to_wind_points.shp', 
                 'wind_energy_points_from_dat.shp', 'wind_points_clipped.shp']
         
-        shape_file_output_names = ['wind_energy_points.shp']
+        shape_file_output_names = ['wind_energy_points.shp',
+                'example_size_and_orientation_of_a_possible_wind_farm.shp']
         
         raster_file_intermediate_names = [
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif',
@@ -252,6 +256,7 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 input_dir, '3_6_turbine.csv') 
         args['global_wind_parameters_uri'] = os.path.join(
                 input_dir, 'global_wind_energy_parameters.csv') 
+        args['number_of_machines'] = 60
         args['min_distance'] = 1000
         args['max_distance'] = 20000
         args['min_depth'] = 3
@@ -259,7 +264,6 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         args['valuation_container'] = False
         #args['grid_points_uri'] = 
         #args['foundation_cost'] = 2
-        #args['number_of_machines'] = 60
         #args['dollar_per_kWh'] = .187
         #args['discount_rate'] = .116
         #args['avg_grid_distance'] = 4
@@ -273,7 +277,8 @@ class TestWindEnergyUriHandler(unittest.TestCase):
                 'aoi_proj_to_land.shp', 'land_poly_clipped.shp',
                 'land_poly_projected.shp']
         
-        shape_file_output_names = ['wind_energy_points.shp']
+        shape_file_output_names = ['wind_energy_points.shp',
+                'example_size_and_orientation_of_a_possible_wind_farm.shp']
         
         raster_file_intermediate_names = [
                 'harvested_temp.tif', 'density_temp.tif', 'depth_mask.tif',

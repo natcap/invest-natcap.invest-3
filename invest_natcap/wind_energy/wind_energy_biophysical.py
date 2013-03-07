@@ -254,7 +254,7 @@ def execute(args):
     biophysical_args['workspace_dir'] = workspace
     biophysical_args['hub_height'] = hub_height
     biophysical_args['scale_key'] = scale_key
-    biophysical_args['number_of_turbines'] = int(args['number_of_machines']
+    biophysical_args['number_of_turbines'] = int(args['number_of_machines'])
 
     # Pass in the depth values as negative, since it should be a negative
     # elevation
