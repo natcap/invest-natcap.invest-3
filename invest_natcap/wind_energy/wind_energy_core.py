@@ -380,6 +380,116 @@ def biophysical(args):
             harvest_mask_list, mask_out_depth_dist, 
             raster_out_uri = harvested_masked_uri, nodata = out_nodata)
 
+    # Create the farm polygon shapefile, which is an example of how big the farm
+    # will be with a rough representation of its dimensions. 
+    LOGGER.info('Creating Farm Polygon')
+    # The number of turbines allowed per circuit for infield cabling
+    turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
+    # The rotor diameter of the turbines
+    rotor_diameter = int(turbine_dict['rotor_diameter'])
+    # The rotor diameter factor is a rule by which to use in deciding how far
+    # apart the turbines should be spaced
+    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
+
+    # Calculate the number of circuits there will be based on the number of
+    # turbines and the number of turbines per circuit. If a fractional value is
+    # returned we want to round up and error on the side of having the farm be
+    # slightly larger
+    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
+    # The distance needed between turbines
+    spacing_dist = rotor_diameter * rotor_diameter_factor
+
+    # Calculate the width
+    width = (num_circuits - 1) * spacing_dist
+    # Calculate the length 
+    length = (turbines_per_circuit - 1) * spacing_dist
+    
+    # Use the wind energy points datasource to determine the wind farms spatial
+    # reference and location. This is in hopes that the farm will thus be
+    # located over ocean, although this is not guaranteed
+    wind_energy_layer.ResetReading()
+    # Get the feature count or how many points exist
+    feature_count = int(wind_energy_layer.GetFeatureCount())
+    # Select the feature from which to get the location for the wind farm by
+    # indexing into the features by the half the feature count. OGR requires
+    # this index to be of type LONG
+    feature = wind_energy_layer.GetFeature(
+                long(math.ceil(feature_count / 2)))
+    pt_geometry = feature.GetGeometryRef()
+    # Get the X and Y location for the selected wind farm point. These
+    # coordinates will be the starting point of which to create the farm lines
+    center_x = pt_geometry.GetX()
+    center_y = pt_geometry.GetY()
+    start_point = (center_x, center_y)
+    spat_ref = wind_energy_layer.GetSpatialRef()
+    
+    farm_poly_uri = os.path.join(output_dir,
+            'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
+    
+    if os.path.isfile(farm_poly_uri):
+        os.remove(farm_poly_uri)
+
+    _ = create_wind_farm_box(
+            spat_ref, start_point, width, length, farm_poly_uri)
+    
+    LOGGER.info('Farm Polygon Created')
+    LOGGER.info('Leaving Wind Energy Biophysical Core')
+
+def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
+    """Create an OGR shapefile where the geometry is a set of lines 
+
+        spat_ref - a SpatialReference to use in creating the output shapefile
+            (required)
+        start_point - a tuple of floats indicating the first vertice of the 
+            line (required)
+        x_len - an integer value for the length of the line segment in
+            the X direction (required)
+        y_len - an integer value for the length of the line segment in
+            the Y direction (required)
+        out_uri - a string representing the file path to disk for the new
+            shapefile (required)
+    
+        return - an OGR shapefile"""
+    LOGGER.info('Entering create_wind_farm_box')
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    datasource = driver.CreateDataSource(out_uri)
+  
+    # Create the layer name from the uri paths basename without the extension
+    uri_basename = os.path.basename(out_uri)
+    layer_name = os.path.splitext(uri_basename)[0]
+    
+    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbLineString)
+
+    # Add a single ID field
+    field = ogr.FieldDefn('id', ogr.OFTReal)
+    layer.CreateField(field)
+
+    # Create the 3 other points that will make up the vertices for the lines 
+    top_left = (start_point[0], start_point[1] + y_len)
+    top_right = (start_point[0] + x_len, start_point[1] + y_len)
+    bottom_right = (start_point[0] + x_len, start_point[1])
+
+    # Create a new feature, setting the field and geometry
+    line = ogr.Geometry(ogr.wkbLineString)
+    line.AddPoint(start_point[0], start_point[1])
+    line.AddPoint(top_left[0], top_left[1])
+    line.AddPoint(top_right[0], top_right[1])
+    line.AddPoint(bottom_right[0], bottom_right[1])
+    line.AddPoint(start_point[0], start_point[1])
+    
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(line)
+    feature.SetField(0, 1)
+    layer.CreateFeature(feature)
+
+    feature = None
+    layer = None
+
+    datasource.SyncToDisk()
+    LOGGER.info('Leaving create_wind_farm_box')
+    return datasource
+
 def distance_transform_dataset(
         dataset, min_dist, max_dist, out_nodata, out_uri):
     """A memory efficient distance transform function that operates on 
@@ -840,115 +950,7 @@ def valuation(args):
 
         output_ds = None
 
-    # Create the farm polygon shapefile, which is an example of how big the farm
-    # will be with a rough representation of its dimensions. 
-    LOGGER.info('Creating Farm Polygon')
-    # The number of turbines allowed per circuit for infield cabling
-    turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
-    # The rotor diameter of the turbines
-    rotor_diameter = int(turbine_dict['rotor_diameter'])
-    # The rotor diameter factor is a rule by which to use in deciding how far
-    # apart the turbines should be spaced
-    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
-
-    # Calculate the number of circuits there will be based on the number of
-    # turbines and the number of turbines per circuit. If a fractional value is
-    # returned we want to round up and error on the side of having the farm be
-    # slightly larger
-    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
-    # The distance needed between turbines
-    spacing_dist = rotor_diameter * rotor_diameter_factor
-
-    # Calculate the width
-    width = (num_circuits - 1) * spacing_dist
-    # Calculate the length 
-    length = (turbines_per_circuit - 1) * spacing_dist
-    
-    # Use the wind energy points datasource to determine the wind farms spatial
-    # reference and location. This is in hopes that the farm will thus be
-    # located over ocean, although this is not guaranteed
-    wind_energy_layer.ResetReading()
-    # Get the feature count or how many points exist
-    feature_count = int(wind_energy_layer.GetFeatureCount())
-    # Select the feature from which to get the location for the wind farm by
-    # indexing into the features by the half the feature count. OGR requires
-    # this index to be of type LONG
-    feature = wind_energy_layer.GetFeature(
-                long(math.ceil(feature_count / 2)))
-    pt_geometry = feature.GetGeometryRef()
-    # Get the X and Y location for the selected wind farm point. These
-    # coordinates will be the starting point of which to create the farm lines
-    center_x = pt_geometry.GetX()
-    center_y = pt_geometry.GetY()
-    start_point = (center_x, center_y)
-    spat_ref = wind_energy_layer.GetSpatialRef()
-    
-    farm_poly_uri = os.path.join(output_dir,
-            'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
-    
-    if os.path.isfile(farm_poly_uri):
-        os.remove(farm_poly_uri)
-
-    _ = create_wind_farm_box(
-            spat_ref, start_point, width, length, farm_poly_uri)
-    
-    LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Valuation Core')
-
-def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
-    """Create an OGR shapefile where the geometry is a set of lines 
-
-        spat_ref - a SpatialReference to use in creating the output shapefile
-            (required)
-        start_point - a tuple of floats indicating the first vertice of the 
-            line (required)
-        x_len - an integer value for the length of the line segment in
-            the X direction (required)
-        y_len - an integer value for the length of the line segment in
-            the Y direction (required)
-        out_uri - a string representing the file path to disk for the new
-            shapefile (required)
-    
-        return - an OGR shapefile"""
-    LOGGER.info('Entering create_wind_farm_box')
-
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    datasource = driver.CreateDataSource(out_uri)
-  
-    # Create the layer name from the uri paths basename without the extension
-    uri_basename = os.path.basename(out_uri)
-    layer_name = os.path.splitext(uri_basename)[0]
-    
-    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbLineString)
-
-    # Add a single ID field
-    field = ogr.FieldDefn('id', ogr.OFTReal)
-    layer.CreateField(field)
-
-    # Create the 3 other points that will make up the vertices for the lines 
-    top_left = (start_point[0], start_point[1] + y_len)
-    top_right = (start_point[0] + x_len, start_point[1] + y_len)
-    bottom_right = (start_point[0] + x_len, start_point[1])
-
-    # Create a new feature, setting the field and geometry
-    line = ogr.Geometry(ogr.wkbLineString)
-    line.AddPoint(start_point[0], start_point[1])
-    line.AddPoint(top_left[0], top_left[1])
-    line.AddPoint(top_right[0], top_right[1])
-    line.AddPoint(bottom_right[0], bottom_right[1])
-    line.AddPoint(start_point[0], start_point[1])
-    
-    feature = ogr.Feature(layer.GetLayerDefn())
-    feature.SetGeometry(line)
-    feature.SetField(0, 1)
-    layer.CreateFeature(feature)
-
-    feature = None
-    layer = None
-
-    datasource.SyncToDisk()
-    LOGGER.info('Leaving create_wind_farm_box')
-    return datasource
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the
