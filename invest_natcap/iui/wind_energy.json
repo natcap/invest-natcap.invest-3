@@ -112,6 +112,16 @@
                                 "validateAs": { "type": "CSV"}
                             },
                             {
+                                "id" : "number_of_machines",
+                                "args_id": "number_of_machines",
+                                "type": "text",
+                                "label": "Number Of Turbines",
+                                "defaultValue": "",
+                                "required": true,
+                                "validText": "[0-9]+",
+                                "helpText" : "An integer value indicating the number of wind turbines per wind farm."
+                            },
+                            {
                                 "id" : "min_depth",
                                 "args_id" : "min_depth",
                                 "type": "text",
@@ -190,16 +200,6 @@
                             "helpText": "A floating point number for the unit cost of the foundation type (in millions of dollars). The cost of a foundation will depend on the type selected, which itself depends on a variety of factors including depth and turbine choice. Please see the User's Guide for guidance on properly selecting this value.",
                             "validateAs": { "type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}}
-                        },
-                        {
-                            "id" : "number_of_machines",
-                            "args_id": "number_of_machines",
-                            "type": "text",
-                            "label": "Number Of Turbines",
-                            "defaultValue": "",
-                            "required": true,
-                            "validText": "[0-9]+",
-                            "helpText" : "An integer value indicating the number of wind turbines per wind farm."
                         },
                         {
                             "id" : "dollar_per_kWh",

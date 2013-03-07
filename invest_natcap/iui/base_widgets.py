@@ -723,6 +723,37 @@ class DynamicText(LabeledElement):
         """
 
     class TextField(QtGui.QLineEdit):
+        def __init__(self):
+            QtGui.QLineEdit.__init__(self)
+
+            self.button = QtGui.QToolButton(self)
+            self.button.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+                'validate-pass.png')))
+            self.button.setStyleSheet('border: 0px; padding: 0px;')
+            self.button.setVisible(False)
+
+            # Only set the text margin if the icon button is visible.
+            if self.button.isVisible():
+                self.setTextMargins(0, 0, self.button.sizeHint().width() + 1, 0)
+
+        def resizeEvent(self, event):
+            """Reimplemented from QtGui.QLineEdit.resizeEvent.
+
+            This reimplemented function allows me to move around the datatype
+            button when the window is resized, before Qt handles all its normal
+            resize event routines."""
+
+            # We only care about moving the button around if the button is
+            # visible.  If it isn't visible, we just call down to the
+            # QLineEdit's resize event handler.
+            if self.button.isVisible():
+                buttonsize = self.button.sizeHint()
+                framewidth = self.style().pixelMetric(QtGui.QStyle.PM_DefaultFrameWidth)
+                self.button.move((self.rect().right() - framewidth -
+                    buttonsize.width()), (self.rect().bottom() - buttonsize.height() +
+                    1)/2)
+            QtGui.QLineEdit.resizeEvent(self, event)
+
         def emit_textchanged(self, state=None):
             """This is a wrapper function that allows me to emit the textChanged
             signal more easily.  It simply emits the textChanged signal with the

@@ -157,6 +157,15 @@ def execute(args):
 
     hra_args['workspace_dir'] = args['workspace_dir']
 
+    hra_args['risk_eq'] = args['risk_eq']
+    
+    #Depending on the risk calculation equation, this should return the highest
+    #possible value of risk for any given habitat-stressor pairing. The highest
+    #risk for a habitat would just be this risk value * the number of stressor
+    #pairs that apply to it.
+    max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
+    hra_args['max_risk'] = max_r
+    
     #Create intermediate and output folders. Delete old ones, if they exist.
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):
@@ -233,9 +242,36 @@ def execute(args):
         if name in hra_args:
             del hra_args[name]
 
-    LOGGER.debug(hra_args)
+   #LOGGER.debug(hra_args)
 
     hra_core.execute(hra_args)
+
+def calc_max_rating(risk_eq, max_rating):
+    ''' Should take in the max possible risk, and return the highest possible
+    per pixel risk that would be seen on a H-S raster pixel.
+
+    Input:
+        risk_eq- The equation that will be used to determine risk.
+        max_rating- The highest possible value that could be given as a
+            criteria rating, data quality, or weight.
+    
+    Returns:
+        An int representing the highest possible risk value for any given h-s
+        overlap raster.
+    '''
+    
+    #The max_rating ends up being the simplified result of each of the E and
+    #C equations when the same value is used in R/DQ/W. Thus for E and C, their
+    #max value is equivalent to the max_rating.
+    
+    if risk_eq == 'Multiplicative':
+        max_r = max_rating * max_rating
+
+    elif risk_eq == 'Euclidean':
+        under_rt = (max_rating - 1)**2 + (max_rating - 1)**2
+        max_r = math.sqrt(under_rt)
+
+    return max_r
     
 def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
@@ -291,6 +327,10 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
         A set of rasterized criteria files. The criteria shapefiles will be
             burned based on their 'Rating' attribute. These will be placed in
             the 'dir' folder.
+        
+        An appended version of habitats, stressors, and h-s which will include
+        entries for criteria rasters at 'Rating' in the appropriate dictionary.
+        'Rating' will map to the URI of the corresponding criteria dataset.
 
     Returns nothing.
     '''
@@ -325,7 +365,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
-            h_s['Crit_Rasters'][c_name]['Rating'] = out_uri
+            h_s[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
     
     #Habs
     for h in crit_dict['h']:
@@ -350,8 +390,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
 
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
-             
-            habitats['Crit_Rasters'][c_name]['Rating'] = out_uri
+            LOGGER.debug(habitats)             
+            habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
 
     #Stressors
     for s in crit_dict['s']:
@@ -377,7 +417,8 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
              
-            stressors['Crit_Rasters'][c_name]['Rating'] = out_uri
+            stressors[s]['Crit_Rasters'][c_name]['DS'] = out_uri
+
 def make_crit_shape_dict(crit_uri):
     '''This will take in the location of the file structure, and will return
     a dictionary containing all the shapefiles that we find. Hypothetically, we
@@ -387,6 +428,7 @@ def make_crit_shape_dict(crit_uri):
     Input:
         crit_uri- Location of the file structure containing all of the shapefile
             criteria.
+
 
     Returns:
         A dictionary containing shapefile URI's, indexed by their criteria name,
@@ -408,7 +450,6 @@ def make_crit_shape_dict(crit_uri):
         }
     '''
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
-
     #First, want to get the things that are either habitat specific or 
     #species specific. These should all be in the 'Resiliance' subfolder
     #of raster_criteria.
@@ -534,10 +575,8 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
         
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
-        #For the h-s overlap, want to do intersection, since we will never need
-        #anything outside that bounding box.
         raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
-                        gdal.GDT_Float32, 0, grid_size, "intersection", 
+                        gdal.GDT_Float32, 0, grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
 
@@ -726,8 +765,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
    '''
-
-    LOGGER.debug(hab_list)
 
     for shape in hab_list:
         

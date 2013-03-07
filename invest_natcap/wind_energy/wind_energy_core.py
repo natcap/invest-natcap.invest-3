@@ -44,6 +44,8 @@ def biophysical(args):
         args[biophysical_turbine_dict] - a python dictionary containing the
             following fields: cut_in_wspd, cut_out_wspd, rated_wspd,
             turbine_rated_pwr, air_density, exponent_power_curve (required)
+        args[number_of_turbines] - an integer value for the number of machines
+            for the wind farm (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -67,6 +69,7 @@ def biophysical(args):
     output_dir = os.path.join(workspace, 'output')
 
     tif_suffix = args['suffix'] + '.tif'
+    shp_suffix = args['suffix'] + '.shp'
 
     bathymetry = args['bathymetry']
     min_depth = args['min_depth']
@@ -231,12 +234,14 @@ def biophysical(args):
     # equation calls for it in terms of Wh. Thus we multiply by a million to get
     # to Wh.
     rated_power = float(bio_turbine_dict['turbine_rated_pwr']) * 1000000
+
     air_density_standard = float(bio_turbine_dict['air_density'])
     v_rate = float(bio_turbine_dict['rated_wspd'])
     v_out = float(bio_turbine_dict['cut_out_wspd'])
     v_in = float(bio_turbine_dict['cut_in_wspd'])
     air_density_coef = float(bio_turbine_dict['air_density_coefficient'])
     losses = float(bio_turbine_dict['loss_parameter'])
+    number_of_turbines = args['number_of_turbines']
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
@@ -292,6 +297,10 @@ def biophysical(args):
         # downtime (mechanical failure, storm damage, etc.)
         # and due to electrical resistance in the cables 
         harvested_wind_energy = (1 - losses) * harvested_wind_energy
+
+        # Finally, multiply the harvested wind energy by the number of turbines
+        # to get the amount of energy generated for the entire farm
+        harvested_wind_energy = harvested_wind_energy * number_of_turbines
 
         # Save the results to their respective fields 
         for field_name, result_value in [(density_field_name, density_results),
@@ -371,6 +380,116 @@ def biophysical(args):
     _ = raster_utils.vectorize_rasters(
             harvest_mask_list, mask_out_depth_dist, 
             raster_out_uri = harvested_masked_uri, nodata = out_nodata)
+
+    # Create the farm polygon shapefile, which is an example of how big the farm
+    # will be with a rough representation of its dimensions. 
+    LOGGER.info('Creating Farm Polygon')
+    # The number of turbines allowed per circuit for infield cabling
+    turbines_per_circuit = int(bio_turbine_dict['turbines_per_circuit'])
+    # The rotor diameter of the turbines
+    rotor_diameter = int(bio_turbine_dict['rotor_diameter'])
+    # The rotor diameter factor is a rule by which to use in deciding how far
+    # apart the turbines should be spaced
+    rotor_diameter_factor = int(bio_turbine_dict['rotor_diameter_factor'])
+
+    # Calculate the number of circuits there will be based on the number of
+    # turbines and the number of turbines per circuit. If a fractional value is
+    # returned we want to round up and error on the side of having the farm be
+    # slightly larger
+    num_circuits = math.ceil(float(number_of_turbines) / turbines_per_circuit)
+    # The distance needed between turbines
+    spacing_dist = rotor_diameter * rotor_diameter_factor
+
+    # Calculate the width
+    width = (num_circuits - 1) * spacing_dist
+    # Calculate the length 
+    length = (turbines_per_circuit - 1) * spacing_dist
+    
+    # Use the wind energy points datasource to determine the wind farms spatial
+    # reference and location. This is in hopes that the farm will thus be
+    # located over ocean, although this is not guaranteed
+    wind_points_layer.ResetReading()
+    # Get the feature count or how many points exist
+    feature_count = int(wind_points_layer.GetFeatureCount())
+    # Select the feature from which to get the location for the wind farm by
+    # indexing into the features by the half the feature count. OGR requires
+    # this index to be of type LONG
+    feature = wind_points_layer.GetFeature(
+                long(math.ceil(feature_count / 2)))
+    pt_geometry = feature.GetGeometryRef()
+    # Get the X and Y location for the selected wind farm point. These
+    # coordinates will be the starting point of which to create the farm lines
+    center_x = pt_geometry.GetX()
+    center_y = pt_geometry.GetY()
+    start_point = (center_x, center_y)
+    spat_ref = wind_points_layer.GetSpatialRef()
+    
+    farm_poly_uri = os.path.join(output_dir,
+            'example_size_and_orientation_of_a_possible_wind_farm' + shp_suffix)
+    
+    if os.path.isfile(farm_poly_uri):
+        os.remove(farm_poly_uri)
+
+    _ = create_wind_farm_box(
+            spat_ref, start_point, width, length, farm_poly_uri)
+    
+    LOGGER.info('Farm Polygon Created')
+    LOGGER.info('Leaving Wind Energy Biophysical Core')
+
+def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
+    """Create an OGR shapefile where the geometry is a set of lines 
+
+        spat_ref - a SpatialReference to use in creating the output shapefile
+            (required)
+        start_point - a tuple of floats indicating the first vertice of the 
+            line (required)
+        x_len - an integer value for the length of the line segment in
+            the X direction (required)
+        y_len - an integer value for the length of the line segment in
+            the Y direction (required)
+        out_uri - a string representing the file path to disk for the new
+            shapefile (required)
+    
+        return - an OGR shapefile"""
+    LOGGER.info('Entering create_wind_farm_box')
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    datasource = driver.CreateDataSource(out_uri)
+  
+    # Create the layer name from the uri paths basename without the extension
+    uri_basename = os.path.basename(out_uri)
+    layer_name = os.path.splitext(uri_basename)[0]
+    
+    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbLineString)
+
+    # Add a single ID field
+    field = ogr.FieldDefn('id', ogr.OFTReal)
+    layer.CreateField(field)
+
+    # Create the 3 other points that will make up the vertices for the lines 
+    top_left = (start_point[0], start_point[1] + y_len)
+    top_right = (start_point[0] + x_len, start_point[1] + y_len)
+    bottom_right = (start_point[0] + x_len, start_point[1])
+
+    # Create a new feature, setting the field and geometry
+    line = ogr.Geometry(ogr.wkbLineString)
+    line.AddPoint(start_point[0], start_point[1])
+    line.AddPoint(top_left[0], top_left[1])
+    line.AddPoint(top_right[0], top_right[1])
+    line.AddPoint(bottom_right[0], bottom_right[1])
+    line.AddPoint(start_point[0], start_point[1])
+    
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(line)
+    feature.SetField(0, 1)
+    layer.CreateFeature(feature)
+
+    feature = None
+    layer = None
+
+    datasource.SyncToDisk()
+    LOGGER.info('Leaving create_wind_farm_box')
+    return datasource
 
 def distance_transform_dataset(
         dataset, min_dist, max_dist, out_nodata, out_uri):
@@ -496,7 +615,7 @@ def valuation(args):
         args[land_polygon] - an OGR datasource of type polygon, to get the wind
             energy bin distances from if grid points and land points are not
             provided (required if grid_points and land_points are not provided)
-        args[number_of_machines] - an integer value for the number of machines
+        args[number_of_turbines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
@@ -545,7 +664,7 @@ def valuation(args):
 
     time = int(turbine_dict['time_period'])
 
-    number_turbines = args['number_of_machines']
+    number_turbines = args['number_of_turbines']
     
     # The total mega watt compacity of the wind farm where mega watt is the
     # turbines rated power
@@ -736,8 +855,8 @@ def valuation(args):
         decommish_capex = decom * capex / disc_time
         
         # The revenue in millions of dollars for the wind farm. The energy_val
-        # is in kWh for a single turbine.
-        rev = energy_val * number_turbines * mill_dollar_per_kwh
+        # is in kWh the farm.
+        rev = energy_val * mill_dollar_per_kwh
         comp_one_sum = 0
         levelized_cost_sum = 0
         levelized_cost_denom = 0
@@ -756,8 +875,8 @@ def valuation(args):
             
             # Calculate the denominator summation value for levelized
             # cost of energy
-            levelized_cost_denom = levelized_cost_denom + ((energy_val *
-                    number_turbines) / disc_const**year) 
+            levelized_cost_denom = levelized_cost_denom + (
+                    energy_val / disc_const**year) 
         
         # Add this years NPV value to the running total
         npv = comp_one_sum - decommish_capex - capex
@@ -772,7 +891,7 @@ def valuation(args):
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
         carbon_coef = float(turbine_dict['carbon_coefficient']) 
-        carbon_emissions = carbon_coef * energy_val * number_turbines
+        carbon_emissions = carbon_coef * energy_val 
         
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)
@@ -832,115 +951,7 @@ def valuation(args):
 
         output_ds = None
 
-    # Create the farm polygon shapefile, which is an example of how big the farm
-    # will be with a rough representation of its dimensions. 
-    LOGGER.info('Creating Farm Polygon')
-    # The number of turbines allowed per circuit for infield cabling
-    turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
-    # The rotor diameter of the turbines
-    rotor_diameter = int(turbine_dict['rotor_diameter'])
-    # The rotor diameter factor is a rule by which to use in deciding how far
-    # apart the turbines should be spaced
-    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
-
-    # Calculate the number of circuits there will be based on the number of
-    # turbines and the number of turbines per circuit. If a fractional value is
-    # returned we want to round up and error on the side of having the farm be
-    # slightly larger
-    num_circuits = math.ceil(float(number_turbines) / turbines_per_circuit)
-    # The distance needed between turbines
-    spacing_dist = rotor_diameter * rotor_diameter_factor
-
-    # Calculate the width
-    width = (num_circuits - 1) * spacing_dist
-    # Calculate the length 
-    length = (turbines_per_circuit - 1) * spacing_dist
-    
-    # Use the wind energy points datasource to determine the wind farms spatial
-    # reference and location. This is in hopes that the farm will thus be
-    # located over ocean, although this is not guaranteed
-    wind_energy_layer.ResetReading()
-    # Get the feature count or how many points exist
-    feature_count = int(wind_energy_layer.GetFeatureCount())
-    # Select the feature from which to get the location for the wind farm by
-    # indexing into the features by the half the feature count. OGR requires
-    # this index to be of type LONG
-    feature = wind_energy_layer.GetFeature(
-                long(math.ceil(feature_count / 2)))
-    pt_geometry = feature.GetGeometryRef()
-    # Get the X and Y location for the selected wind farm point. These
-    # coordinates will be the starting point of which to create the farm lines
-    center_x = pt_geometry.GetX()
-    center_y = pt_geometry.GetY()
-    start_point = (center_x, center_y)
-    spat_ref = wind_energy_layer.GetSpatialRef()
-    
-    farm_poly_uri = os.path.join(output_dir,
-            'example_size_and_orientation_of_a_possible_wind_farm' + suffix + '.shp')
-    
-    if os.path.isfile(farm_poly_uri):
-        os.remove(farm_poly_uri)
-
-    _ = create_wind_farm_box(
-            spat_ref, start_point, width, length, farm_poly_uri)
-    
-    LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Valuation Core')
-
-def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
-    """Create an OGR shapefile where the geometry is a set of lines 
-
-        spat_ref - a SpatialReference to use in creating the output shapefile
-            (required)
-        start_point - a tuple of floats indicating the first vertice of the 
-            line (required)
-        x_len - an integer value for the length of the line segment in
-            the X direction (required)
-        y_len - an integer value for the length of the line segment in
-            the Y direction (required)
-        out_uri - a string representing the file path to disk for the new
-            shapefile (required)
-    
-        return - an OGR shapefile"""
-    LOGGER.info('Entering create_wind_farm_box')
-
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    datasource = driver.CreateDataSource(out_uri)
-  
-    # Create the layer name from the uri paths basename without the extension
-    uri_basename = os.path.basename(out_uri)
-    layer_name = os.path.splitext(uri_basename)[0]
-    
-    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbLineString)
-
-    # Add a single ID field
-    field = ogr.FieldDefn('id', ogr.OFTReal)
-    layer.CreateField(field)
-
-    # Create the 3 other points that will make up the vertices for the lines 
-    top_left = (start_point[0], start_point[1] + y_len)
-    top_right = (start_point[0] + x_len, start_point[1] + y_len)
-    bottom_right = (start_point[0] + x_len, start_point[1])
-
-    # Create a new feature, setting the field and geometry
-    line = ogr.Geometry(ogr.wkbLineString)
-    line.AddPoint(start_point[0], start_point[1])
-    line.AddPoint(top_left[0], top_left[1])
-    line.AddPoint(top_right[0], top_right[1])
-    line.AddPoint(bottom_right[0], bottom_right[1])
-    line.AddPoint(start_point[0], start_point[1])
-    
-    feature = ogr.Feature(layer.GetLayerDefn())
-    feature.SetGeometry(line)
-    feature.SetField(0, 1)
-    layer.CreateFeature(feature)
-
-    feature = None
-    layer = None
-
-    datasource.SyncToDisk()
-    LOGGER.info('Leaving create_wind_farm_box')
-    return datasource
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the
