@@ -98,7 +98,8 @@ def execute(args):
     biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
                           'hub_height', 'turbine_rated_pwr', 'air_density',
                           'exponent_power_curve', 'air_density_coefficient',
-                          'loss_parameter']
+                          'loss_parameter', 'turbines_per_circuit', 
+                          'rotor_diameter', 'rotor_diameter_factor']
     # Get the biophysical turbine parameters from the CSV file
     bio_turbine_param_file = open(args['turbine_parameters_uri'])
     bio_turbine_reader = csv.reader(bio_turbine_param_file)
