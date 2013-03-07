@@ -44,6 +44,8 @@ def biophysical(args):
         args[biophysical_turbine_dict] - a python dictionary containing the
             following fields: cut_in_wspd, cut_out_wspd, rated_wspd,
             turbine_rated_pwr, air_density, exponent_power_curve (required)
+        args[number_of_turbines] - an integer value for the number of machines
+            for the wind farm (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -231,12 +233,14 @@ def biophysical(args):
     # equation calls for it in terms of Wh. Thus we multiply by a million to get
     # to Wh.
     rated_power = float(bio_turbine_dict['turbine_rated_pwr']) * 1000000
+
     air_density_standard = float(bio_turbine_dict['air_density'])
     v_rate = float(bio_turbine_dict['rated_wspd'])
     v_out = float(bio_turbine_dict['cut_out_wspd'])
     v_in = float(bio_turbine_dict['cut_in_wspd'])
     air_density_coef = float(bio_turbine_dict['air_density_coefficient'])
     losses = float(bio_turbine_dict['loss_parameter'])
+    number_of_turbines = args['number_of_turbines']
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
@@ -292,6 +296,10 @@ def biophysical(args):
         # downtime (mechanical failure, storm damage, etc.)
         # and due to electrical resistance in the cables 
         harvested_wind_energy = (1 - losses) * harvested_wind_energy
+
+        # Finally, multiply the harvested wind energy by the number of turbines
+        # to get the amount of energy generated for the entire farm
+        harvested_wind_energy = harvested_wind_energy * number_of_turbines
 
         # Save the results to their respective fields 
         for field_name, result_value in [(density_field_name, density_results),
