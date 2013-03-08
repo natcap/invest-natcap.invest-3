@@ -114,6 +114,8 @@ if platform.system() == 'Windows':
          'invest_carbon_valuation.py',
          'invest_wave_energy_biophysical.py',
          'invest_wave_energy_valuation.py',
+         'invest_hra.py',
+         'invest_hra_preprocessor.py',
          'invest_timber.py',
          'invest_water_yield.py',
          'invest_hydropower_valuation.py',
