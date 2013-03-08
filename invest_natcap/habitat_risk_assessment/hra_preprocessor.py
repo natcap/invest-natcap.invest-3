@@ -7,8 +7,6 @@ import glob
 import logging
 import json
 
-import hra
-
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -160,7 +158,7 @@ def execute(args):
         }
     '''
     if 'criteria_dir' in args:
-        crit_shapes = hra.make_crit_shape_dict(args['criteria_dir'])
+        crit_shapes = make_crit_shape_dict(args['criteria_dir'])
     
     crit_descriptions = {
         'change in area rating': '<enter (3) 50-100% loss, ' + 
@@ -206,7 +204,6 @@ def execute(args):
             habitat_csv_writer.writerow(['HABITAT NAME', habitat_name])
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
-            habitat_csv_writer.writerow([])
 
             habitat_csv_writer.writerow(default_table_headers)
 
@@ -565,7 +562,7 @@ def parse_habitat_overlap(uri):
         while True:
             try:
                 line = csv_reader.next()
-           
+                LOGGER.debug(line) 
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
                 
@@ -592,3 +589,113 @@ def parse_habitat_overlap(uri):
         'hab_only': habitat_dict,
         'overlap': habitat_overlap_dict
         }
+
+def make_crit_shape_dict(crit_uri):
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+
+    Returns:
+        A dictionary containing shapefile URI's, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        structure will be as follows:
+        
+        {'h-s':
+            {('HabA', 'Stress1'):
+                {'CriteriaName': "Shapefile Datasource URI", ...}, ...
+            },
+         'h':
+            {'HabA':
+                {'CriteriaName: "Shapefile Datasource URI"...}, ...
+            },
+         's':
+            {'Stress1':
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            }
+        }
+    '''
+    c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resiliance' subfolder
+    #of raster_criteria.
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+   
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in res_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ').lower()
+
+        if hab_name not in c_shape_dict['h']:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = path
+                   
+    
+    #Now, want to move on to stressor-centric criteria, but will do much the
+    #same thing. 
+    exps_shps = glob.glob(os.path.join(crit_uri, 'Exposure', '*.shp'))
+   
+    #Now we have a list of all stressor specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exps_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        stress_name = parts[0]
+        crit_name = parts[1].replace('_', ' ')
+
+        if stress_name not in c_shape_dict['s']:
+            c_shape_dict['s'][stress_name] = {}
+        
+        c_shape_dict['s'][stress_name][crit_name] = path
+    
+    #Finally, want to get all of our pair-centric shape criteria. 
+    sens_shps = glob.glob(os.path.join(crit_uri, 'Sensitivity', '*.shp'))
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h-s']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = path
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict

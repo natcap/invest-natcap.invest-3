@@ -11,6 +11,11 @@
             "id": "hra_preprocess_list",
             "type": "list",
             "elements": [
+			{		    
+                            "id":"alpha_only",
+                            "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
+			    "type": "label"
+			},
                 {
                     "id":"output_dir",
                     "type": "folder",
@@ -18,7 +23,7 @@
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "args_id": "workspace_dir",
-                    "defaultValue": "../hra_preprocess"
+                    "defaultValue": "../HabitatRiskAssess"
                 },
                 {
                     "id":"habs_dir",
@@ -49,7 +54,7 @@
                     "required": true,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "args_id": "stressor_dir",
+                    "args_id": "stressors_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
             ]

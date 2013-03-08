@@ -1190,6 +1190,19 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     calculate_raster_stats(slope_dataset)
 
 
+def clip_dataset_uri(source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
+    """This function will clip source_dataset to the bounding box of the 
+        polygons in aoi_datasource and mask out the values in source_dataset
+        outside of the AOI with the nodata values in source_dataset.
+
+        source_dataset_uri - uri to single band GDAL dataset to clip
+        aoi_datasource_uri - uri to ogr datasource
+        out_dataset_uri - path to disk for the clipped datset
+
+        returns nothing"""
+    raise NotImplementedError('clip_dataset_uri is not implemented yet')
+    
+
 def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     """This function will clip source_dataset to the bounding box of the 
         polygons in aoi_datasource and mask out the values in source_dataset
@@ -2022,7 +2035,8 @@ def resize_and_resample_dataset(
 
 def align_dataset_list(
     dataset_uri_list, dataset_out_uri_list, resample_method_list,
-    out_pixel_size, mode, dataset_to_align_index, aoi_uri=None):
+    out_pixel_size, mode, dataset_to_align_index, aoi_uri=None,
+    assert_datasets_projected=True):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -2049,7 +2063,8 @@ def align_dataset_list(
 
     #This seems a reasonable precursor for some very common issues, numpy gives
     #me a precedent for this.
-    assert_datasets_in_same_projection(dataset_uri_list)
+    if assert_datasets_projected:
+        assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection"]:
         raise Exception("Unknown mode %s" % (str(mode)))
     if dataset_to_align_index >= len(dataset_uri_list):
@@ -2141,7 +2156,7 @@ def align_dataset_list(
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
     pixel_size_out, bounding_box_mode, resample_method_list=None, 
-    dataset_to_align_index=None, aoi_uri=None):
+    dataset_to_align_index=None, aoi_uri=None, assert_datasets_projected=True):
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
         with one of the input datasets, output a dataset that is the union
@@ -2187,7 +2202,10 @@ def vectorize_datasets(
             union without adjustment.
         aoi_uri - (optional) a URI to an OGR datasource to be used for the 
             aoi.  Irrespective of the `mode` input, the aoi will be used
-            to intersect the final bounding box."""
+            to intersect the final bounding box.
+        assert_datasets_projected - (optional) if True this operation will
+            test if any datasets are not projected and raise an exception
+            if so."""
 
     
     #Create a temporary list of filenames whose files delete on the python
@@ -2205,7 +2223,7 @@ def vectorize_datasets(
     align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
-        aoi_uri=aoi_uri)
+        aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected)
     aligned_datasets = [
         gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
     aligned_bands = [dataset.GetRasterBand(1) for dataset in aligned_datasets]
@@ -2293,16 +2311,8 @@ def viewshed(dem_uri, shapefile_uri, z_factor, curvature_correction, refractivit
              out_cell_size=None, aoi_uri=None):
     """FILL IN"""
 
-    viewshed_dataset = gdal.Open(dem_uri)
-    cols = viewshed_dataset.RasterXSize # Raster xsize
-    rows = viewshed_dataset.RasterYSize # Raster ysize
-    projection = viewshed_dataset.GetProjection()
-    geotransform = viewshed_dataset.GetGeoTransform()
-    format = 'GTiff'
-    nodata = 0
-    datatype = gdal.GDT_Float32
-    bands = 1
-    outputURI=visible_feature_count_uri
-    
-    new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
-              bands, outputURI)
+    out_pixel_size = get_cell_size_from_uri(dem_uri)
+    vectorize_datasets(
+        [dem_uri], lambda x: int(abs(x))%10, visible_feature_count_uri,
+        gdal.GDT_Byte, 255, out_pixel_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=aoi_uri, assert_datasets_projected=False)
