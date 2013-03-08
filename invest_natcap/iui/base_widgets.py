@@ -1018,6 +1018,16 @@ class Container(QtGui.QGroupBox, DynamicGroup):
     def setValue(self, value):
         self.setChecked(value)
 
+    def setState(self, state, includeSelf=False, recursive=True):
+        """Reimplemented from Container.setState.  When this container is
+        collapsible, we only want to set the state of contained elements when
+        the collapsible container is open.  Otherwise, pass."""
+
+        includeSelf = True
+        if state == False and self.isCheckable() and self.isChecked():
+            self.setChecked(False)
+
+        DynamicGroup.setState(self, state, includeSelf, recursive)
 
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
