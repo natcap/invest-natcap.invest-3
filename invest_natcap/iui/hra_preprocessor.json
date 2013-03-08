@@ -23,7 +23,7 @@
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "args_id": "workspace_dir",
-                    "defaultValue": "../hra_preprocess"
+                    "defaultValue": "../HabitatRiskAssess"
                 },
                 {
                     "id":"habs_dir",
