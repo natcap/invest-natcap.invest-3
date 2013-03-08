@@ -731,7 +731,6 @@ def valuation(args):
         # Build a dictionary from the land points datasource so that we can
         # have access to what land point has what land to grid distance
         land_dict = get_dictionary_from_shape(land_shape_ds)
-        
         LOGGER.debug('land_dict : %s', land_dict)
         
         # Build up the KDTree for land points geometries
@@ -965,6 +964,7 @@ def point_to_polygon_distance(poly_ds, point_ds):
 
     LOGGER.info('Loading the polygons into Shapely')
     poly_layer = poly_ds.GetLayer()
+    poly_layer.ResetReading()
     poly_list = []
     for poly_feat in poly_layer:
         # Get the geometry of the polygon in WKT format
