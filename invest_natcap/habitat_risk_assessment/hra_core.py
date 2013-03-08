@@ -199,7 +199,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #Use gdal.Polygonize to take the raster, which should have only
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
-        raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
+        #raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     '''This will take in a raster file, and output a shapefile of the same
@@ -226,9 +226,12 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     ds = driver.CreateDataSource(out_uri)
                 
     spat_ref = osr.SpatialReference()
-    spat_ref.ImportFromWkt(raster.GetProjection())
-    LOGGER.debug("SPAT REF Contains: %s", spat_ref)                            
+    LOGGER.debug("Spat Ref %s", spat_ref)
+    proj = raster.GetProjectionRef() 
+    LOGGER.debug("Projection is: %s", proj)
+    spat_ref.ImportFromWkt(proj)
 
+    LOGGER.debug("Layer name %s", layer_name)
     layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
