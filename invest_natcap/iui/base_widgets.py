@@ -477,6 +477,7 @@ class DynamicPrimitive(DynamicElement):
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
+            DynamicElement.setState(self, False, False, True)
         else:
             # Assume that validation passes until we are proven otherwise.
             self.set_error(None, None)
@@ -1021,15 +1022,11 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         collapsible, we only want to set the state of contained elements when
         the collapsible container is open.  Otherwise, pass."""
 
-        set_state = False
-        if self.isCheckable():
-            if self.isChecked():
-                set_state = True
-        else:
-            set_state = True
+        includeSelf = True
+        if state == False and self.isCheckable() and self.isChecked():
+            self.setChecked(False)
 
-        if set_state:
-            DynamicGroup.setState(self, state, includeSelf, recursive)
+        DynamicGroup.setState(self, state, includeSelf, recursive)
 
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
