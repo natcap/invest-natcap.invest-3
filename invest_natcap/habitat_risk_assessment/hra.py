@@ -150,7 +150,6 @@ def execute(args):
     
     Returns nothing.
     '''
-    LOGGER.debug("Gets here.")
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -159,7 +158,7 @@ def execute(args):
 
     hra_args['risk_eq'] = args['risk_eq']
     
-    #Depending on the risk calculation equation, this should return the highest
+    #Depending on the risk calculation equatioa, this should return the highest
     #possible value of risk for any given habitat-stressor pairing. The highest
     #risk for a habitat would just be this risk value * the number of stressor
     #pairs that apply to it.
@@ -241,8 +240,6 @@ def execute(args):
     for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
         if name in hra_args:
             del hra_args[name]
-
-   #LOGGER.debug(hra_args)
 
     hra_core.execute(hra_args)
 
@@ -390,7 +387,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
 
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
-            LOGGER.debug(habitats)             
+            
             habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
 
     #Stressors
@@ -496,7 +493,6 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             at stressors[stressName]['DS'].
     '''
     stress_list = glob.glob(os.path.join(stressors_dir, '*.shp'))
-
     for shape in stress_list:
 
         #The return of os.path.split is a tuple where everything after the final
@@ -528,7 +524,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #itself.
         base_array = band.ReadAsArray()
         buff = buffer_dict[name]
-        LOGGER.debug("Buffer size is %s", buff)
+        
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
 
@@ -634,7 +630,7 @@ def make_no_decay_array(dist_array, buff, nodata):
     inner_zone_index = dist_array <= buff
     dist_array[inner_zone_index] = 1
     dist_array[~inner_zone_index] = nodata  
-    LOGGER.debug("Need to make sure we are getting here.") 
+    
     return dist_array 
     
 def add_hab_rasters(dir, habitats, hab_list, grid_size):

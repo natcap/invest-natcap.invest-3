@@ -204,7 +204,6 @@ def execute(args):
             habitat_csv_writer.writerow(['HABITAT NAME', habitat_name])
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
-            habitat_csv_writer.writerow([])
 
             habitat_csv_writer.writerow(default_table_headers)
 
@@ -563,7 +562,7 @@ def parse_habitat_overlap(uri):
         while True:
             try:
                 line = csv_reader.next()
-           
+                LOGGER.debug(line) 
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
                 

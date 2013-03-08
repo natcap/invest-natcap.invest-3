@@ -20,6 +20,6 @@ class AestheticQualityTest(unittest.TestCase):
         args['dem_uri'] = 'data/wave_energy_data/samp_input/global_dem'
         args['refraction'] = 0.13
         args['cellSize'] = 30
-        args['pop_uri'] = 'data/aesthetic_quality/aoi_pop'
+        args['pop_uri'] = 'data/aesthetic_quality/aoi_pop.tif'
         args['overlap_uri'] = 'data/aesthetic_quality/BC_parks.shp'
         aesthetic_quality.execute(args)

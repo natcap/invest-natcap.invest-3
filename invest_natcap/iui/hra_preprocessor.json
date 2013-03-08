@@ -54,7 +54,7 @@
                     "required": true,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "args_id": "stressor_dir",
+                    "args_id": "stressors_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
             ]

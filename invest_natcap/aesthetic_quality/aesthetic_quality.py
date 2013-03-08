@@ -35,7 +35,7 @@ def execute(args):
     aoi_prj_uri=os.path.join(aq_args['workspace_dir'],"aoi_prj.shp")
     visible_feature_count_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
     visible_feature_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")
-    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
+##    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
 
     #clip DEM to AOI
     LOGGER.debug("Start clip DEM by AOI.")
@@ -48,11 +48,11 @@ def execute(args):
     raster_utils.reproject_datasource(aoi, projection, aoi_prj_uri)
     aoi=None
     
-    LOGGER.debug("Clip DEM by reprojected AOI.")
-    aoi_prj=ogr.Open(aoi_prj_uri)
-    raster_utils.clip_dataset(dem, aoi_prj, viewshed_dem_uri)
-    dem=None
-    aoi_prj=None
+##    LOGGER.debug("Clip DEM by reprojected AOI.")
+##    aoi_prj=ogr.Open(aoi_prj_uri)
+##    raster_utils.clip_dataset(dem, aoi_prj, viewshed_dem_uri)
+##    dem=None
+##    aoi_prj=None
     
 
     #portions of the DEM that are below sea-level are converted to a value of "0"
@@ -61,14 +61,14 @@ def execute(args):
     #calculate viewshed
     LOGGER.debug("Start viewshed analysis.")
     LOGGER.debug("Saving viewshed to: %s" % visible_feature_count_uri)
-    raster_utils.viewshed(viewshed_dem_uri,
+    raster_utils.viewshed(aq_args['dem_uri'],
                           aq_args['structure_uri'],
                           z_factor,
                           curvature_correction,
                           aq_args['refraction'],
                           visible_feature_count_uri,
                           aq_args['cellSize'],
-                          aq_args['aoi_uri'])
+                          aoi_prj_uri)
 
     #rank viewshed
     visible_feature_count=gdal.Open(visible_feature_count_uri)
@@ -90,7 +90,9 @@ def execute(args):
     #find areas with no data for population
     LOGGER.debug("Tabulating population impact.")
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
+    LOGGER.debug("The nodata value from the population raster is: %f" % nodata_pop)
     nodata_visible_feature_count = raster_utils.get_nodata_from_uri(visible_feature_count_uri)
+    LOGGER.debug("The nodata value from the viewshed raster is: %f" % nodata_visible_feature_count)
     nodata_masked_pop = 0
 
     masked_pop_uri = ''
@@ -110,7 +112,8 @@ def execute(args):
                                     aq_args['cellSize'],
                                     "intersection",
                                     dataset_to_align_index=0,
-                                    aoi_uri=args['aoi_uri'])
+                                    aoi_uri=args['aoi_uri'],
+                                    assert_datasets_projected=False)
 
     #perform overlap analysis
     LOGGER.debug("Performing overlap analysis.")
