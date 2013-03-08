@@ -11,6 +11,11 @@
             "id": "hra_preprocess_list",
             "type": "list",
             "elements": [
+			{		    
+                            "id":"alpha_only",
+                            "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
+			    "type": "label"
+			},
                 {
                     "id":"output_dir",
                     "type": "folder",
