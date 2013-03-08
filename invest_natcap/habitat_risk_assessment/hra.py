@@ -150,7 +150,6 @@ def execute(args):
     
     Returns nothing.
     '''
-    LOGGER.debug("Gets here.")
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -159,7 +158,7 @@ def execute(args):
 
     hra_args['risk_eq'] = args['risk_eq']
     
-    #Depending on the risk calculation equation, this should return the highest
+    #Depending on the risk calculation equatioa, this should return the highest
     #possible value of risk for any given habitat-stressor pairing. The highest
     #risk for a habitat would just be this risk value * the number of stressor
     #pairs that apply to it.
@@ -197,6 +196,7 @@ def execute(args):
     #of the necessary shapefiles. This will be used instead of having users
     #re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
+    LOGGER.debug(hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
     crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
@@ -241,8 +241,6 @@ def execute(args):
     for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
         if name in hra_args:
             del hra_args[name]
-
-   #LOGGER.debug(hra_args)
 
     hra_core.execute(hra_args)
 
@@ -444,6 +442,7 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
     Returns nothing.
     ''' 
     
+    LOGGER.debug(stressors)
     for pair in h_s:
 
         h, s = pair
@@ -495,8 +494,9 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             rasterized version of the stressor shapefile. It will be placed
             at stressors[stressName]['DS'].
     '''
+    LOGGER.debug("Stressors Directory %s", stressors_dir)
     stress_list = glob.glob(os.path.join(stressors_dir, '*.shp'))
-
+    LOGGER.debug("Stressors: %s", stress_list)
     for shape in stress_list:
 
         #The return of os.path.split is a tuple where everything after the final
@@ -559,6 +559,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
         stressors[name]['DS'] = new_buff_uri
+        LOGGER.debug("Added DS for %s", name)
 
 def make_lin_decay_array(dist_array, buff, nodata):
     '''Should create an array where the area around land is a function of 
