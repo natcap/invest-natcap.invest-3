@@ -196,7 +196,6 @@ def execute(args):
     #of the necessary shapefiles. This will be used instead of having users
     #re-enter the locations within args.
     unpack_over_dict(args['csv_uri'], hra_args)
-    LOGGER.debug(hra_args)
 
     #Where we will store the burned individual habitat and stressor rasters.
     crit_dir = os.path.join(inter_dir, 'Criteria_Rasters')
@@ -388,7 +387,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
 
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
-            LOGGER.debug(habitats)             
+            
             habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
 
     #Stressors
@@ -442,7 +441,6 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
     Returns nothing.
     ''' 
     
-    LOGGER.debug(stressors)
     for pair in h_s:
 
         h, s = pair
@@ -494,9 +492,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             rasterized version of the stressor shapefile. It will be placed
             at stressors[stressName]['DS'].
     '''
-    LOGGER.debug("Stressors Directory %s", stressors_dir)
     stress_list = glob.glob(os.path.join(stressors_dir, '*.shp'))
-    LOGGER.debug("Stressors: %s", stress_list)
     for shape in stress_list:
 
         #The return of os.path.split is a tuple where everything after the final
@@ -528,7 +524,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #itself.
         base_array = band.ReadAsArray()
         buff = buffer_dict[name]
-        LOGGER.debug("Buffer size is %s", buff)
+        
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
 
@@ -559,7 +555,6 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
         stressors[name]['DS'] = new_buff_uri
-        LOGGER.debug("Added DS for %s", name)
 
 def make_lin_decay_array(dist_array, buff, nodata):
     '''Should create an array where the area around land is a function of 
@@ -635,7 +630,7 @@ def make_no_decay_array(dist_array, buff, nodata):
     inner_zone_index = dist_array <= buff
     dist_array[inner_zone_index] = 1
     dist_array[~inner_zone_index] = nodata  
-    LOGGER.debug("Need to make sure we are getting here.") 
+    
     return dist_array 
     
 def add_hab_rasters(dir, habitats, hab_list, grid_size):

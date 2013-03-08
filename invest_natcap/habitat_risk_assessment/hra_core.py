@@ -221,13 +221,14 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     Returns nothing.
     '''
     raster = gdal.Open(raster_uri)
-
+    LOGGER.debug("The raster should be located at %s", raster_uri)
     driver = ogr.GetDriverByName("ESRI Shapefile")
     ds = driver.CreateDataSource(out_uri)
                 
     spat_ref = osr.SpatialReference()
     spat_ref.ImportFromWkt(raster.GetProjection())
-                                
+    LOGGER.debug("SPAT REF Contains: %s", spat_ref)                            
+
     layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
