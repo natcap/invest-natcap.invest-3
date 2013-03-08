@@ -60,7 +60,7 @@
                     "id" : "land_polygon",
                     "args_id" : "land_polygon_uri",
                     "type": "file",
-                    "label": "Land Polygon to Calculate Distance From",
+                    "label": "Land Polygon for Distance Calculation",
                     "defaultValue": "../Base_Data/Marine/Land/global_polygon.shp",
                     "enabledBy" : "aoi", 
                     "requiredIf": ["min_distance", "max_distance", "valuation_container"],
@@ -89,7 +89,6 @@
                     "returns": {"ifEmpty": "pass"},
                     "required": false,
                     "helpText":"A String that will be added to the end of the output file paths."
-
                 }                         
             ]
         },
@@ -111,6 +110,16 @@
                                 "required": true,
                                 "helpText": "A CSV file that contains parameters corresponding to a specific turbine type. The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. You may create a new turbine class (or modifying existing classes) by using the existing file format conventions and filling in your own parameters. It is recommended that you do not overwrite the existing default CSV files.",
                                 "validateAs": { "type": "CSV"}
+                            },
+                            {
+                                "id" : "number_of_machines",
+                                "args_id": "number_of_machines",
+                                "type": "text",
+                                "label": "Number Of Turbines",
+                                "defaultValue": "",
+                                "required": true,
+                                "validText": "[0-9]+",
+                                "helpText" : "An integer value indicating the number of wind turbines per wind farm."
                             },
                             {
                                 "id" : "min_depth",
@@ -191,16 +200,6 @@
                             "helpText": "A floating point number for the unit cost of the foundation type (in millions of dollars). The cost of a foundation will depend on the type selected, which itself depends on a variety of factors including depth and turbine choice. Please see the User's Guide for guidance on properly selecting this value.",
                             "validateAs": { "type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}}
-                        },
-                        {
-                            "id" : "number_of_machines",
-                            "args_id": "number_of_machines",
-                            "type": "text",
-                            "label": "Number Of Turbines",
-                            "defaultValue": "",
-                            "required": true,
-                            "validText": "[0-9]+",
-                            "helpText" : "An integer value indicating the number of wind turbines per wind farm."
                         },
                         {
                             "id" : "dollar_per_kWh",

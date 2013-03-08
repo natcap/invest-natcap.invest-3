@@ -34,6 +34,8 @@ def execute(args):
         args[global_wind_parameters_uri] - a uri to a CSV file that holds the
             global parameter values for both the biophysical and valuation
             module (required)        
+        args[number_of_machines] - an integer value for the number of machines
+            for the wind farm (required for valuation)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
@@ -41,8 +43,6 @@ def execute(args):
             (required if grid_points_uri is not provided)
         args[foundation_cost] - a float representing how much the foundation
             will cost for the specific type of turbine (required)
-        args[number_of_machines] - an integer value for the number of machines
-            for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
         args[discount_rate] - a float value for the discount rate (required for
@@ -88,22 +88,19 @@ def execute(args):
     
     valuation_args['biophysical_data'] = biophysical_points
     
-    # Number of machines
-    valuation_args['number_of_machines'] = int(args['number_of_machines'])
     # Dollar per kiloWatt hour
     valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
 
     # Create a list of the valuation parameters we are looking for from the
     # input files 
-    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr',
-                                'turbines_per_circuit', 'rotor_diameter']
+    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+
     valuation_global_params = [
             'carbon_coefficient', 'time_period', 'infield_cable_cost', 
             'infield_cable_length', 'installation_cost',
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
             'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
-            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
-            'rotor_diameter_factor']
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc']
 
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
@@ -141,6 +138,7 @@ def execute(args):
     val_turbine_dict['discount_rate'] = float(args['discount_rate'])
     LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
     valuation_args['turbine_dict'] = val_turbine_dict
+    valuation_args['number_of_turbines'] = int(args['number_of_machines'])
 
     # Handle Grid Points
     try:
