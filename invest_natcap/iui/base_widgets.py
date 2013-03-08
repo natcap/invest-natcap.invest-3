@@ -120,6 +120,7 @@ class DynamicElement(QtGui.QWidget):
         return False
 
     def setState(self, state, includeSelf=True, recursive=True):
+        print(self.attributes['id'], state, includeSelf, recursive)
         if includeSelf:
             self.setEnabled(state)
             for element in self.elements:
@@ -477,6 +478,7 @@ class DynamicPrimitive(DynamicElement):
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
+            DynamicElement.setState(self, False, False, True)
         else:
             # Assume that validation passes until we are proven otherwise.
             self.set_error(None, None)
