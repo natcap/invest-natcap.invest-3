@@ -161,8 +161,9 @@ if platform.system() == 'Windows':
               'invest_natcap/iui/nutrient.json',
               'invest_natcap/iui/wind_energy.json',
               'invest_natcap/iui/coastal_vulnerability.json',
-              'invest_natcap/recreation/recreation_client_config.json',
               'geos_c.dll']))
+    data_files.append(('invest_natcap/recreation/',
+          ['invest_natcap/recreation/recreation_client_config.json']))
     data_files.extend(matplotlib.get_py2exe_datafiles())
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
