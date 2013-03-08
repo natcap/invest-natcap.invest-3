@@ -256,7 +256,7 @@
                             "args_id" : "avg_grid_distance",
                             "type": "text",
                             "label": "Average Shore to Grid Distance (km)",
-                            "defaultValue": "",
+                            "defaultValue": "4",
                             "validText" : "^[0-9]*\\.?[0-9]+$",
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
