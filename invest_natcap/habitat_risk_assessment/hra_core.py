@@ -101,12 +101,12 @@ def execute(args):
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
-
+    
     #Also want to output a polygonized version of high risk areas in each
     #habitat. Will polygonize everything that falls above a certain percentage
     #of the total raster risk.
     make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
-
+    
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
     make_ecosys_risk_raster(maps_dir, h_risk_dict)
@@ -144,7 +144,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
                            hab2: ...
                          }
             }
-        h_dict- A dictionary that contains open raster datasets corresponding
+        h_dict- A dictionary that contains raster dataseti URIs corresponding
             to each of the habitats in the model. The key in this dictionary is
             the name of the habiat, and it maps to the open dataset.
         max_risk- Double representing the highest potential value for a single
@@ -199,7 +199,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #Use gdal.Polygonize to take the raster, which should have only
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
-        #raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
+        raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     '''This will take in a raster file, and output a shapefile of the same
@@ -221,21 +221,17 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     Returns nothing.
     '''
     raster = gdal.Open(raster_uri)
-    LOGGER.debug("The raster should be located at %s", raster_uri)
     driver = ogr.GetDriverByName("ESRI Shapefile")
     ds = driver.CreateDataSource(out_uri)
                 
     spat_ref = osr.SpatialReference()
-    LOGGER.debug("Spat Ref %s", spat_ref)
     proj = raster.GetProjectionRef() 
-    LOGGER.debug("Projection is: %s", proj)
     spat_ref.ImportFromWkt(proj)
-
-    LOGGER.debug("Layer name %s", layer_name)
+    
+    layer_name = layer_name.encode('utf-8')
     layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
-
     layer.CreateField(field_defn)
 
     band = raster.GetRasterBand(1)
@@ -402,15 +398,12 @@ def make_hab_risk_raster(dir, risk_dict):
         return pixel_sum
 
 
-    #This will give up two np lists where we have only the unique habs and
-    #stress for the system.
-    habitats = map(lambda pair: pair[0], risk_dict)
-    habitats = np.array(habitats)
-    habitats = np.unique(habitats)
-
-    stressors = map(lambda pair: pair[1], risk_dict)
-    stressors = np.array(stressors)
-    stressors = np.unique(stressors)
+    #This will give us two lists where we have only the unique habs and
+    #stress for the system. List(set(list)) cast allows us to only get the
+    #unique names within each.
+    habitats, stressors = zip(*risk_dict.keys())
+    habitats = list(set(habitats))
+    stressors = list(set(stressors))
 
     #Want to get an arbitrary element in order to have a pixel size.
     pixel_size = \
