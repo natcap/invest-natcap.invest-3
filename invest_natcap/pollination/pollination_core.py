@@ -297,6 +297,11 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     LOGGER.debug('Starting to calculate farm abundance')
 
+    temp_dir = tempfile.mkdtemp()
+    farm_abundance_temp_uri = os.path.join(temp_dir, 'farm_abund_temp.tif')
+    LOGGER.debug('Farm abundance temp file saved to %s',
+        farm_abundance_temp_uri)
+
     species_abundance = gdal.Open(species_abundance)
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
@@ -311,19 +316,20 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     # that are not agricultural before saving it to the output raster.
     LOGGER.debug('Calculating foraging/farm abundance index')
     raster_utils.gaussian_filter_dataset(
-        species_abundance, sigma, uri, nodata, temp_dir)
+        species_abundance, sigma, farm_abundance_temp_uri, nodata, temp_dir)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
     LOGGER.debug('Setting all agricultural pixels to 0')
-    farm_abundance = gdal.Open(uri)
+    farm_abundance = gdal.Open(farm_abundance_temp_uri)
     ag_map_raster = gdal.Open(ag_map)
     raster_utils.vectorize_rasters(
         [farm_abundance, ag_map_raster],
         lambda x, y: x if y == 1.0 else nodata,
         raster_out_uri=uri, nodata=nodata)
-
+    farm_abundance = None
+    shutil.rmtree(temp_dir)
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
