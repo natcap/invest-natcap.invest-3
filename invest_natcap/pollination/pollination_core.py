@@ -4,6 +4,9 @@ from invest_natcap import raster_utils
 
 from osgeo import gdal
 
+import shutil
+import os
+import tempfile
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -229,7 +232,14 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
 
         Returns nothing."""
     nodata = -1.0
-    map_attribute(landuse, lu_attr, guild, floral_fields, uris['floral'], sum)
+
+
+    temp_dir = tempfile.mkdtemp()
+    floral_raster_temp_uri = os.path.join(temp_dir, 'floral_temp_raster.tif')
+
+    LOGGER.debug('Mapping floral attributes to landcover, writing to %s',
+        floral_raster_temp_uri)
+    map_attribute(landuse, lu_attr, guild, floral_fields, floral_raster_temp_uri, sum)
     map_attribute(landuse, lu_attr, guild, nesting_fields, uris['nesting'], max)
 
     # Now that the per-pixel nesting and floral resources have been
@@ -246,7 +256,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # apply a gaussian filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    floral_raster = gdal.Open(uris['floral'])
+    floral_raster = gdal.Open(floral_raster_temp_uri)
     raster_utils.gaussian_filter_dataset(
         floral_raster, sigma, uris['floral'], nodata, uris['temp'])
 
@@ -269,6 +279,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         [nesting_raster, floral_raster],
         lambda x, y: (x * y) * species_weight if x != nodata else nodata,
         raster_out_uri=uris['species_abundance'], nodata=nodata)
+    shutil.rmtree(temp_dir)
 
 
 def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
