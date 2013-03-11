@@ -373,6 +373,16 @@ def add_two_rasters(raster_1, raster_2, out_uri):
 
         Returns nothing."""
 
+    # If the user wants us to write the output raster to the URI of one of the
+    # input files, create a temporary directory and save the output file to the
+    # temp folder.
+    temp_dir = None
+    if out_uri in [raster_1, raster_2]:
+        old_out_uri = out_uri
+        temp_dir = tempfile.mkdtemp(dir=os.path.dirname(out_uri))
+        out_uri = os.path.join(temp_dir, 'temp_raster_sum.tif')
+        LOGGER.debug('Sum will be saved to temp file %s', out_uri)
+
     raster_1 = gdal.Open(raster_1)
     raster_2 = gdal.Open(raster_2)
     nodata = raster_1.GetRasterBand(1).GetNoDataValue()
@@ -380,6 +390,13 @@ def add_two_rasters(raster_1, raster_2, out_uri):
     raster_utils.vectorize_rasters(
         [raster_1, raster_2], lambda x, y: x + y if y != nodata else nodata,
         raster_out_uri=out_uri, nodata=nodata)
+
+    # If we saved the output file to a temp folder, remove the file that we're
+    # trying to avoid and save the temp file to the old file's location.
+    if temp_dir != None:
+        shutil.rmtree(old_out_uri)
+        shutil.move(out_uri, old_out_uri)
+        shutil.rmtree(temp_dir)
 
 
 def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
