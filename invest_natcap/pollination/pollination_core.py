@@ -154,6 +154,7 @@ def execute_model(args):
             pixel_size = abs(sample_raster.GetGeoTransform()[1])
             sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
             LOGGER.debug('Pixel size: %s, sigma: %s')
+            sample_raster = None
 
             calculate_service(
                 rasters={
@@ -474,6 +475,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
         lambda x, y: 0.0 if x == 0 else y,
         raster_out_uri=out_uris['service_value'], nodata=nodata)
 
+    service_value_raster = None
     shutil.rmtree(temp_dir)
     LOGGER.debug('Finished calculating service value')
 
