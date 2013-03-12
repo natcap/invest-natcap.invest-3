@@ -477,6 +477,7 @@ class DynamicPrimitive(DynamicElement):
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
+            DynamicElement.setState(self, False, False, True)
         else:
             # Assume that validation passes until we are proven otherwise.
             self.set_error(None, None)
@@ -982,7 +983,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
     def toggleHiding(self, state):
         """Show or hide all sub-elements of container (if collapsible) as
             necessary.  This function is a callback for the toggled() signal.
-            
+
             returns nothing."""
 
         for element in self.elements:
@@ -990,7 +991,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             element.setEnabled(state)
 
         self.setMinimumSize(self.sizeHint())
-        self.setState(state, includeSelf=False, recursive=True)
+        DynamicGroup.setState(self, state, includeSelf=False, recursive=True)
 
     def resetValue(self):
         if 'defaultValue' in self.attributes:
@@ -1021,15 +1022,19 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         collapsible, we only want to set the state of contained elements when
         the collapsible container is open.  Otherwise, pass."""
 
-        set_state = False
-        if self.isCheckable():
-            if self.isChecked():
-                set_state = True
-        else:
-            set_state = True
+        # if the checkbox is:
+        #   - disabled,
+        #   - checkable (collapsible), and
+        #   - checked,
+        # then, we want to set the checkbox to be unchecked.
+        if state == False and self.isCheckable() and self.isChecked():
+            self.setChecked(False)
 
-        if set_state:
-            DynamicGroup.setState(self, state, includeSelf, recursive)
+        # we always want to include the checkbox itself when this container is
+        # toggled.
+        includeSelf=True
+        DynamicGroup.setState(self, state, includeSelf, recursive)
+
 
 class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
