@@ -302,7 +302,6 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             for p in pixels:
                 value += p
             
-            LOGGER.debug("Doing recovery for %s", h)
             value = value / denoms['Recovery'][h]
 
         curr_list = crit_lists['Recovery'][h]
