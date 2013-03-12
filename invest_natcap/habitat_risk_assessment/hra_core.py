@@ -282,6 +282,9 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
     Returns nothing.
     '''
+#    LOGGER.debug(crit_lists)
+#    LOGGER.debug(denoms)
+
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
     
@@ -298,7 +301,8 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
             for p in pixels:
                 value += p
-
+            
+            LOGGER.debug("Doing recovery for %s", h)
             value = value / denoms['Recovery'][h]
 
         curr_list = crit_lists['Recovery'][h]
@@ -788,7 +792,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     denoms = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
-
+    LOGGER.debug(hab)
     #Now will iterrate through the dictionaries one at a time, since each has
     #to be placed uniquely.
 
@@ -911,9 +915,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             #Explicitly want a float output so as not to lose precision.
             risk_crit_rate_numerator += r / float(dq*w)
-            rec_crit_rate_numerator += r/dq
+            rec_crit_rate_numerator += r/ float(dq)
             denoms['Risk']['h'][h] += 1 / float(dq*w)
-            denoms['Recovery'][h] += 1 / dq
+            denoms['Recovery'][h] += 1 / float(dq)
 
         #First, burn the crit raster for risk
         single_crit_C_uri = os.path.join(pre_raster_dir, h + 
@@ -1084,5 +1088,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             crit_lists['Risk']['s'][s].append(crit_E_uri)
 
+    LOGGER.debug(denoms)
     #This might help.
     return (crit_lists, denoms)
