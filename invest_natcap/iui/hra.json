@@ -86,7 +86,7 @@
                 "id":"plot_aoi",
                     "args_id": "plot_aoi",
                     "type": "hideableFileEntry",
-                    "label": "Use Risk Plots As AOI?",
+                    "label": "Sub-Regions Shapefile [Optional]",
                     "required": false,
                     "validateAs": {"type": "file",
 		    		  "mustExist": true},
