@@ -13,18 +13,20 @@ from invest_natcap.dbfpy import dbf
 import timber_core
 
 def execute(args):
-    """This function invokes the timber model given uri inputs specified by the user guide.
+    """This function invokes the timber model given uri inputs specified by 
+        the user guide.
     
     args - a dictionary object of arguments 
        
-    args['workspace_dir']        - The file location where the outputs will 
+    args['workspace_dir']     - The file location where the outputs will 
                                 be written (Required)
     args['timber_shape_uri']  - The shape file describing timber parcels with 
                                 fields as described in the user guide (Required)
     args['attr_table_uri']    - The DBF polygon attribute table location with 
-                                fields that describe polygons in timber_shape_uri (Required)
-    args['market_disc_rate']  - The market discount rate as a float (Required, Default: 7)
-    
+                                fields that describe polygons in 
+                                timber_shape_uri (Required)
+    args['market_disc_rate']  - The market discount rate as a float
+                                (Required, Default: 7)
     """
     filesystemencoding = sys.getfilesystemencoding()
 
