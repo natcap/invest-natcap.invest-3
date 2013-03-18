@@ -467,7 +467,7 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
                         gdal.GDT_Float32, 0, grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
-
+        
         h_s[pair]['DS'] = out_uri
 
 def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
@@ -677,7 +677,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
 
         gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
-
         habitats[name]['DS'] = out_uri
 
 def unpack_over_dict(csv_uri, args):

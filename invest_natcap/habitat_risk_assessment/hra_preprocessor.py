@@ -467,10 +467,10 @@ def parse_stressor(uri):
             
             if row[1] == 'SHAPE':
                 stressor_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3],map(int,row[2:4])))
+                        dict(zip(headers[1:3],map(float,row[2:4])))
             else:
                 stressor_dict['Crit_Ratings'][key] = \
-                        dict(zip(headers,map(int,row[1:])))
+                        dict(zip(headers,map(float,row[1:])))
                 
     return stressor_dict
 
@@ -547,10 +547,10 @@ def parse_habitat_overlap(uri):
                 #add the DQ and the W, and we will add a rasterized version of
                 #the shapefile later.
                 habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(int, line[2:4]))) 
+                        dict(zip(headers[1:3], map(float, line[2:4]))) 
             else:
                 habitat_dict['Crit_Ratings'][key] = \
-                        dict(zip(headers, map(int,line[1:4])))
+                        dict(zip(headers, map(float,line[1:4])))
             line = csv_reader.next()
 
         #Drain the next two lines
@@ -577,10 +577,10 @@ def parse_habitat_overlap(uri):
                     if line[1] == 'SHAPE':
                         #Only include DQ and W headers
                         habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
-                                dict(zip(headers[1:3], map(int,line[2:4])))
+                                dict(zip(headers[1:3], map(float,line[2:4])))
                     else:
                         habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
-                                dict(zip(headers, map(int,line[1:4])))
+                                dict(zip(headers, map(float,line[1:4])))
                     line = csv_reader.next()
             except StopIteration:
                 break
