@@ -1,11 +1,9 @@
 """InVEST Timber model at the "uri" level.  No separation between
     biophysical and valuation since the model is so simple."""
 
-import imp
 import sys
 import os
 
-import numpy
 from osgeo import ogr
 
 import json
@@ -30,7 +28,8 @@ def execute(args):
     """
     filesystemencoding = sys.getfilesystemencoding()
 
-    timber_shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
+    timber_shape = ogr.Open(
+            args['timber_shape_uri'].encode(filesystemencoding), 1)
 
     #Add the Output directory onto the given workspace
     workspace_dir = args['workspace_dir'] + os.sep + 'Output/'
@@ -42,7 +41,8 @@ def execute(args):
     #python string here should ensure we are able to proceed.
     shape_source = str(workspace_dir + 'timber.shp')
 
-    #If there is already an existing shapefile with the same name and path, delete it
+    #If there is already an existing shapefile with the same name 
+    #and path, delete it
     if os.path.isfile(shape_source):
         os.remove(shape_source)
 
