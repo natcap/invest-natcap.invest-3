@@ -101,12 +101,12 @@ def execute(args):
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
-
+    
     #Also want to output a polygonized version of high risk areas in each
     #habitat. Will polygonize everything that falls above a certain percentage
     #of the total raster risk.
     make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
-
+    
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
     make_ecosys_risk_raster(maps_dir, h_risk_dict)
@@ -144,7 +144,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
                            hab2: ...
                          }
             }
-        h_dict- A dictionary that contains open raster datasets corresponding
+        h_dict- A dictionary that contains raster dataseti URIs corresponding
             to each of the habitats in the model. The key in this dictionary is
             the name of the habiat, and it maps to the open dataset.
         max_risk- Double representing the highest potential value for a single
@@ -199,7 +199,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #Use gdal.Polygonize to take the raster, which should have only
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
-        #raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
+        raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     '''This will take in a raster file, and output a shapefile of the same
@@ -221,21 +221,17 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     Returns nothing.
     '''
     raster = gdal.Open(raster_uri)
-    LOGGER.debug("The raster should be located at %s", raster_uri)
     driver = ogr.GetDriverByName("ESRI Shapefile")
     ds = driver.CreateDataSource(out_uri)
                 
     spat_ref = osr.SpatialReference()
-    LOGGER.debug("Spat Ref %s", spat_ref)
     proj = raster.GetProjectionRef() 
-    LOGGER.debug("Projection is: %s", proj)
     spat_ref.ImportFromWkt(proj)
-
-    LOGGER.debug("Layer name %s", layer_name)
+    
+    layer_name = layer_name.encode('utf-8')
     layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
-
     layer.CreateField(field_defn)
 
     band = raster.GetRasterBand(1)
@@ -286,6 +282,9 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
     Returns nothing.
     '''
+#    LOGGER.debug(crit_lists)
+#    LOGGER.debug(denoms)
+
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
     
@@ -302,7 +301,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
             for p in pixels:
                 value += p
-
+            
             value = value / denoms['Recovery'][h]
 
         curr_list = crit_lists['Recovery'][h]
@@ -402,15 +401,12 @@ def make_hab_risk_raster(dir, risk_dict):
         return pixel_sum
 
 
-    #This will give up two np lists where we have only the unique habs and
-    #stress for the system.
-    habitats = map(lambda pair: pair[0], risk_dict)
-    habitats = np.array(habitats)
-    habitats = np.unique(habitats)
-
-    stressors = map(lambda pair: pair[1], risk_dict)
-    stressors = np.array(stressors)
-    stressors = np.unique(stressors)
+    #This will give us two lists where we have only the unique habs and
+    #stress for the system. List(set(list)) cast allows us to only get the
+    #unique names within each.
+    habitats, stressors = zip(*risk_dict.keys())
+    habitats = list(set(habitats))
+    stressors = list(set(stressors))
 
     #Want to get an arbitrary element in order to have a pixel size.
     pixel_size = \
@@ -715,12 +711,6 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
 
-    #LOGGER.debug(tot_crit_list)
-    #for ds in tot_crit_list:
-    #    r = ds.GetRasterBand(1)
-    #   LOGGER.debug('\nC Raster X Size, C Raster Y Size')
-    #   LOGGER.debug(str(r.XSize) + ', ' + str(r.YSize))
-
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     '''Want to return two dictionaries in the format of the following:
     (Note: the individual num raster comes from the crit_ratings
@@ -791,7 +781,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             as crit_lists, but the innermost values will be floats instead of
             lists.
     '''
-    pre_raster_dir = os.path.join(dir, 'Crit_Rasters')
+    pre_raster_dir = os.path.join(dir, 'ReBurned_Crit_Rasters')
 
     os.mkdir(pre_raster_dir)
 
@@ -801,7 +791,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     denoms = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
-
+    LOGGER.debug(hab)
     #Now will iterrate through the dictionaries one at a time, since each has
     #to be placed uniquely.
 
@@ -924,9 +914,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             #Explicitly want a float output so as not to lose precision.
             risk_crit_rate_numerator += r / float(dq*w)
-            rec_crit_rate_numerator += r/dq
+            rec_crit_rate_numerator += r/ float(dq)
             denoms['Risk']['h'][h] += 1 / float(dq*w)
-            denoms['Recovery'][h] += 1 / dq
+            denoms['Recovery'][h] += 1 / float(dq)
 
         #First, burn the crit raster for risk
         single_crit_C_uri = os.path.join(pre_raster_dir, h + 
@@ -972,11 +962,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
-
-            LOGGER.debug("----------------------\n")
-            LOGGER.debug(crit_dict)
-            LOGGER.debug(crit)
-            LOGGER.debug(h)
 
             crit_ds_uri = crit_dict['DS']
             crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
@@ -1102,5 +1087,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             crit_lists['Risk']['s'][s].append(crit_E_uri)
 
+    LOGGER.debug(denoms)
     #This might help.
     return (crit_lists, denoms)

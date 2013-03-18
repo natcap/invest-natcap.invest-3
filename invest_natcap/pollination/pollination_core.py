@@ -4,6 +4,9 @@ from invest_natcap import raster_utils
 
 from osgeo import gdal
 
+import shutil
+import os
+import tempfile
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -151,6 +154,7 @@ def execute_model(args):
             pixel_size = abs(sample_raster.GetGeoTransform()[1])
             sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
             LOGGER.debug('Pixel size: %s, sigma: %s')
+            sample_raster = None
 
             calculate_service(
                 rasters={
@@ -229,7 +233,14 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
 
         Returns nothing."""
     nodata = -1.0
-    map_attribute(landuse, lu_attr, guild, floral_fields, uris['floral'], sum)
+
+
+    temp_dir = tempfile.mkdtemp()
+    floral_raster_temp_uri = os.path.join(temp_dir, 'floral_temp_raster.tif')
+
+    LOGGER.debug('Mapping floral attributes to landcover, writing to %s',
+        floral_raster_temp_uri)
+    map_attribute(landuse, lu_attr, guild, floral_fields, floral_raster_temp_uri, sum)
     map_attribute(landuse, lu_attr, guild, nesting_fields, uris['nesting'], max)
 
     # Now that the per-pixel nesting and floral resources have been
@@ -246,7 +257,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # apply a gaussian filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    floral_raster = gdal.Open(uris['floral'])
+    floral_raster = gdal.Open(floral_raster_temp_uri)
     raster_utils.gaussian_filter_dataset(
         floral_raster, sigma, uris['floral'], nodata, uris['temp'])
 
@@ -269,6 +280,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         [nesting_raster, floral_raster],
         lambda x, y: (x * y) * species_weight if x != nodata else nodata,
         raster_out_uri=uris['species_abundance'], nodata=nodata)
+    shutil.rmtree(temp_dir)
 
 
 def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
@@ -286,6 +298,11 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     LOGGER.debug('Starting to calculate farm abundance')
 
+    temp_dir = tempfile.mkdtemp()
+    farm_abundance_temp_uri = os.path.join(temp_dir, 'farm_abund_temp.tif')
+    LOGGER.debug('Farm abundance temp file saved to %s',
+        farm_abundance_temp_uri)
+
     species_abundance = gdal.Open(species_abundance)
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
@@ -300,19 +317,20 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     # that are not agricultural before saving it to the output raster.
     LOGGER.debug('Calculating foraging/farm abundance index')
     raster_utils.gaussian_filter_dataset(
-        species_abundance, sigma, uri, nodata, temp_dir)
+        species_abundance, sigma, farm_abundance_temp_uri, nodata, temp_dir)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
     LOGGER.debug('Setting all agricultural pixels to 0')
-    farm_abundance = gdal.Open(uri)
+    farm_abundance = gdal.Open(farm_abundance_temp_uri)
     ag_map_raster = gdal.Open(ag_map)
     raster_utils.vectorize_rasters(
         [farm_abundance, ag_map_raster],
         lambda x, y: x if y == 1.0 else nodata,
         raster_out_uri=uri, nodata=nodata)
-
+    farm_abundance = None
+    shutil.rmtree(temp_dir)
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
@@ -356,6 +374,16 @@ def add_two_rasters(raster_1, raster_2, out_uri):
 
         Returns nothing."""
 
+    # If the user wants us to write the output raster to the URI of one of the
+    # input files, create a temporary directory and save the output file to the
+    # temp folder.
+    temp_dir = None
+    if out_uri in [raster_1, raster_2]:
+        old_out_uri = out_uri
+        temp_dir = tempfile.mkdtemp(dir=os.path.dirname(out_uri))
+        out_uri = os.path.join(temp_dir, 'temp_raster_sum.tif')
+        LOGGER.debug('Sum will be saved to temp file %s', out_uri)
+
     raster_1 = gdal.Open(raster_1)
     raster_2 = gdal.Open(raster_2)
     nodata = raster_1.GetRasterBand(1).GetNoDataValue()
@@ -363,6 +391,17 @@ def add_two_rasters(raster_1, raster_2, out_uri):
     raster_utils.vectorize_rasters(
         [raster_1, raster_2], lambda x, y: x + y if y != nodata else nodata,
         raster_out_uri=out_uri, nodata=nodata)
+
+    raster_1 = None
+    raster_2 = None
+
+    # If we saved the output file to a temp folder, remove the file that we're
+    # trying to avoid and save the temp file to the old file's location.
+    if temp_dir != None:
+        os.remove(old_out_uri)
+        shutil.move(out_uri, old_out_uri)
+        shutil.rmtree(temp_dir)
+        LOGGER.debug('Moved temp sum to %s', old_out_uri)
 
 
 def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
@@ -414,24 +453,30 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
-    LOGGER.debug('Saving service value raster to %s', out_uris['service_value'])
+
+    temp_dir = tempfile.mkdtemp(dir=os.path.dirname(out_uris['service_value']))
+    temp_service_uri = os.path.join(temp_dir, 'temp_service_value_uri.tif')
+
+    LOGGER.debug('Saving service value raster to %s', temp_service_uri)
     species_abundance = gdal.Open(rasters['species_abundance'])
     blurred_ratio_raster = gdal.Open(out_uris['species_value_blurred'])
     raster_utils.vectorize_rasters(
         [species_abundance, blurred_ratio_raster],
         lambda x, y: part_wild * x * y if x != nodata else nodata,
-        raster_out_uri=out_uris['service_value'],
+        raster_out_uri=temp_service_uri,
         nodata=nodata)
 
     # Set all agricultural pixels to 0.  This is according to issue 761.
     LOGGER.debug('Marking the value of all non-ag pixels as 0.0.')
     ag_map = gdal.Open(rasters['ag_map'])
-    service_value_raster = gdal.Open(out_uris['service_value'])
+    service_value_raster = gdal.Open(temp_service_uri)
     raster_utils.vectorize_rasters(
         [ag_map, service_value_raster],
         lambda x, y: 0.0 if x == 0 else y,
         raster_out_uri=out_uris['service_value'], nodata=nodata)
 
+    service_value_raster = None
+    shutil.rmtree(temp_dir)
     LOGGER.debug('Finished calculating service value')
 
 
@@ -481,6 +526,13 @@ def divide_raster(raster, divisor, uri):
 
         Returns nothing."""
 
+    temp_dir = None
+    if raster == uri:
+        old_out_uri = uri
+        temp_dir = tempfile.mkdtemp(dir=os.path.dirname(uri))
+        uri = os.path.join(temp_dir, 'temp_raster_divide.tif')
+        LOGGER.debug('Quotient raster will be saved to temp file %s', uri)
+
     raster = gdal.Open(raster)
     nodata = raster.GetRasterBand(1).GetNoDataValue()
 
@@ -488,6 +540,12 @@ def divide_raster(raster, divisor, uri):
         [raster], lambda x: x / divisor if x != nodata else nodata,
         raster_out_uri=uri, nodata=nodata)
 
+    raster = None
+    if temp_dir != None:
+        os.remove(old_out_uri)
+        shutil.move(uri, old_out_uri)
+        shutil.rmtree(temp_dir)
+        LOGGER.debug('Moved temp quotient to %s', old_out_uri)
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
                   out_uri, list_op):
