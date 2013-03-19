@@ -513,7 +513,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
 
         #Need to create a larger base than the envelope that would normally
         #surround the raster, since we know that we can be expanding by at
-        #least buffer size more.
+        #least buffer size more. For reference, look to "~/workspace/Examples/expand_raster.py"
         shp_extent = layer.GetExtent()
 
         #These have to be expanded by 2 * buffer to account for both sides
