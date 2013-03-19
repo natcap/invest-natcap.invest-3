@@ -70,9 +70,10 @@ def static_max_marginal_gain(
 	
 	#TODO: mask aoi_uri here
 	
-	current_index = -1
-	while True:
-		current_index += 1
+	#Walk through the indices in reverse order
+	current_index = len(ordered_indexes)
+	while current_index > 0:
+		current_index -= 1
 		if budget <= 0: 
 			break
 		top_index = ordered_indexes[current_index]
