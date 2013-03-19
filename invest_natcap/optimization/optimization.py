@@ -1,5 +1,6 @@
 from osgeo import gdal
 import numpy
+import bisect
 
 def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
@@ -61,7 +62,10 @@ def static_max_marginal_gain(
 	array = band.ReadAsArray()
 	flat_array = array.flat
 	in_nodata = band.GetNoDataValue()
+	flat_array[numpy.isnan(flat_array)] = in_nodata
+	print in_nodata
 	ordered_indexes = numpy.argsort(flat_array)
+	ordered_array = flat_array[ordered_indexes]
 	
 	#TODO: use memmapped or hd5 arrays here
 	out_nodata = 255
@@ -69,23 +73,29 @@ def static_max_marginal_gain(
 	output_array[:] = out_nodata
 	
 	#TODO: mask aoi_uri here
+
+	left_nodata_index = bisect.bisect_left(ordered_array, in_nodata)
+	right_nodata_index = bisect.bisect_right(ordered_array, in_nodata)
 	
-	#Walk through the indices in reverse order
-	current_index = len(ordered_indexes)
-	while current_index > 0:
-		current_index -= 1
-		if budget <= 0: 
-			break
-		top_index = ordered_indexes[current_index]
-		if flat_array[top_index] == in_nodata:
-			continue
-		output_array[top_index] = 1	
-		budget -= 1
-		
+	n_elements = len(ordered_indexes)
+	right_length = n_elements-right_nodata_index
+	
+	if budget < right_length:
+		output_array[ordered_indexes[(n_elements-budget):n_elements]] = 1
+		budget = 0
+	else:
+		output_array[ordered_indexes[right_nodata_index:n_elements]] = 1
+		budget -= right_length
+		if budget > left_nodata_index:
+			output_array[ordered_indexes[0:left_nodata_index]] = 1
+			budget -= left_nodata_index
+		else:
+			output_array[ordered_indexes[(left_nodata_index-budget):left_nodata_index]] = 1
+			buget = 0
 	print output_array
 	
 	out_dataset = new_raster_from_base(dataset, output_datset_uri, 'GTiff', out_nodata, gdal.GDT_Byte)
 	out_band = out_dataset.GetRasterBand(1)
 	output_array.shape = array.shape
 	out_band.WriteArray(output_array)
-static_max_marginal_gain('../../../OYNPP1.tif', 279936, 'test.tif')
+static_max_marginal_gain('../../../OYNPP1.tif', 4320**2, 'test.tif')
