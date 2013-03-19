@@ -253,12 +253,6 @@ class UnifiedPollinationTest(unittest.TestCase):
         self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
             'Guild_with_crops.csv')
 
-        # copy the sample farms shapefile into the correct place to prove that
-        # an existing shapefile folder will be removed
-        shutil.copytree(os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'farms_abundance_cur'), os.path.join(self.workspace_dir, 'output',
-            'farms_abundance_cur'))
-
         pollination.execute(self.args)
 
         regression_file = os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',

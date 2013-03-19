@@ -290,14 +290,7 @@ def execute(args):
                             species_name = species['species']
                             LOGGER.info('Processing species %s', species_name)
 
-                            try:
-                                species_crop = species[crop]
-                            except KeyError:
-                                LOGGER.warn('Crop "%s" found in the farms '
-                                    'shapefile, but not found in guilds,',
-                                    fieldname)
-                                species_crop = 0
-
+                            species_crop = species[crop]
                             if species_crop == 1:
                                 visiting_species.append(species_name)
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
