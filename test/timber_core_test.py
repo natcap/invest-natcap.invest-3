@@ -9,15 +9,12 @@ from osgeo import ogr
 from invest_natcap.dbfpy import dbf
 from invest_natcap.timber import timber_core
 
-#Create a variable to prepend to each path
-current_folder = os.path.dirname(os.path.abspath(__file__)) + os.sep
-
 class TestTimber(unittest.TestCase):
 
     def test_timber_summationOne_NotImmedHarv(self):
         """Test of the first summation in the Net Present Value equation when 
-            immediate harvest is NO. Using known inputs.  Calculated value and Hand Calculations
-            compared against the models equation"""
+            immediate harvest is NO. Using known inputs.  Calculated value and 
+            Hand Calculations compared against the models equation"""
         mdr_perc = 1.07
         harvest_value = 3990.0
         freq_Harv = 2
@@ -27,11 +24,15 @@ class TestTimber(unittest.TestCase):
         subtractor = 1
         #Calculated value by hand:
         summationCalculatedByHand = 6986.000492
-        summation = timber_core.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+        summation = timber_core.npvSummationOne(
+                lower_limit, upper_limit, harvest_value, mdr_perc, 
+                freq_Harv, subtractor)
 
         summationCalculated = 0.0
         for num in range(lower_limit, upper_limit + 1):
-            summationCalculated = summationCalculated + (harvest_value / ((1.07) ** ((freq_Harv * num) - subtractor)))
+            summationCalculated = \
+                    summationCalculated + (harvest_value /\
+                    ((1.07) ** ((freq_Harv * num) - subtractor)))
 
         self.assertAlmostEqual(summationCalculatedByHand, summation, 5)
         self.assertAlmostEqual(summationCalculated, summation, 5)
@@ -39,8 +40,8 @@ class TestTimber(unittest.TestCase):
 
     def test_timber_summationOne_ImmedHarv(self):
         """Test of the first summation in the Net Present Value equation when 
-            immediate harvest is YES. Using known inputs.  Calculated value and Hand Calculations
-            compared against the models equation"""
+            immediate harvest is YES. Using known inputs.  Calculated value
+            and Hand Calculations compared against the models equation"""
         mdr_perc = 1.07
         harvest_value = 3990.0
         freq_Harv = 2
@@ -50,11 +51,15 @@ class TestTimber(unittest.TestCase):
         subtractor = 0
         #Calculated value by hand:
         summationCalculatedByHand = 7475.020526
-        summation = timber_core.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+        summation = timber_core.npvSummationOne(
+                lower_limit, upper_limit, harvest_value, mdr_perc, 
+                freq_Harv, subtractor)
 
         summationCalculated = 0.0
         for num in range(lower_limit, upper_limit + 1):
-            summationCalculated = summationCalculated + (harvest_value / ((1.07) ** ((freq_Harv * num) - subtractor)))
+            summationCalculated = \
+                    summationCalculated + (harvest_value /\
+                    ((1.07) ** ((freq_Harv * num) - subtractor)))
 
         self.assertAlmostEqual(summationCalculatedByHand, summation, 5)
         self.assertAlmostEqual(summationCalculated, summation, 5)
@@ -69,11 +74,13 @@ class TestTimber(unittest.TestCase):
         mdr_perc = 1.07
         #Calculated value by hand:
         summationCalculatedByHand = 362.4316044
-        summation = timber_core.npvSummationTwo(lower_limit, upper_limit, maint_Cost, mdr_perc)
+        summation = timber_core.npvSummationTwo(
+                lower_limit, upper_limit, maint_Cost, mdr_perc)
 
         summationCalculated = 0.0
         for num in range(0, 4):
-            summationCalculated = summationCalculated + (maint_Cost / ((1.07) ** num))
+            summationCalculated = \
+                    summationCalculated + (maint_Cost / ((1.07) ** num))
 
         self.assertAlmostEqual(summationCalculatedByHand, summation, 5)
         self.assertAlmostEqual(summationCalculated, summation, 5)
@@ -81,18 +88,21 @@ class TestTimber(unittest.TestCase):
     def test_timber_smoke(self):
         """Smoke test for Timber.  Model should not crash with 
             basic input requirements"""
-        #Set the path for the test inputs/outputs and check to make sure the directory does not exist
-        smoke_path = current_folder + 'data/timber/Smoke/'
+        #Set the path for the test inputs/outputs and check to make sure the
+        #directory does not exist
+        smoke_path = './data/test_out/timber/Smoke/'
         if not os.path.isdir(smoke_path):
-            os.mkdir(current_folder + 'data/timber/Smoke')
+            os.makedirs(smoke_path)
         #Define the paths for the sample input/output files
-        dbf_path = current_folder + 'data/timber/Smoke/test.dbf'
-        shp_path = current_folder + 'data/timber/Smoke'
+        dbf_path = os.path.join(smoke_path, 'test.dbf')
+        shp_path = smoke_path
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
-        db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
-                     ('Parcl_area', 'N', 4), ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3),
-                     ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3), ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
+        db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1),
+                    ('Parcel_ID', 'N', 1), ('Parcl_area', 'N', 4), 
+                    ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3),
+                    ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3), 
+                    ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
         rec = db.newRecord()
         rec['PRICE'] = 100
         rec['T'] = 2
@@ -108,13 +118,15 @@ class TestTimber(unittest.TestCase):
         rec.store()
         db.close()
 
-        #Create our own basic shapefile with one polygon to run through the model
+        #Create our own basic shapefile with one polygon to run through the 
+        #model
         driverName = "ESRI Shapefile"
         drv = ogr.GetDriverByName(driverName)
         ds = drv.CreateDataSource(shp_path)
         lyr = ds.CreateLayer('timber', None, ogr.wkbPolygon)
 
-        #Creating a field because OGR will not allow an empty feature, it will default by putting FID_1
+        #Creating a field because OGR will not allow an empty feature, 
+        #it will default by putting FID_1
         #as a field.  OGR will also self create the FID and Shape field.
         field_defn = ogr.FieldDefn('Parcl_ID', ogr.OFTInteger)
         lyr.CreateField(field_defn)
@@ -146,7 +158,8 @@ class TestTimber(unittest.TestCase):
 
         lyr = ds.GetLayerByName('timber')
         feat = lyr.GetFeature(0)
-        for field, value in (('TNPV', tnpv), ('TBiomass', tbio), ('TVolume', tvol)):
+        for field, value in (
+                ('TNPV', tnpv), ('TBiomass', tbio), ('TVolume', tvol)):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
             self.assertAlmostEqual(value, field_value, 6)
@@ -156,19 +169,13 @@ class TestTimber(unittest.TestCase):
         ds = None
         db.close()
 
-        #Remove the generated output from the smoke test
-        if os.path.isdir(smoke_path):
-            textFileList = os.listdir(smoke_path)
-            for file in textFileList:
-                os.remove(smoke_path + file)
-            os.rmdir(smoke_path)
-
     def test_timber_BioVol(self):
-        """Biomass and Volume test for timber model.  Creates an attribute table and shapefile
-        with set values.  Compares calculated Biomass and Volume with that from running the
-        shapefile through the model. """
-        #Set the path for the test inputs/outputs and check to make sure the directory does not exist
-        dir_path = current_folder + 'data/timber/Output/'
+        """Biomass and Volume test for timber model.  Creates an attribute
+        table and shapefile with set values.  Compares calculated Biomass
+        and Volume with that from running the shapefile through the model. """
+        #Set the path for the test inputs/outputs and check to make sure
+        #the directory does not exist
+        dir_path = './data/test_out/timber/biovol/Output/'
 
         #Deleting any files in the output if they already exist, this
         #caused a bug once when I didn't do this.
@@ -178,15 +185,17 @@ class TestTimber(unittest.TestCase):
                 os.remove(dir_path + file)
 
         if not os.path.isdir(dir_path):
-            os.mkdir(current_folder + 'data/timber/Output')
-        shp_path = current_folder + 'data/timber/Output'
-        dbf_path = current_folder + 'data/timber/Output/test.dbf'
+            os.makedirs(dir_path)
+        shp_path = dir_path
+        dbf_path = os.path.join(dir_path, 'test.dbf')
 
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
-        db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
-                     ('Parcl_area', 'N', 4), ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3),
-                     ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3), ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
+        db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1),
+                    ('Parcel_ID', 'N', 1), ('Parcl_area', 'N', 4),
+                    ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3),
+                    ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3),
+                    ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
         rec = db.newRecord()
         rec['PRICE'] = 400
         rec['T'] = 4
@@ -212,7 +221,8 @@ class TestTimber(unittest.TestCase):
         ds = drv.CreateDataSource(shp_path)
         lyr = ds.CreateLayer('timber', None, ogr.wkbPolygon)
 
-        #Creating a field because OGR will not allow an empty feature, it will default by putting FID_1
+        #Creating a field because OGR will not allow an empty feature,
+        #it will default by putting FID_1
         #as a field.  OGR will also self create the FID and Shape field.
         field_defn = ogr.FieldDefn('Parcl_ID', ogr.OFTInteger)
         lyr.CreateField(field_defn)
@@ -238,7 +248,9 @@ class TestTimber(unittest.TestCase):
         #Compare Biomass, Volume, and TNPV calculations
         lyr = ds.GetLayerByName('timber')
         feat = lyr.GetFeature(0)
-        for field, value in (('TNPV', TNPV), ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
+        for field, value in (
+                ('TNPV', TNPV), ('TBiomass', calculatedBiomass),
+                ('TVolume', calculatedVolume)):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
             self.assertAlmostEqual(value, field_value, 2)
@@ -249,33 +261,29 @@ class TestTimber(unittest.TestCase):
         lyr = None
         db.close()
 
-        #Remove the generated output from the BioVol test
-        if os.path.isdir(dir_path):
-            textFileList = os.listdir(dir_path)
-            for file in textFileList:
-                os.remove(dir_path + file)
-            os.rmdir(dir_path)
-
     def test_timber_with_inputs(self):
-        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
-            shapefile that was created from the same inputs.  Regression test."""
+        """Test timber model with real inputs. Compare copied and 
+            modified shapefile with valid shapefile that was created from
+            the same inputs.  Regression test."""
         #Open table and shapefile
-        attr_table = dbf.Dbf(current_folder + 'data/timber/input/plant_table.dbf')
-        test_shape = ogr.Open(current_folder + 'data/timber/input/plantation.shp', 1)
+        input_dir = './data/timber/input/'
+        out_dir = './data/test_out/timber/with_inputs/'
+        attr_table = dbf.Dbf(os.path.join(input_dir, 'plant_table.dbf'))
+        test_shape = ogr.Open(os.path.join(input_dir, 'plantation.shp'), 1)
 
         #Add the Output directory onto the given workspace
-        output_dir = current_folder + 'data/timber' + os.sep + 'Output/'
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
-        elif os.path.isfile(output_dir + 'timber.shp'):
-            os.remove(output_dir + 'timber.shp')
+        output_uri = os.path.join(out_dir, 'timber.shp')
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+        if os.path.isfile(output_uri):
+            os.remove(output_uri)
 
-        shape_source = output_dir + 'timber.shp'
+        shape_source = output_uri
 
         ogr.GetDriverByName('ESRI Shapefile').\
             CopyDataSource(test_shape, shape_source)
 
-        timber_output_shape = ogr.Open(current_folder + 'data/timber/Output/timber.shp', 1)
+        timber_output_shape = ogr.Open(shape_source, 1)
         timber_output_layer = timber_output_shape.GetLayerByName('timber')
 
         args = {'timber_shape': timber_output_shape,
@@ -285,9 +293,11 @@ class TestTimber(unittest.TestCase):
 
         timber_core.execute(args)
 
-        valid_output_shape = ogr.Open(current_folder + 'data/timber/regression_data/timber.shp')
+        valid_output_shape = ogr.Open(
+                './data/timber/regression_data/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
-        #Check that the number of features (polygons) are the same between shapefiles
+        #Check that the number of features (polygons) are the same between
+        #shapefiles
         num_features_valid = valid_output_layer.GetFeatureCount()
         num_features_copy = timber_output_layer.GetFeatureCount()
         self.assertEqual(num_features_valid, num_features_copy)
@@ -310,9 +320,3 @@ class TestTimber(unittest.TestCase):
         test_shape = None
         timber_output_layer = None
         attr_table.close()
-        #Delete all the generated files and directory
-        if os.path.isdir('data/timber/Output/'):
-            textFileList = os.listdir('data/timber/Output/')
-            for file in textFileList:
-                os.remove('data/timber/Output/' + file)
-            os.rmdir('data/timber/Output/')

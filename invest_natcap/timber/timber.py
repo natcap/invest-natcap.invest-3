@@ -1,11 +1,9 @@
 """InVEST Timber model at the "uri" level.  No separation between
     biophysical and valuation since the model is so simple."""
 
-import imp
 import sys
 import os
 
-import numpy
 from osgeo import ogr
 
 import json
@@ -13,22 +11,25 @@ from invest_natcap.dbfpy import dbf
 import timber_core
 
 def execute(args):
-    """This function invokes the timber model given uri inputs specified by the user guide.
+    """This function invokes the timber model given uri inputs specified by 
+        the user guide.
     
     args - a dictionary object of arguments 
        
-    args['workspace_dir']        - The file location where the outputs will 
+    args['workspace_dir']     - The file location where the outputs will 
                                 be written (Required)
     args['timber_shape_uri']  - The shape file describing timber parcels with 
                                 fields as described in the user guide (Required)
     args['attr_table_uri']    - The DBF polygon attribute table location with 
-                                fields that describe polygons in timber_shape_uri (Required)
-    args['market_disc_rate']  - The market discount rate as a float (Required, Default: 7)
-    
+                                fields that describe polygons in 
+                                timber_shape_uri (Required)
+    args['market_disc_rate']  - The market discount rate as a float
+                                (Required, Default: 7)
     """
     filesystemencoding = sys.getfilesystemencoding()
 
-    timber_shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
+    timber_shape = ogr.Open(
+            args['timber_shape_uri'].encode(filesystemencoding), 1)
 
     #Add the Output directory onto the given workspace
     workspace_dir = args['workspace_dir'] + os.sep + 'Output/'
@@ -40,7 +41,8 @@ def execute(args):
     #python string here should ensure we are able to proceed.
     shape_source = str(workspace_dir + 'timber.shp')
 
-    #If there is already an existing shapefile with the same name and path, delete it
+    #If there is already an existing shapefile with the same name 
+    #and path, delete it
     if os.path.isfile(shape_source):
         os.remove(shape_source)
 
