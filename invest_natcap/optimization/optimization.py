@@ -55,6 +55,8 @@ def static_max_marginal_gain(
 	
 	returns nothing"""
 	
+	#TODO: mask aoi_uri here
+	
 	dataset = gdal.Open(score_dataset_uri)
 	band = dataset.GetRasterBand(1)
 	
@@ -62,18 +64,18 @@ def static_max_marginal_gain(
 	array = band.ReadAsArray()
 	flat_array = array.flat
 	in_nodata = band.GetNoDataValue()
+	#This sets any nans to nodata values, an issue with the MN data
 	flat_array[numpy.isnan(flat_array)] = in_nodata
-	print in_nodata
 	ordered_indexes = numpy.argsort(flat_array)
 	ordered_array = flat_array[ordered_indexes]
 	
 	#TODO: use memmapped or hd5 arrays here
+	#This is the array that will record what features are selected
 	out_nodata = 255
-	output_array = numpy.empty_like(flat_array, dtype=numpy.ubyte)
-	output_array[:] = out_nodata
+	selection_array = numpy.empty_like(flat_array, dtype=numpy.ubyte)
+	selection_array[:] = out_nodata
 	
-	#TODO: mask aoi_uri here
-
+	#This finds the range of nodata values in the sorted array
 	left_nodata_index = bisect.bisect_left(ordered_array, in_nodata)
 	right_nodata_index = bisect.bisect_right(ordered_array, in_nodata)
 	
@@ -81,21 +83,29 @@ def static_max_marginal_gain(
 	right_length = n_elements-right_nodata_index
 	
 	if budget < right_length:
-		output_array[ordered_indexes[(n_elements-budget):n_elements]] = 1
+		#We can spend it all on the right side of the array
+		selection_array[ordered_indexes[(n_elements-budget):n_elements]] = 1
 		budget = 0
 	else:
-		output_array[ordered_indexes[right_nodata_index:n_elements]] = 1
+		#Spend what we can on the right and figure out the left
+		selection_array[ordered_indexes[right_nodata_index:n_elements]] = 1
 		budget -= right_length
-		if budget > left_nodata_index:
-			output_array[ordered_indexes[0:left_nodata_index]] = 1
-			budget -= left_nodata_index
+		if budget < left_nodata_index:
+			#we can spend the remaining on the left side of the array
+			selection_array[ordered_indexes[(left_nodata_index-budget):left_nodata_index]] = 1
+			budget = 0
 		else:
-			output_array[ordered_indexes[(left_nodata_index-budget):left_nodata_index]] = 1
-			buget = 0
-	print output_array
+			#Otherwise select the rest of the array and have some remaining budget
+			selection_array[ordered_indexes[0:left_nodata_index]] = 1
+			budget -= left_nodata_index
 	
+	print 'remaining budget', budget
+	
+	#Write output result
 	out_dataset = new_raster_from_base(dataset, output_datset_uri, 'GTiff', out_nodata, gdal.GDT_Byte)
 	out_band = out_dataset.GetRasterBand(1)
-	output_array.shape = array.shape
-	out_band.WriteArray(output_array)
-static_max_marginal_gain('../../../OYNPP1.tif', 4320**2, 'test.tif')
+	selection_array.shape = array.shape
+	out_band.WriteArray(selection_array)
+	
+	
+static_max_marginal_gain('../../../OYNPP1.tif', 4320*1000, 'test.tif')
