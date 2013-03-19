@@ -54,8 +54,8 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         
         #Regression Check for wave power percentile raster
         invest_test_core.assertTwoDatasetEqualURI(self,
-            os.path.join(os.sep + 'Output/wp_rc.tif'),
-            os.path.join(regression_dir, '/wp_rc_regression.tif'))
+            os.path.join(output_dir, 'Output/wp_rc.tif'),
+            os.path.join(regression_dir, 'wp_rc_regression.tif'))
         
         #Regression Check for captured wave energy percentile raster
         invest_test_core.assertTwoDatasetEqualURI(self,
