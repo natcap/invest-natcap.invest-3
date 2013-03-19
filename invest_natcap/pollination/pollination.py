@@ -260,9 +260,6 @@ def execute(args):
                     farms_copy.GetLayer(0).CreateField(new_field)
                     LOGGER.debug('Created crop sum field "%s" for "%s"',
                         field_name, crop)
-                else:
-                    LOGGER.debug('Field "%s" already exists.  Skipping',
-                         field_name)
 
                 # Regardless of whether it needs to be created, we still need to
                 # keep track of it for later on, when the value of the cell will
