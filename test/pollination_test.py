@@ -85,7 +85,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             '%s/intermediate/hn_Bombus_cur.tif',
             '%s/intermediate/sup_Bombus_cur.tif',
             '%s/output/frm_avg_cur.tif',
-            '%s/output/sup_tot_cur.tif'
+            '%s/output/sup_tot_cur.tif',
             '%s/intermediate/frm_Apis_fut.tif',
             '%s/intermediate/hf_Apis_fut.tif',
             '%s/intermediate/hn_Apis_fut.tif',
