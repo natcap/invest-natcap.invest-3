@@ -14,9 +14,18 @@ def static_max_marginal_gain(
 		aoi_uri - an area to consider selection
 	
 	returns nothing"""
+	
 	dataset = gdal.Open(score_dataset_uri)
 	band = dataset.GetRasterBand(1)
 	array = band.ReadAsArray()
+	in_nodata = band.GetNoDataValue()
 	ordered_indexes = numpy.argsort(array.flat)
+	
+	out_nodata = 255
+	output_array = numpy.empty_like(array, dtype=numpy.ubyte)
+	output_array[:] = out_nodata
+	
+	print output_array
+	
 	
 static_max_marginal_gain('../../../OYNPP1.tif', 10, 'test.tif')
