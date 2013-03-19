@@ -19,6 +19,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         """A regression test for wave_energy_biophysical that passes
            in sample inputs with the area of interest.  It runs the outputs
            against regression files that are known to be accurate"""
+        #raise SkipTest
         args = {}
         test_dir = './data/wave_energy_data/'
         output_dir = './data/test_out/wave_energy_biophysical_output'
@@ -111,7 +112,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
            compares hand calculated results against the returned
            function generated results
         """
-        raise SkipTest
+        #raise SkipTest
         wave_base_data_uri = \
             './data/wave_energy_data/test_input/sampWaveDataTest.txt.bin'
         if os.path.isfile(wave_base_data_uri):
