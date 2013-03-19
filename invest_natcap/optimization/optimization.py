@@ -1,8 +1,9 @@
 from osgeo import gdal
 import numpy
 import bisect
+import scipy.ndimage.filters
 
-def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
+def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None, ):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
         
@@ -42,7 +43,7 @@ def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_v
 
 
 def static_max_marginal_gain(
-	score_dataset_uri, budget, output_datset_uri, aoi_uri=None):
+	score_dataset_uri, budget, output_datset_uri, sigma=0.0, aoi_uri=None):
 	"""This funciton calculates the maximum marginal gain by selecting pixels
 		in a greedy fashion until the entire budget is spent.
 		
@@ -62,10 +63,19 @@ def static_max_marginal_gain(
 	
 	#TODO: use memmapped or hd5 arrays here
 	array = band.ReadAsArray()
-	flat_array = array.flat
 	in_nodata = band.GetNoDataValue()
+	array[numpy.isnan(array)] = in_nodata
+	nodata_mask = array == in_nodata
+	
+	#Gaussian smooth the array but treating nodata as 0.0
+	array[array==in_nodata] = 0.0
+	array = scipy.ndimage.filters.gaussian_filter(array, sigma, mode='constant', cval=0.0)
+	#put the nodata values back
+	array[nodata_mask] = in_nodata
+	nodata_mask = None
+	
 	#This sets any nans to nodata values, an issue with the MN data
-	flat_array[numpy.isnan(flat_array)] = in_nodata
+	flat_array = array.flat
 	ordered_indexes = numpy.argsort(flat_array)
 	ordered_array = flat_array[ordered_indexes]
 	
@@ -108,4 +118,4 @@ def static_max_marginal_gain(
 	out_band.WriteArray(selection_array)
 	
 	
-static_max_marginal_gain('../../../OYNPP1.tif', 4320*1000, 'test.tif')
+static_max_marginal_gain('../../../OYNPP1.tif', 4320*100, 'test.tif', 5.0)
