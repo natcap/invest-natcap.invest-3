@@ -17,13 +17,19 @@ def static_max_marginal_gain(
 	
 	dataset = gdal.Open(score_dataset_uri)
 	band = dataset.GetRasterBand(1)
+	
+	#TODO: use memmapped or hd5 arrays here
 	array = band.ReadAsArray()
 	in_nodata = band.GetNoDataValue()
 	ordered_indexes = numpy.argsort(array.flat)
 	
+	#TODO: use memmapped or hd5 arrays here
 	out_nodata = 255
 	output_array = numpy.empty_like(array, dtype=numpy.ubyte)
 	output_array[:] = out_nodata
+	
+	#TODO: mask aoi_uri here
+	
 	
 	print output_array
 	
