@@ -58,13 +58,14 @@ def static_max_marginal_gain(
 	band = dataset.GetRasterBand(1)
 	
 	#TODO: use memmapped or hd5 arrays here
-	array = band.ReadAsArray().flat
+	array = band.ReadAsArray()
+	flat_array = array.flat
 	in_nodata = band.GetNoDataValue()
-	ordered_indexes = numpy.argsort(array)
+	ordered_indexes = numpy.argsort(flat_array)
 	
 	#TODO: use memmapped or hd5 arrays here
 	out_nodata = 255
-	output_array = numpy.empty_like(array, dtype=numpy.ubyte)
+	output_array = numpy.empty_like(flat_array, dtype=numpy.ubyte)
 	output_array[:] = out_nodata
 	
 	#TODO: mask aoi_uri here
@@ -75,7 +76,7 @@ def static_max_marginal_gain(
 		if budget <= 0: 
 			break
 		top_index = ordered_indexes[current_index]
-		if array[top_index] == in_nodata:
+		if flat_array[top_index] == in_nodata:
 			continue
 		output_array[top_index] = 1	
 		budget -= 1
@@ -84,5 +85,6 @@ def static_max_marginal_gain(
 	
 	out_dataset = new_raster_from_base(dataset, output_datset_uri, 'GTiff', out_nodata, gdal.GDT_Byte)
 	out_band = out_dataset.GetRasterBand(1)
+	output_array.shape = array.shape
 	out_band.WriteArray(output_array)
-static_max_marginal_gain('../../../OYNPP1.tif', 10, 'test.tif')
+static_max_marginal_gain('../../../OYNPP1.tif', 279936, 'test.tif')
