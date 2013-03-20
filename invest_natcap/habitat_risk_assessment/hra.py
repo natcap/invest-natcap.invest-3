@@ -517,11 +517,13 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         shp_extent = layer.GetExtent()
 
         #These have to be expanded by 2 * buffer to account for both sides
-        width = int((abs(shp_extent[1] - shp_extent[0]) + 2*buff)/grid_size)
-        height = int((abs(shp_extent[3] - shp_extent[2]) + 2*buff) /grid_size)
+        width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
+        height = abs(shp_extent[3] - shp_extent[2]) + 2*buff 
+        p_width = int(np.ceil(width / grid_size))
+        p_height = int(np.ceil(height /grid_size))
          
         driver = gdal.GetDriverByName('GTiff')
-        raster = driver.Create(out_uri, width, height, 1, gdal.GDT_Float32) 
+        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32) 
 
         #increase everything by buffer size
         transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
