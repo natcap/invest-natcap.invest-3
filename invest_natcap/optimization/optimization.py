@@ -52,6 +52,11 @@ def static_max_marginal_gain(
 		output_dataset_uri - the uri to an output gdal dataset of type gdal.Byte
 			values are 0 if not selected, 1 if selected, and nodata if the original
 			was nodata.
+		sigma - a "clumping factor" parameter that biases the selection of maximum
+			pixels to be close to other selected pixels.  The higher the value
+			the higher the clumps.  Formally this is the sigma paramter on
+			a gaussian filter that operates on the original score_dataset_uri
+			the default is 0.0 which does not bias selection toward clumping.
 		aoi_uri - an area to consider selection
 	
 	returns nothing"""
