@@ -505,7 +505,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         buff = buffer_dict[name]
        
         #Want to set this specifically to make later overlap easier.
-        nodata = 0
+        nodata = 0.
 
         #Need to create a larger base than the envelope that would normally
         #surround the raster, since we know that we can be expanding by at

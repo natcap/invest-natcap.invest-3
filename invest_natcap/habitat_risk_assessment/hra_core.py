@@ -180,7 +180,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         if percent > 50.0:
             return 1
         else:
-            return 0
+            return 0.
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
@@ -572,7 +572,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         #was the first ds passed.
         b_pixel = pixels[0]
         if b_pixel == base_nodata:
-            return 0       
+            return 0.       
 
         #Otherwise, straight multiply all of the pixel values. We assume that
         #base could potentially be decayed.
@@ -629,7 +629,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         if not c_pix == 0:
             c_val = c_pix - 1
         else:
-            c_val = 0
+            c_val = 0.
 
         e_val -= 1
 
@@ -944,7 +944,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_rec_single(pixel):
             
             if pixel == base_nodata:
-                return 0
+                return 0.
 
             else:
                 return rec_crit_rate_numerator
@@ -975,7 +975,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_risk(pixel):
             
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / (w*dq)
@@ -994,7 +994,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_rec(pixel):
             
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / dq
@@ -1045,7 +1045,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_s_single(pixel):
             
             if pixel == base_nodata:
-                return 0
+                return 0.
 
             else:
                 return crit_rate_numerator
@@ -1074,7 +1074,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_s(pixel):
             
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / (dq*w)
