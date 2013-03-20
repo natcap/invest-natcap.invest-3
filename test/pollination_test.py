@@ -70,6 +70,42 @@ class UnifiedPollinationTest(unittest.TestCase):
                 invest_test_core.assertTwoDatasetEqualURI(self, test_file,
                     reg_file)
 
+    def test_regression_biophysical_future(self):
+        self.args['landuse_fut_uri'] = os.path.join(TEST_DATA_DIR,
+            'landuse_cur_200m.tif')
+        pollination.execute(self.args)
+
+        bio_rasters = ([
+            '%s/intermediate/frm_Apis_cur.tif',
+            '%s/intermediate/hf_Apis_cur.tif',
+            '%s/intermediate/hn_Apis_cur.tif',
+            '%s/intermediate/sup_Apis_cur.tif',
+            '%s/intermediate/frm_Bombus_cur.tif',
+            '%s/intermediate/hf_Bombus_cur.tif',
+            '%s/intermediate/hn_Bombus_cur.tif',
+            '%s/intermediate/sup_Bombus_cur.tif',
+            '%s/output/frm_avg_cur.tif',
+            '%s/output/sup_tot_cur.tif',
+            '%s/intermediate/frm_Apis_fut.tif',
+            '%s/intermediate/hf_Apis_fut.tif',
+            '%s/intermediate/hn_Apis_fut.tif',
+            '%s/intermediate/sup_Apis_fut.tif',
+            '%s/intermediate/frm_Bombus_fut.tif',
+            '%s/intermediate/hf_Bombus_fut.tif',
+            '%s/intermediate/hn_Bombus_fut.tif',
+            '%s/intermediate/sup_Bombus_fut.tif',
+            '%s/output/frm_avg_fut.tif',
+            '%s/output/sup_tot_fut.tif'
+        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'no_ag_classes'))
+
+        for raster_list, reg_uri_base in [bio_rasters]:
+            for raster in raster_list:
+                test_file = raster % self.workspace_dir
+                reg_file = raster % reg_uri_base
+                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                    reg_file)
+
     def test_regression_biophysical_ag_classes(self):
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
             ' 83 84 85 88 90 91 92')
@@ -212,6 +248,19 @@ class UnifiedPollinationTest(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(self, regression_file,
             test_file)
 
+    def test_farms_shapefile_already_exists(self):
+        self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
+        self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
+            'Guild_with_crops.csv')
+
+        pollination.execute(self.args)
+
+        regression_file = os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
+            'farms_abundance_cur', 'farms.shp')
+        test_file = os.path.join(self.workspace_dir, 'output',
+            'farms_abundance_cur', 'farms.shp')
+        invest_test_core.assertTwoShapesEqualURI(self, regression_file,
+            test_file)
 
 class PollinationSmokeTest(unittest.TestCase):
     """To only run this test class at the command line, do this:

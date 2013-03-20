@@ -467,7 +467,7 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
                         gdal.GDT_Float32, 0, grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
-
+        
         h_s[pair]['DS'] = out_uri
 
 def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq, 
@@ -506,24 +506,40 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
         
-        #Making the nodata value 0 so that it's easier to combine the 
-        #layers later.
+        buff = buffer_dict[name]
+       
+        #Want to set this specifically to make later overlap easier.
+        nodata = 0
 
-        ###Eventually, will use raster_utils.temporary_filename() here.###
-        r_dataset = \
-            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Int32, 0, out_uri, datasource)
+        #Need to create a larger base than the envelope that would normally
+        #surround the raster, since we know that we can be expanding by at
+        #least buffer size more.
+        shp_extent = layer.GetExtent()
 
-        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-        band.Fill(nodata)
+        #These have to be expanded by 2 * buffer to account for both sides
+        width = int((abs(shp_extent[1] - shp_extent[0]) + 2*buff)/grid_size)
+	    height = int((abs(shp_extent[3] - shp_extent[2]) + 2*buff) /grid_size)
+       
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(out_uri, width, height, 1, gdal.GDT_Float32) 
 
-        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+        #increase everything by buffer size
+        transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
+        raster.SetGeoTransform(transform)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(layer.GetSpatialRef().__str__())
+        raster.SetProjection(srs.ExportToWkt())
+
+        raster.GetRasterBand(1).Fill(nodata)
+        raster.GetRasterBand(1).FlushCache()
+
+        gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
        
         #Now, want to take that raster, and make it into a buffered version of
         #itself.
         base_array = band.ReadAsArray()
-        buff = buffer_dict[name]
         
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
@@ -544,7 +560,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #just be assumed to be buffered
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         
-        new_dataset = raster_utils.new_raster_from_base(r_dataset, new_buff_uri,
+        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
                             'GTiff', 0, gdal.GDT_Float32)
         
         n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
@@ -677,7 +693,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
 
         gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
-
         habitats[name]['DS'] = out_uri
 
 def unpack_over_dict(csv_uri, args):

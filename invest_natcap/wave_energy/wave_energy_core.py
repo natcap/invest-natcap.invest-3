@@ -777,60 +777,6 @@ def get_points_values(shape, field):
     results = [points, values]
     return results
 
-def interp_points_over_raster(points, values, raster, nodata):
-    """Interpolates a given set of points and values over new points
-    provided by the raster and writes the interpolated matrix to the 
-    raster band.
-    
-    points - A 2D array of points, where the points are represented as [x,y]
-    values - A list of values corresponding to the points of 'points'
-    raster - A raster to write the interpolated values too and to get the
-             new dimensions from
-    nodata - An integer value that specifies the nodata value for the raster
-    
-    returns - Nothing
-    """
-    #Set the points and values to numpy arrays
-    points = np.array(points)
-    values = np.array(values)
-    #Get the dimensions from the raster as well as the GeoTransform information
-    geo_tran = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    size_x = band.XSize
-    LOGGER.debug('Size of X dimension of raster : %s', size_x)
-    size_y = band.YSize
-    LOGGER.debug('Size of Y dimension of raster : %s', size_y)
-    LOGGER.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f',
-                 geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
-    
-    #This was the old way of getting the points to represent the pixels in 
-    #the raster.  It ran anywhere from 40-70 times slower than the way below.
-#    new_points = \
-#      np.array([[geo_tran[0] + geo_tran[1] * i, geo_tran[3] + geo_tran[5] * j]
-#                           for i in np.arange(size_x) 
-#                           for j in np.arange(size_y)])
-    
-    #For interpolating we need a new set of points, which will represent
-    #each pixel in the raster.  Thus, we first step through and get all of our
-    #'x' points, then all of our 'y' points, then combine them.
-    x_range = \
-        np.array([geo_tran[0] + geo_tran[1] * i for i in np.arange(size_x)])
-    y_range = \
-        np.array([geo_tran[3] + geo_tran[5] * j for j in np.arange(size_y)])
-    new_points = np.array([(x, y) for x in x_range for y in y_range])
-    LOGGER.debug('New points from raster : %s', new_points)
-    #Interpolate the points and values from the shapefile from earlier
-    spl = ip(points, values, fill_value=nodata)
-    #Run the interpolator object over the new set of points from the raster. 
-    #Will return a list of values.
-    spl = spl(new_points)
-    #Reshape the list of values to the dimensions of the raster for writing.
-    #Transpose the matrix provided from 'reshape' because gdal thinks of 
-    #x,y opposite of humans
-    spl = spl.reshape(size_x, size_y).transpose()
-    #Write interpolated matrix of values to raster
-    band.WriteArray(spl, 0, 0)
-
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
     machine performance table using new ranges from wave watch data.
@@ -1021,7 +967,8 @@ def valuation(args):
     #Output path for grid point shapefile
     grid_pt_path = output_dir + os.sep + 'GridPts_prj.shp'
     #Output path for the projected net present value raster
-    raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
+    raster_projected_path = os.path.join(
+            workspace_dir, 'Intermediate/npv_not_clipped.tif')
     #Path for the net present value percentile raster
     npv_rc_path = output_dir + os.sep + 'npv_rc.tif'
     #The datasource of the modified wave watch 3 shapefile from
@@ -1195,15 +1142,28 @@ def valuation(args):
                                                      wave_data_shape)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
     npv_raster = gdal.Open(raster_projected_path, GA_Update)
-    #Get the corresponding points and values from the shapefile to be used 
-    #for interpolation
-    npv_array = get_points_values(wave_data_shape, 'NPV_25Y')
+    
     #Interpolate the NPV values based on the dimensions and 
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-    interp_points_over_raster(npv_array[0], npv_array[1], npv_raster, nodata)
-    LOGGER.debug('Done interpolating NPV over raster.')
+        
+    raster_utils.vectorize_points(wave_data_shape, 'NPV_25Y', npv_raster)
+   
+    convex_uri = os.path.join(workspace_dir, 'Intermediate/convex_hull.shp')
+    # Create a shapefile that is the convex hull of our points so that we can
+    # use it for masking and clipping
+    get_convex_hull(wave_data_shape, 'convex_hull', convex_uri)
+    
+    convex_hull = ogr.Open(convex_uri)
+
+    npv_out_uri = os.path.join(workspace_dir, 'Output/npv_usd.tif')
+    # Clip the raster to the convex hull polygon
+    raster_utils.clip_dataset(npv_raster, convex_hull, npv_out_uri)
+    
+    npv_raster = None
+    npv_raster = gdal.Open(npv_out_uri)
+
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
     npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, ' (US$)',
@@ -1213,6 +1173,59 @@ def valuation(args):
     npv_raster = None
     wave_data_shape.Destroy()
     LOGGER.debug('End of wave_energy_core.valuation')
+
+def get_convex_hull(point_datasource, layer_name, output_uri):
+    """This function finds the convex hull of a point shapefile and creates a
+        new polygon shapefile based on the convex hull.
+
+        point_datasource - an OGR point geometry datasource
+        layer_name - a string for the output polygon datasources layer name
+        output_uri - a URI for the output polygon datasource
+
+        returns - Nothing"""
+
+    # Get the Layer and reset the pointer to make sure it is looking at the
+    # first feature
+    layer = point_datasource.GetLayer()
+    layer.ResetReading()
+    
+    # Create a geometry collection from all the points, which we will then get
+    # the convex hull from
+    point_collection = ogr.Geometry(ogr.wkbGeometryCollection)
+    # Iterate over all the points and build up the geometry collection
+    for index in range(layer.GetFeatureCount()):
+        feature = layer.GetFeature(index)
+        geometry = feature.GetGeometryRef()
+        point_collection.AddGeometry(geometry)
+
+    # Get the convex hull geometry
+    convex_hull = point_collection.ConvexHull()
+
+    # If the output_uri exists delete it
+    if os.path.isfile(output_uri):
+        os.remove(output_uri)
+    # Create a new datasource for the convex hull polygon
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(output_uri)
+
+    output_layer = output_datasource.CreateLayer(
+            layer_name, layer.GetSpatialRef(), ogr.wkbPolygon)
+
+    # Creating a field so that the datasource has at least one field
+    output_field = ogr.FieldDefn('ID', ogr.OFTReal)   
+    output_layer.CreateField(output_field)
+
+    output_feature = ogr.Feature(output_layer.GetLayerDefn())
+    output_layer.CreateFeature(output_feature)
+    
+    field_index = output_feature.GetFieldIndex('ID')
+    output_feature.SetField(field_index, 1)
+
+    # Set the geometry for the feature as the convex hull polygon
+    output_feature.SetGeometryDirectly(convex_hull)
+    output_layer.SetFeature(output_feature)
+    output_feature = None
+    output_datasource = None
 
 def build_point_shapefile(driver_name, layer_name, path, data, prj, 
                           coord_trans):

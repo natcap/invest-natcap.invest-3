@@ -66,7 +66,7 @@
                     "label": "Decay Equation",
                     "defaultValue": "None",
                     "required": true,
-                    "options" : ["None", "Multiplicative", "Euclidean"],
+                    "options" : ["None", "Linear", "Exponential"],
                     "returns": "strings",
                     "dataType": "string",
                     "helpText": "Each of these represents an option for decay equations for the buffered stressors. If stressor buffering is desired, these equtions will determine the rate at which stressor data is reduced."
@@ -86,7 +86,7 @@
                 "id":"plot_aoi",
                     "args_id": "plot_aoi",
                     "type": "hideableFileEntry",
-                    "label": "Use Risk Plots As AOI?",
+                    "label": "Sub-Regions Shapefile [Optional]",
                     "required": false,
                     "validateAs": {"type": "file",
 		    		  "mustExist": true},
