@@ -843,7 +843,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_single_hs(pixel):
 
             if pixel == base_nodata:
-                return 0
+                return 0.
             else:
                 return crit_rate_numerator
 
@@ -875,7 +875,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_hs(pixel):
 
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / (dq * w)
@@ -924,7 +924,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_risk_single(pixel):
             
             if pixel == base_nodata:
-                return 0
+                return 0.
 
             else:
                 return risk_crit_rate_numerator
