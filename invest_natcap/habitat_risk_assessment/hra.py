@@ -8,7 +8,7 @@ import glob
 import numpy as np
 import math
 
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
@@ -518,8 +518,8 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
 
         #These have to be expanded by 2 * buffer to account for both sides
         width = int((abs(shp_extent[1] - shp_extent[0]) + 2*buff)/grid_size)
-	    height = int((abs(shp_extent[3] - shp_extent[2]) + 2*buff) /grid_size)
-       
+        height = int((abs(shp_extent[3] - shp_extent[2]) + 2*buff) /grid_size)
+         
         driver = gdal.GetDriverByName('GTiff')
         raster = driver.Create(out_uri, width, height, 1, gdal.GDT_Float32) 
 
