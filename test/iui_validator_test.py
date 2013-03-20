@@ -185,6 +185,14 @@ class OGRCheckerTester(CheckerTester):
         self.validate_as.update(updates)
         self.assertNoError()
 
+        # This should validate that the projection's linear units are in
+        # Meters (spelled as 'metre').
+        updates = {'layers': [{'name': 'Florida_SC_UTM17N',
+                               'projection': {'units': 'meters'}}],
+                   'value': TEST_DATA + '/iui/validation/Florida_SC_UTM17N.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
         # Verify that if the JSON definition requires a projection that we don't
         # recognize in validation's known_units dictionary.
         updates = {'layers': [{'name': 'mn',
