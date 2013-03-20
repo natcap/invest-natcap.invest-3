@@ -1,3 +1,6 @@
+def execute(args):
+	execute_30(**args)
+
 def execute_30(**args):
 	"""Malarial ecosystem disservice model.
 	
