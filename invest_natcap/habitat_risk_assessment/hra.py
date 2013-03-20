@@ -531,7 +531,8 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         srs.ImportFromWkt(layer.GetSpatialRef().__str__())
         raster.SetProjection(srs.ExportToWkt())
 
-        raster.GetRasterBand(1).Fill(nodata)
+        band = raster.GetRasterBand(1)
+        band.Fill(nodata)
         raster.GetRasterBand(1).FlushCache()
 
         gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
