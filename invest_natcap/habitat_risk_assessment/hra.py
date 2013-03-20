@@ -445,8 +445,8 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
 
         h, s = pair
 
-        _, s_nodata = raster_utils.extract_band_and_nodata(gdal.Open(stressors[s]['DS']))
-        _, h_nodata = raster_utils.extract_band_and_nodata(gdal.Open(habitats[h]['DS']))
+        s_nodata = raster_utils.get_nodata_from_uri(stressors[s]['DS'])
+        h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
  
         files = [habitats[h]['DS'], stressors[s]['DS']]
 
@@ -535,7 +535,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
 
         band = raster.GetRasterBand(1)
         band.Fill(nodata)
-        raster.GetRasterBand(1).FlushCache()
+        band.FlushCache()
 
         gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
