@@ -154,42 +154,12 @@ class OGRCheckerTester(CheckerTester):
         self.validate_as['fieldsExist'] = ['StArT_dAtE', 'Cut_cur']
         self.assertNoError()
 
+
     def test_projection(self):
         """Assert that OGRChecker can validate projection units."""
         updates = {'layers': [{'name': 'harv_samp_cur',
                                'projection': {'units': 'meters'}}],
                    'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
-        self.validate_as.update(updates)
-        self.assertNoError()
-
-        # This should return an error.
-        updates = {'layers': [{'name': 'harv_samp_cur',
-                               'projection': {'units': 'latLong'}}],
-                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
-        self.validate_as.update(updates)
-        self.assertError()
-
-        # This should validate that the projection's linear units are in
-        # Degrees.
-        updates = {'layers': [{'name': 'mn',
-                               'projection': {'units': 'US Feet'}}],
-                   'value': TEST_DATA + '/iui/validation/mn.shp'}
-        self.validate_as.update(updates)
-        self.assertNoError()
-
-        # This should validate that the projection's linear units are in
-        # Meters.
-        updates = {'layers': [{'name': 'meter_proj',
-                               'projection': {'units': 'meters'}}],
-                   'value': TEST_DATA + '/iui/validation/meter_proj.shp'}
-        self.validate_as.update(updates)
-        self.assertNoError()
-
-        # This should validate that the projection's linear units are in
-        # Meters (spelled as 'metre').
-        updates = {'layers': [{'name': 'Florida_SC_UTM17N',
-                               'projection': {'units': 'meters'}}],
-                   'value': TEST_DATA + '/iui/validation/Florida_SC_UTM17N.shp'}
         self.validate_as.update(updates)
         self.assertNoError()
 
@@ -201,6 +171,8 @@ class OGRCheckerTester(CheckerTester):
         self.validate_as.update(updates)
         self.assertError()
 
+    def test_is_projected(self):
+        """Assert that OGRChecker can validate the projection."""
         # Check that the layer is projected.
         updates = {'layers': [{'name': 'harv_samp_cur',
                                'projection': {'exists': True}}],
@@ -244,6 +216,43 @@ class OGRCheckerTester(CheckerTester):
                    'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
         self.validate_as.update(updates)
         self.assertError()
+
+    def test_projection_meters(self):
+        """Assert that OGRChecker can validate projection units (meters)."""
+        # This should validate that the projection's linear units are in
+        # Meters.
+        updates = {'layers': [{'name': 'meter_proj',
+                               'projection': {'units': 'meters'}}],
+                   'value': TEST_DATA + '/iui/validation/meter_proj.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
+        # This should validate that the projection's linear units are in
+        # Meters (spelled as 'metre').
+        updates = {'layers': [{'name': 'Florida_SC_UTM17N',
+                               'projection': {'units': 'meters'}}],
+                   'value': TEST_DATA + '/iui/validation/Florida_SC_UTM17N.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
+    def test_projection_latlong(self):
+        """Assert that OGRChecker can validate projection units (latlong)."""
+        # This should return an error.
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'units': 'latLong'}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertError()
+
+    def test_projection_us_feet(self):
+        """Assert that OGRChecker can validate projection units (US Feet)."""
+        # This should validate that the projection's linear units are in
+        # Degrees.
+        updates = {'layers': [{'name': 'mn',
+                               'projection': {'units': 'US Feet'}}],
+                   'value': TEST_DATA + '/iui/validation/mn.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
 
 class DBFCheckerTester(CheckerTester):
         """Test the class iui_validator.DBFChecker"""
