@@ -68,12 +68,13 @@ def static_max_marginal_gain(
 	nodata_mask = array == in_nodata
 	
 	#Gaussian smooth the array but treating nodata as 0.0
-	array[array==in_nodata] = 0.0
-	array = scipy.ndimage.filters.gaussian_filter(array, sigma, mode='constant', cval=0.0)
-	#put the nodata values back
-	array[nodata_mask] = in_nodata
-	nodata_mask = None
-	
+	if sigma != 0.0:
+		array[array==in_nodata] = 0.0
+		array = scipy.ndimage.filters.gaussian_filter(array, sigma, mode='constant', cval=0.0)
+		#put the nodata values back
+		array[nodata_mask] = in_nodata
+		nodata_mask = None
+		
 	#This sets any nans to nodata values, an issue with the MN data
 	flat_array = array.flat
 	ordered_indexes = numpy.argsort(flat_array)
