@@ -260,9 +260,6 @@ def execute(args):
                     farms_copy.GetLayer(0).CreateField(new_field)
                     LOGGER.debug('Created crop sum field "%s" for "%s"',
                         field_name, crop)
-                else:
-                    LOGGER.debug('Field "%s" already exists.  Skipping',
-                         field_name)
 
                 # Regardless of whether it needs to be created, we still need to
                 # keep track of it for later on, when the value of the cell will
@@ -290,14 +287,7 @@ def execute(args):
                             species_name = species['species']
                             LOGGER.info('Processing species %s', species_name)
 
-                            try:
-                                species_crop = species[crop]
-                            except KeyError:
-                                LOGGER.warn('Crop "%s" found in the farms '
-                                    'shapefile, but not found in guilds,',
-                                    fieldname)
-                                species_crop = 0
-
+                            species_crop = species[crop]
                             if species_crop == 1:
                                 visiting_species.append(species_name)
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
