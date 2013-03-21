@@ -9,6 +9,9 @@ import logging
 
 import datetime
 
+import zipfile
+from invest_natcap.raster_utils import temporary_filename
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -134,16 +137,27 @@ def execute(args):
     LOGGER.info("Opening predictors for uploading.")
     
     #opening shapefiles
-    attachments={}                
+    attachments={}
+    zip_file_uri=temporary_filename()
+    zip_file=zipfile.ZipFile(zip_file_uri, mode='w')
     for predictor in predictors:
-        attachments[predictor+".shp"]= open(args["data_dir"]+predictor+".shp","rb")
-        attachments[predictor+".shx"]= open(args["data_dir"]+predictor+".shx","rb")
-        attachments[predictor+".dbf"]= open(args["data_dir"]+predictor+".dbf","rb")
-        attachments[predictor+".prj"]= open(args["data_dir"]+predictor+".prj","rb")
+##        attachments[predictor+".shp"]= open(args["data_dir"]+predictor+".shp","rb")
+##        attachments[predictor+".shx"]= open(args["data_dir"]+predictor+".shx","rb")
+##        attachments[predictor+".dbf"]= open(args["data_dir"]+predictor+".dbf","rb")
+##        attachments[predictor+".prj"]= open(args["data_dir"]+predictor+".prj","rb")
+        zip_file.write(args["data_dir"]+predictor+".shp",predictor+".shp")
+        zip_file.write(args["data_dir"]+predictor+".shx",predictor+".shx")
+        zip_file.write(args["data_dir"]+predictor+".dbf",predictor+".dbf")
+        zip_file.write(args["data_dir"]+predictor+".prj",predictor+".prj")
+        
 
     #opening categorization table
     for tsv in userCategorization:
-        attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
+##        attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
+        zip_file.write(aargs["data_dir"]+tsv+".tsv",tsv+".tsv")
+
+    zip_file.close()
+    attachments["zip_file"]=open(zip_file_uri,'rb')
 
     args["user_predictors"]=len(predictors)
     args["user_tables"]=len(userCategorization)
