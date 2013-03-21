@@ -630,14 +630,16 @@ class OGRChecker(TableChecker):
 
                 # Validate projection units if the user specifies it.
                 if 'units' in layer_dict['projection']:
-                    linear_units = str(reference.GetLinearUnitsName())
+                    linear_units = str(reference.GetLinearUnitsName()).lower()
 
                     # This dictionary maps IUI-defined projection strings to the
                     # WKT unit name strings that OGR recognizes.
+                    # Use a list of possible options to identify different
+                    # spellings.
                     known_units = {
-                        'meters': 'Meter',
-                        'latLong': 'Degree',
-                        'US Feet': 'Foot_US'
+                        'meters':  ['meter', 'metre'],
+                        'latLong': ['degree'],
+                        'US Feet': ['foot_us']
                     }
 
                     # Get the JSON-defined projection unit and validate that the
@@ -649,16 +651,16 @@ class OGRChecker(TableChecker):
                     # printed.
                     required_unit = layer_dict['projection']['units']
                     try:
-                        expected_unit = known_units[required_unit]
+                        expected_units = known_units[required_unit]
                     except:
                         return str('Expected projection units must be '
                             'one of %s, not %s' % (known_units.keys(),
                             required_unit))
 
-                    if expected_unit != linear_units:
+                    if linear_units not in expected_units:
                         return str('Shapefile layer %s must be projected '
-                            'in %s (%s). \'%s\' found.' % (layer_name,
-                            required_unit, expected_unit, linear_units))
+                            'in %s (one of %s, case-insensitive). \'%s\' found.'
+                            % (layer_name, required_unit, expected_units, linear_units))
 
                 # Validate whether the layer should be projected
                 projection = reference.GetAttrValue('PROJECTION')
