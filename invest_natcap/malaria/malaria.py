@@ -55,3 +55,7 @@ def execute_30(**args):
         args['lulc_uri'], lucode_to_suitability, suitability_uri, 
         gdal.GDT_Float32, -1.0, exception_flag='values_required')
 
+    LOGGER.info('calculating slope')
+    slope_uri = os.path.join(output_dir, 'slope.tif')
+    raster_utils.calculate_slope(args['dem_uri'], slope_uri)
+
