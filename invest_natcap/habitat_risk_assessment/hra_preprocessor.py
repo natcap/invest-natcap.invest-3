@@ -159,6 +159,7 @@ def execute(args):
     '''
     if 'criteria_dir' in args:
         crit_shapes = make_crit_shape_dict(args['criteria_dir'])
+        LOGGER.debug(crit_shapes)
     
     crit_descriptions = {
         'change in area rating': '<enter (3) 50-100% loss, ' + 

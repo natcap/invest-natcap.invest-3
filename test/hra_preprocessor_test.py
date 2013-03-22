@@ -18,7 +18,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
-        args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
+        args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
         args['exposure_crits'] = ['intensity rating rating', 'management effectiveness']
         args['sensitivity_crits'] = ['temporal overlap rating', \
                     'frequency of disturbance']
@@ -30,7 +30,17 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''This will use only the habitats directory as an input to overlap
         stressors, and won't attempt to pull in shapefile criteria.'''
 
-        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
+
+        hra_preprocessor.execute(self.args)
+
+    def test_HabsOnlyShape_smoke(self):
+        '''This will use only the habitats directory as an input to overlap
+        stressors, and will atempt to use a single shapefile criteria with
+        eelgrass and recruitment_rate.'''
+
+        self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
+        self.args['criteria_dir'] = './data/hra_regression_data/Shape_Criteria'
 
         hra_preprocessor.execute(self.args)
 

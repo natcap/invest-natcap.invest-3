@@ -86,6 +86,7 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
+                    "defaultValue": ["Temporal Overlap"],
                     "linkText": "Add Another"
                 },  
                 {
@@ -97,6 +98,7 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
+                    "defaultValue": ["Recruitment Rate"],
                     "linkText": "Add Another"
                 }  
             ]
