@@ -1,4 +1,10 @@
 from invest_natcap import raster_utils
+import logging
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('sediment')
 
 def execute(args):
     execute_30(**args)
@@ -19,4 +25,4 @@ def execute_30(**args):
     """
 
     lucode_to_suitability = raster_utils.get_lookup_from_csv(
-        args['breeding_suitability_table_uri'], 'suitability_index')
+        args['breeding_suitability_table_uri'], 'lucode')
