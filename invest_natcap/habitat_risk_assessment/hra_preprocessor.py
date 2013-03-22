@@ -216,7 +216,8 @@ def execute(args):
                 #Need to first check to make sure that crit_shapes 
                 #was instantiated when 
                 if 'crit_shapes' in locals() and \
-                                    c_name in crit_shapes['h'][habitat_name]:
+                                (habitat_name in crit_shapes['h'] and \
+                                c_name in crit_shapes['h'][habitat_name]):
                     curr_row = [c_name] + ['SHAPE'] + curr_row
                 elif c_name in crit_descriptions:
                     curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
@@ -241,7 +242,8 @@ def execute(args):
                     curr_row = default_row
 
                     if 'crit_shapes' in locals() and \
-                        c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]:
+                            ((habitat_name, stressor_name) in crit_shapes['h-s'] and \
+                            c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]):
 
                         curr_row = [c_name] + ['SHAPE'] + curr_row
                     elif c_name in crit_descriptions:
@@ -273,7 +275,8 @@ def execute(args):
                 curr_row = default_row
 
                 if 'crit_shapes' in locals() and \
-                            c_name in crit_shapes['s'][stressor_name]:
+                            (stressor_name in crit_shapes['s'] and \
+                            c_name in crit_shapes['s'][stressor_name]):
 
                     curr_row = [c_name] + ['SHAPE'] + curr_row
                 elif c_name in crit_descriptions:
