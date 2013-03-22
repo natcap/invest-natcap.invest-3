@@ -123,5 +123,3 @@ def static_max_marginal_gain(
 	selection_array.shape = array.shape
 	out_band.WriteArray(selection_array)
 	
-	
-static_max_marginal_gain('../../../OYNPP1.tif', 4320*100, 'test.tif', 5.0)
