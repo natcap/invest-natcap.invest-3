@@ -1,5 +1,9 @@
-from invest_natcap import raster_utils
+import os
 import logging
+
+from invest_natcap import raster_utils
+from invest_natcap.routing import routing_utils
+
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -24,5 +28,18 @@ def execute_30(**args):
     returns nothing
     """
 
+    #Sets up the intermediate and output directory structure for the workspace
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    if not os.path.exists(output_dir):
+        LOGGER.info('creating directory %s', output_dir)
+        os.makedirs(output_dir)
+
+    #Parse out the table
     lucode_to_suitability = raster_utils.get_lookup_from_csv(
         args['breeding_suitability_table_uri'], 'lucode')
+
+    LOGGER.info('calculating flow accumulation')
+    flux_output_uri = os.path.join(output_dir, 'flow_accumulation.tif')
+    routing_utils.flow_accumulation(dem_uri, flux_output_uri)
+
+    
