@@ -1184,18 +1184,31 @@ class MultiElement(Container):
             list of values to be set.  A new element will be created for each
             item in values.   Returns nothing."""
 
-        self.resetValue()
+        self.clear_elements()
         for value in values:
             self.add_element(value)
 
-    def resetValue(self):
-        """Reimplemented from the Container class.  Removes all rows."""
-
+    def clear_elements(self):
+        """Remove ALL elements in this multi-element."""
         # Need to make a deep copy of the elements so we don't have some
         # conflict with self.remove_element.
         elements = self.multi_widget.elements[:]
         for element in elements:
             self.remove_element(element.elements[1].row_num)
+
+    def resetValue(self):
+        """Reimplemented from the Container class.  Removes all rows in the
+        multiElement and then creates new rows for each JSON-defined default
+        value, if provided."""
+
+        # Clear out all the elements.
+        self.clear_elements()
+
+        # Now that we've removed all the existing elements, add an element for
+        # each default value the user provided.
+        if 'defaultValue' in self.attributes:
+            for user_value in self.attributes['defaultValue']:
+                self.add_element(user_value)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
