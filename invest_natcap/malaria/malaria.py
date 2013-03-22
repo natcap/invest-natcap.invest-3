@@ -85,3 +85,13 @@ def execute_30(**args):
         breeding_suitability_op, breeding_suitability_uri, gdal.GDT_Float32,
         breeding_suitability_nodata, pixel_size_out, "intersection", dataset_to_align_index=0)
 
+
+    LOGGER.info('calculating breeding site influence')
+    breeding_site_influence_uri = os.path.join(
+        output_dir, 'breeding_site_influence.tif')
+    breeding_site_influence_nodata = breeding_suitability_nodata
+    #Dividing by pixel_size out so the blur is in pixels, not meters
+    raster_utils.gaussian_filter_dataset_uri(
+        breeding_suitability_uri, args['max_vector_flight']/float(pixel_size_out),
+        breeding_site_influence_uri, breeding_site_influence_nodata)
+
