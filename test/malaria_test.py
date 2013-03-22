@@ -27,6 +27,7 @@ class TestMalaria(unittest.TestCase):
         args['workspace_dir'] = './data/test_out/malaria_output'
         base_dir = './data/malaria_test_data'
         args['dem_uri'] = './data/sediment_test_data/dem'
+        args['flow_threshold'] = 100
         args['lulc_uri'] = 'data/sediment_test_data/landuse_90.tif'
         args['max_vector_flight'] = 150.0
         args['population_uri'] = 'empty.tif'
