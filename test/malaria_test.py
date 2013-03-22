@@ -25,11 +25,11 @@ class TestMalaria(unittest.TestCase):
            sample input."""
         args = {}
         args['workspace_dir'] = './data/test_out/malaria_output'
-        base_dir = './data/sediment_test_data'
-        args['dem_uri'] = '%s/dem' % base_dir
-        args['lulc_uri'] = '%s/landuse_90.tif' % base_dir
+        base_dir = './data/malaria_test_data'
+        args['dem_uri'] = 'data/sediment_test_data/dem'
+        args['lulc_uri'] = 'data/sediment_test_data/landuse_90.tif'
         args['max_vector_flight'] = 150.0
         args['population_uri'] = 'empty.tif'
-        args['breeding_suitability_table_uri'] = 'empty.csv'
+        args['breeding_suitability_table_uri'] = os.path.join(base_dir,'breeding_suitability_table.csv')
 
         malaria.execute_30(**args)
