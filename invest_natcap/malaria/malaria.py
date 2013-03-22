@@ -40,6 +40,6 @@ def execute_30(**args):
 
     LOGGER.info('calculating flow accumulation')
     flux_output_uri = os.path.join(output_dir, 'flow_accumulation.tif')
-    routing_utils.flow_accumulation(dem_uri, flux_output_uri)
+    routing_utils.flow_accumulation(args['dem_uri'], flux_output_uri)
 
     
