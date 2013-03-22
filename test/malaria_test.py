@@ -29,5 +29,5 @@ class TestMalaria(unittest.TestCase):
         args['dem_uri'] = '%s/dem' % base_dir
         args['lulc_uri'] = '%s/landuse_90.tif' % base_dir
         args['max_vector_flight'] = 150.0
-        args['population_uri'] = 
+        args['population_uri'] = 'empty.tif'
         malaria.execute_30(**args)
