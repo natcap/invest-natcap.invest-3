@@ -7,7 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap import raster_utils
-from invest_natcap.nutrient import nutrient_biophysical
+#from invest_natcap.nutrient import nutrient_biophysical
 from invest_natcap.nutrient import nutrient_valuation
 from invest_natcap.nutrient import nutrient_core
 
@@ -50,9 +50,9 @@ class NutrientBiophysicalTest(unittest.TestCase):
         #shutil.rmtree(WORKSPACE)
         pass
 
-    def test_smoke(self):
+#    def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""
-        nutrient_biophysical.execute(self.args)
+#        nutrient_biophysical.execute(self.args)
 
 #        dest = '/tmp/Nutrient_workspace'
 #        try:
