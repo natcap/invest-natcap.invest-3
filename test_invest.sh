@@ -9,7 +9,7 @@ python setup_environment.py --clear --system-site-packages $ENVDIR
 ls invest_python_environment/bin
 source $ENVDIR/bin/activate
 echo 'Activated'
-python setup.py install
+python setup.py install --no-compile
 pushd test
 
 
@@ -58,12 +58,14 @@ then
         invest_init_test.py
         iui_validator_test.py
         marine_water_quality_test.py
+        nutrient_test.py
         overlap_analysis_test.py
         overlap_analysis_mz_core_test.py
         overlap_analysis_core_test.py
         pollination_test.py
         raster_utils_test.py
         reclassify_test.py
+        routing_test.py
         sediment_test.py
         timber_core_test.py
         timber_test.py

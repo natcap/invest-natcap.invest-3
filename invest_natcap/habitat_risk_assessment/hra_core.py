@@ -180,7 +180,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         if percent > 50.0:
             return 1
         else:
-            return 0
+            return 0.
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
@@ -192,7 +192,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
         
         raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, out_uri_r,
-                        gdal.GDT_Float32, 0, grid_size, "union", 
+                        gdal.GDT_Float32, 0., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
 
@@ -295,7 +295,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         def add_recov_pix(*pixels):
             '''We will have burned numerator values for the recovery potential
             equation. Want to add all of the numerators (r/dq), then divide by
-            the denoms added together (1/dq.'''
+            the denoms added together (1/dq).'''
 
             value = 0.
 
@@ -314,7 +314,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
-                    gdal.GDT_Float32, 0, pixel_size, "union", 
+                    gdal.GDT_Float32, 0., pixel_size, "union", 
                     resample_method_list=None, dataset_to_align_index=None,
                     aoi_uri=None)
 
@@ -357,7 +357,7 @@ def make_ecosys_risk_raster(dir, h_dict):
         return pixel_sum
      
     raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
-                gdal.GDT_Float32, 0, pixel_size, "union", 
+                gdal.GDT_Float32, 0., pixel_size, "union", 
                 resample_method_list=None, dataset_to_align_index=None,
                 aoi_uri=None)
 
@@ -430,7 +430,7 @@ def make_hab_risk_raster(dir, risk_dict):
         out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
 
         raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
-                        gdal.GDT_Float32, 0, pixel_size, "union", 
+                        gdal.GDT_Float32, 0., pixel_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
 
@@ -572,7 +572,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         #was the first ds passed.
         b_pixel = pixels[0]
         if b_pixel == base_nodata:
-            return 0       
+            return 0.       
 
         #Otherwise, straight multiply all of the pixel values. We assume that
         #base could potentially be decayed.
@@ -584,7 +584,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         return value
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult, risk_uri, 
-                    gdal.GDT_Float32, 0, grid_size, "union", 
+                    gdal.GDT_Float32, 0., grid_size, "union", 
                     resample_method_list=None, dataset_to_align_index=None,
                     aoi_uri=None)
 
@@ -629,7 +629,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         if not c_pix == 0:
             c_val = c_pix - 1
         else:
-            c_val = 0
+            c_val = 0.
 
         e_val -= 1
 
@@ -643,7 +643,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         return value
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
-                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0, grid_size,
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0., grid_size,
                     "union", resample_method_list=None, 
                     dataset_to_align_index=None, aoi_uri=None)
 
@@ -672,7 +672,7 @@ def calc_E_raster(out_uri, s_list, s_denom):
         return value / s_denom
 
     raster_utils.vectorize_datasets(s_list, add_e_pix, out_uri,
-                        gdal.GDT_Float32, 0, grid_size, "union", 
+                        gdal.GDT_Float32, 0., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
 
@@ -707,7 +707,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         return value / tot_denom
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
-                        gdal.GDT_Float32, 0, grid_size, "union", 
+                        gdal.GDT_Float32, 0., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
 
@@ -843,12 +843,12 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_single_hs(pixel):
 
             if pixel == base_nodata:
-                return 0
+                return 0.
             else:
                 return crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
-                        single_crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size,
+                        single_crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
                         "union", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
 
@@ -875,14 +875,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_hs(pixel):
 
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / (dq * w)
                     return burn_rating
             
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
-                        crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size,
+                        crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
                         "union", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
 
@@ -924,13 +924,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_risk_single(pixel):
             
             if pixel == base_nodata:
-                return 0
+                return 0.
 
             else:
+                LOGGER.debug("Risk_Crit_Num %s", risk_crit_rate_numerator)
                 return risk_crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_risk_single,
-                            single_crit_C_uri, gdal.GDT_Float32, 0, 
+                            single_crit_C_uri, gdal.GDT_Float32, 0., 
                             base_pixel_size, "union", 
                             resample_method_list=None, 
                             dataset_to_align_index=None, aoi_uri=None)
@@ -938,24 +939,26 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
         #Now, burn the recovery potential raster, and add that.
-        single_crit_C_uri = os.path.join(pre_raster_dir, h + 
+        single_crit_rec_uri = os.path.join(pre_raster_dir, h + 
                                                   '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
             
             if pixel == base_nodata:
-                return 0
+                return 0.
 
             else:
+                LOGGER.debug("Risk_Rec_Num %s", rec_crit_rate_numerator)
                 return rec_crit_rate_numerator
 
+        LOGGER.debug("Rec_Crit_Num == %s", rec_crit_rate_numerator)
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_rec_single,
-                            single_crit_C_uri, gdal.GDT_Float32, 0, 
+                            single_crit_rec_uri, gdal.GDT_Float32, 0., 
                             base_pixel_size, "union", 
                             resample_method_list=None, 
                             dataset_to_align_index=None, aoi_uri=None)
 
-        crit_lists['Recovery'][h].append(single_crit_C_uri)
+        crit_lists['Recovery'][h].append(single_crit_rec_uri)
         
         #Raster Criteria: should output multiple rasters, each
         #of which is reburned with the old pixel value r as r/dq*w, or r/dq.
@@ -975,14 +978,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_risk(pixel):
             
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / (w*dq)
                     return burn_rating
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_risk,
-                                crit_C_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                                crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size, 
                                 "union", resample_method_list=None, 
                                 dataset_to_align_index=None, aoi_uri=None)
             
@@ -994,14 +997,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_rec(pixel):
             
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / dq
                     return burn_rating
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_rec,
-                                crit_recov_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                                crit_recov_uri, gdal.GDT_Float32, 0., base_pixel_size, 
                                 "union", resample_method_list=None, 
                                 dataset_to_align_index=None, aoi_uri=None)
             
@@ -1045,13 +1048,13 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         def burn_numerator_s_single(pixel):
             
             if pixel == base_nodata:
-                return 0
+                return 0.
 
             else:
                 return crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_s_single,
-                            single_crit_E_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                            single_crit_E_uri, gdal.GDT_Float32, 0., base_pixel_size, 
                             "union", resample_method_list=None, 
                             dataset_to_align_index=None, aoi_uri=None)
 
@@ -1074,14 +1077,14 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             def burn_numerator_s(pixel):
             
                 if pixel == crit_nodata:
-                    return 0
+                    return 0.
 
                 else:
                     burn_rating = float(pixel) / (dq*w)
                     return burn_rating
         
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_s,
-                            crit_E_uri, gdal.GDT_Float32, 0, base_pixel_size, 
+                            crit_E_uri, gdal.GDT_Float32, 0., base_pixel_size, 
                             "union", resample_method_list=None, 
                             dataset_to_align_index=None, aoi_uri=None)
 

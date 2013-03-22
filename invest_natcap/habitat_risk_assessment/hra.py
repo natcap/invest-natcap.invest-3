@@ -8,7 +8,7 @@ import glob
 import numpy as np
 import math
 
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
@@ -444,9 +444,7 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
     for pair in h_s:
 
         h, s = pair
-
-        _, s_nodata = raster_utils.extract_band_and_nodata(gdal.Open(stressors[s]['DS']))
-        _, h_nodata = raster_utils.extract_band_and_nodata(gdal.Open(habitats[h]['DS']))
+        h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
  
         files = [habitats[h]['DS'], stressors[s]['DS']]
 
@@ -454,12 +452,10 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
 
-            if not h_pix == h_nodata and not s_pix == s_nodata:
-                
+            if h_pix != h_nodata:
                 return s_pix
             else:
-                return 0
-
+                return 0.
         
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
@@ -506,24 +502,43 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
         
-        #Making the nodata value 0 so that it's easier to combine the 
-        #layers later.
+        buff = buffer_dict[name]
+       
+        #Want to set this specifically to make later overlap easier.
+        nodata = 0.
 
-        ###Eventually, will use raster_utils.temporary_filename() here.###
-        r_dataset = \
-            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Int32, 0, out_uri, datasource)
+        #Need to create a larger base than the envelope that would normally
+        #surround the raster, since we know that we can be expanding by at
+        #least buffer size more. For reference, look to "~/workspace/Examples/expand_raster.py"
+        shp_extent = layer.GetExtent()
 
-        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        #These have to be expanded by 2 * buffer to account for both sides
+        width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
+        height = abs(shp_extent[3] - shp_extent[2]) + 2*buff 
+        p_width = int(np.ceil(width / grid_size))
+        p_height = int(np.ceil(height /grid_size))
+         
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32) 
+
+        #increase everything by buffer size
+        transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
+        raster.SetGeoTransform(transform)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(layer.GetSpatialRef().__str__())
+        raster.SetProjection(srs.ExportToWkt())
+
+        band = raster.GetRasterBand(1)
         band.Fill(nodata)
+        band.FlushCache()
 
-        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+        gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
        
         #Now, want to take that raster, and make it into a buffered version of
         #itself.
         base_array = band.ReadAsArray()
-        buff = buffer_dict[name]
         
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
@@ -544,7 +559,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #just be assumed to be buffered
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         
-        new_dataset = raster_utils.new_raster_from_base(r_dataset, new_buff_uri,
+        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
                             'GTiff', 0, gdal.GDT_Float32)
         
         n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
@@ -670,7 +685,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         #layers later.
         r_dataset = \
             raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Int32, 0, out_uri, datasource)
+                    gdal.GDT_Float32, 0., out_uri, datasource)
 
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
