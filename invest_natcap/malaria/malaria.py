@@ -1,3 +1,5 @@
+from invest_natcap import raster_utils
+
 def execute(args):
     execute_30(**args)
 
@@ -15,5 +17,6 @@ def execute_30(**args):
 
     returns nothing
     """
-    pass
-    
+
+    lucode_to_suitability = raster_utils.get_lookup_from_csv(
+        args['breeding_suitability_table_uri'], 'suitability_index')
