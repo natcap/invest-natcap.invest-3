@@ -1184,20 +1184,25 @@ class MultiElement(Container):
             list of values to be set.  A new element will be created for each
             item in values.   Returns nothing."""
 
-        self.resetValue()
+        self.clear_elements()
         for value in values:
             self.add_element(value)
+
+    def clear_elements(self):
+        """Remove ALL elements in this multi-element."""
+        # Need to make a deep copy of the elements so we don't have some
+        # conflict with self.remove_element.
+        elements = self.multi_widget.elements[:]
+        for element in elements:
+            self.remove_element(element.elements[1].row_num)
 
     def resetValue(self):
         """Reimplemented from the Container class.  Removes all rows in the
         multiElement and then creates new rows for each JSON-defined default
         value, if provided."""
 
-        # Need to make a deep copy of the elements so we don't have some
-        # conflict with self.remove_element.
-        elements = self.multi_widget.elements[:]
-        for element in elements:
-            self.remove_element(element.elements[1].row_num)
+        # Clear out all the elements.
+        self.clear_elements()
 
         # Now that we've removed all the existing elements, add an element for
         # each default value the user provided.
