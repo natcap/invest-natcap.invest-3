@@ -90,11 +90,35 @@ def execute_30(**args):
     LOGGER.info('calculating breeding site influence')
     breeding_site_influence_uri = os.path.join(
         output_dir, 'breeding_site_influence.tif')
+    filtered_breeding_site_uri = raster_utils.temporary_filename()
     breeding_site_influence_nodata = breeding_suitability_nodata
     #Dividing by pixel_size out so the blur is in pixels, not meters
     raster_utils.gaussian_filter_dataset_uri(
         breeding_suitability_uri, args['max_vector_flight']/float(pixel_size_out),
-        breeding_site_influence_uri, breeding_site_influence_nodata)
+        filtered_breeding_site_uri, breeding_site_influence_nodata)
+
+    #Clipping the population URI to the breeding sutability dataset
+    clipped_population_uri = raster_utils.temporary_filename()
+    reproject_and_clip_dataset_uri(
+        args['population_uri'], breeding_suitability_uri, pixel_size_out, clipped_population_uri)
+
+    population_density_nodata = raster_utils.get_nodata_from_uri(clipped_population_uri)
+
+    def multiply_op(breeding_site, population_density):
+        if (breeding_site == breeding_site_influence_nodata or
+            population_density == population_density_nodata):
+            return breeding_site_influence_nodata
+
+        return breeding_site * population_density
+
+    raster_utils.vectorize_datasets(
+        [filtered_breeding_site_uri, clipped_population_uri],
+        multiply_op, breeding_site_influence_uri, gdal.GDT_Float32,
+        breeding_site_influence_nodata, pixel_size_out, "intersection",
+        dataset_to_align_index=0)
+
+
+
 
 
 def reproject_and_clip_dataset_uri(
@@ -121,5 +145,5 @@ def reproject_and_clip_dataset_uri(
     # Perform the projection/resampling 
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), base_sr.ExportToWkt(),
-                        gdal.GRA_NearestNeighbour)
+                        gdal.GRA_Bilinear)
 

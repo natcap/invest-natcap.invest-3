@@ -27,8 +27,8 @@ class TestMalaria(unittest.TestCase):
         pixel_size = 30.0
         os.makedirs('./data/test_out/malaria_output/')
         output_uri = './data/test_out/malaria_output/clipped_pop.tif'
-        malaria.reproject_and_clip_dataset_uri(
-            original_dataset_uri, base_dataset_uri, pixel_size, output_uri)
+#        malaria.reproject_and_clip_dataset_uri(
+#            original_dataset_uri, base_dataset_uri, pixel_size, output_uri)
 
 
     def test_malaria_re(self):
@@ -41,7 +41,8 @@ class TestMalaria(unittest.TestCase):
         args['flow_threshold'] = 100
         args['lulc_uri'] = 'data/sediment_test_data/landuse_90.tif'
         args['max_vector_flight'] = 150.0
-        args['population_uri'] = 'empty.tif'
+        args['population_uri'] = './data/malaria_test_data/global_pop'
+
         args['breeding_suitability_table_uri'] = os.path.join(base_dir,'breeding_suitability_table.csv')
 
-#        malaria.execute_30(**args)
+        malaria.execute_30(**args)
