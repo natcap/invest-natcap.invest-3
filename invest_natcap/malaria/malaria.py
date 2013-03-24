@@ -118,6 +118,27 @@ def execute_30(**args):
         dataset_to_align_index=0)
 
 
+    LOGGER.info('calculating influential breeding areas')
+    
+    filtered_breeding_site_influence_uri = os.path.join(output_dir, 'filtered_breeding_site_influence.tif')
+
+    raster_utils.gaussian_filter_dataset_uri(
+        breeding_site_influence_uri, args['max_vector_flight']/float(pixel_size_out),
+        filtered_breeding_site_influence_uri, breeding_site_influence_nodata)
+
+    def multiply_breeding_op(breeding_suitability, breeding_influence):
+        if (breeding_suitability == breeding_site_influence_nodata or
+            breeding_influence == breeding_site_influence_nodata):
+            return breeding_site_influence_nodata
+        return breeding_suitability * breeding_influence
+    
+    influential_breeding_site_uri = os.path.join(output_dir, 'influential_breeding_site.tif')
+
+    raster_utils.vectorize_datasets(
+        [breeding_suitability_uri, filtered_breeding_site_influence_uri],
+        multiply_breeding_op, influential_breeding_site_uri, gdal.GDT_Float32,
+        breeding_site_influence_nodata, pixel_size_out, "intersection",
+        dataset_to_align_index=0)
 
 
 
