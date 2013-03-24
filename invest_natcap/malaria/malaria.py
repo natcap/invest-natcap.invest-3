@@ -7,6 +7,7 @@ import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
+from invest_natcap.optimization import optimization
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -29,6 +30,8 @@ def execute_30(**args):
     max_vector_flight -- a floating point number specifying the flight 
         distance of a vector from a breeding site
     population_uri -- a uri to a gdal dataset specifying population density
+    area_to_convert -- (optional) a floating point number indicating the
+        area able to be converted in Ha
 
     returns nothing
     """
@@ -140,6 +143,12 @@ def execute_30(**args):
         breeding_site_influence_nodata, pixel_size_out, "intersection",
         dataset_to_align_index=0)
 
+    if 'area_to_convert' in args:
+        area_to_convert_uri = os.path.join(output_dir, 'optimial_conversion.tif')
+        base_cell_size_in_ha = raster_utils.get_cell_size_from_uri(influential_breeding_site_uri) * 0.0001
+        
+        optimization.static_max_marginal_gain(
+            influential_breeding_site_uri, args['area_to_convert']/base_cell_size_in_ha, area_to_convert_uri, sigma=args['max_vector_flight']/float(pixel_size_out))
 
 
 def reproject_and_clip_dataset_uri(

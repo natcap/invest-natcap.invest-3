@@ -44,5 +44,5 @@ class TestMalaria(unittest.TestCase):
         args['population_uri'] = './data/malaria_test_data/global_pop'
 
         args['breeding_suitability_table_uri'] = os.path.join(base_dir,'breeding_suitability_table.csv')
-
+        args['area_to_convert'] = 2.0
         malaria.execute_30(**args)
