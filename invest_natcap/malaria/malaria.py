@@ -90,7 +90,7 @@ def execute_30(**args):
     LOGGER.info('calculating breeding site influence')
     breeding_site_influence_uri = os.path.join(
         output_dir, 'breeding_site_influence.tif')
-    filtered_breeding_site_uri = os.path.join(output_dir, 'population_density.tif')
+    filtered_breeding_site_uri = os.path.join(output_dir, 'filtered_breeding_site_influence.tif')
     breeding_site_influence_nodata = breeding_suitability_nodata
     #Dividing by pixel_size out so the blur is in pixels, not meters
     raster_utils.gaussian_filter_dataset_uri(
@@ -98,7 +98,7 @@ def execute_30(**args):
         filtered_breeding_site_uri, breeding_site_influence_nodata)
 
     #Clipping the population URI to the breeding sutability dataset
-    clipped_population_uri = raster_utils.temporary_filename()
+    clipped_population_uri = os.path.join(output_dir, 'clipped_population.tif')
     reproject_and_clip_dataset_uri(
         args['population_uri'], breeding_suitability_uri, pixel_size_out, clipped_population_uri)
 
