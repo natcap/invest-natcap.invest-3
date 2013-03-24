@@ -2,6 +2,7 @@ import os
 import logging
 
 from osgeo import gdal
+from osgeo import osr
 import numpy
 
 from invest_natcap import raster_utils
@@ -94,4 +95,31 @@ def execute_30(**args):
     raster_utils.gaussian_filter_dataset_uri(
         breeding_suitability_uri, args['max_vector_flight']/float(pixel_size_out),
         breeding_site_influence_uri, breeding_site_influence_nodata)
+
+
+def reproject_and_clip_dataset_uri(
+    original_dataset_uri, base_dataset_uri, pixel_size, output_uri):
+
+    """A function to reproject and clip a GDAL dataset
+
+       original_dataset_uri - the uri to the original gdal dataset
+       base_dataset_uri - a uri to a gdal dataset that contains the 
+           desired output projection as well as the bounds
+       pixel_size - output dataset pixel size in projected linear units
+           in base_dataset_uri
+       output_uri - uri location for output dataset"""
+
+    original_dataset = gdal.Open(original_dataset_uri)
+    original_band = original_dataset.GetRasterBand(1)
+    original_sr = osr.SpatialReference(original_dataset.GetProjection())
+    base_dataset = gdal.Open(base_dataset_uri)
+    base_band = base_dataset.GetRasterBand(1)
+    base_sr = osr.SpatialReference(base_dataset.GetProjection())
+
+    output_dataset = raster_utils.new_raster_from_base(base_dataset, output_uri, 'GTiff', base_band.GetNoDataValue(), original_band.DataType)
+
+    # Perform the projection/resampling 
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), base_sr.ExportToWkt(),
+                        gdal.GRA_NearestNeighbour)
 

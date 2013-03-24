@@ -20,6 +20,17 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestMalaria(unittest.TestCase):
     """Main testing class for the sediment tests"""
+
+    def test_malaria_clip_reproject_re(self):
+        original_dataset_uri = './data/malaria_test_data/global_pop'
+        base_dataset_uri = './data/sediment_test_data/landuse_90.tif'
+        pixel_size = 30.0
+        os.makedirs('./data/test_out/malaria_output/')
+        output_uri = './data/test_out/malaria_output/clipped_pop.tif'
+        malaria.reproject_and_clip_dataset_uri(
+            original_dataset_uri, base_dataset_uri, pixel_size, output_uri)
+
+
     def test_malaria_re(self):
         """Test for sediment function running with default InVEST 
            sample input."""
@@ -33,4 +44,4 @@ class TestMalaria(unittest.TestCase):
         args['population_uri'] = 'empty.tif'
         args['breeding_suitability_table_uri'] = os.path.join(base_dir,'breeding_suitability_table.csv')
 
-        malaria.execute_30(**args)
+#        malaria.execute_30(**args)
