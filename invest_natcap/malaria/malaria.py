@@ -22,10 +22,11 @@ def execute_30(**args):
     
     Keyword arguments:
     lulc_uri -- a uri to a gdal dataset specifying land cover types
+    results_suffix -- an optional string to append to the output files
     breeding_suitability_table_uri -- a uri to a csv table mapping lulc
         types to suitability values.
     dem_uri -- a uri to a gdal dataset specifying the DEM
-    flow_threshold -- a floating point value indicating where streams 
+    threshold_flow_accumulation -- a floating point value indicating where streams 
         occur (running water)
     max_vector_flight -- a floating point number specifying the flight 
         distance of a vector from a breeding site
@@ -35,16 +36,23 @@ def execute_30(**args):
 
     returns nothing
     """
+    area_to_convert = float(args.pop('area_to_convert', 0.0))
+    max_vector_flight = float(args.pop('max_vector_flight'))
+    threshold_flow_accumulation = float(args.pop('threshold_flow_accumulation'))
+    results_suffix = args.pop('results_suffix', '')
+    if len(results_suffix) > 0 and not results_suffix.startswith('_'):
+        results_suffix = '_' + results_suffix
 
     #Sets up the intermediate and output directory structure for the workspace
     output_dir = os.path.join(args['workspace_dir'], 'output')
-    if not os.path.exists(output_dir):
-        LOGGER.info('creating directory %s', output_dir)
-        os.makedirs(output_dir)
-
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    for directory in [output_dir, intermediate_dir]:
+        if not os.path.exists(directory):
+            LOGGER.info('creating directory %s', directory)
+            os.makedirs(directory)
 
     LOGGER.info('calculating flow accumulation')
-    flow_accumulation_uri = os.path.join(output_dir, 'flow_accumulation.tif')
+    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % results_suffix)
     routing_utils.flow_accumulation(args['dem_uri'], flow_accumulation_uri)
 
     LOGGER.info('mapping breeding suitability to lulc')
@@ -56,14 +64,14 @@ def execute_30(**args):
     lucode_to_suitability = dict(
         [(lucode, val['suitability_index']) for lucode, val in 
          lucode_table.iteritems()])
-    suitability_uri = os.path.join(output_dir, 'suitability.tif')
+    suitability_uri = os.path.join(intermediate_dir, 'suitability%s.tif' % results_suffix)
     #and reclassify the lulc dataset
     raster_utils.reclassify_dataset_uri(
         args['lulc_uri'], lucode_to_suitability, suitability_uri, 
         gdal.GDT_Float32, -1.0, exception_flag='values_required')
 
     LOGGER.info('calculating slope')
-    slope_uri = os.path.join(output_dir, 'slope.tif')
+    slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % results_suffix)
     raster_utils.calculate_slope(args['dem_uri'], slope_uri)
 
     LOGGER.info('calculating breeding site suitability')
@@ -78,11 +86,11 @@ def execute_30(**args):
             flow_accumulation == flow_accumulation_nodata):
             return breeding_suitability_nodata
         #If there's a stream, zero it out
-        if flow_accumulation >= args['flow_threshold']:
+        if flow_accumulation >= threshold_flow_accumulation:
             return 0.0
         return suitability_index * numpy.exp(-slope) * numpy.log(flow_accumulation)
 
-    breeding_suitability_uri = os.path.join(output_dir, 'breeding_suitability.tif')
+    breeding_suitability_uri = os.path.join(output_dir, 'breeding_suitability%s.tif' % results_suffix)
     pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_uri'])
     raster_utils.vectorize_datasets(
         [suitability_uri, slope_uri, flow_accumulation_uri], 
@@ -92,16 +100,16 @@ def execute_30(**args):
 
     LOGGER.info('calculating breeding site influence')
     breeding_site_influence_uri = os.path.join(
-        output_dir, 'breeding_site_influence.tif')
-    filtered_breeding_site_uri = os.path.join(output_dir, 'filtered_breeding_site_influence.tif')
+        output_dir, 'breeding_site_influence%s.tif' % results_suffix)
+    filtered_breeding_site_uri = os.path.join(intermediate_dir, 'filtered_breeding_site_influence%s.tif' % results_suffix)
     breeding_site_influence_nodata = breeding_suitability_nodata
     #Dividing by pixel_size out so the blur is in pixels, not meters
     raster_utils.gaussian_filter_dataset_uri(
-        breeding_suitability_uri, args['max_vector_flight']/float(pixel_size_out),
+        breeding_suitability_uri, max_vector_flight/float(pixel_size_out),
         filtered_breeding_site_uri, breeding_site_influence_nodata)
 
     #Clipping the population URI to the breeding sutability dataset
-    clipped_population_uri = os.path.join(output_dir, 'clipped_population.tif')
+    clipped_population_uri = os.path.join(intermediate_dir, 'clipped_population%s.tif' % results_suffix)
     reproject_and_clip_dataset_uri(
         args['population_uri'], breeding_suitability_uri, pixel_size_out, clipped_population_uri)
 
@@ -123,10 +131,10 @@ def execute_30(**args):
 
     LOGGER.info('calculating influential breeding areas')
     
-    filtered_breeding_site_influence_uri = os.path.join(output_dir, 'filtered_breeding_site_influence.tif')
+    filtered_breeding_site_influence_uri = os.path.join(intermediate_dir, 'filtered_breeding_site_influence%s.tif' % results_suffix)
 
     raster_utils.gaussian_filter_dataset_uri(
-        breeding_site_influence_uri, args['max_vector_flight']/float(pixel_size_out),
+        breeding_site_influence_uri, max_vector_flight/float(pixel_size_out),
         filtered_breeding_site_influence_uri, breeding_site_influence_nodata)
 
     def multiply_breeding_op(breeding_suitability, breeding_influence):
@@ -135,7 +143,7 @@ def execute_30(**args):
             return breeding_site_influence_nodata
         return breeding_suitability * breeding_influence
     
-    influential_breeding_site_uri = os.path.join(output_dir, 'influential_breeding_site.tif')
+    influential_breeding_site_uri = os.path.join(output_dir, 'influential_breeding_site%s.tif' % results_suffix)
 
     raster_utils.vectorize_datasets(
         [breeding_suitability_uri, filtered_breeding_site_influence_uri],
@@ -143,12 +151,11 @@ def execute_30(**args):
         breeding_site_influence_nodata, pixel_size_out, "intersection",
         dataset_to_align_index=0)
 
-    if 'area_to_convert' in args:
-        area_to_convert_uri = os.path.join(output_dir, 'optimial_conversion.tif')
+    if area_to_convert > 0.0:
+        area_to_convert_uri = os.path.join(output_dir, 'optimial_conversion%s.tif' % results_suffix)
         base_cell_size_in_ha = raster_utils.get_cell_size_from_uri(influential_breeding_site_uri) * 0.0001
-        
         optimization.static_max_marginal_gain(
-            influential_breeding_site_uri, args['area_to_convert']/base_cell_size_in_ha, area_to_convert_uri, sigma=args['max_vector_flight']/float(pixel_size_out))
+            influential_breeding_site_uri, area_to_convert/base_cell_size_in_ha, area_to_convert_uri, sigma=max_vector_flight/float(pixel_size_out))
 
 
 def reproject_and_clip_dataset_uri(
