@@ -25,7 +25,7 @@ def execute_30(**args):
     breeding_suitability_table_uri -- a uri to a csv table mapping lulc
         types to suitability values.
     dem_uri -- a uri to a gdal dataset specifying the DEM
-    flow_threshold -- a floating point value indicating where streams 
+    threshold_flow_accumulation -- a floating point value indicating where streams 
         occur (running water)
     max_vector_flight -- a floating point number specifying the flight 
         distance of a vector from a breeding site
@@ -35,7 +35,10 @@ def execute_30(**args):
 
     returns nothing
     """
-
+    area_to_convert = float(args.pop('area_to_convert', 0.0))
+    max_vector_flight = float(args.pop('max_vector_flight'))
+    threshold_flow_accumulation = float(args.pop('threshold_flow_accumulation'))
+ 
     #Sets up the intermediate and output directory structure for the workspace
     output_dir = os.path.join(args['workspace_dir'], 'output')
     if not os.path.exists(output_dir):
@@ -78,7 +81,7 @@ def execute_30(**args):
             flow_accumulation == flow_accumulation_nodata):
             return breeding_suitability_nodata
         #If there's a stream, zero it out
-        if flow_accumulation >= args['flow_threshold']:
+        if flow_accumulation >= threshold_flow_accumulation:
             return 0.0
         return suitability_index * numpy.exp(-slope) * numpy.log(flow_accumulation)
 
@@ -97,7 +100,7 @@ def execute_30(**args):
     breeding_site_influence_nodata = breeding_suitability_nodata
     #Dividing by pixel_size out so the blur is in pixels, not meters
     raster_utils.gaussian_filter_dataset_uri(
-        breeding_suitability_uri, args['max_vector_flight']/float(pixel_size_out),
+        breeding_suitability_uri, max_vector_flight/float(pixel_size_out),
         filtered_breeding_site_uri, breeding_site_influence_nodata)
 
     #Clipping the population URI to the breeding sutability dataset
@@ -126,7 +129,7 @@ def execute_30(**args):
     filtered_breeding_site_influence_uri = os.path.join(output_dir, 'filtered_breeding_site_influence.tif')
 
     raster_utils.gaussian_filter_dataset_uri(
-        breeding_site_influence_uri, args['max_vector_flight']/float(pixel_size_out),
+        breeding_site_influence_uri, max_vector_flight/float(pixel_size_out),
         filtered_breeding_site_influence_uri, breeding_site_influence_nodata)
 
     def multiply_breeding_op(breeding_suitability, breeding_influence):
@@ -143,12 +146,11 @@ def execute_30(**args):
         breeding_site_influence_nodata, pixel_size_out, "intersection",
         dataset_to_align_index=0)
 
-    if 'area_to_convert' in args:
+    if area_to_convert > 0.0:
         area_to_convert_uri = os.path.join(output_dir, 'optimial_conversion.tif')
         base_cell_size_in_ha = raster_utils.get_cell_size_from_uri(influential_breeding_site_uri) * 0.0001
-        
         optimization.static_max_marginal_gain(
-            influential_breeding_site_uri, args['area_to_convert']/base_cell_size_in_ha, area_to_convert_uri, sigma=args['max_vector_flight']/float(pixel_size_out))
+            influential_breeding_site_uri, area_to_convert/base_cell_size_in_ha, area_to_convert_uri, sigma=max_vector_flight/float(pixel_size_out))
 
 
 def reproject_and_clip_dataset_uri(
