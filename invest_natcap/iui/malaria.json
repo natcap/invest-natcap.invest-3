@@ -22,7 +22,7 @@
 		},
                 {
                     "id" : "results_suffix",
-                    "args_id" : "suffix",
+                    "args_id" : "results_suffix",
                     "type": "text",
                     "dataType": "string",
                     "validText": "[a-zA-Z0-9]*",
