@@ -19,6 +19,9 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 logger = logging.getLogger('carbon_biophysical')
 
 def execute(args):
+    execute_30(**args)
+
+def execute_30(**args):
     """This function invokes the carbon model given URI inputs of files.
         It will do filehandling and open/create appropriate objects to 
         pass to the core carbon biophysical processing function.  It may write
