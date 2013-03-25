@@ -4,8 +4,8 @@
     "targetScript" : "invest_natcap.malaria.malaria",
     "modelName" : "Malaria",
     "localDocURI": "../documentation/malaria_mosquito_habitat.html",
-    "height": 500,
-    "width" : 700,
+    "height": 650,
+    "width" : 750,
     "elements": [
         {
             "id" : "workspace_list",
@@ -56,7 +56,7 @@
 		    "id" : "population_uri",
 		    "args_id" : "population_uri",
 		    "type": "file",
-		    "label": "LULC Raster",
+		    "label": "Human Population Density Raster",
 		    "defaultValue": "../Base_Data/Marine/Population/global_pop",
 		    "required": true,
 		    "validateAs": {"type": "GDAL"},
