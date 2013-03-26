@@ -1,18 +1,23 @@
 """InVEST Carbon biophysical module at the "uri" level"""
 
-import sys, os
-
-from osgeo import gdal, ogr
+import sys
+import os
+import math
 import json
+import logging
+
+from osgeo import gdal
+from osgeo import ogr
 
 try:
     import carbon_core
 except ImportError:
     from invest_natcap.carbon import carbon_core
-from invest_natcap.dbfpy import dbf
+
 from invest_natcap import raster_utils
 
-import logging
+
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -88,6 +93,22 @@ def execute_30(**args):
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
                 "intersection", dataset_to_align_index=0)
+
+            #Add calculate the hwp storage, if it is passed as an input argument
+            hwp_key = 'hwp_%s_shape_uri' % scenario_type
+            if hwp_key in args:
+
+                c_hwp_uri = os.path.join(intermediate_dir, 'c_hwp_%s.tif' % scenario_type)
+                bio_hwp_uri = os.path.join(intermediate_dir, 'bio_hwp_%s.tif' % scenario_type)
+                vol_hwp_uri = os.path.join(intermediate_dir, 'vol_hwp_%s.tif' % scenario_type)
+
+                calculate_hwp_storage_cur(
+                    args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
+                    args['lulc_%s_year' % scenario_type])
+
+
+
+
 
         #3) burn hwp_{cur/fut} into rasters
 
@@ -237,8 +258,27 @@ def calculate_hwp_storage_cur(
                 math.exp((timeSpan - t * harvestFreq) * omega))
         return carbonSum * carbonPerCut
 
+    def get_fields(feature):
+        """Return a dict with all fields in the given feature.
+
+            feature - an OGR feature.
+
+            Returns an assembled python dict with a mapping of 
+            fieldname -> fieldvalue"""
+
+        fields = {}
+        for i in xrange(feature.GetFieldCount()):
+            field_def = feature.GetFieldDefnRef(i)
+            name = field_def.GetNameRef()
+            value = feature.GetField(i)
+            fields[name] = value
+
+        return fields
+
+
+
     ############### Start
-    pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri)
+    pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     hwp_shape = ogr.Open(hwp_shape_uri)
     base_dataset = gdal.Open(base_dataset_uri)
     nodata = -1.0
@@ -264,7 +304,7 @@ def calculate_hwp_storage_cur(
     for feature in hwp_shape_layer_copy:
         #This makes a helpful dictionary to access fields in the feature
         #later in the code
-        field_args = getFields(feature)
+        field_args = get_fields(feature)
 
         #If start date and/or the amount of carbon per cut is zero, it doesn't
         #make sense to do any calculation on carbon pools or 
