@@ -269,12 +269,11 @@ def calculate_hwp_storage_cur(
         fields = {}
         for i in xrange(feature.GetFieldCount()):
             field_def = feature.GetFieldDefnRef(i)
-            name = field_def.GetNameRef()
+            name = field_def.GetNameRef().lower()
             value = feature.GetField(i)
             fields[name] = value
 
         return fields
-
 
 
     ############### Start
@@ -309,28 +308,28 @@ def calculate_hwp_storage_cur(
         #If start date and/or the amount of carbon per cut is zero, it doesn't
         #make sense to do any calculation on carbon pools or 
         #biomassPerPixel/volumePerPixel
-        if field_args['Start_date'] != 0 and field_args['Cut_cur'] != 0:
+        if field_args['start_date'] != 0 and field_args['cut_cur'] != 0:
 
-            time_span = yr_cur - field_args['Start_date']
+            time_span = yr_cur - field_args['start_date']
             start_years = time_span
 
             #Calculate the carbon pool due to decaying HWP over the time_span
             feature_carbon_storage_per_pixel = (
                 pixel_area * carbon_pool_in_hwp_from_parcel(
-                    field_args['Cut_cur'], time_span, start_years,
-                    field_args['Freq_cur'], field_args['Decay_cur']))
+                    field_args['cut_cur'], time_span, start_years,
+                    field_args['freq_cur'], field_args['decay_cur']))
 
             #Next lines caculate biomassPerPixel and volumePerPixel of 
             #harvested wood
             number_of_harvests = \
-                math.ceil(time_span / float(field_args['Freq_cur']))
+                math.ceil(time_span / float(field_args['freq_cur']))
 
-            biomass_in_feature = field_args['Cut_cur'] * number_of_harvests / \
-                float(field_args['C_den_cur'])
+            biomass_in_feature = field_args['cut_cur'] * number_of_harvests / \
+                float(field_args['c_den_cur'])
 
             biomass_per_pixel = biomass_in_feature * pixel_area
 
-            volume_per_pixel = biomass_per_pixel / field_args['BCEF_cur']
+            volume_per_pixel = biomass_per_pixel / field_args['bcef_cur']
 
             #Copy biomass_per_pixel and carbon pools to the temporary feature 
             #for rasterization of the entire layer later
