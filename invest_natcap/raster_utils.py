@@ -22,7 +22,7 @@ import scipy.ndimage
 
 import raster_cython_utils
 
-from invest_natcap import invest_core
+from invest_natcap.invest_core import fileio
 
 GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Byte: numpy.byte,
@@ -2290,8 +2290,8 @@ def get_lookup_from_table(table_uri, key_field):
             {header_1: val_1_0, header_2: val_2_0, etc.}
             depending on the values of those fields"""
     
-    table_object = invest_core.fileio.TableHandler(table_uri)
-    raw_table_dictionary = table_object.get_table_dictionary(key_field)
+    table_object = fileio.TableHandler(table_uri)
+    raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
 
     def smart_cast(value):
         """Attempts to cat value to a float, int, or leave it as string"""

@@ -16,7 +16,7 @@ import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-logger = logging.getLogger('carbon_biophysical')
+LOGGER = logging.getLogger('carbon_biophysical')
 
 def execute(args):
     execute_30(**args)
@@ -49,7 +49,23 @@ def execute_30(**args):
         
         returns nothing."""
 
-    gdal.AllRegister()
+    cell_area_ha = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri']) ** 2 / 10000.0
+
+    LOGGER.debug("building carbon pools")
+    pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
+    LOGGER.debug(pools)
+    return
+
+
+    inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
+    outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
+    pools = build_pools_dict(args['carbon_pools'], cell_area_ha, inNoData,
+                             outNoData)
+    LOGGER.debug("built carbon pools")
+
+
+
+
 
     #Load and copy relevant inputs from args into a dictionary that
     #can be passed to the biophysical core model
