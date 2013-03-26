@@ -97,6 +97,9 @@ def calculate_raster_stats_uri(ds_uri):
         band.ComputeStatistics(0)
 
 
+def get_cell_area_from_uri(dataset_uri):
+    return pixel_area(gdal.Open(dataset_uri))
+
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
     
@@ -2295,6 +2298,10 @@ def get_lookup_from_table(table_uri, key_field):
 
     def smart_cast(value):
         """Attempts to cat value to a float, int, or leave it as string"""
+        #If it's not a string, don't try to cast it because i got a bug
+        #where all my floats were happily cast to ints
+        if type(value) != str:
+            return value
         cast_functions = [int, float]
         for fn in cast_functions:
             try:
