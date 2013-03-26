@@ -95,19 +95,27 @@ def execute_30(**args):
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
             if hwp_key in args:
-
                 c_hwp_uri = os.path.join(intermediate_dir, 'c_hwp_%s.tif' % scenario_type)
                 bio_hwp_uri = os.path.join(intermediate_dir, 'bio_hwp_%s.tif' % scenario_type)
                 vol_hwp_uri = os.path.join(intermediate_dir, 'vol_hwp_%s.tif' % scenario_type)
 
-                calculate_hwp_storage_cur(
-                    args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
-                    args['lulc_%s_year' % scenario_type])
+                if scenario_type == 'cur':
+                    calculate_hwp_storage_cur(
+                        args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
+                        vol_hwp_uri, args['lulc_%s_year' % scenario_type])
+                elif scenario_type == 'fut':
+                    hwp_shapes = {}
 
+                    if 'hwp_cur_shape_uri' in args:
+                        hwp_shapes['cur'] = args['hwp_cur_shape_uri']
+                    if 'hwp_fut_shape_uri' in args:
+                        hwp_shapes['fut'] = args['hwp_fut_shape_uri']
 
+                    calculate_hwp_storage_fut(
+                        hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
+                        vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
 
-
-
+                    
         #3) burn hwp_{cur/fut} into rasters
 
 
@@ -336,6 +344,11 @@ def calculate_hwp_storage_fut(
     pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     base_dataset = gdal.Open(base_dataset_uri)
     nodata = -1.0
+
+    c_hwp_cur_uri = raster_utils.temporary_filename()
+    bio_hwp_cur_uri = raster_utils.temporary_filename()
+    vol_hwp_cur_uri = raster_utils.temporary_filename()
+
     c_hwp = raster_utils.new_raster_from_base(base_dataset, c_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
     bio_hwp = raster_utils.new_raster_from_base(base_dataset, bio_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
     vol_hwp = raster_utils.new_raster_from_base(base_dataset, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
@@ -402,10 +415,12 @@ def calculate_hwp_storage_fut(
                 hwp_shape_layer_copy.SetFeature(feature)
 
         #burn all the attribute values to a raster
-        for attributeName, raster  in zip(calculatedAttributeNames,
-                                          [c_hwp, bio_hwp, vol_hwp]):
-            gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy,
-                                    options=['ATTRIBUTE=' + attributeName])
+        for attributeName, raster_uri in zip(calculatedAttributeNames,
+                                          [c_hwp_cur_uri, bio_hwp_cur_uri, vol_hwp_cur_uri]):
+            nodata = -1.e10
+            raster = raster_utils.new_raster_from_base(base_dataset, raster_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+            gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy, options=['ATTRIBUTE=' + attributeName])
+            raster = None
 
     #handle the future term 
     if 'fut' in hwp_shapes:
@@ -465,19 +480,37 @@ def calculate_hwp_storage_fut(
                 hwp_shape_layer_copy.SetFeature(feature)
 
         #burn all the attribute values to a raster
-        for attributeName, raster  in zip(calculatedAttributeNames,
-                                          [c_hwp, bio_hwp, vol_hwp]):
-            #we might have already written to the raster if we did a 'fut cur'
-            #calculation, so rasterize to a temporary layer then add 'em
-            tempRaster = raster_utils.new_raster_from_base(raster, '', 'MEM',
-                raster.GetRasterBand(1).GetNoDataValue(), gdal.GDT_Float32)
-            tempRaster.GetRasterBand(1).Fill(tempRaster.GetRasterBand(1).\
-                                             GetNoDataValue())
-            gdal.RasterizeLayer(tempRaster, [1], hwp_shape_layer_copy,
-                                    options=['ATTRIBUTE=' + attributeName])
-            invest_core.rasterAdd(tempRaster.GetRasterBand(1),
-                                  raster.GetRasterBand(1),
-                                  raster.GetRasterBand(1))
+        for attributeName, (raster_uri, cur_raster_uri) in zip(
+            calculatedAttributeNames, [(c_hwp_uri, c_hwp_cur_uri), (bio_hwp_uri, bio_hwp_cur_uri), (vol_hwp_uri, vol_hwp_cur_uri)]):
+
+            #Burn the future data on to a raster
+            cur_raster = gdal.Open(cur_raster_uri)
+            temp_filename = raster_utils.temporary_filename()
+            temp_raster = raster_utils.new_raster_from_base(
+                cur_raster, temp_filename, 'GTiff',
+                nodata, gdal.GDT_Float32, fill_value=nodata)
+            gdal.RasterizeLayer(temp_raster, [1], hwp_shape_layer_copy,
+                                options=['ATTRIBUTE=' + attributeName])
+            temp_raster = None
+            cur_raster = None
+
+
+            #add temp_raster and raster cur raster into the output raster
+            nodata = -1.0e10
+            base_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+            cur_nodata = raster_utils.get_nodata_from_uri(cur_raster_uri)
+            def add_op(base, current):
+                if base == base_nodata or current == cur_nodata:
+                    return nodata
+                return base + current
+
+            pixel_size_out = raster_utils.get_cell_size_from_uri(raster_uri)
+            raster_utils.vectorize_datasets(
+                [cur_raster_uri, temp_filename], add_op, raster_uri, gdal.GDT_Float32, nodata,
+                pixel_size_out, "intersection", dataset_to_align_index=0)
+
+
+
 
 
 def _get_fields(feature):
