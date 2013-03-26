@@ -150,6 +150,8 @@ def execute(args):
     
     Returns nothing.
     '''
+    LOGGER.debug("Checkpoint 1")
+
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -685,7 +687,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         #layers later.
         r_dataset = \
             raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Float32, 0, out_uri, datasource)
+                    gdal.GDT_Float32, 0., out_uri, datasource)
 
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)

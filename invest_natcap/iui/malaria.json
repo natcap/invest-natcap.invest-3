@@ -1,0 +1,126 @@
+{
+    "id" : "window",
+    "label": "Malaria",
+    "targetScript" : "invest_natcap.malaria.malaria",
+    "modelName" : "Malaria",
+    "localDocURI": "../documentation/malaria_mosquito_habitat.html",
+    "height": 650,
+    "width" : 750,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+		{
+		    "id" : "workspace",
+		    "args_id" : "workspace_dir",
+		    "type": "folder",
+		    "label": "Workspace",
+		    "defaultValue": "../Malaria",
+		    "required": true,
+                    "helpText":"This is the directory in which the output and intermediate files will be saved."
+		},
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "results_suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
+                },
+		{        
+		    "id" : "dem_uri",
+		    "args_id" : "dem_uri",
+		    "type": "file",
+		    "label": "DEM Raster",
+		    "defaultValue": "../Base_Data/Freshwater/dem",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when you see unusual streams.) See the Working with the DEM section of the InVEST user's guide for more information."
+		},
+		{        
+		    "id" : "lulc_uri",
+		    "args_id" : "lulc_uri",
+		    "type": "file",
+		    "label": "LULC Raster",
+		    "defaultValue": "../Base_Data/Freshwater/landuse_90",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "A GIS raster dataset, with an integer LULC code for each cell."
+		},
+		{        
+		    "id" : "population_uri",
+		    "args_id" : "population_uri",
+		    "type": "file",
+		    "label": "Human Population Density Raster",
+		    "defaultValue": "../Base_Data/Marine/Population/global_pop",
+		    "required": true,
+		    "validateAs": {"type": "GDAL"},
+		    "helpText": "A GIS raster dataset that has population data."
+		},
+		{        
+		    "id" : "breeding_suitability_table_uri",
+		    "args_id" : "breeding_suitability_table_uri",
+		    "type": "file",
+		    "label": "Biophysical Table",
+		    "defaultValue": "../Malaria/Input/breeding_suitability_table.csv",
+		    "required": true,
+		    "validateAs": {"type": "CSV",
+				  "fieldsExist": ["lucode", "suitability_index"]
+				  },
+		    "helpText": "A table containing land type based suitability for mosquito breeding habitat.model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', 'usle_c', 'usle_p', and 'sedret_eff'.  See the InVEST Malaria user's guide for more information about these fields."
+		},
+		{        
+		    "id" : "threshold_flow_accumulation",
+		    "args_id" : "threshold_flow_accumulation",
+		    "type": "text",
+		    "label": "Threshold Flow Accumluation",
+		    "defaultValue": "1000",
+		    "required": true,
+		    "validText": "^[0-9]+$",
+		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
+		},
+		{        
+		    "id" : "max_vector_flight",
+		    "args_id" : "max_vector_flight",
+		    "type": "text",
+		    "label": "Mean Mosquito Flight Distance",
+		    "defaultValue": "150",
+		    "required": true,
+		    "validText": "^[0-9]+$",
+		    "helpText": "The mean distance a mosquito will fly from its breeding site to feed."
+		}
+	    ]
+	},
+	{
+	    "id" : "land_optimization_container",
+	    "args_id" : "land_optimization_container",
+	    "type" : "container",
+	    "label" : "Land Use Optimization",
+	    "collapsible" : true,
+	    "defaultValue" : false,
+	    "elements" : [
+		{
+		    "id" : "land_optimization_list",
+		    "type" : "list",
+		    "elements" : [
+			{        
+			    "id" : "area_to_convert",
+			    "args_id" : "area_to_convert",
+			    "type": "text",
+			    "label": "Amount of area available for conversion (Ha)",
+			    "defaultValue": "25",
+			    "required": false,
+			    "validText": "^[0-9]+$",
+			    "helpText": "The amount of area that can be converted for mosquito breeding abation."
+			}
+		    ]
+		}
+	    ]
+	}
+    ]
+}

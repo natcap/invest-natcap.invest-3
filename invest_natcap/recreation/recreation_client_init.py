@@ -140,21 +140,31 @@ def execute(args):
     attachments={}
     zip_file_uri=temporary_filename()
     zip_file=zipfile.ZipFile(zip_file_uri, mode='w')
+
+    #check if comprssion supported
+    try:
+        import zlib
+        compression = zipfile.ZIP_DEFLATED
+        LOGGER.debug("Predictors will be compressed.")
+    except ImportError:
+        compression = zipfile.ZIP_STORED
+        LOGGER.debug("Predictors will not be compressed.")
+    
     for predictor in predictors:
 ##        attachments[predictor+".shp"]= open(args["data_dir"]+predictor+".shp","rb")
 ##        attachments[predictor+".shx"]= open(args["data_dir"]+predictor+".shx","rb")
 ##        attachments[predictor+".dbf"]= open(args["data_dir"]+predictor+".dbf","rb")
 ##        attachments[predictor+".prj"]= open(args["data_dir"]+predictor+".prj","rb")
-        zip_file.write(args["data_dir"]+predictor+".shp",predictor+".shp")
-        zip_file.write(args["data_dir"]+predictor+".shx",predictor+".shx")
-        zip_file.write(args["data_dir"]+predictor+".dbf",predictor+".dbf")
-        zip_file.write(args["data_dir"]+predictor+".prj",predictor+".prj")
+        zip_file.write(args["data_dir"]+predictor+".shp",predictor+".shp",compression)
+        zip_file.write(args["data_dir"]+predictor+".shx",predictor+".shx",compression)
+        zip_file.write(args["data_dir"]+predictor+".dbf",predictor+".dbf",compression)
+        zip_file.write(args["data_dir"]+predictor+".prj",predictor+".prj",compression)
         
 
     #opening categorization table
     for tsv in userCategorization:
 ##        attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
-        zip_file.write(aargs["data_dir"]+tsv+".tsv",tsv+".tsv")
+        zip_file.write(aargs["data_dir"]+tsv+".tsv",tsv+".tsv",compression)
 
     zip_file.close()
     attachments["zip_file"]=open(zip_file_uri,'rb')

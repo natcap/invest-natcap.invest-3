@@ -1649,6 +1649,15 @@ def get_rat_as_dictionary(dataset):
 
     return rat_dictionary
 
+def gaussian_filter_dataset_uri(
+    dataset_uri, sigma, out_uri, out_nodata, temp_dir=None):
+    """A callthrough to gaussian filter dataset"""
+
+    dataset = gdal.Open(dataset_uri)
+    gaussian_filter_dataset(
+        dataset, sigma, out_uri, out_nodata, temp_dir=temp_dir)
+
+
 def gaussian_filter_dataset(
     dataset, sigma, out_uri, out_nodata, temp_dir=None):
     """A memory efficient gaussian filter function that operates on 
