@@ -64,6 +64,7 @@ def execute_30(**args):
     #2) map lulc_cur and _fut (if availble) to total carbon
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri']:
         if lulc_uri in args:
+            scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
             cell_area_ha = (
                 raster_utils.get_cell_area_from_uri(args[lulc_uri]) /
                 10000.0)
@@ -80,17 +81,20 @@ def execute_30(**args):
                 if lulc == nodata:
                     return nodata_out
                 return pools[lulc]['total_%s' % lulc_uri]
-            dataset_out_uri = os.path.join(output_dir, 'tot_C_%s' % lulc_uri.split('_')[-2])
+            dataset_out_uri = os.path.join(
+                output_dir, 'tot_C_%s.tif' % scenario_type)
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
             raster_utils.vectorize_datasets(
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
                 "intersection", dataset_to_align_index=0)
 
+        #3) burn hwp_{cur/fut} into rasters
+
+
     return
 
     #TODO:
-    #3) burn hwp_{cur/fut} into rasters
     #4) if _fut, calculate sequestration
 
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
