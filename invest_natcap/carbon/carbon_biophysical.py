@@ -244,9 +244,6 @@ def calculate_hwp_storage_cur(
     hwp_shape = ogr.Open(hwp_shape_uri)
     base_dataset = gdal.Open(base_dataset_uri)
     nodata = -1.0
-    c_hwp = raster_utils.new_raster_from_base(base_dataset, c_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
-    bio_hwp = raster_utils.new_raster_from_base(base_dataset, bio_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
-    vol_hwp = raster_utils.new_raster_from_base(base_dataset, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
 
     #Create a temporary shapefile to hold values of per feature carbon pools
     #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
@@ -268,10 +265,9 @@ def calculate_hwp_storage_cur(
         #later in the code
         field_args = _get_fields(feature)
 
+        #Sometimes the ogr file does not have start dates or cut cur in it.
         if 'start_date' not in field_args or 'cut_cur' not in field_args:
             continue
-
-        LOGGER.debug('calculate_hwp_storage_cur %s ' % field_args)
 
         #If start date and/or the amount of carbon per cut is zero, it doesn't
         #make sense to do any calculation on carbon pools or 
@@ -310,12 +306,14 @@ def calculate_hwp_storage_cur(
             hwp_shape_layer_copy.SetFeature(feature)
 
     #burn all the attribute values to a raster
-    for attribute_name, raster in zip(
-                    calculated_attribute_names, [c_hwp, bio_hwp, vol_hwp]):
-        raster.GetRasterBand(1).Fill(raster.GetRasterBand(1).GetNoDataValue())
+    for attribute_name, raster_uri in zip(
+        calculated_attribute_names, [c_hwp_uri, bio_hwp_uri, vol_hwp_uri]):
+        
+        raster = raster_utils.new_raster_from_base(
+            base_dataset, raster_uri, 'GTiff', nodata, gdal.GDT_Float32,
+            fill_value=nodata)
         gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy,
-                                options=['ATTRIBUTE=' + attribute_name])
-
+                            options=['ATTRIBUTE=' + attribute_name])
 
 def calculate_hwp_storage_fut(
     hwp_shapes, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
@@ -483,17 +481,14 @@ def calculate_hwp_storage_fut(
         for attributeName, (raster_uri, cur_raster_uri) in zip(
             calculatedAttributeNames, [(c_hwp_uri, c_hwp_cur_uri), (bio_hwp_uri, bio_hwp_cur_uri), (vol_hwp_uri, vol_hwp_cur_uri)]):
 
-            #Burn the future data on to a raster
-            cur_raster = gdal.Open(cur_raster_uri)
             temp_filename = raster_utils.temporary_filename()
             temp_raster = raster_utils.new_raster_from_base(
-                cur_raster, temp_filename, 'GTiff',
+                base_dataset, temp_filename, 'GTiff',
                 nodata, gdal.GDT_Float32, fill_value=nodata)
             gdal.RasterizeLayer(temp_raster, [1], hwp_shape_layer_copy,
                                 options=['ATTRIBUTE=' + attributeName])
             temp_raster = None
             cur_raster = None
-
 
             #add temp_raster and raster cur raster into the output raster
             nodata = -1.0e10
@@ -508,10 +503,6 @@ def calculate_hwp_storage_fut(
             raster_utils.vectorize_datasets(
                 [cur_raster_uri, temp_filename], add_op, raster_uri, gdal.GDT_Float32, nodata,
                 pixel_size_out, "intersection", dataset_to_align_index=0)
-
-
-
-
 
 def _get_fields(feature):
     """Return a dict with all fields in the given feature.
@@ -555,15 +546,3 @@ def _carbon_pool_in_hwp_from_parcel(carbonPerCut, start_years, timeSpan, harvest
         carbonSum += (1 - math.exp(-omega)) / (omega *
             math.exp((timeSpan - t * harvestFreq) * omega))
     return carbonSum * carbonPerCut
-
-
-
-
-
-
-#This part is for command line invocation and allows json objects to be passed
-#as the argument dictionary
-if __name__ == '__main__':
-    modulename, json_args = sys.argv
-    args = json.loads(json_args)
-    execute(args)
