@@ -50,12 +50,16 @@ def execute_30(**args):
         returns nothing."""
 
     cell_area_ha = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri']) ** 2 / 10000.0
-
     LOGGER.debug("building carbon pools")
     pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
     LOGGER.debug(pools)
     return
 
+    #TODO:
+    #1) load carbon pools into dictionary indexed by LULC
+    #2) map lulc_cur and _fut (if availble) to total carbon
+    #3) burn hwp_{cur/fut} into rasters
+    #4) if _fut, calculate sequestration
 
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
@@ -64,8 +68,7 @@ def execute_30(**args):
     LOGGER.debug("built carbon pools")
 
 
-
-
+    gdal.AllRegister()
 
     #Load and copy relevant inputs from args into a dictionary that
     #can be passed to the biophysical core model
