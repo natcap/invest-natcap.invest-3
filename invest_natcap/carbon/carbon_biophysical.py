@@ -46,6 +46,21 @@ def execute(args):
         
         returns nothing."""
 
+
+    #TODO:
+    #1) load carbon pools into dictionary indexed by LULC
+
+    #2) map lulc_cur and _fut (if availble) to total carbon
+
+    #3) burn hwp_{cur/fut} into rasters
+
+    #4) if _fut, calculate sequestration
+
+
+
+
+
+
     gdal.AllRegister()
 
     #Load and copy relevant inputs from args into a dictionary that
