@@ -103,6 +103,7 @@ def execute_30(**args):
                     calculate_hwp_storage_cur(
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
+                    #TODO add to tot_C_cur
                 elif scenario_type == 'fut':
                     hwp_shapes = {}
 
@@ -114,111 +115,11 @@ def execute_30(**args):
                     calculate_hwp_storage_fut(
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
+                    #TODO add to tot_C_fut
 
-                    
-        #3) burn hwp_{cur/fut} into rasters
 
 
     return
-
-    #TODO:
-    #4) if _fut, calculate sequestration
-
-    gdal.AllRegister()
-
-    #Load and copy relevant inputs from args into a dictionary that
-    #can be passed to the biophysical core model
-    biophysicalArgs = {}
-
-    #map lulc to carbon pool
-#    nodata_carbon = -1.0
-#    cur_carbon_uri = os.path.join(args['workspace_dir'], 'cur_carbon.tif')
-#    raster_utils.reclassify_dataset_uri(
-#        args['lulc_cur_uri'], carbon_pool_map, cur_carbon_uri, gdal.GDT_Float32,
-#        nodata_carbon, exception_flag='values_required')
-
-    #lulc_cur is always required
-    LOGGER.debug('loading %s', args['lulc_cur_uri'])
-    biophysicalArgs['lulc_cur'] = gdal.Open(str(args['lulc_cur_uri']),
-                                            gdal.GA_ReadOnly)
-
-    #a future lulc is only required if sequestering or hwp calculating
-    if 'lulc_fut_uri' in args:
-        LOGGER.debug('loading %s', args['lulc_fut_uri'])
-        biophysicalArgs['lulc_fut'] = gdal.Open(str(args['lulc_fut_uri']),
-                                            gdal.GA_ReadOnly)
-
-    #Years and harvest shapes are required if doing HWP calculation
-    for x in ['lulc_cur_year', 'lulc_fut_year']:
-        if x in args: biophysicalArgs[x] = args[x]
-    fsencoding = sys.getfilesystemencoding()
-    for x in ['hwp_cur_shape', 'hwp_fut_shape']:
-        uriName = x + '_uri'
-        if uriName in args:
-            LOGGER.debug('loading %s', str(args[uriName]))
-            biophysicalArgs[x] = ogr.Open(str(args[uriName]).encode(fsencoding))
-
-    #Always need carbon pools, if uncertainty calculation they also need
-    #to have range columns in them, but no need to check at this level.
-    LOGGER.debug('loading %s', args['carbon_pools_uri'])
-
-    #setting readOnly true because we won't write to it
-    biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'], 
-                                              readOnly=True)
-
-    #At this point all inputs are loaded into biophysicalArgs.  The 
-    #biophysical model also needs temporary and output files to do its
-    #calculation.  These are calculated next.
-
-    #These lines sets up the output directory structure for the workspace
-    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
-    intermediateDirectoryPrefix = args['workspace_dir'] + os.sep + \
-        'Intermediate' + os.sep
-    for d in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
-        if not os.path.exists(d):
-            LOGGER.debug('creating directory %s', d)
-            os.makedirs(d)
-
-    #This defines a dictionary that links output/temporary GDAL/OAL objects
-    #to their locations on disk.  Helpful for creating the objects in the 
-    #next step
-    outputURIs = {}
-
-    #make a list of all the rasters that we need to create, it's dependant
-    #on what calculation mode we're in (sequestration, HWP, uncertainty, etc.)
-    outputRasters = ['tot_C_cur']
-    if 'lulc_fut_uri' in args:
-        outputRasters.extend(['tot_C_fut', 'sequest'])
-    #build the URIs for the output rasters in a single loop
-    for key in outputRasters:
-        outputURIs[key] = outputDirectoryPrefix + key + '.tif'
-
-    intermediateRasters = ['storage_cur']
-
-    #If we're doing a HWP calculation, we need temporary rasters to hold the
-    #HWP pools, name them the same as the key but add a .tif extension
-    if 'hwp_cur_shape_uri' in args:
-        for key in ['c_hwp_cur', 'bio_hwp_cur', 'vol_hwp_cur']:
-            outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
-    if 'hwp_fut_shape_uri' in args:
-        for key in ['c_hwp_fut', 'bio_hwp_fut', 'vol_hwp_fut']:
-            outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
-
-    #Create the output and intermediate rasters to be the same size/format as
-    #the base LULC
-    for rasterName, rasterPath in outputURIs.iteritems():
-        LOGGER.debug('creating output raster %s', rasterPath)
-        biophysicalArgs[rasterName] = \
-            raster_utils.new_raster_from_base(biophysicalArgs['lulc_cur'],
-                              rasterPath, 'GTiff', -5.0, gdal.GDT_Float32)
-
-    #run the biophysical part of the carbon model.
-    LOGGER.info('starting carbon biophysical model')
-    carbon_core.biophysical(biophysicalArgs)
-    LOGGER.info('finished carbon biophysical model')
-    
-    #Dump some info about total carbon stats
-#    carbon_core.calculate_summary(biophysicalArgs)
 
 
 def calculate_hwp_storage_cur(
