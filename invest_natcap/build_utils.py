@@ -111,11 +111,20 @@ def write_version_file(filepath):
 
     # Even though we're also saving the release version, we also want to save
     # the build_id, as it can be very informative.
-    fp.write('build_id = \'%s\'\n' % get_build_id())
+    build_id = get_build_id()
+    fp.write('build_id = \'%s\'\n' % build_id)
 
     # We also care about the python architecture on which this copy of InVEST is
     # built, so record that here
-    fp.write('py_arch = \'%s\'\n' % platform.architecture())
+    architecture = platform.architecture()
+    fp.write('py_arch = \'%s\'\n' % architecture)
+
+    # Compose a full version string and save it to the file.
+    if release_version == 'None':
+        full_version_string = build_dev_id(build_id)
+    else:
+        full_version_string = release_version
+    fp.write("version_str = '%s (%s )'\n" % (full_version_string, architecture)
 
     # Close the file.
     fp.close()
