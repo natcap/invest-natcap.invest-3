@@ -5,6 +5,7 @@ import os
 import math
 import json
 import logging
+import shutil
 
 from osgeo import gdal
 from osgeo import ogr
@@ -66,6 +67,7 @@ def execute_30(**args):
     pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
+    out_file_names = {}
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri']:
         if lulc_uri in args:
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
@@ -86,6 +88,8 @@ def execute_30(**args):
                 return pools[lulc]['total_%s' % lulc_uri]
             dataset_out_uri = os.path.join(
                 output_dir, 'tot_C_%s.tif' % scenario_type)
+            out_file_names['tot_C_%s' % scenario_type] = dataset_out_uri
+
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
             raster_utils.vectorize_datasets(
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
@@ -104,6 +108,20 @@ def execute_30(**args):
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
                     #TODO add to tot_C_cur
+                    temp_c_cur_uri = raster_utils.temporary_filename()
+                    LOGGER.debug(out_file_names)
+                    shutil.copyfile(out_file_names['tot_C_cur'], temp_c_cur_uri)
+                    
+                    hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
+                    def add_op(tmp_c_cur, hwp_cur):
+                        if tmp_c_cur == nodata_out or hwp_cur == hwp_cur_nodata:
+                            return nodata_out
+                        return tmp_c_cur + hwp_cur
+
+                    raster_utils.vectorize_datasets(
+                        [temp_c_cur_uri, c_hwp_uri], add_op, out_file_names['tot_C_cur'], gdal.GDT_Float32, nodata_out,
+                        pixel_size_out, "intersection", dataset_to_align_index=0)
+
                 elif scenario_type == 'fut':
                     hwp_shapes = {}
 
