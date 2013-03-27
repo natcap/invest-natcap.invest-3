@@ -205,10 +205,6 @@ def calculate_hwp_storage_cur(
         #later in the code
         field_args = _get_fields(feature)
 
-        #Sometimes the ogr file does not have start dates or cut cur in it.
-        if 'start_date' not in field_args or 'cut_cur' not in field_args:
-            continue
-
         #If start date and/or the amount of carbon per cut is zero, it doesn't
         #make sense to do any calculation on carbon pools or 
         #biomassPerPixel/volumePerPixel
