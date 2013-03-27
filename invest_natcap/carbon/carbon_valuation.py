@@ -1,20 +1,20 @@
 """InVEST valuation interface module.  Informally known as the URI level."""
 
-import sys
 import os
 import logging
 
-import json
 from osgeo import gdal
 
-import invest_cython_core
-from invest_natcap.carbon import carbon_core
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-logger = logging.getLogger('carbon_valuation')
+LOGGER = logging.getLogger('carbon_valuation')
 
 def execute(args):
+    execute_30(**args)
+
+def execute_30(**args):
     """This function calculates carbon sequestration valuation.
         
         args - a python dictionary with at the following *required* entries:
@@ -24,7 +24,7 @@ def execute(args):
         args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
             amount of carbon sequestered
         args['carbon_price_units'] - a string indicating whether the price is 
-            in terms of carbon or carbon dioxide. Can value either as 
+            in terms of carbon or carbon dioxide. Can value either as
             'Carbon (C)' or 'Carbon Dioxide (CO2)'.
         args['V'] - value of a sequestered ton of carbon or carbon dioxide in 
             dollars per metric ton
@@ -36,19 +36,16 @@ def execute(args):
         
         returns nothing."""
 
-    gdal.AllRegister()
+    #These lines sets up the output directory structure for the workspace
+    output_directory = os.path.join(args['workspace_dir'],'output')
+    if not os.path.exists(output_directory):
+        LOGGER.debug('creating directory %s', output_directory)
+        os.makedirs(output_directory)
 
-    #Load and copy relevant inputs from args into a dictionary that
-    #can be passed to the valuation core model
-    valuationArgs = {}
-
-    logger.debug('loading %s', args['sequest_uri'])
-    valuationArgs['sequest'] = \
-        gdal.Open(args['sequest_uri'], gdal.GA_ReadOnly)
-
-    for key in args:
-        if key != 'sequest_uri':
-            valuationArgs[key] = args[key]
+    #This defines the sequestration output raster.  Notice the 1e38 value as
+    #nodata.  This is something very large that should be outside the range
+    #of reasonable valuation values.
+    value_seq_uri = os.path.join(output_directory, 'value_seq.tif')
 
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
         #Cover to price per unit of Carbon do this by dividing
@@ -57,29 +54,28 @@ def execute(args):
         #elements.
         args['V'] *= (15.9994*2+12.0107)/12.0107
 
-    #These lines sets up the output directory structure for the workspace
-    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
-    if not os.path.exists(outputDirectoryPrefix):
-        logger.debug('creating directory %s', outputDirectoryPrefix)
-        os.makedirs(outputDirectoryPrefix)
+    LOGGER.debug('constructing valuation formula')
+    n = args['yr_fut'] - args['yr_cur'] - 1
+    ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
+    valuation_constant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
+        (1.0 - ratio ** (n + 1)) / (1.0 - ratio)
 
-    #This defines the sequestration output raster.  Notice the 1e38 value as
-    #nodata.  This is something very large that should be outside the range
-    #of reasonable valuation values.
-    outputURI = outputDirectoryPrefix + "value_seq.tif"
+    nodata_out = -1.0e10
 
-    logger.debug('creating value_seq output raster')
-    valuationArgs['value_seq_uri'] = outputURI
+    sequest_nodata = raster_utils.get_nodata_from_uri(args['sequest_uri'])
 
-    #run the valuation part of the carbon model.
-    logger.info('starting sequestration valuation')
-    carbon_core.valuation(valuationArgs)
-    logger.info('completed sequestration valuation')
+    def value_op(sequest):
+        if sequest == sequest_nodata:
+            return nodata_out
+        return sequest * valuation_constant
 
-#This part is for command line invocation and allows json objects to be passed
-#as the argument dictionary
-if __name__ == '__main__':
+    LOGGER.debug('finished constructing valuation formula')
 
-    modulename, json_args = sys.argv
-    args = json.loads(json_args)
-    execute(args)
+    LOGGER.info('starting valuation of each pixel')
+
+    pixel_size_out = raster_utils.get_cell_size_from_uri(args['sequest_uri'])
+    LOGGER.debug("pixel_size_out %s" % pixel_size_out)
+    raster_utils.vectorize_datasets(
+        [args['sequest_uri']], value_op, value_seq_uri,
+        gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
+    LOGGER.info('finished valuation of each pixel')
