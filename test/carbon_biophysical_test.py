@@ -64,10 +64,10 @@ do sequestration and harvested wood products on lulc maps."""
             './data/carbon_regression_data/vol_hwp_fut_regression.tif')
 
 
-    def test_carbon_biophysical_sequestration_hwp_different_lulcs(self):
+    def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
-        raise SkipTest
+
         args = {}
         args['workspace_dir'] = './data/test_out/carbon_uk_output'
         args['lulc_cur_uri'] = './data/carbon/uk_data/gb_lulc_2000'
