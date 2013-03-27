@@ -82,7 +82,7 @@ def execute_30(**args):
                      ['c_above', 'c_below', 'c_soil', 'c_dead']]) * cell_area_ha
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
-            nodata_out = -1.0
+            nodata_out = -5.0
             def map_carbon_pool(lulc):
                 if lulc == nodata:
                     return nodata_out
@@ -115,8 +115,8 @@ def execute_30(**args):
                     
                     hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_cur, hwp_cur):
-                        if tmp_c_cur == nodata_out or hwp_cur == hwp_cur_nodata:
-                            return nodata_out
+                        if hwp_cur == hwp_cur_nodata:
+                            return tmp_c_cur
                         return tmp_c_cur + hwp_cur
 
                     raster_utils.vectorize_datasets(
@@ -142,8 +142,8 @@ def execute_30(**args):
                     
                     hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_fut, hwp_fut):
-                        if tmp_c_fut == nodata_out or hwp_fut == hwp_fut_nodata:
-                            return nodata_out
+                        if hwp_fut == hwp_fut_nodata:
+                            return tmp_c_fut
                         return tmp_c_fut + hwp_fut
 
                     raster_utils.vectorize_datasets(
@@ -190,7 +190,7 @@ def calculate_hwp_storage_cur(
     pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     hwp_shape = ogr.Open(hwp_shape_uri)
     base_dataset = gdal.Open(base_dataset_uri)
-    nodata = -1.0
+    nodata = -5.0
 
     #Create a temporary shapefile to hold values of per feature carbon pools
     #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
@@ -288,7 +288,7 @@ def calculate_hwp_storage_fut(
     ############### Start
     pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     base_dataset = gdal.Open(base_dataset_uri)
-    nodata = -1.0
+    nodata = -5.0
 
     c_hwp_cur_uri = raster_utils.temporary_filename()
     bio_hwp_cur_uri = raster_utils.temporary_filename()
