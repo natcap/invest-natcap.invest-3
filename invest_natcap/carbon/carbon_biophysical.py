@@ -9,6 +9,7 @@ import shutil
 
 from osgeo import gdal
 from osgeo import ogr
+import numpy
 
 try:
     import carbon_core
@@ -163,7 +164,8 @@ def execute_30(**args):
             [out_file_names['tot_C_cur'], out_file_names['tot_C_fut']], sub_op, out_file_names['sequest'], gdal.GDT_Float32, nodata_out,
             pixel_size_out, "intersection", dataset_to_align_index=0)
 
-    return
+    _calculate_summary(out_file_names)
+
 
 
 def calculate_hwp_storage_cur(
@@ -449,6 +451,7 @@ def calculate_hwp_storage_fut(
                 [cur_raster_uri, temp_filename], add_op, raster_uri, gdal.GDT_Float32, nodata,
                 pixel_size_out, "intersection", dataset_to_align_index=0)
 
+
 def _get_fields(feature):
     """Return a dict with all fields in the given feature.
 
@@ -491,3 +494,41 @@ def _carbon_pool_in_hwp_from_parcel(carbonPerCut, start_years, timeSpan, harvest
         carbonSum += (1 - math.exp(-omega)) / (omega *
             math.exp((timeSpan - t * harvestFreq) * omega))
     return carbonSum * carbonPerCut
+
+def _calculate_summary(args):
+    """Dumps information about total carbon summaries from the past run
+        in the form
+
+        Total current carbon: xxx Mg
+        Total scenario carbon: yyy Mg
+        Total sequestered carbon: zzz Mg
+
+        args - a dictionary of arguments defined as follows:
+
+        args['tot_C_cur'] - a gdal dataset uri that contains pixels with
+            total Mg of carbon per cell on current landscape (required)
+        args['tot_C_fut'] - a gdal dataset uri that contains pixels with
+            total Mg of carbon per cell on future landscape (optional)
+        args['sequest'] - a gdal dataset uri that contains pixels with
+            total Mg of carbon sequestered per cell (optional)
+
+        returns nothing
+        """
+    LOGGER.debug('calculate summary')
+    raster_key_messages = [('tot_C_cur', 'Total current carbon: '),
+                           ('tot_C_fut', 'Total scenario carbon: '),
+                           ('sequest', 'Total sequestered carbon: ')]
+
+    for raster_key, message in raster_key_messages:
+        #Make sure we passed in the dictionary, and gracefully continue
+        #if we didn't.
+        if raster_key not in args:
+            continue
+        dataset = gdal.Open(args[raster_key])
+        band, nodata = raster_utils.extract_band_and_nodata(dataset)
+        total_sum = 0.0
+        #Loop over each row in out_band
+        for row_index in range(band.YSize):
+            row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
+            total_sum += numpy.sum(row_array[row_array != nodata])
+        LOGGER.info("%s %s Mg" % (message, total_sum))
