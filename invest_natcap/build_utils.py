@@ -3,6 +3,7 @@ import imp
 import os
 import logging
 import traceback
+import platform
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
@@ -77,10 +78,7 @@ def invest_version(uri=None, force_new=False):
 #        print 'getting version from hg'
         return get_version_from_hg()
 
-    if version_info.release == 'None':
-        return build_dev_id(version_info.build_id)
-    else:
-        return version_info.release
+    return version_info.version_str
 
 def write_version_file(filepath):
     """Write the version number to the file designated by filepath.  Returns
@@ -110,7 +108,20 @@ def write_version_file(filepath):
 
     # Even though we're also saving the release version, we also want to save
     # the build_id, as it can be very informative.
-    fp.write('build_id = \'%s\'\n' % get_build_id())
+    build_id = get_build_id()
+    fp.write('build_id = \'%s\'\n' % build_id)
+
+    # We also care about the python architecture on which this copy of InVEST is
+    # built, so record that here
+    architecture = platform.architecture()[0]
+    fp.write('py_arch = \'%s\'\n' % architecture)
+
+    # Compose a full version string and save it to the file.
+    if release_version == None:
+        full_version_string = build_dev_id(build_id)
+    else:
+        full_version_string = release_version
+    fp.write("version_str = '%s (%s)'\n" % (full_version_string, architecture))
 
     # Close the file.
     fp.close()
@@ -119,7 +130,14 @@ def build_dev_id(build_id=None):
     """This function builds the dev version string.  Returns a string."""
     if build_id == None:
         build_id = get_build_id()
-    return 'dev%s' % build_id
+    return 'dev%s' % (build_id)
+
+def get_architecture_string():
+    """Return a string representing the operating system and the python
+    architecture on which this python installation is operating (which may be
+    different than the native processor architecture.."""
+    return '%s%s' % (platform.system().lower(),
+        platform.architecture()[0][0:2])
 
 def get_version_from_hg():
     """Get the version from mercurial.  If we're on a tag, return that.
