@@ -113,6 +113,10 @@ def write_version_file(filepath):
     # the build_id, as it can be very informative.
     fp.write('build_id = \'%s\'\n' % get_build_id())
 
+    # We also care about the python architecture on which this copy of InVEST is
+    # built, so record that here
+    fp.write('py_arch = \'%s\'\n' % platform.architecture())
+
     # Close the file.
     fp.close()
 
@@ -120,7 +124,7 @@ def build_dev_id(build_id=None):
     """This function builds the dev version string.  Returns a string."""
     if build_id == None:
         build_id = get_build_id()
-    return 'dev%s %s' % (build_id, get_architecture_string())
+    return 'dev%s' % (build_id)
 
 def get_architecture_string():
     """Return a string representing the operating system and the python
