@@ -26,7 +26,7 @@ class ImproperCriteriaAttributeName(Exception):
     pass
 
 class ImproperAOIAttributeName(Exception):
-    '''An exception to pass in hra non core if the risk plot AOIs do not
+    '''An exception to pass in hra non core if the AOIzone files do not
     contain the proper attribute name for individual indentification. The
     attribute should be named 'NAME', and must exist for every shape in the
     AOI layer.'''
@@ -56,10 +56,10 @@ def execute(args):
         args['max_rating']- An int representing the highest potential value that
             should be represented in rating, data quality, or weight in the
             CSV table.
-        args['plot_aoi']- A shapefile containing one or more planning regions
+        args['aoi_tables']- A shapefile containing one or more planning regions
             for a given model. This will be used to get the average risk value
             over a larger area. Each potential region MUST contain the
-            attribute "NAME" as a way of identifying each individual shape.
+            attribute "name" as a way of identifying each individual shape.
 
     Intermediate:
         hra_args['habitats_dir']- The directory location of all habitat 
@@ -174,22 +174,22 @@ def execute(args):
 
         os.makedirs(folder)
     
-    #If using risk plots are desired, pass the AOI layer directly to core to be
+    #If using aoi zones are desired, pass the AOI layer directly to core to be
     #dealt with there.
-    if 'plot_aoi' in args:
+    if 'aoi_tables' in args:
 
         #Need to check that this shapefile contains the correct attribute name.
         #Later, this is where the uppercase/lowercase dictionary can be
         #implimented.
-        shape = ogr.Open(args['plot_aoi'])
+        shape = ogr.Open(args['aoi_tables'])
         layer = shape.GetLayer()
         for feature in layer:
             if 'name' not in feature.items():
-                raise ImproperAOIAttributeName("Risk plot layer attributes must \
+                raise ImproperAOIAttributeName("Risk table layer attributes must \
                     contain the attribute \"name\" in order to be properly used \
                     within the HRA model run.")
 
-        hra_args['plot_aoi'] = args['plot_aoi']
+        hra_args['aoi_tables'] = args['aoi_tables']
 
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them and put them into the
