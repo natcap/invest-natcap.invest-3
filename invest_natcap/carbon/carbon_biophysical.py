@@ -133,6 +133,22 @@ def execute_30(**args):
                     calculate_hwp_storage_fut(
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
+
+                    #TODO add to tot_C_cur
+                    temp_c_fut_uri = raster_utils.temporary_filename()
+                    LOGGER.debug(out_file_names)
+                    shutil.copyfile(out_file_names['tot_C_fut'], temp_c_fut_uri)
+                    
+                    hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
+                    def add_op(tmp_c_fut, hwp_fut):
+                        if tmp_c_fut == nodata_out or hwp_fut == hwp_fut_nodata:
+                            return nodata_out
+                        return tmp_c_fut + hwp_fut
+
+                    raster_utils.vectorize_datasets(
+                        [temp_c_fut_uri, c_hwp_uri], add_op, out_file_names['tot_C_fut'], gdal.GDT_Float32, nodata_out,
+                        pixel_size_out, "intersection", dataset_to_align_index=0)
+
                     #TODO add to tot_C_fut
 
 
