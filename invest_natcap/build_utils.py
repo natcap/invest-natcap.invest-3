@@ -116,15 +116,15 @@ def write_version_file(filepath):
 
     # We also care about the python architecture on which this copy of InVEST is
     # built, so record that here
-    architecture = platform.architecture()
+    architecture = platform.architecture()[0]
     fp.write('py_arch = \'%s\'\n' % architecture)
 
     # Compose a full version string and save it to the file.
-    if release_version == 'None':
+    if release_version == None:
         full_version_string = build_dev_id(build_id)
     else:
         full_version_string = release_version
-    fp.write("version_str = '%s (%s )'\n" % (full_version_string, architecture)
+    fp.write("version_str = '%s (%s)'\n" % (full_version_string, architecture))
 
     # Close the file.
     fp.close()
