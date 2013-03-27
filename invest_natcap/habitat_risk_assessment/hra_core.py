@@ -94,7 +94,7 @@ def execute(args):
     #Know at this point that the non-core has re-created the ouput directory
     #So we can go ahead and make the maps directory without worrying that
     #it will throw an 'already exists.'
-    maps_dir = os.path.join(output_dir, 'maps')
+    maps_dir = os.path.join(output_dir, 'Maps')
     os.mkdir(maps_dir)
 
     #We will combine all of the h-s rasters of the same habitat into
@@ -114,6 +114,9 @@ def execute(args):
     #Recovery potential will use the 'Recovery' subdictionary from the
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
+
+    if 'plots_aoi' in locals():
+        plots_dir = os.path.join(output_dir, 'Plots')
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each

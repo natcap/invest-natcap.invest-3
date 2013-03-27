@@ -83,8 +83,8 @@
                     "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the Rating column of the habitat, species, and stressor CSVs."
                 },
                 {
-                "id":"plot_aoi",
-                    "args_id": "plot_aoi",
+                "id": "aoi_tables",
+                    "args_id": "aoi_tables",
                     "type": "hideableFileEntry",
                     "label": "Sub-Regions Shapefile [Optional]",
                     "required": false,
