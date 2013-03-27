@@ -18,8 +18,12 @@ do sequestration and harvested wood products on lulc maps."""
         args = {}
         args['workspace_dir'] = './data/test_out/carbon_output'
         args['lulc_cur_uri'] = "./data/base_data/terrestrial/lulc_samp_cur"
-        args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
         args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.dbf'
+        carbon_biophysical.execute(args)
+
+
+
+        args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
         args['lulc_cur_year'] = 2000
         args['lulc_fut_year'] = 2030
         args['hwp_cur_shape_uri'] = "./data/carbon/input/harv_samp_cur.shp"
