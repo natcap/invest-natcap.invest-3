@@ -3,6 +3,7 @@ import imp
 import os
 import logging
 import traceback
+import platform
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
@@ -119,7 +120,14 @@ def build_dev_id(build_id=None):
     """This function builds the dev version string.  Returns a string."""
     if build_id == None:
         build_id = get_build_id()
-    return 'dev%s' % build_id
+    return 'dev%s %s' % (build_id, get_architecture_string())
+
+def get_architecture_string():
+    """Return a string representing the operating system and the python
+    architecture on which this python installation is operating (which may be
+    different than the native processor architecture.."""
+    return '%s%s' % (platform.system().lower(),
+        platform.architecture()[0][0:2])
 
 def get_version_from_hg():
     """Get the version from mercurial.  If we're on a tag, return that.
