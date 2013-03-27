@@ -28,18 +28,20 @@ class TestCarbonBiophysical(unittest.TestCase):
             """
 
         args = {}
-        args['workspace_dir'] = './data/carbon_valuation_output'
+        args['workspace_dir'] = './data/test_out/carbon_valuation_output'
         args['sequest_uri'] = './data/carbon_regression_data/sequest_regression.tif'
         args['V'] = 43.0
         args['r'] = 7.0
         args['c'] = 0.0
         args['yr_cur'] = 2000
         args['yr_fut'] = 2030
-        args['carbon_price_units'] = 'Carbon Dioxide (CO2)'
+#        args['carbon_price_units'] = 'Carbon Dioxide (CO2)'
+        args['carbon_price_units'] = 'Carbon'
         carbon_valuation.execute(args)
 
         #assert that the output raster is equivalent to the regression
         #test
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + "/Output/value_seq.tif",
-            './data/carbon_regression_data/value_seq_regression.tif')
+        invest_test_core.assertTwoDatasetEqualURI(
+            self,
+            os.path.join(args['workspace_dir'], 'output', "value_seq.tif"),
+            os.path.join('./data/carbon_regression_data/value_seq_regression.tif'))
