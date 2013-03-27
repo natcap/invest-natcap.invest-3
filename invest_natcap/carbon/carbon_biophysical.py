@@ -149,9 +149,19 @@ def execute_30(**args):
                         [temp_c_fut_uri, c_hwp_uri], add_op, out_file_names['tot_C_fut'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection", dataset_to_align_index=0)
 
-                    #TODO add to tot_C_fut
 
+    #TODO: sequestration
+    if 'lulc_cur_uri' in args and 'lulc_fut_uri' in args:
+        def sub_op(c_cur, c_fut):
+            if nodata_out in [c_cur, c_fut]:
+                return nodata_out
+            return c_fut - c_cur
 
+        pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
+        out_file_names['sequest'] = os.path.join(output_dir, 'sequest.tif')
+        raster_utils.vectorize_datasets(
+            [out_file_names['tot_C_cur'], out_file_names['tot_C_fut']], sub_op, out_file_names['sequest'], gdal.GDT_Float32, nodata_out,
+            pixel_size_out, "intersection", dataset_to_align_index=0)
 
     return
 
