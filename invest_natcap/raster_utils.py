@@ -22,6 +22,8 @@ import scipy.ndimage
 
 import raster_cython_utils
 
+from invest_natcap.invest_core import fileio
+
 GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Byte: numpy.byte,
     gdal.GDT_Int16: numpy.int16,
@@ -94,6 +96,9 @@ def calculate_raster_stats_uri(ds_uri):
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
+
+def get_cell_area_from_uri(dataset_uri):
+    return pixel_area(gdal.Open(dataset_uri))
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
@@ -2276,6 +2281,42 @@ def vectorize_datasets(
             out_row[mask_array == 0] = nodata_out
         output_band.WriteArray(out_row, xoff=0, yoff=row_index)
 
+
+def get_lookup_from_table(table_uri, key_field):
+    """Creates a python dictionary to look up the rest of the fields in a
+       table file table indexed by the given key_field
+
+        table_uri - a URI to a dbf or csv file containing at
+            least the header key_field
+
+        returns a dictionary of the form {key_field_0: 
+            {header_1: val_1_0, header_2: val_2_0, etc.}
+            depending on the values of those fields"""
+    
+    table_object = fileio.TableHandler(table_uri)
+    raw_table_dictionary = table_object.get_table_dictionary(key_field.lower())
+
+    def smart_cast(value):
+        """Attempts to cat value to a float, int, or leave it as string"""
+        #If it's not a string, don't try to cast it because i got a bug
+        #where all my floats were happily cast to ints
+        if type(value) != str:
+            return value
+        cast_functions = [int, float]
+        for fn in cast_functions:
+            try:
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    lookup_dict = {}
+    for key, sub_dict in raw_table_dictionary.iteritems():
+        key_value = smart_cast(key)
+        #Map an entire row to its lookup values
+        lookup_dict[key_value] = (
+            dict([(sub_key, smart_cast(value)) for sub_key, value in sub_dict.iteritems()]))
+    return lookup_dict
 
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a

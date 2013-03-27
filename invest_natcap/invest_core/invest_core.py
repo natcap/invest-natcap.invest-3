@@ -24,15 +24,18 @@ def calculateRasterStats(band):
     """
 
     #calculating raster statistics
-    rasterMin, rasterMax = band.ComputeRasterMinMax(0)
-    #make up stddev and mean
-    mean = (rasterMax + rasterMin) / 2.0
+    try:
+        rasterMin, rasterMax = band.ComputeRasterMinMax(0)
+        #make up stddev and mean
+        mean = (rasterMax + rasterMin) / 2.0
 
-    #This is an incorrect standard deviation, but saves us from having to 
-    #calculate by hand
-    stdev = (rasterMax - mean) / 2.0
+        #This is an incorrect standard deviation, but saves us from having to 
+        #calculate by hand
+        stdev = (rasterMax - mean) / 2.0
 
-    band.SetStatistics(rasterMin, rasterMax, mean, stdev)
+        band.SetStatistics(rasterMin, rasterMax, mean, stdev)
+    except RuntimeError:
+        LOGGER.warn("all pixels nodata, so can't set min/max")
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two sequestration rasters and calculate 
