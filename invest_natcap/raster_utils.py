@@ -10,6 +10,7 @@ import shutil
 import atexit
 import functools
 import csv
+import math
 
 from osgeo import gdal
 from osgeo import osr
@@ -2025,8 +2026,8 @@ def resize_and_resample_dataset(
     original_sr.ImportFromWkt(original_dataset.GetProjection())
 
     output_geo_transform = [bounding_box[0], out_pixel_size, 0.0, bounding_box[1], 0.0, -out_pixel_size]
-    new_x_size = abs(int((bounding_box[2] - bounding_box[0]) / out_pixel_size + 0.5))
-    new_y_size = abs(int((bounding_box[3] - bounding_box[1]) / out_pixel_size + 0.5))
+    new_x_size = abs(int(math.ceil((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
+    new_y_size = abs(int(math.ceil((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
 
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
@@ -2090,12 +2091,12 @@ def align_dataset_list(
         """Helper function to merge two bounding boxes through union or 
             intersection"""
         lte = lambda x, y: x if x <= y else y
-        gte = lambda x, y: x if x >= y else y
+        gt = lambda x, y: x if x > y else y
 
         if mode == "union":
-            comparison_ops = [lte, gte, gte, lte]
+            comparison_ops = [lte, gt, gt, lte]
         if mode == "intersection":
-            comparison_ops = [gte, lte, lte, gte]
+            comparison_ops = [gt, lte, lte, gt]
 
         bb_out = [op(x, y) for op, x, y in zip(comparison_ops, bb1, bb2)]
         return bb_out
@@ -2119,8 +2120,8 @@ def align_dataset_list(
         #bounding box needs alignment
         align_bounding_box = get_bounding_box(
             dataset_uri_list[dataset_to_align_index])
-        align_pixel_size = pixel_size(
-            gdal.Open(dataset_uri_list[dataset_to_align_index]))
+        align_pixel_size = get_cell_size_from_uri(
+            dataset_uri_list[dataset_to_align_index])
         
         for index in [0, 1]:
             n_pixels = int(
