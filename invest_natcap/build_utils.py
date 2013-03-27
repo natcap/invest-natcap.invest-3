@@ -78,10 +78,7 @@ def invest_version(uri=None, force_new=False):
 #        print 'getting version from hg'
         return get_version_from_hg()
 
-    if version_info.release == 'None':
-        return build_dev_id(version_info.build_id)
-    else:
-        return version_info.release
+    return version_info.version_str
 
 def write_version_file(filepath):
     """Write the version number to the file designated by filepath.  Returns
