@@ -58,8 +58,8 @@ def execute(args):
             dependent on this.
         args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
-        args['plot_aoi']- May or may not exist within this model run, but if it
-            does, the user desires to have the average risk values plotted by 
+        args['aoi_tables']- May or may not exist within this model run, but if it
+            does, the user desires to have the average risk values by 
             stressor/habitat using E/C axes for each feature in the AOI layer.
     
     Outputs:
@@ -115,8 +115,42 @@ def execute(args):
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
-    if 'plots_aoi' in locals():
-        plots_dir = os.path.join(output_dir, 'Plots')
+    if 'aoi_tables' in locals():
+        tables_dir = os.path.join(output_dir, 'HTML_Tables')
+        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'])
+
+def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
+    '''This function will take in an shapefile containing multiple AOIs, and
+    output a table containing values averaged over those areas.
+
+    Input:
+        out_dir- The directory into which the completed HTML tables should be
+            placed.
+        inter_dir- The directory which contains the individual E and C rasters.
+            We can use these to get the avg. E and C values per area. Since we
+            don't really have these in any sort of dictionary, will probably
+            just need to explicitly call each individual file based on the
+            names that we pull from the risk_dict keys.
+        risk_rasters- A simple dictionary that maps a tuple of 
+            (Habitat, Stressor) to the URI for the risk raster created when the 
+            various sub components (H/S/H_S) are combined.
+
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+        aoi_uri- The location of the AOI zone files. Each feature within this
+            file (identified by a 'name' attribute) will be used to average 
+            an area of E/C/Risk values.
+     
+     Output:
+        A set of HTML tables which will contain averaged values of E, C, and
+        risk for each H, S pair within each AOI. Additionally, the tables will
+        contain a column for risk %, which is the averaged risk value in that
+        area divided by the total potential risk for a given pixel in the map.
+
+     Returns nothing.
+    '''
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each
