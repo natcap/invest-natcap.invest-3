@@ -11,14 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 
-try:
-    import carbon_core
-except ImportError:
-    from invest_natcap.carbon import carbon_core
-
 from invest_natcap import raster_utils
-
-
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
