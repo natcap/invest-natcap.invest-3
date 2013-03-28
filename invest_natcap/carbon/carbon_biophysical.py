@@ -30,7 +30,7 @@ def execute_30(**args):
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
+        args['suffix'] - a string to append to any output file name (optional)        args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
             lulc rasters. (required) 
@@ -48,6 +48,13 @@ def execute_30(**args):
             calculation (optional, include if calculating future lulc hwp)
         
         returns nothing."""
+
+    try:
+        file_suffix = args['suffix']
+        if not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -81,7 +88,7 @@ def execute_30(**args):
                     return nodata_out
                 return pools[lulc]['total_%s' % lulc_uri]
             dataset_out_uri = os.path.join(
-                output_dir, 'tot_C_%s.tif' % scenario_type)
+                output_dir, 'tot_C_%s%s.tif' % (scenario_type, file_suffix))
             out_file_names['tot_C_%s' % scenario_type] = dataset_out_uri
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
@@ -93,9 +100,9 @@ def execute_30(**args):
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
             if hwp_key in args:
-                c_hwp_uri = os.path.join(intermediate_dir, 'c_hwp_%s.tif' % scenario_type)
-                bio_hwp_uri = os.path.join(intermediate_dir, 'bio_hwp_%s.tif' % scenario_type)
-                vol_hwp_uri = os.path.join(intermediate_dir, 'vol_hwp_%s.tif' % scenario_type)
+                c_hwp_uri = os.path.join(intermediate_dir, 'c_hwp_%s%s.tif' % (scenario_type, file_suffix))
+                bio_hwp_uri = os.path.join(intermediate_dir, 'bio_hwp_%s%s.tif' % (scenario_type, file_suffix))
+                vol_hwp_uri = os.path.join(intermediate_dir, 'vol_hwp_%s%s.tif' % (scenario_type, file_suffix))
 
                 if scenario_type == 'cur':
                     calculate_hwp_storage_cur(
@@ -152,7 +159,7 @@ def execute_30(**args):
             return c_fut - c_cur
 
         pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
-        out_file_names['sequest'] = os.path.join(output_dir, 'sequest.tif')
+        out_file_names['sequest'] = os.path.join(output_dir, 'sequest%s.tif' % file_suffix)
         raster_utils.vectorize_datasets(
             [out_file_names['tot_C_cur'], out_file_names['tot_C_fut']], sub_op, out_file_names['sequest'], gdal.GDT_Float32, nodata_out,
             pixel_size_out, "intersection", dataset_to_align_index=0)

@@ -4,7 +4,7 @@
     "targetScript": "invest_natcap.carbon.carbon_valuation",
     "modelName": "carbon_valuation",
     "localDocURI": "../documentation/carbonstorage.html",
-    "height": 400,
+    "height": 600,
     "width": 700,
     "elements": [
         {
@@ -18,6 +18,18 @@
                     "args_id": "workspace_dir",
                     "defaultValue": "../Carbon/",
 		    "helpText": "The folder that will contain the intermediate and ouput files related to carbon valuation."
+                },
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"This text will be appended to the end of the output files to help separate multiple runs."
                 },
                 {
                     "id":"sequest_uri",

@@ -44,9 +44,7 @@ then
     test_files=(
         biodiversity_biophysical_test.py
         biodiversity_core_test.py
-        carbon_biophysical_test.py
-        carbon_core_test.py
-        carbon_valuation_test.py
+        carbon_test.py
         fileio_test.py
         finfish_aquaculture_test.py
         finfish_aquaculture_core_test.py
@@ -54,7 +52,6 @@ then
         hydropower_valuation_test.py
         invest_core_fileio_test.py
         invest_core_test.py
-        invest_cython_core_test.py
         invest_init_test.py
         iui_validator_test.py
         marine_water_quality_test.py

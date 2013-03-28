@@ -21,7 +21,7 @@ do sequestration and harvested wood products on lulc maps."""
         args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.dbf'
         carbon_biophysical.execute(args)
 
-
+        
 
         args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
         args['lulc_cur_year'] = 2000
@@ -44,6 +44,13 @@ do sequestration and harvested wood products on lulc maps."""
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/output/sequest.tif",
             './data/carbon_regression_data/sequest.tif')
+
+        args['suffix'] = '_foo_bar'
+        carbon_biophysical.execute(args)
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/output/tot_C_cur_foo_bar.tif",
+            './data/carbon_regression_data/tot_C_cur.tif')
+
 
     def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \
