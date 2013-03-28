@@ -156,10 +156,10 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
     #Let's pre-calc stuff so we don't have to worry about it in the middle of
     #the file creation.
-    avgs _dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+    avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
 
     filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
+                   % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
 
     file = open(filename, "w")
 
