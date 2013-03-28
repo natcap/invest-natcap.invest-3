@@ -4,15 +4,15 @@ from invest_natcap.sediment import sediment
 def base_run(workspace_dir):
     args = {}
     args['workspace_dir'] = workspace_dir
-    args['dem_uri'] = '../Base_Data/Freshwater/dem'
-    args['erosivity_uri'] = '../Base_Data/Freshwater/erosivity'
-    args['erodibility_uri'] = '../Base_Data/Freshwater/erodibility'
-    args['landuse_uri'] = '../Base_Data/Freshwater/landuse_90'
-    args['watersheds_uri'] = '../Base_Data/Freshwater/watersheds.shp'
-    args['biophysical_table_uri'] = '../Base_Data/Freshwater/biophysical_table.csv'
+    args['dem_uri'] = '../Pucallpa_subset/dem_fill'
+    args['erosivity_uri'] = '../Pucallpa_subset/imf_erosivity'
+    args['erodibility_uri'] = '../Pucallpa_subset/erod_k'
+    args['landuse_uri'] = '../Pucallpa_subset/lulc_bases'
+    args['watersheds_uri'] = '../Pucallpa_subset/ws_20.shp'
+    args['biophysical_table_uri'] = '../Pucallpa_subset/biophysical.csv'
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 70.0
-    args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
+    args['sediment_threshold_table_uri'] = '../Pucallpa_subset/sed_thresh.csv'
     sediment.execute(args)
 
 if __name__ == '__main__':
