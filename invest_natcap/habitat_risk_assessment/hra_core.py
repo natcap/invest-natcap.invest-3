@@ -200,6 +200,7 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
                 "</td><td>" +  \
                 avgs_dict[habitat][stressor][0]['Risk'] / max_risk + "</td></tr>")
 
+            #For all remaining AOIs on that H-S pairing.
             for element in avgs_dict[habitat][stressor][1::]:
 
                 file.write("<tr>")
@@ -210,8 +211,15 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
                 file.write("<td>" + element['Risk'] / max_risk+ "</td>")
                 file.write("</tr>")
 
-        file.write("</table")
-            
+        #End of the habitat-specific table
+        file.write("</table>")
+
+    #End of the page.
+    file.write("</html>")
+    file.close()
+
+    #When the model run is complete, open the page of results.
+    webbrowser.open(filename)
 
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
