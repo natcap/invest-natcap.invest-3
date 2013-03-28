@@ -131,7 +131,7 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
             don't really have these in any sort of dictionary, will probably
             just need to explicitly call each individual file based on the
             names that we pull from the risk_dict keys.
-        risk_rasters- A simple dictionary that maps a tuple of 
+        risk_dict- A simple dictionary that maps a tuple of 
             (Habitat, Stressor) to the URI for the risk raster created when the 
             various sub components (H/S/H_S) are combined.
 
@@ -144,6 +144,22 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
             an area of E/C/Risk values.
      
      Output:
+
+     --Intermediate--
+        avgs_dict- A multi level dictionary to hold the average values that
+            will be placed into the HTML table.
+
+            {'HabitatName':
+                {'StressorName':
+                    {'AOI_Name':
+                        {'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                        ...
+                    },
+                    ...
+                },
+                ....
+            }
+     --Final--
         A set of HTML tables which will contain averaged values of E, C, and
         risk for each H, S pair within each AOI. Additionally, the tables will
         contain a column for risk %, which is the averaged risk value in that
@@ -151,6 +167,60 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
 
      Returns nothing.
     '''
+
+    #Let's pre-calc stuff so we don't have to worry about it in the middle of
+    #the file creation.
+    avgs_dict = {}
+
+    shape = ogr.Open(aoi_uri)
+    layer = shape.GetLayer()
+
+    for pair in risk_dict:
+        h, s = pair
+
+        if h not in avgs_dict:
+            avgs_dict[h] = {}
+        if s not in avgs_dict[h]:
+            avgs_dict[h][s] = {}
+
+        #GETTING MEANS OF THE RISK RASTERS HERE
+
+        r_raster = gdal.Open(risk_dict[pair])
+
+
+        #We know explicitly that the user will have a 'name' attribute on each
+        #feature, since we already threw an error if they didn't.
+        r_agg_dict = raster_utils.aggregate_raster_values(r_raster, shape, 'name',
+                        'mean', ignore_nodata = True)
+
+        #GETTING MEANS OF THE E RASTERS HERE
+
+        #Just going to have to pull explicitly. Too late to go back and
+        #rejigger now.
+        e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        e_raster = gdal.Open(e_rast_uri)
+
+        e_agg_dict = raster_utils.aggregate_raster_values(e_raster, shape, 'name',
+                        'mean', ignore_nodata = True)
+
+        #GETTING MEANS OF THE C RASTER HERE
+
+        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        c_raster = gdal.Open(c_rast_uri)
+
+        c_agg_dict = raster_utils.aggregate_raster_values(c_raster, shape, 'name',
+                        'mean', ignore_nodata = True)
+
+        #Now, want to place all values into the dictionary. Since we know that
+        #the names of the attributes will be the same for each dictionary, can
+        #just use the names of one to index into the rest.
+        for name in r_agg_dict:
+            
+            avgs_dict[h][s][name]['Risk'] = r_agg_dict[name]
+            avgs_dict[h][s][name]['E'] = e_agg_dict[name]
+            avgs_dict[h][s][name]['C'] = c_agg_dict[name]
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each

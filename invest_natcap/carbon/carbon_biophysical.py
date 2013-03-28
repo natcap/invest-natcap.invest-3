@@ -11,14 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 
-try:
-    import carbon_core
-except ImportError:
-    from invest_natcap.carbon import carbon_core
-
 from invest_natcap import raster_utils
-
-
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -82,7 +75,7 @@ def execute_30(**args):
                      ['c_above', 'c_below', 'c_soil', 'c_dead']]) * cell_area_ha
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
-            nodata_out = -1.0
+            nodata_out = -5.0
             def map_carbon_pool(lulc):
                 if lulc == nodata:
                     return nodata_out
@@ -115,8 +108,8 @@ def execute_30(**args):
                     
                     hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_cur, hwp_cur):
-                        if tmp_c_cur == nodata_out or hwp_cur == hwp_cur_nodata:
-                            return nodata_out
+                        if hwp_cur == hwp_cur_nodata:
+                            return tmp_c_cur
                         return tmp_c_cur + hwp_cur
 
                     raster_utils.vectorize_datasets(
@@ -142,8 +135,8 @@ def execute_30(**args):
                     
                     hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_fut, hwp_fut):
-                        if tmp_c_fut == nodata_out or hwp_fut == hwp_fut_nodata:
-                            return nodata_out
+                        if hwp_fut == hwp_fut_nodata:
+                            return tmp_c_fut
                         return tmp_c_fut + hwp_fut
 
                     raster_utils.vectorize_datasets(
@@ -190,7 +183,7 @@ def calculate_hwp_storage_cur(
     pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     hwp_shape = ogr.Open(hwp_shape_uri)
     base_dataset = gdal.Open(base_dataset_uri)
-    nodata = -1.0
+    nodata = -5.0
 
     #Create a temporary shapefile to hold values of per feature carbon pools
     #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
@@ -211,10 +204,6 @@ def calculate_hwp_storage_cur(
         #This makes a helpful dictionary to access fields in the feature
         #later in the code
         field_args = _get_fields(feature)
-
-        #Sometimes the ogr file does not have start dates or cut cur in it.
-        if 'start_date' not in field_args or 'cut_cur' not in field_args:
-            continue
 
         #If start date and/or the amount of carbon per cut is zero, it doesn't
         #make sense to do any calculation on carbon pools or 
@@ -288,7 +277,7 @@ def calculate_hwp_storage_fut(
     ############### Start
     pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
     base_dataset = gdal.Open(base_dataset_uri)
-    nodata = -1.0
+    nodata = -5.0
 
     c_hwp_cur_uri = raster_utils.temporary_filename()
     bio_hwp_cur_uri = raster_utils.temporary_filename()
