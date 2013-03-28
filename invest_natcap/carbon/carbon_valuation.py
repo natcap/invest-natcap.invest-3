@@ -21,7 +21,7 @@ def execute_30(**args):
         
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
+        args['suffix'] - a string to append to any output file name (optional        args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
             amount of carbon sequestered
         args['carbon_price_units'] - a string indicating whether the price is 
             in terms of carbon or carbon dioxide. Can value either as
@@ -36,6 +36,13 @@ def execute_30(**args):
         
         returns nothing."""
 
+    try:
+        file_suffix = args['suffix']
+        if not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
     #These lines sets up the output directory structure for the workspace
     output_directory = os.path.join(args['workspace_dir'],'output')
     if not os.path.exists(output_directory):
@@ -45,7 +52,7 @@ def execute_30(**args):
     #This defines the sequestration output raster.  Notice the 1e38 value as
     #nodata.  This is something very large that should be outside the range
     #of reasonable valuation values.
-    value_seq_uri = os.path.join(output_directory, 'value_seq.tif')
+    value_seq_uri = os.path.join(output_directory, 'value_seq%s.tif' % file_suffix)
 
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
         #Cover to price per unit of Carbon do this by dividing
