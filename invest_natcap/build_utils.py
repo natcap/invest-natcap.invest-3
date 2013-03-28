@@ -47,30 +47,35 @@ def invest_version(uri=None, force_new=False):
 #        print 'imported version'
         LOGGER.debug('Successfully imported version file')
         found_file = True
-    except (ImportError, IOError, AttributeError, TypeError):
+    except (ImportError, IOError, AttributeError, TypeError) as error:
         # ImportError thrown when we can't import the target source
         # IOError thrown if the target source file does not exist on disk
         # AttributeError thrown in some odd cases
         # TypeError thrown when uri == None.
         # In any of these cases, try creating the version file and import
         # once again.
-        LOGGER.debug('Unable to import version.  Creating a new file')
+        LOGGER.debug('Problem importing: %s', str(error))
+        LOGGER.debug('Unable to import version.  Creating a new file at %s',
+            new_uri)
 #        print "can't import version from %s" % new_uri
         found_file = False
 
     # We only want to write a new version file if the user wants to force the
     # file's creation, OR if the user specified a URI, but we can't find it.
+    LOGGER.debug('Force_new=%s found_file=%s', force_new, found_file)
     if force_new or (not found_file and uri != None):
         try:
             write_version_file(new_uri)
             name = get_file_name(new_uri)
             version_info = imp.load_source(name, new_uri)
+            LOGGER.debug('Wrote a new version file to %s', new_uri)
             print 'Wrote a new version file'
         except ValueError as e:
             # Thrown when Mercurial is not found to be installed in the local
             # directory.  This is a band-aid fix for when we import InVEST from
             # within a distributed version of RIOS.
             # When this happens, return the exception as a string.
+            LOGGER.debug('ValueError encountered: %s', str(e))
             return str(e)
     elif not found_file and uri == None:
         # If we have not found the version file and no URI is provided, we need
