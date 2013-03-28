@@ -6,6 +6,7 @@ import os
 import numpy as np
 import collections 
 import math
+import datetime
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -144,8 +145,44 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
             an area of E/C/Risk values.
      
      Output:
+        A set of HTML tables which will contain averaged values of E, C, and
+        risk for each H, S pair within each AOI. Additionally, the tables will
+        contain a column for risk %, which is the averaged risk value in that
+        area divided by the total potential risk for a given pixel in the map.
 
-     --Intermediate--
+     Returns nothing.
+    '''
+
+    #Let's pre-calc stuff so we don't have to worry about it in the middle of
+    #the file creation.
+    pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+
+    filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
+                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
+
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
+    '''This funtion is a helper to make_aoi_tables, and will just handle
+    pre-calculation of the average values for each aoi zone.
+
+    Input:
+        inter_dir- The directory which contains the individual E and C rasters.
+            We can use these to get the avg. E and C values per area. Since we
+            don't really have these in any sort of dictionary, will probably
+            just need to explicitly call each individual file based on the
+            names that we pull from the risk_dict keys.
+        risk_dict- A simple dictionary that maps a tuple of 
+            (Habitat, Stressor) to the URI for the risk raster created when the 
+            various sub components (H/S/H_S) are combined.
+
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+        aoi_uri- The location of the AOI zone files. Each feature within this
+            file (identified by a 'name' attribute) will be used to average 
+            an area of E/C/Risk values.
+
+    Returns:
         avgs_dict- A multi level dictionary to hold the average values that
             will be placed into the HTML table.
 
@@ -159,17 +196,7 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
                 },
                 ....
             }
-     --Final--
-        A set of HTML tables which will contain averaged values of E, C, and
-        risk for each H, S pair within each AOI. Additionally, the tables will
-        contain a column for risk %, which is the averaged risk value in that
-        area divided by the total potential risk for a given pixel in the map.
-
-     Returns nothing.
     '''
-
-    #Let's pre-calc stuff so we don't have to worry about it in the middle of
-    #the file creation.
     avgs_dict = {}
 
     shape = ogr.Open(aoi_uri)
@@ -221,6 +248,8 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
             avgs_dict[h][s][name]['Risk'] = r_agg_dict[name]
             avgs_dict[h][s][name]['E'] = e_agg_dict[name]
             avgs_dict[h][s][name]['C'] = c_agg_dict[name]
+
+    return avgs_dict
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each
