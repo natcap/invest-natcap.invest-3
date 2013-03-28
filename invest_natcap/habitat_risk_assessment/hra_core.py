@@ -118,9 +118,10 @@ def execute(args):
 
     if 'aoi_tables' in locals():
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
-        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'])
+        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'],
+                        args['max_risk'])
 
-def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
+def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
@@ -188,11 +189,29 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
             #within it. 
             file.write("<tr><td rowspan = " + len(avgs_dict[habitat][stressor]) + \
                     + stressor + "</td>")
-                
-                #Now add a row for each aoi within the sub region file.
-                for aoi in avgs[habitat][stressor]:
+            
+            #Want to set the first AOI here so that it's in the first row, along
+            #with the "beginning" of the stressor cell. Recall that dict[h][s]
+            #is a list, so we can index directly.
+            file.write("<td>" + avgs_dict[habitat][stressor][0]['Name'] + \
+                "</td><td>" +  avgs_dict[habitat][stressor][0]['E'] + \
+                "</td><td>" + avgs_dict[habitat][stressor][0]['C'] + \
+                "</td><td>" +  avgs_dict[habitat][stressor][0]['Risk'] + \
+                "</td><td>" +  \
+                avgs_dict[habitat][stressor][0]['Risk'] / max_risk + "</td></tr>")
 
-                    file.write("<td>" + aoi + "</td>")
+            for element in avgs_dict[habitat][stressor][1::]:
+
+                file.write("<tr>")
+                file.write("<td>" + element['Name']+ "</td>")
+                file.write("<td>" + element['E']+ "</td>")
+                file.write("<td>" + element['C']+ "</td>")
+                file.write("<td>" + element['Risk']+ "</td>")
+                file.write("<td>" + element['Risk'] / max_risk+ "</td>")
+                file.write("</tr>")
+
+        file.write("</table")
+            
 
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
