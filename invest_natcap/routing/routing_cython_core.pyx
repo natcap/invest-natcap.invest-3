@@ -430,7 +430,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
 
 def calculate_flow_graph(
-    flow_direction_uri, outflow_weights_uri, outflow_direction_uri):
+    flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
+    dem_uri=None):
     """This function calculates the flow graph from a d-infinity based
         flow algorithm to include including source/sink cells
         as well as a data structures to assist in walking up the flow graph.
@@ -447,6 +448,9 @@ def calculate_flow_graph(
             3 2 1
             4 x 0
             5 6 7
+
+        dem_uri - (optional) if present, returns a sink cell list sorted by
+            "lowest" height to highest.  useful for flow accumulation sorting
 
         returns sink_cell_set, source_cell_set
             where these sets indicate the cells with only inflow (sinks) or
@@ -580,6 +584,33 @@ def calculate_flow_graph(
     LOGGER.debug("Calculating sink and source cells")
     sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
     source_cell_set = outflow_cell_set.difference(inflow_cell_set)
+
+    #make a sink cell list sorted by height of lowest neighbor pixel
+    if dem_uri != None:
+        memory_file = open(raster_utils.temporary_filename(), 'w')
+        dem_array = raster_utils.load_memory_mapped_array(
+            dem_uri, memory_file)
+        dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
+        lowest_neighbor_memo = {}
+        def lowest_neighbor(index):
+            if index in lowest_neighbor_memo:
+                return lowest_neighbor_memo[index]
+            row_index = index / n_cols
+            col_index = index % n_cols
+            cell_height = dem_array[row_index, col_index]
+            min_neighbor = None
+            for row_offset, col_offset in [
+                (1, 0), (-1, 0), (0, 1), (0, -1), 
+                (1, 1), (-1, 1), (1, -1), (-1, -1)]:
+                cur_height = dem_array[
+                    row_index + row_offset, col_index + col_offset]
+                if cur_height == dem_nodata:
+                    continue
+                if min_neighbor == None or cur_height < min_neighbor:
+                    min_neighbor = cur_height
+            lowest_neighbor_memo[index] = min_neighbor
+            return min_neighbor
+        sink_cell_set = sorted(sink_cell_set, key=lowest_neighbor)
 
     LOGGER.info('Done calculating flow path elapsed time %ss' % \
                     (time.clock()-start))
