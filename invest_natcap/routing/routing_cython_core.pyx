@@ -338,8 +338,12 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
                 #LOGGER.debug('e_0 %s e_1 %s e_2 %s' % (e_0, e_1, e_2))
                 
                 #avoid calculating a slope on nodata values
-                if e_1 == dem_nodata or e_2 == dem_nodata: 
-                    break #fallthrough to D8
+                if e_1 == dem_nodata:
+                    flow_array[row_index, col_index] = 3.14159262 / 4.0 * facet_index
+                    break
+                if e_2 == dem_nodata:
+                    flow_array[row_index, col_index] = 3.14159262 / 4.0 * (facet_index + 1)
+                    break
                  
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
