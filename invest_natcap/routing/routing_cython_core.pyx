@@ -2,6 +2,7 @@ import collections
 import tempfile
 import time
 import logging
+import sys
 
 import numpy
 cimport numpy
@@ -586,37 +587,6 @@ def calculate_flow_graph(
     source_cell_set = outflow_cell_set.difference(inflow_cell_set)
 
     LOGGER.debug('n_cols n_rows %s %s' % (n_cols, n_rows))
-    #make a sink cell list sorted by height of lowest neighbor pixel
-    if dem_uri != None:
-        memory_file = tempfile.TemporaryFile()
-        dem_array = raster_utils.load_memory_mapped_array(
-            dem_uri, memory_file)
-        dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
-        lowest_neighbor_memo = {}
-        LOGGER.debug('dem array size %s' % (str(dem_array.shape)))
-        def lowest_neighbor(index):
-            if index in lowest_neighbor_memo:
-                return lowest_neighbor_memo[index]
-            row_index = index / n_cols
-            col_index = index % n_cols
-            cell_height = dem_array[row_index, col_index]
-            min_neighbor = None
-            for row_offset, col_offset in [
-                (1, 0), (-1, 0), (0, 1), (0, -1),
-                (1, 1), (-1, 1), (1, -1), (-1, -1)]:
-                try:
-                    cur_height = dem_array[
-                        row_index + row_offset, col_index + col_offset]
-                    if cur_height == dem_nodata or cur_height == cell_height:
-                        continue
-                    if min_neighbor == None or cur_height < min_neighbor:
-                        min_neighbor = cur_height
-                except IndexError:
-                    #LOGGER.debug('on the edge, skipping (%s %s)' % (row_index + row_offset, col_index + col_offset))
-                    pass
-            lowest_neighbor_memo[index] = min_neighbor
-            return min_neighbor
-        sink_cell_set = [sorted(sink_cell_set, key=lowest_neighbor)[0]]
 
     LOGGER.info('Done calculating flow path elapsed time %ss' % \
                     (time.clock()-start))
@@ -647,6 +617,99 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
         'Done calculating d-infinity elapsed time %ss' % (time.clock() - start))
 
 
+def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
+    """A special case function to see if we have an esri style etched stream
+       layer.
+
+        dem_uri - the path to a DEM GDAL dataset
+        flow_direction_uri - the path to a flow direction dataset whose
+            flow directions have already been defined, but may have undefined
+            flow directions due to plateaus.  The value of this raster will
+            be modified where flow directions that were previously undefined
+            will be resolved.
+
+        returns nothing"""
+       
+    LOGGER.info('resolving potential esri etchned stream directions')
+    dem_dataset = gdal.Open(dem_uri)
+    cdef float dem_nodata
+    dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
+
+    dem_mem_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = raster_utils.load_memory_mapped_array(
+        dem_uri, dem_mem_file, array_type=numpy.float32)
+
+    flow_direction_dataset = gdal.Open(flow_direction_uri, osgeo.gdalconst.GA_Update)
+    cdef float flow_direction_nodata
+    flow_direction_band, flow_direction_nodata  = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
+
+    flow_direction_memory_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
+        flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
+
+    cdef int n_cols = dem_dataset.RasterXSize
+    cdef int n_rows = dem_dataset.RasterYSize
+    cdef int row_index
+    cdef int col_index
+    cdef int neighbor_index
+
+    cdef int* row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int* col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    #A dictionary indexed by height of pixel
+    esri_stream_entry_points = {}
+
+    for row_index in xrange(n_rows):
+        for col_index in xrange(n_cols):
+            dem_value = dem_array[row_index, col_index]
+            if dem_value == dem_nodata:
+                continue
+
+            flow_direction_value = flow_direction_array[row_index, col_index]
+            if flow_direction_value != flow_direction_nodata:
+                continue
+            
+            is_on_edge = False
+            min_neighbor = None
+            neighbor_at_same_height = False
+            for neighbor_index in xrange(8):
+                neighbor_row = row_index + row_offsets[neighbor_index]
+                neighbor_col = col_index + col_offsets[neighbor_index]
+
+                #Search the neighbors to see 1) if it's on the edge and 2) it has
+                #a neighbor at the same height; this suggests the start of an
+                #esri etched stream network
+                try:
+                    neighbor_height = dem_array[neighbor_row, neighbor_col]
+
+                    if neighbor_height == dem_nodata:
+                        is_on_edge = True
+
+                    if neighbor_height == dem_value:
+                        neighbor_at_same_height = True
+
+                    if min_neighbor == None or neighbor_height < min_neighbor:
+                        min_neighbor = neighbor_height
+                except IndexError:
+                    #LOGGER.debug('on the edge, skipping (%s %s)' % (row_index + row_offset, col_index + col_offset))
+                    pass
+
+            if is_on_edge and neighbor_at_same_height:
+                #This is a potential entrance/exit for an ESRI etched stream, follow it back.
+                pixel_index = row_index * n_cols + col_index
+
+                try:
+                    esri_stream_entry_points[dem_value][min_neighbor].add(pixel_index)
+                except KeyError:
+                    esri_stream_entry_points[dem_value] = {
+                        min_neighbor: set([pixel_index])
+                        }
+
+    print esri_stream_entry_points
+    sys.exit(-1)
+
+
 def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     """Take a raster that has flow directions already defined and fill in
         the undefined ones.
@@ -659,6 +722,10 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
             will be resolved.
 
         returns nothing"""
+
+    #It's possible that we're dealing with a case where ArcHydro has etched
+    #streams into the dem
+    resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     dem_dataset = gdal.Open(dem_uri)
     cdef float dem_nodata
@@ -677,13 +744,11 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
         flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
 
-
     cdef int n_cols = dem_dataset.RasterXSize
     cdef int n_rows = dem_dataset.RasterYSize
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] distance_array = numpy.empty((n_rows, n_cols), dtype=numpy.float32)
     distance_array[:] = -1.0
-
 
     ### Grid cell direction reference
     # 3 2 1
@@ -700,7 +765,6 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     cdef int row_index, col_index, neighbor_index, neighbor_row, neighbor_col, min_direction
     cdef double dem_value, flow_direction_value, min_distance, neighbor_distance, dem_neighbor_value
     cdef char dem_neighbors_valid
-
 
     #Build an initial list of cells to depth first search through to find
     #minimum distances
@@ -739,7 +803,7 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
                     #Here we found a flow direction that is valid
                     #we can build from here
                     flow_direction_neighbors_valid = True
-                
+
             if dem_neighbors_valid and flow_direction_neighbors_valid:
                 #Then we can define a valid direction
                 cells_to_process.push(row_index * n_cols + col_index)
