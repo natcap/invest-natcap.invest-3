@@ -30,6 +30,12 @@ ARCHITECTURE = invest_version.py_arch
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
+#This makes a destination directory with the name invest_version_datetime.
+#Will make it easy to see the difference between different builds of the 
+#same version.
+DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
+    ARCHITECTURE)
+
 class ZipCommand(Command):
     description = 'Custom command to recurseively zip a folder'
     user_options = [
@@ -37,8 +43,7 @@ class ZipCommand(Command):
         ('zip-file=', None, 'Output zip file path')]
 
     def initialize_options(self):
-        version = 'invest_' + VERSION.replace(':', '_').replace('.', '_')
-        self.zip_dir = version
+        self.zip_dir = DIST_DIR
         self.zip_file = str(version + '.zip')
 
     def finalize_options(self):
@@ -89,12 +94,6 @@ packages = ['invest_natcap',
             'invest_natcap.aesthetic_quality',
             'invest_natcap.habitat_risk_assessment',
             'invest_natcap.routing']
-
-#This makes a destination directory with the name invest_version_datetime.
-#Will make it easy to see the difference between different builds of the 
-#same version.
-DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
-    ARCHITECTURE)
 
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
