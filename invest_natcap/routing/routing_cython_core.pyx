@@ -585,13 +585,15 @@ def calculate_flow_graph(
     sink_cell_set = inflow_cell_set.difference(outflow_cell_set)
     source_cell_set = outflow_cell_set.difference(inflow_cell_set)
 
+    LOGGER.debug('n_cols n_rows %s %s' % (n_cols, n_rows))
     #make a sink cell list sorted by height of lowest neighbor pixel
     if dem_uri != None:
-        memory_file = open(raster_utils.temporary_filename(), 'w')
+        memory_file = tempfile.TemporaryFile()
         dem_array = raster_utils.load_memory_mapped_array(
             dem_uri, memory_file)
         dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
         lowest_neighbor_memo = {}
+        LOGGER.debug('dem array size %s' % (str(dem_array.shape)))
         def lowest_neighbor(index):
             if index in lowest_neighbor_memo:
                 return lowest_neighbor_memo[index]
@@ -600,17 +602,21 @@ def calculate_flow_graph(
             cell_height = dem_array[row_index, col_index]
             min_neighbor = None
             for row_offset, col_offset in [
-                (1, 0), (-1, 0), (0, 1), (0, -1), 
+                (1, 0), (-1, 0), (0, 1), (0, -1),
                 (1, 1), (-1, 1), (1, -1), (-1, -1)]:
-                cur_height = dem_array[
-                    row_index + row_offset, col_index + col_offset]
-                if cur_height == dem_nodata:
-                    continue
-                if min_neighbor == None or cur_height < min_neighbor:
-                    min_neighbor = cur_height
+                try:
+                    cur_height = dem_array[
+                        row_index + row_offset, col_index + col_offset]
+                    if cur_height == dem_nodata or cur_height == cell_height:
+                        continue
+                    if min_neighbor == None or cur_height < min_neighbor:
+                        min_neighbor = cur_height
+                except IndexError:
+                    #LOGGER.debug('on the edge, skipping (%s %s)' % (row_index + row_offset, col_index + col_offset))
+                    pass
             lowest_neighbor_memo[index] = min_neighbor
             return min_neighbor
-        sink_cell_set = sorted(sink_cell_set, key=lowest_neighbor)
+        sink_cell_set = [sorted(sink_cell_set, key=lowest_neighbor)[0]]
 
     LOGGER.info('Done calculating flow path elapsed time %ss' % \
                     (time.clock()-start))

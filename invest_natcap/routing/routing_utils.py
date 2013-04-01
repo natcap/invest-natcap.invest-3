@@ -80,7 +80,7 @@ def route_flux(
 
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri, dem_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)

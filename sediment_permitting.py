@@ -1,5 +1,7 @@
-from invest_natcap.sediment import sediment
+import os
 
+from invest_natcap.sediment import sediment
+from invest_natcap.routing import routing_utils
 
 def base_run(workspace_dir):
     args = {}
@@ -13,6 +15,7 @@ def base_run(workspace_dir):
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 70.0
     args['sediment_threshold_table_uri'] = '../Pucallpa_subset/sed_thresh.csv'
+#    routing_utils.flow_accumulation(args['dem_uri'], os.path.join(args['workspace_dir'], 'flux_output_uri.tif'))
     sediment.execute(args)
 
 if __name__ == '__main__':
