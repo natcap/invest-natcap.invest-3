@@ -685,9 +685,11 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
 
                     if neighbor_height == dem_nodata:
                         is_on_edge = True
+                        continue
 
                     if neighbor_height == dem_value:
                         neighbor_at_same_height = True
+                        continue
 
                     if min_neighbor == None or neighbor_height < min_neighbor:
                         min_neighbor = neighbor_height
