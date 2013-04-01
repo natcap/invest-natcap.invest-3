@@ -44,7 +44,7 @@ class ZipCommand(Command):
 
     def initialize_options(self):
         self.zip_dir = DIST_DIR
-        self.zip_file = str(version + '.zip')
+        self.zip_file = str(self.zip_dir + '.zip')
 
     def finalize_options(self):
         """This function, though empty, is requred to exist in subclasses of
