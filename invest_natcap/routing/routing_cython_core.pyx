@@ -727,6 +727,8 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
 
     #It's possible that we're dealing with a case where ArcHydro has etched
     #streams into the dem
+    LOGGER.info('resolving undefined flow directions')
+
     resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     dem_dataset = gdal.Open(dem_uri)

@@ -64,7 +64,8 @@ def route_flux(
 
         returns nothing"""
 
-    dem_uri = raster_utils.temporary_filename()
+#    dem_uri = raster_utils.temporary_filename()
+    dem_uri = 'clipped_dem.tif'
     source_uri = raster_utils.temporary_filename()
     absorption_rate_uri = raster_utils.temporary_filename()
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
