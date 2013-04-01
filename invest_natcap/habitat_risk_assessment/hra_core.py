@@ -6,6 +6,7 @@ import os
 import numpy as np
 import collections 
 import math
+import datetime
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -117,9 +118,10 @@ def execute(args):
 
     if 'aoi_tables' in locals():
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
-        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'])
+        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'],
+                        args['max_risk'])
 
-def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
+def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
@@ -144,22 +146,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
             an area of E/C/Risk values.
      
      Output:
-
-     --Intermediate--
-        avgs_dict- A multi level dictionary to hold the average values that
-            will be placed into the HTML table.
-
-            {'HabitatName':
-                {'StressorName':
-                    {'AOI_Name':
-                        {'E': 4.6, 'C': 2.8, 'Risk': 4.2},
-                        ...
-                    },
-                    ...
-                },
-                ....
-            }
-     --Final--
         A set of HTML tables which will contain averaged values of E, C, and
         risk for each H, S pair within each AOI. Additionally, the tables will
         contain a column for risk %, which is the averaged risk value in that
@@ -170,6 +156,108 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
 
     #Let's pre-calc stuff so we don't have to worry about it in the middle of
     #the file creation.
+    avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+
+    filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
+                   % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
+
+    file = open(filename, "w")
+
+    file.write("<html>")
+    file.write("<title>" + "InVEST HRA" + "</title>")
+    file.write("<CENTER><H1>" + "Habitat Risk Assessment Model" + "</H1></CENTER>")
+    file.write("<br>")
+    file.write("This page contains results from running the InVEST Habitat Risk \
+    Assessment model." + "<p>" + "Each table displays values on a per-habitat \
+    basis. For each overlapping stressor within the model, the averages for the \
+    desired sub-regions are presented. C, E, and Risk values are calculated as \
+    an average across a given subregion. Risk Percentage is calculated as a \
+    function of total potential risk within that area.")
+    file.write("<br><br>")
+    file.write("<HR>")
+
+    #Now, all of the actual calculations within the table. We want to make one
+    #table for each habitat that is present within this model run.
+    for habitat in avgs_dict:
+
+        file.write("<H2>" + habitat + "</H2>")
+        file.write('<table border="1", cellpadding="5">')
+
+        for stressor in avgs_dict[habitat]:
+        
+            #Want the stressor row to span the number of AOIs that are included
+            #within it. 
+            file.write("<tr><td rowspan = " + len(avgs_dict[habitat][stressor]) + \
+                    + stressor + "</td>")
+            
+            #Want to set the first AOI here so that it's in the first row, along
+            #with the "beginning" of the stressor cell. Recall that dict[h][s]
+            #is a list, so we can index directly.
+            file.write("<td>" + avgs_dict[habitat][stressor][0]['Name'] + \
+                "</td><td>" +  avgs_dict[habitat][stressor][0]['E'] + \
+                "</td><td>" + avgs_dict[habitat][stressor][0]['C'] + \
+                "</td><td>" +  avgs_dict[habitat][stressor][0]['Risk'] + \
+                "</td><td>" +  \
+                avgs_dict[habitat][stressor][0]['Risk'] / max_risk + "</td></tr>")
+
+            #For all remaining AOIs on that H-S pairing.
+            for element in avgs_dict[habitat][stressor][1::]:
+
+                file.write("<tr>")
+                file.write("<td>" + element['Name']+ "</td>")
+                file.write("<td>" + element['E']+ "</td>")
+                file.write("<td>" + element['C']+ "</td>")
+                file.write("<td>" + element['Risk']+ "</td>")
+                file.write("<td>" + element['Risk'] / max_risk+ "</td>")
+                file.write("</tr>")
+
+        #End of the habitat-specific table
+        file.write("</table>")
+
+    #End of the page.
+    file.write("</html>")
+    file.close()
+
+    #When the model run is complete, open the page of results.
+    webbrowser.open(filename)
+
+
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
+    '''This funtion is a helper to make_aoi_tables, and will just handle
+    pre-calculation of the average values for each aoi zone.
+
+    Input:
+        inter_dir- The directory which contains the individual E and C rasters.
+            We can use these to get the avg. E and C values per area. Since we
+            don't really have these in any sort of dictionary, will probably
+            just need to explicitly call each individual file based on the
+            names that we pull from the risk_dict keys.
+        risk_dict- A simple dictionary that maps a tuple of 
+            (Habitat, Stressor) to the URI for the risk raster created when the 
+            various sub components (H/S/H_S) are combined.
+
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+        aoi_uri- The location of the AOI zone files. Each feature within this
+            file (identified by a 'name' attribute) will be used to average 
+            an area of E/C/Risk values.
+
+    Returns:
+        avgs_dict- A multi level dictionary to hold the average values that
+            will be placed into the HTML table.
+
+            {'HabitatName':
+                {'StressorName':
+                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                        {...},
+                    ...
+                    ]
+                },
+                ....
+            }
+    '''
     avgs_dict = {}
 
     shape = ogr.Open(aoi_uri)
@@ -181,7 +269,7 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
         if h not in avgs_dict:
             avgs_dict[h] = {}
         if s not in avgs_dict[h]:
-            avgs_dict[h][s] = {}
+            avgs_dict[h][s] = []
 
         #GETTING MEANS OF THE RISK RASTERS HERE
 
@@ -217,10 +305,10 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri):
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
         for name in r_agg_dict:
-            
-            avgs_dict[h][s][name]['Risk'] = r_agg_dict[name]
-            avgs_dict[h][s][name]['E'] = e_agg_dict[name]
-            avgs_dict[h][s][name]['C'] = c_agg_dict[name]
+           
+            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[name],
+                                    'C': c_agg_dict[name], 'Risk': r_agg_dict[name]})
+    return avgs_dict
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each
