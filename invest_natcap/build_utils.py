@@ -4,12 +4,13 @@ import os
 import logging
 import traceback
 import platform
+from distutils.sysconfig import get_python_lib
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 LOGGER = logging.getLogger('build_utils')
 
-def invest_version(uri=None, force_new=False):
+def invest_version(uri=None, force_new=False, attribute='version_str'):
     """Get the version of InVEST by importing invest_natcap.invest_version and
     using the appropriate version string from that module.  If
     invest_natcap.invest_version cannot be found, it is programmatically
@@ -19,6 +20,8 @@ def invest_version(uri=None, force_new=False):
     the invest_natcap package, or else we run the risk of causing invest_natcap
     programs to crash if the do not have CLI mercurial installed.
 
+    attribute - an attribute to fetch from the invest_version file.
+
     Returns a python bytestring with the version identifier, as appropriate for
     the development version or the release version."""
 
@@ -27,12 +30,12 @@ def invest_version(uri=None, force_new=False):
         return os.path.splitext(os.path.basename(uri))[0]
 
     if uri == None:
-        new_uri = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-            'invest_version.pyc')
+        new_uri = os.path.join(os.path.abspath(os.path.dirname(get_python_lib())),
+            'site-packages', 'invest_natcap', 'invest_version.pyc')
     else:
         new_uri = uri
 
-    LOGGER.debug('Getting the InVEST version for URI=%s' % uri)
+    LOGGER.debug('Getting the InVEST version for URI=%s' % new_uri)
     try:
         name = get_file_name(new_uri)
         new_uri_extension = os.path.splitext(new_uri)[1]
@@ -77,13 +80,16 @@ def invest_version(uri=None, force_new=False):
             # When this happens, return the exception as a string.
             LOGGER.debug('ValueError encountered: %s', str(e))
             return str(e)
-    elif not found_file and uri == None:
+    elif not found_file and uri == None and attribute == 'version_str':
         # If we have not found the version file and no URI is provided, we need
         # to get the version info from HG.
 #        print 'getting version from hg'
+        LOGGER.debug('Getting the version number from HG')
         return get_version_from_hg()
 
-    return version_info.version_str
+    LOGGER.debug('Returning attribute %s', attribute)
+    return getattr(version_info, attribute)
+
 
 def write_version_file(filepath):
     """Write the version number to the file designated by filepath.  Returns
@@ -126,7 +132,7 @@ def write_version_file(filepath):
         full_version_string = build_dev_id(build_id)
     else:
         full_version_string = release_version
-    fp.write("version_str = '%s (%s)'\n" % (full_version_string, architecture))
+    fp.write("version_str = '%s'\n" % (full_version_string))
 
     # Close the file.
     fp.close()
