@@ -25,6 +25,8 @@ VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
     force_new=True)
 # sanitize the version tag for distutils.
 VERSION = VERSION.replace(':', '_').replace(' ', '_')
+invest_natcap = reload(invest_natcap)
+build_utils = reload(build_utils)
 ARCHITECTURE = build_utils.invest_version(attribute='py_arch')
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
