@@ -25,6 +25,7 @@ VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
     force_new=True)
 # sanitize the version tag for distutils.
 VERSION = VERSION.replace(':', '_').replace(' ', '_')
+ARCHITECTURE = build_utils.invest_version(attribute='py_arch')
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
@@ -91,7 +92,8 @@ packages = ['invest_natcap',
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
 #same version.
-DIST_DIR = 'invest_'+VERSION.replace('.','_').replace(':', '_')
+DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
+    ARCHITECTURE)
 
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
