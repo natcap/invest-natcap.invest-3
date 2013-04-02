@@ -666,9 +666,9 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
             if dem_value == dem_nodata:
                 continue
 
-            flow_direction_value = flow_direction_array[row_index, col_index]
-            if flow_direction_value != flow_direction_nodata:
-                continue
+#            flow_direction_value = flow_direction_array[row_index, col_index]
+#            if flow_direction_value != flow_direction_nodata:
+#                continue
             
             is_on_edge = False
             min_neighbor = None
