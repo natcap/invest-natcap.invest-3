@@ -88,7 +88,10 @@ class ModelUI(base_widgets.ExecRoot):
         links = []
         try:
             import invest_natcap
-            links.append('InVEST Version %s' % invest_natcap.__version__)
+            from invest_natcap import build_utils
+            architecture = build_utils.invest_version(attribute='py_arch')
+            links.append('InVEST Version %s (%s)' % (invest_natcap.__version__,
+                architecture))
         except AttributeError:
             links.append('InVEST Version UNKNOWN')
 

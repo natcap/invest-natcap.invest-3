@@ -90,7 +90,8 @@ def execute(args):
     dem_nodata = raster_utils.get_nodata_from_uri(args['dem_uri'])
 
     #Clip the dem and cast to a float
-    clipped_dem_uri = raster_utils.temporary_filename()
+    clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
+#raster_utils.temporary_filename()
     raster_utils.vectorize_datasets(
         [args['dem_uri']], float, clipped_dem_uri,
         gdal.GDT_Float32, dem_nodata, out_pixel_size, "intersection",
