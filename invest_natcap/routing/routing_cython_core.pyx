@@ -702,11 +702,8 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 try:
                     esri_stream_entry_points[dem_value][min_neighbor].add(pixel_index)
                 except KeyError:
-                    esri_stream_entry_points[dem_value] = {
-                        min_neighbor: set([pixel_index])
-                        }
-
-    print esri_stream_entry_points
+                    esri_stream_entry_points[dem_value][min_neighbor] = set([pixel_index])
+    print esri_stream_entry_points[sorted(esri_stream_entry_points.keys())[0]]
     sys.exit(-1)
 
 
@@ -726,7 +723,6 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     #It's possible that we're dealing with a case where ArcHydro has etched
     #streams into the dem
     LOGGER.info('resolving undefined flow directions')
-
     resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     dem_dataset = gdal.Open(dem_uri)
