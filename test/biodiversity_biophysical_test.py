@@ -17,7 +17,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
             possible inputs"""
         #raise SkipTest
         input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/'
+        out_dir = './data/test_out/biodiversity/samp_workspace/all_inputs/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
@@ -25,8 +25,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         
         args = {}
         args['workspace_dir'] = out_dir
-        args['landuse_cur_uri'] = \
-                os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
         args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
         args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
         args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
@@ -59,10 +58,446 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
         invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
         invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_suffix(self):
+        """A regression test for the biodiversity model with all 
+            possible inputs and suffix"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/suffix/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        args['suffix'] = 'test'
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/suffix/'
+        output_dir = os.path.join(out_dir, 'output')
+
+        reg_rarity_c = os.path.join(regression_dir, 'rarity_c_test.tif')
+        reg_rarity_f = os.path.join(regression_dir, 'rarity_f_test.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c_test.tif')
+        reg_quality_f = os.path.join(regression_dir, 'quality_out_f_test.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c_test.tif')
+        reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f_test.tif')
+
+        rarity_c = os.path.join(output_dir, 'rarity_c_test.tif')
+        rarity_f = os.path.join(output_dir, 'rarity_f_test.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c_test.tif')
+        quality_f = os.path.join(output_dir, 'quality_out_f_test.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c_test.tif')
+        deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f_test.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_no_options(self):
+        """A regression test for the biodiversity model with only the 
+            required inputs"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/no_options/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        #args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        #args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/no_access/'
+        output_dir = os.path.join(out_dir, 'output')
+
+        #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        #reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        #reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        #reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        #rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        #rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        #quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        #deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
         invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_c, quality_c)
-        invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_f, quality_f)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_f, quality_f)
         invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_c, deg_sum_c)
-        invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_f, deg_sum_f)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_with_access(self):
+        """A regression test for the biodiversity model with only the 
+            optional access input"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/access/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        #args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        #args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/'
+        output_dir = os.path.join(out_dir, 'output')
+
+        #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        #reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        #reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        #reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        #rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        #rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        #quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        #deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_c, quality_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_c, deg_sum_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_base(self):
+        """A regression test for the biodiversity model with both
+            current and base landcovers. No access or future lancover"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/cur_bse/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        #args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/no_access'
+        output_dir = os.path.join(out_dir, 'output')
+
+        reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        #reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        #reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        #reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        #rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        #quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        #deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        #invest_test_core.assertTwoDatasetEqualURI(
+        #        self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        #invest_test_core.assertTwoDatasetEqualURI(
+        #        self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_future(self):
+        """A regression test for the biodiversity model with both
+            current and future landcovers. No access or base lancover"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/cur_fut/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        #args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/no_access'
+        output_dir = os.path.join(out_dir, 'output')
+
+        #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        #reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        #rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        #rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_fut_access(self):
+        """A regression test for the biodiversity model with both
+            current and future landcovers as well as access. No base lancover"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/fut_access/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        #args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/'
+        output_dir = os.path.join(out_dir, 'output')
+
+        #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        #reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        #rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        #rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_fut_bse(self):
+        """A regression test for the biodiversity model with both
+            current, future, and base landcovers. No access"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/fut_bse/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/no_access'
+        output_dir = os.path.join(out_dir, 'output')
+
+        reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression_bse_access(self):
+        """A regression test for the biodiversity model with both
+            current and base landcovers as well as access. No future lancover"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/test_out/biodiversity/samp_workspace/bse_access/'
+      
+        # copy the workspace to test_out so that it can be properly managed on
+        # everyones machine without polluting their test/data/ directory
+        shutil.copytree(input_dir, out_dir)
+        
+        args = {}
+        args['workspace_dir'] = out_dir
+        args['landuse_cur_uri'] = os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        #args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        #args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/'
+        output_dir = os.path.join(out_dir, 'output')
+
+        reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        #reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        #reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        #reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        rarity_c = os.path.join(output_dir, 'rarity_c.tif')
+        #rarity_f = os.path.join(output_dir, 'rarity_f.tif')
+        quality_c = os.path.join(output_dir, 'quality_out_c.tif')
+        #quality_f = os.path.join(output_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(output_dir, 'deg_sum_out_c.tif')
+        #deg_sum_f = os.path.join(output_dir, 'deg_sum_out_f.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        #invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_quality_c, quality_c)
+        #invest_test_core.assertTwoDatasetEqualURI(
+        #        self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_deg_sum_c, deg_sum_c)
+        #invest_test_core.assertTwoDatasetEqualURI(
+        #        self, reg_deg_sum_f, deg_sum_f)
     
     def test_biodiversity_biophysical_sample_regression2(self):
         """A regression test for the biodiversity model with Current and Future
