@@ -693,7 +693,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                     #LOGGER.debug('on the edge, skipping (%s %s)' % (row_index + row_offset, col_index + col_offset))
                     pass
 
-            if is_on_edge and neighbor_at_same_height:
+            if is_on_edge and neighbor_at_same_height and min_neighbor != None:
                 #This is a potential entrance/exit for an ESRI etched stream, follow it back.
                 pixel_index = row_index * n_cols + col_index
                 if dem_value not in esri_stream_entry_points:
