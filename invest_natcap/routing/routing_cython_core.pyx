@@ -704,6 +704,17 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 except KeyError:
                     esri_stream_entry_points[dem_value][min_neighbor] = set([pixel_index])
     print esri_stream_entry_points[sorted(esri_stream_entry_points.keys())[0]]
+
+
+    #Do a simple D8 resolution of the cell directions
+    #while stack is not empty:
+    #    cell = pop the stack
+    #    for all neighbors of that cell:
+    #        if that neighbor is in bounds and equal height and no direction:
+    #            point the neighbor flow to the current cell
+    #            push the neighbor on the stack
+
+
     sys.exit(-1)
 
 
