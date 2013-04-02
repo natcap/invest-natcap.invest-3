@@ -666,10 +666,6 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
             if dem_value == dem_nodata:
                 continue
 
-#            flow_direction_value = flow_direction_array[row_index, col_index]
-#            if flow_direction_value != flow_direction_nodata:
-#                continue
-            
             is_on_edge = False
             min_neighbor = None
             neighbor_at_same_height = False
@@ -691,7 +687,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                         neighbor_at_same_height = True
                         continue
 
-                    if min_neighbor == None or neighbor_height < min_neighbor:
+                    if (min_neighbor == None or neighbor_height < min_neighbor) and neighbor_height > dem_value:
                         min_neighbor = neighbor_height
                 except IndexError:
                     #LOGGER.debug('on the edge, skipping (%s %s)' % (row_index + row_offset, col_index + col_offset))
@@ -700,6 +696,8 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
             if is_on_edge and neighbor_at_same_height:
                 #This is a potential entrance/exit for an ESRI etched stream, follow it back.
                 pixel_index = row_index * n_cols + col_index
+                if dem_value not in esri_stream_entry_points:
+                    esri_stream_entry_points[dem_value] = {}
 
                 try:
                     esri_stream_entry_points[dem_value][min_neighbor].add(pixel_index)
