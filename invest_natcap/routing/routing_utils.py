@@ -64,7 +64,8 @@ def route_flux(
 
         returns nothing"""
 
-    dem_uri = raster_utils.temporary_filename()
+#    dem_uri = raster_utils.temporary_filename()
+    dem_uri = 'clipped_dem.tif'
     source_uri = raster_utils.temporary_filename()
     absorption_rate_uri = raster_utils.temporary_filename()
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
@@ -80,7 +81,7 @@ def route_flux(
 
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri, dem_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
