@@ -298,7 +298,7 @@ def biophysical(args):
         base_properties = raster_utils.get_raster_properties(lulc_base)
         base_area = base_properties['width'] * base_properties['height']
 
-        base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
+        base_nodata = int(lulc_base.GetRasterBand(1).GetNoDataValue())
         rarity_nodata = float(np.finfo(np.float32).min)
         
         lulc_code_count_b = raster_pixel_count(lulc_base)
@@ -312,7 +312,7 @@ def biophysical(args):
                 lulc_properties = raster_utils.get_raster_properties(lulc_x)
                 lulc_area = lulc_properties['width'] * lulc_properties['height']
                 
-                lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
+                lulc_nodata = int(lulc_x.GetRasterBand(1).GetNoDataValue())
                 
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
                         lulc_nodata) 
@@ -329,7 +329,7 @@ def biophysical(args):
                             nodata values or the cover_x value
                         """
                     if base == base_nodata or cover_x == lulc_nodata:
-                        return out_nodata
+                        return base_nodata
                     return cover_x 
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
@@ -345,7 +345,7 @@ def biophysical(args):
                 new_cover = \
                     raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
                             raster_out_uri=new_cover_uri,
-                            datatype=gdal.GDT_Int32, nodata=out_nodata)
+                            datatype=gdal.GDT_Int32, nodata=base_nodata)
                 
                 LOGGER.debug('Finished vectorize on trim_op')
                 
