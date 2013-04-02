@@ -32,6 +32,11 @@ def invest_version(uri=None, force_new=False, attribute='version_str'):
     if uri == None:
         new_uri = os.path.join(os.path.abspath(os.path.dirname(get_python_lib())),
             'site-packages', 'invest_natcap', 'invest_version.pyc')
+        if not os.path.exists(new_uri):
+            LOGGER.debug('URI %s does not exist.  Defaulting to local paths',
+                new_uri)
+            new_uri = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                'invest_version.pyc')
     else:
         new_uri = uri
 
