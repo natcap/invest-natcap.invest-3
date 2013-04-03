@@ -271,9 +271,11 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     #This matrix holds the flow direction value, initialize to flow_nodata
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = \
-        numpy.memmap(flow_data_file, dtype=numpy.float32, mode='w+',
-                     shape=(n_rows, n_cols))
-    flow_array[:] = flow_nodata
+        raster_utils.load_memory_mapped_array(flow_direction_uri, flow_data_file, array_type=numpy.float32)
+#    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = \
+#        numpy.memmap(flow_data_file, dtype=numpy.float32, mode='w+',
+#                     shape=(n_rows, n_cols))
+#    flow_array[:] = flow_nodata
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  
@@ -318,6 +320,9 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
             #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_array[row_index, col_index] == dem_nodata:
                 flow_array[row_index, col_index] = flow_nodata
+                continue
+
+            if flow_array[row_index, col_index] != flow_nodata:
                 continue
 
             #Calculate the flow flow_direction for each facet
@@ -433,7 +438,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     LOGGER.info("writing flow data to raster")
     flow_band.WriteArray(flow_array)
     raster_utils.calculate_raster_stats(flow_direction_dataset)
-
 
 def calculate_flow_graph(
     flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
@@ -756,9 +760,6 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
             indexes_to_visit.append(neighbor_row * n_cols + neighbor_col)
 
     flow_direction_band.WriteArray(flow_direction_array)
-
-    sys.exit(-1)
-
 
 def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     """Take a raster that has flow directions already defined and fill in
