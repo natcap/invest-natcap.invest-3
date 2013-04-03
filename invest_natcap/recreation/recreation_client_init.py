@@ -12,6 +12,8 @@ import datetime
 import zipfile
 from invest_natcap.raster_utils import temporary_filename
 
+import invest_natcap
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -34,6 +36,7 @@ def urlopen(url,request,tries=3,delay=15,log=LOGGER):
     return success, msg
 
 def reLOGGER(log,msgType,msg):
+    msgType=msgType.strip()
     if msgType == "INFO":
         log.info(msg)
     elif msgType == "DEBUG":
@@ -83,7 +86,40 @@ def execute(args):
     configFile=open(configFileName,'r')
     config=json.loads(configFile.read())
     configFile.close()
-   
+
+    #VERSION AND RELEASE CHECK
+    args["version_info"] = invest_natcap.__version__
+    args["is_release"] = invest_natcap.is_release()
+
+
+    #constructing model parameters
+    attachments = {"version_info" : args["version_info"],
+                   "is_release": args["is_release"]}
+    
+    datagen, headers = multipart_encode(attachments)
+    
+    #constructing server side version
+    url = config["server"]+config["files"]["PHP"]["version"]
+    LOGGER.info("URL: %s." % url)
+    request = urllib2.Request(url, datagen, headers)
+    
+    #opening request and comparing session id
+    success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
+
+    if success:
+        args["sessid"]=sessid
+    else:
+        LOGGER.error("Failed to establish sesssion.")
+        raise urllib2.URLError, msg
+
+    #check log and echo messages while not done
+    LOGGER.info("Checking version.")
+    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
+    logcheck(url,"End version PHP script.",15,LOGGER)
+    
+    LOGGER.info("Finished checking version.")
+
+       
     #VALIDATING MODEL PARAMETERS
     LOGGER.debug("Processing parameters.")
 
@@ -138,6 +174,7 @@ def execute(args):
     
     #opening shapefiles
     attachments={}
+    attachments["sessid"] = args["sessid"]
     zip_file_uri=temporary_filename()
     zip_file=zipfile.ZipFile(zip_file_uri, mode='w')
 
@@ -184,10 +221,8 @@ def execute(args):
     #opening request and saving session id
     success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
-    if success:
-        args["sessid"]=sessid
-    else:
-        LOGGER.error("Failed to start new sesssion.")
+    if not success:
+        LOGGER.error("Failed to reestabilish sesssion.")
         raise urllib2.URLError, msg
         
     LOGGER.debug("Server session %s." % (args["sessid"]))
