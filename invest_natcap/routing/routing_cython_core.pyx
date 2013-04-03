@@ -641,8 +641,8 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, osgeo.gdalconst.GA_Update)
     cdef float flow_direction_nodata
-    flow_direction_band, flow_direction_nodata  = \
-        raster_utils.extract_band_and_nodata(flow_direction_dataset)
+    flow_direction_band, flow_direction_nodata  = (
+        raster_utils.extract_band_and_nodata(flow_direction_dataset))
 
     flow_direction_memory_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
@@ -651,8 +651,14 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
     cdef int n_cols = dem_dataset.RasterXSize
     cdef int n_rows = dem_dataset.RasterYSize
     cdef int row_index
+    cdef int neighbor_row
+    cdef float neighbor_dem_value
+    cdef float dem_value
+    cdef float neighbor_flow_direction
+    cdef int neighbor_col
     cdef int col_index
     cdef int neighbor_index
+    cdef int current_index
 
     cdef int* row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int* col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
@@ -677,18 +683,18 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 #a neighbor at the same height; this suggests the start of an
                 #esri etched stream network
                 try:
-                    neighbor_height = dem_array[neighbor_row, neighbor_col]
+                    neighbor_dem_value = dem_array[neighbor_row, neighbor_col]
 
-                    if neighbor_height == dem_nodata:
+                    if neighbor_dem_value == dem_nodata:
                         is_on_edge = True
                         continue
 
-                    if neighbor_height == dem_value:
+                    if neighbor_dem_value == dem_value:
                         neighbor_at_same_height = True
                         continue
 
-                    if (min_neighbor == None or neighbor_height < min_neighbor) and neighbor_height > dem_value:
-                        min_neighbor = neighbor_height
+                    if (min_neighbor == None or neighbor_dem_value < min_neighbor) and neighbor_dem_value > dem_value:
+                        min_neighbor = neighbor_dem_value
                 except IndexError:
                     #LOGGER.debug('on the edge, skipping (%s %s)' % (row_index + row_offset, col_index + col_offset))
                     pass
@@ -696,17 +702,57 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
             if is_on_edge and neighbor_at_same_height and min_neighbor != None:
                 #This is a potential entrance/exit for an ESRI etched stream, follow it back.
                 pixel_index = row_index * n_cols + col_index
+                #TODO: can we set the outflow direction here?
+
                 if dem_value not in esri_stream_entry_points:
                     esri_stream_entry_points[dem_value] = {}
 
                 try:
                     esri_stream_entry_points[dem_value][min_neighbor].add(pixel_index)
                 except KeyError:
-                    esri_stream_entry_points[dem_value] = {
-                        min_neighbor: set([pixel_index])
-                        }
+                    esri_stream_entry_points[dem_value][min_neighbor] = set([pixel_index])
+    print esri_stream_entry_points[sorted(esri_stream_entry_points.keys())[0]]
 
-    print esri_stream_entry_points
+    indexes_to_visit = []
+    for cell_height in sorted(esri_stream_entry_points, reverse=True):
+        for neighbor_min_height in sorted(esri_stream_entry_points[cell_height], reverse=True):
+            indexes_to_visit.extend(esri_stream_entry_points[cell_height][neighbor_min_height])
+        
+    print indexes_to_visit
+
+    #This makes the outflow directions start at pi and loop to 2pi before wrapping around to 0
+    cdef float* outflow_directions = [3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138, 0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345]
+
+    LOGGER.info('walking along the esri streams')
+
+    #Do a simple D8 resolution of the cell directions
+    while len(indexes_to_visit) > 0:
+        current_index = indexes_to_visit.pop()
+        row_index = current_index / n_cols
+        col_index = current_index % n_cols
+        current_dem_value = dem_array[row_index, col_index]
+        current_flow_direction = flow_direction_array[row_index, col_index]
+        
+        for neighbor_index in xrange(8):
+            neighbor_row = row_index + row_offsets[neighbor_index]
+            neighbor_col = col_index + col_offsets[neighbor_index]
+        
+            if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
+                #out of range, skip
+                continue
+
+            neighbor_dem_value = dem_array[neighbor_row, neighbor_col]
+            neighbor_flow_direction = flow_direction_array[neighbor_row, neighbor_col]
+
+            if neighbor_flow_direction != flow_direction_nodata or neighbor_dem_value == dem_nodata or neighbor_dem_value != current_dem_value:
+                #this neighbor is already set or not part of an esri stream layer
+                continue
+
+            flow_direction_array[neighbor_row, neighbor_col] = outflow_directions[neighbor_index]
+            indexes_to_visit.append(neighbor_row * n_cols + neighbor_col)
+
+    flow_direction_band.WriteArray(flow_direction_array)
+
     sys.exit(-1)
 
 
@@ -726,7 +772,6 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     #It's possible that we're dealing with a case where ArcHydro has etched
     #streams into the dem
     LOGGER.info('resolving undefined flow directions')
-
     resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     dem_dataset = gdal.Open(dem_uri)
