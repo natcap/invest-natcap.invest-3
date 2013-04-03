@@ -106,7 +106,9 @@ def execute(args):
     #opening request and comparing session id
     success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
-    if not success:
+    if success:
+        args["sessid"]=sessid
+    else:
         LOGGER.error("Failed to establish sesssion.")
         raise urllib2.URLError, msg
 
@@ -172,6 +174,7 @@ def execute(args):
     
     #opening shapefiles
     attachments={}
+    attachments["sessid"] = args["sessid"]
     zip_file_uri=temporary_filename()
     zip_file=zipfile.ZipFile(zip_file_uri, mode='w')
 
@@ -218,10 +221,8 @@ def execute(args):
     #opening request and saving session id
     success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
-    if success:
-        args["sessid"]=sessid
-    else:
-        LOGGER.error("Failed to start new sesssion.")
+    if not success:
+        LOGGER.error("Failed to reestabilish sesssion.")
         raise urllib2.URLError, msg
         
     LOGGER.debug("Server session %s." % (args["sessid"]))
