@@ -677,6 +677,8 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
     #A dictionary indexed by height of pixel
     esri_stream_entry_points = {}
 
+    cdef float* outflow_directions = [0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345, 3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138]
+
     for row_index in xrange(n_rows):
         for col_index in xrange(n_cols):
             dem_value = dem_array[row_index, col_index]
@@ -698,6 +700,8 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
 
                     if neighbor_dem_value == dem_nodata:
                         is_on_edge = True
+                        if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
+                            flow_direction_array[neighbor_row, neighbor_col] = outflow_directions[neighbor_index]
                         continue
 
                     if neighbor_dem_value == dem_value:
@@ -729,7 +733,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
             indexes_to_visit.extend(esri_stream_entry_points[cell_height][neighbor_min_height])
         
     #This makes the outflow directions start at pi and loop to 2pi before wrapping around to 0
-    cdef float* outflow_directions = [3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138, 0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345]
+    cdef float* inflow_directions = [3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138, 0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345]
 
     LOGGER.info('walking along the esri streams')
 
@@ -756,7 +760,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 #this neighbor is already set or not part of an esri stream layer
                 continue
 
-            flow_direction_array[neighbor_row, neighbor_col] = outflow_directions[neighbor_index]
+            flow_direction_array[neighbor_row, neighbor_col] = inflow_directions[neighbor_index]
             indexes_to_visit.append(neighbor_row * n_cols + neighbor_col)
 
     flow_direction_band.WriteArray(flow_direction_array)
