@@ -33,8 +33,8 @@
                                     "required": true
                                 },
                                 {
-                                    "id": "gridType",
-                                    "args_id" : "gridType",
+                                    "id": "grid_type",
+                                    "args_id" : "grid_type",
                                     "type": "dropdown",
                                     "label": "Grid type",
                                     "options":["rectangular", "hexagonal"],
@@ -43,8 +43,8 @@
                                     "required": true
                                 },
                                 {
-                                    "id" : "cellSize",
-                                    "args_id" : "cellSize",
+                                    "id" : "cell_size",
+                                    "args_id" : "cell_size",
                                     "type": "text",
                                     "label": "Cell size",
                                     "defaultValue": "1",
