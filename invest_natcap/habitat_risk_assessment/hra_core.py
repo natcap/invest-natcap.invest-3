@@ -7,6 +7,7 @@ import numpy as np
 import collections 
 import math
 import datetime
+import sys
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -116,9 +117,11 @@ def execute(args):
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
-    if 'aoi_tables' in locals():
+    if 'aoi_tables' in args:
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
-        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'],
+        os.mkdir(tables_dir)
+        
+        make_aoi_tables(tables_dir, inter_dir, risk_dict, args['aoi_tables'],
                         args['max_risk'])
 
 def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
@@ -184,10 +187,10 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
         file.write('<table border="1", cellpadding="5">')
 
         for stressor in avgs_dict[habitat]:
-        
+            LOGGER.debug("Stressor : %s", avgs_dict) 
             #Want the stressor row to span the number of AOIs that are included
             #within it. 
-            file.write("<tr><td rowspan = " + len(avgs_dict[habitat][stressor]) + \
+            file.write("<tr><td rowspan = " + str(len(avgs_dict[habitat][stressor])) + \
                     + stressor + "</td>")
             
             #Want to set the first AOI here so that it's in the first row, along
@@ -258,10 +261,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
                 ....
             }
     '''
-    avgs_dict = {}
-
     shape = ogr.Open(aoi_uri)
-    layer = shape.GetLayer()
+    for feature in shape.GetLayer():
+
+        LOGGER.debug("Do we even have features at the beginning?: %s ", feature.items())
+    
+    avgs_dict = {}
 
     for pair in risk_dict:
         h, s = pair
@@ -273,13 +278,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
 
         #GETTING MEANS OF THE RISK RASTERS HERE
 
-        r_raster = gdal.Open(risk_dict[pair])
-
+        r_raster_uri = risk_dict[pair]
 
         #We know explicitly that the user will have a 'name' attribute on each
         #feature, since we already threw an error if they didn't.
-        r_agg_dict = raster_utils.aggregate_raster_values(r_raster, shape, 'name',
+        r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, aoi_uri, 'name',
                         'mean', ignore_nodata = True)
+
+        LOGGER.debug("dictionaryyy %s", r_agg_dict)
 
         #GETTING MEANS OF THE E RASTERS HERE
 
@@ -287,27 +293,33 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        e_raster = gdal.Open(e_rast_uri)
-
-        e_agg_dict = raster_utils.aggregate_raster_values(e_raster, shape, 'name',
+        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, aoi_uri, 'name',
                         'mean', ignore_nodata = True)
 
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        c_raster = gdal.Open(c_rast_uri)
-
-        c_agg_dict = raster_utils.aggregate_raster_values(c_raster, shape, 'name',
+        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, aoi_uri, 'name',
                         'mean', ignore_nodata = True)
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
         for name in r_agg_dict:
-           
+            LOGGER.debug("name: %s", name)           
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[name],
                                     'C': c_agg_dict[name], 'Risk': r_agg_dict[name]})
+
+            LOGGER.debug("dictionary is: %s", avgs_dict[h][s])
+        LOGGER.debug(avgs_dict)
+
+    LOGGER.debug("Here's the end: %s", shape.GetLayer().GetFeatureCount())
+    for feature in shape.GetLayer():
+
+        LOGGER.debug("Because here's what we have at the end: %s", feature.items())
+
+
     return avgs_dict
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):

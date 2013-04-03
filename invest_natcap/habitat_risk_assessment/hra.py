@@ -7,6 +7,7 @@ import logging
 import glob
 import numpy as np
 import math
+import sys
 
 from osgeo import gdal, ogr, osr
 from scipy import ndimage
@@ -173,7 +174,10 @@ def execute(args):
             shutil.rmtree(folder) 
 
         os.makedirs(folder)
-    
+   
+    #sys.exit(-1)
+    LOGGER.debug("Confirm that we aren't getting here.")
+
     #If using aoi zones are desired, pass the AOI layer directly to core to be
     #dealt with there.
     if 'aoi_tables' in args:
@@ -188,7 +192,7 @@ def execute(args):
                 raise ImproperAOIAttributeName("Risk table layer attributes must \
                     contain the attribute \"name\" in order to be properly used \
                     within the HRA model run.")
-
+        
         hra_args['aoi_tables'] = args['aoi_tables']
 
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
