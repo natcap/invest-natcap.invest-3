@@ -247,9 +247,14 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
     dem_dataset = gdal.Open(dem_uri)
 
     flow_nodata = -1.0
-    flow_direction_dataset = raster_utils.new_raster_from_base(
+    raster_utils.new_raster_from_base(
         dem_dataset, flow_direction_uri, 'GTiff', flow_nodata,
-        gdal.GDT_Float32)
+        gdal.GDT_Float32, fill_value=flow_nodata)
+
+    LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
+    resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
+
+    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
 
     dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
     flow_band = flow_direction_dataset.GetRasterBand(1)
@@ -610,7 +615,6 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     #Calcualte the d infinity flow direction
     flow_direction_inf(dem_uri, flow_direction_uri)
-
     resolve_undefined_flow_directions(dem_uri, flow_direction_uri)
 
     LOGGER.info(
@@ -647,6 +651,9 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
     flow_direction_memory_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
         flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
+
+    LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
+    LOGGER.debug("flow_direction_array %s" % flow_direction_array)
 
     cdef int n_cols = dem_dataset.RasterXSize
     cdef int n_rows = dem_dataset.RasterYSize
@@ -711,15 +718,12 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                     esri_stream_entry_points[dem_value][min_neighbor].add(pixel_index)
                 except KeyError:
                     esri_stream_entry_points[dem_value][min_neighbor] = set([pixel_index])
-    print esri_stream_entry_points[sorted(esri_stream_entry_points.keys())[0]]
 
     indexes_to_visit = []
     for cell_height in sorted(esri_stream_entry_points, reverse=True):
         for neighbor_min_height in sorted(esri_stream_entry_points[cell_height], reverse=True):
             indexes_to_visit.extend(esri_stream_entry_points[cell_height][neighbor_min_height])
         
-    print indexes_to_visit
-
     #This makes the outflow directions start at pi and loop to 2pi before wrapping around to 0
     cdef float* outflow_directions = [3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138, 0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345]
 
@@ -772,8 +776,6 @@ def resolve_undefined_flow_directions(dem_uri, flow_direction_uri):
     #It's possible that we're dealing with a case where ArcHydro has etched
     #streams into the dem
     LOGGER.info('resolving undefined flow directions')
-    resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
-
     dem_dataset = gdal.Open(dem_uri)
     cdef float dem_nodata
     dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
