@@ -487,9 +487,9 @@ def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_v
     band = new_raster.GetRasterBand(1)
     band.SetNoDataValue(nodata)
     if fill_value != None:
-        band.SetNoDataValue(fill_value)
+        band.Fill(fill_value)
     else:
-        band.SetNoDataValue(nodata)
+        band.Fill(nodata)
     band = None
 
     return new_raster
