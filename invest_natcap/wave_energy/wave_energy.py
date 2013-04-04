@@ -19,76 +19,197 @@ from invest_natcap.invest_core import invest_core
 
 LOGGER = logging.getLogger('wave_energy_core')
 
-def biophysical(args):
-    """Runs the biophysical part of the Wave Energy Model (WEM). 
-    Generates a wave power raster, wave energy capacity raster, 
-    and a wave data shapefile that hosts various attributes for
-    wave farm locations, such as depth, wave height, and wave period.
-    args - A python dictionary that has as least the following required 
-           inputs:
-    Required:
-    args['workspace_dir'] - the workspace path where Output/Intermediate
-                            files will be written
-    args['wave_base_data'] - a dictionary of seastate bin data with the ranges
-                             of period and height. The dictionary has the 
-                             following structure:
-               {'periods': [1,2,3,4,...],
-                'heights': [.5,1.0,1.5,...],
-                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
-                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
-                                 ...
-                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
-                              }
-               }
-    args['analysis_area'] - a point geometry shapefile representing the 
-                            relevant WW3 points
-    args['analysis_area_extract'] - a polygon geometry shapefile encompassing 
-                                    the broader range of interest.
-    args['machine_perf'] - a dictionary that holds the machine performance
-                           information with the following keys and structure:
-                           machine_perf['periods'] - [1,2,3,...]
-                           machine_perf['heights'] - [.5,1,1.5,...]
-                           machine_perf['bin_matrix'] - [[1,2],[5,6],...].
-    args['machine_param'] - a dictionary which holds the machine 
-                            parameter values.
-    args['dem'] - a GIS raster file of the global elevation model
-    
-    Optional (but required for valuation):
-    args['aoi'] - a polygon geometry shapefile outlining a more 
-                  specific area of interest.
+def execute(**args):
+    """Executes the wave energy model
+        
+        **args - a pythong dictionary
 
-    returns - Nothing
-    """
-    #Set variables for output paths
-    #Workspace Directory path
-    workspace_dir = args['workspace_dir']
-    #Intermediate Directory path to store information
-    intermediate_dir = os.path.join(workspace_dir, 'Intermediate')
-    #Output Directory path to store output rasters
-    output_dir = os.path.join(workspace_dir, 'Output')
+        args['workspace_dir'] - Where the intermediate and output folder/files  
+                                will be saved.
+        
+        args['wave_base_data_uri'] - Directory location of wave base data 
+                                     including WW3 data and analysis area 
+                                     shapefile.
+        
+        args['analysis_area_uri'] - A string identifying the analysis area of 
+                                    interest. Used to determine wave data 
+                                    shapefile, wave data text file, and 
+                                    analysis area boundary shape.
+        
+        args['machine_perf_uri'] - The path of a CSV file that holds the 
+                                   machine performance table. 
+        
+        args['machine_param_uri'] - The path of a CSV file that holds the 
+                                    machine parameter table.
+        
+        args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
+
+        args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
+                          within the analysis area. (OPTIONAL, but required to
+                          run Valuation model)
+
+        args['land_gridPts_uri'] - A CSV file path containing the Landing and 
+                                   Power Grid Connection Points table.
+        args['machine_econ_uri'] - A CSV file path for the machine economic 
+                                   parameters table.
+        args['number_of_machines'] - An integer specifying the number of 
+                                     machines for a wave farm site.
+
+        returns nothing."""
+
+    #Create the Output and Intermediate directories if they do not exist.
+    workspace = args['workspace_dir'] 
+    output_dir = os.path.join(workspace, 'output')
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    for directory in [output_dir, intermediate_dir]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    #Dictionary that will hold all the input arguments to be 
+    #passed to wave_energy_core.biophysical
+    #biophysical_args = {}
+    #biophysical_args['workspace_dir'] = args['workspace_dir']
+    #biophysical_args['dem'] = gdal.Open(args['dem_uri'])
+    dem_uri = args['dem_uri']
+
+    #Create a dictionary that stores the wave periods and wave heights as
+    #arrays. Also store the amount of energy the machine produces 
+    #in a certain wave period/height state as a 2D array
+    machine_perf_dict = {}
+    machine_perf_file = open(args['machine_perf_uri'])
+    reader = csv.reader(machine_perf_file)
+    #Get the column header which is the first row in the file
+    #and specifies the range of wave periods
+    periods = reader.next()
+    machine_perf_dict['periods'] = periods[1:]
+    #Set the keys for storing wave height range and the machine performance
+    #at each state
+    machine_perf_dict['heights'] = []
+    machine_perf_dict['bin_matrix'] = []
+    for row in reader:
+        #Build up the row header by taking the first element in each row
+        #This is the range of heights
+        machine_perf_dict['heights'].append(row.pop(0))
+        machine_perf_dict['bin_matrix'].append(row)
+    machine_perf_file.close()
+    LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
+    LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
+    biophysical_args['machine_perf'] = machine_perf_dict
+    
+    #Create a dictionary whose keys are the 'NAMES' from the machine parameter
+    #table and whose values are from the corresponding 'VALUES' field.
+    machine_params = {}
+    machine_param_file = open(args['machine_param_uri'])
+    reader = csv.DictReader(machine_param_file)
+    for row in reader:
+        machine_params[row['NAME'].strip().lower()] = row['VALUE']
+    machine_param_file.close()
+    biophysical_args['machine_param'] = machine_params
+   
+    #Build up a dictionary of possible analysis areas where the key
+    #is the analysis area selected and the value is a dictionary
+    #that stores the related uri paths to the needed inputs 
+    wave_base_data_uri = args['wave_base_data_uri']
+    analysis_dict = {
+            'West Coast of North America and Hawaii': {
+            'point_shape': os.path.join(
+                wave_base_data_uri, 'NAmerica_WestCoast_4m.shp'),
+             'extract_shape': os.path.join(
+                 wave_base_data_uri, 'WCNA_extract.shp'),
+             'ww3_uri': os.path.join(
+                 wave_base_data_uri, 'NAmerica_WestCoast_4m.txt.bin')
+            },
+         'East Coast of North America and Puerto Rico': {
+             'point_shape': os.path.join(
+                wave_base_data_uri, 'NAmerica_EastCoast_4m.shp'),
+             'extract_shape': os.path.join(
+                 wave_base_data_uri, 'ECNA_extract.shp'),
+             'ww3_uri': os.path.join(
+                 wave_base_data_uri, 'NAmerica_EastCoast_4m.txt.bin')
+            },
+         'Global': {
+             'point_shape': os.path.join(wave_base_data_uri, 'Global.shp'),
+             'extract_shape': os.path.join(
+                 wave_base_data_uri, 'Global_extract.shp'),
+             'ww3_uri': os.path.join(
+                 wave_base_data_uri, 'Global_WW3.txt.bin')
+            }
+       }
+
+    #Add the ww3 dictionary, point shapefile, and polygon extract shapefile
+    #to the biophysical_args based on the analysis area selected
+    analysis_area_uri = args['analysis_area_uri']
+    #biophysical_args['wave_base_data'] = load_binary_wave_data(
+    #        analysis_dict[analysis_area_uri]['ww3_uri'])
+    
+    #biophysical_args['analysis_area'] = ogr.Open(
+    #        analysis_dict[analysis_area_uri]['point_shape'])
+    
+    #biophysical_args['analysis_area_extract'] = ogr.Open(
+    #        analysis_dict[analysis_area_uri]['extract_shape'])
+    
+    wave_base_data = load_binary_wave_data(
+            analysis_dict[analysis_area_uri]['ww3_uri'])
+    analysis_area_points_uri = analysis_dict[analysis_area_uri]['point_shape']
+    analysis_area_extract_uri = \
+            analysis_dict[analysis_area_uri]['extract_shape']
+
+
+
+    try:
+        aoi_uri = args['aoi_uri']
+    except:
+        LOGGER.debug('AOI not provided')
+    
+    
     #Path for clipped wave point shapefile holding wave attribute information
-    clipped_wave_shape_path = \
-        intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
+    clipped_wave_shape_path = os.path.join(
+            intermediate_dir, 'WEM_InputOutput_Pts.shp')
+    
     #Paths for wave energy and wave power raster
-    wave_energy_unclipped_path = os.path.join(intermediate_dir, 
-                                              'capwe_mwh_unclipped.tif')
-    wave_power_unclipped_path = os.path.join(intermediate_dir,
-                                             'wp_kw_unclipped.tif')
+    wave_energy_unclipped_path = os.path.join(
+            intermediate_dir, 'capwe_mwh_unclipped.tif')
+    
+    wave_power_unclipped_path = os.path.join(
+            intermediate_dir, 'wp_kw_unclipped.tif')
+    
     wave_energy_path = os.path.join(output_dir, 'capwe_mwh.tif')
+    
     wave_power_path = os.path.join(output_dir, 'wp_kw.tif')
+    
     #Paths for wave energy and wave power percentile rasters
     wp_rc_path = os.path.join(output_dir, 'wp_rc.tif')
+    
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc.tif')
-    global_dem = args['dem']
+    
+    #global_dem = args['dem']
+    def get_geotransform(ds_uri):
+        ds = gdal.Open(ds_uri)
+        gt = ds.GetGeoTransform()
+        return gt
+
     #Set nodata value and datatype for new rasters
     nodata = 0
     datatype = gdal.GDT_Float32
     #Since the global dem is the finest resolution we get as an input,
     #use its pixel sizes as the sizes for the new rasters
-    dem_gt = global_dem.GetGeoTransform()
+    #dem_gt = global_dem.GetGeoTransform()
+    dem_gt = get_geotransform(dem_uri)
+    
     #Set the source projection for a coordinate transformation
     #to the input projection from the wave watch point shapefile
-    analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
+    def get_spatial_ref(ds_uri):
+        ds = ogr.Open(ds_uri)
+        layer = ds.GetLayer()
+        spat_ref = layer.GetSpatialRef()
+        return spat_ref
+    
+    
+    #analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
+    analysis_area_sr = get_spatial_ref(analysis_area_points_uri)
+    
+    
+    
     #Holds any temporary files we want to clean up at the end of the model run
     file_list = []
     #This if statement differentiates between having an AOI or doing a broad
@@ -99,40 +220,45 @@ def biophysical(args):
 
         #Temporary shapefile path needed for an intermediate step when
         #changing the projection
-        projected_wave_shape_path = \
-            intermediate_dir + os.sep + 'projected_wave_data.shp'
+        projected_wave_shape_path = os.path.join(
+                intermediate_dir, 'projected_wave_data.shp')
+
         file_list.append(projected_wave_shape_path)
         #The polygon shapefile that specifies the area of interest
-        aoi_shape = args['aoi']
+        #aoi_shape = args['aoi']
         
         #Set the wave data shapefile to the same projection as the 
         #area of interest
-        projected_wave_shape = change_shape_projection(args['analysis_area'], \
-                                   aoi_shape.GetLayer(0).GetSpatialRef(), \
-                                   projected_wave_shape_path)
+        change_shape_projection(
+                analysis_area_points_uri, aoi_uri, projected_wave_shape_path)
 
         #Clip the wave data shape by the bounds provided from the 
         #area of interest
-        clipped_wave_shape = clip_shape(projected_wave_shape, aoi_shape, \
-                                        clipped_wave_shape_path)
+        #clipped_wave_shape = clip_shape(
+        #        projected_wave_shape, aoi_shape, clipped_wave_shape_path)
+        clip_shape(projected_wave_shape_path, aoi_uri, clipped_wave_shape_path)
         
         #Create a coordinate transformation from the given
         #WWIII point shapefile (args['analysis_area']), to the 
         #area of interest's projection (args['aoi'])
-        aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
-        coord_trans, coord_trans_opposite = \
-            get_coordinate_transformation(analysis_area_sr, aoi_sr)
+        #aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
+        #coord_trans, coord_trans_opposite = \
+        #    get_coordinate_transformation(analysis_area_sr, aoi_sr)
 
         #Get the size of the pixels in meters, to be used for creating 
         #projected wave power and wave energy capacity rasters
-        pixel_xsize, pixel_ysize = \
-            pixel_size_helper(clipped_wave_shape, coord_trans, \
-                              coord_trans_opposite, global_dem)
-        
+        #pixel_xsize, pixel_ysize = \
+        #    pixel_size_helper(clipped_wave_shape, coord_trans, \
+        #                      coord_trans_opposite, global_dem)
+       
+        pixel_size = raster_utils.get_cell_size_from_uri(dem_uri)
+
+
         #Close file as it is no longer used
-        projected_wave_shape.Destroy()
-        LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
-        LOGGER.debug('Y pixel size in meters : %f', pixel_ysize)
+        #projected_wave_shape.Destroy()
+        #LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
+        #LOGGER.debug('Y pixel size in meters : %f', pixel_ysize)
+        LOGGER.debug('Pixel size in meters : %f', pixel_size)
 
     else:
         #If no AOI, we can use the pixel size directly from the DEM, but this
@@ -143,15 +269,19 @@ def biophysical(args):
 
         #Not sure if this is needed, as aoi_shape is already an outline 
         #of analysis_area
-        clipped_wave_shape = clip_shape(args['analysis_area'], aoi_shape, \
-                                        clipped_wave_shape_path)
+        #clipped_wave_shape = clip_shape(args['analysis_area'], aoi_shape, \
+        #                                clipped_wave_shape_path)
+        clip_shape(
+                analysis_area_points_uri, analysis_area_extract_uri,
+                clipped_wave_shape_path)
 
         #Set the pixel size to that of DEM, to be used for creating rasters
-        pixel_xsize, pixel_ysize = \
-            float(dem_gt[1]), np.absolute(float(dem_gt[5]))
+        #pixel_xsize, pixel_ysize = \
+        #    float(dem_gt[1]), np.absolute(float(dem_gt[5]))
+        pixel_size = (float(dem_gt[1]) + np.absolute(float(dem_gt[5]))) / 2.0
 
         #Create a coordinate transformation, because it is expected below
-        aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
+        aoi_sr = get_spatial_ref(analysis_area_extract_uri)
         coord_trans, coord_trans_opposite = \
             get_coordinate_transformation(analysis_area_sr, aoi_sr)
 
@@ -159,37 +289,75 @@ def biophysical(args):
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
     LOGGER.debug('Adding a depth field to the shapefile from the DEM raster')
-    dem_matrix = global_dem.GetRasterBand(1).ReadAsArray()
+    #dem_matrix = global_dem.GetRasterBand(1).ReadAsArray()
+    
+    def index_dem(point_shape_uri, dataset_uri, field_name, coord_trans):
+        global_dem = gdal.Open(dataset_uri)
+        clipped_wave_shape = ogr.Open(point_shape_uri, 1)
+        dem_gt = global_dem.GetGeoTransform()
+        dem_matrix = global_dem.GetRasterBand(1).ReadAsArray()
+
+        #Create a new field for the depth attribute
+        field_defn = ogr.FieldDefn('DEPTH_M', ogr.OFTReal)
+
+        clipped_wave_layer = clipped_wave_shape.GetLayer()
+        clipped_wave_layer.CreateField(field_defn)
+        feature = clipped_wave_layer.GetNextFeature()
+
+        #For all the features (points) add the proper depth value from the DEM
+        while feature is not None:
+            depth_index = feature.GetFieldIndex('DEPTH_M')
+            geom = feature.GetGeometryRef()
+            geom_x, geom_y = geom.GetX(), geom.GetY()
+
+            #Transform two points into meters
+            point_decimal_degree = coord_trans_opposite.TransformPoint(
+                    geom_x, geom_y)
+
+            #To get proper depth value we must index into the dem matrix
+            #by getting where the point is located in terms of the matrix
+            i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
+            j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
+            depth = dem_matrix[j][i]
+            feature.SetField(int(depth_index), float(depth))
+            clipped_wave_layer.SetFeature(feature)
+            feature = None
+            feature = clipped_wave_layer.GetNextFeature()
+
+        dem_matrix = None
+
+    index_dem(
+            clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
 
     #Create a new field for the depth attribute
-    field_defn = ogr.FieldDefn('DEPTH_M', ogr.OFTReal)
+    #field_defn = ogr.FieldDefn('DEPTH_M', ogr.OFTReal)
 
-    clipped_wave_layer = clipped_wave_shape.GetLayer(0)
-    clipped_wave_layer.ResetReading()
-    clipped_wave_layer.CreateField(field_defn)
-    feature = clipped_wave_layer.GetNextFeature()
+    #clipped_wave_layer = clipped_wave_shape.GetLayer(0)
+    #clipped_wave_layer.ResetReading()
+    #clipped_wave_layer.CreateField(field_defn)
+    #feature = clipped_wave_layer.GetNextFeature()
 
     #For all the features (points) add the proper depth value from the DEM
-    while feature is not None:
-        depth_index = feature.GetFieldIndex('DEPTH_M')
-        geom = feature.GetGeometryRef()
-        geom_x, geom_y = geom.GetX(), geom.GetY()
+    #while feature is not None:
+    #    depth_index = feature.GetFieldIndex('DEPTH_M')
+    #    geom = feature.GetGeometryRef()
+    #    geom_x, geom_y = geom.GetX(), geom.GetY()
 
         #Transform two points into meters
-        point_decimal_degree = \
-            coord_trans_opposite.TransformPoint(geom_x, geom_y)
+    #    point_decimal_degree = \
+    #        coord_trans_opposite.TransformPoint(geom_x, geom_y)
 
         #To get proper depth value we must index into the dem matrix
         #by getting where the point is located in terms of the matrix
-        i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
-        j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
-        depth = dem_matrix[j][i]
-        feature.SetField(int(depth_index), float(depth))
-        clipped_wave_layer.SetFeature(feature)
-        feature.Destroy()
-        feature = clipped_wave_layer.GetNextFeature()
+    #    i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
+    #    j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
+    #    depth = dem_matrix[j][i]
+    #    feature.SetField(int(depth_index), float(depth))
+    #    clipped_wave_layer.SetFeature(feature)
+    #    feature.Destroy()
+    #    feature = clipped_wave_layer.GetNextFeature()
 
-    dem_matrix = None
+    #dem_matrix = None
 
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
@@ -288,6 +456,79 @@ def biophysical(args):
     
     #Clean up any temporary files that the user does not need to know about
     file_cleanup_handler(file_list)
+
+def load_binary_wave_data(wave_file_uri):
+    """The load_binary_wave_data function converts a pickled WW3 text file into a 
+    dictionary who's keys are the corresponding (I,J) values and whose value 
+    is a two-dimensional array representing a matrix of the number of hours 
+    a seastate occurs over a 5 year period. The row and column headers are 
+    extracted once and stored in the dictionary as well.
+    
+    wave_file_uri - The path to a pickled binary WW3 file.
+    
+    returns - A dictionary of matrices representing hours of specific seastates,
+              as well as the period and height ranges.  It has the following
+              structure:
+               {'periods': [1,2,3,4,...],
+                'heights': [.5,1.0,1.5,...],
+                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 ...
+                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                              }
+               }  
+    """
+    LOGGER.debug('Extrapolating wave data from text to a dictionary')
+    wave_file = open(wave_file_uri, 'rb')
+    wave_dict = {}
+    #Create a key that hosts another dictionary where the matrix representation
+    #of the seastate bins will be saved
+    wave_dict['bin_matrix'] = {}
+    wave_array = None
+    wave_periods = []
+    wave_heights = []
+    key = None
+
+    #get rows,cols
+    row_col_bin = wave_file.read(8)
+    col,row = struct.unpack('ii',row_col_bin)
+
+    #get the periods and heights
+    line = wave_file.read(col*4)
+
+    wave_periods = list(struct.unpack('f'*col,line))
+    line = wave_file.read(row*4)
+    wave_heights = list(struct.unpack('f'*row,line))
+
+    key = None
+    while True:
+        line = wave_file.read(8)
+        if len(line) == 0:
+            #end of file
+            wave_dict['bin_matrix'][key] = np.array(wave_array)
+            break
+
+        if key != None:
+            wave_dict['bin_matrix'][key] = np.array(wave_array)
+
+        #Clear out array
+        wave_array = []
+
+        key = struct.unpack('ii',line)
+
+        for row_id in range(row):
+            line = wave_file.read(col*4)
+            array = list(struct.unpack('f'*col,line))
+            wave_array.append(array)
+
+    wave_file.close()
+    #Add row/col header to dictionary
+    LOGGER.debug('WaveData col %s', wave_periods)
+    wave_dict['periods'] = np.array(wave_periods, dtype='f')
+    LOGGER.debug('WaveData row %s', wave_heights)
+    wave_dict['heights'] = np.array(wave_heights, dtype='f')
+    LOGGER.debug('Finished extrapolating wave data to dictionary')
+    return wave_dict
 
 def file_cleanup_handler(file_list):
     """Handles removing any shape files and any necessary extensions
@@ -637,7 +878,7 @@ def clip_raster_from_polygon(shape, raster, path):
                                 fill_bound_data, copy_band)
     return copy_raster
 
-def clip_shape(shape_to_clip, binding_shape, output_path):
+def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
     that intersect or are within a binding polygon shape.
     
@@ -648,6 +889,9 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
     
     returns - A shapefile representing the clipped version of shape_to_clip
     """
+    shape_to_clip = ogr.Open(shape_to_clip_uri)
+    binding_shape = ogr.Open(binding_shape_uri)
+
     shape_source = output_path
     #If the output_path is already a file, remove it
     if os.path.isfile(shape_source):
@@ -1319,7 +1563,8 @@ def calculate_distance(xy_1, xy_2):
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
 
-def change_shape_projection(shape_to_reproject, target_sr, output_path):
+def change_shape_projection(
+        shape_to_reproject_uri, projection_shape_uri, output_path):
     """Changes the projection of a shapefile by creating a new shapefile 
     based on the projection passed in.  The new shapefile then copies all the 
     features and fields of the shapefile to reproject as its own. 
@@ -1331,6 +1576,12 @@ def change_shape_projection(shape_to_reproject, target_sr, output_path):
     
     returns - The reprojected shapefile.
     """
+
+    shape_to_reproject = ogr.Open(shape_to_reproject_uri)
+    projection_shape = ogr.Open(projection_shape_uri)
+    projection_layer = projection_shape.GetLayer()
+    target_sr = projection_layer.GetSpatialRef()
+
     shape_source = output_path
     #If this file already exists, then remove it
     if os.path.isfile(shape_source):
