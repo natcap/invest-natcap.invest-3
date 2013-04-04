@@ -8,6 +8,7 @@ import collections
 import math
 import datetime
 import sys
+import webbrowser
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
