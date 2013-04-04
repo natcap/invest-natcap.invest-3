@@ -728,7 +728,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 except KeyError:
                     esri_stream_entry_points[dem_value][min_neighbor] = set([pixel_index])
 
-    indexes_to_visit = []
+    indexes_to_visit = collections.deque()
     for cell_height in sorted(esri_stream_entry_points, reverse=True):
         for neighbor_min_height in sorted(esri_stream_entry_points[cell_height], reverse=True):
             indexes_to_visit.extend(esri_stream_entry_points[cell_height][neighbor_min_height])
@@ -762,7 +762,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 continue
 
             flow_direction_array[neighbor_row, neighbor_col] = inflow_directions[neighbor_index]
-            indexes_to_visit.append(neighbor_row * n_cols + neighbor_col)
+            indexes_to_visit.appendleft(neighbor_row * n_cols + neighbor_col)
 
     flow_direction_band.WriteArray(flow_direction_array)
 
