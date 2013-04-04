@@ -708,6 +708,13 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                         neighbor_at_same_height = True
                         continue
 
+                    #This handles a case where there is obviously a flow direction
+                    #so we don't artifically handle it with pointing along the fake esri stream
+                    if neighbor_dem_value < dem_value:
+                        neighbor_at_same_height = False
+                        break
+
+
                     if (min_neighbor == None or neighbor_dem_value < min_neighbor) and neighbor_dem_value > dem_value:
                         min_neighbor = neighbor_dem_value
                 except IndexError:
