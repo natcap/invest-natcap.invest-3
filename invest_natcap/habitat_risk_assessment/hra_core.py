@@ -261,11 +261,37 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
                 ....
             }
     '''
-    shape = ogr.Open(aoi_uri)
-    for feature in shape.GetLayer():
-
-        LOGGER.debug("Do we even have features at the beginning?: %s ", feature.items())
     
+    #Since we know that the AOI will be consistent across all of the rasters,
+    #want to create the new int field, and the name mapping dictionary upfront
+    
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    aoi = ogr.Open(aoi_uri)
+    cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
+    cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)
+    layer = cp_aoi.GetLayer()
+
+    field_defn = ogr.FieldDefn('BURN_ID', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    name_map = {}
+    count = 0
+    
+    for feature in layer:
+
+        name = feature.items()['name']
+        feature.SetField('BURN_ID', count)
+        name_map[count] = name
+        count += 1
+
+        layer.SetFeature(feature)
+        
+    layer.ResetReading()
+
+
+    #Now we will loop through all of the various pairings to deal with all their
+    #component parts across our AOI. Want to make sure to use our new field as
+    #the index.
     avgs_dict = {}
 
     for pair in risk_dict:
@@ -282,8 +308,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
 
         #We know explicitly that the user will have a 'name' attribute on each
         #feature, since we already threw an error if they didn't.
-        r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, aoi_uri, 'name',
-                        'mean', ignore_nodata = True)
+        r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
 
         LOGGER.debug("dictionaryyy %s", r_agg_dict)
 
@@ -293,32 +319,29 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, aoi_uri, 'name',
-                        'mean', ignore_nodata = True)
+        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
 
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, aoi_uri, 'name',
-                        'mean', ignore_nodata = True)
+        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
-        for name in r_agg_dict:
+        for ident in r_agg_dict:
+            
+            name = name_map[ident]
+
             LOGGER.debug("name: %s", name)           
-            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[name],
-                                    'C': c_agg_dict[name], 'Risk': r_agg_dict[name]})
+            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
+                                    'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
 
             LOGGER.debug("dictionary is: %s", avgs_dict[h][s])
         LOGGER.debug(avgs_dict)
-
-    LOGGER.debug("Here's the end: %s", shape.GetLayer().GetFeatureCount())
-    for feature in shape.GetLayer():
-
-        LOGGER.debug("Because here's what we have at the end: %s", feature.items())
-
 
     return avgs_dict
 

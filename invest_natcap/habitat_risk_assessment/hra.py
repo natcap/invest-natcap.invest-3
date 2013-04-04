@@ -151,7 +151,6 @@ def execute(args):
     
     Returns nothing.
     '''
-    LOGGER.debug("Checkpoint 1")
 
     hra_args = {}
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
@@ -175,9 +174,6 @@ def execute(args):
 
         os.makedirs(folder)
    
-    #sys.exit(-1)
-    LOGGER.debug("Confirm that we aren't getting here.")
-
     #If using aoi zones are desired, pass the AOI layer directly to core to be
     #dealt with there.
     if 'aoi_tables' in args:
