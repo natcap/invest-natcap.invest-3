@@ -159,6 +159,19 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
     #Let's pre-calc stuff so we don't have to worry about it in the middle of
     #the file creation.
+    '''    avgs_dict- A multi level dictionary to hold the average values that
+            will be placed into the HTML table.
+
+            {'HabitatName':
+                {'StressorName':
+                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                        {...},
+                    ...
+                    ]
+                },
+                ....
+            }
+    '''
     avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
 
     filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
@@ -181,37 +194,36 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
     #Now, all of the actual calculations within the table. We want to make one
     #table for each habitat that is present within this model run.
-    for habitat in avgs_dict:
+    for habitat, stress_dict in avgs_dict.items():
 
         file.write("<H2>" + habitat + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
-        for stressor in avgs_dict[habitat]:
-            LOGGER.debug("Stressor : %s", avgs_dict) 
-            #Want the stressor row to span the number of AOIs that are included
+        for stressor, s_list in stress_dict.items():
+            LOGGER.debug("Stressor : %s", stressor)
+            LOGGER.debug("Type? %s", type(stressor))
+            #Want the stressor column to span the number of AOIs that are included
             #within it. 
-            file.write("<tr><td rowspan = " + str(len(avgs_dict[habitat][stressor])) + \
-                    + stressor + "</td>")
+            file.write("<tr><td rowspan = \"" + str(len(s_list)) + "\">" + stressor + "</td>")
             
             #Want to set the first AOI here so that it's in the first row, along
             #with the "beginning" of the stressor cell. Recall that dict[h][s]
             #is a list, so we can index directly.
-            file.write("<td>" + avgs_dict[habitat][stressor][0]['Name'] + \
-                "</td><td>" +  avgs_dict[habitat][stressor][0]['E'] + \
-                "</td><td>" + avgs_dict[habitat][stressor][0]['C'] + \
-                "</td><td>" +  avgs_dict[habitat][stressor][0]['Risk'] + \
-                "</td><td>" +  \
-                avgs_dict[habitat][stressor][0]['Risk'] / max_risk + "</td></tr>")
+            file.write("<td>" + s_list[0]['Name'] + \
+                "</td><td>" +  str(s_list[0]['E']) + \
+                "</td><td>" + str(s_list[0]['C']) + \
+                "</td><td>" +  str(s_list[0]['Risk']) + \
+                "</td><td>" + str(s_list[0]['Risk'] / max_risk) + "</td></tr>")
 
             #For all remaining AOIs on that H-S pairing.
-            for element in avgs_dict[habitat][stressor][1::]:
+            for element in s_list[1::]:
 
                 file.write("<tr>")
                 file.write("<td>" + element['Name']+ "</td>")
-                file.write("<td>" + element['E']+ "</td>")
-                file.write("<td>" + element['C']+ "</td>")
-                file.write("<td>" + element['Risk']+ "</td>")
-                file.write("<td>" + element['Risk'] / max_risk+ "</td>")
+                file.write("<td>" + str(element['E']) + "</td>")
+                file.write("<td>" + str(element['C']) + "</td>")
+                file.write("<td>" + str(element['Risk']) + "</td>")
+                file.write("<td>" + str(element['Risk'] / max_risk) + "</td>")
                 file.write("</tr>")
 
         #End of the habitat-specific table
@@ -1157,7 +1169,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 return 0.
 
             else:
-                LOGGER.debug("Risk_Crit_Num %s", risk_crit_rate_numerator)
                 return risk_crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_risk_single,
@@ -1178,10 +1189,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 return 0.
 
             else:
-                LOGGER.debug("Risk_Rec_Num %s", rec_crit_rate_numerator)
                 return rec_crit_rate_numerator
 
-        LOGGER.debug("Rec_Crit_Num == %s", rec_crit_rate_numerator)
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_rec_single,
                             single_crit_rec_uri, gdal.GDT_Float32, 0., 
                             base_pixel_size, "union", 
