@@ -686,6 +686,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 continue
 
             is_on_edge = False
+            edge_neighbor_index = -1
             min_neighbor = None
             neighbor_at_same_height = False
             for neighbor_index in xrange(8):
@@ -700,8 +701,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
 
                     if neighbor_dem_value == dem_nodata:
                         is_on_edge = True
-                        if flow_direction_array[neighbor_row, neighbor_col] == flow_direction_nodata:
-                            flow_direction_array[neighbor_row, neighbor_col] = outflow_directions[neighbor_index]
+                        edge_neighbor_index = neighbor_index
                         continue
 
                     if neighbor_dem_value == dem_value:
@@ -718,6 +718,7 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 #This is a potential entrance/exit for an ESRI etched stream, follow it back.
                 pixel_index = row_index * n_cols + col_index
                 #TODO: can we set the outflow direction here?
+                flow_direction_array[row_index, col_index] = outflow_directions[edge_neighbor_index]
 
                 if dem_value not in esri_stream_entry_points:
                     esri_stream_entry_points[dem_value] = {}
