@@ -37,9 +37,12 @@ class ZeroDQWeightValue(Exception):
     criteria entirely from that H-S overlap, it should be allowed.'''
     pass
 
-class NoEntryException(Exception):
-    '''An exception for hra_preprocessor that should catch null strings being
-    passed in with the CSV. This should take care of users trying to input '''
+class UnexpectedString(Exception):
+    '''An exception for hra_preprocessor that should catch any strings that are
+    left over in the CSVs. Since everything from the CSV's are being cast to
+    floats, this will be a hook off of python's ValueError, which will re-raise 
+    our exception with a more accurate message. '''
+    pass
 
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
@@ -607,13 +610,30 @@ def parse_habitat_overlap(uri):
                         'Crit_Rasters': {}}
                 while line[0] != '':
                     if line[1] == 'SHAPE':
-                        #Only include DQ and W headers
+                        #Going to do some custom error checking for null values or strings.
+                        try:                    
+                        #Only include DQ and W headers, since 'rating' will come
+                        #in the form of a shapefile.
                         habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
                                 dict(zip(headers[1:3], map(float,line[2:4])))
+                        except ValueError:
+                            raise UnexpectedString("Entries in CSV table may not be \
+                                strings, and may not be left blank.Check your %s CSV \
+                                for any leftover strings or spaces within Rating, \
+                                Data Quality or Weight columns.", hab_name)
                     else:
-                        habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
+                        #Going to do some custom error checking for null values or strings.
+                        try:
+                            habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
                                 dict(zip(headers, map(float,line[1:4])))
+                        except ValueError:
+                            raise UnexpectedString("Entries in CSV table may not be \
+                                strings, and may not be left blank.Check your %s CSV \
+                                for any leftover strings or spaces within Rating, \
+                                Data Quality or Weight columns.", hab_name)
+
                     line = csv_reader.next()
+
             except StopIteration:
                 break
 
