@@ -200,9 +200,14 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
         file.write("<H2>" + habitat + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
+        #Headers row
+        file.write("<tr><b><td>Stressor Name</td><td>AOI Name</td><td>E</td>" + \
+            "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
+        
         for stressor, s_list in stress_dict.items():
             LOGGER.debug("Stressor : %s", stressor)
             LOGGER.debug("Type? %s", type(stressor))
+
             #Want the stressor column to span the number of AOIs that are included
             #within it. 
             file.write("<tr><td rowspan = \"" + str(len(s_list)) + "\">" + stressor + "</td>")
@@ -214,7 +219,7 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
                 "</td><td>" +  str(s_list[0]['E']) + \
                 "</td><td>" + str(s_list[0]['C']) + \
                 "</td><td>" +  str(s_list[0]['Risk']) + \
-                "</td><td>" + str(s_list[0]['Risk'] / max_risk) + "</td></tr>")
+                "</td><td>" + str(s_list[0]['Risk'] * 100 / max_risk) + "</td></tr>")
 
             #For all remaining AOIs on that H-S pairing.
             for element in s_list[1::]:
@@ -224,7 +229,7 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
                 file.write("<td>" + str(element['E']) + "</td>")
                 file.write("<td>" + str(element['C']) + "</td>")
                 file.write("<td>" + str(element['Risk']) + "</td>")
-                file.write("<td>" + str(element['Risk'] / max_risk) + "</td>")
+                file.write("<td>" + str(element['Risk'] * 100 / max_risk) + "</td>")
                 file.write("</tr>")
 
         #End of the habitat-specific table
