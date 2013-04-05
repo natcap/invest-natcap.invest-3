@@ -75,7 +75,8 @@ def route_flux(
         ["nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri)
 
-    flow_direction_uri = raster_utils.temporary_filename()
+    flow_direction_uri = 'clipped_flow_direction.tif'
+#raster_utils.temporary_filename()
     outflow_weights_uri = raster_utils.temporary_filename()
     outflow_direction_uri = raster_utils.temporary_filename()
 
