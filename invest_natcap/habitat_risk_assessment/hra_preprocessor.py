@@ -29,6 +29,18 @@ class ImproperCriteriaSpread(Exception):
     exposure, and sensitivity.'''
     pass
 
+class ZeroDQWeightValue(Exception):
+    '''An exception specifically for the parsing of the preprocessor tables in
+    which the model shoudl break loudly if a user tries to enter a zero value
+    for either a data quality or a weight. However, we should confirm that it
+    will only break if the rating is not also zero. If they're removing the
+    criteria entirely from that H-S overlap, it should be allowed.'''
+    pass
+
+class NoEntryException(Exception):
+    '''An exception for hra_preprocessor that should catch null strings being
+    passed in with the CSV. This should take care of users trying to input '''
+
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
@@ -403,11 +415,27 @@ def parse_hra_tables(workspace_uri):
                     #since it's not the dictionary that we're concerned with.
                     try:
                         for crit_name, crit_dict in kind.iteritems():
+
+                            #Remove the subdictionary if the rating is 0
+                            if 'Rating' in crit_dict and crit_dict['Rating'] in [0, 0.0]:
+                                del(kind[crit_name])
+                                #Breaking because crit_dict won't contain crit_name
+                                break
+                            
+                            #If we get to this point, we know that rating is non-zero
+                            for value in crit_dict['DQ'], crit_dict['Weight']:
+                                if value in [0, 0.0]:
+                                    raise ZeroDQWeightValue("Individual criteria \
+                                        data qualities and weights may not be 0.")
+
+                            #THIS MAY BE LATER REPLACED BY AN OVERARCHING STRING CHECK.
+                            #Want to break if anything entered is a null string.
                             for value in crit_dict.values():
-                                if value in [0, '']:
-                                    del(kind[crit_name])
-                                    #Breaking because crit_dict won't contain crit_name
-                                    break
+                                if value == '':
+                                    raise NoEntryException("Criteria CSV files must \
+                                        have values filled out for all criteria. If \
+                                        you would like to exclude a criteria from the \
+                                        assessment, use a 0 for that entry.")
                     except AttributeError:
                         #Can just skip over float values.
                         pass
@@ -626,9 +654,9 @@ def make_crit_shape_dict(crit_uri):
     '''
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
     #First, want to get the things that are either habitat specific or 
-    #species specific. These should all be in the 'Resiliance' subfolder
+    #species specific. These should all be in the 'Resilience subfolder
     #of raster_criteria.
-    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resilience', '*.shp'))
    
     #Now we have a list of all habitat specific shapefile criteria. Now we need
     #to parse them out.
