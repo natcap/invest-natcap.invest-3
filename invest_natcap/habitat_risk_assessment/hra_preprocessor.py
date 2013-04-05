@@ -577,15 +577,29 @@ def parse_habitat_overlap(uri):
             
             key = line[0]
 
+            #If we are dealing with a shapefile criteria, we only want  to
+            #add the DQ and the W, and we will add a rasterized version of
+            #the shapefile later.
             if line[1] == 'SHAPE':
-                #If we are dealing with a shapefile criteria, we only want  to
-                #add the DQ and the W, and we will add a rasterized version of
-                #the shapefile later.
-                habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(float, line[2:4]))) 
+                try:
+                    habitat_dict['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:3], map(float, line[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+                    
             else:
-                habitat_dict['Crit_Ratings'][key] = \
+                try:
+                    habitat_dict['Crit_Ratings'][key] = \
                         dict(zip(headers, map(float,line[1:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            
             line = csv_reader.next()
 
         #Drain the next two lines
@@ -618,7 +632,7 @@ def parse_habitat_overlap(uri):
                                 dict(zip(headers[1:3], map(float,line[2:4])))
                         except ValueError:
                             raise UnexpectedString("Entries in CSV table may not be \
-                                strings, and may not be left blank.Check your %s CSV \
+                                strings, and may not be left blank. Check your %s CSV \
                                 for any leftover strings or spaces within Rating, \
                                 Data Quality or Weight columns.", hab_name)
                     else:
@@ -628,7 +642,7 @@ def parse_habitat_overlap(uri):
                                 dict(zip(headers, map(float,line[1:4])))
                         except ValueError:
                             raise UnexpectedString("Entries in CSV table may not be \
-                                strings, and may not be left blank.Check your %s CSV \
+                                strings, and may not be left blank. Check your %s CSV \
                                 for any leftover strings or spaces within Rating, \
                                 Data Quality or Weight columns.", hab_name)
 
