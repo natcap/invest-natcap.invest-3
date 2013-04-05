@@ -98,7 +98,7 @@ def execute(args):
 
         raise ImproperCriteriaSpread("This model requires there to be one \
                 criteria in each of the following catagories: Exposure, \
-                Sensitivity, and Resiliance.")
+                Sensitivity, and Resilience.")
     
     #3. There should be > 4 criteria total.
     total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) \

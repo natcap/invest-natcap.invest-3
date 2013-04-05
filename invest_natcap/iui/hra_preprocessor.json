@@ -92,8 +92,8 @@
                 {
                     "id": "res_crit",
                     "type": "multi",
-                    "args_id": "resiliance_crits",
-                    "label": "Resiliance",
+                    "args_id": "resilience_crits",
+                    "label": "Resilience",
                     "sampleElement": {"id": "sample_id",
                                       "type": "text",
                                       "label": "Input Criteria",
