@@ -84,6 +84,7 @@ def invest_version(uri=None, force_new=False, attribute='version_str',
 #        print "can't import version from %s" % new_uri
         found_file = False
 
+    return_value = None
     # We only want to write a new version file if the user wants to force the
     # file's creation, OR if the user specified a URI, but we can't find it.
     LOGGER.debug('Force_new=%s found_file=%s', force_new, found_file)
@@ -108,8 +109,9 @@ def invest_version(uri=None, force_new=False, attribute='version_str',
         LOGGER.debug('Getting the version number from HG')
         return_value = get_version_from_hg()
 
-    LOGGER.debug('Returning attribute %s', attribute)
-    return_value = getattr(version_info, attribute)
+    if return_value == None:
+        LOGGER.debug('Returning attribute %s', attribute)
+        return_value = getattr(version_info, attribute)
 
     os.chdir(current_dir)
     return return_value
