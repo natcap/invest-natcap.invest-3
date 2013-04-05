@@ -419,7 +419,7 @@ class FileChecker(URIChecker):
             otherwise."""
 
         try:
-            file_handler = open(self.uri, 'w')
+            file_handler = open(self.uri, 'r')
             file_handler.close()
         except IOError:
             return 'Unable to open file'
