@@ -253,6 +253,8 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
     resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
+    return
+
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
 
@@ -619,6 +621,8 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     #Calcualte the d infinity flow direction
     flow_direction_inf(dem_uri, flow_direction_uri)
+    return
+
     resolve_undefined_flow_directions(dem_uri, flow_direction_uri)
 
     LOGGER.info(
@@ -735,10 +739,10 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
                 except KeyError:
                     esri_stream_entry_points[dem_value][min_neighbor] = set([pixel_index])
 
-    indexes_to_visit = collections.deque()
+    seed_indexes = collections.deque()
     for cell_height in sorted(esri_stream_entry_points, reverse=True):
         for neighbor_min_height in sorted(esri_stream_entry_points[cell_height], reverse=True):
-            indexes_to_visit.extend(esri_stream_entry_points[cell_height][neighbor_min_height])
+            seed_indexes.extend(esri_stream_entry_points[cell_height][neighbor_min_height])
         
     #This makes the outflow directions start at pi and loop to 2pi before wrapping around to 0
     cdef float* inflow_directions = [3.141592653589793, 3.9269908169872414, 4.71238898038469, 5.497787143782138, 0.0, 0.7853981633974483, 1.5707963267948966, 2.356194490192345]
@@ -746,30 +750,32 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
     LOGGER.info('walking along the esri streams')
 
     #Do a simple D8 resolution of the cell directions
-    while len(indexes_to_visit) > 0:
-        current_index = indexes_to_visit.pop()
-        row_index = current_index / n_cols
-        col_index = current_index % n_cols
-        current_dem_value = dem_array[row_index, col_index]
-        current_flow_direction = flow_direction_array[row_index, col_index]
-        
-        for neighbor_index in xrange(8):
-            neighbor_row = row_index + row_offsets[neighbor_index]
-            neighbor_col = col_index + col_offsets[neighbor_index]
-        
-            if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
-                #out of range, skip
-                continue
+    while len(seed_indexes) > 0:
+        work_queue = collections.deque([seed_indexes.pop()])
+        while len(work_queue) > 0:
+            current_index = work_queue.pop()
+            row_index = current_index / n_cols
+            col_index = current_index % n_cols
+            current_dem_value = dem_array[row_index, col_index]
+            current_flow_direction = flow_direction_array[row_index, col_index]
 
-            neighbor_dem_value = dem_array[neighbor_row, neighbor_col]
-            neighbor_flow_direction = flow_direction_array[neighbor_row, neighbor_col]
+            for neighbor_index in xrange(8):
+                neighbor_row = row_index + row_offsets[neighbor_index]
+                neighbor_col = col_index + col_offsets[neighbor_index]
 
-            if neighbor_flow_direction != flow_direction_nodata or neighbor_dem_value == dem_nodata or neighbor_dem_value != current_dem_value:
-                #this neighbor is already set or not part of an esri stream layer
-                continue
+                if neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols:
+                    #out of range, skip
+                    continue
 
-            flow_direction_array[neighbor_row, neighbor_col] = inflow_directions[neighbor_index]
-            indexes_to_visit.appendleft(neighbor_row * n_cols + neighbor_col)
+                neighbor_dem_value = dem_array[neighbor_row, neighbor_col]
+                neighbor_flow_direction = flow_direction_array[neighbor_row, neighbor_col]
+
+                if neighbor_flow_direction != flow_direction_nodata or neighbor_dem_value == dem_nodata or neighbor_dem_value != current_dem_value:
+                    #this neighbor is already set or not part of an esri stream layer
+                    continue
+
+                flow_direction_array[neighbor_row, neighbor_col] = inflow_directions[neighbor_index]
+                work_queue.appendleft(neighbor_row * n_cols + neighbor_col)
 
     flow_direction_band.WriteArray(flow_direction_array)
 
