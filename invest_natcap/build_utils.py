@@ -109,9 +109,11 @@ def invest_version(uri=None, force_new=False, attribute='version_str',
         LOGGER.debug('Getting the version number from HG')
         return_value = get_version_from_hg()
 
-    if return_value == None:
+    try:
         LOGGER.debug('Returning attribute %s', attribute)
         return_value = getattr(version_info, attribute)
+    except UnboundLocalError:
+        LOGGER.debug('Unable to import version information, skipping.')
 
     os.chdir(current_dir)
     return return_value
