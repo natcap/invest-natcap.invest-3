@@ -25,8 +25,16 @@ VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
     force_new=True)
 # sanitize the version tag for distutils.
 VERSION = VERSION.replace(':', '_').replace(' ', '_')
+from invest_natcap import invest_version
+ARCHITECTURE = invest_version.py_arch
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
+
+#This makes a destination directory with the name invest_version_datetime.
+#Will make it easy to see the difference between different builds of the 
+#same version.
+DIST_DIR = 'invest_%s_%s' % (VERSION.replace('.','_').replace(':', '_'),
+    ARCHITECTURE)
 
 class ZipCommand(Command):
     description = 'Custom command to recurseively zip a folder'
@@ -35,9 +43,8 @@ class ZipCommand(Command):
         ('zip-file=', None, 'Output zip file path')]
 
     def initialize_options(self):
-        version = 'invest_' + VERSION.replace(':', '_').replace('.', '_')
-        self.zip_dir = version
-        self.zip_file = str(version + '.zip')
+        self.zip_dir = DIST_DIR
+        self.zip_file = str(self.zip_dir + '.zip')
 
     def finalize_options(self):
         """This function, though empty, is requred to exist in subclasses of
@@ -87,11 +94,6 @@ packages = ['invest_natcap',
             'invest_natcap.aesthetic_quality',
             'invest_natcap.habitat_risk_assessment',
             'invest_natcap.routing']
-
-#This makes a destination directory with the name invest_version_datetime.
-#Will make it easy to see the difference between different builds of the 
-#same version.
-DIST_DIR = 'invest_'+VERSION.replace('.','_').replace(':', '_')
 
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':

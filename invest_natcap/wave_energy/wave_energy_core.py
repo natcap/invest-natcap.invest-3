@@ -15,7 +15,6 @@ from bisect import bisect
 
 from invest_natcap.dbfpy import dbf
 from invest_natcap import raster_utils
-import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
 LOGGER = logging.getLogger('wave_energy_core')
