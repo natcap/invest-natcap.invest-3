@@ -17,7 +17,9 @@
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../WaveEnergy",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
                 },          
 				{        
                     "id" : "wave_base_data",
@@ -25,7 +27,9 @@
                     "type": "folder",
                     "label": "Path to Folder with Wave Base Data",
                     "defaultValue": "../WaveEnergy/input/WaveData",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "helpText": "Select the folder that has the packaged Wave Energy Data."
                 },    
 		        {
 		            "id": "analysis_area",
@@ -33,10 +37,11 @@
 		            "type": "dropdown",
 		            "label": "Analysis Area",
 		            "options": ["West Coast of North America and Hawaii",
-		            		"East Coast of North America and Puerto Rico", 
-					"Global"],
+		            		    "East Coast of North America and Puerto Rico", 
+					            "Global"],
 		            "defaultValue": 0,
-		            "required": true
+		            "required": true,
+                    "helpText": "Select from a list of pre-processed wave energy data. Currently coarse global data is provided as well as finer data for the East and West coast of North America."
 		        },
         		{
                     "id" : "machine_perf_table",
@@ -45,7 +50,8 @@
                     "label": "Machine Performance Table",
                     "defaultValue": "../WaveEnergy/input/Machine_Pelamis_Performance.csv",
                     "required": true,
-                    "validateAs": {"type":"CSV"}
+                    "validateAs": {"type":"CSV"},
+                    "helpText": "A Comma Separated Value table that has the performance of a particular wave energy machine at certain sea state conditions."
                 },
                 {
                     "id" : "machine_param_table",
@@ -64,7 +70,8 @@
                 									 {"field": "VALUE",
                 									  "validateAs": {"type": "number",
                 									                 "allowedValues":{"pattern":"[0-9]*\\.?[0-9]+$"}
-                									                 }}]}
+                									                 }}]},
+                    "helpText": "A Comma Separated Value table that has parameter values for a wave energy machine."
                 },
                 {
                     "id" : "dem",
@@ -73,7 +80,8 @@
                     "label": "Global Digital Elevation Model (DEM)",
                     "defaultValue": "../Base_Data/Marine/DEMs/global_dem",
                     "required": true,
-                    "validateAs": {"type": "GDAL"}
+                    "validateAs": {"type": "GDAL"},
+                    "helpText": "A GDAL dataset that has elevation values in meters. Used to get the cable distance for wave energy transmission."
                 },
                 {
                     "id" : "aoi",
@@ -88,8 +96,21 @@
                     			               "projection" : {"units": "meters", "exists":true},
                     			               "datum" : "WGS_1984"}]
                     			   },
-                    "returns": {"ifEmpty": "pass"}
-                }
+                    "returns": {"ifEmpty": "pass"},
+                    "helpText": "An OGR polygon datasource that defines an area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
+                },
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"A String that will be added to the end of the output file paths."
+                }                         
               ]
             },
             {
@@ -98,7 +119,7 @@
                 "type" : "container",
                 "label" : "Valuation",
                 "collapsible" : true,
-                "defaultValue" : true,
+                "defaultValue" : false,
                 "elements" : [
                     {
                         "id" : "valuation_list",
@@ -125,7 +146,8 @@
                                                                 {"field": "LONG",
                                                                 "validateAs": {"type": "number",
                                                                 "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
-                                                    ]}                                    
+                                                    ]},
+                                "helpText": "A Comma Separated Value table that has the landing points and grid points locations for computing cable distances."
                                                 
                             },    
                             {
@@ -144,7 +166,8 @@
                                                                 {"field": "VALUE",
                                                                 "validateAs": {"type": "number",
                                                                 "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
-                                                    ]}                                    
+                                                    ]},
+                                "helpText": "A Comma Separated Value table that has the economic parameters for the wave energy machine."
                                                 
                             },
                             {
@@ -154,7 +177,8 @@
                                 "label": "Number Of Machines",
                                 "defaultValue": "28",
                                 "required": true,
-                                "validText": "[0-9]+"
+                                "validText": "[0-9]+",
+                                "helpText": "An integer for how many wave energy machines will be in the wave farm."
                             }
                         ]
                     }

@@ -7,6 +7,8 @@ import numpy as np
 import collections 
 import math
 import datetime
+import sys
+import webbrowser
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -116,9 +118,11 @@ def execute(args):
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
-    if 'aoi_tables' in locals():
+    if 'aoi_tables' in args:
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
-        make_aoi_tables(plots_dir, inter_dir, risk_dict, args['aoi_tables'],
+        os.mkdir(tables_dir)
+        
+        make_aoi_tables(tables_dir, inter_dir, risk_dict, args['aoi_tables'],
                         args['max_risk'])
 
 def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
@@ -156,6 +160,19 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
     #Let's pre-calc stuff so we don't have to worry about it in the middle of
     #the file creation.
+    '''    avgs_dict- A multi level dictionary to hold the average values that
+            will be placed into the HTML table.
+
+            {'HabitatName':
+                {'StressorName':
+                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                        {...},
+                    ...
+                    ]
+                },
+                ....
+            }
+    '''
     avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
 
     filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
@@ -178,37 +195,41 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
     #Now, all of the actual calculations within the table. We want to make one
     #table for each habitat that is present within this model run.
-    for habitat in avgs_dict:
+    for habitat, stress_dict in avgs_dict.items():
 
         file.write("<H2>" + habitat + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
-        for stressor in avgs_dict[habitat]:
+        #Headers row
+        file.write("<tr><b><td>Stressor Name</td><td>AOI Name</td><td>E</td>" + \
+            "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
         
-            #Want the stressor row to span the number of AOIs that are included
+        for stressor, s_list in stress_dict.items():
+            LOGGER.debug("Stressor : %s", stressor)
+            LOGGER.debug("Type? %s", type(stressor))
+
+            #Want the stressor column to span the number of AOIs that are included
             #within it. 
-            file.write("<tr><td rowspan = " + len(avgs_dict[habitat][stressor]) + \
-                    + stressor + "</td>")
+            file.write("<tr><td rowspan = \"" + str(len(s_list)) + "\">" + stressor + "</td>")
             
             #Want to set the first AOI here so that it's in the first row, along
             #with the "beginning" of the stressor cell. Recall that dict[h][s]
             #is a list, so we can index directly.
-            file.write("<td>" + avgs_dict[habitat][stressor][0]['Name'] + \
-                "</td><td>" +  avgs_dict[habitat][stressor][0]['E'] + \
-                "</td><td>" + avgs_dict[habitat][stressor][0]['C'] + \
-                "</td><td>" +  avgs_dict[habitat][stressor][0]['Risk'] + \
-                "</td><td>" +  \
-                avgs_dict[habitat][stressor][0]['Risk'] / max_risk + "</td></tr>")
+            file.write("<td>" + s_list[0]['Name'] + \
+                "</td><td>" +  str(s_list[0]['E']) + \
+                "</td><td>" + str(s_list[0]['C']) + \
+                "</td><td>" +  str(s_list[0]['Risk']) + \
+                "</td><td>" + str(s_list[0]['Risk'] * 100 / max_risk) + "</td></tr>")
 
             #For all remaining AOIs on that H-S pairing.
-            for element in avgs_dict[habitat][stressor][1::]:
+            for element in s_list[1::]:
 
                 file.write("<tr>")
                 file.write("<td>" + element['Name']+ "</td>")
-                file.write("<td>" + element['E']+ "</td>")
-                file.write("<td>" + element['C']+ "</td>")
-                file.write("<td>" + element['Risk']+ "</td>")
-                file.write("<td>" + element['Risk'] / max_risk+ "</td>")
+                file.write("<td>" + str(element['E']) + "</td>")
+                file.write("<td>" + str(element['C']) + "</td>")
+                file.write("<td>" + str(element['Risk']) + "</td>")
+                file.write("<td>" + str(element['Risk'] * 100 / max_risk) + "</td>")
                 file.write("</tr>")
 
         #End of the habitat-specific table
@@ -258,10 +279,38 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
                 ....
             }
     '''
-    avgs_dict = {}
+    
+    #Since we know that the AOI will be consistent across all of the rasters,
+    #want to create the new int field, and the name mapping dictionary upfront
+    
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    aoi = ogr.Open(aoi_uri)
+    cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
+    cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)
+    layer = cp_aoi.GetLayer()
 
-    shape = ogr.Open(aoi_uri)
-    layer = shape.GetLayer()
+    field_defn = ogr.FieldDefn('BURN_ID', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    name_map = {}
+    count = 0
+    
+    for feature in layer:
+
+        name = feature.items()['name']
+        feature.SetField('BURN_ID', count)
+        name_map[count] = name
+        count += 1
+
+        layer.SetFeature(feature)
+        
+    layer.ResetReading()
+
+
+    #Now we will loop through all of the various pairings to deal with all their
+    #component parts across our AOI. Want to make sure to use our new field as
+    #the index.
+    avgs_dict = {}
 
     for pair in risk_dict:
         h, s = pair
@@ -273,13 +322,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
 
         #GETTING MEANS OF THE RISK RASTERS HERE
 
-        r_raster = gdal.Open(risk_dict[pair])
-
+        r_raster_uri = risk_dict[pair]
 
         #We know explicitly that the user will have a 'name' attribute on each
         #feature, since we already threw an error if they didn't.
-        r_agg_dict = raster_utils.aggregate_raster_values(r_raster, shape, 'name',
-                        'mean', ignore_nodata = True)
+        r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
+
+        LOGGER.debug("dictionaryyy %s", r_agg_dict)
 
         #GETTING MEANS OF THE E RASTERS HERE
 
@@ -287,27 +337,30 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        e_raster = gdal.Open(e_rast_uri)
-
-        e_agg_dict = raster_utils.aggregate_raster_values(e_raster, shape, 'name',
-                        'mean', ignore_nodata = True)
+        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
 
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        c_raster = gdal.Open(c_rast_uri)
-
-        c_agg_dict = raster_utils.aggregate_raster_values(c_raster, shape, 'name',
-                        'mean', ignore_nodata = True)
+        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
-        for name in r_agg_dict:
-           
-            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[name],
-                                    'C': c_agg_dict[name], 'Risk': r_agg_dict[name]})
+        for ident in r_agg_dict:
+            
+            name = name_map[ident]
+
+            LOGGER.debug("name: %s", name)           
+            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
+                                    'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
+
+            LOGGER.debug("dictionary is: %s", avgs_dict[h][s])
+        LOGGER.debug(avgs_dict)
+
     return avgs_dict
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
@@ -1122,7 +1175,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 return 0.
 
             else:
-                LOGGER.debug("Risk_Crit_Num %s", risk_crit_rate_numerator)
                 return risk_crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_risk_single,
@@ -1143,10 +1195,8 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                 return 0.
 
             else:
-                LOGGER.debug("Risk_Rec_Num %s", rec_crit_rate_numerator)
                 return rec_crit_rate_numerator
 
-        LOGGER.debug("Rec_Crit_Num == %s", rec_crit_rate_numerator)
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_rec_single,
                             single_crit_rec_uri, gdal.GDT_Float32, 0., 
                             base_pixel_size, "union", 
