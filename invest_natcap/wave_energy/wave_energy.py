@@ -67,9 +67,6 @@ def execute(**args):
 
     #Dictionary that will hold all the input arguments to be 
     #passed to wave_energy_core.biophysical
-    #biophysical_args = {}
-    #biophysical_args['workspace_dir'] = args['workspace_dir']
-    #biophysical_args['dem'] = gdal.Open(args['dem_uri'])
     dem_uri = args['dem_uri']
 
     #Create a dictionary that stores the wave periods and wave heights as
@@ -94,7 +91,7 @@ def execute(**args):
     machine_perf_file.close()
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
-    biophysical_args['machine_perf'] = machine_perf_dict
+    machine_perf = machine_perf_dict
     
     #Create a dictionary whose keys are the 'NAMES' from the machine parameter
     #table and whose values are from the corresponding 'VALUES' field.
@@ -104,7 +101,7 @@ def execute(**args):
     for row in reader:
         machine_params[row['NAME'].strip().lower()] = row['VALUE']
     machine_param_file.close()
-    biophysical_args['machine_param'] = machine_params
+    machine_param = machine_params
    
     #Build up a dictionary of possible analysis areas where the key
     #is the analysis area selected and the value is a dictionary
@@ -139,22 +136,12 @@ def execute(**args):
     #Add the ww3 dictionary, point shapefile, and polygon extract shapefile
     #to the biophysical_args based on the analysis area selected
     analysis_area_uri = args['analysis_area_uri']
-    #biophysical_args['wave_base_data'] = load_binary_wave_data(
-    #        analysis_dict[analysis_area_uri]['ww3_uri'])
-    
-    #biophysical_args['analysis_area'] = ogr.Open(
-    #        analysis_dict[analysis_area_uri]['point_shape'])
-    
-    #biophysical_args['analysis_area_extract'] = ogr.Open(
-    #        analysis_dict[analysis_area_uri]['extract_shape'])
     
     wave_base_data = load_binary_wave_data(
             analysis_dict[analysis_area_uri]['ww3_uri'])
     analysis_area_points_uri = analysis_dict[analysis_area_uri]['point_shape']
     analysis_area_extract_uri = \
             analysis_dict[analysis_area_uri]['extract_shape']
-
-
 
     try:
         aoi_uri = args['aoi_uri']
@@ -326,63 +313,30 @@ def execute(**args):
 
         dem_matrix = None
 
-    index_dem(
-            clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
-
-    #Create a new field for the depth attribute
-    #field_defn = ogr.FieldDefn('DEPTH_M', ogr.OFTReal)
-
-    #clipped_wave_layer = clipped_wave_shape.GetLayer(0)
-    #clipped_wave_layer.ResetReading()
-    #clipped_wave_layer.CreateField(field_defn)
-    #feature = clipped_wave_layer.GetNextFeature()
-
-    #For all the features (points) add the proper depth value from the DEM
-    #while feature is not None:
-    #    depth_index = feature.GetFieldIndex('DEPTH_M')
-    #    geom = feature.GetGeometryRef()
-    #    geom_x, geom_y = geom.GetX(), geom.GetY()
-
-        #Transform two points into meters
-    #    point_decimal_degree = \
-    #        coord_trans_opposite.TransformPoint(geom_x, geom_y)
-
-        #To get proper depth value we must index into the dem matrix
-        #by getting where the point is located in terms of the matrix
-    #    i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
-    #    j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
-    #    depth = dem_matrix[j][i]
-    #    feature.SetField(int(depth_index), float(depth))
-    #    clipped_wave_layer.SetFeature(feature)
-    #    feature.Destroy()
-    #    feature = clipped_wave_layer.GetNextFeature()
-
-    #dem_matrix = None
+    index_dem(clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
 
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
     #Generate an interpolate object for wave_energy_capacity
     LOGGER.debug('Interpolating machine performance table')
 
-    energy_interp = wave_energy_interp(args['wave_base_data'], \
-                                       args['machine_perf'])
+    energy_interp = wave_energy_interp(wave_base_data, machine_perf)
 
     #Create a dictionary with the wave energy capacity sums from each location
     LOGGER.debug('Summing the wave energy capacity at each wave farm')
     LOGGER.info('Calculating Captured Wave Energy.')
-    energy_cap = \
-        compute_wave_energy_capacity(
-        args['wave_base_data'], energy_interp, args['machine_param'])
+    energy_cap = compute_wave_energy_capacity(
+        wave_base_data, energy_interp, machine_param)
 
     #Add the sum as a field to the shapefile for the corresponding points
     LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
-    captured_wave_energy_to_shape(energy_cap, clipped_wave_shape)
+    captured_wave_energy_to_shape(energy_cap, clipped_wave_shape_path)
 
     #Calculate wave power for each wave point and add it as a field 
     #to the shapefile
     LOGGER.debug('Calculating wave power for each farm site')
     LOGGER.info('Calculating Wave Power.')
-    clipped_wave_shape = wave_power(clipped_wave_shape)
+    clipped_wave_shape = wave_power(clipped_wave_shape_path)
 
     #Reset the iterator head for the aoi_shape's layer so that it can properly
     #iterate over the features.  NOTE: A better solution to this issue would be
@@ -394,15 +348,13 @@ def execute(**args):
     aoi_layer.ResetReading()
 
     #Create blank rasters bounded by the shape file of analyis area
-    wave_energy_raster = \
-        raster_utils.create_raster_from_vector_extents(pixel_xsize, \
-           pixel_ysize, datatype, nodata, wave_energy_unclipped_path, \
-           aoi_shape)
+    wave_energy_raster = raster_utils.create_raster_from_vector_extents(
+            pixel_xsize, pixel_ysize, datatype, nodata, 
+            wave_energy_unclipped_path, aoi_shape)
 
-    wave_power_raster = \
-        raster_utils.create_raster_from_vector_extents(pixel_xsize, \
-            pixel_ysize, datatype, nodata, wave_power_unclipped_path, \
-            aoi_shape)
+    wave_power_raster = raster_utils.create_raster_from_vector_extents(
+            pixel_xsize, pixel_ysize, datatype, nodata,
+            wave_power_unclipped_path, aoi_shape)
 
     #Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
@@ -413,17 +365,18 @@ def execute(**args):
 
     #Clip the wave energy and wave power rasters so that they are confined 
     #to the AOI
-    clipped_wave_power_raster = clip_raster_from_polygon(aoi_shape, \
-        wave_power_raster, wave_power_path)
-    clipped_wave_energy_raster = clip_raster_from_polygon(aoi_shape, \
-        wave_energy_raster, wave_energy_path)
+    clipped_wave_power_raster = clip_raster_from_polygon(
+            aoi_shape, wave_power_unclipped_path, wave_power_path)
+    clipped_wave_energy_raster = clip_raster_from_polygon(
+            aoi_shape, wave_energy_unclipped_path, wave_energy_path)
+    
     #Flush the cache to make sure all data has been saved to disk and nothing
     #is waiting in a buffer to be written
     clipped_wave_energy_raster.FlushCache()
     clipped_wave_power_raster.FlushCache()
 
-    raster_utils.calculate_raster_stats(clipped_wave_power_raster)
-    raster_utils.calculate_raster_stats(clipped_wave_energy_raster)
+    raster_utils.calculate_raster_stats_uri(wave_power_path)
+    raster_utils.calculate_raster_stats_uri(wave_energy_path)
 
     #Create the percentile rasters for wave energy and wave power
     #These values are hard coded in because it's specified explicitly in  
@@ -772,7 +725,7 @@ def create_attribute_table(raster_uri, percentile_ranges, counter):
         rec.store()
     dataset_attribute_table.close()
 
-def wave_power(shape):
+def wave_power(shape_uri):
     """Calculates the wave power from the fields in the shapefile
     and writes the wave power value to a field for the corresponding
     feature. 
@@ -783,6 +736,8 @@ def wave_power(shape):
     returns - The shape that was just edited with the new wave power field
               and corresponding value    
     """
+    shape = ogr.Open(shape_uri, 1)
+
     #Sea water density constant (kg/m^3)
     swd = 1028
     #Gravitational acceleration (m/s^2)
@@ -790,7 +745,7 @@ def wave_power(shape):
     #Constant determining the shape of a wave spectrum (see users guide pg 23)
     alfa = 0.86
     #Add a waver power field to the shapefile.
-    layer = shape.GetLayer(0)
+    layer = shape.GetLayer()
     field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
     layer.CreateField(field_defn)
     layer.ResetReading()
@@ -1144,7 +1099,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
 
     return energy_cap
 
-def captured_wave_energy_to_shape(energy_cap, wave_shape):
+def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
     """Adds each captured wave energy value from the dictionary
     energy_cap to a field of the shapefile wave_shape. The values are
     set corresponding to the same I,J values which is the key of the
@@ -1156,7 +1111,8 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape):
     
     returns - Nothing    
     """
-    wave_layer = wave_shape.GetLayer(0)
+    wave_shape = ogr.Open(wave_shape_uri, 1)
+    wave_layer = wave_shape.GetLayer()
     #Incase the layer has already been read through earlier in the program
     #reset it to start from the beginning
     wave_layer.ResetReading()
