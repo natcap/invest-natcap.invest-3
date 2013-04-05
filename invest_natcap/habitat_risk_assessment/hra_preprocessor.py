@@ -19,13 +19,13 @@ class MissingHabitatsOrSpecies(Exception):
 
 class NotEnoughCriteria(Exception):
     '''An exception for hra_preprocessor which can be passed if the number of
-    criteria in the resiliance, exposure, and sensitivity categories all sums
+    criteria in the resilience, exposure, and sensitivity categories all sums
     to less than 4.'''
     pass
 
 class ImproperCriteriaSpread(Exception):
     '''An exception for hra_preprocessor which can be passed if there are not
-    one or more criteria in each of the 3 criteria categories: resiliance,
+    one or more criteria in each of the 3 criteria categories: resilience,
     exposure, and sensitivity.'''
     pass
 
@@ -57,7 +57,7 @@ def execute(args):
             (stressor-specific) criteria.
         args['sensitivity-crits']- List containing string names of sensitivity
             (habitat-stressor overlap specific) criteria.
-        args['resiliance_crits']- List containing string names of resiliance
+        args['resilience_crits']- List containing string names of resilience
             (habitat or species-specific) criteria.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             May not exist if the user does not desire criteria shapefiles. This
@@ -92,8 +92,8 @@ def execute(args):
                 potential stressors.")
 
     #2. There should be criteria of each type (exposure, sensitivity,
-    # resiliance).
-    if len(args['exposure_crits']) == 0 or len(args['resiliance_crits']) == 0 \
+    # resilience).
+    if len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
             or len(args['sensitivity_crits']) == 0:
 
         raise ImproperCriteriaSpread("This model requires there to be one \
@@ -101,7 +101,7 @@ def execute(args):
                 Sensitivity, and Resiliance.")
     
     #3. There should be > 4 criteria total.
-    total_crits = len(args['exposure_crits']) + len(args['resiliance_crits']) \
+    total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) \
                 + len(args['sensitivity_crits'])
    
     if total_crits < 4:
@@ -148,8 +148,8 @@ def execute(args):
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['exposure_crits'])
-    resiliance_crits = map(lambda name: name.replace('_', ' ').lower(), \
-                    args['resiliance_crits'])
+    resilience_crits = map(lambda name: name.replace('_', ' ').lower(), \
+                    args['resilience_crits'])
     sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['sensitivity_crits'])
     
@@ -221,7 +221,7 @@ def execute(args):
             habitat_csv_writer.writerow(default_table_headers)
 
             ##### HERE WILL BE WHERE USER INPUT HABITAT CRITERIA GO.####
-            for c_name in resiliance_crits:
+            for c_name in resilience_crits:
 
                 curr_row = default_row
 
