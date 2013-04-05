@@ -11,7 +11,8 @@ HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 LOGGER = logging.getLogger('build_utils')
 
-def invest_version(uri=None, force_new=False, attribute='version_str'):
+def invest_version(uri=None, force_new=False, attribute='version_str',
+        exec_dir=None):
     """Get the version of InVEST by importing invest_natcap.invest_version and
     using the appropriate version string from that module.  If
     invest_natcap.invest_version cannot be found, it is programmatically
@@ -22,6 +23,9 @@ def invest_version(uri=None, force_new=False, attribute='version_str'):
     programs to crash if the do not have CLI mercurial installed.
 
     attribute - an attribute to fetch from the invest_version file.
+    exec_dir - a string URI to a folder on disk where the execution should take
+        place.  It need not be inside of a python directory, but it must be
+        inside a mercurial installation.
 
     Returns a python bytestring with the version identifier, as appropriate for
     the development version or the release version."""
@@ -29,6 +33,16 @@ def invest_version(uri=None, force_new=False, attribute='version_str'):
     def get_file_name(uri):
         """This function gets the file's basename without the extension."""
         return os.path.splitext(os.path.basename(uri))[0]
+
+    # if the user provided an execution director, switch to that folder before
+    # executing all this.  This is mostly a hack so that we can access the
+    # invest_natcap version information from other projects like RIOS.
+    current_dir = os.getcwd()
+    if exec_dir == None:
+        directory = os.path.dirname(__file__)
+    else:
+        directory = exec_dir
+    os.chdir(directory)
 
     if uri == None:
         new_uri = os.path.join(os.path.abspath(os.path.dirname(get_python_lib())),
@@ -52,6 +66,7 @@ def invest_version(uri=None, force_new=False, attribute='version_str'):
         elif new_uri_extension == '.pyd':
             version_info = imp.load_dynamic(name, new_uri)
         else:
+            os.chdir(current_dir)
             raise IOError('Module %s must be importable by python' % new_uri)
 #        print 'imported version'
         LOGGER.debug('Successfully imported version file')
@@ -85,17 +100,19 @@ def invest_version(uri=None, force_new=False, attribute='version_str'):
             # within a distributed version of RIOS.
             # When this happens, return the exception as a string.
             LOGGER.debug('ValueError encountered: %s', str(e))
-            return str(e)
+            return_value = str(e)
     elif not found_file and uri == None and attribute == 'version_str':
         # If we have not found the version file and no URI is provided, we need
         # to get the version info from HG.
 #        print 'getting version from hg'
         LOGGER.debug('Getting the version number from HG')
-        return get_version_from_hg()
+        return_value = get_version_from_hg()
 
     LOGGER.debug('Returning attribute %s', attribute)
-    return getattr(version_info, attribute)
+    return_value = getattr(version_info, attribute)
 
+    os.chdir(current_dir)
+    return return_value
 
 def write_version_file(filepath):
     """Write the version number to the file designated by filepath.  Returns
