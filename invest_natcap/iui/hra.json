@@ -83,12 +83,12 @@
                     "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the Rating column of the habitat, species, and stressor CSVs."
                 },
                 {
-                "id": "aoi_tables",
+                    "id": "aoi_tables",
                     "args_id": "aoi_tables",
                     "type": "hideableFileEntry",
                     "label": "Sub-Regions Shapefile [Optional]",
                     "required": false,
-                    "validateAs": {"type": "file",
+                    "validateAs": {"type": "OGR",
 		    		  "mustExist": true},
                     "defaultValue": "../HabitatRiskAssess/Input/Risk_Plot.shp",
                     "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."

@@ -15,7 +15,8 @@
             "recreation": "recreation.php",
             "scenario": "scenario.php",
             "regression": "regression.php",
-            "results": "results.php"
+            "results": "results.php",
+            "version" : "version.php"
         },
         "grid_tmp": {
             "shp": "grid.shp",

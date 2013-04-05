@@ -163,20 +163,32 @@ def open_ambiguous_raster(uri):
 
         return - a gdal dataset or NONE if no file is found with the pre-defined
                  suffixes and 'uri'"""
+    # Turning on exceptions so that if an error occurs when trying to open a
+    # file path we can catch it and handle it properly
+    gdal.UseExceptions()
+    
     # a list of possible suffixes for raster datasets. We currently can handle
     # .tif and directory paths
-
     possible_suffixes = ['', '.tif', '.img']
     
     # initialize dataset to None in the case that all paths do not exist
-    dataset = None 
+    dataset = None
     for suffix in possible_suffixes:
-        if not os.path.exists(uri + suffix):
+        full_uri = uri +  suffix
+        if not os.path.exists(full_uri):
             continue
-        dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
+        try:
+            dataset = gdal.Open(full_uri, gdal.GA_ReadOnly)
+        except:
+            dataset = None            
+        
         # return as soon as a valid gdal dataset is found
         if dataset is not None:
             break
+
+    # Turning off exceptions because there is a known bug that will hide
+    # certain issues we care about later
+    gdal.DontUseExceptions()
 
     return dataset
 
