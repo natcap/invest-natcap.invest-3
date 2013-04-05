@@ -4,6 +4,7 @@ import os
 import logging
 import traceback
 import platform
+import codecs
 from distutils.sysconfig import get_python_lib
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
@@ -108,7 +109,7 @@ def write_version_file(filepath):
     ]
 
     # Open the version file for writing
-    fp = open(filepath, 'w')
+    fp = codecs.open(filepath, 'w', encoding='utf-8')
 
     # Write the comments as comments to the file and write the version to the
     # file as well.
