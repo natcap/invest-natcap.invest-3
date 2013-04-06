@@ -483,12 +483,20 @@ def parse_stressor(uri):
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
       
-        #Skip first two lines
-        for _ in range(2): 
-            csv_reader.next()
+        s_name = csv_reader.next()[1]
+
+        #Skip the blank line
+        csv_reader.next()
 
         #pull the stressor buffer from the second part of the third line
-        stressor_buffer = float(csv_reader.next()[1])
+        try:
+            stressor_buffer = float(csv_reader.next()[1])
+        except ValueError:
+            raise UnexpectedString("Entries in CSV table may not be \
+                strings, and may not be left blank. Check your %s CSV \
+                for any leftover strings or spaces within Buffer, Rating, \
+                Data Quality or Weight columns.", s_name)
+        
         stressor_dict['buffer'] = stressor_buffer
 
         #Ignore the next blank line
@@ -501,12 +509,24 @@ def parse_stressor(uri):
             key = row[0]
             
             if row[1] == 'SHAPE':
-                stressor_dict['Crit_Rasters'][key] = \
+                #Guarding against strings or null values being passed.
+                try:
+                    stressor_dict['Crit_Rasters'][key] = \
                         dict(zip(headers[1:3],map(float,row[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Buffer, Rating, \
+                        Data Quality or Weight columns.", s_name)
             else:
-                stressor_dict['Crit_Ratings'][key] = \
+                try:
+                    stressor_dict['Crit_Ratings'][key] = \
                         dict(zip(headers,map(float,row[1:])))
-                
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Buffer, Rating, \
+                        Data Quality or Weight columns.", s_name)
     return stressor_dict
 
 def parse_habitat_overlap(uri):
