@@ -46,7 +46,7 @@ then
         biodiversity_core_test.py
         carbon_test.py
         fileio_test.py
-        finfish_aquaculture_test.py
+#        finfish_aquaculture_test.py
         finfish_aquaculture_core_test.py
         hydropower_core_test.py
         hydropower_valuation_test.py

@@ -253,8 +253,6 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
     resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
-    return
-
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
 
@@ -621,8 +619,6 @@ def calculate_flow_direction(dem_uri, flow_direction_uri):
 
     #Calcualte the d infinity flow direction
     flow_direction_inf(dem_uri, flow_direction_uri)
-    return
-
     resolve_undefined_flow_directions(dem_uri, flow_direction_uri)
 
     LOGGER.info(
