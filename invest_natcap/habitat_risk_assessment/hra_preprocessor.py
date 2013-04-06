@@ -648,7 +648,7 @@ def parse_habitat_overlap(uri):
                         try:                    
                         #Only include DQ and W headers, since 'rating' will come
                         #in the form of a shapefile.
-                        habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
+                            habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
                                 dict(zip(headers[1:3], map(float,line[2:4])))
                         except ValueError:
                             raise UnexpectedString("Entries in CSV table may not be \
