@@ -590,6 +590,22 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
 
     return bounding_box
 
+def create_raster_from_vector_extents_uri(shapefile_uri, pixel_size, gdal_format, nodata_out_value, output_uri):
+    """A wrapper for create_raster_from_vector_extents
+    
+        shapefile_uri - uri to an OGR datasource to use as the extents of the raster
+        pixel_size - size of output pixels in the projected units of shapefile_uri
+        gdal_format - the raster pixel format, something like gdal.GDT_Float32
+        nodata_out_value - the output nodata value
+        output_uri - the URI to write the gdal dataset
+        
+        returns nothing"""
+
+    datasource = ogr.Open(shapefile_uri)
+    create_raster_from_vector_extents(
+        pixel_size, pixel_size, gdal_format, nodata_out_value, output_uri,
+        datasource)
+
 def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, 
                                       shp):
     """Create a blank raster based on a vector file extent.  This code is

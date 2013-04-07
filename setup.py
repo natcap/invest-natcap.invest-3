@@ -21,7 +21,7 @@ from Cython.Build import cythonize
 
 
 from invest_natcap import build_utils
-VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
+VERSION = build_utils.invest_version(uri='invest_version.py',
     force_new=True)
 # sanitize the version tag for distutils.
 VERSION = VERSION.replace(':', '_').replace(' ', '_')

@@ -19,14 +19,29 @@ class MissingHabitatsOrSpecies(Exception):
 
 class NotEnoughCriteria(Exception):
     '''An exception for hra_preprocessor which can be passed if the number of
-    criteria in the resiliance, exposure, and sensitivity categories all sums
+    criteria in the resilience, exposure, and sensitivity categories all sums
     to less than 4.'''
     pass
 
 class ImproperCriteriaSpread(Exception):
     '''An exception for hra_preprocessor which can be passed if there are not
-    one or more criteria in each of the 3 criteria categories: resiliance,
+    one or more criteria in each of the 3 criteria categories: resilience,
     exposure, and sensitivity.'''
+    pass
+
+class ZeroDQWeightValue(Exception):
+    '''An exception specifically for the parsing of the preprocessor tables in
+    which the model shoudl break loudly if a user tries to enter a zero value
+    for either a data quality or a weight. However, we should confirm that it
+    will only break if the rating is not also zero. If they're removing the
+    criteria entirely from that H-S overlap, it should be allowed.'''
+    pass
+
+class UnexpectedString(Exception):
+    '''An exception for hra_preprocessor that should catch any strings that are
+    left over in the CSVs. Since everything from the CSV's are being cast to
+    floats, this will be a hook off of python's ValueError, which will re-raise 
+    our exception with a more accurate message. '''
     pass
 
 def execute(args):
@@ -45,7 +60,7 @@ def execute(args):
             (stressor-specific) criteria.
         args['sensitivity-crits']- List containing string names of sensitivity
             (habitat-stressor overlap specific) criteria.
-        args['resiliance_crits']- List containing string names of resiliance
+        args['resilience_crits']- List containing string names of resilience
             (habitat or species-specific) criteria.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             May not exist if the user does not desire criteria shapefiles. This
@@ -80,16 +95,16 @@ def execute(args):
                 potential stressors.")
 
     #2. There should be criteria of each type (exposure, sensitivity,
-    # resiliance).
-    if len(args['exposure_crits']) == 0 or len(args['resiliance_crits']) == 0 \
+    # resilience).
+    if len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
             or len(args['sensitivity_crits']) == 0:
 
         raise ImproperCriteriaSpread("This model requires there to be one \
                 criteria in each of the following catagories: Exposure, \
-                Sensitivity, and Resiliance.")
+                Sensitivity, and Resilience.")
     
     #3. There should be > 4 criteria total.
-    total_crits = len(args['exposure_crits']) + len(args['resiliance_crits']) \
+    total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) \
                 + len(args['sensitivity_crits'])
    
     if total_crits < 4:
@@ -136,8 +151,8 @@ def execute(args):
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['exposure_crits'])
-    resiliance_crits = map(lambda name: name.replace('_', ' ').lower(), \
-                    args['resiliance_crits'])
+    resilience_crits = map(lambda name: name.replace('_', ' ').lower(), \
+                    args['resilience_crits'])
     sensitivity_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['sensitivity_crits'])
     
@@ -209,7 +224,7 @@ def execute(args):
             habitat_csv_writer.writerow(default_table_headers)
 
             ##### HERE WILL BE WHERE USER INPUT HABITAT CRITERIA GO.####
-            for c_name in resiliance_crits:
+            for c_name in resilience_crits:
 
                 curr_row = default_row
 
@@ -403,11 +418,27 @@ def parse_hra_tables(workspace_uri):
                     #since it's not the dictionary that we're concerned with.
                     try:
                         for crit_name, crit_dict in kind.iteritems():
+
+                            #Remove the subdictionary if the rating is 0
+                            if 'Rating' in crit_dict and crit_dict['Rating'] in [0, 0.0]:
+                                del(kind[crit_name])
+                                #Breaking because crit_dict won't contain crit_name
+                                break
+                            
+                            #If we get to this point, we know that rating is non-zero
+                            for value in crit_dict['DQ'], crit_dict['Weight']:
+                                if value in [0, 0.0]:
+                                    raise ZeroDQWeightValue("Individual criteria \
+                                        data qualities and weights may not be 0.")
+
+                            #THIS MAY BE LATER REPLACED BY AN OVERARCHING STRING CHECK.
+                            #Want to break if anything entered is a null string.
                             for value in crit_dict.values():
-                                if value in [0, '']:
-                                    del(kind[crit_name])
-                                    #Breaking because crit_dict won't contain crit_name
-                                    break
+                                if value == '':
+                                    raise NoEntryException("Criteria CSV files must \
+                                        have values filled out for all criteria. If \
+                                        you would like to exclude a criteria from the \
+                                        assessment, use a 0 for that entry.")
                     except AttributeError:
                         #Can just skip over float values.
                         pass
@@ -452,12 +483,20 @@ def parse_stressor(uri):
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
       
-        #Skip first two lines
-        for _ in range(2): 
-            csv_reader.next()
+        s_name = csv_reader.next()[1]
+
+        #Skip the blank line
+        csv_reader.next()
 
         #pull the stressor buffer from the second part of the third line
-        stressor_buffer = float(csv_reader.next()[1])
+        try:
+            stressor_buffer = float(csv_reader.next()[1])
+        except ValueError:
+            raise UnexpectedString("Entries in CSV table may not be \
+                strings, and may not be left blank. Check your %s CSV \
+                for any leftover strings or spaces within Buffer, Rating, \
+                Data Quality or Weight columns.", s_name)
+        
         stressor_dict['buffer'] = stressor_buffer
 
         #Ignore the next blank line
@@ -470,12 +509,24 @@ def parse_stressor(uri):
             key = row[0]
             
             if row[1] == 'SHAPE':
-                stressor_dict['Crit_Rasters'][key] = \
+                #Guarding against strings or null values being passed.
+                try:
+                    stressor_dict['Crit_Rasters'][key] = \
                         dict(zip(headers[1:3],map(float,row[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Buffer, Rating, \
+                        Data Quality or Weight columns.", s_name)
             else:
-                stressor_dict['Crit_Ratings'][key] = \
+                try:
+                    stressor_dict['Crit_Ratings'][key] = \
                         dict(zip(headers,map(float,row[1:])))
-                
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Buffer, Rating, \
+                        Data Quality or Weight columns.", s_name)
     return stressor_dict
 
 def parse_habitat_overlap(uri):
@@ -546,15 +597,29 @@ def parse_habitat_overlap(uri):
             
             key = line[0]
 
+            #If we are dealing with a shapefile criteria, we only want  to
+            #add the DQ and the W, and we will add a rasterized version of
+            #the shapefile later.
             if line[1] == 'SHAPE':
-                #If we are dealing with a shapefile criteria, we only want  to
-                #add the DQ and the W, and we will add a rasterized version of
-                #the shapefile later.
-                habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(float, line[2:4]))) 
+                try:
+                    habitat_dict['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:3], map(float, line[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+                    
             else:
-                habitat_dict['Crit_Ratings'][key] = \
+                try:
+                    habitat_dict['Crit_Ratings'][key] = \
                         dict(zip(headers, map(float,line[1:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            
             line = csv_reader.next()
 
         #Drain the next two lines
@@ -579,13 +644,30 @@ def parse_habitat_overlap(uri):
                         'Crit_Rasters': {}}
                 while line[0] != '':
                     if line[1] == 'SHAPE':
-                        #Only include DQ and W headers
-                        habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
+                        #Going to do some custom error checking for null values or strings.
+                        try:                    
+                        #Only include DQ and W headers, since 'rating' will come
+                        #in the form of a shapefile.
+                            habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
                                 dict(zip(headers[1:3], map(float,line[2:4])))
+                        except ValueError:
+                            raise UnexpectedString("Entries in CSV table may not be \
+                                strings, and may not be left blank. Check your %s CSV \
+                                for any leftover strings or spaces within Rating, \
+                                Data Quality or Weight columns.", hab_name)
                     else:
-                        habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
+                        #Going to do some custom error checking for null values or strings.
+                        try:
+                            habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
                                 dict(zip(headers, map(float,line[1:4])))
+                        except ValueError:
+                            raise UnexpectedString("Entries in CSV table may not be \
+                                strings, and may not be left blank. Check your %s CSV \
+                                for any leftover strings or spaces within Rating, \
+                                Data Quality or Weight columns.", hab_name)
+
                     line = csv_reader.next()
+
             except StopIteration:
                 break
 
@@ -626,9 +708,9 @@ def make_crit_shape_dict(crit_uri):
     '''
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
     #First, want to get the things that are either habitat specific or 
-    #species specific. These should all be in the 'Resiliance' subfolder
+    #species specific. These should all be in the 'Resilience subfolder
     #of raster_criteria.
-    res_shps = glob.glob(os.path.join(crit_uri, 'Resiliance', '*.shp'))
+    res_shps = glob.glob(os.path.join(crit_uri, 'Resilience', '*.shp'))
    
     #Now we have a list of all habitat specific shapefile criteria. Now we need
     #to parse them out.
