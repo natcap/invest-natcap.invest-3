@@ -82,7 +82,6 @@ def create_random_permitting_site(workspace_dir, base_watershed_shp):
         if contained:
             break
 
-
     feature = ogr.Feature(layer.GetLayerDefn())
     feature.SetGeometry(polygon)
     feature.SetField(0, 1)
@@ -92,26 +91,6 @@ def create_random_permitting_site(workspace_dir, base_watershed_shp):
     layer = None
 
     datasource.SyncToDisk()
-
-    return
-
-
-
-
-    #create a new ogr shapefile with the same projection as base_watershed_shp and save in workspace_idr
-    base_datasource = ogr.Open(base_watershed_shp)
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-
-    datasource_copy = esri_driver.CopyDataSource(base_datasource, permitting_datasource_uri)
-    layer = datasource_copy.GetLayer(0)
-    print layer
-    #get extents of base_watershed_shp
-
-    #make a square of size about 1-10% of the watershed and randomly center it
-
-    #reject if it is outside the watershed, accept otherwise
-
-
 
 if __name__ == '__main__':
     create_random_permitting_site('permitting_dir', '../Pucallpa_subset/sws_20.shp')
