@@ -22,6 +22,12 @@ def base_run(workspace_dir):
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 70.0
     args['sediment_threshold_table_uri'] = '../Pucallpa_subset/sed_thresh.csv'
+    sediment.execute(args)
+
+    if not os.path.exists(args['workspace_dir']):
+        os.makedirs(args['workspace_dir'])
+
+#    routing_utils.flow_accumulation(args['dem_uri'], os.path.join(args['workspace_dir'], 'flux_output_uri.tif'))
 
     #First calculate the base sediment run
     sediment.execute(args)
