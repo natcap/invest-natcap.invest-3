@@ -49,10 +49,12 @@ def base_run(workspace_dir):
         pixel_export_nodata, pixel_size_out, "intersection", aoi_uri=permitting_datasource_uri)
     print closure['max_export']
 
-
-
     #Create a new LULC that masks the LULC values to the new type that lie within
     #the permitting site and re-run sediment model, base new lulc on user input
+    converted_lulc_uri = raster_utils.temporary_filename()
+    #rasterize permitting_datasource_uri
+    #vectorize_datasets so that mask converts original lulc to bare soil
+    #re-run sediment
 
     #take the difference of export from the base run minus the new run
 
