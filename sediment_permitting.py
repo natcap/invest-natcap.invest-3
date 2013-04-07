@@ -101,7 +101,7 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp)
         poly_width = feature_extent[1]-feature_extent[0]
         poly_height = feature_extent[3]-feature_extent[2]
 
-        rand_width_percent = random.random(0.05, 0.2)
+        rand_width_percent = random.random()
         xmin = feature_extent[0] + poly_width * rand_width_percent
         xmax = feature_extent[1] - poly_width * random.random() * rand_width_percent
 
