@@ -1,5 +1,7 @@
 import os
 import shutil
+import random
+
 
 from osgeo import ogr
 
@@ -52,14 +54,34 @@ def create_random_permitting_site(workspace_dir, base_watershed_shp):
     field = ogr.FieldDefn('id', ogr.OFTReal)
     layer.CreateField(field)
 
-    poly_ring = ogr.Geometry(type=ogr.wkbLinearRing)
-    poly_ring.AddPoint(feature_extent[0], feature_extent[2])
-    poly_ring.AddPoint(feature_extent[0], feature_extent[3])
-    poly_ring.AddPoint(feature_extent[1], feature_extent[3])
-    poly_ring.AddPoint(feature_extent[1], feature_extent[2])
-    poly_ring.AddPoint(feature_extent[0], feature_extent[2])
-    polygon = ogr.Geometry(ogr.wkbPolygon)
-    polygon.AddGeometry(poly_ring)
+
+    while True:
+        poly_ring = ogr.Geometry(type=ogr.wkbLinearRing)
+        poly_width = feature_extent[1]-feature_extent[0]
+        poly_height = feature_extent[3]-feature_extent[2]
+
+        rand_width_percent = random.random()
+        xmin = feature_extent[0] + poly_width * rand_width_percent
+        xmax = feature_extent[1] - poly_width * random.random() * rand_width_percent
+
+        rand_height_percent = random.random()
+        ymin = feature_extent[2] + poly_height * rand_height_percent
+        ymax = feature_extent[3] - poly_height * random.random() * rand_height_percent
+
+        poly_ring.AddPoint(xmin, ymin)
+        poly_ring.AddPoint(xmin, ymax)
+        poly_ring.AddPoint(xmax, ymax)
+        poly_ring.AddPoint(xmax, ymin)
+        poly_ring.AddPoint(xmin, ymin)
+        polygon = ogr.Geometry(ogr.wkbPolygon)
+        polygon.AddGeometry(poly_ring)
+
+        #See if the watershed contains the permitting polygon
+        contained = base_geometry.Contains(polygon)
+        print contained
+        if contained:
+            break
+
 
     feature = ogr.Feature(layer.GetLayerDefn())
     feature.SetGeometry(polygon)
