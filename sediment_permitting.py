@@ -24,7 +24,16 @@ def base_run(workspace_dir):
     sediment.execute(args)
     pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
 
-    
+    #score the permitting site by multiplying the max export by the area of the polygon
+
+    #Create a new LULC that masks the LULC values to the new type that lie within
+    #the permitting site and re-run sediment model, base new lulc on user input
+
+    #take the difference of export from the base run minus the new run
+
+    #output scores
+
+
 
 def create_random_permitting_site(workspace_dir, base_watershed_shp):
     permitting_datasource_uri = os.path.join(workspace_dir,'random_permit')
