@@ -4,8 +4,11 @@ import random
 
 
 from osgeo import ogr
+from osgeo import gdal
+
 
 from invest_natcap.sediment import sediment
+from invest_natcap import raster_utils
 
 def base_run(workspace_dir):
     args = {}
@@ -22,9 +25,31 @@ def base_run(workspace_dir):
 
     #First calculate the base sediment run
     sediment.execute(args)
-    pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
 
-    #score the permitting site by multiplying the max export by the area of the polygon
+    #create a random permitting polygon
+    permitting_datasource_uri = os.path.join(workspace_dir, 'random_permit')
+    create_random_permitting_site(permitting_datasource_uri, args['watersheds_uri'])
+
+    #prep data from sediment run
+    pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
+    pixel_export_nodata = raster_utils.get_nodata_from_uri(pixel_export_uri)
+
+    #Find the max export
+    closure = {'max_export': -1.0}
+    def find_max_export(pixel_export):
+        if pixel_export == pixel_export_nodata:
+            return pixel_export_nodata
+        if pixel_export > closure['max_export']:
+            closure['max_export'] = pixel_export
+        return 1.0
+    dataset_out_uri = raster_utils.temporary_filename()
+    pixel_size_out = raster_utils.get_cell_size_from_uri(pixel_export_uri)
+    raster_utils.vectorize_datasets(
+        [pixel_export_uri], find_max_export, dataset_out_uri, gdal.GDT_Float32,
+        pixel_export_nodata, pixel_size_out, "intersection", aoi_uri=permitting_datasource_uri)
+    print closure['max_export']
+
+
 
     #Create a new LULC that masks the LULC values to the new type that lie within
     #the permitting site and re-run sediment model, base new lulc on user input
@@ -35,8 +60,7 @@ def base_run(workspace_dir):
 
 
 
-def create_random_permitting_site(workspace_dir, base_watershed_shp):
-    permitting_datasource_uri = os.path.join(workspace_dir,'random_permit')
+def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp):
     if os.path.exists(permitting_datasource_uri):
         shutil.rmtree(permitting_datasource_uri)
 
@@ -73,7 +97,8 @@ def create_random_permitting_site(workspace_dir, base_watershed_shp):
         xmin = feature_extent[0] + poly_width * rand_width_percent
         xmax = feature_extent[1] - poly_width * random.random() * rand_width_percent
 
-        rand_height_percent = random.random()
+        #Make it squarish
+        rand_height_percent = rand_width_percent + (0.5-random.random())*0.3
         ymin = feature_extent[2] + poly_height * rand_height_percent
         ymax = feature_extent[3] - poly_height * random.random() * rand_height_percent
 
@@ -102,5 +127,4 @@ def create_random_permitting_site(workspace_dir, base_watershed_shp):
     datasource.SyncToDisk()
 
 if __name__ == '__main__':
-    create_random_permitting_site('permitting_dir', '../Pucallpa_subset/sws_20.shp')
-#    base_run('./base_sediment_run')
+    base_run('./base_sediment_run')
