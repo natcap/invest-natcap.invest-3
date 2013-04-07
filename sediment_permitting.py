@@ -20,8 +20,17 @@ def base_run(workspace_dir):
     sediment.execute(args)
     pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
 
-
     
+
+def create_random_permitting_site(workspace_dir, base_watershed_shp):
+    #create a new ogr shapefile with the same projection as base_watershed_shp and save in workspace_idr
+
+    #get extents of base_watershed_shp
+
+    #make a square of size about 1-10% of the watershed and randomly center it
+
+    #reject if it is outside the watershed, accept otherwise
+
 
 
 if __name__ == '__main__':
