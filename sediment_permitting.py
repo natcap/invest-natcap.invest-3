@@ -81,10 +81,12 @@ def base_run(workspace_dir):
     permitting_pixel_export_band = pixel_export_dataset.GetRasterBand(1)
     permitting_pixel_export_array = pixel_export_band.ReadAsArray()
 
-    export_difference = (numpy.sum(permitting_pixel_export_array[permitting_pixel_export_array != pixel_export_nodata]) -
-                         numpy.sum(pixel_export_array[pixel_export_array != pixel_export_nodata]))
-                         
+    permitting_export = sum(permitting_pixel_export_array[permitting_pixel_export_array != pixel_export_nodata])
+    base_export = sum(pixel_export_array[pixel_export_array != pixel_export_nodata])
 
+    export_difference = permitting_export - base_export
+                         
+    print permitting_export, base_export, export_difference
 
 
     closure = {'max_export': -1.0}
