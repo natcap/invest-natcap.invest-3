@@ -1,7 +1,7 @@
 import os
 import shutil
 import random
-
+import numpy
 
 from osgeo import ogr
 from osgeo import gdal
@@ -72,6 +72,19 @@ def base_run(workspace_dir):
     args['landuse_uri'] = converted_lulc_uri
     sediment.execute(args)
     permitting_pixel_export_uri = os.path.join(workspace_dir, 'permitting_run', 'Output', 'sed_export.tif')
+
+    pixel_export_dataset = gdal.Open(pixel_export_uri)
+    pixel_export_band = pixel_export_dataset.GetRasterBand(1)
+    pixel_export_array = pixel_export_band.ReadAsArray()
+
+    permitting_pixel_export_dataset = gdal.Open(permitting_pixel_export_uri)
+    permitting_pixel_export_band = pixel_export_dataset.GetRasterBand(1)
+    permitting_pixel_export_array = pixel_export_band.ReadAsArray()
+
+    export_difference = (numpy.sum(permitting_pixel_export_array[permitting_pixel_export_array != pixel_export_nodata]) -
+                         numpy.sum(pixel_export_array[pixel_export_array != pixel_export_nodata]))
+                         
+
 
 
     closure = {'max_export': -1.0}
