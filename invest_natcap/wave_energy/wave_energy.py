@@ -3,6 +3,8 @@ import math
 import os
 import re
 import logging
+import csv
+import struct
 
 import numpy as np
 from osgeo import gdal
@@ -19,7 +21,7 @@ from invest_natcap.invest_core import invest_core
 
 LOGGER = logging.getLogger('wave_energy_core')
 
-def execute(**args):
+def execute(args):
     """Executes the wave energy model
         
         **args - a pythong dictionary
@@ -143,10 +145,10 @@ def execute(**args):
     analysis_area_extract_uri = \
             analysis_dict[analysis_area_uri]['extract_shape']
 
-    try:
-        aoi_uri = args['aoi_uri']
-    except:
-        LOGGER.debug('AOI not provided')
+    #try:
+    #    aoi_uri = args['aoi_uri']
+    #except:
+    #    LOGGER.debug('AOI not provided')
     
     
     #Path for clipped wave point shapefile holding wave attribute information
@@ -191,17 +193,16 @@ def execute(**args):
         spat_ref = layer.GetSpatialRef()
         return spat_ref
     
-    
     #analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
     analysis_area_sr = get_spatial_ref(analysis_area_points_uri)
-    
-    
     
     #Holds any temporary files we want to clean up at the end of the model run
     file_list = []
     #This if statement differentiates between having an AOI or doing a broad
     #run on all the wave watch points specified by args['analysis_area'].
-    if 'aoi' in args:
+    if 'aoi_uri' in args:
+        LOGGER.debug('AOI was provided')
+
         #There is an AOI, so we need to reproject WWIII points into that the
         #output can be in the same projection as the AOI.
 
@@ -212,33 +213,35 @@ def execute(**args):
 
         file_list.append(projected_wave_shape_path)
         #The polygon shapefile that specifies the area of interest
-        #aoi_shape = args['aoi']
+        aoi_shape_path = args['aoi_uri']
         
         #Set the wave data shapefile to the same projection as the 
         #area of interest
         change_shape_projection(
-                analysis_area_points_uri, aoi_uri, projected_wave_shape_path)
+                analysis_area_points_uri, aoi_shape_path, projected_wave_shape_path)
 
         #Clip the wave data shape by the bounds provided from the 
         #area of interest
         #clipped_wave_shape = clip_shape(
         #        projected_wave_shape, aoi_shape, clipped_wave_shape_path)
-        clip_shape(projected_wave_shape_path, aoi_uri, clipped_wave_shape_path)
+        clip_shape(projected_wave_shape_path, aoi_shape_path,
+                clipped_wave_shape_path)
         
         #Create a coordinate transformation from the given
         #WWIII point shapefile (args['analysis_area']), to the 
         #area of interest's projection (args['aoi'])
         #aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
-        #coord_trans, coord_trans_opposite = \
-        #    get_coordinate_transformation(analysis_area_sr, aoi_sr)
+        aoi_sr = get_spatial_ref(aoi_shape_path)
+        coord_trans, coord_trans_opposite = \
+            get_coordinate_transformation(analysis_area_sr, aoi_sr)
 
         #Get the size of the pixels in meters, to be used for creating 
         #projected wave power and wave energy capacity rasters
-        #pixel_xsize, pixel_ysize = \
-        #    pixel_size_helper(clipped_wave_shape, coord_trans, \
-        #                      coord_trans_opposite, global_dem)
-       
-        pixel_size = raster_utils.get_cell_size_from_uri(dem_uri)
+        pixel_xsize, pixel_ysize = pixel_size_helper(
+                clipped_wave_shape_path, coord_trans, coord_trans_opposite, 
+                dem_uri)
+        pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
+        #pixel_size = raster_utils.get_cell_size_from_uri(dem_uri)
 
 
         #Close file as it is no longer used
@@ -252,7 +255,7 @@ def execute(**args):
         #is necessary to make the following while loop simpler.
 
         #The polygon shapefile that specifies the broader area of interest
-        aoi_shape = args['analysis_area_extract']
+        aoi_shape_path = analysis_area_extract_uri
 
         #Not sure if this is needed, as aoi_shape is already an outline 
         #of analysis_area
@@ -344,36 +347,41 @@ def execute(**args):
     #raster_utils.create_raster_from_vector_extents, where we solved this issue
     #by not iterating over the features but calling them specifically with their
     #index which we got from getting the feature count.
-    aoi_layer = aoi_shape.GetLayer(0)
-    aoi_layer.ResetReading()
+    #aoi_layer = aoi_shape.GetLayer(0)
+    #aoi_layer.ResetReading()
 
     #Create blank rasters bounded by the shape file of analyis area
-    wave_energy_raster = raster_utils.create_raster_from_vector_extents(
-            pixel_xsize, pixel_ysize, datatype, nodata, 
-            wave_energy_unclipped_path, aoi_shape)
+    raster_utils.create_raster_from_vector_extents_uri(
+            aoi_shape_path, pixel_size, datatype, nodata, 
+            wave_energy_unclipped_path)
 
-    wave_power_raster = raster_utils.create_raster_from_vector_extents(
-            pixel_xsize, pixel_ysize, datatype, nodata,
-            wave_power_unclipped_path, aoi_shape)
+    raster_utils.create_raster_from_vector_extents_uri(
+            aoi_shape_path, pixel_size, datatype, nodata,
+            wave_power_unclipped_path)
 
     #Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
-    raster_utils.vectorize_points(
-            clipped_wave_shape, 'CAPWE_MWHY', wave_energy_raster)
-    raster_utils.vectorize_points(
-            clipped_wave_shape, 'WE_kWM', wave_power_raster)
+    def vectorize_points_uri(shapefile_uri, field, output_uri):
+        datasource = ogr.Open(shapefile_uri, 1)
+        output_raster = gdal.Open(output_uri, 1)
+        raster_utils.vectorize_points(datasource, field, output_raster)
+    
+    vectorize_points_uri(
+            clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
+    vectorize_points_uri(
+            clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
 
     #Clip the wave energy and wave power rasters so that they are confined 
     #to the AOI
-    clipped_wave_power_raster = clip_raster_from_polygon(
-            aoi_shape, wave_power_unclipped_path, wave_power_path)
-    clipped_wave_energy_raster = clip_raster_from_polygon(
-            aoi_shape, wave_energy_unclipped_path, wave_energy_path)
+    clip_raster_from_polygon(
+            aoi_shape_path, wave_power_unclipped_path, wave_power_path)
+    clip_raster_from_polygon(
+            aoi_shape_path, wave_energy_unclipped_path, wave_energy_path)
     
     #Flush the cache to make sure all data has been saved to disk and nothing
     #is waiting in a buffer to be written
-    clipped_wave_energy_raster.FlushCache()
-    clipped_wave_power_raster.FlushCache()
+    #clipped_wave_energy_raster.FlushCache()
+    #clipped_wave_power_raster.FlushCache()
 
     raster_utils.calculate_raster_stats_uri(wave_power_path)
     raster_utils.calculate_raster_stats_uri(wave_energy_path)
@@ -387,19 +395,17 @@ def execute(**args):
     wp_units_short = ' (kW/m)'
     wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
     starting_percentile_range = '1'
-    capwe_rc = \
-       create_percentile_rasters(clipped_wave_energy_raster, capwe_rc_path, \
+    create_percentile_rasters(wave_energy_path, capwe_rc_path, \
                                  capwe_units_short, capwe_units_long, \
                                  starting_percentile_range, percentiles, nodata)
-    wp_rc_raster = \
-        create_percentile_rasters(clipped_wave_power_raster, wp_rc_path, \
+    create_percentile_rasters(wave_power_path, wp_rc_path, \
                                   wp_units_short, wp_units_long, \
                                   starting_percentile_range, percentiles, \
                                   nodata)
 
     #Clean up Shapefiles and Rasters
-    clipped_wave_shape.Destroy()
-    aoi_shape.Destroy()
+    clipped_wave_shape = None
+    aoi_shape = None
     wave_energy_raster = None
     wave_power_raster = None
     clipped_wave_energy_raster = None
@@ -499,7 +505,7 @@ def file_cleanup_handler(file_list):
         #string after that separator and before the '.' extension.
         pattern = file_name[file_name.rfind(os.sep) + 1:len(file_name) - 4] + ".*"
         directory = file_name[0:file_name.rfind(os.sep) + 1]
-        logging.debug('Regex file_name pattern : %s', pattern)
+        LOGGER.debug('Regex file_name pattern : %s', pattern)
         for item in os.listdir(directory):
             if re.search(pattern, item):
                 try:
@@ -508,7 +514,7 @@ def file_cleanup_handler(file_list):
                     LOGGER.warn("Warning, could not delete the file %s" % \
                                     os.path.join(directory, item))
 
-def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
+def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
     """This function helps retrieve the pixel sizes of the global DEM 
     when given an area of interest that has a certain projection.
     
@@ -522,6 +528,9 @@ def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
     returns - A tuple of the x and y pixel sizes of the global DEM 
               given in the units of what 'shape' is projected in
     """
+    shape = ogr.Open(shape_path)
+    global_dem = gdal.Open(ds_uri)
+
     #Get a point in the clipped shape to determine output grid size
     feat = shape.GetLayer(0).GetNextFeature()
     geom = feat.GetGeometryRef()
@@ -554,8 +563,9 @@ def get_coordinate_transformation(source_sr, target_sr):
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     return (coord_trans, coord_trans_opposite)
     
-def create_percentile_rasters(raster_dataset, output_path, units_short, \
-                              units_long, start_value, percentile_list, nodata):
+def create_percentile_rasters(
+        raster_path, output_path, units_short, units_long, start_value, 
+        percentile_list, nodata):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
     ranges provided by taking the quartile of values.  
@@ -573,6 +583,8 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, \
                   
     return - The new gdal raster
     """
+    raster_dataset = gdal.Open(raster_path)
+
     #If the output_path is already a file, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
@@ -633,7 +645,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, \
         pixel_count[percentile_class - 1] = \
             np.where(perc_array == percentile_class)[0].size
 
-    logging.debug('number of pixels per group: : %s', pixel_count)
+    LOGGER.debug('number of pixels per group: : %s', pixel_count)
     #Generate the attribute table for the percentile raster
     create_attribute_table(output_path, percentile_ranges, pixel_count)
 
@@ -717,7 +729,7 @@ def create_attribute_table(raster_uri, percentile_ranges, counter):
                  ("VAL_RANGE", "C", 254))
     #Add all the records
     for id_value in range(len(percentile_ranges)):
-        logging.debug('id_value: %s', id_value)
+        LOGGER.debug('id_value: %s', id_value)
         rec = dataset_attribute_table.newRecord()
         rec["VALUE"] = id_value + 1
         rec["COUNT"] = int(counter[id_value])
@@ -793,7 +805,7 @@ def wave_power(shape_uri):
 
     return shape
 
-def clip_raster_from_polygon(shape, raster, path):
+def clip_raster_from_polygon(shape_path, raster_path, path):
     """Returns a raster where any value outside the bounds of the
     polygon shape are set to nodata values. This represents clipping 
     the raster to the dimensions of the polygon.
@@ -804,6 +816,9 @@ def clip_raster_from_polygon(shape, raster, path):
     
     returns - The clipped raster    
     """
+    shape = ogr.Open(shape_path)
+    raster = gdal.Open(raster_path, 1)
+
     #Create a new raster as a copy from 'raster'
     copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     copy_band = copy_raster.GetRasterBand(1)
