@@ -22,7 +22,7 @@ def base_run(workspace_dir):
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 70.0
     args['sediment_threshold_table_uri'] = '../Pucallpa_subset/sed_thresh.csv'
-    sediment.execute(args)
+    #sediment.execute(args)
 
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
@@ -30,11 +30,13 @@ def base_run(workspace_dir):
 #    routing_utils.flow_accumulation(args['dem_uri'], os.path.join(args['workspace_dir'], 'flux_output_uri.tif'))
 
     #First calculate the base sediment run
-    sediment.execute(args)
+#    sediment.execute(args)
 
     #create a random permitting polygon
     permitting_datasource_uri = os.path.join(workspace_dir, 'random_permit')
-    create_random_permitting_site(permitting_datasource_uri, args['watersheds_uri'])
+    create_random_permitting_site(permitting_datasource_uri, args['watersheds_uri'], 7000)
+
+    return 
 
     #prep data from sediment run
     pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
@@ -68,7 +70,7 @@ def base_run(workspace_dir):
 
 
 
-def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp):
+def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp, side_length):
     if os.path.exists(permitting_datasource_uri):
         shutil.rmtree(permitting_datasource_uri)
 
@@ -95,20 +97,22 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp)
     field = ogr.FieldDefn('id', ogr.OFTReal)
     layer.CreateField(field)
 
-
     while True:
         poly_ring = ogr.Geometry(type=ogr.wkbLinearRing)
-        poly_width = feature_extent[1]-feature_extent[0]
-        poly_height = feature_extent[3]-feature_extent[2]
+        bbox_width = feature_extent[1]-feature_extent[0]
+        bbox_height = feature_extent[3]-feature_extent[2]
 
         rand_width_percent = random.random()
-        xmin = feature_extent[0] + poly_width * rand_width_percent
-        xmax = feature_extent[1] - poly_width * random.random() * rand_width_percent
+        xmin = feature_extent[0] + bbox_width * rand_width_percent
+        xmax = xmin + side_length * random.uniform(0.8, 1.2)
 
         #Make it squarish
-        rand_height_percent = rand_width_percent + (0.5-random.random())*0.3*rand_width_percent
-        ymin = feature_extent[2] + poly_height * rand_height_percent
-        ymax = feature_extent[3] - poly_height * random.random() * rand_height_percent
+        rand_height_percent = random.random()
+        ymin = feature_extent[2] + bbox_height * rand_height_percent
+        ymax = ymin + side_length * random.uniform(0.8, 1.2)
+
+        print feature_extent
+        print xmin, xmax, ymin, ymax
 
         poly_ring.AddPoint(xmin, ymin)
         poly_ring.AddPoint(xmin, ymax)
