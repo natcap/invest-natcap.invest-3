@@ -46,8 +46,8 @@ class DynamicElement(QtGui.QWidget):
 
         # Save a local logger instance with the logger name reflecting the class
         # we're in.
-        self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s' %
-            self.__class__.__name__)
+        self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s.%s' %
+            (self.__class__.__name__, attributes['id'][0:10]))
 
         self.LOGGER.debug('Initializing element %s', attributes['id'])
         #save a copy of the user-defined attributes for this element.  Based
@@ -1041,6 +1041,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         #   - checkable (collapsible), and
         #   - checked,
         # then, we want to set the checkbox to be unchecked.
+        self.LOGGER.debug('State=%s.  Checkable=%s. Checked=%s', state,
+            self.isCheckable(), self.isChecked())
         if state == False and self.isCheckable() and self.isChecked():
             self.setChecked(False)
 
