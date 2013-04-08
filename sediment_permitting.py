@@ -25,7 +25,6 @@ def base_run(workspace_dir):
     args['slope_threshold'] = 70.0
     args['sediment_threshold_table_uri'] = '../Pucallpa_subset/sed_thresh.csv'
     #First calculate the base sediment run
-    #sediment.execute(args)
 
 
     #create a random permitting polygon
@@ -62,17 +61,21 @@ def base_run(workspace_dir):
         aoi_uri=args['watersheds_uri'])
 
 
-
-
     #prep data from sediment run
+    print 'doing the base sediment run'
+    sediment.execute(args)
     pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
     pixel_export_nodata = raster_utils.get_nodata_from_uri(pixel_export_uri)
 
-#    sediment.execute(args)
+    print 'doing the permitting sediment run'
+    args['workspace_dir'] = os.path.join(workspace_dir, 'permitting_run')
+    args['landuse_uri'] = converted_lulc_uri
+    sediment.execute(args)
+    permitting_pixel_export_uri = os.path.join(workspace_dir, 'permitting_run', 'Output', 'sed_export.tif')
 
 
-    #Find the max export
     closure = {'max_export': -1.0}
+    #Find the max export
     def find_max_export(pixel_export):
         if pixel_export == pixel_export_nodata:
             return pixel_export_nodata
