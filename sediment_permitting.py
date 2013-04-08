@@ -13,6 +13,8 @@ from invest_natcap import raster_utils
 def base_run(workspace_dir):
     args = {}
     args['workspace_dir'] = os.path.join(workspace_dir, 'base_run')
+    if not os.path.exists(args['workspace_dir']):
+        os.makedirs(args['workspace_dir'])
     args['dem_uri'] = '../Pucallpa_subset/dem_fill'
     args['erosivity_uri'] = '../Pucallpa_subset/imf_erosivity'
     args['erodibility_uri'] = '../Pucallpa_subset/erod_k'
@@ -22,25 +24,52 @@ def base_run(workspace_dir):
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 70.0
     args['sediment_threshold_table_uri'] = '../Pucallpa_subset/sed_thresh.csv'
+    #First calculate the base sediment run
     #sediment.execute(args)
 
-    if not os.path.exists(args['workspace_dir']):
-        os.makedirs(args['workspace_dir'])
-
-#    routing_utils.flow_accumulation(args['dem_uri'], os.path.join(args['workspace_dir'], 'flux_output_uri.tif'))
-
-    #First calculate the base sediment run
-#    sediment.execute(args)
 
     #create a random permitting polygon
     permitting_datasource_uri = os.path.join(workspace_dir, 'random_permit')
     create_random_permitting_site(permitting_datasource_uri, args['watersheds_uri'], 7000)
 
-    return 
+    #Create a new LULC that masks the LULC values to the new type that lie within
+    #the permitting site and re-run sediment model, base new lulc on user input
+    permitting_mask_uri = os.path.join(workspace_dir, 'random_permit_mask.tif')
+
+    landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    def mask_op(value):
+        if value == landuse_nodata:
+            return landuse_nodata
+        return 1.0
+    print 'making the raster mask for the permitting area'
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], mask_op, permitting_mask_uri, gdal.GDT_Float32, landuse_nodata,
+        landuse_pixel_size, "intersection", dataset_to_align_index=0, aoi_uri=permitting_datasource_uri)
+
+    converted_lulc_uri = os.path.join(workspace_dir, 'permitted_lulc.tif')
+    #I got this from the pucallapa biophysical table
+    mining_lulc_value = 2906
+    def convert_lulc(original_lulc, permit_mask):
+        if permit_mask == 1.0:
+            return mining_lulc_value
+        return original_lulc
+    print 'creating the permitted lulc'
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri'], permitting_mask_uri], convert_lulc,
+        converted_lulc_uri, gdal.GDT_Float32, landuse_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+
+
 
     #prep data from sediment run
     pixel_export_uri = os.path.join(workspace_dir, 'base_run', 'Output', 'sed_export.tif')
     pixel_export_nodata = raster_utils.get_nodata_from_uri(pixel_export_uri)
+
+#    sediment.execute(args)
+
 
     #Find the max export
     closure = {'max_export': -1.0}
@@ -57,9 +86,7 @@ def base_run(workspace_dir):
         pixel_export_nodata, pixel_size_out, "intersection", aoi_uri=permitting_datasource_uri)
     print closure['max_export']
 
-    #Create a new LULC that masks the LULC values to the new type that lie within
-    #the permitting site and re-run sediment model, base new lulc on user input
-    converted_lulc_uri = raster_utils.temporary_filename()
+    #rasterize permitting_datasource_uri
     #rasterize permitting_datasource_uri
     #vectorize_datasets so that mask converts original lulc to bare soil
     #re-run sediment
