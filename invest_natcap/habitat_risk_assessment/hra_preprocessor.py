@@ -410,7 +410,7 @@ def parse_hra_tables(workspace_uri):
     #from the assessment for that subdictionary.
     try:
         for subdict in parse_dictionary.values():
-            for indivs in subdict.values():
+            for key, indivs in subdict.items():
                 for kind in indivs.values():
 
                     #Since we have the buffer_dict in here as well, occasionally it
@@ -435,10 +435,10 @@ def parse_hra_tables(workspace_uri):
                             #Want to break if anything entered is a null string.
                             for value in crit_dict.values():
                                 if value == '':
-                                    raise NoEntryException("Criteria CSV files must \
-                                        have values filled out for all criteria. If \
-                                        you would like to exclude a criteria from the \
-                                        assessment, use a 0 for that entry.")
+                                    raise UnexpectedString("Entries in CSV table may not be \
+                                    strings, and may not be left blank. Check your %s CSV \
+                                    for any leftover strings or spaces within Buffer, Rating, \
+                                    Data Quality or Weight columns.", name)
                     except AttributeError:
                         #Can just skip over float values.
                         pass
