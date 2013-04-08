@@ -1049,9 +1049,11 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         if state == False and self.isCheckable() and self.isChecked():
             self.setChecked(False)
 
-        # we always want to include the checkbox itself when this container is
-        # toggled.
-        includeSelf=True
+        if self.isCheckable():
+            # we always want to include the checkbox itself when this container is
+            # toggled.
+            includeSelf=True
+
         DynamicGroup.setState(self, state, includeSelf, recursive)
 
 
