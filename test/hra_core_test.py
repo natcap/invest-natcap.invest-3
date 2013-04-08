@@ -27,7 +27,9 @@ class TestHRACore(unittest.TestCase):
         #delete current intermediate and output folders
         out_dir = os.path.join(args['workspace_dir'], 'Output')
         inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    
+   
+        overlap_dir = './data/test_out/HRA/Reg_Inputs/Intermediate/Overlap_Rasters'
+
         for folder in [out_dir, inter_dir]:
             if (os.path.exists(folder)):
                 shutil.rmtree(folder) 
@@ -52,7 +54,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/H[kelp]_S[FinfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[kelp]_S[FinfishAquacultureComm].tif'
                 },
             ('kelp', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -69,7 +71,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/H[kelp]_S[ShellfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[kelp]_S[ShellfishAquacultureComm].tif'
                },
            ('eelgrass', 'finfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -86,7 +88,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/H[eelgrass]_S[FinfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[eelgrass]_S[FinfishAquacultureComm].tif'
                 },
            ('eelgrass', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -103,7 +105,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/H[eelgrass]_S[ShellfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[eelgrass]_S[ShellfishAquacultureComm].tif'
                 }
             }
          
@@ -123,7 +125,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/Habitat_Rasters/kelp.tif'
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/kelp.tif'
                 },
             ('eelgrass'):
                 {'Crit_Ratings':
@@ -140,7 +142,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/Habitat_Rasters/eelgrass.tif'
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/eelgrass.tif'
                 }
             }
         args['stressors'] = \
@@ -159,7 +161,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif'
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif'
                 },
             ('shellfishaquaculturecomm'):
                {'Crit_Ratings':
@@ -176,7 +178,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                 'DS': 
-                    './data/test_out/HRA/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif'
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif'
                 } 
             }
         self.args = args
@@ -193,9 +195,9 @@ class TestHRACore(unittest.TestCase):
         hra_core.execute(self.args)
     
     def test_mult_smoke(self):
-    '''This tests the alternate risk equation in which we would use a
-    multiplicative risk equation, but would still have a max risk value of 3.
-    '''
+        '''This tests the alternate risk equation in which we would use a
+        multiplicative risk equation, but would still have a max risk value of 3.
+        '''
         #Now, do one that uses multiplicative risk. Still want to use a max
         #rating of 3 as a test.
         self.args['risk_eq'] = 'Multiplicative'
@@ -204,9 +206,9 @@ class TestHRACore(unittest.TestCase):
         hra_core.execute(self.args)
 
     def test_diff_num_crits_smoke(self):
-    '''Want to test that the moel will still run if we have different numbers of
-    criteria, but the model would have (hypothetically) passed the minimum 
-    required to avoid an exception throw in hra non-core. '''
+        '''Want to test that the model will still run if we have different numbers of
+        criteria, but the model would have (hypothetically) passed the minimum 
+        required to avoid an exception throw in hra non-core. '''
 
         #Still need to have standard risk calculation in order to get
         #the whole core to run
@@ -224,10 +226,10 @@ class TestHRACore(unittest.TestCase):
         hra_core.execute(self.args)
 
     def test_no_rast_dict(self):
-    '''Want to test the case where we have a complete dictionary, but one of the
-    h-s pairs within the dictionary does not contain a rasters dictionary at all.
-    This should be a viable run, since Crit_Rasters would not get built if there
-    were no qualifying shapefile criteria for that pairing.'''
+        '''Want to test the case where we have a complete dictionary, but one of the
+        h-s pairs within the dictionary does not contain a rasters dictionary at all.
+        This should be a viable run, since Crit_Rasters would not get built if there
+        were no qualifying shapefile criteria for that pairing.'''
 
         #Still need standard risk calc stuff.
         self.args['risk_eq'] = 'Euclidean'
