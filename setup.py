@@ -209,6 +209,9 @@ setup(name='invest_natcap',
                              language="c++"),
                    Extension(name="routing_cython_core",
                              sources = ['invest_natcap/routing/routing_cython_core.pyx'],
+                             language="c++"),
+                   Extension(name="sediment_cython_core",
+                             sources = ['invest_natcap/sediment/sediment_cython_core.pyx'],
                              language="c++")]),
       **py2exe_args)
 
