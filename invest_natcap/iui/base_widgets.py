@@ -8,6 +8,7 @@ import logging
 
 from PyQt4 import QtGui, QtCore
 
+import invest_natcap.iui
 import iui_validator
 import executor
 import registrar
@@ -18,9 +19,6 @@ CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 ENCODING = sys.getfilesystemencoding()
-
-import invest_natcap.iui
-LOGGER = invest_natcap.iui.get_ui_logger('base_widgets')
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -45,6 +43,11 @@ class DynamicElement(QtGui.QWidget):
         #DynamicElement inherits QtGui.QWidget, so we'll call the constructor
         #for QWidget here.
         QtGui.QWidget.__init__(self)
+
+        # Save a local logger instance with the logger name reflecting the class
+        # we're in.
+        self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s' %
+            self.__class__.__name__)
 
         #save a copy of the user-defined attributes for this element.  Based
         # on the specification of the JSON config file, the attributes array 
@@ -950,6 +953,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             returns an instance of Container."""
 
         super(Container, self).__init__(attributes, QtGui.QVBoxLayout(), registrar)
+
         #set the title of the container
         self.setTitle(attributes['label'])
 
@@ -2647,7 +2651,6 @@ class ExecRoot(Root):
 class InfoDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
-#        LOGGER.debug('Initializing information dialog %s', self)
         self.messages = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
