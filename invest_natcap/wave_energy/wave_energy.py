@@ -198,7 +198,7 @@ def execute(args):
     
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-    analysis_area_sr = get_spatial_ref(analysis_area_points_uri)
+    analysis_area_sr = get_spatial_ref_uri(analysis_area_points_uri)
     
     # Holds any temporary files we want to clean up at the end of the model run
     file_list = []
@@ -222,13 +222,16 @@ def execute(args):
                     shapefile
 
                 returns - Nothing"""
+            if os.path.isfile(copy_uri):
+                os.remove(copy_uri)
+
             shape = ogr.Open(shape_uri)
             drv = ogr.GetDriverByName('ESRI Shapefile')
             drv.CopyDataSource(shape, copy_uri)
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
-        copy_datasource_uri(analysis_area_point_uri, clipped_wave_shape_path)
+        copy_datasource_uri(analysis_area_points_uri, clipped_wave_shape_path)
         
         # NOTE: commenting out the following code because it is not necessary to
         # clip the wave points by the extraction area. This is do to the fact
@@ -247,9 +250,9 @@ def execute(args):
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
-        aoi_sr = get_spatial_ref(analysis_area_extract_uri)
-        coord_trans, coord_trans_opposite = \
-            get_coordinate_transformation(analysis_area_sr, aoi_sr)
+        aoi_sr = get_spatial_ref_uri(analysis_area_extract_uri)
+        coord_trans, coord_trans_opposite = get_coordinate_transformation(
+                analysis_area_sr, aoi_sr)
     else:
         LOGGER.debug('AOI was provided')
 
@@ -272,7 +275,7 @@ def execute(args):
         
         # Create a coordinate transformation from the given
         # WWIII point shapefile, to the area of interest's projection
-        aoi_sr = get_spatial_ref(aoi_shape_path)
+        aoi_sr = get_spatial_ref_uri(aoi_shape_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
                 analysis_area_sr, aoi_sr)
 
@@ -343,7 +346,7 @@ def execute(args):
         dem_matrix = None
     
     # Add the depth value to the wave points by indexing into the DEM dataset
-    index_dem(clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
+    index_dem_uri(clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
 
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
@@ -398,11 +401,17 @@ def execute(args):
 
     # Clip the wave energy and wave power rasters so that they are confined 
     # to the AOI
+    wave_power_inter_uri = os.path.join(
+            intermediate_dir, 'inter_clip_power.tif')
     clip_raster_from_polygon(
-            aoi_shape_path, wave_power_unclipped_path, wave_power_path)
+            aoi_shape_path, wave_power_unclipped_path, wave_power_path,
+            wave_power_inter_uri)
     
+    wave_energy_inter_uri = os.path.join(
+            intermediate_dir, 'inter_clip_energy.tif')
     clip_raster_from_polygon(
-            aoi_shape_path, wave_energy_unclipped_path, wave_energy_path)
+            aoi_shape_path, wave_energy_unclipped_path, wave_energy_path,
+            wave_energy_inter_uri)
 
     raster_utils.calculate_raster_stats_uri(wave_power_path)
     raster_utils.calculate_raster_stats_uri(wave_energy_path)
@@ -602,8 +611,8 @@ def create_percentile_rasters(
     percentile_raster = raster_utils.new_raster_from_base(
             raster_dataset, output_path, 'GTiff', 0, gdal.GDT_Int32)
     # Get raster bands
-    percentile_band = percentile_raster.GetRasterBand(1)
     dataset_band = raster_dataset.GetRasterBand(1)
+    
     def raster_percentile(band):
         """Operation to use in vectorize_datasets that takes
         the pixels of 'band' and groups them together based on 
@@ -636,19 +645,22 @@ def create_percentile_rasters(
     # before the start value is set to nodata (zero)
     percentiles.insert(0, int(start_value))
     
-    
     raster_dataset = None
     percentile_raster = None
+    matrix = None
+    dataset_array = None
+    dataset_mask = None
+    dataset_comp = None
 
     # Classify the pixels of raster_dataset into groups and write 
     # then to output band
     pixel_size = (float(ds_gt[1]) + np.absolute(float(ds_gt[5]))) / 2.0
     raster_utils.vectorize_datasets(
             [raster_path], raster_percentile, output_path, gdal.GDT_Int32,
-            nodata, pixel_size, 'intersection')
+            nodata, pixel_size, 'intersection', assert_datasets_projected=False)
    
     percentile_ds = gdal.Open(output_path, 1)
-    percentil_band = percentile_ds.GetRasterBand(1)
+    percentile_band = percentile_ds.GetRasterBand(1)
 
     # Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
@@ -669,8 +681,9 @@ def create_percentile_rasters(
     # Generate the attribute table for the percentile raster
     create_attribute_table(output_path, percentile_ranges, pixel_count)
 
+    percentile_ds = None
     # calculate min, max, std for visualization in arc
-    raster_utils.calculate_raster_stats(percentile_raster)
+    raster_utils.calculate_raster_stats_uri(output_path)
 
 def get_percentiles(value_list, percentile_list):
     """Creates a list of integers of the percentile marks
@@ -819,7 +832,7 @@ def wave_power(shape_uri):
         feat.Destroy()
         feat = layer.GetNextFeature()
 
-def clip_raster_from_polygon(shape_path, raster_path, path):
+def clip_raster_from_polygon(shape_path, raster_path, output_uri, inter_uri):
     """Returns a raster where any value outside the bounds of the
     polygon shape are set to nodata values. This represents clipping 
     the raster to the dimensions of the polygon.
@@ -827,14 +840,19 @@ def clip_raster_from_polygon(shape_path, raster_path, path):
     shape_path - A uri to a polygon shapefile representing
         the bounds for the raster
     raster_path - A uri to a raster to be bounded by shape
-    path - The path for the clipped output raster
+    output_uri - The path for the clipped output raster
+    inter_uri - a uri path for an intermediate raster step
     
     returns - Nothing"""
     shape = ogr.Open(shape_path)
     raster = gdal.Open(raster_path, 1)
+    ds_gt = raster.GetGeoTransform()
+
+    if os.path.isfile(inter_uri):
+        os.path.remove(inter_uri)
 
     # Create a new raster as a copy from 'raster'
-    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy('MEM', raster)
+    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(inter_uri, raster)
     copy_band = copy_raster.GetRasterBand(1)
     # Set the copied rasters values to nodata to create a blank raster.
     nodata = copy_band.GetNoDataValue()
@@ -857,12 +875,17 @@ def clip_raster_from_polygon(shape_path, raster_path, path):
             return copy_value
         else:
             return value
+   
+    copy_raster = None
+    shape = None
+    raster = None
     
     # Vectorize the two rasters using the operation fill_bound_data
     pixel_size = (float(ds_gt[1]) + np.absolute(float(ds_gt[5]))) / 2.0
     raster_utils.vectorize_datasets(
-            [raster_path, path], fill_bound_data, path, nodata, pixel_size,
-            'intersection')
+            [raster_path, inter_uri], fill_bound_data, output_uri,
+            gdal.GDT_Float32, nodata, pixel_size, 'intersection',
+            assert_datasets_projected=False)
 
 def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
