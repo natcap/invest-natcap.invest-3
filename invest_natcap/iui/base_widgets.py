@@ -49,6 +49,7 @@ class DynamicElement(QtGui.QWidget):
         self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s' %
             self.__class__.__name__)
 
+        self.LOGGER.debug('Initializing element %s', attributes['id'])
         #save a copy of the user-defined attributes for this element.  Based
         # on the specification of the JSON config file, the attributes array 
         #may contain the attributes for other, to-be-created, elements.
@@ -956,8 +957,10 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
         #set the title of the container
         self.setTitle(attributes['label'])
+        self.LOGGER.debug('Title=%s', attributes['label'])
 
         if 'collapsible' in self.attributes:
+            self.LOGGER.debug('Collapsible=%s', self.attributes['collapsible'])
             #this attribute of QtGui.QGroupBox determines whether the container
             #will sport a hide/reveal checkbox.
             self.setCheckable(self.attributes['collapsible'])
@@ -965,6 +968,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
             if self.attributes['collapsible'] == True:
                 for element in self.elements:
+                    self.LOGGER.debug('Hiding element %s', element)
                     element.setVisible(False)
 
                 self.toggled.connect(self.toggleHiding)
@@ -982,6 +986,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
         if 'enabled' in self.attributes:
+            self.LOGGER.debug('Setting enabled=%s', self.attributes['enabled'])
             self.setEnabled(self.attributes['enabled'])
 
     def toggleHiding(self, state):
@@ -990,11 +995,16 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
             returns nothing."""
 
+        self.LOGGER.debug('Toggling hiding of contained elements.')
         for element in self.elements:
+            self.LOGGER.debug('Setting %s to state=%s', element, state)
             element.setVisible(state)
             element.setEnabled(state)
 
+        self.LOGGER.debug('Setting minimum size from local sizeHint')
         self.setMinimumSize(self.sizeHint())
+
+        self.LOGGER.debug('Calling down to DynamicGroup.setState')
         DynamicGroup.setState(self, state, includeSelf=False, recursive=True)
 
     def resetValue(self):
