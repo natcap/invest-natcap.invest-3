@@ -124,6 +124,9 @@ class DynamicElement(QtGui.QWidget):
         return False
 
     def setState(self, state, includeSelf=True, recursive=True):
+        self.LOGGER.debug('Setting state in %s', self.attributes['id'])
+        self.LOGGER.debug('state=%s, includeSelf=%s, recursive=%s',
+            state, includeSelf, recursive)
         if includeSelf:
             self.setEnabled(state)
             for element in self.elements:
