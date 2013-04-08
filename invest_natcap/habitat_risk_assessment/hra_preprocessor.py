@@ -435,6 +435,13 @@ def parse_hra_tables(workspace_uri):
                             #Want to break if anything entered is a null string.
                             for value in crit_dict.values():
                                 if value == '':
+                                    #name could potentially be a tuple. Need to make sure.
+                                    #If it is, we still want to direct them to the habitat
+                                    #CSV, since h-s info is stored there.
+                                    if type(key) == tuple:
+                                        name = key[0]
+                                    else:
+                                        name = key
                                     raise UnexpectedString("Entries in CSV table may not be \
                                     strings, and may not be left blank. Check your %s CSV \
                                     for any leftover strings or spaces within Buffer, Rating, \
