@@ -525,6 +525,8 @@ def parse_stressor(uri):
                         strings, and may not be left blank. Check your %s CSV \
                         for any leftover strings or spaces within Buffer, Rating, \
                         Data Quality or Weight columns.", s_name)
+            #This should catch any instances where the rating is a string, but
+            #is not SHAPE (aka- is leftover from the user's guide population)
             else:
                 try:
                     stressor_dict['Crit_Ratings'][key] = \
@@ -616,7 +618,7 @@ def parse_habitat_overlap(uri):
                         strings, and may not be left blank. Check your %s CSV \
                         for any leftover strings or spaces within Rating, \
                         Data Quality or Weight columns.", hab_name)
-                    
+            #Should catch any leftovers from the autopopulation of the helptext        
             else:
                 try:
                     habitat_dict['Crit_Ratings'][key] = \
