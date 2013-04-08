@@ -48,11 +48,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_finfishaquaculturecomm_change_in_area.tif')
+                           './data/test_out/HRA/Criteria_Rasters/kelp_finfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[kelp]_S[FinfishAquacultureComm].tif')
+                    './data/test_out/HRA/Intermediate/H[kelp]_S[FinfishAquacultureComm].tif'
                 },
             ('kelp', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -65,11 +65,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_shellfishaquaculturecomm_change_in_area.tif')
+                            './data/test_out/HRA/Criteria_Rasters/kelp_shellfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[kelp]_S[ShellfishAquacultureComm].tif')
+                    './data/test_out/HRA/Intermediate/H[kelp]_S[ShellfishAquacultureComm].tif'
                },
            ('eelgrass', 'finfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -82,11 +82,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_finfishaquaculturecomm_change_in_area.tif')
+                            './data/test_out/HRA/Criteria_Rasters/eelgrass_finfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[eelgrass]_S[FinfishAquacultureComm].tif')
+                    './data/test_out/HRA/Intermediate/H[eelgrass]_S[FinfishAquacultureComm].tif'
                 },
            ('eelgrass', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -99,11 +99,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_shellfishaquaculturecomm_change_in_area.tif')
+                            './data/test_out/HRA/Criteria_Rasters/eelgrass_shellfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[eelgrass]_S[ShellfishAquacultureComm].tif')
+                    './data/test_out/HRA/Intermediate/H[eelgrass]_S[ShellfishAquacultureComm].tif'
                 }
             }
          
@@ -119,10 +119,11 @@ class TestHRACore(unittest.TestCase):
                     {'connectivity_rating':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif'
+                        }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Habitat_Rasters/kelp.tif')
+                    './data/test_out/HRA/Intermediate/Habitat_Rasters/kelp.tif'
                 },
             ('eelgrass'):
                 {'Crit_Ratings':
@@ -135,10 +136,11 @@ class TestHRACore(unittest.TestCase):
                     {'connectivity_rating':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif'
+                        }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Habitat_Rasters/eelgrass.tif')
+                    './data/test_out/HRA/Intermediate/Habitat_Rasters/eelgrass.tif'
                 }
             }
         args['stressors'] = \
@@ -153,10 +155,11 @@ class TestHRACore(unittest.TestCase):
                     {'new_stresscrit':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif'
+                        }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif')
+                    './data/test_out/HRA/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif'
                 },
             ('shellfishaquaculturecomm'):
                {'Crit_Ratings':
@@ -169,10 +172,11 @@ class TestHRACore(unittest.TestCase):
                     {'new_stresscrit':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif'
+                        }
                     },
                 'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif')
+                    './data/test_out/HRA/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif'
                 } 
             }
         self.args = args
