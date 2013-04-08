@@ -136,7 +136,5 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
     feature = None
     layer = None
 
-    datasource.SyncToDisk()
-
 if __name__ == '__main__':
     base_run('./base_sediment_run')
