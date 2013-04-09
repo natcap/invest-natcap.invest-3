@@ -184,6 +184,19 @@ def execute(args):
     # geotranform to get this information later
     dem_gt = get_geotransform_uri(dem_uri)
     
+    def get_wkt_projection_uri(ds_uri):
+        """Get the WKT of an OGR datasource
+            
+            ds_uri - A URI to an ogr datasource
+
+            returns - the WKT"""
+
+        ds = ogr.Open(ds_uri)
+        layer = ds.GetLayer()
+        spat_ref = layer.GetSpatialRef()
+        wkt = spat_ref.ExportToWkt()
+        return wkt
+    
     def get_spatial_ref_uri(ds_uri):
         """Get the spatial reference of an OGR datasource
             
@@ -195,6 +208,24 @@ def execute(args):
         layer = ds.GetLayer()
         spat_ref = layer.GetSpatialRef()
         return spat_ref
+        
+    def reproject_datasource_uri(
+            original_datasource_uri, output_wkt, output_uri):
+        """A wrapper function for raster_utils.reproject_datasource that
+            allows for uri passing.
+
+            original_datasource_uri - a uri to an ogr datasource to be
+                reprojected
+            output_wkt - a string of Well Known Text that is the desired
+                output projection
+            output_uri - a uri path to disk for the reprojected datasource
+
+            returns - Nothing"""
+
+        original_ds = ogr.Open(original_datasource_uri)
+        
+        _ = raster_utils.reproject_datasource(
+                original_ds, output_wkt, output_uri)
     
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
@@ -260,13 +291,12 @@ def execute(args):
         # changing the projection
         projected_wave_shape_path = os.path.join(
                 intermediate_dir, 'projected_wave_data.shp')
-
-        #file_list.append(projected_wave_shape_path)
         
         # Set the wave data shapefile to the same projection as the 
         # area of interest
-        change_shape_projection(
-                analysis_area_points_uri, aoi_shape_path, projected_wave_shape_path)
+        output_wkt = get_wkt_projection_uri(aoi_shape_path)     
+        reproject_datasource_uri(
+                analysis_area_points_uri, output_wkt, projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the 
         # area of interest
@@ -491,7 +521,6 @@ def execute(args):
             #The discount rate calculation for the npv equations
             rho = 1.0 / (1.0 + drate)
             #Extract the landing and grid points data
-            land_grid_pts = args['land_gridPts']
             grid_pts = {}
             land_pts = {}
             for key, value in land_grid_pts.iteritems():
@@ -827,82 +856,6 @@ def calculate_distance(xy_1, xy_2):
         dists = np.sqrt(np.sum((xy_point - xy_2) ** 2, axis=1))
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
-
-def change_shape_projection(
-        shape_to_reproject_uri, projection_shape_uri, output_path):
-    """Changes the projection of a shapefile by creating a new shapefile 
-    based on the projection passed in.  The new shapefile then copies all the 
-    features and fields of the shapefile to reproject as its own. 
-    The reprojected shapefile is written to 'outputpath' and is returned.
-    
-    shape_to_reproject - A shapefile to be copied and reprojected.
-    target_sr - The desired projection as a SpatialReference from a WKT string.
-    output_path - The path to where the new shapefile should be written to disk.
-    
-    returns - The reprojected shapefile.
-    """
-
-    shape_to_reproject = ogr.Open(shape_to_reproject_uri)
-    projection_shape = ogr.Open(projection_shape_uri)
-    projection_layer = projection_shape.GetLayer()
-    target_sr = projection_layer.GetSpatialRef()
-
-    shape_source = output_path
-    #If this file already exists, then remove it
-    if os.path.isfile(shape_source):
-        os.remove(shape_source)
-    #Get the layer of points from the current point geometry shape
-    in_layer = shape_to_reproject.GetLayer(0)
-    #Get the layer definition which holds needed attribute values
-    in_defn = in_layer.GetLayerDefn()
-    #Create a new shapefile with similar properties of the current 
-    #point geometry shape
-    shp_driver = ogr.GetDriverByName('ESRI Shapefile')
-    shp_ds = shp_driver.CreateDataSource(shape_source)
-    #Create the new layer for the shapefile using same name and geometry
-    #type from shape_to_reproject, but different projection
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), target_sr, \
-                                   in_defn.GetGeomType())
-    #Get the number of fields in the current point shapefile
-    in_field_count = in_defn.GetFieldCount()
-    #For every field, create a duplicate field and add it to the new 
-    #shapefiles layer
-    for fld_index in range(in_field_count):
-        src_fd = in_defn.GetFieldDefn(fld_index)
-        fd_def = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
-        fd_def.SetWidth(src_fd.GetWidth())
-        fd_def.SetPrecision(src_fd.GetPrecision())
-        shp_layer.CreateField(fd_def)
-
-    in_layer.ResetReading()
-    #Get the spatial reference of the source layer to use in transforming
-    source_sr = in_layer.GetSpatialRef()
-    #Create a coordinate transformation
-    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-    #Get the first feature from the shapefile
-    in_feat = in_layer.GetNextFeature()
-    #Copy all of the features in shape_to_reproject to the new shapefile
-    while in_feat is not None:
-        geom = in_feat.GetGeometryRef()
-        #Transform the geometry into a format desired for the new projection
-        geom.Transform(coord_trans)
-        #Copy shape_to_reproject's feature and set as new shapes feature
-        out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
-        out_feat.SetFrom(in_feat)
-        out_feat.SetGeometry(geom)
-        #For all the fields in the feature set the field values from the 
-        #source field
-        for fld_index2 in range(out_feat.GetFieldCount()):
-            src_field = in_feat.GetField(fld_index2)
-            out_feat.SetField(fld_index2, src_field)
-
-        shp_layer.CreateFeature(out_feat)
-        out_feat.Destroy()
-
-        in_feat.Destroy()
-        in_feat = in_layer.GetNextFeature()
-
-    return shp_ds
 
 def load_binary_wave_data(wave_file_uri):
     """The load_binary_wave_data function converts a pickled WW3 text file into a 
