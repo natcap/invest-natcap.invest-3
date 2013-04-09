@@ -248,16 +248,7 @@ class TestHRACore(unittest.TestCase):
         seperate improperly named AOI file for these purposes.
         '''
 
-        self.args['aoi_tables'] = './data/hra_regression_data/HabitatLayers'
+        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
 
-        #Since we had 6 crits to begin with, remove one from each should leave
-        #us with 3, want to make sure this causes to error.
-        for c_list in (self.args['resiliance_crits'], 
-                    self.args['sensitivity_crits'],
-                    self.args['exposure_crits']):
-
-            c_list.remove(c_list[0])
-
-
-        self.assertRaises(hra_preprocessor.NotEnoughCriteria,
-                        hra_preprocessor.execute, self.args)
+        self.assertRaises(hra_core.ImproperAOIAttributeName,
+                        hra_core.execute, self.args)
