@@ -406,8 +406,21 @@ def execute(args):
     #clip_raster_from_polygon(
     #        aoi_shape_path, wave_power_unclipped_path, wave_power_path,
     #        wave_power_inter_uri)
-    
-    raster_utils.clip_dataset_uri(
+    def clip_dataset_uri(
+            source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
+        """A wrapper function for calling raster_utils.clip_dataset by passing
+            around uri paths instead of the actual datasets / datasources.
+
+            source_dataset_uri - uri to a single band GDAL dataset to clip 
+            aoi_datasource_uri - uri to ogr datasource
+            out_dataset_uri - path to disk for the clipped dataset
+
+            returns - Nothing"""
+        source_ds = gdal.Open(source_dataset_uri)
+        aoi_ds = ogr.Open(aoi_datasource_uri)
+        raster_utils.clip_dataset(source_ds, aoi_ds, out_dataset_uri)
+
+    clip_dataset_uri(
             wave_power_unclipped_path, aoi_shape_path, wave_energy_path)
     
     #wave_energy_inter_uri = os.path.join(
@@ -416,7 +429,7 @@ def execute(args):
     #        aoi_shape_path, wave_energy_unclipped_path, wave_energy_path,
     #        wave_energy_inter_uri)
 
-    raster_utils.clip_dataset_uri(
+    clip_dataset_uri(
             wave_energy_unclipped_path, aoi_shape_path, wave_energy_path)
 
     raster_utils.calculate_raster_stats_uri(wave_power_path)
@@ -580,13 +593,13 @@ def execute(args):
 
             def npv_wave(annual_revenue, annual_cost):
                 """Calculates the NPV for a wave farm site based on the
-                annual revenue and annual cost
+                    annual revenue and annual cost
                 
-                annual_revenue - A numpy array of the annual revenue for the 
+                    annual_revenue - A numpy array of the annual revenue for the 
                                  first 25 years
-                annual_cost - A numpy array of the annual cost for the first 25 years
+                    annual_cost - A numpy array of the annual cost for the first 25 years
                 
-                returns - The Total NPV which is the sum of all 25 years
+                    returns - The Total NPV which is the sum of all 25 years
                 """
                 npv = []
                 for i in range(len(time)):
@@ -594,13 +607,13 @@ def execute(args):
                 return sum(npv)
             
             def compute_npv_farm_energy_uri(wave_points_uri):
-            """A wrapper function for passing uri's to compute the
-                Net Present Value. Also computes the total captured wave energy for the
-                entire farm.
+                """A wrapper function for passing uri's to compute the
+                    Net Present Value. Also computes the total captured
+                    wave energy for the entire farm.
 
-                wave_points_uri - a uri path to the wave energy points
+                    wave_points_uri - a uri path to the wave energy points
 
-                returns - Nothing"""
+                    returns - Nothing"""
 
                 wave_points = ogr.Open(wave_points_uri, 1)
                 wave_data_layer = wave_points.GetLayer()
@@ -680,7 +693,7 @@ def execute(args):
 
             npv_out_uri = os.path.join(output_dir, 'npv_usd.tif')
             # Clip the raster to the convex hull polygon
-            raster_utils.clip_dataset_uri(
+            clip_dataset_uri(
                     raster_projected_path, convex_uri, npv_out_uri)
 
             #Create the percentile raster for net present value
