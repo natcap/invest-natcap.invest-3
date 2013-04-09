@@ -15,6 +15,7 @@ Groups:
   - list
   - embeddedUI
   - MultiFile
+  - Tabs
 
 Primitive elements:
   - label
@@ -92,6 +93,44 @@ example JSON:
                       "validateAs": {"type": "GDAL"}},
     "linkText": "Add another"
 
+Tabs
+==============================
+Tabs allow for a convenient way for elements to be aggregated according to
+usability or whatever other organization strategy the developer prefers.
+
+Note that to use tabs, you must use a TabbedGroup, where the elements of the
+TabbedGroup must all be tabs.  Individual tabs may have primitive and group
+elements as normal.
+
+Example JSON:
+    {
+        "id": "objectiveTabGroup",
+        "type": "tabbedGroup",
+        "elements": 
+        [
+            {
+                "id": "erosion_drinking_objective_tab",
+                "label": "Erosion Control for Drinking Water Quality",
+                "type": "tab",
+                "enabledBy": "use_erosion_drinking",
+                "enabled": false,
+                "elements":
+                [
+                    ... create elements here as normal ...
+                ]
+            },
+            {
+                "id": "erosion_reservoir_objective_tab",
+                "label": "Erosion Control for Reservoir Maintenance",
+                "type": "tab",
+                "enabledBy": "use_erosion_reservoir",
+                "elements":
+                [
+                    ... create elements here as normal ...
+                ]
+            }
+        ]
+    }
 
 
 
