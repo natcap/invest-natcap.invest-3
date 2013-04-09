@@ -399,13 +399,6 @@ def execute(args):
     vectorize_points_uri(
             clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
 
-    # Clip the wave energy and wave power rasters so that they are confined 
-    # to the AOI
-    #wave_power_inter_uri = os.path.join(
-    #        intermediate_dir, 'inter_clip_power.tif')
-    #clip_raster_from_polygon(
-    #        aoi_shape_path, wave_power_unclipped_path, wave_power_path,
-    #        wave_power_inter_uri)
     def clip_dataset_uri(
             source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
         """A wrapper function for calling raster_utils.clip_dataset by passing
@@ -420,20 +413,13 @@ def execute(args):
         aoi_ds = ogr.Open(aoi_datasource_uri)
         raster_utils.clip_dataset(source_ds, aoi_ds, out_dataset_uri)
 
+    # Clip the wave energy and wave power rasters so that they are confined 
+    # to the AOI
     clip_dataset_uri(
-            wave_power_unclipped_path, aoi_shape_path, wave_energy_path)
-    
-    #wave_energy_inter_uri = os.path.join(
-    #        intermediate_dir, 'inter_clip_energy.tif')
-    #clip_raster_from_polygon(
-    #        aoi_shape_path, wave_energy_unclipped_path, wave_energy_path,
-    #        wave_energy_inter_uri)
+            wave_power_unclipped_path, aoi_shape_path, wave_power_path)
 
     clip_dataset_uri(
             wave_energy_unclipped_path, aoi_shape_path, wave_energy_path)
-
-    raster_utils.calculate_raster_stats_uri(wave_power_path)
-    raster_utils.calculate_raster_stats_uri(wave_energy_path)
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in  
@@ -1328,61 +1314,6 @@ def wave_power(shape_uri):
         layer.SetFeature(feat)
         feat.Destroy()
         feat = layer.GetNextFeature()
-
-def clip_raster_from_polygon(shape_path, raster_path, output_uri, inter_uri):
-    """Returns a raster where any value outside the bounds of the
-    polygon shape are set to nodata values. This represents clipping 
-    the raster to the dimensions of the polygon.
-    
-    shape_path - A uri to a polygon shapefile representing
-        the bounds for the raster
-    raster_path - A uri to a raster to be bounded by shape
-    output_uri - The path for the clipped output raster
-    inter_uri - a uri path for an intermediate raster step
-    
-    returns - Nothing"""
-    shape = ogr.Open(shape_path)
-    raster = gdal.Open(raster_path, 1)
-    ds_gt = raster.GetGeoTransform()
-
-    if os.path.isfile(inter_uri):
-        os.path.remove(inter_uri)
-
-    # Create a new raster as a copy from 'raster'
-    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(inter_uri, raster)
-    copy_band = copy_raster.GetRasterBand(1)
-    # Set the copied rasters values to nodata to create a blank raster.
-    nodata = copy_band.GetNoDataValue()
-    copy_band.Fill(nodata)
-    # Rasterize the polygon layer onto the copied raster
-    gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
-    def fill_bound_data(value, copy_value):
-        """If the copied raster's value is nodata then the pixel is not within
-        the polygon and should write nodata back. If copied raster's value
-        is not nodata, then pixel lies within polygon and the value 
-        from 'raster' should be written out.
-        
-        value - The pixel value of the raster to be bounded by the shape
-        copy_value - The pixel value of a copied raster where every pixel
-                     is nodata except for where the polygon was rasterized
-        
-        returns - Either a nodata value or relevant pixel value
-        """
-        if copy_value == nodata:
-            return copy_value
-        else:
-            return value
-   
-    copy_raster = None
-    shape = None
-    raster = None
-    
-    # Vectorize the two rasters using the operation fill_bound_data
-    pixel_size = (float(ds_gt[1]) + np.absolute(float(ds_gt[5]))) / 2.0
-    raster_utils.vectorize_datasets(
-            [raster_path, inter_uri], fill_bound_data, output_uri,
-            gdal.GDT_Float32, nodata, pixel_size, 'intersection',
-            assert_datasets_projected=False)
 
 def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
