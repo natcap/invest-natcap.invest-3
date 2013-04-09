@@ -399,26 +399,12 @@ def execute(args):
     vectorize_points_uri(
             clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
 
-    def clip_dataset_uri(
-            source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
-        """A wrapper function for calling raster_utils.clip_dataset by passing
-            around uri paths instead of the actual datasets / datasources.
-
-            source_dataset_uri - uri to a single band GDAL dataset to clip 
-            aoi_datasource_uri - uri to ogr datasource
-            out_dataset_uri - path to disk for the clipped dataset
-
-            returns - Nothing"""
-        source_ds = gdal.Open(source_dataset_uri)
-        aoi_ds = ogr.Open(aoi_datasource_uri)
-        raster_utils.clip_dataset(source_ds, aoi_ds, out_dataset_uri)
-
     # Clip the wave energy and wave power rasters so that they are confined 
     # to the AOI
-    clip_dataset_uri(
+    raster_utils.clip_dataset_uri(
             wave_power_unclipped_path, aoi_shape_path, wave_power_path)
 
-    clip_dataset_uri(
+    raster_utils.clip_dataset_uri(
             wave_energy_unclipped_path, aoi_shape_path, wave_energy_path)
 
     # Create the percentile rasters for wave energy and wave power
@@ -679,7 +665,7 @@ def execute(args):
 
             npv_out_uri = os.path.join(output_dir, 'npv_usd.tif')
             # Clip the raster to the convex hull polygon
-            clip_dataset_uri(
+            raster_utils.clip_dataset_uri(
                     raster_projected_path, convex_uri, npv_out_uri)
 
             #Create the percentile raster for net present value
