@@ -237,7 +237,27 @@ class TestHRACore(unittest.TestCase):
 
         #Want to make sure that if we don't have raster criteria, that the core
         #will still run.
-        del self.args['h-s'][('kelp', 'finfishaquaculturecomm')]['Crit_Rasters']
+        self.args['h-s'][('kelp', 'finfishaquaculturecomm')]['Crit_Rasters'] = {}
         
         hra_core.execute(self.args)
 
+    def test_ImproperAOIAttrib_exception(self):
+        '''Want to check that if this model run contains an AOI, that we have a
+        'name' attribute in each of the AOI features. If this is not true, it
+        should raise an ImproperAOIAttributeName exception. We will use a
+        seperate improperly named AOI file for these purposes.
+        '''
+
+        self.args['aoi_tables'] = './data/hra_regression_data/HabitatLayers'
+
+        #Since we had 6 crits to begin with, remove one from each should leave
+        #us with 3, want to make sure this causes to error.
+        for c_list in (self.args['resiliance_crits'], 
+                    self.args['sensitivity_crits'],
+                    self.args['exposure_crits']):
+
+            c_list.remove(c_list[0])
+
+
+        self.assertRaises(hra_preprocessor.NotEnoughCriteria,
+                        hra_preprocessor.execute, self.args)
