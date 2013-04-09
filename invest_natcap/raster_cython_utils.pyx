@@ -113,12 +113,13 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
             if f == dem_nodata: continue
             g = dem_array[2, col_index - 1]
             if g == dem_nodata: continue
-            h = dem_array[0, col_index]
+            h = dem_array[2, col_index]
             if h == dem_nodata: continue
-            i = dem_array[0, col_index + 1]
+            i = dem_array[2, col_index + 1]
             if i == dem_nodata: continue
 
             dzdx = ((c+2*f+i) - (a+2*d+g)) / (cell_size_times_8)
             dzdy = ((g+2*h+i) - (a+2*b+c)) / (cell_size_times_8)
+#            slope_array[0, col_index] = numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2)) * 57.29578
             slope_array[0, col_index] = numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2)) * 57.29578
         slope_band.WriteArray(slope_array, 0, row_index)
