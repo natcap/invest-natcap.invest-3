@@ -8,7 +8,7 @@ import logging
 
 # Format string and the date format are shared by the basic configuration as
 # well as the added streamhandler.
-format_string = '%(asctime)s %(name)-18s %(levelname)-8s %(message)s'
+format_string = '%(asctime)s %(name)-30s %(funcName)-20s %(levelname)-8s %(message)s'
 date_format = '%m/%d/%Y %H:%M:%S '
 
 # Do the basic configuration of logging here.  This is required in addition to

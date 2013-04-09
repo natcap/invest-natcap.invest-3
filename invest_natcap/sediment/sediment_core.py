@@ -8,6 +8,7 @@ import numpy
 from osgeo import gdal
 
 from invest_natcap import raster_utils
+import sediment_cython_core
 
 LOGGER = logging.getLogger('sediment_core')
 
@@ -53,54 +54,8 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
 
             returns the ls_factor calculation for this point"""
 
-        #Skip the calculation if any of the inputs are nodata
-        if aspect_angle == aspect_nodata or slope == slope_nodata or \
-                flow_accumulation == flow_accumulation_nodata:
-            return ls_nodata
-
-        #Here the aspect direciton can range from 0 to 2PI, but the purpose
-        #of the term is to determine the length of the flow path on the
-        #pixel, thus we take the absolute value of each trigometric
-        #function to keep the computation in the first quadrant
-        xij = abs(numpy.sin(aspect_angle)) + abs(numpy.cos(aspect_angle))
-
-        contributing_area = (flow_accumulation-1) * cell_area
-
-        #To convert to radians, we need to divide the slope by 100 since
-        #it's a percent. :(
-        slope_in_radians = numpy.arctan(slope / 100.0)
-
-        #From Equation 4 in "Extension and validataion of a geographic
-        #information system ..."
-        if slope < 9:
-            slope_factor =  10.8 * numpy.sin(slope_in_radians) + 0.03
-        else:
-            slope_factor =  16.8 * numpy.sin(slope_in_radians) - 0.5
-            
-        #Set the m value to the lookup table that's Table 1 in 
-        #InVEST Sediment Model_modifications_10-01-2012_RS.docx in the
-        #FT Team dropbox
-        beta = (numpy.sin(slope_in_radians) / 0.0896) / \
-            (3 * pow(numpy.sin(slope_in_radians),0.8) + 0.56)
-        slope_table = [0.01, 0.035, 0.05, 0.09]
-        exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
-            
-        #Use the bisect function to do a nifty range 
-        #lookup. http://docs.python.org/library/bisect.html#other-examples
-        m_exp = exponent_table[bisect.bisect(slope_table, slope)]
-
-        #The length part of the ls_factor:
-        ls_factor = (
-            ((contributing_area + cell_area)**(m_exp+1) - 
-             contributing_area ** (m_exp+1)) / 
-            ((cell_size ** (m_exp + 2)) * (xij**m_exp) * (22.13**m_exp)))
-
-        #From the paper "as a final check against exessively long slope
-        #length calculations ... cap of 333m"
-        if ls_factor > 333:
-            ls_factor = 333
-                
-        return ls_factor * slope_factor
+        return sediment_cython_core.ls_factor_function(
+            float(aspect_angle), float(slope), float(flow_accumulation), float(aspect_nodata), float(slope_nodata), float(flow_accumulation_nodata), float(ls_nodata), float(cell_area), float(cell_size))
 
     #Call vectorize datasets to calculate the ls_factor
     dataset_uri_list = [aspect_uri, slope_uri, flow_accumulation_uri]
