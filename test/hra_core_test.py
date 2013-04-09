@@ -241,14 +241,3 @@ class TestHRACore(unittest.TestCase):
         
         hra_core.execute(self.args)
 
-    def test_ImproperAOIAttrib_exception(self):
-        '''Want to check that if this model run contains an AOI, that we have a
-        'name' attribute in each of the AOI features. If this is not true, it
-        should raise an ImproperAOIAttributeName exception. We will use a
-        seperate improperly named AOI file for these purposes.
-        '''
-
-        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
-
-        self.assertRaises(hra_core.ImproperAOIAttributeName,
-                        hra_core.execute, self.args)
