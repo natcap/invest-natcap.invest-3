@@ -74,8 +74,8 @@ class TestHRA(unittest.TestCase):
 
         self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
 
-        self.assertRaises(hra_core.ImproperAOIAttributeName,
-                        hra_core.execute, self.args)
+        self.assertRaises(hra.ImproperAOIAttributeName,
+                        hra.execute, self.args)
 
     def test_ImproperCritAttrib_exception(self):
         '''Want to check that if this model uses shapefile criteria, that each 
@@ -85,9 +85,9 @@ class TestHRA(unittest.TestCase):
         seperate improperly named shape criteria file for these purposes.
         '''
 
-        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
+        self.args['csv_uri'] = './data/hra_regression_data/Input/habitat_stressor_ratings_bad_attrib'
 
-        self.assertRaises(hra_core.ImproperAOIAttributeName,
-                        hra_core.execute, self.args)
+        self.assertRaises(hra.ImproperCriteriaAttributeName,
+                        hra.execute, self.args)
 
 
