@@ -8,7 +8,7 @@ def ls_factor_function(
     """Calculate the ls factor
 
         aspect_angle - flow direction in radians
-        slope - slope in terms of (units?)
+        slope - slope in terms of percent
         flow_accumulation - upstream pixels at this point
 
         returns the ls_factor calculation for this point"""
@@ -32,7 +32,7 @@ def ls_factor_function(
 
     #From Equation 4 in "Extension and validataion of a geographic
     #information system ..."
-    if slope < 9:
+    if slope < 9.0:
         slope_factor =  10.8 * sin(slope_in_radians) + 0.03
     else:
         slope_factor =  16.8 * sin(slope_in_radians) - 0.5
@@ -42,26 +42,27 @@ def ls_factor_function(
     #FT Team dropbox
     beta = (sin(slope_in_radians) / 0.0896) / \
         (3 * sin(slope_in_radians)**0.8 + 0.56)
+
     #slope table in percent
     cdef float * slope_table = [1., 3.5, 5., 9.]
     cdef float * exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
-
-    #Use the bisect function to do a nifty range 
-    #lookup. http://docs.python.org/library/bisect.html#other-examples
     cdef float m_exp = exponent_table[4]
+    #Look up the correct m value from the table
     for i in range(4):
         if slope <= slope_table[i]:
             m_exp = exponent_table[i]
+            break
 
     #The length part of the ls_factor:
-    ls_factor = (
+    l_factor = (
         ((contributing_area + cell_area)**(m_exp+1) - 
          contributing_area ** (m_exp+1)) / 
         ((cell_size ** (m_exp + 2)) * (xij**m_exp) * (22.13**m_exp)))
 
-    #From the paper "as a final check against exessively long slope
+    #From the McCool paper "as a final check against exessively long slope
     #length calculations ... cap of 333m"
-    if ls_factor > 333:
-        ls_factor = 333
+    if l_factor > 333:
+        l_factor = 333
 
-    return ls_factor * slope_factor
+    #This is the ls_factor
+    return l_factor * slope_factor

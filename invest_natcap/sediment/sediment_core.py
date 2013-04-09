@@ -25,8 +25,7 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         flow_accumulation_uri - a uri to a  single band raster of type float that
             indicates the contributing area at the inlet of a grid cell
         slope_uri - a uri to a single band raster of type float that indicates
-            the slope at a pixel given as a proportion (e.g. a value of 0.05
-            is a slope of 5%)
+            the slope at a pixel given as a percent
         aspect_uri - a uri to a single band raster of type float that indicates the
             direction that slopes are facing in terms of radians east and
             increase clockwise: pi/2 is north, pi is west, 3pi/2, south and
@@ -49,7 +48,7 @@ def calculate_ls_factor(flow_accumulation_uri, slope_uri,
         """Calculate the ls factor
 
             aspect_angle - flow direction in radians
-            slope - slope in terms of (units?)
+            slope - slope in terms of percent
             flow_accumulation - upstream pixels at this point
 
             returns the ls_factor calculation for this point"""
