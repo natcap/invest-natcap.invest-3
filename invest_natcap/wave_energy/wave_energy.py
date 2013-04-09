@@ -989,45 +989,6 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
 
     return shp_ds
 
-#def get_points_values(shape, field):
-#   """Generates a list of points and a list of values based on a point
-#   geometry shapefile
-#   
-#   shape - A point geometry shapefile of which to gather the information from
-#   field - A string representing a field in the shapefile 'shape' 
-#   
-#   returns - A list of points and values (points represented as 2D list, 
-#             values as list)
-#    """
-#   #Retrieve the layer from the shapefile and reset the reader head
-#   #incase it has been iterated through earlier.
-#   shape_layer = shape.GetLayer(0)
-#   shape_layer.ResetReading()
-#   #Get the first point from the shape layer
-#   shape_feat = shape_layer.GetNextFeature()
-#   points = []
-#   values = []
-#   while shape_feat is not None:
-#       #May want to check to make sure field is in shape layer
-#       #Get the specified field and append its value
-#       #to a list
-#       field_index = shape_feat.GetFieldIndex(field)
-#       value = shape_feat.GetField(field_index)
-#       values.append(value)
-#       #Get the X,Y coordinate of the geometry of
-#       #the point and append it as a list [X,Y] to
-#       #the list 'points'
-#       geom = shape_feat.GetGeometryRef()
-#       reference_x = geom.GetX()
-#       reference_y = geom.GetY()
-#       points.append([reference_x, reference_y])
-#       geom = None
-#       shape_feat.Destroy()
-#       shape_feat = shape_layer.GetNextFeature()
-
-#   results = [points, values]
-#   return results
-
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
     machine performance table using new ranges from wave watch data.
