@@ -502,7 +502,7 @@ def execute(args):
             land_grid_pts_file.close()
 
             #Number of machines for a given wave farm
-            units = args['number_of_machines']
+            units = int(args['number_of_machines'])
             #Extract the machine economic parameters
             #machine_econ = args['machine_econ']
             cap_max = float(machine_econ['capmax'])
@@ -577,7 +577,7 @@ def execute(args):
                     land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
                     id_index = feature.GetFieldIndex('LAND_ID')
 
-                    land_id = int(ocean_to_land_id[iterate_feat])
+                    land_id = int(wave_to_land_id[iterate_feat])
 
                     feature.SetField(ocean_to_land_index, ocean_to_land_dist[iterate_feat])
                     feature.SetField(land_to_grid_index, land_to_grid_dist[land_id])
@@ -711,16 +711,17 @@ def execute(args):
         else:
             LOGGER.debug('Valuation not selected')
 
-def get_convex_hull(point_datasource, layer_name, output_uri):
+def get_convex_hull_uri(point_datasource_uri, layer_name, output_uri):
     """This function finds the convex hull of a point shapefile and creates a
         new polygon shapefile based on the convex hull.
 
-        point_datasource - an OGR point geometry datasource
+        point_datasource_uri - an uri to a OGR point geometry datasource
         layer_name - a string for the output polygon datasources layer name
         output_uri - a URI for the output polygon datasource
 
         returns - Nothing"""
 
+    point_datasource = ogr.Open(point_datasource_uri)
     # Get the Layer and reset the pointer to make sure it is looking at the
     # first feature
     layer = point_datasource.GetLayer()
