@@ -54,7 +54,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    os.path.join(overlap_dir, 'H[kelp]_S[FinfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[kelp]_S[FinfishAquacultureComm].tif')
                 },
             ('kelp', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -71,7 +71,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    os.path.join(overlap_dir, 'H[kelp]_S[ShellfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[kelp]_S[ShellfishAquacultureComm].tif')
                },
            ('eelgrass', 'finfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -88,7 +88,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    os.path.join(overlap_dir, 'H[eelgrass]_S[FinfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[eelgrass]_S[FinfishAquacultureComm].tif')
                 },
            ('eelgrass', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -105,7 +105,7 @@ class TestHRACore(unittest.TestCase):
                         }
                     },
                  'DS': 
-                    os.path.join(overlap_dir, 'H[eelgrass]_S[ShellfishAquacultureComm].tif'
+                    os.path.join(overlap_dir, 'H[eelgrass]_S[ShellfishAquacultureComm].tif')
                 }
             }
          
