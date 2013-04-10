@@ -10,6 +10,25 @@ from osgeo import gdal
 from invest_natcap.sediment import sediment
 from invest_natcap import raster_utils
 
+def willimate_run(workspace_dir):
+    args = {}
+    args['workspace_dir'] = os.path.join(workspace_dir, 'base_run')
+    if not os.path.exists(args['workspace_dir']):
+        os.makedirs(args['workspace_dir'])
+    args['dem_uri'] = '../Base_Data/Freshwater/dem'
+    args['erosivity_uri'] = '../Base_Data/Freshwater/erosivity'
+    args['erodibility_uri'] = '../Base_Data/Freshwater/erodibility'
+    args['landuse_uri'] = '../Base_Data/Freshwater/landuse_90'
+    args['watersheds_uri'] = '../Base_Data/Freshwater/watersheds.shp'
+    args['biophysical_table_uri'] = '../Base_Data/Freshwater/biophysical_table.csv'
+    args['threshold_flow_accumulation'] = 1000
+    args['slope_threshold'] = 75.0
+    args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
+    
+    sediment.execute(args)
+
+
+
 def base_run(workspace_dir):
     args = {}
     args['workspace_dir'] = os.path.join(workspace_dir, 'base_run')
@@ -182,4 +201,4 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
     layer = None
 
 if __name__ == '__main__':
-    base_run('./base_sediment_run')
+    willimate_run('./base_sediment_run')
