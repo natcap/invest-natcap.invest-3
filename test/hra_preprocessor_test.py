@@ -105,36 +105,36 @@ class TestHRAPreprocessor(unittest.TestCase):
                 {('kelp', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                          'frequency of disturbance':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                     'Crit_Rasters': {}
                     },
                 ('kelp', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                          'frequency of disturbance':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('eelgrass', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                          'frequency of disturbance':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('eelgrass', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'temporal overlap':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                          'frequency of disturbance':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     }
@@ -143,21 +143,21 @@ class TestHRAPreprocessor(unittest.TestCase):
                 {('kelp'):
                     {'Crit_Ratings':
                         {'natural mortality':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                         },
                      'Crit_Rasters':
                         {'recruitment rate':
-                            {'Weight': 1, 'DQ': 1}
+                            {'Weight': 1.0, 'DQ': 1.0}
                         }
                     },
                 ('eelgrass'):
                     {'Crit_Ratings':
                         {'natural mortality':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                         },
                      'Crit_Rasters':
                         {'recruitment rate':
-                            {'Weight': 1, 'DQ': 1}
+                            {'Weight': 1.0, 'DQ': 1.0}
                         }
                     }
                 },
@@ -165,18 +165,18 @@ class TestHRAPreprocessor(unittest.TestCase):
                 {('FinfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'intensity rating':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                          'management effectiveness':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('ShellfishAquacultureComm'):
                     {'Crit_Ratings':
                         {'intensity rating':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1},
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                          'management effectiveness':
-                            {'Rating': 1, 'DQ': 1, 'Weight': 1}
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                     'Crit_Rasters':{}
                     }
