@@ -28,6 +28,13 @@ def willimate_run(workspace_dir):
 
     sediment.execute(args)
 
+    sediment_export_base = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    base_sediment_export = raster_utils.aggregate_raster_values_uri(
+        sediment_export_base, args['watersheds_uri'], 'ws_id', 'sum')[0]
+
+
+
+
     #######Create a mining only export lulc and export map
     only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
     landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
@@ -48,7 +55,8 @@ def willimate_run(workspace_dir):
     args['landuse_uri'] = only_mining_lulc_uri
     print 'simulating the entire watershed as mining'
     sediment.execute(args)
-
+    args.pop('suffix')
+    
 
     ########Subtract the mining only and origina lulc map for a static permitting map
     original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
@@ -70,10 +78,11 @@ def willimate_run(workspace_dir):
 
 
 
+
     ########create a random permitting polygon
     while True:
         permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit')
-        create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], 2000)
+        create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], 500)
 
         #Create a new LULC that masks the LULC values to the new type that lie within
         #the permitting site and re-run sediment model, base new lulc on user input
@@ -108,7 +117,18 @@ def willimate_run(workspace_dir):
         args['workspace_dir'] = permitting_workspace_uri
         args['landuse_uri'] = converted_lulc_uri
         sediment.execute(args)
+
+        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export.tif')
+
+        #Lookup the amount of sediment export on the watershed polygon
+        permitting_sediment_export = raster_utils.aggregate_raster_values_uri(
+            sediment_export_permitting, args['watersheds_uri'], 'ws_id', 'sum')[0]
+
+        print permitting_sediment_export, base_sediment_export, permitting_sediment_export - base_sediment_export
+
         break
+
+
 
 
 
