@@ -27,7 +27,9 @@ class TestHRACore(unittest.TestCase):
         #delete current intermediate and output folders
         out_dir = os.path.join(args['workspace_dir'], 'Output')
         inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    
+   
+        overlap_dir = './data/test_out/HRA/Reg_Inputs/Intermediate/Overlap_Rasters'
+
         for folder in [out_dir, inter_dir]:
             if (os.path.exists(folder)):
                 shutil.rmtree(folder) 
@@ -48,11 +50,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_finfishaquaculturecomm_change_in_area.tif')
+                           './data/test_out/HRA/Criteria_Rasters/kelp_finfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[kelp]_S[FinfishAquacultureComm].tif')
+                    os.path.join(overlap_dir, 'H[kelp]_S[FinfishAquacultureComm].tif')
                 },
             ('kelp', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -65,11 +67,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_shellfishaquaculturecomm_change_in_area.tif')
+                            './data/test_out/HRA/Criteria_Rasters/kelp_shellfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[kelp]_S[ShellfishAquacultureComm].tif')
+                    os.path.join(overlap_dir, 'H[kelp]_S[ShellfishAquacultureComm].tif')
                },
            ('eelgrass', 'finfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -82,11 +84,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_finfishaquaculturecomm_change_in_area.tif')
+                            './data/test_out/HRA/Criteria_Rasters/eelgrass_finfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[eelgrass]_S[FinfishAquacultureComm].tif')
+                    os.path.join(overlap_dir, 'H[eelgrass]_S[FinfishAquacultureComm].tif')
                 },
            ('eelgrass', 'shellfishaquaculturecomm'):
                 {'Crit_Ratings':
@@ -99,11 +101,11 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_shellfishaquaculturecomm_change_in_area.tif')
+                            './data/test_out/HRA/Criteria_Rasters/eelgrass_shellfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/H[eelgrass]_S[ShellfishAquacultureComm].tif')
+                    os.path.join(overlap_dir, 'H[eelgrass]_S[ShellfishAquacultureComm].tif')
                 }
             }
          
@@ -119,10 +121,11 @@ class TestHRACore(unittest.TestCase):
                     {'connectivity_rating':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif'
+                        }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Habitat_Rasters/kelp.tif')
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/kelp.tif'
                 },
             ('eelgrass'):
                 {'Crit_Ratings':
@@ -135,10 +138,11 @@ class TestHRACore(unittest.TestCase):
                     {'connectivity_rating':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif'
+                        }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Habitat_Rasters/eelgrass.tif')
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/eelgrass.tif'
                 }
             }
         args['stressors'] = \
@@ -153,10 +157,11 @@ class TestHRACore(unittest.TestCase):
                     {'new_stresscrit':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif'
+                        }
                     },
                  'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif')
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif'
                 },
             ('shellfishaquaculturecomm'):
                {'Crit_Ratings':
@@ -169,16 +174,19 @@ class TestHRACore(unittest.TestCase):
                     {'new_stresscrit':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            gdal.Open('./data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif')                 }
+                            './data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif'
+                        }
                     },
                 'DS': 
-                    gdal.Open('./data/test_out/HRA/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif')
+                    './data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif'
                 } 
             }
         self.args = args
 
-    def test_euc_execute(self):
-       
+    def test_euc_smoke(self):
+        '''This will test the standard run in which we would have Euclidean
+        risk with a maximum risk value of 3.
+        '''
         #in an average test run, would likely have Euclidean risk, and a max
         #rating of 3. The max risk would therefore be as seen below.
         self.args['risk_eq'] = 'Euclidean'
@@ -186,9 +194,10 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
     
-    @unittest.skip("For later testing.")
-    def test_mult_execute(self):
-
+    def test_mult_smoke(self):
+        '''This tests the alternate risk equation in which we would use a
+        multiplicative risk equation, but would still have a max risk value of 3.
+        '''
         #Now, do one that uses multiplicative risk. Still want to use a max
         #rating of 3 as a test.
         self.args['risk_eq'] = 'Multiplicative'
@@ -196,9 +205,11 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
 
-    @unittest.skip("For later testing.")
-    def test_diff_num_crits(self):
-        
+    def test_diff_num_crits_smoke(self):
+        '''Want to test that the model will still run if we have different numbers of
+        criteria, but the model would have (hypothetically) passed the minimum 
+        required to avoid an exception throw in hra non-core. '''
+
         #Still need to have standard risk calculation in order to get
         #the whole core to run
         self.args['risk_eq'] = 'Euclidean'
@@ -214,32 +225,19 @@ class TestHRACore(unittest.TestCase):
 
         hra_core.execute(self.args)
 
-    @unittest.skip("For later testing.")
     def test_no_rast_dict(self):
-        
+        '''Want to test the case where we have a complete dictionary, but one of the
+        h-s pairs within the dictionary does not contain a rasters dictionary at all.
+        This should be a viable run, since Crit_Rasters would not get built if there
+        were no qualifying shapefile criteria for that pairing.'''
+
         #Still need standard risk calc stuff.
         self.args['risk_eq'] = 'Euclidean'
         self.args['max_risk'] = math.sqrt((3-1)**2 + (3-1)**2)
 
         #Want to make sure that if we don't have raster criteria, that the core
         #will still run.
-        del self.args['h-s'][('kelp', 'finfishaquaculturecomm')]['Crit_Rasters']
+        self.args['h-s'][('kelp', 'finfishaquaculturecomm')]['Crit_Rasters'] = {}
         
         hra_core.execute(self.args)
 
-    @unittest.skip("For later testing.")
-    def test_zero_val_ratings(self):
-        '''We know that the core should never recieve anything with a DQ or W
-        of 0, since that would NaN most of the equations. But, want to make
-        sure that 0 values in the ratings will be okay. There should
-        automagically be some in the rasters, since we will have nodata
-        values, but check for the single ratings values.'''
-
-        #IF RATING IS 0, NEED TO REMOVE THAT DICTIONARY, ELSE WE WILL END UP
-        #STILL ADDING THE DQ/W TO THE CALCULATIONS AS 1/DQ OR 1/DQ*W
-
-        #So....this test should never happen. Hypothetically.
-        self.args['h-s']['Crit_Ratings'][('kelp', 'finfishaquaculturecomm')]\
-            ['temporal_overlap']['Rating'] = 0.0
-        
-        hra_core.execute(self)

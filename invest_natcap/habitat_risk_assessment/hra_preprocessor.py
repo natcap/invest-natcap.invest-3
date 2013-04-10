@@ -410,7 +410,7 @@ def parse_hra_tables(workspace_uri):
     #from the assessment for that subdictionary.
     try:
         for subdict in parse_dictionary.values():
-            for indivs in subdict.values():
+            for key, indivs in subdict.items():
                 for kind in indivs.values():
 
                     #Since we have the buffer_dict in here as well, occasionally it
@@ -435,10 +435,17 @@ def parse_hra_tables(workspace_uri):
                             #Want to break if anything entered is a null string.
                             for value in crit_dict.values():
                                 if value == '':
-                                    raise NoEntryException("Criteria CSV files must \
-                                        have values filled out for all criteria. If \
-                                        you would like to exclude a criteria from the \
-                                        assessment, use a 0 for that entry.")
+                                    #name could potentially be a tuple. Need to make sure.
+                                    #If it is, we still want to direct them to the habitat
+                                    #CSV, since h-s info is stored there.
+                                    if type(key) == tuple:
+                                        name = key[0]
+                                    else:
+                                        name = key
+                                    raise UnexpectedString("Entries in CSV table may not be \
+                                    strings, and may not be left blank. Check your %s CSV \
+                                    for any leftover strings or spaces within Buffer, Rating, \
+                                    Data Quality or Weight columns.", name)
                     except AttributeError:
                         #Can just skip over float values.
                         pass
@@ -518,6 +525,8 @@ def parse_stressor(uri):
                         strings, and may not be left blank. Check your %s CSV \
                         for any leftover strings or spaces within Buffer, Rating, \
                         Data Quality or Weight columns.", s_name)
+            #This should catch any instances where the rating is a string, but
+            #is not SHAPE (aka- is leftover from the user's guide population)
             else:
                 try:
                     stressor_dict['Crit_Ratings'][key] = \
@@ -609,7 +618,7 @@ def parse_habitat_overlap(uri):
                         strings, and may not be left blank. Check your %s CSV \
                         for any leftover strings or spaces within Rating, \
                         Data Quality or Weight columns.", hab_name)
-                    
+            #Should catch any leftovers from the autopopulation of the helptext        
             else:
                 try:
                     habitat_dict['Crit_Ratings'][key] = \

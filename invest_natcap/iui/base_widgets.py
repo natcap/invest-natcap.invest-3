@@ -1988,6 +1988,62 @@ class MessageArea(QtGui.QLabel):
             self.setStyleSheet('QLabel { padding: 15px;' +
                 'background-color: #ebabb6; border: 2px solid #a23332;}')
 
+class TabbedGroup(QtGui.QTabWidget, DynamicGroup):
+    def __init__(self, attributes, registrar=None):
+        super(TabbedGroup, self).__init__(attributes, QtGui.QVBoxLayout(), registrar)
+
+        for index, tab in enumerate(self.elements):
+            tab.set_index(index)
+            self.addTab(tab, tab.attributes['label'])
+
+    def set_active_tab(self):
+        """Update the active tab in this tabbedgroup to be the leftmost enabled
+            tab.  If there are no enabled tabs, the active tab should be the
+            leftmost tab.
+
+            returns nothing."""
+
+        num_enabled = 0
+        rightmost_tab_index = 0
+        for tab_num in range(self.count() - 1, -1, -1):
+            if self.isTabEnabled(tab_num):
+                self.setCurrentIndex(tab_num)
+                num_enabled += 1
+        self.LOGGER.debug('%s tabs enabled', num_enabled)
+
+        if num_enabled == 0 and self.count() > 0:
+            self.setCurrentIndex(0)
+            self.LOGGER.debug('Active tab=%s (leftmost)', 0)
+
+
+class Tab(DynamicGroup):
+    def __init__(self, attributes, registrar=None):
+        layout = QtGui.QVBoxLayout()
+        super(Tab, self).__init__(attributes, layout, registrar)
+        self.index = None
+
+        if 'condenseElements' in self.attributes:
+            self.LOGGER.debug('Condense elements=%s',
+                self.attributes['condenseElements'])
+            if self.attributes['condenseElements'] == True:
+                layout.insertStretch(-1)
+
+
+    def set_index(self, index):
+        self.index = index
+
+    def setState(self, state, includeSelf=True, recursive=True):
+        #disabling the tab itself automatically disables all its options.  No
+        #need to recurse through all contained elements.
+        #The parent of a tab is a QStackedWidget.  The parent of this
+        #QStackedWidget is the TabbedGroup
+        self.parent().parent().setTabEnabled(self.index, state)
+        self.parent().parent().set_active_tab()
+
+    def isEnabled(self):
+        return self.parent().parent().isTabEnabled(self.index)
+
+
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
@@ -2759,7 +2815,9 @@ class ElementRegistrar(registrar.Registrar):
                    'OGRFieldDropdown': OGRFieldDropdown,
                    'hiddenElement': StaticReturn,
                    'multi': MultiElement,
-                   'label': Label
+                   'label': Label,
+                   'tabbedGroup': TabbedGroup,
+                   'tab': Tab
                    }
         self.update_map(updates)
         

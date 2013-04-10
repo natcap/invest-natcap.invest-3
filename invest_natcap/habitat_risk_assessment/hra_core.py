@@ -216,20 +216,20 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
             #with the "beginning" of the stressor cell. Recall that dict[h][s]
             #is a list, so we can index directly.
             file.write("<td>" + s_list[0]['Name'] + \
-                "</td><td>" +  str(s_list[0]['E']) + \
-                "</td><td>" + str(s_list[0]['C']) + \
-                "</td><td>" +  str(s_list[0]['Risk']) + \
-                "</td><td>" + str(s_list[0]['Risk'] * 100 / max_risk) + "</td></tr>")
+                "</td><td>" +  str(round(s_list[0]['E'], 2)) + \
+                "</td><td>" + str(round(s_list[0]['C'], 2)) + \
+                "</td><td>" +  str(round(s_list[0]['Risk'], 2)) + \
+                "</td><td>" + str(round(s_list[0]['Risk'] * 100 / max_risk, 2)) + "</td></tr>")
 
             #For all remaining AOIs on that H-S pairing.
             for element in s_list[1::]:
 
                 file.write("<tr>")
                 file.write("<td>" + element['Name']+ "</td>")
-                file.write("<td>" + str(element['E']) + "</td>")
-                file.write("<td>" + str(element['C']) + "</td>")
-                file.write("<td>" + str(element['Risk']) + "</td>")
-                file.write("<td>" + str(element['Risk'] * 100 / max_risk) + "</td>")
+                file.write("<td>" + str(round(element['E'], 2)) + "</td>")
+                file.write("<td>" + str(round(element['C'], 2)) + "</td>")
+                file.write("<td>" + str(round(element['Risk'], 2)) + "</td>")
+                file.write("<td>" + str(round(element['Risk'] * 100 / max_risk, 2)) + "</td>")
                 file.write("</tr>")
 
         #End of the habitat-specific table

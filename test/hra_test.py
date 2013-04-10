@@ -64,3 +64,39 @@ class TestHRA(unittest.TestCase):
         model_raster_dict = hra.combine_hs_rasters(inter_dir, h_dir, s_dir, dict_orig)
 
         #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE '''
+
+    def test_euc_withAOI_smoke(self):
+       '''Want to make sure that we can run from non-core when including an AOI
+        overlay as a final output. That shoudl produce an HTML folder, containining
+        a table.'''
+
+        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions.shp'
+
+        self.execute(self.args)
+
+    def test_ImproperAOIAttrib_exception(self):
+        '''Want to check that if this model run contains an AOI, that we have a
+        'name' attribute in each of the AOI features. If this is not true, it
+        should raise an ImproperAOIAttributeName exception. We will use a
+        seperate improperly named AOI file for these purposes.
+        '''
+
+        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
+
+        self.assertRaises(hra.ImproperAOIAttributeName,
+                        hra.execute, self.args)
+
+    def test_ImproperCritAttrib_exception(self):
+        '''Want to check that if this model uses shapefile criteria, that each 
+        of them contains an attribute of 'name'. Currently, this is case
+        sensitive. After the fact, it can be changed. If this is not existant, it
+        should raise an ImproperCriteriaAttributeName exception. We will use a
+        seperate improperly named shape criteria file for these purposes.
+        '''
+
+        self.args['csv_uri'] = './data/hra_regression_data/Input/habitat_stressor_ratings_bad_attrib'
+
+        self.assertRaises(hra.ImproperCriteriaAttributeName,
+                        hra.execute, self.args)
+
+

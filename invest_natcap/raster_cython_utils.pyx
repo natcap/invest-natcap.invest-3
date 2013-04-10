@@ -57,13 +57,12 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format,
 def _cython_calculate_slope(dem_dataset_uri, slope_uri):
     """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        and generates a slope dataset as a percent
         
         dem_dataset_uri - (input) a URI to a  single band raster of z values.
-        slope_uri - (input) a path to the output slope uri
-        aoi_uri - (optional) a uri to an AOI input
+        slope_uri - (input) a path to the output slope uri in percent.
 
-        returns GDAL single band raster of the same dimensions as dem whose
-            elements are percent rise"""
+        returns nothing"""
 
     #Read the DEM directly into an array
     cdef float a,b,c,d,e,f,g,h,i,dem_nodata, dxdz, dxdy
@@ -113,12 +112,13 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
             if f == dem_nodata: continue
             g = dem_array[2, col_index - 1]
             if g == dem_nodata: continue
-            h = dem_array[0, col_index]
+            h = dem_array[2, col_index]
             if h == dem_nodata: continue
-            i = dem_array[0, col_index + 1]
+            i = dem_array[2, col_index + 1]
             if i == dem_nodata: continue
 
             dzdx = ((c+2*f+i) - (a+2*d+g)) / (cell_size_times_8)
             dzdy = ((g+2*h+i) - (a+2*b+c)) / (cell_size_times_8)
-            slope_array[0, col_index] = numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2)) * 57.29578
+            #output in terms of percent
+            slope_array[0, col_index] = numpy.tan(numpy.arctan(numpy.sqrt(dzdx**2 + dzdy**2))) * 100
         slope_band.WriteArray(slope_array, 0, row_index)
