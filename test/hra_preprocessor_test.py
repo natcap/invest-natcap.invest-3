@@ -184,9 +184,32 @@ class TestHRAPreprocessor(unittest.TestCase):
                     'Crit_Rasters':{}
                     }
                 }
-        }
+            }
     
         produced_dict = hra_preprocessor.parse_hra_tables(csv_folder)
         
         self.maxDiff=None
+        self.assertEqual(expected_dict, produced_dict)
+
+    def test_make_crit_dict_regression(self):
+        '''This should specifically test the make_crit_shape_dict function in
+        hra_preprocessor. This will get called by both preprocessor and
+        non-core. Want to check against the dictionary of what we think it
+        should be.'''
+
+        shp_crit_dir = './data/hra_regression_data/Shape_Criteria'
+
+        expected_dict = \
+            {'h-s': {},
+             'h': {'kelp':
+                    {'recruitment_rate': 
+                        './data/hra_regression_data/Shape_Criteria/Resilience/kelp_recruitment_rate.shp'
+                    }
+                  }
+             's': {}
+            }
+
+        produced_dict = hra_preprocessor.make_crit_shape_dict(shp_crit_dir)
+
+        self.maxDiff = None
         self.assertEqual(expected_dict, produced_dict)
