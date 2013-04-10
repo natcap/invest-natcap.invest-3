@@ -24,6 +24,53 @@ def willimate_run(workspace_dir):
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 75.0
     args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
+
+    #create a random permitting polygon
+    permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit')
+    create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], 2000)
+
+    #Create a new LULC that masks the LULC values to the new type that lie within
+    #the permitting site and re-run sediment model, base new lulc on user input
+    permitting_mask_uri = os.path.join(permitting_workspace_uri, 'random_permit_mask.tif')
+
+    landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    def mask_op(value):
+        if value == landuse_nodata:
+            return landuse_nodata
+        return 1.0
+    print 'making the raster mask for the permitting area'
+
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], mask_op, permitting_mask_uri, gdal.GDT_Float32, landuse_nodata,
+        landuse_pixel_size, "intersection", dataset_to_align_index=0, aoi_uri=permitting_workspace_uri)
+
+    converted_lulc_uri = os.path.join(permitting_workspace_uri, 'permitted_lulc.tif')
+    #I got this from the pucallapa biophysical table
+    mining_lulc_value = 2906
+    def convert_lulc(original_lulc, permit_mask):
+        if permit_mask == 1.0:
+            return mining_lulc_value
+        return original_lulc
+    print 'creating the permitted lulc'
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri'], permitting_mask_uri], convert_lulc,
+        converted_lulc_uri, gdal.GDT_Float32, landuse_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+
+    args['workspace_dir'] = permitting_workspace_uri
+    args['landuse_uri'] = converted_lulc_uri
+    sediment.execute(args)
+
+
+    sediment.execute(args)
+
+
+    return
+
+
     
     sediment.execute(args)
 
@@ -47,6 +94,26 @@ def willimate_run(workspace_dir):
     args['landuse_uri'] = only_mining_lulc_uri
     print 'simulating the entire watershed as mining'
     sediment.execute(args)
+
+
+    #Subtract the mining only and origina lulc map for a static permitting map
+    original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    export_nodata = raster_utils.get_nodata_from_uri(original_export_uri)
+    mining_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export_mining.tif')
+    static_impact_map_uri = os.path.join(workspace_dir, 'static_impact_map.tif')
+
+    def sub_export(original_export, mining_export):
+        if original_export == export_nodata:
+            return export_nodata
+        return mining_export - original_export
+    print 'calculating the static impact map'
+    raster_utils.vectorize_datasets(
+        [original_export_uri, mining_export_uri], sub_export,
+        static_impact_map_uri, gdal.GDT_Float32, export_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+
 
 
 
