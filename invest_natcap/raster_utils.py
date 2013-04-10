@@ -1222,8 +1222,31 @@ def clip_dataset_uri(source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
         out_dataset_uri - path to disk for the clipped datset
 
         returns nothing"""
-    raise NotImplementedError('clip_dataset_uri is not implemented yet')
+    #raise NotImplementedError('clip_dataset_uri is not implemented yet')
     
+    # I choose to open up the dataset here because I want to use the
+    # calculate_value_not_in_dataset function which requires a datasource. For
+    # now I do not want to create a uri version of that function.
+    source_dataset = gdal.Open(source_dataset_uri)
+    
+    band, nodata = extract_band_and_nodata(source_dataset)
+    datatype = band.DataType
+
+    if nodata is None:
+        nodata = calculate_value_not_in_dataset(source_dataset)
+
+    LOGGER.info("clip_dataset nodata value is %s" % nodata)
+
+    def op(x):
+        return x
+
+    source_dataset = None
+
+    pixel_size = get_cell_size_from_uri(source_dataset_uri) 
+
+    vectorize_datasets(
+            [source_dataset_uri], op, out_dataset_uri, datatype, nodata,
+            pixel_size, 'intersection', aoi_uri=aoi_datasource_uri)
 
 def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     """This function will clip source_dataset to the bounding box of the 
