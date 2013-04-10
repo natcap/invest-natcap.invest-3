@@ -65,6 +65,15 @@ class TestHRA(unittest.TestCase):
 
         #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE '''
 
+    def test_euc_withAOI_smoke(self):
+       '''Want to make sure that we can run from non-core when including an AOI
+        overlay as a final output. That shoudl produce an HTML folder, containining
+        a table.'''
+
+        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions.shp'
+
+        self.execute(self.args)
+
     def test_ImproperAOIAttrib_exception(self):
         '''Want to check that if this model run contains an AOI, that we have a
         'name' attribute in each of the AOI features. If this is not true, it
