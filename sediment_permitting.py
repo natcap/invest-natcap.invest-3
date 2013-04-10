@@ -25,7 +25,56 @@ def willimate_run(workspace_dir):
     args['slope_threshold'] = 75.0
     args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
 
-    #create a random permitting polygon
+
+    return
+
+
+    
+    sediment.execute(args)
+
+    #######Create a mining only export lulc and export map
+    only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
+    landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
+    mining_lulc_value = 2906
+    def convert_to_mining(original_lulc):
+        if original_lulc == landuse_nodata:
+            return landuse_nodata
+        return mining_lulc_value
+    print 'creating the mining lulc'
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], convert_to_mining,
+        only_mining_lulc_uri, gdal.GDT_Int32, landuse_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+    args['suffix'] = 'mining'
+    args['landuse_uri'] = only_mining_lulc_uri
+    print 'simulating the entire watershed as mining'
+    sediment.execute(args)
+
+
+    ########Subtract the mining only and origina lulc map for a static permitting map
+    original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    export_nodata = raster_utils.get_nodata_from_uri(original_export_uri)
+    mining_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export_mining.tif')
+    static_impact_map_uri = os.path.join(workspace_dir, 'static_impact_map.tif')
+
+    def sub_export(original_export, mining_export):
+        if original_export == export_nodata:
+            return export_nodata
+        return mining_export - original_export
+    print 'calculating the static impact map'
+    raster_utils.vectorize_datasets(
+        [original_export_uri, mining_export_uri], sub_export,
+        static_impact_map_uri, gdal.GDT_Float32, export_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+
+
+
+    ########create a random permitting polygon
     permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit')
     create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], 2000)
 
@@ -59,59 +108,10 @@ def willimate_run(workspace_dir):
         landuse_pixel_size, "union", dataset_to_align_index=0, 
         aoi_uri=args['watersheds_uri'])
 
-
     args['workspace_dir'] = permitting_workspace_uri
     args['landuse_uri'] = converted_lulc_uri
     sediment.execute(args)
 
-
-    sediment.execute(args)
-
-
-    return
-
-
-    
-    sediment.execute(args)
-
-    #Create a mining only export lulc and export map
-    only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
-    landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
-    mining_lulc_value = 2906
-    def convert_to_mining(original_lulc):
-        if original_lulc == landuse_nodata:
-            return landuse_nodata
-        return mining_lulc_value
-    print 'creating the mining lulc'
-    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
-    raster_utils.vectorize_datasets(
-        [args['landuse_uri']], convert_to_mining,
-        only_mining_lulc_uri, gdal.GDT_Int32, landuse_nodata,
-        landuse_pixel_size, "union", dataset_to_align_index=0, 
-        aoi_uri=args['watersheds_uri'])
-
-    args['suffix'] = 'mining'
-    args['landuse_uri'] = only_mining_lulc_uri
-    print 'simulating the entire watershed as mining'
-    sediment.execute(args)
-
-
-    #Subtract the mining only and origina lulc map for a static permitting map
-    original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
-    export_nodata = raster_utils.get_nodata_from_uri(original_export_uri)
-    mining_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export_mining.tif')
-    static_impact_map_uri = os.path.join(workspace_dir, 'static_impact_map.tif')
-
-    def sub_export(original_export, mining_export):
-        if original_export == export_nodata:
-            return export_nodata
-        return mining_export - original_export
-    print 'calculating the static impact map'
-    raster_utils.vectorize_datasets(
-        [original_export_uri, mining_export_uri], sub_export,
-        static_impact_map_uri, gdal.GDT_Float32, export_nodata,
-        landuse_pixel_size, "union", dataset_to_align_index=0, 
-        aoi_uri=args['watersheds_uri'])
 
 
 
