@@ -130,11 +130,12 @@ def willimate_run(workspace_dir):
             static_impact_map_uri, permitting_workspace_uri, 'id', 'sum')[1]
 
         logfile.write(str(permit_area))
-        logfile.write(str(permitting_sediment_export - base_sediment_export))
+        logfile.write(",")
+        logfile.write(str((permitting_sediment_export - base_sediment_export)/static_sediment_export))
         logfile.write(",")
         logfile.write(str(static_sediment_export))
         logfile.write(",")
-        logfile.write(str((permitting_sediment_export - base_sediment_export)/static_sediment_export))
+        logfile.write(str(permitting_sediment_export - base_sediment_export))
         logfile.write('\n')
         logfile.flush()
     logfile.close()
