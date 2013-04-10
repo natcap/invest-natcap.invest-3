@@ -124,7 +124,14 @@ def willimate_run(workspace_dir):
         permitting_sediment_export = raster_utils.aggregate_raster_values_uri(
             sediment_export_permitting, args['watersheds_uri'], 'ws_id', 'sum')[0]
 
-        print permitting_sediment_export, base_sediment_export, permitting_sediment_export - base_sediment_export
+        static_sediment_export = raster_utils.aggregate_raster_values_uri(
+            static_impact_map_uri, permitting_workspace_uri, 'id', 'sum')[1]
+
+
+        print permitting_sediment_export, base_sediment_export, permitting_sediment_export - base_sediment_export, static_sediment_export
+
+
+
 
         break
 
