@@ -90,16 +90,19 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertRaises(hra_preprocessor.ImproperCriteriaSpread,
                         hra_preprocessor.execute, self.args)
 
-    @unittest.skip("This should test both CSV outputs and JSON file, but I'll \
-            get to it later.")
     def test_table_parse_regression(self):
-        '''Given a known set of CSV's, want to make a mock up for exactly what the 
-        dictionary should look like, and regression test it.'''
-        
-        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+       '''Want to specifically test the dictionary making function that gets
+       called in hra_preprocessor from hra. There will be a TON of things in
+       this one. Just need to make sure that the folder we're testing against
+       had the proper params enabled within the dir_names.txt file.'''
+
+        csv_folder = './data/hra_regression_data/habitat_stressor_ratings'
 
         expected_dict = \
-            {'buffer_dict': {'FinfishAquacultureComm': 250.0,
+            {'habitats_dir': './data/hra_regression_data/Input/HabitatLayers',
+            'stressors_dir': './data/hra_regression_data/StressorLayers',
+            'criteria_dir': './data/hra_regression_data/Shape_Criteria',
+            'buffer_dict': {'FinfishAquacultureComm': 250.0,
                             'ShellfishAquacultureComm': 500.0},
             'h-s':
                 {('kelp', 'FinfishAquacultureComm'):
@@ -183,7 +186,6 @@ class TestHRAPreprocessor(unittest.TestCase):
                 }
         }
     
-        csv_folder = './data/hra_regression_data'
         produced_dict = hra_preprocessor.parse_hra_tables(csv_folder)
         
         self.maxDiff=None
