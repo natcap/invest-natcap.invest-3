@@ -41,10 +41,12 @@ class TestHRA(unittest.TestCase):
         '''Want to make sure that we can run from non-core when including an AOI
         overlay as a final output. That shoudl produce an HTML folder, containining
         a table.'''
+    
+        #Standard params
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
 
-        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions.shp'
-
-        self.execute(self.args)
+        hra.execute(self.args)
 
     def test_ImproperAOIAttrib_exception(self):
         '''Want to check that if this model run contains an AOI, that we have a
@@ -52,7 +54,11 @@ class TestHRA(unittest.TestCase):
         should raise an ImproperAOIAttributeName exception. We will use a
         seperate improperly named AOI file for these purposes.
         '''
-
+        #Add standard run params
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
+        
+        #And now the optional
         self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
 
         self.assertRaises(hra.ImproperAOIAttributeName,
@@ -65,8 +71,12 @@ class TestHRA(unittest.TestCase):
         should raise an ImproperCriteriaAttributeName exception. We will use a
         seperate improperly named shape criteria file for these purposes.
         '''
+        #Add standard params
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
 
-        self.args['csv_uri'] = './data/hra_regression_data/Input/habitat_stressor_ratings_bad_attrib'
+        #And the incorrect optional
+        self.args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings_bad_attrib'
 
         self.assertRaises(hra.ImproperCriteriaAttributeName,
                         hra.execute, self.args)

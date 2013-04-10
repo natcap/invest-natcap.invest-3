@@ -214,6 +214,7 @@ def execute(args):
     #Criteria, if they exist.
     if 'criteria_dir' in hra_args:
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
+        LOGGER.debug("C_SHAPE_DICT %s", c_shape_dict)
         add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 
@@ -742,5 +743,4 @@ def unpack_over_dict(csv_uri, args):
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
 
     for dict_name in dicts:
-     
         args[dict_name] = dicts[dict_name]
