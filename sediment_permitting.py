@@ -20,11 +20,32 @@ def willimate_run(workspace_dir):
     args['erodibility_uri'] = '../Base_Data/Freshwater/erodibility'
     args['landuse_uri'] = '../Base_Data/Freshwater/landuse_90'
     args['watersheds_uri'] = '../Base_Data/Freshwater/watersheds.shp'
-    args['biophysical_table_uri'] = '../Base_Data/Freshwater/biophysical_table.csv'
+    args['biophysical_table_uri'] = 'permitting_data/biophysical_table.csv'
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 75.0
     args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
     
+    sediment.execute(args)
+
+    #Create a mining only export lulc and export map
+    only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
+    landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
+    mining_lulc_value = 2906
+    def convert_to_mining(original_lulc):
+        if original_lulc == landuse_nodata:
+            return landuse_nodata
+        return mining_lulc_value
+    print 'creating the mining lulc'
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], convert_to_mining,
+        only_mining_lulc_uri, gdal.GDT_Int32, landuse_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+    args['suffix'] = 'mining'
+    args['landuse_uri'] = only_mining_lulc_uri
+    print 'simulating the entire watershed as mining'
     sediment.execute(args)
 
 
