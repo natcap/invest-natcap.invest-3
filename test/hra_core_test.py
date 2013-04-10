@@ -237,7 +237,7 @@ class TestHRACore(unittest.TestCase):
 
         #Want to make sure that if we don't have raster criteria, that the core
         #will still run.
-        del self.args['h-s'][('kelp', 'finfishaquaculturecomm')]['Crit_Rasters']
+        self.args['h-s'][('kelp', 'finfishaquaculturecomm')]['Crit_Rasters'] = {}
         
         hra_core.execute(self.args)
 

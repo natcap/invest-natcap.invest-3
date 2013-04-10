@@ -37,30 +37,48 @@ class TestHRA(unittest.TestCase):
 
         hra.execute(self.args)
 
-#    def test_run_zero_buffer(self):
+    def test_euc_withAOI_smoke(self):
+        '''Want to make sure that we can run from non-core when including an AOI
+        overlay as a final output. That shoudl produce an HTML folder, containining
+        a table.'''
+    
+        #Standard params
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
 
- #       self.args['buffer_dict'] = {'FinfishAquacultureComm': 0}
-
-  #      hra.execute(self.args)
-
-'''    def test_dict(self):
-
-        #Need to make a copy so that we have something to pass when we check
-        #out the raster dictionary creation by itself. However, we have to run
-        #the whole thing first so that the rasterized versions of the shapefiles
-        #exist in the first place.
-        dict_orig = copy.deepcopy(self.args['ratings'])
-
-        #This is just checking whether or not it is erroring anywhere in HRA
         hra.execute(self.args)
-        
-        #This should pull out the ratings dictionary, and check it against our
-        #pre-populated one with the open raster datasets. Need to do a 
-        #dictionary check and a raster compare.
-        inter_dir = os.path.join(self.args['workspace_dir'], 'Intermediate')
-        h_dir = os.path.join(inter_dir, 'Habitat_Rasters')
-        s_dir = os.path.join(inter_dir, 'Stressor_Rasters')
-        
-        model_raster_dict = hra.combine_hs_rasters(inter_dir, h_dir, s_dir, dict_orig)
 
-        #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE '''
+    def test_ImproperAOIAttrib_exception(self):
+        '''Want to check that if this model run contains an AOI, that we have a
+        'name' attribute in each of the AOI features. If this is not true, it
+        should raise an ImproperAOIAttributeName exception. We will use a
+        seperate improperly named AOI file for these purposes.
+        '''
+        #Add standard run params
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
+        
+        #And now the optional
+        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
+
+        self.assertRaises(hra.ImproperAOIAttributeName,
+                        hra.execute, self.args)
+
+    def test_ImproperCritAttrib_exception(self):
+        '''Want to check that if this model uses shapefile criteria, that each 
+        of them contains an attribute of 'name'. Currently, this is case
+        sensitive. After the fact, it can be changed. If this is not existant, it
+        should raise an ImproperCriteriaAttributeName exception. We will use a
+        seperate improperly named shape criteria file for these purposes.
+        '''
+        #Add standard params
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'None'
+
+        #And the incorrect optional
+        self.args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings_bad_attrib'
+
+        self.assertRaises(hra.ImproperCriteriaAttributeName,
+                        hra.execute, self.args)
+
+

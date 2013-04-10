@@ -5,10 +5,40 @@ from invest_natcap import raster_utils
 from invest_natcap.wave_energy import wave_energy_core
 import logging
 
+from scipy.stats import scoreatpercentile
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('aesthetic_quality')
+
+def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
+    nodata_ds = get_nodata_from_uri(dataset_uri)
+
+    memory_file_uri = raster_utils.temporary_filename()
+    memory_array = load_memory_mapped_array(dataset_uri, memory_file_uri)
+
+    quantile_breaks = [0]
+    for quantile in quantile_list:
+        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array, quantile))
+
+    def reclass(value):
+        if value == nodata_ds:
+            return nodata_out
+        else:
+            for new_value,quantile_break in enumerate(quantile_breaks):
+                if value <= quantile_break:
+                    return new_value
+        raise ValueError, "Value was not within quantiles."
+
+    raster_utils.vectorize_datasets([dataset_uri],
+                                    reclass,
+                                    dataset_out_uri,
+                                    datatype_out,
+                                    nodata_out,
+                                    aq_args['cellSize'],
+                                    "union",
+                                    dataset_to_align_index=0)
 
 def execute(args):
     """DOCSTRING"""
@@ -71,21 +101,10 @@ def execute(args):
                           aoi_prj_uri)
 
     #rank viewshed
-    visible_feature_count=gdal.Open(visible_feature_count_uri)
-    units_short="m"
-    units_long="meters"
-    start_value="0"
-    percentile_list=[25,50,75]
-    nodata=-1
-    LOGGER.debug("Ranking viewshed.")
-    wave_energy_core.create_percentile_rasters(visible_feature_count,
-                              visible_feature_quality_uri,
-                              units_short,
-                              units_long,
-                              start_value,
-                              percentile_list,
-                              nodata)
-
+    nodata_out = -1
+    quantile_list = [25,50,75,100]
+    datatype_out = gdal.GDT_Int32
+    reclassify_quantile_dataset_uri(visibile_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
     
     #find areas with no data for population
     LOGGER.debug("Tabulating population impact.")
