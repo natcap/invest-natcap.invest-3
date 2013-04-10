@@ -11,8 +11,10 @@ from invest_natcap.sediment import sediment
 from invest_natcap import raster_utils
 
 def willimate_run(workspace_dir):
+
     args = {}
     args['workspace_dir'] = os.path.join(workspace_dir, 'base_run')
+
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
     args['dem_uri'] = '../Base_Data/Freshwater/dem'
@@ -25,8 +27,6 @@ def willimate_run(workspace_dir):
     args['threshold_flow_accumulation'] = 1000
     args['slope_threshold'] = 75.0
     args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
-
-
     sediment.execute(args)
 
     sediment_export_base = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
@@ -77,13 +77,12 @@ def willimate_run(workspace_dir):
         aoi_uri=args['watersheds_uri'])
 
 
-
-
-
     ########create a random permitting polygon
-    while True:
-        permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit')
-        create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], 500)
+    logfile = open(os.path.join(workspace_dir, 'logfile.txt'), 'w')
+    permit_area = 2000
+    for run_number in range(10):
+        permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit_%s' % run_number)
+        create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], permit_area)
 
         #Create a new LULC that masks the LULC values to the new type that lie within
         #the permitting site and re-run sediment model, base new lulc on user input
@@ -117,9 +116,11 @@ def willimate_run(workspace_dir):
 
         args['workspace_dir'] = permitting_workspace_uri
         args['landuse_uri'] = converted_lulc_uri
+        args['suffix'] = str(run_number)
+
         sediment.execute(args)
 
-        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export.tif')
+        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export_%s.tif' % str(run_number))
 
         #Lookup the amount of sediment export on the watershed polygon
         permitting_sediment_export = raster_utils.aggregate_raster_values_uri(
@@ -128,9 +129,15 @@ def willimate_run(workspace_dir):
         static_sediment_export = raster_utils.aggregate_raster_values_uri(
             static_impact_map_uri, permitting_workspace_uri, 'id', 'sum')[1]
 
-        print permitting_sediment_export, base_sediment_export, permitting_sediment_export - base_sediment_export, static_sediment_export
-
-        break
+        logfile.write(str(permit_area))
+        logfile.write(str(permitting_sediment_export - base_sediment_export))
+        logfile.write(",")
+        logfile.write(str(static_sediment_export))
+        logfile.write(",")
+        logfile.write(str((permitting_sediment_export - base_sediment_export)/static_sediment_export))
+        logfile.write('\n')
+        logfile.flush()
+    logfile.close()
 
 
 
