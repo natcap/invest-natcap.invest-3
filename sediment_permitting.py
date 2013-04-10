@@ -18,7 +18,8 @@ def willimate_run(workspace_dir):
     args['dem_uri'] = '../Base_Data/Freshwater/dem'
     args['erosivity_uri'] = '../Base_Data/Freshwater/erosivity'
     args['erodibility_uri'] = '../Base_Data/Freshwater/erodibility'
-    args['landuse_uri'] = '../Base_Data/Freshwater/landuse_90'
+    base_landuse_uri = '../Base_Data/Freshwater/landuse_90'
+    args['landuse_uri'] = base_landuse_uri
     args['watersheds_uri'] = '../Base_Data/Freshwater/watersheds.shp'
     args['biophysical_table_uri'] = 'permitting_data/biophysical_table.csv'
     args['threshold_flow_accumulation'] = 1000
@@ -109,7 +110,7 @@ def willimate_run(workspace_dir):
             return original_lulc
         print 'creating the permitted lulc'
         raster_utils.vectorize_datasets(
-            [args['landuse_uri'], permitting_mask_uri], convert_lulc,
+            [base_landuse_uri, permitting_mask_uri], convert_lulc,
             converted_lulc_uri, gdal.GDT_Float32, landuse_nodata,
             landuse_pixel_size, "union", dataset_to_align_index=0, 
             aoi_uri=args['watersheds_uri'])
@@ -127,11 +128,7 @@ def willimate_run(workspace_dir):
         static_sediment_export = raster_utils.aggregate_raster_values_uri(
             static_impact_map_uri, permitting_workspace_uri, 'id', 'sum')[1]
 
-
         print permitting_sediment_export, base_sediment_export, permitting_sediment_export - base_sediment_export, static_sediment_export
-
-
-
 
         break
 
