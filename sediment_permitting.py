@@ -79,8 +79,8 @@ def willimate_run(workspace_dir):
 
     ########create a random permitting polygon
     logfile = open(os.path.join(workspace_dir, 'logfile.txt'), 'w')
-    permit_area = 2000
-    for run_number in range(10):
+    for run_number in range(10000):
+        permit_area = random.uniform(500,3000)
         permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit_%s' % run_number)
         create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], permit_area)
 
@@ -284,12 +284,12 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
 
         rand_width_percent = random.random()
         xmin = feature_extent[0] + bbox_width * rand_width_percent
-        xmax = xmin + side_length * random.uniform(0.8, 1.2)
+        xmax = xmin + side_length
 
         #Make it squarish
         rand_height_percent = random.random()
         ymin = feature_extent[2] + bbox_height * rand_height_percent
-        ymax = ymin + side_length * random.uniform(0.8, 1.2)
+        ymax = ymin + side_length
 
         print feature_extent
         print xmin, xmax, ymin, ymax
