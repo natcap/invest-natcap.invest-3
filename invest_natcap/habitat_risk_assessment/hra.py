@@ -378,6 +378,12 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
+            for feature in layer:
+                if 'rating' not in feature.items():
+                    raise ImproperCriteriaAttributeName("Criteria layer must \
+                        contain the attribute \"rating\" in order to be properly used \
+                        within the HRA model run.")
+            
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
@@ -404,6 +410,12 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             shape = ogr.Open(c_path)
             layer = shape.GetLayer()
 
+            for feature in layer:
+                if 'rating' not in feature.items():
+                    raise ImproperCriteriaAttributeName("Criteria layer must \
+                        contain the attribute \"rating\" in order to be properly used \
+                        within the HRA model run.")
+            
             out_uri = os.path.join(dir, filename + '.tif')
 
             r_dataset = \
