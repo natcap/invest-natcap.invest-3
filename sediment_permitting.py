@@ -9,6 +9,143 @@ from osgeo import gdal
 
 from invest_natcap.sediment import sediment
 from invest_natcap import raster_utils
+from invest_natcap.optimization import optimization
+
+def willimate_run(workspace_dir):
+
+    args = {}
+    args['workspace_dir'] = os.path.join(workspace_dir, 'base_run')
+
+    if not os.path.exists(args['workspace_dir']):
+        os.makedirs(args['workspace_dir'])
+    args['dem_uri'] = '../Base_Data/Freshwater/dem'
+    args['erosivity_uri'] = '../Base_Data/Freshwater/erosivity'
+    args['erodibility_uri'] = '../Base_Data/Freshwater/erodibility'
+    base_landuse_uri = '../Base_Data/Freshwater/landuse_90'
+    args['landuse_uri'] = base_landuse_uri
+    args['watersheds_uri'] = '../Base_Data/Freshwater/watersheds.shp'
+    args['biophysical_table_uri'] = 'permitting_data/biophysical_table.csv'
+    args['threshold_flow_accumulation'] = 1000
+    args['slope_threshold'] = 75.0
+    args['sediment_threshold_table_uri'] = '../Sedimentation/input/sediment_threshold_table.csv'
+    sediment.execute(args)
+
+    sediment_export_base = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    base_sediment_export = raster_utils.aggregate_raster_values_uri(
+        sediment_export_base, args['watersheds_uri'], 'ws_id', 'sum')[0]
+
+
+
+
+    #######Create a mining only export lulc and export map
+    only_mining_lulc_uri = os.path.join(workspace_dir, 'mining_lulc.tif')
+    landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
+    mining_lulc_value = 2906
+    def convert_to_mining(original_lulc):
+        if original_lulc == landuse_nodata:
+            return landuse_nodata
+        return mining_lulc_value
+    print 'creating the mining lulc'
+    landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+    raster_utils.vectorize_datasets(
+        [args['landuse_uri']], convert_to_mining,
+        only_mining_lulc_uri, gdal.GDT_Int32, landuse_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+    args['suffix'] = 'mining'
+    args['landuse_uri'] = only_mining_lulc_uri
+    print 'simulating the entire watershed as mining'
+    sediment.execute(args)
+    args.pop('suffix')
+    
+
+    ########Subtract the mining only and origina lulc map for a static permitting map
+    original_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export.tif')
+    export_nodata = raster_utils.get_nodata_from_uri(original_export_uri)
+    mining_export_uri = os.path.join(args['workspace_dir'], 'Output', 'sed_export_mining.tif')
+    static_impact_map_uri = os.path.join(workspace_dir, 'static_impact_map.tif')
+
+    def sub_export(original_export, mining_export):
+        if original_export == export_nodata:
+            return export_nodata
+        return mining_export - original_export
+    print 'calculating the static impact map'
+    raster_utils.vectorize_datasets(
+        [original_export_uri, mining_export_uri], sub_export,
+        static_impact_map_uri, gdal.GDT_Float32, export_nodata,
+        landuse_pixel_size, "union", dataset_to_align_index=0, 
+        aoi_uri=args['watersheds_uri'])
+
+
+    ########create a random permitting polygon
+    logfile = open(os.path.join(workspace_dir, 'logfile.txt'), 'w')
+    for run_number in range(10000):
+        permit_area = random.uniform(500,3000)
+        permitting_workspace_uri = os.path.join(workspace_dir, 'random_permit_%s' % run_number)
+        create_random_permitting_site(permitting_workspace_uri, args['watersheds_uri'], permit_area)
+
+        #Create a new LULC that masks the LULC values to the new type that lie within
+        #the permitting site and re-run sediment model, base new lulc on user input
+        permitting_mask_uri = os.path.join(permitting_workspace_uri, 'random_permit_mask.tif')
+
+        landuse_nodata = raster_utils.get_nodata_from_uri(args['landuse_uri'])
+        landuse_pixel_size = raster_utils.get_cell_size_from_uri(args['landuse_uri'])
+        def mask_op(value):
+            if value == landuse_nodata:
+                return landuse_nodata
+            return 1.0
+        print 'making the raster mask for the permitting area'
+
+        raster_utils.vectorize_datasets(
+            [args['landuse_uri']], mask_op, permitting_mask_uri, gdal.GDT_Float32, landuse_nodata,
+            landuse_pixel_size, "intersection", dataset_to_align_index=0, aoi_uri=permitting_workspace_uri)
+
+        converted_lulc_uri = os.path.join(permitting_workspace_uri, 'permitted_lulc.tif')
+        #I got this from the pucallapa biophysical table
+        mining_lulc_value = 2906
+        def convert_lulc(original_lulc, permit_mask):
+            if permit_mask == 1.0:
+                return mining_lulc_value
+            return original_lulc
+        print 'creating the permitted lulc'
+        raster_utils.vectorize_datasets(
+            [base_landuse_uri, permitting_mask_uri], convert_lulc,
+            converted_lulc_uri, gdal.GDT_Float32, landuse_nodata,
+            landuse_pixel_size, "union", dataset_to_align_index=0, 
+            aoi_uri=args['watersheds_uri'])
+
+        args['workspace_dir'] = permitting_workspace_uri
+        args['landuse_uri'] = converted_lulc_uri
+        args['suffix'] = str(run_number)
+
+        sediment.execute(args)
+
+        sediment_export_permitting = os.path.join(permitting_workspace_uri, 'Output', 'sed_export_%s.tif' % str(run_number))
+
+        #Lookup the amount of sediment export on the watershed polygon
+        permitting_sediment_export = raster_utils.aggregate_raster_values_uri(
+            sediment_export_permitting, args['watersheds_uri'], 'ws_id', 'sum')[0]
+
+        static_sediment_export = raster_utils.aggregate_raster_values_uri(
+            static_impact_map_uri, permitting_workspace_uri, 'id', 'sum')[1]
+
+        logfile.write(str(permit_area))
+        logfile.write(",")
+        logfile.write(str((permitting_sediment_export - base_sediment_export)/static_sediment_export))
+        logfile.write(",")
+        logfile.write(str(static_sediment_export))
+        logfile.write(",")
+        logfile.write(str(permitting_sediment_export - base_sediment_export))
+        logfile.write('\n')
+        logfile.flush()
+    logfile.close()
+
+
+
+
+
+
 
 def base_run(workspace_dir):
     args = {}
@@ -149,12 +286,12 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
 
         rand_width_percent = random.random()
         xmin = feature_extent[0] + bbox_width * rand_width_percent
-        xmax = xmin + side_length * random.uniform(0.8, 1.2)
+        xmax = xmin + side_length
 
         #Make it squarish
         rand_height_percent = random.random()
         ymin = feature_extent[2] + bbox_height * rand_height_percent
-        ymax = ymin + side_length * random.uniform(0.8, 1.2)
+        ymax = ymin + side_length
 
         print feature_extent
         print xmin, xmax, ymin, ymax
@@ -181,5 +318,24 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
     feature = None
     layer = None
 
+def optimize_it(base_map_uri, aoi_uri, output_uri):
+#    inverted_map_uri = raster_utils.temporary_filename()
+    inverted_map_uri = './base_sediment_run/inverted.tif'
+    base_map_nodata = raster_utils.get_nodata_from_uri(base_map_uri)
+    pixel_size_out = raster_utils.get_cell_size_from_uri(base_map_uri)
+    def invert(value):
+        if value == base_map_nodata:
+            return base_map_nodata
+        return -value
+
+    raster_utils.vectorize_datasets(
+        [base_map_uri], invert, inverted_map_uri, gdal.GDT_Float32,
+        base_map_nodata, pixel_size_out, "intersection", aoi_uri=aoi_uri)
+
+    optimization.static_max_marginal_gain(
+        inverted_map_uri, 500, output_uri, sigma=2.0)
+
+
 if __name__ == '__main__':
-    base_run('./base_sediment_run')
+    #willimate_run('./base_sediment_run')
+    optimize_it('./base_sediment_run/base_run/Output/sed_ret_mining.tif', './base_sediment_run/random_permit_0/random_permit_0.shp', './base_sediment_run/optimal.tif')
