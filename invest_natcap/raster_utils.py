@@ -2406,3 +2406,16 @@ def viewshed(dem_uri, shapefile_uri, z_factor, curvature_correction, refractivit
         [dem_uri], lambda x: int(abs(x))%10, visible_feature_count_uri,
         gdal.GDT_Byte, 255, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=aoi_uri, assert_datasets_projected=False)
+
+def extract_datasource_table_by_key(datasource_uri, key_field):
+    """Create a dictionary lookup table of the features in the attribute table
+        of the datasource referenced by datasource_uri.
+
+        datasource_uri - a uri to an OGR datasource
+        key_field - a field in datasource_uri that refers to a key (unique) value
+            for each row; for example, a polygon id.
+
+        returns a dictionary of the form {key_field_0: 
+            {field_0: value0, field_1: value1}...}"""
+
+        pass
