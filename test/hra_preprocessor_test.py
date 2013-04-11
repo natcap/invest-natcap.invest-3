@@ -91,7 +91,7 @@ class TestHRAPreprocessor(unittest.TestCase):
                         hra_preprocessor.execute, self.args)
 
     def test_table_parse_regression(self):
-        '''Want to specifically test the dictionary making function that gets
+        '''Want to specifically test the dictionar making function that gets
         called in hra_preprocessor from hra. There will be a TON of things in
         this one. Just need to make sure that the folder we're testing against
         had the proper params enabled within the dir_names.txt file.'''
@@ -329,3 +329,13 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
                         hra_preprocessor.zero_null_val_check, curr_dict_zeros)
 
+    def test_UnexpectedString_exception(self):
+        '''Want to make sure that preproc will throw an exception if a CSV is
+        passed which contains strings or null values where there should be
+        floats for use in calculation'''
+
+        test_CSV = './data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp.csv'
+
+        self.assertRaises(hra_preprocessor.UnexpectedString,
+                        hra_preprocessor.parse_habitat_overlap, test_CSV)
+        
