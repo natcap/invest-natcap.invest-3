@@ -174,7 +174,6 @@ def execute(args):
     '''
     if 'criteria_dir' in args:
         crit_shapes = make_crit_shape_dict(args['criteria_dir'])
-        LOGGER.debug(crit_shapes)
     
     crit_descriptions = {
         'change in area rating': '<enter (3) 50-100% loss, ' + 
@@ -367,7 +366,7 @@ def parse_hra_tables(workspace_uri):
 
     with open(json_uri, 'rb') as infile:
         parse_dictionary = json.load(infile)
-    LOGGER.debug(parse_dictionary)
+    
     #Now we can compile and add the other dictionaries
     habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
     stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
@@ -407,11 +406,6 @@ def parse_hra_tables(workspace_uri):
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
        
-    #At this point, we want to check for 0 or null values in any of the
-    #subdictionaries subpieces, and if we find any, remove that whole criteria
-    #from the assessment for that subdictionary. Abstracting this to a new function.
-    zero_null_val_check(parse_dictionary)
-
     #Add the stressors in after to make the dictionary traversal easier before
     #this. We already know that the values in here are floats, since we checked 
     #them as they were placed in there.
@@ -422,57 +416,107 @@ def parse_hra_tables(workspace_uri):
 
     parse_dictionary['buffer_dict'] = stressor_buf_dict
 
+    #At this point, we want to check for 0 or null values in any of the
+    #subdictionaries subpieces, and if we find any, remove that whole criteria
+    #from the assessment for that subdictionary. Abstracting this to a new function.
+    zero_null_val_check(parse_dictionary)
+
     return parse_dictionary
 
 def zero_null_val_check(parse_dictionary):
+    '''Helper function to remove criteria whose ratings is a 0, or raise an
+    exception if the DQ or Weight is 0.
 
-    try:
-        for subdict in parse_dictionary.values():
-            for key, indivs in subdict.items():
-                for kind in indivs.values():
+        {'habitats_dir': 'Habitat Directory URI',
+        'species_dir': 'Species Directory URI',
+        'stressors_dir': 'Stressors Directory URI',
+        'criteria_dir': 'Criteria Directory URI',
+        'buffer_dict':
+            {'Stressor 1': 50,
+            'Stressor 2': ...,
+            },
+        'h-s':
+            {(Habitat A, Stressor 1): 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            },
+         'stressors':
+            {Stressor 1: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            },
+         'habitats':
+            {Habitat A: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            }
+        }
+    '''
+    for subdict_lvl1 in parse_dictionary.values():
+        
+        #Sometimes will find strings here that are coming from the JSON object
+        #URIs being passed in. Just skip them.
+        try:
+            for subdict_lvl2 in subdict_lvl1.values():
+                #Sometimes will find floats here that are coming from the buffer
+                #subdictionary. Skip them.
+                try:
+                    for subdict_lvl3 in subdict_lvl2.values():
 
-                    #Since we have the buffer_dict in here as well, occasionally it
-                    #will encounter a float value. We just want to let that go, 
-                    #since it's not the dictionary that we're concerned with.
-                    try:
-                        for crit_name, crit_dict in kind.iteritems():
-
-                            #Remove the subdictionary if the rating is 0
-                            if 'Rating' in crit_dict and crit_dict['Rating'] in [0, 0.0]:
-                                del(kind[crit_name])
-                                #Breaking because crit_dict won't contain crit_name
-                                break
+                        #This is an actual list copy of the resulting dictionary.
+                        for key4, subdict_lvl4 in subdict_lvl3.items():
                             
-                            #If we get to this point, we know that rating is non-zero
-                            for value in crit_dict['DQ'], crit_dict['Weight']:
-                                LOGGER.debug("Value is: %s", value)
-                                if value in [0, 0.0]:
-                                    raise ZeroDQWeightValue("Individual criteria \
-                                        data qualities and weights may not be 0.")
+                            #If they have listed the rating as 0, they do not
+                            #want that to be an applicable criteria. Need to first
+                            #check that it has a 'Rating' spot, instead of nothing
+                            #if it was listed as SHAPE
+                            if 'Rating' in subdict_lvl4 and subdict_lvl4['Rating'] in [0, 0.0]:
+                                
+                                del subdict_lvl3[key4]
+                            
+                            else:
+                                #Now that we know that they want this criteria, we
+                                #need to make sure their DQ and W have been entered
+                                #properly
+                                for val in subdict_lvl4['DQ'], subdict_lvl4['Weight']:
+                                    #We already know that it's not null, since that
+                                    #was checked as it was added to the dictionary,
+                                    #so we can just check for 0's.
+                                    if val in [0, 0.0]:
+                                        
+                                        raise ZeroDQWeightValue("Individual criteria \
+                                            data qualities and weights may not be 0.")
 
-                            #THIS MAY BE LATER REPLACED BY AN OVERARCHING STRING CHECK.
-                            #Want to break if anything entered is a null string.
-                            for value in crit_dict.values():
-                                if value == '':
-                                    #name could potentially be a tuple. Need to make sure.
-                                    #If it is, we still want to direct them to the habitat
-                                    #CSV, since h-s info is stored there.
-                                    if type(key) == tuple:
-                                        name = key[0]
-                                    else:
-                                        name = key
-                                    raise UnexpectedString("Entries in CSV table may not be \
-                                    strings, and may not be left blank. Check your %s CSV \
-                                    for any leftover strings or spaces within Buffer, Rating, \
-                                    Data Quality or Weight columns.", name)
-                    except AttributeError:
-                        #Can just skip over float values.
-                        pass
+                except AttributeError:
+                    #If we can't iterrate into it, it's not a subdictionary,
+                    #can skip.
+                    pass
 
-    except AttributeError:
-        #Since we are passing in unicode strings from the UI, want to just be
-        #able to ignore those and move on to the actual dictionary items.
-        pass
+        except AttributeError:
+            #If we can't iterrate into it, it's not a subdictionary, and we're
+            #safe to ignore it.
+            pass
 
 def parse_stressor(uri):
     """Helper function to parse out a stressor csv file
@@ -651,7 +695,6 @@ def parse_habitat_overlap(uri):
         while True:
             try:
                 line = csv_reader.next()
-                LOGGER.debug(line) 
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
                 

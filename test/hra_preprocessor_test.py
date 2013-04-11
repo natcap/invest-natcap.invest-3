@@ -102,7 +102,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         #be unicode
         expected_dict = \
             {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
-            u'stressors_dir': u'./data/hra_regression_data/StressorLayers',
+            u'stressors_dir': u'./data/hra_regression_data/Input/StressorLayers',
             u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
             'buffer_dict': {'FinfishAquacultureComm': 1000.0,
                             'ShellfishAquacultureComm': 2000.0},
@@ -223,7 +223,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         curr_dict_zeros = \
             {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
-            u'stressors_dir': u'./data/hra_regression_data/StressorLayers',
+            u'stressors_dir': u'./data/hra_regression_data/Input/StressorLayers',
             u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
             'buffer_dict': {'FinfishAquacultureComm': 250.0,
                             'ShellfishAquacultureComm': 500.0},
