@@ -109,36 +109,36 @@ class TestHRAPreprocessor(unittest.TestCase):
             'h-s':
                 {('kelp', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                     'Crit_Rasters': {}
                     },
                 ('kelp', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('eelgrass', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('eelgrass', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
@@ -147,21 +147,21 @@ class TestHRAPreprocessor(unittest.TestCase):
             'habitats': 
                 {('kelp'):
                     {'Crit_Ratings':
-                        {'natural mortality':
+                        {'natural_mortality':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                         },
                      'Crit_Rasters':
-                        {'recruitment rate':
+                        {'recruitment_rate':
                             {'Weight': 1.0, 'DQ': 1.0}
                         }
                     },
                 ('eelgrass'):
                     {'Crit_Ratings':
-                        {'natural mortality':
+                        {'natural_mortality':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                         },
                      'Crit_Rasters':
-                        {'recruitment rate':
+                        {'recruitment_rate':
                             {'Weight': 1.0, 'DQ': 1.0}
                         }
                     }
@@ -169,18 +169,18 @@ class TestHRAPreprocessor(unittest.TestCase):
             'stressors': 
                 {('FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'intensity rating':
+                        {'intensity_rating':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'management effectiveness':
+                         'management_effectiveness':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'intensity rating':
+                        {'intensity_rating':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'management effectiveness':
+                         'management_effectiveness':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                     'Crit_Rasters':{}
@@ -230,36 +230,36 @@ class TestHRAPreprocessor(unittest.TestCase):
             'h-s':
                 {('kelp', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                     'Crit_Rasters': {}
                     },
                 ('kelp', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('eelgrass', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('eelgrass', 'ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'temporal overlap':
+                        {'temporal_overlap':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'frequency of disturbance':
+                         'frequency_of_disturbance':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
@@ -268,21 +268,21 @@ class TestHRAPreprocessor(unittest.TestCase):
             'habitats': 
                 {('kelp'):
                     {'Crit_Ratings':
-                        {'natural mortality':
+                        {'natural_mortality':
                             {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
                         },
                      'Crit_Rasters':
-                        {'recruitment rate':
+                        {'recruitment_rate':
                             {'Weight': 1.0, 'DQ': 1.0}
                         }
                     },
                 ('eelgrass'):
                     {'Crit_Ratings':
-                        {'natural mortality':
+                        {'natural_mortality':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
                         },
                      'Crit_Rasters':
-                        {'recruitment rate':
+                        {'recruitment_rate':
                             {'Weight': 1.0, 'DQ': 1.0}
                         }
                     }
@@ -290,18 +290,18 @@ class TestHRAPreprocessor(unittest.TestCase):
             'stressors': 
                 {('FinfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'intensity rating':
+                        {'intensity_rating':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'management effectiveness':
+                         'management_effectiveness':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                      'Crit_Rasters':{}
                     },
                 ('ShellfishAquacultureComm'):
                     {'Crit_Ratings':
-                        {'intensity rating':
+                        {'intensity_rating':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
-                         'management effectiveness':
+                         'management_effectiveness':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
                     'Crit_Rasters':{}
