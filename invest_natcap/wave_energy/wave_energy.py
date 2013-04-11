@@ -104,7 +104,8 @@ def execute(args):
     machine_param_file = open(args['machine_param_uri'])
     reader = csv.DictReader(machine_param_file)
     for row in reader:
-        machine_param_dict[row['NAME'].strip().lower()] = row['VALUE']
+        row_name = row['NAME'].strip().lower()
+        machine_param_dict[row_name] = row['VALUE']
     machine_param_file.close()
    
     # Build up a dictionary of possible analysis areas where the key
@@ -152,20 +153,18 @@ def execute(args):
     clipped_wave_shape_path = os.path.join(
             intermediate_dir, 'WEM_InputOutput_Pts.shp')
     
-    # Paths for wave energy and wave power rasters
+    # Intermediate paths for wave energy and wave power rasters
     wave_energy_unclipped_path = os.path.join(
             intermediate_dir, 'capwe_mwh_unclipped.tif')
-    
     wave_power_unclipped_path = os.path.join(
             intermediate_dir, 'wp_kw_unclipped.tif')
-    
+
+    # Final output paths for wave energy and wave power rasters
     wave_energy_path = os.path.join(output_dir, 'capwe_mwh.tif')
-    
     wave_power_path = os.path.join(output_dir, 'wp_kw.tif')
     
     # Paths for wave energy and wave power percentile rasters
     wp_rc_path = os.path.join(output_dir, 'wp_rc.tif')
-    
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc.tif')
     
     def get_geotransform_uri(ds_uri):
@@ -180,7 +179,8 @@ def execute(args):
         return raster_gt
 
     # Set nodata value and datatype for new rasters
-    nodata = 0
+    #nodata = 0
+    nodata = float(np.finfo(np.float).tiny)
     datatype = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
