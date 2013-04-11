@@ -9,6 +9,7 @@ from osgeo import gdal
 
 from invest_natcap.sediment import sediment
 from invest_natcap import raster_utils
+from invest_natcap.optimization import optimization
 
 def willimate_run(workspace_dir):
 
@@ -317,5 +318,24 @@ def create_random_permitting_site(permitting_datasource_uri, base_watershed_shp,
     feature = None
     layer = None
 
+def optimize_it(base_map_uri, aoi_uri, output_uri):
+#    inverted_map_uri = raster_utils.temporary_filename()
+    inverted_map_uri = './base_sediment_run/inverted.tif'
+    base_map_nodata = raster_utils.get_nodata_from_uri(base_map_uri)
+    pixel_size_out = raster_utils.get_cell_size_from_uri(base_map_uri)
+    def invert(value):
+        if value == base_map_nodata:
+            return base_map_nodata
+        return -value
+
+    raster_utils.vectorize_datasets(
+        [base_map_uri], invert, inverted_map_uri, gdal.GDT_Float32,
+        base_map_nodata, pixel_size_out, "intersection", aoi_uri=aoi_uri)
+
+    optimization.static_max_marginal_gain(
+        inverted_map_uri, 500, output_uri, sigma=2.0)
+
+
 if __name__ == '__main__':
-    willimate_run('./base_sediment_run')
+    #willimate_run('./base_sediment_run')
+    optimize_it('./base_sediment_run/base_run/Output/sed_ret_mining.tif', './base_sediment_run/random_permit_0/random_permit_0.shp', './base_sediment_run/optimal.tif')
