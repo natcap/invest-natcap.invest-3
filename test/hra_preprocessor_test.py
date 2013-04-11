@@ -22,7 +22,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         args['exposure_crits'] = ['intensity rating rating', 'management effectiveness']
         args['sensitivity_crits'] = ['temporal overlap rating', \
                     'frequency of disturbance']
-        args['resiliance_crits'] = ['natural mortality', 'recruitment rate']
+        args['resilience_crits'] = ['natural mortality', 'recruitment rate']
     
         self.args = args
 
