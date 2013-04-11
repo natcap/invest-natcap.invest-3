@@ -453,8 +453,6 @@ def execute(args):
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
             wp_units_long, starting_percentile_range, percentiles, nodata)
     
-    # Clean up any temporary files that the user does not need to know about
-    #file_cleanup_handler(file_list)
     try:
         valuation_checked = args['valuation_container']
     except KeyError:
@@ -930,31 +928,6 @@ def load_binary_wave_data(wave_file_uri):
     wave_dict['heights'] = np.array(wave_heights, dtype='f')
     LOGGER.debug('Finished extrapolating wave data to dictionary')
     return wave_dict
-
-def file_cleanup_handler(file_list):
-    """Handles removing any shape files and any necessary extensions
-    
-    file_list - A list of strings representing paths to shape files
-    
-    returns - nothing
-    """
-    LOGGER.debug('Cleaning up files : %s', file_list)
-    for file_name in file_list:
-        LOGGER.debug('Cleaning up file_name : %s', file_name)    
-        # Clean up temporary files on disk
-        # Creating a match pattern that finds the last directory seperator
-        # in a path like '/home/blath/../name_of_shape.*' and focuses just on the
-        # string after that separator and before the '.' extension.
-        pattern = file_name[file_name.rfind(os.sep) + 1:len(file_name) - 4] + ".*"
-        directory = file_name[0:file_name.rfind(os.sep) + 1]
-        LOGGER.debug('Regex file_name pattern : %s', pattern)
-        for item in os.listdir(directory):
-            if re.search(pattern, item):
-                try:
-                    os.remove(os.path.join(directory, item))
-                except WindowsError:
-                    LOGGER.warn("Warning, could not delete the file %s" % \
-                                    os.path.join(directory, item))
 
 def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
     """This function helps retrieve the pixel sizes of the global DEM 
