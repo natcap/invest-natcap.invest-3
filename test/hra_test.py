@@ -39,7 +39,7 @@ class TestHRA(unittest.TestCase):
 
     def test_euc_withAOI_smoke(self):
         '''Want to make sure that we can run from non-core when including an AOI
-        overlay as a final output. That shoudl produce an HTML folder, containining
+        overlay as a final output. That should produce an HTML folder, containining
         a table.'''
     
         #Standard params
