@@ -401,13 +401,35 @@ def parse_hra_tables(workspace_uri):
             h_s_dict[(habitat_name, hab_stress_overlap)] = \
                         habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
+    #Should note: these are references to the dictionaries. If we change the
+    #properties of them, they will change within parse_dictionary.
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
-    
+       
     #At this point, we want to check for 0 or null values in any of the
     #subdictionaries subpieces, and if we find any, remove that whole criteria
-    #from the assessment for that subdictionary.
+    #from the assessment for that subdictionary. Abstracting this to a new function.
+    zero_null_val_check(parse_dictionary)
+
+    #Add the stressors in after to make the dictionary traversal easier before
+    #this. We already know that the values in here are floats, since we checked 
+    #them as they were placed in there.
+    stressor_buf_dict = {}
+    for stressor, stressor_properties in stressor_dict.iteritems():
+        stressor_buf_dict[stressor] = stressor_properties['buffer']
+        del(stressor_properties['buffer'])
+
+    parse_dictionary['buffer_dict'] = stressor_buf_dict
+
+    LOGGER.debug("PARSE DICTIONARY WITH BUFFER: %s", parse_dictionary)
+
+    return parse_dictionary
+
+def zero_null_val_check(parse_dictionary):
+
+    LOGGER.debug("PARSE_DICTIONARY: %s", parse_dictionary)
+
     try:
         for subdict in parse_dictionary.values():
             for key, indivs in subdict.items():
@@ -455,15 +477,6 @@ def parse_hra_tables(workspace_uri):
         #able to ignore those and move on to the actual dictionary items.
         pass
 
-    stressor_buf_dict = {}
-    for stressor, stressor_properties in stressor_dict.iteritems():
-        stressor_buf_dict[stressor] = stressor_properties['buffer']
-        del(stressor_properties['buffer'])
-
-    parse_dictionary['buffer_dict'] = stressor_buf_dict
-
-    return parse_dictionary
-
 def parse_stressor(uri):
     """Helper function to parse out a stressor csv file
 
@@ -482,7 +495,8 @@ def parse_stressor(uri):
                     {'DQ': 1.0, 'Weight': 1.0},
                   'Management Effectiveness:':
                     {'DQ': 1.0, 'Weight': 1.0}
-                }
+                },
+           'buffer': StressBuffNum
            }
     """
     stressor_dict = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
