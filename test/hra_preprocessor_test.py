@@ -159,11 +159,11 @@ class TestHRAPreprocessor(unittest.TestCase):
                     {'Crit_Ratings':
                         {'natural mortality':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'recruitment rate':
+                            {'Rating': 1.0, 'Weight': 1.0, 'DQ': 1.0}
                         },
-                     'Crit_Rasters':
-                        {'recruitment rate':
-                            {'Weight': 1.0, 'DQ': 1.0}
-                        }
+                     'Crit_Rasters': {}
+                        
                     }
                 },
             'stressors': 
