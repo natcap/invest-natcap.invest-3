@@ -316,7 +316,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         del expected_dict['habitats']['kelp']['Crit_Ratings']['natural mortality']
 
         #I...think the scope of this shoudl change our version of curr_dict_zeros
-        hra_preprocessor.zero_null_value_check(curr_dict_zeros)
+        hra_preprocessor.zero_null_val_check(curr_dict_zeros)
 
         self.maxDiff = None
         self.assertEqual(expected_dict, curr_dict_zeros)
