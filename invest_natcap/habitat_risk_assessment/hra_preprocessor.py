@@ -422,13 +422,9 @@ def parse_hra_tables(workspace_uri):
 
     parse_dictionary['buffer_dict'] = stressor_buf_dict
 
-    LOGGER.debug("PARSE DICTIONARY WITH BUFFER: %s", parse_dictionary)
-
     return parse_dictionary
 
 def zero_null_val_check(parse_dictionary):
-
-    LOGGER.debug("PARSE_DICTIONARY: %s", parse_dictionary)
 
     try:
         for subdict in parse_dictionary.values():
@@ -449,6 +445,7 @@ def zero_null_val_check(parse_dictionary):
                             
                             #If we get to this point, we know that rating is non-zero
                             for value in crit_dict['DQ'], crit_dict['Weight']:
+                                LOGGER.debug("Value is: %s", value)
                                 if value in [0, 0.0]:
                                     raise ZeroDQWeightValue("Individual criteria \
                                         data qualities and weights may not be 0.")

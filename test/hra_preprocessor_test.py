@@ -69,7 +69,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         #Since we had 6 crits to begin with, remove one from each should leave
         #us with 3, want to make sure this causes to error.
-        for c_list in (self.args['resiliance_crits'], 
+        for c_list in (self.args['resilience_crits'], 
                     self.args['sensitivity_crits'],
                     self.args['exposure_crits']):
 
@@ -85,7 +85,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
-        self.args['resiliance_crits'] = []
+        self.args['resilience_crits'] = []
 
         self.assertRaises(hra_preprocessor.ImproperCriteriaSpread,
                         hra_preprocessor.execute, self.args)
@@ -101,9 +101,9 @@ class TestHRAPreprocessor(unittest.TestCase):
         #since the file paths are coming in through the JSON import, they will
         #be unicode
         expected_dict = \
-            {u'habitats_dir': './data/hra_regression_data/Input/HabitatLayers',
-            u'stressors_dir': './data/hra_regression_data/StressorLayers',
-            u'criteria_dir': './data/hra_regression_data/Shape_Criteria',
+            {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
+            u'stressors_dir': u'./data/hra_regression_data/StressorLayers',
+            u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
             'buffer_dict': {'FinfishAquacultureComm': 1000.0,
                             'ShellfishAquacultureComm': 2000.0},
             'h-s':
@@ -222,9 +222,9 @@ class TestHRAPreprocessor(unittest.TestCase):
         are 0's in either DQ or Weight.'''
 
         curr_dict_zeros = \
-            {u'habitats_dir': './data/hra_regression_data/Input/HabitatLayers',
-            u'stressors_dir': './data/hra_regression_data/StressorLayers',
-            u'criteria_dir': './data/hra_regression_data/Shape_Criteria',
+            {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
+            u'stressors_dir': u'./data/hra_regression_data/StressorLayers',
+            u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
             'buffer_dict': {'FinfishAquacultureComm': 250.0,
                             'ShellfishAquacultureComm': 500.0},
             'h-s':
@@ -315,7 +315,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         del expected_dict['h-s'][('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
         del expected_dict['habitats']['kelp']['Crit_Ratings']['natural mortality']
 
-        #I...think the scope of this shoudl change our version of curr_dict_zeros
+        #I...think the scope of this should change our version of curr_dict_zeros
         hra_preprocessor.zero_null_val_check(curr_dict_zeros)
 
         self.maxDiff = None
@@ -327,5 +327,5 @@ class TestHRAPreprocessor(unittest.TestCase):
         curr_dict_zeros['stressors']['FinfishAquacultureComm']['Crit_Ratings']['intensity rating']['DQ'] = 0
 
         self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
-                        hra_preprocessor.null_zero_val_check, curr_dict_zeros)
+                        hra_preprocessor.zero_null_val_check, curr_dict_zeros)
 
