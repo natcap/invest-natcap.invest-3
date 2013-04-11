@@ -334,7 +334,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         passed which contains strings or null values where there should be
         floats for use in calculation'''
 
-        test_CSV = './data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp.csv'
+        test_CSV = './data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_overlap_ratings.csv'
 
         self.assertRaises(hra_preprocessor.UnexpectedString,
                         hra_preprocessor.parse_habitat_overlap, test_CSV)
