@@ -2418,4 +2418,39 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
         returns a dictionary of the form {key_field_0: 
             {field_0: value0, field_1: value1}...}"""
 
-        pass
+    def smart_cast(value):
+        """Attempts to cast value to a float, int, or leave it as string"""
+        if type(value) != str: 
+            return value
+
+        cast_functions = [int, float]
+        for fn in cast_functions:
+            try:
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    #Pull apart the datasource
+    datasource = ogr.Open(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    #Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    #Loop through each feature and build up the dictionary representing the
+    #attribute table
+    attribute_dictionary = {}
+    for feature_index in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_index)
+        feature_fields = {}
+        for field_name in field_names:
+            feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    return attribute_dictionary
