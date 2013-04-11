@@ -17,43 +17,50 @@ from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('wave_energy_core')
+LOGGER = logging.getLogger('wave_energy')
 
 def execute(args):
-    """Executes the wave energy model
+    """Executes both the biophysical and valuation parts of the
+        wave energy model (WEM). Files will be written on disk to the
+        intermediate and output directories. The outputs computed for
+        biophysical and valuation include: wave energy capacity raster,
+        wave power raster, net present value raster, percentile rasters for the
+        previous three, and a point shapefile of the wave points with
+        attributes.
         
-        **args - a pythong dictionary
+        args - a pythong dictionary that houses the inputs for the model
 
         args['workspace_dir'] - Where the intermediate and output folder/files  
-                                will be saved.
+            will be saved. (required)
         
         args['wave_base_data_uri'] - Directory location of wave base data 
-                                     including WW3 data and analysis area 
-                                     shapefile.
+            including WW3 data and analysis area shapefile. (required)
         
         args['analysis_area_uri'] - A string identifying the analysis area of 
-                                    interest. Used to determine wave data 
-                                    shapefile, wave data text file, and 
-                                    analysis area boundary shape.
+            interest. Used to determine wave data shapefile, wave data text
+            file, and analysis area boundary shape. (required)
         
         args['machine_perf_uri'] - The path of a CSV file that holds the 
-                                   machine performance table. 
+            machine performance table. (required)
         
         args['machine_param_uri'] - The path of a CSV file that holds the 
-                                    machine parameter table.
+            machine parameter table. (required)
         
         args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
+            (required)
 
         args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
-                          within the analysis area. (OPTIONAL, but required to
-                          run Valuation model)
+            within the analysis area. This shapefile should be projected with
+            linear units being in meters. (required to run Valuation model)
 
         args['land_gridPts_uri'] - A CSV file path containing the Landing and 
-                                   Power Grid Connection Points table.
+            Power Grid Connection Points table. (required for Valuation)
+
         args['machine_econ_uri'] - A CSV file path for the machine economic 
-                                   parameters table.
+            parameters table. (required for Valuation)
+
         args['number_of_machines'] - An integer specifying the number of 
-                                     machines for a wave farm site.
+            machines for a wave farm site. (required for Valuation)
 
         returns nothing."""
 
