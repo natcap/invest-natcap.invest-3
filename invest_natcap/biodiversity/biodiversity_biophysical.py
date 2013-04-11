@@ -36,7 +36,7 @@ def execute(args):
         args['sensitivity_uri'] - a uri to an input CSV file of LULC types,
             whether they are considered habitat, and their sensitivity to each
             threat (required)
-        args['half_saturation_constant'] - a python integer that determines
+        args['half_saturation_constant'] - a python float that determines
             the spread and central tendency of habitat quality scores 
             (required)
         args['suffix'] - a python string that will be inserted into all
