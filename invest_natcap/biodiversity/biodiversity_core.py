@@ -40,7 +40,7 @@ def biophysical(args):
            }
        args['access_shape'] - an OGR datasource of polygons depicting any 
            protected/reserved land boundaries
-       args['half_saturation'] - an integer that determines the spread and
+       args['half_saturation'] - an float that determines the spread and
            central tendency of habitat quality scores
        args['suffix'] - a string of the desired suffix
 

@@ -123,7 +123,7 @@
                     "validateAs": {"type" : "number",
                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                     "label": "Half-saturation constant",
-                    "defaultValue": "30",
+                    "defaultValue": "0.5",
                     "required": true,
                     "helpText":"A positive floating point value that is defaulted at 30. This is the value of the parameter k in equation (4). In general, set k to half of the highest grid cell degradation value on the landscape. To perform this model calibration you will have to run the model once to find the highest degradation value and set k for your landscape. Note that the choice of k only determines the spread and central tendency of habitat quality cores."
                 },                         
