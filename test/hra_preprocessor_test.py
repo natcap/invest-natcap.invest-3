@@ -350,6 +350,9 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
         self.args['criteria_dir'] = './data/hra_regression_data/Shape_Criteria'
 
+        #Run to create the outputs.
+        hra_preprocessor.execute(self.args)
+    
         #We know that the output will be within the workspace directory
         result_dir = os.path.join(self.args['workspace_dir'], 'habitat_stressor_ratings')
 
@@ -359,7 +362,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         #and check that they exist, and are correct within result_dir
         clean_dir = './data/hra_regression_data/habitat_stressor_ratings_clean'
 
-        c_file_list = glob.glob(os.path.join(clean_dir, '*.shp'))
+        c_file_list = glob.glob(os.path.join(clean_dir, '*.csv'))
 
         for c_uri in c_file_list:
 
@@ -373,7 +376,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
             #Want to check off that we know that file was good for expected
             #results
-            del r_file_list[expected_name]
+            r_file_list.remover(expected_name)
         
         #At this point, we should just have the dir_names.txt file left in the
         #file list of the created dictionary.
@@ -388,7 +391,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         #paths be identical. Assume the one of the other asserts would pick this up.
         self.assertEqual(c_dict.keys(), r_dict.keys())
 
-        del r_file_list[r_expected_uri]
+        r_file_list.remove(r_expected_uri)
 
         #There should be no files left within the workspace directory
         self.assertEqual(r_file_list, 0)
