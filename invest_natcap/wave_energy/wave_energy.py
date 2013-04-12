@@ -167,17 +167,6 @@ def execute(args):
     wp_rc_path = os.path.join(output_dir, 'wp_rc.tif')
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc.tif')
     
-    def get_geotransform_uri(ds_uri):
-        """Get the geotransform from a gdal dataset
-
-            ds_uri - A URI for the dataset
-
-            returns - a dataset geotransform list"""
-
-        raster_ds = gdal.Open(ds_uri)
-        raster_gt = raster_ds.GetGeoTransform()
-        return raster_gt
-
     # Set nodata value and datatype for new rasters
     #nodata = 0
     nodata = float(np.finfo(np.float).tiny)
@@ -185,57 +174,12 @@ def execute(args):
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
-    dem_gt = get_geotransform_uri(dem_uri)
-    
-    def get_wkt_projection_uri(ds_uri):
-        """Get the WKT of an OGR datasource
-            
-            ds_uri - A URI to an ogr datasource
-
-            returns - the WKT"""
-
-        shape_ds = ogr.Open(ds_uri)
-        layer = shape_ds.GetLayer()
-        spat_ref = layer.GetSpatialRef()
-        wkt = spat_ref.ExportToWkt()
-        return wkt
-    
-    def get_spatial_ref_uri(ds_uri):
-        """Get the spatial reference of an OGR datasource
-            
-            ds_uri - A URI to an ogr datasource
-
-            returns - a spatial reference"""
-
-        shape_ds = ogr.Open(ds_uri)
-        layer = shape_ds.GetLayer()
-        spat_ref = layer.GetSpatialRef()
-        return spat_ref
-        
-    def reproject_datasource_uri(
-            original_datasource_uri, output_wkt, output_uri):
-        """A wrapper function for raster_utils.reproject_datasource that
-            allows for uri passing.
-
-            original_datasource_uri - a uri to an ogr datasource to be
-                reprojected
-            output_wkt - a string of Well Known Text that is the desired
-                output projection
-            output_uri - a uri path to disk for the reprojected datasource
-
-            returns - Nothing"""
-
-        original_ds = ogr.Open(original_datasource_uri)
-        
-        _ = raster_utils.reproject_datasource(
-                original_ds, output_wkt, output_uri)
+    dem_gt = raster_utils.get_geotransform_uri(dem_uri)
     
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-    analysis_area_sr = get_spatial_ref_uri(analysis_area_points_uri)
-    
-    # Holds any temporary files we want to clean up at the end of the model run
-    #file_list = []
+    analysis_area_sr = raster_utils.get_spatial_ref_uri(
+            analysis_area_points_uri)
     
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
@@ -248,25 +192,11 @@ def execute(args):
         # The uri to a polygon shapefile that specifies the broader area
         # of interest
         aoi_shape_path = analysis_area_extract_uri
-        
-        def copy_datasource_uri(shape_uri, copy_uri):
-            """Create a copy of an ogr shapefile
-
-                shape_uri - a uri path to the ogr shapefile that is to be copied
-                copy_uri - a uri path for the destination of the copied
-                    shapefile
-
-                returns - Nothing"""
-            if os.path.isfile(copy_uri):
-                os.remove(copy_uri)
-
-            shape = ogr.Open(shape_uri)
-            drv = ogr.GetDriverByName('ESRI Shapefile')
-            drv.CopyDataSource(shape, copy_uri)
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
-        copy_datasource_uri(analysis_area_points_uri, clipped_wave_shape_path)
+        raster_utils.copy_datasource_uri(
+                analysis_area_points_uri, clipped_wave_shape_path)
         
         # NOTE: commenting out the following code because it is not necessary to
         # clip the wave points by the extraction area. This is do to the fact
@@ -285,7 +215,7 @@ def execute(args):
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
-        aoi_sr = get_spatial_ref_uri(analysis_area_extract_uri)
+        aoi_sr = raster_utils.get_spatial_ref_uri(analysis_area_extract_uri)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
                 analysis_area_sr, aoi_sr)
     else:
@@ -298,8 +228,9 @@ def execute(args):
         
         # Set the wave data shapefile to the same projection as the 
         # area of interest
-        output_wkt = get_wkt_projection_uri(aoi_shape_path)     
-        reproject_datasource_uri(
+        temp_sr = raster_utils.get_spatial_ref_uri(aoi_shape_path)     
+        output_wkt = temp_sr.ExportToWkt()
+        raster_utils.reproject_datasource_uri(
                 analysis_area_points_uri, output_wkt, projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the 
@@ -309,7 +240,7 @@ def execute(args):
         
         # Create a coordinate transformation from the given
         # WWIII point shapefile, to the area of interest's projection
-        aoi_sr = get_spatial_ref_uri(aoi_shape_path)
+        aoi_sr = raster_utils.get_spatial_ref_uri(aoi_shape_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
                 analysis_area_sr, aoi_sr)
 
@@ -415,23 +346,11 @@ def execute(args):
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
-    def vectorize_points_uri(shapefile_uri, field, output_uri):
-        """Call vectorize_points in raster_utils
-
-            shapefile_uri - a uri path to an ogr shapefile
-            field - a String for the field name
-            output_uri - a uri path for the output raster
-
-            returns - Nothing"""
-
-        datasource = ogr.Open(shapefile_uri, 1)
-        output_raster = gdal.Open(output_uri, 1)
-        raster_utils.vectorize_points(datasource, field, output_raster)
     
-    vectorize_points_uri(
+    raster_utils.vectorize_points_uri(
             clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
     
-    vectorize_points_uri(
+    raster_utils.vectorize_points_uri(
             clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
 
     # Clip the wave energy and wave power rasters so that they are confined 
@@ -703,7 +622,7 @@ def execute(args):
             # values to the raster
             LOGGER.info('Generating Net Present Value Raster.')
                 
-            vectorize_points_uri(
+            raster_utils.vectorize_points_uri(
                     clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
            
             convex_uri = os.path.join(intermediate_dir, 'convex_hull.shp')
