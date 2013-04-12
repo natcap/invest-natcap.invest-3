@@ -19,7 +19,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
-        args['exposure_crits'] = ['intensity rating rating', 'management effectiveness']
+        args['exposure_crits'] = ['intensity rating', 'management effectiveness']
         args['sensitivity_crits'] = ['temporal overlap rating', \
                     'frequency of disturbance']
         args['resilience_crits'] = ['natural mortality', 'recruitment rate']
