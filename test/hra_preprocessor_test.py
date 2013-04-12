@@ -19,10 +19,10 @@ class TestHRAPreprocessor(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
-        args['exposure_crits'] = ['intensity rating rating', 'management effectiveness']
+        args['exposure_crits'] = ['intensity rating', 'management effectiveness']
         args['sensitivity_crits'] = ['temporal overlap rating', \
                     'frequency of disturbance']
-        args['resiliance_crits'] = ['natural mortality', 'recruitment rate']
+        args['resilience_crits'] = ['natural mortality', 'recruitment rate']
     
         self.args = args
 
@@ -37,7 +37,7 @@ class TestHRAPreprocessor(unittest.TestCase):
     def test_HabsOnlyShape_smoke(self):
         '''This will use only the habitats directory as an input to overlap
         stressors, and will atempt to use a single shapefile criteria with
-        eelgrass and recruitment_rate.'''
+        eelgrass and recruitment rate.'''
 
         self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
         self.args['criteria_dir'] = './data/hra_regression_data/Shape_Criteria'
@@ -69,7 +69,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         #Since we had 6 crits to begin with, remove one from each should leave
         #us with 3, want to make sure this causes to error.
-        for c_list in (self.args['resiliance_crits'], 
+        for c_list in (self.args['resilience_crits'], 
                     self.args['sensitivity_crits'],
                     self.args['exposure_crits']):
 
@@ -85,25 +85,27 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
 
-        self.args['resiliance_crits'] = []
+        self.args['resilience_crits'] = []
 
         self.assertRaises(hra_preprocessor.ImproperCriteriaSpread,
                         hra_preprocessor.execute, self.args)
 
     def test_table_parse_regression(self):
-       '''Want to specifically test the dictionary making function that gets
-       called in hra_preprocessor from hra. There will be a TON of things in
-       this one. Just need to make sure that the folder we're testing against
-       had the proper params enabled within the dir_names.txt file.'''
+        '''Want to specifically test the dictionar making function that gets
+        called in hra_preprocessor from hra. There will be a TON of things in
+        this one. Just need to make sure that the folder we're testing against
+        had the proper params enabled within the dir_names.txt file.'''
 
         csv_folder = './data/hra_regression_data/habitat_stressor_ratings'
-
+       
+        #since the file paths are coming in through the JSON import, they will
+        #be unicode
         expected_dict = \
-            {'habitats_dir': './data/hra_regression_data/Input/HabitatLayers',
-            'stressors_dir': './data/hra_regression_data/StressorLayers',
-            'criteria_dir': './data/hra_regression_data/Shape_Criteria',
-            'buffer_dict': {'FinfishAquacultureComm': 250.0,
-                            'ShellfishAquacultureComm': 500.0},
+            {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
+            u'stressors_dir': u'./data/hra_regression_data/Input/StressorLayers',
+            u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
+            'buffer_dict': {'FinfishAquacultureComm': 1000.0,
+                            'ShellfishAquacultureComm': 2000.0},
             'h-s':
                 {('kelp', 'FinfishAquacultureComm'):
                     {'Crit_Ratings':
@@ -157,11 +159,11 @@ class TestHRAPreprocessor(unittest.TestCase):
                     {'Crit_Ratings':
                         {'natural mortality':
                             {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'recruitment rate':
+                            {'Rating': 1.0, 'Weight': 1.0, 'DQ': 1.0}
                         },
-                     'Crit_Rasters':
-                        {'recruitment rate':
-                            {'Weight': 1.0, 'DQ': 1.0}
-                        }
+                     'Crit_Rasters': {}
+                        
                     }
                 },
             'stressors': 
@@ -202,10 +204,10 @@ class TestHRAPreprocessor(unittest.TestCase):
         expected_dict = \
             {'h-s': {},
              'h': {'kelp':
-                    {'recruitment_rate': 
+                    {'recruitment rate': 
                         './data/hra_regression_data/Shape_Criteria/Resilience/kelp_recruitment_rate.shp'
                     }
-                  }
+                  },
              's': {}
             }
 
@@ -213,3 +215,127 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.maxDiff = None
         self.assertEqual(expected_dict, produced_dict)
+
+    def test_remove_zero_reg(self):
+        '''We want to test the preprocessor functionality to properly remove any
+        subdictionaries that have 0 rating values, and raise exceptions if there
+        are 0's in either DQ or Weight.'''
+
+        curr_dict_zeros = \
+            {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
+            u'stressors_dir': u'./data/hra_regression_data/Input/StressorLayers',
+            u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
+            'buffer_dict': {'FinfishAquacultureComm': 250.0,
+                            'ShellfishAquacultureComm': 500.0},
+            'h-s':
+                {('kelp', 'FinfishAquacultureComm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': {}
+                    },
+                ('kelp', 'ShellfishAquacultureComm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    },
+                ('eelgrass', 'FinfishAquacultureComm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    },
+                ('eelgrass', 'ShellfishAquacultureComm'):
+                    {'Crit_Ratings':
+                        {'temporal overlap':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'frequency of disturbance':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    }
+                },
+            'habitats': 
+                {('kelp'):
+                    {'Crit_Ratings':
+                        {'natural mortality':
+                            {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
+                        },
+                     'Crit_Rasters':
+                        {'recruitment rate':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        }
+                    },
+                ('eelgrass'):
+                    {'Crit_Ratings':
+                        {'natural mortality':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                        },
+                     'Crit_Rasters':
+                        {'recruitment rate':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        }
+                    }
+                },
+            'stressors': 
+                {('FinfishAquacultureComm'):
+                    {'Crit_Ratings':
+                        {'intensity rating':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'management effectiveness':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                     'Crit_Rasters':{}
+                    },
+                ('ShellfishAquacultureComm'):
+                    {'Crit_Ratings':
+                        {'intensity rating':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                         'management effectiveness':
+                            {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters':{}
+                    }
+                }
+            }
+    
+        #Anything that has a 0 in the ratings score should have the entire criteria
+        #removed from the dictionary.
+        expected_dict = curr_dict_zeros.copy()
+        del expected_dict['h-s'][('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
+        del expected_dict['habitats']['kelp']['Crit_Ratings']['natural mortality']
+
+        #I...think the scope of this should change our version of curr_dict_zeros
+        hra_preprocessor.zero_null_val_check(curr_dict_zeros)
+
+        self.maxDiff = None
+        self.assertEqual(expected_dict, curr_dict_zeros)
+
+        
+        #Now want to try to get it to throw the ZeroDQWeightValue error
+        curr_dict_zeros['habitats']['eelgrass']['Crit_Ratings']['natural mortality']['DQ'] = ''
+        curr_dict_zeros['stressors']['FinfishAquacultureComm']['Crit_Ratings']['intensity rating']['DQ'] = 0
+
+        self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
+                        hra_preprocessor.zero_null_val_check, curr_dict_zeros)
+
+    def test_UnexpectedString_exception(self):
+        '''Want to make sure that preproc will throw an exception if a CSV is
+        passed which contains strings or null values where there should be
+        floats for use in calculation'''
+
+        test_CSV = './data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_overlap_ratings.csv'
+
+        self.assertRaises(hra_preprocessor.UnexpectedString,
+                        hra_preprocessor.parse_habitat_overlap, test_CSV)
+        

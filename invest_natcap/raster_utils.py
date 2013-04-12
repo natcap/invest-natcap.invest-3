@@ -2406,3 +2406,119 @@ def viewshed(dem_uri, shapefile_uri, z_factor, curvature_correction, refractivit
         [dem_uri], lambda x: int(abs(x))%10, visible_feature_count_uri,
         gdal.GDT_Byte, 255, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=aoi_uri, assert_datasets_projected=False)
+
+def extract_datasource_table_by_key(datasource_uri, key_field):
+    """Create a dictionary lookup table of the features in the attribute table
+        of the datasource referenced by datasource_uri.
+
+        datasource_uri - a uri to an OGR datasource
+        key_field - a field in datasource_uri that refers to a key (unique) value
+            for each row; for example, a polygon id.
+
+        returns a dictionary of the form {key_field_0: 
+            {field_0: value0, field_1: value1}...}"""
+
+    def smart_cast(value):
+        """Attempts to cast value to a float, int, or leave it as string"""
+        if type(value) != str: 
+            return value
+
+        cast_functions = [int, float]
+        for fn in cast_functions:
+            try:
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    #Pull apart the datasource
+    datasource = ogr.Open(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    #Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    #Loop through each feature and build up the dictionary representing the
+    #attribute table
+    attribute_dictionary = {}
+    for feature_index in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_index)
+        feature_fields = {}
+        for field_name in field_names:
+            feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    return attribute_dictionary
+    
+def get_geotransform_uri(ds_uri):
+    """Get the geotransform from a gdal dataset
+
+        ds_uri - A URI for the dataset
+
+        returns - a dataset geotransform list"""
+
+    raster_ds = gdal.Open(ds_uri)
+    raster_gt = raster_ds.GetGeoTransform()
+    return raster_gt
+    
+def get_spatial_ref_uri(ds_uri):
+    """Get the spatial reference of an OGR datasource
+        
+        ds_uri - A URI to an ogr datasource
+
+        returns - a spatial reference"""
+
+    shape_ds = ogr.Open(ds_uri)
+    layer = shape_ds.GetLayer()
+    spat_ref = layer.GetSpatialRef()
+    return spat_ref
+    
+def reproject_datasource_uri(original_datasource_uri, output_wkt, output_uri):
+    """A wrapper function for raster_utils.reproject_datasource that
+        allows for uri passing.
+
+        original_datasource_uri - a uri to an ogr datasource to be
+            reprojected
+        output_wkt - a string of Well Known Text that is the desired
+            output projection
+        output_uri - a uri path to disk for the reprojected datasource
+
+        returns - Nothing"""
+
+    original_ds = ogr.Open(original_datasource_uri)
+    
+    _ = reproject_datasource(original_ds, output_wkt, output_uri)
+        
+def copy_datasource_uri(shape_uri, copy_uri):
+    """Create a copy of an ogr shapefile
+
+        shape_uri - a uri path to the ogr shapefile that is to be copied
+        copy_uri - a uri path for the destination of the copied
+            shapefile
+
+        returns - Nothing"""
+    if os.path.isfile(copy_uri):
+        os.remove(copy_uri)
+
+    shape = ogr.Open(shape_uri)
+    drv = ogr.GetDriverByName('ESRI Shapefile')
+    drv.CopyDataSource(shape, copy_uri)
+    
+def vectorize_points_uri(shapefile_uri, field, output_uri):
+    """A wrapper function for raster_utils.vectorize_points, that allows for uri
+        passing
+
+        shapefile_uri - a uri path to an ogr shapefile
+        field - a String for the field name
+        output_uri - a uri path for the output raster
+
+        returns - Nothing"""
+
+    datasource = ogr.Open(shapefile_uri)
+    output_raster = gdal.Open(output_uri, 1)
+    vectorize_points(datasource, field, output_raster)
