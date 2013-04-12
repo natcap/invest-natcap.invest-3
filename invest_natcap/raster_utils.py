@@ -2492,7 +2492,7 @@ def reproject_datasource_uri(original_datasource_uri, output_wkt, output_uri):
 
     original_ds = ogr.Open(original_datasource_uri)
     
-    _ = raster_utils.reproject_datasource(original_ds, output_wkt, output_uri)
+    _ = reproject_datasource(original_ds, output_wkt, output_uri)
         
 def copy_datasource_uri(shape_uri, copy_uri):
     """Create a copy of an ogr shapefile
@@ -2521,4 +2521,4 @@ def vectorize_points_uri(shapefile_uri, field, output_uri):
 
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
-    raster_utils.vectorize_points(datasource, field, output_raster)
+    vectorize_points(datasource, field, output_raster)
