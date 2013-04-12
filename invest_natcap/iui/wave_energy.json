@@ -43,6 +43,22 @@
 		            "required": true,
                     "helpText": "Select from a list of pre-processed wave energy data. Currently coarse global data is provided as well as finer data for the East and West coast of North America."
 		        },
+                {
+                    "id" : "aoi",
+                    "args_id": "aoi_uri",
+                    "type": "file",
+                    "label": "Area of Interest (AOI)",
+                    "defaultValue": "../WaveEnergy/input/AOI_WCVI.shp",
+                    "required": false,
+                    "validateAs": {"type": "OGR", 
+                    			   "layers": [{"name": {"inheritFrom": "file"}, 
+                    			               "type": "polygons", 
+                    			               "projection" : {"units": "meters", "exists":true},
+                    			               "datum" : "WGS_1984"}]
+                    			   },
+                    "returns": {"ifEmpty": "pass"},
+                    "helpText": "An OGR polygon datasource that defines an area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
+                },
         		{
                     "id" : "machine_perf_table",
                     "args_id": "machine_perf_uri",
@@ -71,7 +87,7 @@
                 									  "validateAs": {"type": "number",
                 									                 "allowedValues":{"pattern":"[0-9]*\\.?[0-9]+$"}
                 									                 }}]},
-                    "helpText": "A Comma Separated Value table that has parameter values for a wave energy machine."
+                    "helpText": "A Comma Separated Value table that has parameter values for a wave energy machine. This includes information on the maximum capacity of the device and the upper limits for wave height and period."
                 },
                 {
                     "id" : "dem",
@@ -84,27 +100,11 @@
                     "helpText": "A GDAL dataset that has elevation values in meters. Used to get the cable distance for wave energy transmission."
                 },
                 {
-                    "id" : "aoi",
-                    "args_id": "aoi_uri",
-                    "type": "file",
-                    "label": "Area of Interest (AOI)",
-                    "defaultValue": "../WaveEnergy/input/AOI_WCVI.shp",
-                    "required": false,
-                    "validateAs": {"type": "OGR", 
-                    			   "layers": [{"name": {"inheritFrom": "file"}, 
-                    			               "type": "polygons", 
-                    			               "projection" : {"units": "meters", "exists":true},
-                    			               "datum" : "WGS_1984"}]
-                    			   },
-                    "returns": {"ifEmpty": "pass"},
-                    "helpText": "An OGR polygon datasource that defines an area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
-                },
-                {
                     "id" : "results_suffix",
                     "args_id" : "suffix",
                     "type": "text",
                     "dataType": "string",
-                    "validText": "[a-zA-Z0-9]*",
+                    "validText": "[a-zA-Z0-9_]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "returns": {"ifEmpty": "pass"},
@@ -120,6 +120,7 @@
                 "label" : "Valuation",
                 "collapsible" : true,
                 "defaultValue" : false,
+                "enabledBy": "aoi",
                 "elements" : [
                     {
                         "id" : "valuation_list",
@@ -129,7 +130,7 @@
                                 "id" : "land_grid_points",
                                 "args_id" : "land_gridPts_uri",
                                 "type": "file",
-                                "label": "Land and Grid Points Table",
+                                "label": "Grid Connection Points",
                                 "defaultValue": "../WaveEnergy/input/LandGridPts_WCVI.csv",
                                 "required": true,
                                 "validateAs": { "type": "CSV",

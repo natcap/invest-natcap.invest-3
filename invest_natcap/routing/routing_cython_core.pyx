@@ -656,9 +656,6 @@ def resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = raster_utils.load_memory_mapped_array(
         flow_direction_uri, flow_direction_memory_file, array_type=numpy.float32)
 
-    LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
-    LOGGER.debug("flow_direction_array %s" % flow_direction_array)
-
     cdef int n_cols = dem_dataset.RasterXSize
     cdef int n_rows = dem_dataset.RasterYSize
     cdef int row_index
