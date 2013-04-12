@@ -275,11 +275,12 @@ def execute(args):
         # datasets / datasource by passing URI's. This function lacks memory
         # efficiency and the global dem is being dumped into an array. This may
         # cause the global biophysical run to crash
-
-        global_dem = gdal.Open(dataset_uri)
+        tmp_dem_path = raster_utils.temporary_filename()
+        
         clipped_wave_shape = ogr.Open(point_shape_uri, 1)
-        dem_gt = global_dem.GetGeoTransform()
-        dem_matrix = global_dem.GetRasterBand(1).ReadAsArray()
+        dem_gt = raster_utils.get_geotransform_uri(dataset_uri)
+        dem_matrix = raster_utils.load_memory_mapped_array(
+                dataset_uri, tmp_dem_path, array_type=None)
 
         # Create a new field for the depth attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -742,7 +743,7 @@ def build_point_shapefile(
         feat.SetGeometryDirectly(geom)
         #Save the feature modifications to the layer.
         layer.SetFeature(feat)
-        feat.Destroy()
+        feat = None
 
 def get_points_geometries(shape_uri):
     """This function takes a shapefile and for each feature retrieves
@@ -763,7 +764,7 @@ def get_points_geometries(shape_uri):
         x_location = float(feat.GetGeometryRef().GetX())
         y_location = float(feat.GetGeometryRef().GetY())
         point.append([x_location, y_location])
-        feat.Destroy()
+        feat = None
         feat = layer.GetNextFeature()
 
     return np.array(point)
@@ -941,7 +942,7 @@ def create_percentile_rasters(
         os.remove(output_path)
     # Create a blank raster from raster_dataset
     percentile_raster = raster_utils.new_raster_from_base(
-            raster_dataset, output_path, 'GTiff', 0, gdal.GDT_Int32)
+            raster_dataset, output_path, 'GTiff', nodata, gdal.GDT_Int32)
     # Get raster bands
     dataset_band = raster_dataset.GetRasterBand(1)
     
@@ -956,17 +957,38 @@ def create_percentile_rasters(
         """
         return bisect(percentiles, band)
 
+    tmp_matrix_file = raster_utils.temporary_filename()
+    matrix = raster_utils.load_memory_mapped_array(
+            raster_path, tmp_matrix_file, array_type=None)
+
+    tmp_mask_file = raster_utils.temporary_filename()
+    matrix_mask = raster_utils.load_memory_mapped_array(
+            raster_path, tmp_mask_file, array_type=None)
+    
+    tmp_compress_file = raster_utils.temporary_filename()
+    compress_matrix = raster_utils.load_memory_mapped_array(
+            raster_path, tmp_compress_file, array_type=None)
+
     # Read in the values of the raster we want to get percentiles from
-    matrix = np.array(dataset_band.ReadAsArray())
+    #matrix = np.array(dataset_band.ReadAsArray())
     # Flatten the 2D numpy array into a 1D numpy array
-    dataset_array = matrix.flatten()
+    #dataset_array = matrix.flatten()
+    
+    dataset_array = np.reshape(matrix, (-1,))
+    dataset_nodata_flat = np.reshape(matrix_mask, (-1))
+
     # Create a mask that makes all nodata values invalid.  Do this because
     # having a bunch of nodata values will muttle the results of getting the
     # percentiles
-    dataset_mask = np.ma.masked_array(
-            dataset_array, mask=dataset_array == nodata)
+
+    np.equal(dataset_array, nodata, dataset_nodata_flat)
+
+    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
+
+
     # Get all of the non-masked (non-nodata) data
-    dataset_comp = np.ma.compressed(dataset_mask)
+    #dataset_comp = np.ma.compressed(dataset_mask)
+    
     # Get the percentile marks
     percentiles = get_percentiles(dataset_comp, percentile_list)
     LOGGER.debug('percentiles_list : %s', percentiles)
@@ -1161,7 +1183,7 @@ def wave_power(shape_uri):
 
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
-        feat.Destroy()
+        feat = None
         feat = layer.GetNextFeature()
 
 def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
@@ -1229,8 +1251,8 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         clip_geom.Transform(coord_trans)
         # Add geometry to list
         clip_geom_list.append(clip_geom.Clone())
-        in_feat.Destroy()
-        clip_feat.Destroy()
+        in_feat = None
+        clip_feat = None
         clip_feat = clip_layer.GetNextFeature()
 
     in_layer.ResetReading()
@@ -1258,10 +1280,10 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
                     out_feat.SetField(fld_index2, src_field)
     
                 shp_layer.CreateFeature(out_feat)
-                out_feat.Destroy()
+                out_feat = None
                 break
             
-        in_feat.Destroy()
+        in_feat = None
         in_feat = in_layer.GetNextFeature()
 
     return shp_ds
@@ -1425,4 +1447,4 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         feat.SetField(index, we_value)
         # Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
-        feat.Destroy()
+        feat = None
