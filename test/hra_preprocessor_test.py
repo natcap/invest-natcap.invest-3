@@ -338,4 +338,53 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.assertRaises(hra_preprocessor.UnexpectedString,
                         hra_preprocessor.parse_habitat_overlap, test_CSV)
+   
+    def test_overall_regression(self):
+        '''This is the overarching regression test for the CSV outputs within
+        preprocessor. We will use the habitats folder that we already have set
+        up and compare it to the "cealn run" folder that it the output just
+        after those inputs have been used.'''
+
+        self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
+        self.args['criteria_dir'] = './data/hra_regression_data/Shape_Criteria'
+
+        #We know that the output will be within the workspace directory
+        result_dir = os.path.join(self.args['workspace_dir'], 'habitat_stressor_ratings')
+
+        r_file_list = glob.glob(result_dir)
+
+        #Know the location of our clean run directory, get the files within,
+        #and check that they exist, and are correct within result_dir
+        clean_dir = './data/hra_regression_data/habitat_stressor_ratings_clean'
+
+        c_file_list = glob.glob(clean_dir, '*.shp')
+
+        for c_uri in c_file_list:
+
+            c_name = os.path.basename(c_uri)
+            expected_name = os.path.join(['workspace_dir'], file_name)
+
+            c_file = open(c_uri, 'rU')
+            r_file = open(expected_name, 'rU')
+            
+            self.assertEqual(c_file.readlines(), r_file.readlines())
+
+            #Want to check off that we know that file was good for expected
+            #results
+            del r_file_list[expected_name]
         
+        #At this point, we should just have the dir_names.txt file left in the
+        #file list of the created dictionary.
+        c_json_uri = os.path.join('./data/hra_regression_data/habitat_stressor_ratings_clean/dir_name.txt')
+        c_dict = json.load(open(c_json_uri))
+
+        r_expected_uri = os.path.join(result_dir, 'dir_names.txt')
+        r_dict = json.load(open(r_expected_uri))
+
+        #Check that they're identical.
+        self.assertEqual(c_dict, r_dict)
+
+        del r_file_list[r_expected_uri]
+
+        #There should be no files left within the workspace directory
+        self.assertEqual(r_file_list, 0)
