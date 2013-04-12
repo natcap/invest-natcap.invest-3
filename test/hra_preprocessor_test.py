@@ -367,11 +367,12 @@ class TestHRAPreprocessor(unittest.TestCase):
         for c_uri in c_file_list:
 
             c_name = os.path.basename(c_uri)
-            expected_name = os.path.join(['workspace_dir'], file_name)
+            expected_name = os.path.join(result_dir, c_name)
 
             c_file = open(c_uri, 'rU')
             r_file = open(expected_name, 'rU')
-            
+           
+            self.maxDiff = None
             self.assertEqual(c_file.readlines(), r_file.readlines())
 
             #Want to check off that we know that file was good for expected
