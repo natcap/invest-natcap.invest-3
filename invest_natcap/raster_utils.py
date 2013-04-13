@@ -2454,3 +2454,71 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
         attribute_dictionary[key_value] = feature_fields
 
     return attribute_dictionary
+    
+def get_geotransform_uri(ds_uri):
+    """Get the geotransform from a gdal dataset
+
+        ds_uri - A URI for the dataset
+
+        returns - a dataset geotransform list"""
+
+    raster_ds = gdal.Open(ds_uri)
+    raster_gt = raster_ds.GetGeoTransform()
+    return raster_gt
+    
+def get_spatial_ref_uri(ds_uri):
+    """Get the spatial reference of an OGR datasource
+        
+        ds_uri - A URI to an ogr datasource
+
+        returns - a spatial reference"""
+
+    shape_ds = ogr.Open(ds_uri)
+    layer = shape_ds.GetLayer()
+    spat_ref = layer.GetSpatialRef()
+    return spat_ref
+    
+def reproject_datasource_uri(original_datasource_uri, output_wkt, output_uri):
+    """A wrapper function for raster_utils.reproject_datasource that
+        allows for uri passing.
+
+        original_datasource_uri - a uri to an ogr datasource to be
+            reprojected
+        output_wkt - a string of Well Known Text that is the desired
+            output projection
+        output_uri - a uri path to disk for the reprojected datasource
+
+        returns - Nothing"""
+
+    original_ds = ogr.Open(original_datasource_uri)
+    
+    _ = reproject_datasource(original_ds, output_wkt, output_uri)
+        
+def copy_datasource_uri(shape_uri, copy_uri):
+    """Create a copy of an ogr shapefile
+
+        shape_uri - a uri path to the ogr shapefile that is to be copied
+        copy_uri - a uri path for the destination of the copied
+            shapefile
+
+        returns - Nothing"""
+    if os.path.isfile(copy_uri):
+        os.remove(copy_uri)
+
+    shape = ogr.Open(shape_uri)
+    drv = ogr.GetDriverByName('ESRI Shapefile')
+    drv.CopyDataSource(shape, copy_uri)
+    
+def vectorize_points_uri(shapefile_uri, field, output_uri):
+    """A wrapper function for raster_utils.vectorize_points, that allows for uri
+        passing
+
+        shapefile_uri - a uri path to an ogr shapefile
+        field - a String for the field name
+        output_uri - a uri path for the output raster
+
+        returns - Nothing"""
+
+    datasource = ogr.Open(shapefile_uri)
+    output_raster = gdal.Open(output_uri, 1)
+    vectorize_points(datasource, field, output_raster)
