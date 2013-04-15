@@ -72,6 +72,14 @@ def execute(args):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+    # Append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
     # Get the uri for the DEM
     dem_uri = args['dem_uri']
 
@@ -151,21 +159,21 @@ def execute(args):
     
     # Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = os.path.join(
-            intermediate_dir, 'WEM_InputOutput_Pts.shp')
+            intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
     
     # Intermediate paths for wave energy and wave power rasters
     wave_energy_unclipped_path = os.path.join(
-            intermediate_dir, 'capwe_mwh_unclipped.tif')
+            intermediate_dir, 'capwe_mwh_unclipped%s.tif' % file_suffix)
     wave_power_unclipped_path = os.path.join(
-            intermediate_dir, 'wp_kw_unclipped.tif')
+            intermediate_dir, 'wp_kw_unclipped%s.tif' % file_suffix)
 
     # Final output paths for wave energy and wave power rasters
-    wave_energy_path = os.path.join(output_dir, 'capwe_mwh.tif')
-    wave_power_path = os.path.join(output_dir, 'wp_kw.tif')
+    wave_energy_path = os.path.join(output_dir, 'capwe_mwh%s.tif' % file_suffix)
+    wave_power_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
     
     # Paths for wave energy and wave power percentile rasters
-    wp_rc_path = os.path.join(output_dir, 'wp_rc.tif')
-    capwe_rc_path = os.path.join(output_dir, 'capwe_rc.tif')
+    wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
+    capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
     
     # Set nodata value and datatype for new rasters
     nodata = float(np.finfo(np.float32).min)
@@ -223,7 +231,7 @@ def execute(args):
         # Temporary shapefile path needed for an intermediate step when
         # changing the projection
         projected_wave_shape_path = os.path.join(
-                intermediate_dir, 'projected_wave_data.shp')
+                intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
         
         # Set the wave data shapefile to the same projection as the 
         # area of interest
@@ -385,14 +393,14 @@ def execute(args):
     else:
         if valuation_checked:
             # Output path for landing point shapefile
-            land_pt_path = os.path.join(output_dir, 'LandPts_prj.shp')
+            land_pt_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
             # Output path for grid point shapefile
-            grid_pt_path = os.path.join(output_dir, 'GridPts_prj.shp')
+            grid_pt_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
             # Output path for the projected net present value raster
             raster_projected_path = os.path.join(
-                    intermediate_dir, 'npv_not_clipped.tif')
+                    intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
             # Path for the net present value percentile raster
-            npv_rc_path = os.path.join(output_dir, 'npv_rc.tif')
+            npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
             # Read machine economic parameters into a dictionary
             machine_econ = {}
@@ -608,8 +616,6 @@ def execute(args):
 
             compute_npv_farm_energy_uri(clipped_wave_shape_path)
 
-            datatype = gdal.GDT_Float32
-            nodata = -100000
             # Create a blank raster from the extents of the wave farm shapefile
             LOGGER.debug('Creating Raster From Vector Extents')
             raster_utils.create_raster_from_vector_extents_uri(
@@ -625,13 +631,13 @@ def execute(args):
             raster_utils.vectorize_points_uri(
                     clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
            
-            convex_uri = os.path.join(intermediate_dir, 'convex_hull.shp')
+            convex_uri = os.path.join(intermediate_dir, 'convex_hull%s.shp' % file_suffix)
             # Create a shapefile that is the convex hull of our points so that
             # we can use it for masking and clipping
             get_convex_hull_uri(
                     clipped_wave_shape_path, 'convex_hull', convex_uri)
 
-            npv_out_uri = os.path.join(output_dir, 'npv_usd.tif')
+            npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
             # Clip the raster to the convex hull polygon
             raster_utils.clip_dataset_uri(
                     raster_projected_path, convex_uri, npv_out_uri)
