@@ -29,7 +29,7 @@ class ImproperCriteriaAttributeName(Exception):
 class ImproperAOIAttributeName(Exception):
     '''An exception to pass in hra non core if the AOIzone files do not
     contain the proper attribute name for individual indentification. The
-    attribute should be named 'NAME', and must exist for every shape in the
+    attribute should be named 'name', and must exist for every shape in the
     AOI layer.'''
     pass
 

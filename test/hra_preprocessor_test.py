@@ -340,7 +340,16 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.assertRaises(hra_preprocessor.UnexpectedString,
                         hra_preprocessor.parse_habitat_overlap, test_CSV)
-   
+  
+    def test_Improper_Crit_FileStruct(self):
+        '''Since the folder structure for the criteria shapefiles must be in an
+        explicit form, want to check that it will error if given an incorrect
+        folder setup.'''
+
+        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Attrib'
+
+        hra_preprocessor.make_crit_shape_dict(crit_uri)
+
     def test_overall_regression(self):
         '''This is the overarching regression test for the CSV outputs within
         preprocessor. We will use the habitats folder that we already have set
