@@ -771,6 +771,11 @@ def make_crit_shape_dict(crit_uri):
             }
         }
     '''
+    
+    files =  glob.glob(os.path.join(crit_uri, '*'))
+
+    LOGGER.debug("These are the files contained within the folder: %s", files)
+
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
     
     res_dir = os.path.join(crit_uri, 'Resilience')
@@ -860,5 +865,6 @@ def make_crit_shape_dict(crit_uri):
         
         c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = path
 
+    LOGGER.debug("Here is the final criteria dict: %s", c_shape_dict)
     #Et, voila! C'est parfait.
     return c_shape_dict

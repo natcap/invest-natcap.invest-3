@@ -346,7 +346,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         explicit form, want to check that it will error if given an incorrect
         folder setup.'''
 
-        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Attrib'
+        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Struct'
 
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
