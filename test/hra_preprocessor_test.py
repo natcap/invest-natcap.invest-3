@@ -21,8 +21,8 @@ class TestHRAPreprocessor(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
-        args['exposure_crits'] = ['management effectiveness', 'intentsity_rating']
-        args['sensitivity_crits'] = ['temporal overlap rating', \
+        args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
+        args['sensitivity_crits'] = ['temporal overlap', \
                     'frequency of disturbance']
         args['resilience_crits'] = ['recruitment rate', 'natural mortality']
     
@@ -366,7 +366,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         #We know that the output will be within the workspace directory
         result_dir = os.path.join(self.args['workspace_dir'], 'habitat_stressor_ratings')
 
-        r_file_list = glob.glob(result_dir)
+        r_file_list = glob.glob(os.path.join(result_dir, '*'))
 
         #Know the location of our clean run directory, get the files within,
         #and check that they exist, and are correct within result_dir
@@ -382,22 +382,12 @@ class TestHRAPreprocessor(unittest.TestCase):
             c_file = open(c_uri, 'rU')
             r_file = open(expected_name, 'rU')
           
-            c_list = c_file.readlines()
-            r_list = r_file.readlines()
-
-            for i in range(0, len(c_list)):
-
-                LOGGER.debug("C Line is: %s", c_list[i])
-
-                LOGGER.debug("R Line is: %s", r_list[i])
-
-
             self.maxDiff = None
             self.assertEqual(c_file.readlines(), r_file.readlines())
 
             #Want to check off that we know that file was good for expected
             #results
-            r_file_list.remover(expected_name)
+            r_file_list.remove(expected_name)
         
         #At this point, we should just have the dir_names.txt file left in the
         #file list of the created dictionary.
@@ -415,4 +405,4 @@ class TestHRAPreprocessor(unittest.TestCase):
         r_file_list.remove(r_expected_uri)
 
         #There should be no files left within the workspace directory
-        self.assertEqual(r_file_list, 0)
+        self.assertEqual(len(r_file_list), 0)
