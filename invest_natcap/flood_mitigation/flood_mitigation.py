@@ -36,6 +36,7 @@ def execute(args):
                         interval.  Note that there should be one column for each
                         time interval.  The label of the column must be an int
                         index for the interval (so 1, 2, 3, etc.).
+            This table must be a CSV.
 
     The following files are saved to the user's disk, relative to the defined
     workspace:
