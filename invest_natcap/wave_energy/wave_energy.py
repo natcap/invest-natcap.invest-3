@@ -169,7 +169,7 @@ def execute(args):
     
     # Set nodata value and datatype for new rasters
     #nodata = 0
-    nodata = float(np.finfo(np.float).tiny)
+    nodata = float(np.finfo(np.float).min)
     datatype = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
@@ -935,6 +935,9 @@ def create_percentile_rasters(
     nodata - the nodata value for the output raster
                   
     return - Nothing """
+    LOGGER.debug('Create Perctile Rasters')
+    
+
     raster_dataset = gdal.Open(raster_path)
     ds_gt = raster_dataset.GetGeoTransform()
     # If the output_path is already a file, delete it
@@ -965,46 +968,40 @@ def create_percentile_rasters(
     matrix_mask = raster_utils.load_memory_mapped_array(
             raster_path, tmp_mask_file, array_type=None)
     
-    tmp_compress_file = raster_utils.temporary_filename()
-    compress_matrix = raster_utils.load_memory_mapped_array(
-            raster_path, tmp_compress_file, array_type=None)
-
-    # Read in the values of the raster we want to get percentiles from
-    #matrix = np.array(dataset_band.ReadAsArray())
-    # Flatten the 2D numpy array into a 1D numpy array
-    #dataset_array = matrix.flatten()
+    tmp_mask_large_file = raster_utils.temporary_filename()
+    large_matrix = raster_utils.load_memory_mapped_array(
+            raster_path, tmp_mask_large_file, array_type=None)
     
     dataset_array = np.reshape(matrix, (-1,))
     dataset_nodata_flat = np.reshape(matrix_mask, (-1))
+    dataset_large_flat = np.reshape(large_mask, (-1))
 
     # Create a mask that makes all nodata values invalid.  Do this because
     # having a bunch of nodata values will muttle the results of getting the
     # percentiles
-
-    np.equal(dataset_array, nodata, dataset_nodata_flat)
-
-    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
-
-
-    # Get all of the non-masked (non-nodata) data
-    #dataset_comp = np.ma.compressed(dataset_mask)
     
-    # Get the percentile marks
-    percentiles = get_percentiles(dataset_comp, percentile_list)
+    neg_float = np.finfo(np.float).min
+    ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
+
+    np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
+    dataset_array[dataset_nodata_flat] = neg_float
+    np.equal(dataset_array, neg_float, dataset_large_flat)
+    
+    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_large_flat)
+
+    min_val = dataset_mask.min()
+    max_val = dataset_mask.max()
+    
+    percentiles = get_percentiles(
+            dataset_array, percentile_list, min_val, max_val)
+    
     LOGGER.debug('percentiles_list : %s', percentiles)
     # Get the percentile ranges
     percentile_ranges = create_percentile_ranges(
             percentiles, units_short, units_long, start_value)
     # Add the start_value to the beginning of the percentiles so that any value
-    # before the start value is set to nodata (zero)
+    # before the start value is set to (zero)
     percentiles.insert(0, int(start_value))
-    
-    raster_dataset = None
-    percentile_raster = None
-    matrix = None
-    dataset_array = None
-    dataset_mask = None
-    dataset_comp = None
 
     # Classify the pixels of raster_dataset into groups and write 
     # then to output band
@@ -1012,14 +1009,15 @@ def create_percentile_rasters(
     raster_utils.vectorize_datasets(
             [raster_path], raster_percentile, output_path, gdal.GDT_Int32,
             nodata, pixel_size, 'intersection', assert_datasets_projected=False)
-   
-    percentile_ds = gdal.Open(output_path, 1)
-    percentile_band = percentile_ds.GetRasterBand(1)
 
+    tmp_perc_file = raster_utils.temporary_filename()
+    perc_array = raster_utils.load_memory_mapped_array(
+            output_path, tmp_perc_file, array_type=None)
+    
     # Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
     # Read in percentile raster so that we can get the count of each group
-    perc_array = percentile_band.ReadAsArray()
+    #perc_array = percentile_band.ReadAsArray()
     percentile_groups = np.arange(1, len(percentiles) + 1)
     for percentile_class in percentile_groups:
         # This line of code takes the numpy array 'perc_array', which holds 
@@ -1035,22 +1033,26 @@ def create_percentile_rasters(
     # Generate the attribute table for the percentile raster
     create_attribute_table(output_path, percentile_ranges, pixel_count)
 
-    percentile_ds = None
     # calculate min, max, std for visualization in arc
-    raster_utils.calculate_raster_stats_uri(output_path)
+    #raster_utils.calculate_raster_stats_uri(output_path)
 
-def get_percentiles(value_list, percentile_list):
+def get_percentiles(value_list, percentile_list, min_val, max_val):
     """Creates a list of integers of the percentile marks
     
     value_list - A list of numbers
     percentile_list - A list of ascending integers of the desired
                       percentiles
+    min_val - a int/float indicating the lower limit for computing the
+        percentile. Values lower will be ignored
+    max_val - a int/float indicating the upper limit for computing the
+        percentile. Values greater will be ignored
                       
     returns - A list of integers which are the percentile marks
     """
     pct_list = []
     for percentile in percentile_list:
-        pct_list.append(int(stats.scoreatpercentile(value_list, percentile)))
+        pct_list.append(int(stats.scoreatpercentile(
+            value_list, percentile, (min_val, max_val)))
     return pct_list
 
 def create_percentile_ranges(percentiles, units_short, units_long, start_value):
