@@ -37,6 +37,18 @@ def execute(args):
                         time interval.  The label of the column must be an int
                         index for the interval (so 1, 2, 3, etc.).
             This table must be a CSV.
+        'curve_numbers' - a string URI pointing to a raster of the user's curve
+            numbers.  See the user's guide for documentation on constructing
+            this intput.
+        'cn_adjust' - A python boolean indicating whether to adjust the
+            args['curve_numbers'] input according to the user's defined
+            seasonality adjustment.
+        'cn_season' - A string indicating for which season the Curve Numbers
+            should be adjusted.  One of ['Growing', 'Dormant'].  Required only
+            if args['cn_adjust'] == True.
+        'cn_amc_class' - A string indicating the Antecedent Soil Moisture class
+            that should be used for CN adjustment.  One of ['Wet', 'Dry',
+            'Average'].  Required only if args['cn_adjust'] == True.
 
     The following files are saved to the user's disk, relative to the defined
     workspace:
