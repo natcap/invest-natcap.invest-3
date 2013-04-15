@@ -367,10 +367,10 @@ def execute(args):
     # Clip the wave energy and wave power rasters so that they are confined 
     # to the AOI
     raster_utils.clip_dataset_uri(
-            wave_power_unclipped_path, aoi_shape_path, wave_power_path)
+            wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
 
     raster_utils.clip_dataset_uri(
-            wave_energy_unclipped_path, aoi_shape_path, wave_energy_path)
+            wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in  
@@ -638,7 +638,7 @@ def execute(args):
             npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
             # Clip the raster to the convex hull polygon
             raster_utils.clip_dataset_uri(
-                    raster_projected_path, aoi_shape_path, npv_out_uri)
+                    raster_projected_path, aoi_shape_path, npv_out_uri, False)
 
             #Create the percentile raster for net present value
             percentiles = [25, 50, 75, 90]
