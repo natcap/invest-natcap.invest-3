@@ -238,6 +238,8 @@ def execute(args):
                 else:
                     curr_row = [c_name] + default_rating + curr_row
 
+                LOGGER.debug(curr_row)
+
                 habitat_csv_writer.writerow(curr_row)
 
             ##### HERE WILL BE WHERE ALL THE H-S USER INPUT CRITERIA GO.####
