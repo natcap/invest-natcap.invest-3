@@ -4,9 +4,33 @@ def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
     landscape in a flood situation.
 
+    args - a python dictionary.  All entries noted below are required unless
+        explicity stated as optional.
+        'workspace' - a string URI to the user's workspace on disk.  Any temporary
+            files needed for processing will also be saved to this folder before
+            they are deleted.  If this folder exists on disk, any outputs will
+            be overwritten in the execution of this model.
+        'dem' - a string URI to the user's Digital Elevation Model on disk.
+            Must be a raster dataset that GDAL can open.
+        'landuse' - a string URI to the user's Land Use/Land Cover raster on
+            disk.  Must be a raster dataset that GDAL can open.
+        'num_intervals' - A python int representing the number of timesteps this
+            model should process.
+        'time_interval' - a python float representing the duration of the
+            desired timestep, in hours.
+        'precipitation' a string URI to a table of precipitation data.  Table
+            must have the following structure:
+                Fieldnames:
+                    'STATION' - (string) label for the water gauge station
+                    'LAT' - (float) the latitude of the station
+                    'LONG' - (float) the longitude of the station
+                    [1 ... n] - (int) the rainfall values for the specified time
+                        interval.  Note that there should be one column for each
+                        time interval.  The label of the column must be an int
+                        index for the interval (so 1, 2, 3, etc.).
+
     The following files are saved to the user's disk, relative to the defined
     workspace:
-
         Rasters produced during preprocessing:
         <workspace>/intermediate/mannings_coeff.tif
             A raster of the user's input Land Use/Land Cover, reclassified
@@ -44,6 +68,6 @@ def execute(args):
             A raster of the height of flood waters on the landscape at this time
             interval.
 
-        This function returns None.
-        """
+    This function returns None."""
+
     pass
