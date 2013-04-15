@@ -348,7 +348,8 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Attrib'
 
-        hra_preprocessor.make_crit_shape_dict(crit_uri)
+        self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
+                    crit_uri)
 
     def test_overall_regression(self):
         '''This is the overarching regression test for the CSV outputs within
