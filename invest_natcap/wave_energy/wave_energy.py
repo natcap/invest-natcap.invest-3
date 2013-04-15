@@ -1052,7 +1052,7 @@ def get_percentiles(value_list, percentile_list, min_val, max_val):
     pct_list = []
     for percentile in percentile_list:
         pct_list.append(int(stats.scoreatpercentile(
-            value_list, percentile, (min_val, max_val)))
+            value_list, percentile, (min_val, max_val))))
     return pct_list
 
 def create_percentile_ranges(percentiles, units_short, units_long, start_value):
