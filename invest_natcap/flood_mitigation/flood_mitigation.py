@@ -1,5 +1,13 @@
 """Functions for the InVEST Flood Mitigation model."""
 
+import logging
+
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('flood_mitigation')
+
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
     landscape in a flood situation.
