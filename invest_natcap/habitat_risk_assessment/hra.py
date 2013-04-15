@@ -372,7 +372,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
-            if crit_name in h_s[pair]['Crit_Rasters']:
+            if c_name in h_s[pair]['Crit_Rasters']:
                 h_s[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
                 raise DQWeightNotFound("All spatial criteria desired within the \
