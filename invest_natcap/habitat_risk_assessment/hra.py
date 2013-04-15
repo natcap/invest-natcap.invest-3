@@ -377,7 +377,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             else:
                 raise DQWeightNotFound("All spatial criteria desired within the \
                     model run require corresponding Data Quality and Weight \
-                    information. Please run HRA Preprocessor again to include all
+                    information. Please run HRA Preprocessor again to include all\
                     relavant criteria data.")
 
     #Habs
@@ -415,7 +415,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             else:
                 raise DQWeightNotFound("All spatial criteria desired within the \
                     model run require corresponding Data Quality and Weight \
-                    information. Please run HRA Preprocessor again to include all
+                    information. Please run HRA Preprocessor again to include all\
                     relavant criteria data.")
 
     #Stressors
@@ -453,7 +453,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             else:
                 raise DQWeightNotFound("All spatial criteria desired within the \
                     model run require corresponding Data Quality and Weight \
-                    information. Please run HRA Preprocessor again to include all
+                    information. Please run HRA Preprocessor again to include all\
                     relavant criteria data.")
 
 
