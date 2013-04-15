@@ -21,10 +21,10 @@ class TestHRAPreprocessor(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
-        args['exposure_crits'] = ['intensity rating', 'management effectiveness']
+        args['exposure_crits'] = ['management effectiveness', 'intentsity_rating']
         args['sensitivity_crits'] = ['temporal overlap rating', \
                     'frequency of disturbance']
-        args['resilience_crits'] = ['natural mortality', 'recruitment rate']
+        args['resilience_crits'] = ['recruitment rate', 'natural mortality']
     
         self.args = args
 
@@ -381,7 +381,17 @@ class TestHRAPreprocessor(unittest.TestCase):
 
             c_file = open(c_uri, 'rU')
             r_file = open(expected_name, 'rU')
-           
+          
+            c_list = c_file.readlines()
+            r_list = r_file.readlines()
+
+            for i in range(0, len(c_list)):
+
+                LOGGER.debug("C Line is: %s", c_list[i])
+
+                LOGGER.debug("R Line is: %s", r_list[i])
+
+
             self.maxDiff = None
             self.assertEqual(c_file.readlines(), r_file.readlines())
 
