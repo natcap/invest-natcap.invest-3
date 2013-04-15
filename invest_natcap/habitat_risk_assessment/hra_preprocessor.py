@@ -772,6 +772,18 @@ def make_crit_shape_dict(crit_uri):
         }
     '''
     c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+    
+    res_dir = os.path.join(crit_uri, 'Resilience')
+    exps_dir = os.path.join(crit_uri, 'Exposure')
+    sens_dir = os.path.join(crit_uri, 'Sensitivity')
+   
+    for folder in [res_dir, exps_dir, sens_dir]:
+        if not os.path.exists(folder):
+            raise IOError("Using spatically explicit critiera requires you to \
+                    have subfolders named \"Resilience\", \"Exposure\", and \
+                    \"Sensitivity\". Check that all these folders exist, and \
+                    that your criteria are placed properly.")
+    
     #First, want to get the things that are either habitat specific or 
     #species specific. These should all be in the 'Resilience subfolder
     #of raster_criteria.
