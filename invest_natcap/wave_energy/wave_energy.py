@@ -390,6 +390,8 @@ def execute(args):
             wp_units_long, starting_percentile_range, percentiles,
             aoi_shape_path)
     
+    LOGGER.info('Completed Wave Energy Biophysical')
+
     try:
         valuation_checked = args['valuation_container']
     except KeyError:
@@ -397,9 +399,11 @@ def execute(args):
     else:
         if valuation_checked:
             # Output path for landing point shapefile
-            land_pt_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
+            land_pt_path = os.path.join(
+                    output_dir, 'LandPts_prj%s.shp' % file_suffix)
             # Output path for grid point shapefile
-            grid_pt_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
+            grid_pt_path = os.path.join(
+                    output_dir, 'GridPts_prj%s.shp' % file_suffix)
             # Output path for the projected net present value raster
             raster_projected_path = os.path.join(
                     intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
@@ -450,13 +454,17 @@ def execute(args):
             price = float(machine_econ['p'])
             drate = float(machine_econ['r'])
             smlpm = float(machine_econ['smlpm'])
+
             # The NPV is for a 25 year period
             year = 25.0
+            
             # A numpy array of length 25, representing the npv of a farm for
             # each year
             time = np.linspace(0.0, year - 1.0, year)
+            
             # The discount rate calculation for the npv equations
             rho = 1.0 / (1.0 + drate)
+            
             # Extract the landing and grid points data
             grid_pts = {}
             land_pts = {}
@@ -481,8 +489,9 @@ def execute(args):
             we_points = get_points_geometries(clipped_wave_shape_path)
             landing_points = get_points_geometries(land_pt_path)
             grid_point = get_points_geometries(grid_pt_path)
-            LOGGER.info('Calculating Distances.')
+            
             # Calculate the distances between the relative point groups
+            LOGGER.info('Calculating Distances.')
             wave_to_land_dist, wave_to_land_id = calculate_distance(
                     we_points, landing_points)
             land_to_grid_dist, land_to_grid_id = calculate_distance(
@@ -635,7 +644,9 @@ def execute(args):
             raster_utils.vectorize_points_uri(
                     clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
 
-            npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
+            npv_out_uri = os.path.join(
+                    output_dir, 'npv_usd%s.tif' % file_suffix)
+            
             # Clip the raster to the convex hull polygon
             raster_utils.clip_dataset_uri(
                     raster_projected_path, aoi_shape_path, npv_out_uri, False)
@@ -777,14 +788,14 @@ def load_binary_wave_data(wave_file_uri):
 
     # get rows,cols
     row_col_bin = wave_file.read(8)
-    col,row = struct.unpack('ii',row_col_bin)
+    col, row = struct.unpack('ii', row_col_bin)
 
     # get the periods and heights
     line = wave_file.read(col*4)
 
-    wave_periods = list(struct.unpack('f'*col,line))
+    wave_periods = list(struct.unpack('f' * col, line))
     line = wave_file.read(row*4)
-    wave_heights = list(struct.unpack('f'*row,line))
+    wave_heights = list(struct.unpack('f' * row, line))
 
     key = None
     while True:
@@ -800,11 +811,11 @@ def load_binary_wave_data(wave_file_uri):
         # Clear out array
         wave_array = []
 
-        key = struct.unpack('ii',line)
+        key = struct.unpack('ii', line)
 
         for row_id in range(row):
-            line = wave_file.read(col*4)
-            array = list(struct.unpack('f'*col,line))
+            line = wave_file.read(col * 4)
+            array = list(struct.unpack('f' * col, line))
             wave_array.append(array)
 
     wave_file.close()
@@ -927,7 +938,6 @@ def create_percentile_rasters(
     # scipy.scoreatpercentiles later
     dataset_array = np.reshape(matrix, (-1,))
     dataset_nodata_flat = np.reshape(matrix_mask, (-1))
-    dataset_large_flat = np.reshape(large_matrix, (-1))
 
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
