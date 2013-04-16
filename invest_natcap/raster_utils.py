@@ -1212,7 +1212,9 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     calculate_raster_stats(slope_dataset)
 
 
-def clip_dataset_uri(source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
+def clip_dataset_uri(
+        source_dataset_uri, aoi_datasource_uri, out_dataset_uri,
+        assert_projections):
     """This function will clip source_dataset to the bounding box of the 
         polygons in aoi_datasource and mask out the values in source_dataset
         outside of the AOI with the nodata values in source_dataset.
@@ -1220,8 +1222,14 @@ def clip_dataset_uri(source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
         source_dataset_uri - uri to single band GDAL dataset to clip
         aoi_datasource_uri - uri to ogr datasource
         out_dataset_uri - path to disk for the clipped datset
-
+        assert_projections - a boolean value for whether the dataset needs to be
+            projected
+        
         returns nothing"""
+    #NOTE: I have altered the signature of this function compared to the
+    # previous one because I want to be able to use vectorize_datasets to clip
+    # two sources that are not projected
+    
     #raise NotImplementedError('clip_dataset_uri is not implemented yet')
     
     # I choose to open up the dataset here because I want to use the
@@ -1246,7 +1254,8 @@ def clip_dataset_uri(source_dataset_uri, aoi_datasource_uri, out_dataset_uri):
 
     vectorize_datasets(
             [source_dataset_uri], op, out_dataset_uri, datatype, nodata,
-            pixel_size, 'intersection', aoi_uri=aoi_datasource_uri)
+            pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
+            assert_datasets_projected=assert_projections)
 
 def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     """This function will clip source_dataset to the bounding box of the 

@@ -29,8 +29,15 @@ class ImproperCriteriaAttributeName(Exception):
 class ImproperAOIAttributeName(Exception):
     '''An exception to pass in hra non core if the AOIzone files do not
     contain the proper attribute name for individual indentification. The
-    attribute should be named 'NAME', and must exist for every shape in the
+    attribute should be named 'name', and must exist for every shape in the
     AOI layer.'''
+    pass
+
+class DQWeightNotFound(Exception):
+    '''An exception to be passed if there is a shapefile within the spatial
+    criteria directory, but no corresponing data quality and weight to support
+    it. This would likely indicate that the user is try to run HRA without
+    having added the criteria name into hra_preprocessor properly.'''
     pass
 
 def execute(args):
@@ -213,6 +220,7 @@ def execute(args):
 
     #Criteria, if they exist.
     if 'criteria_dir' in hra_args:
+        LOGGER.debug(os.getcwd())
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
         LOGGER.debug("C_SHAPE_DICT %s", c_shape_dict)
         add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
@@ -365,8 +373,14 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=rating','ALL_TOUCHED=TRUE'])
              
-            h_s[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
-    
+            if c_name in h_s[pair]['Crit_Rasters']:
+                h_s[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
+            else:
+                raise DQWeightNotFound("All spatial criteria desired within the \
+                    model run require corresponding Data Quality and Weight \
+                    information. Please run HRA Preprocessor again to include all\
+                    relavant criteria data.")
+
     #Habs
     for h in crit_dict['h']:
         
@@ -397,7 +411,13 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
             
-            habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
+            if c_name in habitats[h]['Crit_Rasters']:  
+                habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
+            else:
+                raise DQWeightNotFound("All spatial criteria desired within the \
+                    model run require corresponding Data Quality and Weight \
+                    information. Please run HRA Preprocessor again to include all\
+                    relavant criteria data.")
 
     #Stressors
     for s in crit_dict['s']:
@@ -429,7 +449,13 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=Rating','ALL_TOUCHED=TRUE'])
              
-            stressors[s]['Crit_Rasters'][c_name]['DS'] = out_uri
+            if c_name in stressors[s]['Crit_Rasters']:
+                stressors[s]['Crit_Rasters'][c_name]['DS'] = out_uri
+            else:
+                raise DQWeightNotFound("All spatial criteria desired within the \
+                    model run require corresponding Data Quality and Weight \
+                    information. Please run HRA Preprocessor again to include all\
+                    relavant criteria data.")
 
 
 def make_add_overlap_rasters(dir, habitats, stressors, h_s, grid_size):
