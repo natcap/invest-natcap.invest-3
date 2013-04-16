@@ -62,6 +62,9 @@ def execute(args):
         args['number_of_machines'] - An integer specifying the number of 
             machines for a wave farm site. (required for Valuation)
 
+        args['suffix'] - A python string of characters to append to each output
+            filename (optional)
+
         returns nothing."""
 
     # Create the Output and Intermediate directories if they do not exist.
@@ -71,6 +74,14 @@ def execute(args):
     for directory in [output_dir, intermediate_dir]:
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+    # Append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
 
     # Get the uri for the DEM
     dem_uri = args['dem_uri']
@@ -151,25 +162,24 @@ def execute(args):
     
     # Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = os.path.join(
-            intermediate_dir, 'WEM_InputOutput_Pts.shp')
+            intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
     
     # Intermediate paths for wave energy and wave power rasters
     wave_energy_unclipped_path = os.path.join(
-            intermediate_dir, 'capwe_mwh_unclipped.tif')
+            intermediate_dir, 'capwe_mwh_unclipped%s.tif' % file_suffix)
     wave_power_unclipped_path = os.path.join(
-            intermediate_dir, 'wp_kw_unclipped.tif')
+            intermediate_dir, 'wp_kw_unclipped%s.tif' % file_suffix)
 
     # Final output paths for wave energy and wave power rasters
-    wave_energy_path = os.path.join(output_dir, 'capwe_mwh.tif')
-    wave_power_path = os.path.join(output_dir, 'wp_kw.tif')
+    wave_energy_path = os.path.join(output_dir, 'capwe_mwh%s.tif' % file_suffix)
+    wave_power_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
     
     # Paths for wave energy and wave power percentile rasters
-    wp_rc_path = os.path.join(output_dir, 'wp_rc.tif')
-    capwe_rc_path = os.path.join(output_dir, 'capwe_rc.tif')
+    wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
+    capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
     
     # Set nodata value and datatype for new rasters
-    #nodata = 0
-    nodata = float(np.finfo(np.float).tiny)
+    nodata = float(np.finfo(np.float32).min) - 1.0
     datatype = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
@@ -224,7 +234,7 @@ def execute(args):
         # Temporary shapefile path needed for an intermediate step when
         # changing the projection
         projected_wave_shape_path = os.path.join(
-                intermediate_dir, 'projected_wave_data.shp')
+                intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
         
         # Set the wave data shapefile to the same projection as the 
         # area of interest
@@ -357,10 +367,10 @@ def execute(args):
     # Clip the wave energy and wave power rasters so that they are confined 
     # to the AOI
     raster_utils.clip_dataset_uri(
-            wave_power_unclipped_path, aoi_shape_path, wave_power_path)
+            wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
 
     raster_utils.clip_dataset_uri(
-            wave_energy_unclipped_path, aoi_shape_path, wave_energy_path)
+            wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in  
@@ -374,10 +384,11 @@ def execute(args):
     starting_percentile_range = '1'
     create_percentile_rasters(wave_energy_path, capwe_rc_path,
             capwe_units_short, capwe_units_long, starting_percentile_range,
-            percentiles, nodata)
+            percentiles, aoi_shape_path)
     
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
-            wp_units_long, starting_percentile_range, percentiles, nodata)
+            wp_units_long, starting_percentile_range, percentiles,
+            aoi_shape_path)
     
     try:
         valuation_checked = args['valuation_container']
@@ -386,14 +397,14 @@ def execute(args):
     else:
         if valuation_checked:
             # Output path for landing point shapefile
-            land_pt_path = os.path.join(output_dir, 'LandPts_prj.shp')
+            land_pt_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
             # Output path for grid point shapefile
-            grid_pt_path = os.path.join(output_dir, 'GridPts_prj.shp')
+            grid_pt_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
             # Output path for the projected net present value raster
             raster_projected_path = os.path.join(
-                    intermediate_dir, 'npv_not_clipped.tif')
+                    intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
             # Path for the net present value percentile raster
-            npv_rc_path = os.path.join(output_dir, 'npv_rc.tif')
+            npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
             # Read machine economic parameters into a dictionary
             machine_econ = {}
@@ -609,8 +620,6 @@ def execute(args):
 
             compute_npv_farm_energy_uri(clipped_wave_shape_path)
 
-            datatype = gdal.GDT_Float32
-            nodata = -100000
             # Create a blank raster from the extents of the wave farm shapefile
             LOGGER.debug('Creating Raster From Vector Extents')
             raster_utils.create_raster_from_vector_extents_uri(
@@ -625,82 +634,23 @@ def execute(args):
                 
             raster_utils.vectorize_points_uri(
                     clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
-           
-            convex_uri = os.path.join(intermediate_dir, 'convex_hull.shp')
-            # Create a shapefile that is the convex hull of our points so that
-            # we can use it for masking and clipping
-            get_convex_hull_uri(
-                    clipped_wave_shape_path, 'convex_hull', convex_uri)
 
-            npv_out_uri = os.path.join(output_dir, 'npv_usd.tif')
+            npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
             # Clip the raster to the convex hull polygon
             raster_utils.clip_dataset_uri(
-                    raster_projected_path, convex_uri, npv_out_uri)
+                    raster_projected_path, aoi_shape_path, npv_out_uri, False)
 
             #Create the percentile raster for net present value
             percentiles = [25, 50, 75, 90]
             create_percentile_rasters(
                     npv_out_uri, npv_rc_path, ' (US$)',
-                    ' thousands of US dollars (US$)', '1', percentiles, nodata)
+                    ' thousands of US dollars (US$)', '1', percentiles,
+                    aoi_shape_path)
             
             LOGGER.debug('End of wave_energy_core.valuation')
 
         else:
             LOGGER.debug('Valuation not selected')
-
-def get_convex_hull_uri(point_datasource_uri, layer_name, output_uri):
-    """This function finds the convex hull of a point shapefile and creates a
-        new polygon shapefile based on the convex hull.
-
-        point_datasource_uri - an uri to a OGR point geometry datasource
-        layer_name - a string for the output polygon datasources layer name
-        output_uri - a URI for the output polygon datasource
-
-        returns - Nothing"""
-
-    point_datasource = ogr.Open(point_datasource_uri)
-    # Get the Layer and reset the pointer to make sure it is looking at the
-    # first feature
-    layer = point_datasource.GetLayer()
-    layer.ResetReading()
-    
-    # Create a geometry collection from all the points, which we will then get
-    # the convex hull from
-    point_collection = ogr.Geometry(ogr.wkbGeometryCollection)
-    # Iterate over all the points and build up the geometry collection
-    for index in range(layer.GetFeatureCount()):
-        feature = layer.GetFeature(index)
-        geometry = feature.GetGeometryRef()
-        point_collection.AddGeometry(geometry)
-
-    # Get the convex hull geometry
-    convex_hull = point_collection.ConvexHull()
-
-    # If the output_uri exists delete it
-    if os.path.isfile(output_uri):
-        os.remove(output_uri)
-    # Create a new datasource for the convex hull polygon
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(output_uri)
-
-    output_layer = output_datasource.CreateLayer(
-            layer_name, layer.GetSpatialRef(), ogr.wkbPolygon)
-
-    # Creating a field so that the datasource has at least one field
-    output_field = ogr.FieldDefn('ID', ogr.OFTReal)   
-    output_layer.CreateField(output_field)
-
-    output_feature = ogr.Feature(output_layer.GetLayerDefn())
-    output_layer.CreateFeature(output_feature)
-    
-    field_index = output_feature.GetFieldIndex('ID')
-    output_feature.SetField(field_index, 1)
-
-    # Set the geometry for the feature as the convex hull polygon
-    output_feature.SetGeometryDirectly(convex_hull)
-    output_layer.SetFeature(output_feature)
-    output_feature = None
-    output_datasource = None
 
 def build_point_shapefile(
         driver_name, layer_name, path, data, prj, coord_trans):
@@ -915,7 +865,7 @@ def get_coordinate_transformation(source_sr, target_sr):
     
 def create_percentile_rasters(
         raster_path, output_path, units_short, units_long, start_value, 
-        percentile_list, nodata):
+        percentile_list, aoi_shape_path):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
     ranges provided by taking the quartile of values.  
@@ -932,19 +882,22 @@ def create_percentile_rasters(
                   first percentile range (start_value - percentile_one)
     percentile_list - a python list of the percentiles ranges
         ex: [25, 50, 75, 90]
-    nodata - the nodata value for the output raster
+    aoi_shape_path - a uri to an OGR polygon shapefile to clip the rasters to
                   
     return - Nothing """
-    raster_dataset = gdal.Open(raster_path)
-    ds_gt = raster_dataset.GetGeoTransform()
+    
+    LOGGER.debug('Create Perctile Rasters')
+    
+    ds_gt = raster_utils.get_geotransform_uri(raster_path)
+    
     # If the output_path is already a file, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
     # Create a blank raster from raster_dataset
-    percentile_raster = raster_utils.new_raster_from_base(
-            raster_dataset, output_path, 'GTiff', nodata, gdal.GDT_Int32)
+    #percentile_raster = raster_utils.new_raster_from_base(
+    #        raster_dataset, output_path, 'GTiff', nodata, gdal.GDT_Int32)
     # Get raster bands
-    dataset_band = raster_dataset.GetRasterBand(1)
+    #dataset_band = raster_dataset.GetRasterBand(1)
     
     def raster_percentile(band):
         """Operation to use in vectorize_datasets that takes
@@ -961,66 +914,65 @@ def create_percentile_rasters(
     matrix = raster_utils.load_memory_mapped_array(
             raster_path, tmp_matrix_file, array_type=None)
 
-    tmp_mask_file = raster_utils.temporary_filename()
-    matrix_mask = raster_utils.load_memory_mapped_array(
-            raster_path, tmp_mask_file, array_type=None)
-    
-    tmp_compress_file = raster_utils.temporary_filename()
-    compress_matrix = raster_utils.load_memory_mapped_array(
-            raster_path, tmp_compress_file, array_type=None)
+    n_rows, n_cols = matrix.shape
 
-    # Read in the values of the raster we want to get percentiles from
-    #matrix = np.array(dataset_band.ReadAsArray())
-    # Flatten the 2D numpy array into a 1D numpy array
-    #dataset_array = matrix.flatten()
+    tmp_mask_file = raster_utils.temporary_filename()
+    matrix_mask = np.memmap(
+        tmp_mask_file, dtype = bool, mode = 'w+', shape = (n_rows, n_cols))
+    
+    tmp_mask_large_file = raster_utils.temporary_filename()
+    large_matrix = np.memmap(
+        tmp_mask_large_file, dtype = bool, mode = 'w+', shape = (n_rows, n_cols))
     
     dataset_array = np.reshape(matrix, (-1,))
     dataset_nodata_flat = np.reshape(matrix_mask, (-1))
+    dataset_large_flat = np.reshape(large_matrix, (-1))
 
     # Create a mask that makes all nodata values invalid.  Do this because
     # having a bunch of nodata values will muttle the results of getting the
     # percentiles
-
-    np.equal(dataset_array, nodata, dataset_nodata_flat)
-
+    neg_float = float(np.finfo(np.float32).min) - 1.0
+    ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
+    
+    np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
+    dataset_array[dataset_nodata_flat] = neg_float 
+    
     dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_nodata_flat)
 
+    min_val = dataset_mask.min()
+    max_val = dataset_mask.max()
+    LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
 
-    # Get all of the non-masked (non-nodata) data
-    #dataset_comp = np.ma.compressed(dataset_mask)
+    percentiles = get_percentiles(
+            dataset_array, percentile_list, min_val, max_val)
     
-    # Get the percentile marks
-    percentiles = get_percentiles(dataset_comp, percentile_list)
     LOGGER.debug('percentiles_list : %s', percentiles)
     # Get the percentile ranges
     percentile_ranges = create_percentile_ranges(
             percentiles, units_short, units_long, start_value)
     # Add the start_value to the beginning of the percentiles so that any value
-    # before the start value is set to nodata (zero)
+    # before the start value is set to (zero)
     percentiles.insert(0, int(start_value))
-    
-    raster_dataset = None
-    percentile_raster = None
-    matrix = None
-    dataset_array = None
-    dataset_mask = None
-    dataset_comp = None
-
+    nodata = np.iinfo(np.int32).min
     # Classify the pixels of raster_dataset into groups and write 
     # then to output band
     pixel_size = (float(ds_gt[1]) + np.absolute(float(ds_gt[5]))) / 2.0
     raster_utils.vectorize_datasets(
             [raster_path], raster_percentile, output_path, gdal.GDT_Int32,
-            nodata, pixel_size, 'intersection', assert_datasets_projected=False)
-   
-    percentile_ds = gdal.Open(output_path, 1)
-    percentile_band = percentile_ds.GetRasterBand(1)
+            nodata, pixel_size, 'intersection',
+            assert_datasets_projected=False, aoi_uri=aoi_shape_path)
+
+    tmp_perc_file = raster_utils.temporary_filename()
+    perc_array = raster_utils.load_memory_mapped_array(
+            output_path, tmp_perc_file, array_type=None)
+    count_rows, count_cols = perc_array.shape
 
     # Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
     # Read in percentile raster so that we can get the count of each group
-    perc_array = percentile_band.ReadAsArray()
+    #perc_array = percentile_band.ReadAsArray()
     percentile_groups = np.arange(1, len(percentiles) + 1)
+    LOGGER.debug('Percentile Groups : %s', percentile_groups)
     for percentile_class in percentile_groups:
         # This line of code takes the numpy array 'perc_array', which holds 
         # the values from the percentile_band after being grouped, and checks 
@@ -1028,29 +980,39 @@ def create_percentile_rasters(
         # This check gives an array of indices where the case was true, 
         # so we take the size of that array to give us the number of pixels 
         # that fall in that group.
-        pixel_count[percentile_class - 1] = \
-            np.where(perc_array == percentile_class)[0].size
-
+        
+        tmp_count_file = raster_utils.temporary_filename()
+        count_mask = np.memmap(
+            tmp_count_file, dtype = np.int32, mode = 'w+',
+            shape = (count_rows, count_cols))
+   
+        np.equal(perc_array, percentile_class, count_mask)
+        pixel_count[percentile_class - 1] = np.count_nonzero(count_mask)
+    
     LOGGER.debug('number of pixels per group: : %s', pixel_count)
     # Generate the attribute table for the percentile raster
     create_attribute_table(output_path, percentile_ranges, pixel_count)
 
-    percentile_ds = None
     # calculate min, max, std for visualization in arc
-    raster_utils.calculate_raster_stats_uri(output_path)
+    #raster_utils.calculate_raster_stats_uri(output_path)
 
-def get_percentiles(value_list, percentile_list):
+def get_percentiles(value_list, percentile_list, min_val, max_val):
     """Creates a list of integers of the percentile marks
     
     value_list - A list of numbers
     percentile_list - A list of ascending integers of the desired
                       percentiles
+    min_val - a int/float indicating the lower limit for computing the
+        percentile. Values lower will be ignored
+    max_val - a int/float indicating the upper limit for computing the
+        percentile. Values greater will be ignored
                       
     returns - A list of integers which are the percentile marks
     """
     pct_list = []
     for percentile in percentile_list:
-        pct_list.append(int(stats.scoreatpercentile(value_list, percentile)))
+        pct_list.append(int(stats.scoreatpercentile(
+            value_list, percentile, (min_val, max_val))))
     return pct_list
 
 def create_percentile_ranges(percentiles, units_short, units_long, start_value):

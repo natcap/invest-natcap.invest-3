@@ -93,7 +93,8 @@ packages = ['invest_natcap',
             'invest_natcap.wind_energy',
             'invest_natcap.aesthetic_quality',
             'invest_natcap.habitat_risk_assessment',
-            'invest_natcap.routing']
+            'invest_natcap.routing',
+            'invest_natcap.flood_mitigation']
 
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
