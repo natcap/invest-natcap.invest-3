@@ -327,6 +327,29 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
         r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
                         'mean')
 
+        #GETTING MEANS OF THE E RASTERS HERE
+
+        #Just going to have to pull explicitly. Too late to go back and
+        #rejigger now.
+        e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
+
+        #GETTING MEANS OF THE C RASTER HERE
+
+        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean')
+
+        #Now, want to place all values into the dictionary. Since we know that
+        #the names of the attributes will be the same for each dictionary, can
+        #just use the names of one to index into the rest.
+        for ident in r_agg_dict:
+            
+            name = name_map[ident]
+
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
 
