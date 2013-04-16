@@ -40,7 +40,7 @@
                     "id" : "grid_size",
                     "args_id" : "grid_size",
                     "type": "text",
-                    "label": "Resolution of Analysis (square meters)",
+                    "label": "Resolution of Analysis (meters sq.)",
                     "defaultValue": "500",
                     "required": true,
                     "validateAs": {"type": "number"},
@@ -86,12 +86,12 @@
                     "id": "aoi_tables",
                     "args_id": "aoi_tables",
                     "type": "hideableFileEntry",
-                    "label": "Use Subregions Shapefile for Summary Outputs? [Optional]",
+                    "label": "Use Subregions Shapefile?",
                     "required": false,
                     "validateAs": {"type": "OGR",
 		    		  "mustExist": true},
                     "defaultValue": "../HabitatRiskAssess/Input/Risk_Plot.shp",
-                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."
+                    "helpText": "This is an option input which will take in a shapefile conatining feature subregions, and create additional summary outputs across these various subregions."
                 }
             ]
         }

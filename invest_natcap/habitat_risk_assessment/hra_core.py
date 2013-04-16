@@ -205,8 +205,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
             "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
         
         for stressor, s_list in stress_dict.items():
-            LOGGER.debug("Stressor : %s", stressor)
-            LOGGER.debug("Type? %s", type(stressor))
 
             #Want the stressor column to span the number of AOIs that are included
             #within it. 
@@ -329,37 +327,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
         r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
                         'mean')
 
-        LOGGER.debug("dictionaryyy %s", r_agg_dict)
-
-        #GETTING MEANS OF THE E RASTERS HERE
-
-        #Just going to have to pull explicitly. Too late to go back and
-        #rejigger now.
-        e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
-
-        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
-
-        #GETTING MEANS OF THE C RASTER HERE
-
-        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
-
-        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
-
-        #Now, want to place all values into the dictionary. Since we know that
-        #the names of the attributes will be the same for each dictionary, can
-        #just use the names of one to index into the rest.
-        for ident in r_agg_dict:
-            
-            name = name_map[ident]
-
-            LOGGER.debug("name: %s", name)           
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
-
-            LOGGER.debug("dictionary is: %s", avgs_dict[h][s])
-        LOGGER.debug(avgs_dict)
 
     return avgs_dict
 
@@ -530,8 +499,8 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
     Returns nothing.
     '''
-#    LOGGER.debug(crit_lists)
-#    LOGGER.debug(denoms)
+    LOGGER.debug(crit_lists)
+    LOGGER.debug(denoms)
 
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
@@ -1039,7 +1008,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     denoms = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
-    LOGGER.debug(hab)
     #Now will iterrate through the dictionaries one at a time, since each has
     #to be placed uniquely.
 
@@ -1335,6 +1303,5 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             crit_lists['Risk']['s'][s].append(crit_E_uri)
 
-    LOGGER.debug(denoms)
     #This might help.
     return (crit_lists, denoms)
