@@ -21,10 +21,10 @@ class TestHRAPreprocessor(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
-        args['exposure_crits'] = ['intensity rating', 'management effectiveness']
-        args['sensitivity_crits'] = ['temporal overlap rating', \
+        args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
+        args['sensitivity_crits'] = ['temporal overlap', \
                     'frequency of disturbance']
-        args['resilience_crits'] = ['natural mortality', 'recruitment rate']
+        args['resilience_crits'] = ['recruitment rate', 'natural mortality']
     
         self.args = args
 
@@ -340,7 +340,17 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.assertRaises(hra_preprocessor.UnexpectedString,
                         hra_preprocessor.parse_habitat_overlap, test_CSV)
-   
+  
+    def test_Improper_Crit_FileStruct(self):
+        '''Since the folder structure for the criteria shapefiles must be in an
+        explicit form, want to check that it will error if given an incorrect
+        folder setup.'''
+
+        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Struct'
+
+        self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
+                    crit_uri)
+
     def test_overall_regression(self):
         '''This is the overarching regression test for the CSV outputs within
         preprocessor. We will use the habitats folder that we already have set
@@ -356,7 +366,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         #We know that the output will be within the workspace directory
         result_dir = os.path.join(self.args['workspace_dir'], 'habitat_stressor_ratings')
 
-        r_file_list = glob.glob(result_dir)
+        r_file_list = glob.glob(os.path.join(result_dir, '*'))
 
         #Know the location of our clean run directory, get the files within,
         #and check that they exist, and are correct within result_dir
@@ -371,13 +381,13 @@ class TestHRAPreprocessor(unittest.TestCase):
 
             c_file = open(c_uri, 'rU')
             r_file = open(expected_name, 'rU')
-           
+          
             self.maxDiff = None
             self.assertEqual(c_file.readlines(), r_file.readlines())
 
             #Want to check off that we know that file was good for expected
             #results
-            r_file_list.remover(expected_name)
+            r_file_list.remove(expected_name)
         
         #At this point, we should just have the dir_names.txt file left in the
         #file list of the created dictionary.
@@ -395,4 +405,4 @@ class TestHRAPreprocessor(unittest.TestCase):
         r_file_list.remove(r_expected_uri)
 
         #There should be no files left within the workspace directory
-        self.assertEqual(r_file_list, 0)
+        self.assertEqual(len(r_file_list), 0)

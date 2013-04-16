@@ -81,4 +81,6 @@ class TestHRA(unittest.TestCase):
         self.assertRaises(hra.ImproperCriteriaAttributeName,
                         hra.execute, self.args)
 
+    def test_extra_crit_shape(self):
 
+        

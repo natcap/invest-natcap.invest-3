@@ -15,7 +15,7 @@ from invest_natcap.raster_utils import temporary_filename
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('recreation_client')
+LOGGER = logging.getLogger('recreation_client_scenario')
 
 def urlopen(url,request,tries=3,delay=15,log=LOGGER):
     success=False
