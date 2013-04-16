@@ -2,6 +2,10 @@
 
 import logging
 
+from osgeo import gdal
+
+from invest_natcap import raster_utils
+
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -105,5 +109,15 @@ def adjust_cn_for_dry_season(cn_uri, adjusted_uri):
         dataset.
 
     Returns None."""
-    pass
 
+   def pixel_op(curve_num):
+       """Perform dry season adjustment on the pixel level.
+            Returns a float."""
+
+       return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+    cn_pixel_size = raster_utils.pixel_size(gdal.Open(cn_uri))
+
+    raster_utils.vectorize_datasets([cn_uri], pixel_op, adjusted_uri,
+        gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
