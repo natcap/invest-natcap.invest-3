@@ -92,3 +92,18 @@ def execute(args):
     This function returns None."""
 
     pass
+
+def adjust_cn_for_dry_season(cn_uri, adjusted_uri):
+    """Adjust the user's Curve Numbers raster for the Dry soil antecedent
+    moisture class.  In the dormant season, this class typically experiences
+    less than 12mm of rainfall, or 36 in the growing season.
+
+    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must be a
+        raster that GDAL can open.
+    adjusted_uri - a string URI to which the adjusted Curve Numbers to be saved.
+        If the file at this URI exists, it will be overwritten with a GDAL
+        dataset.
+
+    Returns None."""
+    pass
+
