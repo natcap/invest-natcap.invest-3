@@ -72,7 +72,7 @@ def reclassify_lulc_samp_cur():
     output_path = 'curve_numbers.tif'
 
     raster_utils.reclassify_by_dictionary(gdal.Open(lulc_path), reclass,
-        output_path, 'GTiff', 255, gdal.GDT_Float32)
+        output_path, 'GTiff', 255, gdal.GDT_Byte)
 
 if __name__ == '__main__':
     reclassify_lulc_samp_cur()
