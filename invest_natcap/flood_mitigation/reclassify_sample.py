@@ -1,4 +1,10 @@
-def reclassify_lulc_samp_cur.py():
+import os
+
+from osgeo import gdal
+
+from invest_natcap import raster_utils
+
+def reclassify_lulc_samp_cur():
     # I'm using Hydrological Soil Group A, from table 10.4 in the Flood Mitigation
     # user's guide.  Assuming pixel size of 900 m^2.
     reclass = {
@@ -59,3 +65,14 @@ def reclassify_lulc_samp_cur.py():
         93: 35,
         95: 35
     }
+
+    # setting the lulc_samp_cur path relative to the invest-3 root
+    lulc_path = os.path.join('test', 'data', 'base_data', 'terrestrial',
+        'lulc_samp_cur', 'hdr.adf')
+    output_path = 'curve_numbers.tif'
+
+    raster_utils.reclassify_by_dictionary(gdal.Open(lulc_path), reclass,
+        output_path, 'GTiff', 255, gdal.GDT_Float32)
+
+if __name__ == '__main__':
+    reclassify_lulc_samp_cur()
