@@ -220,9 +220,7 @@ def execute(args):
 
     #Criteria, if they exist.
     if 'criteria_dir' in hra_args:
-        LOGGER.debug(os.getcwd())
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
-        LOGGER.debug("C_SHAPE_DICT %s", c_shape_dict)
         add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
                     hra_args['stressors'], hra_args['h-s'], args['grid_size'])
 

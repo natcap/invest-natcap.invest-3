@@ -522,9 +522,6 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
     Returns nothing.
     '''
-    LOGGER.debug(crit_lists)
-    LOGGER.debug(denoms)
-
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
     
@@ -544,6 +541,8 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             
             value = value / denoms['Recovery'][h]
 
+            return value
+
         curr_list = crit_lists['Recovery'][h]
 
         #Need to get the arbitrary first element in order to have a pixel size
@@ -553,6 +552,9 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
 
+        LOGGER.debug("Curr_List: %s", curr_list)
+        LOGGER.debug("Denom?: %s", denoms['Recovery'][h])
+        
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, 0., pixel_size, "union", 
                     resample_method_list=None, dataset_to_align_index=None,
