@@ -26,7 +26,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Regression test for the wave energy model without any optional
             inputs.
         """
-        #raise SkipTest
+        raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy/no_options'
         
@@ -108,6 +108,117 @@ class TestWaveEnergy(unittest.TestCase):
         regression_dbf_uris = [
                 os.path.join(regression_dir, 'wp_rc_no_aoi_regression.tif.vat.dbf'),
                 os.path.join(regression_dir, 'capwe_rc_no_aoi_regression.tif.vat.dbf'),
+                #os.path.join(regression_dir, 'npv_rc_regression.tif.vat.dbf')
+                ]
+        dbf_uris = [
+                os.path.join(output_dir, 'output/wp_rc.tif.vat.dbf'),
+                os.path.join(output_dir, 'output/capwe_rc.tif.vat.dbf'),
+                #os.path.join(output_dir, 'output/npv_rc.tif.vat.dbf')
+                ]
+
+        # Regression check to make sure the dbf files with the attributes for the
+        # percentile rasters are correct
+        for reg_dbf_uri, dbf_uri in zip(regression_dbf_uris, dbf_uris):
+            try:
+                regression_table = dbf.Dbf(reg_dbf_uri)
+                db_file = dbf.Dbf(dbf_uri)
+                value_array = []
+                count_array = []
+                val_range_array = []
+                for rec, reg_rec in zip(db_file, regression_table):
+                    self.assertEqual(rec['VALUE'], reg_rec['VALUE'])
+                    self.assertEqual(rec['COUNT'], reg_rec['COUNT'])
+                    self.assertEqual(rec['VAL_RANGE'], reg_rec['VAL_RANGE'])
+                db_file.close()
+                regression_table.close()
+            except IOError, error:
+                self.assertTrue(False, 'The dbf file could not be opened')
+    
+    def test_wave_energy_regression_aoi(self):
+        """Regression test for the wave energy model when using an AOI.
+        """
+        raise SkipTest
+        test_dir = './data/wave_energy_data'
+        output_dir = './data/test_out/wave_energy/aoi'
+        
+        #Set all arguments to be passed
+        args = {}
+        # Required
+        args['workspace_dir'] = output_dir
+        args['wave_base_data_uri'] = os.path.join(
+                test_dir, 'samp_input/WaveData')
+        args['analysis_area_uri'] = 'West Coast of North America and Hawaii'
+        args['machine_perf_uri'] = os.path.join(
+                test_dir, 'samp_input/Machine_PelamisPerfCSV.csv')
+        args['machine_param_uri'] = os.path.join(
+                test_dir, 'samp_input/Machine_PelamisParamCSV.csv')
+        args['dem_uri'] = os.path.join(test_dir, 'samp_input/global_dem')
+        # Optional
+        #args['valuation_container'] = True
+        args['aoi_uri'] = os.path.join(test_dir, 'test_input/AOI_WCVI.shp')
+        #args['land_gridPts_uri'] =  os.path.join(
+        #        test_dir, 'samp_input/LandGridPts_WCVI_221.csv')
+        #args['machine_econ_uri'] = os.path.join(
+        #        test_dir, 'samp_input/Machine_PelamisEconCSV.csv') 
+        #args['number_of_machines'] = 28 
+        args['suffix'] = '' 
+        
+        #Add the Output directory onto the given workspace
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+
+        wave_energy.execute(args)
+        
+        regression_dir = './data/wave_energy_regression_data/'
+        
+        # Path names for output rasters to test 
+        regression_raster_uris = [
+                os.path.join(regression_dir, 'wp_kw_regression.tif'),
+                os.path.join(regression_dir, 'capwe_mwh_regression.tif'),
+                os.path.join(regression_dir, 'wp_rc_regression.tif'),
+                os.path.join(regression_dir, 'capwe_rc_regression.tif'),
+                #os.path.join(regression_dir, 'npv_usd_regression.tif'),
+                #os.path.join(regression_dir, 'npv_rc_regression.tif')
+                ]
+        raster_uris = [
+                os.path.join(output_dir, 'output/wp_kw.tif'),
+                os.path.join(output_dir, 'output/capwe_mwh.tif'),
+                os.path.join(output_dir, 'output/wp_rc.tif'),
+                os.path.join(output_dir, 'output/capwe_rc.tif'),
+                #os.path.join(output_dir, 'output/npv_usd.tif'),
+                #os.path.join(output_dir, 'output/npv_rc.tif')
+                ]
+        # Test that raster outputs are correct
+        for reg_raster_uri, raster_uri in zip(
+                regression_raster_uris, raster_uris):
+            invest_test_core.assertTwoDatasetEqualURI(
+                    self, reg_raster_uri, raster_uri)
+        
+        # Path names for output shapefiles to test
+        regression_shapes_uris = [
+                os.path.join(
+                    regression_dir, 'WEM_InputOutput_Pts_bio_regression.shp'),
+                #os.path.join(
+                #    regression_dir, 'WEM_InputOutput_Pts_val_regression.shp'),
+                #os.path.join(regression_dir, 'LandPts_prj_regression.shp'),
+                #os.path.join(regression_dir, 'GridPts_prj_regression.shp')
+                ]
+        shapes_uris = [
+                os.path.join(output_dir,
+                    'intermediate/WEM_InputOutput_Pts.shp'),
+                #os.path.join(output_dir, 'output/LandPts_prj.shp'),
+                #os.path.join(output_dir, 'output/GridPts_prj.shp')
+                ]
+        # Test that shapefile outputs are correct
+        for reg_shapes_uri, shapes_uri in zip(
+                regression_shapes_uris, shapes_uris):
+            invest_test_core.assertTwoShapesEqualURI(
+                    self, reg_shapes_uri, shapes_uri)
+
+        # Path names for output dbf tables
+        regression_dbf_uris = [
+                os.path.join(regression_dir, 'wp_rc_regression.tif.vat.dbf'),
+                os.path.join(regression_dir, 'capwe_rc_regression.tif.vat.dbf'),
                 #os.path.join(regression_dir, 'npv_rc_regression.tif.vat.dbf')
                 ]
         dbf_uris = [
@@ -221,6 +332,112 @@ class TestWaveEnergy(unittest.TestCase):
                 os.path.join(output_dir, 'output/wp_rc.tif.vat.dbf'),
                 os.path.join(output_dir, 'output/capwe_rc.tif.vat.dbf'),
                 os.path.join(output_dir, 'output/npv_rc.tif.vat.dbf')]
+
+        # Regression check to make sure the dbf files with the attributes for the
+        # percentile rasters are correct
+        for reg_dbf_uri, dbf_uri in zip(regression_dbf_uris, dbf_uris):
+            try:
+                regression_table = dbf.Dbf(reg_dbf_uri)
+                db_file = dbf.Dbf(dbf_uri)
+                value_array = []
+                count_array = []
+                val_range_array = []
+                for rec, reg_rec in zip(db_file, regression_table):
+                    self.assertEqual(rec['VALUE'], reg_rec['VALUE'])
+                    self.assertEqual(rec['COUNT'], reg_rec['COUNT'])
+                    self.assertEqual(rec['VAL_RANGE'], reg_rec['VAL_RANGE'])
+                db_file.close()
+                regression_table.close()
+            except IOError, error:
+                self.assertTrue(False, 'The dbf file could not be opened')
+    
+    def test_wave_energy_regression_suffix(self):
+        """Regression test for the wave energy model when doing valuation,
+            using an AOI, and a suffix.
+        """
+        #raise SkipTest
+        test_dir = './data/wave_energy_data'
+        output_dir = './data/test_out/wave_energy/aoi_val'
+        
+        #Set all arguments to be passed
+        args = {}
+        # Required
+        args['workspace_dir'] = output_dir
+        args['wave_base_data_uri'] = os.path.join(
+                test_dir, 'samp_input/WaveData')
+        args['analysis_area_uri'] = 'West Coast of North America and Hawaii'
+        args['machine_perf_uri'] = os.path.join(
+                test_dir, 'samp_input/Machine_PelamisPerfCSV.csv')
+        args['machine_param_uri'] = os.path.join(
+                test_dir, 'samp_input/Machine_PelamisParamCSV.csv')
+        args['dem_uri'] = os.path.join(test_dir, 'samp_input/global_dem')
+        # Optional
+        args['valuation_container'] = True
+        args['aoi_uri'] = os.path.join(test_dir, 'test_input/AOI_WCVI.shp')
+        args['land_gridPts_uri'] =  os.path.join(
+                test_dir, 'samp_input/LandGridPts_WCVI_221.csv')
+        args['machine_econ_uri'] = os.path.join(
+                test_dir, 'samp_input/Machine_PelamisEconCSV.csv') 
+        args['number_of_machines'] = 28 
+        args['suffix'] = 'suffix' 
+        
+        #Add the Output directory onto the given workspace
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
+
+        wave_energy.execute(args)
+        
+        regression_dir = './data/wave_energy_regression_data/'
+        
+        # Path names for output rasters to test 
+        regression_raster_uris = [
+                os.path.join(regression_dir, 'wp_kw_regression.tif'),
+                os.path.join(regression_dir, 'capwe_mwh_regression.tif'),
+                os.path.join(regression_dir, 'wp_rc_regression.tif'),
+                os.path.join(regression_dir, 'capwe_rc_regression.tif'),
+                os.path.join(regression_dir, 'npv_usd_regression.tif'),
+                os.path.join(regression_dir, 'npv_rc_regression.tif')]
+        raster_uris = [
+                os.path.join(output_dir, 'output/wp_kw_suffix.tif'),
+                os.path.join(output_dir, 'output/capwe_mwh_suffix.tif'),
+                os.path.join(output_dir, 'output/wp_rc_suffix.tif'),
+                os.path.join(output_dir, 'output/capwe_rc_suffix.tif'),
+                os.path.join(output_dir, 'output/npv_usd_suffix.tif'),
+                os.path.join(output_dir, 'output/npv_rc_suffix.tif')]
+        # Test that raster outputs are correct
+        for reg_raster_uri, raster_uri in zip(
+                regression_raster_uris, raster_uris):
+            invest_test_core.assertTwoDatasetEqualURI(
+                    self, reg_raster_uri, raster_uri)
+        
+        # Path names for output shapefiles to test
+        regression_shapes_uris = [
+                #os.path.join(
+                #    regression_dir, 'WEM_InputOutput_Pts_bio_regression.shp'),
+                os.path.join(
+                    regression_dir, 'WEM_InputOutput_Pts_val_regression.shp'),
+                os.path.join(regression_dir, 'LandPts_prj_regression.shp'),
+                os.path.join(regression_dir, 'GridPts_prj_regression.shp')]
+        shapes_uris = [
+                os.path.join(output_dir,
+                    'intermediate/WEM_InputOutput_Pts_suffix.shp'),
+                os.path.join(output_dir, 'output/LandPts_prj_suffix.shp'),
+                os.path.join(output_dir, 'output/GridPts_prj_suffix.shp')]
+        # Test that shapefile outputs are correct
+        for reg_shapes_uri, shapes_uri in zip(
+                regression_shapes_uris, shapes_uris):
+            invest_test_core.assertTwoShapesEqualURI(
+                    self, reg_shapes_uri, shapes_uri)
+
+        # Path names for output dbf tables
+        regression_dbf_uris = [
+                os.path.join(regression_dir, 'wp_rc_regression.tif.vat.dbf'),
+                os.path.join(regression_dir, 'capwe_rc_regression.tif.vat.dbf'),
+                os.path.join(regression_dir, 'npv_rc_regression.tif.vat.dbf')]
+        dbf_uris = [
+                os.path.join(output_dir, 'output/wp_rc_suffix.tif.vat.dbf'),
+                os.path.join(output_dir, 'output/capwe_rc_suffix.tif.vat.dbf'),
+                os.path.join(output_dir, 'output/npv_rc_suffix.tif.vat.dbf')]
 
         # Regression check to make sure the dbf files with the attributes for the
         # percentile rasters are correct
