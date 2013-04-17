@@ -355,7 +355,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Regression test for the wave energy model when doing valuation,
             using an AOI, and a suffix.
         """
-        #raise SkipTest
+        raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy/aoi_val'
         
@@ -459,9 +459,9 @@ class TestWaveEnergy(unittest.TestCase):
     
     def test_wave_energy_build_point_shapefile(self):
         """A regression test that uses known data and inputs to test
-        the validity of the function build_point_shapefile"""
+            the validity of the function build_point_shapefile"""
         raise SkipTest
-        output_dir = './data/test_out/wave_energy_core_build_pt_shapefile'
+        output_dir = './data/test_out/wave_energy_build_pt_shapefile'
         reg_shape_path = \
             './data/wave_energy_regression_data/LandPts_prj_regression.shp'
         reg_shape = ogr.Open(reg_shape_path)
@@ -484,7 +484,7 @@ class TestWaveEnergy(unittest.TestCase):
         target_sr = reg_shape.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
 
-        built_shape = wave_energy_core.build_point_shapefile(
+        built_shape = wave_energy.build_point_shapefile(
                 driver_name, layer_name, path, data, target_sr, coord_trans)
         built_shape = None
         reg_shape = None
@@ -492,13 +492,14 @@ class TestWaveEnergy(unittest.TestCase):
                 
     def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper 
-        shape after it has been clipped by a polygon shapefile.  
-        Here the clipping polygon is the same size and form as the shape to be 
-        clipped so we would expect the output to be equal to the input"""
+            shape after it has been clipped by a polygon shapefile.  
+            Here the clipping polygon is the same size and form as the shape
+            to be clipped so we would expect the output to be equal to the
+            input"""
 
         raise SkipTest
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_clip_shape'
+        output_dir = './data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
                 test_dir, 'test_input/NAmerica_WestCoast_4m.shp')
         binding_shape_path = os.path.join(
@@ -511,28 +512,21 @@ class TestWaveEnergy(unittest.TestCase):
             os.makedirs(output_dir)
         if os.path.isfile(new_shape_path):
             os.remove(new_shape_path)
-            
-        shape_to_clip = ogr.Open(shape_to_clip_path)
-        binding_shape = ogr.Open(binding_shape_path)
 
-        new_shape = wave_energy_core.clip_shape(
-                shape_to_clip, binding_shape, new_shape_path)
-
-        new_shape.Destroy()
-        shape_to_clip.Destroy()
-        binding_shape.Destroy()
+        wave_energy.clip_shape(
+                shape_to_clip_path, binding_shape_path, new_shape_path)
 
         invest_test_core.assertTwoShapesEqualURI(
                 self, shape_to_clip_path, new_shape_path)
 
     def test_wave_energy_clip_shape_empty(self):
         """A trivial test case that makes sure clip_shape returns an empty
-        shapefile if the binding polygon does not intersect with the other
-        shape's features"""
+            shapefile if the binding polygon does not intersect with the other
+            shape's features"""
 
         raise SkipTest
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_clip_shape'
+        output_dir = './data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
                 test_dir, 'test_input/pointShapeTest.shp')
         binding_shape_path = os.path.join(test_dir, 'test_input/AOI_WCVI.shp')
@@ -542,30 +536,26 @@ class TestWaveEnergy(unittest.TestCase):
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
 
-        shape_to_clip = ogr.Open(shape_to_clip_path)
-        binding_shape = ogr.Open(binding_shape_path)
+        wave_energy.clip_shape(
+                shape_to_clip_path, binding_shape_path, new_shape_path)
 
-        new_shape = wave_energy_core.clip_shape(
-                shape_to_clip, binding_shape, new_shape_path)
-
+        new_shape = ogr.Open(new_shape_path)
         layer = new_shape.GetLayer(0)
 
         self.assertEqual(layer.GetFeatureCount(), 0)
 
         layer = None
-        new_shape.Destroy()
-        shape_to_clip.Destroy()
-        binding_shape.Destroy()
+        new_shape = None
 
     def test_wave_energy_clip_shape_hand_calculated(self):
-        """A non trivial test case that makes sure clip_shape returns the proper shape
-        after it has been clipped by a polygon shapefile. Also check values of features
-        based on known hand given results.
+        """A non trivial test case that makes sure clip_shape returns the
+            proper shape after it has been clipped by a polygon shapefile.
+            Also check values of features based on known hand given results.
         """
         raise SkipTest
 
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_clip_shape'
+        output_dir = './data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
                 test_dir, 'test_input/NAmerica_WestCoast_4m.shp')
         binding_shape_path = os.path.join(
@@ -577,20 +567,18 @@ class TestWaveEnergy(unittest.TestCase):
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
 
-        shape_to_clip = ogr.Open(shape_to_clip_path)
-        binding_shape = ogr.Open(binding_shape_path)
-
-        new_shape = wave_energy_core.clip_shape(
-                shape_to_clip, binding_shape, new_shape_path)
-        #It seems that the fields "FID" and "Shape" are not included for some 
-        #reason when
-        #Looping through all the fields of the shapefile
+        wave_energy.clip_shape(
+                shape_to_clip_path, binding_shape_path, new_shape_path)
+        
+        # It seems that the fields "FID" and "Shape" are not included for some 
+        # reason when Looping through all the fields of the shapefile
         point_one_fields = [572, 490, -126.933144, 47.600162, 2.8, 11.1]
         point_two_fields = [573, 490, -126.866477, 47.600162, 2.8, 11.11]
         point_three_fields = [574, 490, -126.79981, 47.600162, 2.79, 11.11]
-        point_field_array = [point_one_fields, point_two_fields, 
-                             point_three_fields]
+        point_field_array = [
+                point_one_fields, point_two_fields, point_three_fields]
 
+        new_shape = ogr.Open(new_shape_path)
         layer = new_shape.GetLayer(0)
         feat_count_calc = 3
         feat_count = layer.GetFeatureCount()
@@ -613,70 +601,46 @@ class TestWaveEnergy(unittest.TestCase):
                                  'The field values do not match' + str(field) + 
                                  '!=' + str(field_calc))
 
-            feat.Destroy()
+            feat = None
             feat = layer.GetNextFeature()
             point_array_iderator = point_array_iderator + 1
 
-        new_shape.Destroy()
-        shape_to_clip.Destroy()
-        binding_shape.Destroy()
-
-    def test_wave_energy_get_points_values(self):
-        """Test get_points_values by using hand calculated results to
-        check against returned values.
-        """
-        raise SkipTest
-
-        shape_path = './data/wave_energy_data/test_input/pointShapeTest.shp'
-
-        shape_to_clip = ogr.Open(shape_path)
-        value = 'HSAVG_M'
-        points = [[-126.933144, 47.600162], [-126.866477, 47.600162], 
-                  [-126.79981, 47.600162]]
-        values = [2.8, 2.8, 2.79]
-        shape_array = wave_energy_core.get_points_values(shape_to_clip, value)
-        self.assertEqual(len(points), len(shape_array[0]), 
-                         'The number of points do not match')
-        self.assertEqual(len(values), len(shape_array[1]), 
-                         'The number of values do not match')
-        shape_points = shape_array[0]
-        shape_values = shape_array[1]
-        calc_dict = {}
-        fun_dict = {}
-        for index, var in enumerate(points):
-            calc_dict[tuple(var)] = values[index]
-        for index, var in enumerate(shape_points):
-            fun_dict[tuple(var)] = shape_values[index]
-        for key, val in calc_dict.iteritems():
-            if key in fun_dict:
-                self.assertEqual(val, fun_dict[key], 'The values do not match')
-            else:
-                self.assertEqual(0, 1, 'The keys do not match')
-
-        shape_to_clip.Destroy()
+        new_shape = None
 
     def test_wave_energy_captured_wave_energy_to_shape(self):
         """Test captured_wave_energy_to_shape using hand calculated and 
-        generated values to pass into the function.
+            generated values to pass into the function.
         """
         raise SkipTest
 
         shape_path = './data/wave_energy_data/test_input/pointShapeTest.shp'
+        out_dir = \
+            './data/test_out/wave_energy/captured_wave_energy_to_shape'
+        shape_copy_path = os.path.join(out_dir,'pointShapeTest_copy.shp')
+
         wave_shape = ogr.Open(shape_path)
 
-        wave_shape_copy = \
-            ogr.GetDriverByName('Memory').CopyDataSource(wave_shape, '')
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+        if os.path.isfile(shape_copy_path):
+            os.remove(shape_copy_path)
+
+        wave_shape_driver = ogr.GetDriverByName('ESRI Shapefile')
+        wave_shape_copy = wave_shape_driver.CopyDataSource(
+                wave_shape, shape_copy_path)
+        
+        wave_shape_copy = None
 
         test_dict = {(572, 490):2302, (573, 490):1453, (574, 490):2103}
         ij_array = [[572, 490], [573, 490], [574, 490]]
         
-        wave_energy_core.captured_wave_energy_to_shape(
-                test_dict, wave_shape_copy)
+        wave_energy.captured_wave_energy_to_shape(
+            test_dict, shape_copy_path)
 
+        wave_shape_copy = ogr.Open(shape_copy_path)
         layer = wave_shape_copy.GetLayer(0)
         #Need to reset the layer because the function call goes through the 
         #features in the layer and does not reset or close.
-        layer.ResetReading()
         feat = layer.GetNextFeature()
         comp_dict = {}
         while feat is not None:
@@ -687,7 +651,7 @@ class TestWaveEnergy(unittest.TestCase):
                 temp_array.append(field_val)
             comp_dict[(temp_array[0], temp_array[1])] = temp_array[2]
 
-            feat.Destroy()
+            feat = None
             feat = layer.GetNextFeature()
 
         self.assertEqual(len(test_dict), len(comp_dict), 
@@ -699,12 +663,12 @@ class TestWaveEnergy(unittest.TestCase):
             else:
                 self.assertEqual(0, 1, 
                                  'The key does not exist in the new feature')
-        wave_shape.Destroy()
-        wave_shape_copy.Destroy()
+        wave_shape = None
+        wave_shape_copy = None
 
     def test_wave_energy_compute_wave_energy_capacity(self):
         """Test compute_wave_energy_capacity function using hand generated
-        values and results."""
+            values and results."""
 
         raise SkipTest
         #A dictionary representing a mini version of what would be produced
@@ -728,21 +692,22 @@ class TestWaveEnergy(unittest.TestCase):
         #Hand calculated results for the two points
         result = {(520, 490):0.0762, (521, 491):0.22116}
 
-        we_sum = wave_energy_core.compute_wave_energy_capacity(
+        we_sum = wave_energy.compute_wave_energy_capacity(
                     wave_data, interpZ, machine_param)
 
         #Loop that compares dictionaries we_sum and result checking key, 
         #sum values
         for key in result:
             if key in we_sum:
-                self.assertAlmostEqual(result[key], we_sum[key], 8, \
+                self.assertAlmostEqual(
+                        result[key], we_sum[key], 8,
                         'The values do not match for key ' + str(we_sum[key]))
             else:
                 self.assertEqual(0, 1, 'The keys do not match')
 
     def test_wave_energy_wave_energy_interp(self):
         """Test wave_energy_interp by using hand calculations and hand
-        calculated results based on the given inputs.
+            calculated results based on the given inputs.
         """
         raise SkipTest
         #Rows/Col
@@ -763,7 +728,7 @@ class TestWaveEnergy(unittest.TestCase):
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0],
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0]]
         result = np.array(result)
-        interpZ = wave_energy_core.wave_energy_interp(wave_data, machine_perf)
+        interpZ = wave_energy.wave_energy_interp(wave_data, machine_perf)
 
         self.assertEqual(
                 result.shape, interpZ.shape, 'The shapes are not the same')
@@ -775,12 +740,12 @@ class TestWaveEnergy(unittest.TestCase):
                 
     def test_wave_energy_wave_power(self):
         """Test the wave_power function by hand calculating wave power with 
-        known variables and creating shapefile with those variables and 
-        comparing returned value against known results."""
+            known variables and creating shapefile with those variables and 
+            comparing returned value against known results."""
         raise SkipTest
 
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_wave_power'
+        output_dir = './data/test_out/wave_energy_wave_power'
         shape_path = os.path.join(
                 test_dir, 'test_input/test_wave_power_shape.shp')
         shape_copy_path = os.path.join(output_dir, 'test_wave_power_shape.shp')
@@ -817,12 +782,16 @@ class TestWaveEnergy(unittest.TestCase):
             feat.SetField(period_index, period_list[i])
         
             layer.SetFeature(feat)
-            feat.Destroy()
+            feat = None
             feat = layer.GetNextFeature()
             i = i + 1
+
         layer = None
-        shape_copy = wave_energy_core.wave_power(shape_copy)
+        shape_copy = None
         
+        wave_energy.wave_power(shape_copy_path)
+        
+        shape_copy = ogr.Open(shape_copy_path)
         layer = shape_copy.GetLayer(0)
         layer.ResetReading()
         feat = layer.GetNextFeature()
@@ -833,18 +802,19 @@ class TestWaveEnergy(unittest.TestCase):
             self.assertAlmostEqual(
                     wave_power, calculations_by_hand[i], 1, 
                     'Wave Power calculations do not match.')
-            feat.Destroy()
+            feat = None
             feat = layer.GetNextFeature()
             i = i + 1
-        shape_copy.Destroy()
-        shape.Destroy()
+        
+        shape_copy = None
+        shape = None
         
     def test_wave_energy_wave_power_regression(self):
         """A regresssion test for the wave_power function."""
         raise SkipTest
 
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_wave_power'
+        output_dir = './data/test_out/wave_energy_wave_power'
         regression_dir = './data/wave_energy_regression_data'
         shape_path = os.path.join(
                 test_dir, 'test_input/test_wavepower_withfields.shp')
@@ -863,8 +833,10 @@ class TestWaveEnergy(unittest.TestCase):
         shape_reg = ogr.Open(regression_shape_path)
         shape_copy = ogr.GetDriverByName('ESRI Shapefile').\
                              CopyDataSource(shape, shape_copy_path)
-        shape_copy = wave_energy_core.wave_power(shape_copy)
-        
+        shape_copy = None
+        shape_copy = wave_energy.wave_power(shape_copy_path)
+        shape_copy = ogr.Open(shape_copy_path)
+
         layer = shape_copy.GetLayer(0)
         layer_reg = shape_reg.GetLayer(0)
         layer.ResetReading()
@@ -878,30 +850,37 @@ class TestWaveEnergy(unittest.TestCase):
             self.assertEqual(
                     wave_power, wave_power_reg,
                     'The wave power values do not match.')
-            feat.Destroy()
-            feat_reg.Destroy()
+            feat = None
+            feat_reg = None
             feat = layer.GetNextFeature()
             feat_reg = layer_reg.GetNextFeature()
 
-        shape_copy.Destroy()
-        shape.Destroy()
-        shape_reg.Destroy()
+        shape_copy = None
+        shape = None
+        shape_reg = None
 
     def test_wave_energy_get_points(self):
         """Test the get_points_geometries function by first creating a shapefile
-        with assigned points and geometries. Pass shapefile to function
-        and checked returned value against calculated ones."""
+            with assigned points and geometries. Pass shapefile to function
+            and checked returned value against calculated ones."""
         raise SkipTest
         shape_path = \
             './data/wave_energy_data/test_input/test_wavepower_withfields.shp'
+        out_dir = './data/test_out/wave_energy/get_points_geometries'
+        out_path = os.path.join(out_dir, 'points_geom.shp')
+        
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+        if os.path.isfile(out_path):
+            os.remove(out_path)
         
         shape = ogr.Open(shape_path)
         layer = shape.GetLayer(0)
         calculated_points = [[-126.726911, 48.241337], [-126.580642, 48.240944],
                              [-126.726911, 48.098204], [-126.5771122, 48.015067],
                               [-126.427313, 48.091537]]
-        drv = ogr.GetDriverByName('MEMORY')
-        src = drv.CreateDataSource('')
+        drv = ogr.GetDriverByName('ESRI Shapefile')
+        src = drv.CreateDataSource(out_path)
         lyr = src.CreateLayer('geom', layer.GetSpatialRef(), ogr.wkbPoint)
         field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
         lyr.CreateField(field_defn)
@@ -913,10 +892,13 @@ class TestWaveEnergy(unittest.TestCase):
             lyr.CreateFeature(feat)
             feat.SetGeometryDirectly(point)
             lyr.SetFeature(feat)
-            feat.Destroy()
+            feat = None
         
         lyr.ResetReading()
-        result_points = wave_energy_core.get_points_geometries(src)
+        shape = None
+        src = None
+
+        result_points = wave_energy.get_points_geometries(out_path)
         
         for index, value in enumerate(result_points):
             self.assertEqual(value[0], calculated_points[index][0],
@@ -926,15 +908,15 @@ class TestWaveEnergy(unittest.TestCase):
         
     def test_wave_energy_calc_dist(self):
         """Test the calculate_distance function by hand calculating the
-        distances between known points and checking them against the functions
-        returned results on the same set of points."""
-        raise SkipTest
+            distances between known points and checking them against
+            the functions returned results on the same set of points."""
+        #raise SkipTest
         xy_1 = np.array([[250, 120], [300, 212], [125, 215], [1222, 988]])
         xy_2 = np.array([[156, 133], [198, 111]])
         calculated_dist_results = np.array(
                 [52.77309921, 143.5444182, 87.66413178, 1348.222904])
         calculated_id_results = np.array([1, 1, 0, 1])
-        dist_results, id_results = wave_energy_core.calculate_distance(
+        dist_results, id_results = wave_energy.calculate_distance(
                 xy_1, xy_2)
         calculated_dist_rounded = np.ma.round(calculated_dist_results, 3)
         dist_rounded = np.ma.round(dist_results, 3)
@@ -944,85 +926,92 @@ class TestWaveEnergy(unittest.TestCase):
                         'Not all of the distances were equal.')
         self.assertTrue(mask_id.all(), 'Not all of the IDs matched.')
         
-    def test_wave_energy_create_percentile_raster(self):
-        """A non-trivial test case that passes in a generated 10x10 raster
-        with values from 1 - 100, along with the other necessary arguments.
-        It then compares the resulting percentile raster against hand
-        calculated results."""
-        
-        raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_percentile_raster'
-        #Output path for created raster
-        perc_path = os.path.join(output_dir, 'percentile_five_by_five.tif')
-        #Add the Output directory onto the given workspace
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir)
-        if os.path.isfile(perc_path):
-            os.remove(perc_path)
-        #Make a dummy 10 x 10 raster
-        raster_size = 10
-        driver = gdal.GetDriverByName('GTiff')
-        dataset = driver.Create(
-                perc_path, raster_size, raster_size, 1, gdal.GDT_Int32)
-        #Create a 10 x 10 2D numpy array with values ranging from 1 to 100
-        raster_data = np.reshape(np.arange(1,101),(10,10))
-        dataset.GetRasterBand(1).WriteArray(raster_data, 0, 0)
-        calculated_perc_list = [25,50,75,90]
-        calc_value_array = [1,2,3,4,5]
-        calc_count_array = [24, 25, 25, 15, 11]
-        calc_val_range_array = ['1 - 25 the amount of mice per cat (mice/cat)',
-                                '25 - 50 (mice/cat)',
-                                '50 - 75 (mice/cat)',
-                                '75 - 90 (mice/cat)',
-                                'Greater than 90 (mice/cat)']
-        calculated_output_raster = np.array([[1,1,1,1,1,1,1,1,1,1],
-                                            [1,1,1,1,1,1,1,1,1,1],
-                                            [1,1,1,1,2,2,2,2,2,2],
-                                            [2,2,2,2,2,2,2,2,2,2],
-                                            [2,2,2,2,2,2,2,2,2,3],
-                                            [3,3,3,3,3,3,3,3,3,3],
-                                            [3,3,3,3,3,3,3,3,3,3],
-                                            [3,3,3,3,4,4,4,4,4,4],
-                                            [4,4,4,4,4,4,4,4,4,5],
-                                            [5,5,5,5,5,5,5,5,5,5]])
-        units_short = ' (mice/cat)'
-        units_long = ' the amount of mice per cat (mice/cat)'
-        percentile_raster = wave_energy_core.create_percentile_rasters(
-                dataset, perc_path, units_short, units_long, '1', 
-                [25,50,75,90], 0)
-        perc_band = percentile_raster.GetRasterBand(1)
-        perc_matrix = perc_band.ReadAsArray()
-        LOGGER.debug('percentile matrix: %s', perc_matrix)
-        LOGGER.debug('matrix: %s', calculated_output_raster)
-        #Assert that the resulting raster's data is what is expected
-        self.assertTrue((perc_matrix == calculated_output_raster).all())
-        #Verify the resulting dbf attribute table is what is expected
-        try:
-            db_file = dbf.Dbf(perc_path+'.vat.dbf')
-            value_array = []
-            count_array = []
-            val_range_array = []
-            for rec in db_file:
-                value_array.append(rec['VALUE'])
-                count_array.append(rec['COUNT'])
-                val_range_array.append(rec['VAL_RANGE'])
-            LOGGER.debug('ranges : %s : %s', val_range_array, 
-                         calc_val_range_array)
-            for i in range(5):
-                self.assertEqual(value_array[i], calc_value_array[i])
-                self.assertEqual(count_array[i], calc_count_array[i])
-                self.assertEqual(val_range_array[i], calc_val_range_array[i])
-            db_file.close()
-        except IOError, error:
-            self.assertTrue(False, 'The dbf file could not be opened')
+#   def test_wave_energy_create_percentile_raster(self):
+#       """A non-trivial test case that passes in a generated 10x10 raster
+#           with values from 1 - 100, along with the other necessary arguments.
+#           It then compares the resulting percentile raster against hand
+#           calculated results."""
+#       
+#       #raise SkipTest
+#       test_dir = './data/wave_energy_data'
+#       reg_dir = './data/wave_energy_regression_data'
+#       output_dir = './data/test_out/wave_energy/we_percentile_raster'
+#       #Output path for created raster
+#       dataset_path = os.path.join(output_dir, 'percentile_ten_by_ten.tif')
+#       perc_path = os.path.join(output_dir, 'percentile_out.tif')
+#       aoi_path = os.path.join(reg_dir, 'percentile_aoi.shp')
+#       
+#       #Add the Output directory onto the given workspace
+#       if not os.path.isdir(output_dir):
+#           os.makedirs(output_dir)
+#       if os.path.isfile(perc_path):
+#           os.remove(perc_path)
+#       #Make a dummy 10 x 10 raster
+#       raster_size = 10
+#       driver = gdal.GetDriverByName('GTiff')
+#       dataset = driver.Create(
+#               dataset_path, raster_size, raster_size, 1, gdal.GDT_Float32)
+#       #Create a 10 x 10 2D numpy array with values ranging from 1 to 100
+#       raster_data = np.reshape(np.arange(1,101),(10,10))
+#       dataset.GetRasterBand(1).WriteArray(raster_data, 0, 0)
+#       calculated_perc_list = [25,50,75,90]
+#       calc_value_array = [1,2,3,4,5]
+#       calc_count_array = [24, 25, 25, 15, 11]
+#       calc_val_range_array = ['1 - 25 the amount of mice per cat (mice/cat)',
+#                               '25 - 50 (mice/cat)',
+#                               '50 - 75 (mice/cat)',
+#                               '75 - 90 (mice/cat)',
+#                               'Greater than 90 (mice/cat)']
+#       calculated_output_raster = np.array([[1,1,1,1,1,1,1,1,1,1],
+#                                           [1,1,1,1,1,1,1,1,1,1],
+#                                           [1,1,1,1,2,2,2,2,2,2],
+#                                           [2,2,2,2,2,2,2,2,2,2],
+#                                           [2,2,2,2,2,2,2,2,2,3],
+#                                           [3,3,3,3,3,3,3,3,3,3],
+#                                           [3,3,3,3,3,3,3,3,3,3],
+#                                           [3,3,3,3,4,4,4,4,4,4],
+#                                           [4,4,4,4,4,4,4,4,4,5],
+#                                           [5,5,5,5,5,5,5,5,5,5]])
+#       units_short = ' (mice/cat)'
+#       units_long = ' the amount of mice per cat (mice/cat)'
+#       dataset = None
+#       wave_energy.create_percentile_rasters(
+#               dataset_path, perc_path, units_short, units_long, '1', 
+#               [25,50,75,90], aoi_path)
+
+#       percentile_raster = gdal.Open(perc_path)
+#       perc_band = percentile_raster.GetRasterBand(1)
+#       perc_matrix = perc_band.ReadAsArray()
+#       LOGGER.debug('percentile matrix: %s', perc_matrix)
+#       LOGGER.debug('matrix: %s', calculated_output_raster)
+#       #Assert that the resulting raster's data is what is expected
+#       self.assertTrue((perc_matrix == calculated_output_raster).all())
+#       #Verify the resulting dbf attribute table is what is expected
+#       try:
+#           db_file = dbf.Dbf(perc_path+'.vat.dbf')
+#           value_array = []
+#           count_array = []
+#           val_range_array = []
+#           for rec in db_file:
+#               value_array.append(rec['VALUE'])
+#               count_array.append(rec['COUNT'])
+#               val_range_array.append(rec['VAL_RANGE'])
+#           LOGGER.debug('ranges : %s : %s', val_range_array, 
+#                        calc_val_range_array)
+#           for i in range(5):
+#               self.assertEqual(value_array[i], calc_value_array[i])
+#               self.assertEqual(count_array[i], calc_count_array[i])
+#               self.assertEqual(val_range_array[i], calc_val_range_array[i])
+#           db_file.close()
+#       except IOError, error:
+#           self.assertTrue(False, 'The dbf file could not be opened')
     
     def test_wave_energy_create_percentile_raster_regression(self):
         """A regression test for create_percentile_raster."""
         raise SkipTest
         
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_percentile_raster'
+        output_dir = './data/test_out/wave_energy_percentile_raster'
         regression_dir = './data/wave_energy_regression_data'
         #The raster dataset input
         regression_dataset_uri = os.path.join(
@@ -1043,7 +1032,7 @@ class TestWaveEnergy(unittest.TestCase):
         regression_dataset = gdal.Open(regression_dataset_uri)
         units_short = ' (kW/m)'
         units_long = ' wave power per unit width of wave crest length (kW/m)'
-        percentile_raster = wave_energy_core.create_percentile_rasters(
+        percentile_raster = wave_energy.create_percentile_rasters(
                 regression_dataset, perc_path, units_short, units_long, 
                 '1', [25,50,75,90], 0)
         percentile_raster = None
@@ -1076,7 +1065,7 @@ class TestWaveEnergy(unittest.TestCase):
         values = np.arange(1,101)
         calc_percentiles = [25, 50, 75, 90]
         perc_list = [25,50,75,90]
-        percentiles = wave_energy_core.get_percentiles(values, perc_list)
+        percentiles = wave_energy.get_percentiles(values, perc_list)
         self.assertTrue(calc_percentiles == percentiles)
         return
     
@@ -1089,7 +1078,7 @@ class TestWaveEnergy(unittest.TestCase):
         units_short = ' (m/s)'
         units_long = ' the rate of time travel in meters per second (m/s)'
         percentiles = [4, 8, 12, 16]
-        ranges = wave_energy_core.create_percentile_ranges(percentiles, units_short, units_long, '1')
+        ranges = wave_energy.create_percentile_ranges(percentiles, units_short, units_long, '1')
         calc_ranges = ['1 - 4 the rate of time travel in meters per second (m/s)',
                        '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 'Greater than 16 (m/s)']
         #Check that the returned ranges as Strings are correct
@@ -1102,7 +1091,7 @@ class TestWaveEnergy(unittest.TestCase):
         from the function being tested."""
         raise SkipTest
         
-        output_dir = './data/test_out/wave_energy_core_attribute_table'
+        output_dir = './data/test_out/wave_energy_attribute_table'
         raster_uri = os.path.join(output_dir, 'test_attr_table.tif')
         dbf_uri = raster_uri + '.vat.dbf'
         #Add the Output directory onto the given workspace
@@ -1118,7 +1107,7 @@ class TestWaveEnergy(unittest.TestCase):
             'Greater than 16 (m/s)']
         calc_count = [24, 25, 25, 15, 11]
         calc_values = [1,2,3,4,5]
-        wave_energy_core.create_attribute_table(
+        wave_energy.create_attribute_table(
                 raster_uri, calc_ranges, calc_count)
         #Check that the dbf attribute table returned is correct and what
         #is expected
@@ -1137,97 +1126,5 @@ class TestWaveEnergy(unittest.TestCase):
                 self.assertEqual(count_array[i], calc_count[i])
                 self.assertEqual(val_range_array[i], calc_ranges[i])
             db_file.close()
-        except IOError, error:
-            self.assertTrue(False, 'The dbf file could not be opened')
-        
-    def test_wave_energy_valuation_regression(self):
-        """Runs the valuation part of the Wave Energy Model (WEM),
-        and does regression tests against the raster outputs and shapefile
-        output.
-        """
-        raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_core_valuation'
-        intermediate_dir = os.path.join(output_dir, 'Intermediate')
-        out_dir = os.path.join(output_dir, 'Output')
-        wave_data_shape_path = os.path.join(
-                test_dir, 'test_input/WEM_InputOutput_Pts_Bio.shp')
-        wave_data_copy_path = os.path.join(
-                test_dir, 'test_input/WEM_InputOutput_Bio_copy.shp')
-        number_of_machines = 28
-        machine_econ_path = os.path.join(
-                test_dir, 'samp_input/Machine_PelamisEconCSV.csv')
-        land_grid_path = os.path.join(
-                test_dir, 'samp_input/LandGridPts_WCVI_221.csv')
-        dem_path = os.path.join(test_dir, 'samp_input/global_dem')
-        
-        if not os.path.isdir(output_dir):
-            os.makedirs(output_dir)
-        if os.path.isfile(wave_data_copy_path):
-            os.remove(wave_data_copy_path)
-        for file in [intermediate_dir, out_dir]:
-            if not os.path.isdir(file):
-                os.makedirs(file)
-                
-        wave_data_shape = ogr.Open(wave_data_shape_path)
-        wave_data_shape_copy = \
-            ogr.GetDriverByName('ESRI Shapefile').\
-                CopyDataSource(wave_data_shape, wave_data_copy_path)
-        
-        #Set all arguments to be passed
-        args = {}
-        args['workspace_dir'] = output_dir
-        args['wave_data_shape'] = wave_data_shape_copy
-        args['number_machines'] = number_of_machines
-        args['global_dem'] = gdal.Open(dem_path)
-
-        wave_energy_core.valuation(args)
-        
-        regression_dir = './data/wave_energy_regression_data/'
-        
-        #Regression Check for NPV raster
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            os.path.join(output_dir, 'Output/npv_usd.tif'),
-            os.path.join(regression_dir, 'npv_usd_regression.tif'))
-        
-        #Regression Check for NPV percentile raster
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            os.path.join(output_dir, 'Output/npv_rc.tif'),
-            os.path.join(regression_dir, 'npv_rc_regression.tif'))
-        
-        #Regression Check for LandPts_prj shapefile
-        landing_shape_path = os.path.join(output_dir, 'Output/LandPts_prj.shp')
-        regression_landing_shape_path = os.path.join(
-                regression_dir, 'LandPts_prj_regression.shp')
-        invest_test_core.assertTwoShapesEqualURI(
-                self, landing_shape_path, regression_landing_shape_path)
-        
-        #Regression Check for GridPts_prj shapefile
-        grid_shape_path = os.path.join(output_dir, 'Output/GridPts_prj.shp')
-        regression_grid_shape_path = os.path.join(
-                regression_dir, 'GridPts_prj_regression.shp')
-        invest_test_core.assertTwoShapesEqualURI(
-                self, grid_shape_path, regression_grid_shape_path)
-        
-        #Regression Check for WEM_InputOutput_Pts shapefile
-        regression_wave_data_shape_path = os.path.join(
-                regression_dir, 'WEM_InputOutput_Pts_val_regression.shp')
-        invest_test_core.assertTwoShapesEqualURI(
-                self, wave_data_copy_path, regression_wave_data_shape_path)
-
-        try:
-            regression_table = dbf.Dbf(os.path.join(
-                regression_dir, 'npv_rc_regression.tif.vat.dbf'))
-            db_file = dbf.Dbf(os.path.join(
-                output_dir, 'Output/npv_rc.tif.vat.dbf'))
-            value_array = []
-            count_array = []
-            val_range_array = []
-            for rec, reg_rec in zip(db_file, regression_table):
-                self.assertEqual(rec['VALUE'], reg_rec['VALUE'])
-                self.assertEqual(rec['COUNT'], reg_rec['COUNT'])
-                self.assertEqual(rec['VAL_RANGE'], reg_rec['VAL_RANGE'])
-            db_file.close()
-            regression_table.close()
         except IOError, error:
             self.assertTrue(False, 'The dbf file could not be opened')
