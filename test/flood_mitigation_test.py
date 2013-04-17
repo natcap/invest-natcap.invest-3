@@ -40,3 +40,10 @@ class FloodMitigationTest(unittest.TestCase):
             'wet_season_cn.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, regression_cn_raster,
             wet_season_cn)
+
+    def test_season_adjustment_bad_season(self):
+        """Verify that an exception is raised when a bad season is used."""
+        season_cn = os.path.join(self.workspace, 'season_cn.tif')
+        self.assertRaises(flood_mitigation.InvalidSeason,
+            flood_mitigation.adjust_cn_for_season, self.curve_numbers,
+            'winter', season_cn)
