@@ -22,8 +22,8 @@ class FloodMitigationTest(unittest.TestCase):
     def test_cn_dry_adjustment(self):
         """Check the dry seasion adjustment for curve numbers."""
         dry_season_cn = os.path.join(self.workspace, 'dry_season_cn.tif')
-        flood_mitigation.adjust_cn_for_dry_season(self.curve_numbers,
-            dry_season_cn)
+        flood_mitigation.adjust_cn_for_season(self.curve_numbers,
+            'dry', dry_season_cn)
 
         regression_cn_raster = os.path.join(REGRESSION_DATA,
             'dry_season_cn.tif')
@@ -33,8 +33,8 @@ class FloodMitigationTest(unittest.TestCase):
     def test_cn_wet_adjustment(self):
         """Check the wet season adjustment for curve numbers."""
         dry_season_cn = os.path.join(self.workspace, 'wet_season_cn.tif')
-        flood_mitigation.adjust_cn_for_wet_season(self.curve_numbers,
-            dry_season_cn)
+        flood_mitigation.adjust_cn_for_season(self.curve_numbers,
+            'wet', dry_season_cn)
 
         regression_cn_raster = os.path.join(REGRESSION_DATA,
             'wet_season_cn.tif')
