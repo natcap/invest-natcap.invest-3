@@ -110,11 +110,11 @@ def adjust_cn_for_dry_season(cn_uri, adjusted_uri):
 
     Returns None."""
 
-   def pixel_op(curve_num):
-       """Perform dry season adjustment on the pixel level.
+    def pixel_op(curve_num):
+        """Perform dry season adjustment on the pixel level.
             Returns a float."""
 
-       return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+        return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
 
     cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
     cn_pixel_size = raster_utils.pixel_size(gdal.Open(cn_uri))
