@@ -1,6 +1,7 @@
 import unittest
 import os
 
+from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
 import invest_test_core
 
@@ -12,6 +13,7 @@ class FloodMitigationTest(unittest.TestCase):
     def setUp(self):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
+        self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
 
         self.args = {
             'workspace': self.workspace,
@@ -52,6 +54,17 @@ class FloodMitigationTest(unittest.TestCase):
         self.assertRaises(flood_mitigation.InvalidSeason,
             flood_mitigation.adjust_cn_for_season, self.curve_numbers,
             'winter', season_cn)
+
+    def test_cn_slope_adjustment(self):
+        """Check the slope adjustment for curve numbers."""
+
+        slope_uri = os.path.join(self.workspace, 'slope.tif')
+        slope_cn = raster_utils.calculate_slope(self.dem, slope_uri)
+
+        slope_cn = os.path.join(self.workspace, 'slope_cn.tif')
+        flood_mitigation.adjust_cn_for_slope(self.curve_numbers, slope_uri,
+            slope_cn)
+
 
     def test_regression(self):
         """Regression test for the flood mitigation model."""
