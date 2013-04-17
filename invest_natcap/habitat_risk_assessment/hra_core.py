@@ -8,7 +8,6 @@ import collections
 import math
 import datetime
 import sys
-import webbrowser
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -236,9 +235,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
     #End of the page.
     file.write("</html>")
     file.close()
-
-    #When the model run is complete, open the page of results.
-    webbrowser.open(filename)
 
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
