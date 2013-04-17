@@ -29,3 +29,14 @@ class FloodMitigationTest(unittest.TestCase):
             'dry_season_cn.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, regression_cn_raster,
             dry_season_cn)
+
+    def test_cn_wet_adjustment(self):
+        """Check the wet season adjustment for curve numbers."""
+        dry_season_cn = os.path.join(self.workspace, 'wet_season_cn.tif')
+        flood_mitigation.adjust_cn_for_wet_season(self.curve_numbers,
+            dry_season_cn)
+
+        regression_cn_raster = os.path.join(REGRESSION_DATA,
+            'wet_season_cn.tif')
+        invest_test_core.assertTwoDatasetEqualURI(self, regression_cn_raster,
+            dry_season_cn)
