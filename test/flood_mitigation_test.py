@@ -58,6 +58,9 @@ class FloodMitigationTest(unittest.TestCase):
     def test_cn_slope_adjustment(self):
         """Check the slope adjustment for curve numbers."""
 
+        # Until we think it's necessary to actually save away a regression slope
+        # raster, I'll just calculate it on the fly for this test.  It's only
+        # a couple seconds.
         slope_uri = os.path.join(self.workspace, 'slope.tif')
         slope_cn = raster_utils.calculate_slope(self.dem, slope_uri)
 
@@ -65,7 +68,9 @@ class FloodMitigationTest(unittest.TestCase):
         flood_mitigation.adjust_cn_for_slope(self.curve_numbers, slope_uri,
             slope_cn)
 
-
+        regression_slope_cn = os.path.join(REGRESSION_DATA, 'slope_cn.tif')
+        invest_test_core.assertTwoDatasetEqualURI(self, regression_slope_cn,
+            slope_cn)
 
     def test_regression(self):
         """Regression test for the flood mitigation model."""
