@@ -49,34 +49,40 @@ def reLOGGER(log,msgType,msg):
     else:
         log.warn("Unknown logging message type %s: %s" % (msgType,msg))    
 
-def logcheck(url,flag="Dropped intermediate tables.",delay=15,log=LOGGER):    
+def logcheck(url,flag="Dropped intermediate tables.",delay=15,log=LOGGER,line=0):
+    log.debug("Begin log check at line %i.", line)
     complete = False
-    oldServerLog=""
-    msg=""
-
+    count=0
+    
     while not complete:
-        severLog = urllib2.urlopen(url).read()
-        serverLogging = severLog[len(oldServerLog):].strip()
-        if len(serverLogging) > 0:
-            serverLogging=serverLogging.split("\n")        
-            if serverLogging[-1][-1] != ".":
-                serverLogging.pop(-1)
-        else:
-            serverLogging=[]
-            
-        for entry in serverLogging:
-            timestamp,msgType,msg = entry.split(",")
-            reLOGGER(log,msgType,msg)
-            
-        oldServerLog=severLog
+        serverLog = urllib2.urlopen(url).read()
+        serverLog = serverLog.strip().split("\n")
 
-        if msg==flag:
-            complete = True            
+        if (len(serverLog) > 0) and (serverLog[-1] != "") and (serverLog[-1][-1] != "."):
+            serverLogging.pop(-1)
+        
+        if len(serverLog[line+count:]) > 0:           
+            for entry in serverLog[line + count:]:
+                timestamp,msgType,msg = entry.split(",")
+                reLOGGER(log,msgType,msg)
+                count = count + 1
+                if msg.strip()==flag.strip():
+                    log.debug("Detected log check exit message.")
+                    complete = True
+                    if len(serverLog[line+count:]) > 0:
+                        log.warn("There are unwritten messages on the remote log.")
+                    break
+            
         else:
             log.info("Please wait.")
             time.sleep(delay)
+
+    line = line + count
+    log.debug("End log check at line %i.", line)
+
+    return line
             
-def execute(args):
+def execute(args):    
     # Register the streaming http handlers with urllib2
     register_openers()
 
@@ -104,7 +110,7 @@ def execute(args):
     request = urllib2.Request(url, datagen, headers)
     
     #opening request and comparing session id
-    success,sessid=urlopen(url,request,config["tries"],config["delay"],LOGGER)
+    success, sessid = urlopen(url,request,config["tries"],config["delay"],LOGGER)
 
     if success:
         args["sessid"]=sessid
@@ -113,9 +119,11 @@ def execute(args):
         raise urllib2.URLError, msg
 
     #check log and echo messages while not done
+    log_url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]
+    log_line = 0
+    
     LOGGER.info("Checking version.")
-    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
-    logcheck(url,"End version PHP script.",15,LOGGER)
+    log_line=logcheck(log_url,"End version PHP script.",15,LOGGER,log_line)
     
     LOGGER.info("Finished checking version.")
 
@@ -215,6 +223,8 @@ def execute(args):
     url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
 
+
+
     #recording server to model parameters
     args["server"]=config["server"]
 
@@ -226,6 +236,9 @@ def execute(args):
         raise urllib2.URLError, msg
         
     LOGGER.debug("Server session %s." % (args["sessid"]))
+
+    #wait for server to finish saving predictors.
+    log_line=logcheck(log_url,"End predictors PHP script.",15,LOGGER,log_line)
 
     #EXECUTING SERVER SIDE PYTHON SCRIPT
     LOGGER.info("Uploading AOI and running model.")
@@ -257,8 +270,7 @@ def execute(args):
 
     #check log and echo messages while not done
     LOGGER.info("Model running.")
-    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
-    logcheck(url,"Dropped intermediate tables.",15,LOGGER)
+    log_line = logcheck(log_url,"Dropped intermediate tables.",15,LOGGER, log_line)
     
     LOGGER.info("Finished processing data.")
 
@@ -266,7 +278,7 @@ def execute(args):
     LOGGER.info("Running regression.")
 
     #construct server side R script request
-    url = config["server"]+"/"+config["files"]["PHP"]["regression"]
+    url = config["server"]+config["files"]["PHP"]["regression"]
     datagen, headers = multipart_encode({"sessid": args["sessid"]})
     request = urllib2.Request(url, datagen, headers)
 
@@ -282,11 +294,10 @@ def execute(args):
         raise ValueError, "The session id unexpectedly changed."
 
     #check log and echo messages while not done
-    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
-    logcheck(url,"Wrote regression statistics.",15,LOGGER)
+    log_line=logcheck(log_url,"End regression PHP script.",15,LOGGER,log_line)
 
     #ZIP SERVER SIDE RESULTS
-    url = config["server"]+"/"+config["files"]["PHP"]["results"]
+    url = config["server"]+config["files"]["PHP"]["results"]
     datagen, headers = multipart_encode({"sessid": args["sessid"]})
     request = urllib2.Request(url, datagen, headers)
 
