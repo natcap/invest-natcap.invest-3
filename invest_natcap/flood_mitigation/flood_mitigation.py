@@ -152,7 +152,7 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
             (adjustments.keys(), season))
 
     cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
-    cn_pixel_size = raster_utils.pixel_size(gdal.Open(cn_uri))
+    cn_pixel_size = raster_utils.get_cell_size_from_uri(cn_uri)
 
     raster_utils.vectorize_datasets([cn_uri], season_function, adjusted_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
