@@ -101,17 +101,23 @@ def execute(args):
 
     pass
 
-def dry_season_adjustment(curve_num):
+def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
         corresponds with equation 3 in the user's guide.
+
+        This is a local function, as it should really only be used for
+        vectorized operations if you _really_ know what you're doing.
 
         Returns a float."""
 
     return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
 
-def wet_season_adjustment(curve_num):
+def _wet_season_adjustment(curve_num):
     """Perform wet season adjustment on the pixel level.  This corresponds with
         equation 4 in the user's guide.
+
+        This is a local function, as it should really only be used for
+        vectorized operations if you _really_ know what you're doing.
 
         Returns a float."""
 
@@ -138,11 +144,14 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
         If the file at this URI exists, it will be overwritten with a GDAL
         dataset.
 
+    This function saves a GDAL dataset to the URI noted by the `adjusted_uri`
+    parameter.
+
     Returns None."""
 
     adjustments = {
-        'dry': dry_season_adjustment,
-        'wet': wet_season_adjustment
+        'dry': _dry_season_adjustment,
+        'wet': _wet_season_adjustment
     }
 
     try:
@@ -180,7 +189,7 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
 
         Returns a float."""
 
-        ratio = (wet_season_adjustment(curve_num) - curve_num) / 3.0
+        ratio = (_wet_season_adjustment(curve_num) - curve_num) / 3.0
         quotient = 1.0 - 2.0 ** (-13.86 * slope)
 
         return ratio * quotient + curve_num
