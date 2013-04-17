@@ -551,9 +551,6 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         pixel_size = raster_utils.get_cell_size_from_uri(curr_list[0])
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
-
-        LOGGER.debug("Curr_List: %s", curr_list)
-        LOGGER.debug("Denom?: %s", denoms['Recovery'][h])
         
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, 0., pixel_size, "union", 
