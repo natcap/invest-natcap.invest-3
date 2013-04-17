@@ -2330,6 +2330,13 @@ def vectorize_datasets(
             out_row[mask_array == 0] = nodata_out
         output_band.WriteArray(out_row, xoff=0, yoff=row_index)
 
+    #Making sure the band and dataset is flushed and not in memory before
+    #adding stats
+    output_band.FlushCache()
+    output_dataset.FlushCache()
+    output_dataset = None
+    output_band = None
+    calculate_raster_stats_uri(dataset_out_uri)
 
 def get_lookup_from_table(table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
