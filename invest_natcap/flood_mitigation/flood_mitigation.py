@@ -101,6 +101,22 @@ def execute(args):
 
     pass
 
+def dry_season_adjustment(curve_num):
+    """Perform dry season curve number adjustment on the pixel level.  This
+        corresponds with equation 3 in the user's guide.
+
+        Returns a float."""
+
+    return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+
+def wet_season_adjustment(curve_num):
+    """Perform wet season adjustment on the pixel level.  This corresponds with
+        equation 4 in the user's guide.
+
+        Returns a float."""
+
+    return ((23 * curve_num) / (10.0 + (0.13 * curve_num)))
+
 def adjust_cn_for_season(cn_uri, season, adjusted_uri):
     """Adjust the user's Curve Numbers raster for the specified season's soil
     antecedent moisture class.
@@ -123,18 +139,6 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
         dataset.
 
     Returns None."""
-
-    def dry_season_adjustment(curve_num):
-        """Perform dry season adjustment on the pixel level.
-            Returns a float."""
-
-        return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
-
-    def wet_season_adjustment(curve_num):
-        """Perform wet season adjustment on the pixel level.
-            Returns a float."""
-
-        return ((23 * curve_num) / (10.0 + (0.13 * curve_num)))
 
     adjustments = {
         'dry': dry_season_adjustment,
