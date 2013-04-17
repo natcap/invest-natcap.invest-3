@@ -21,18 +21,20 @@ the_dicto = {
 
 
 def plot_background_circle(max_value):
-    
-    circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'), (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'), (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'), (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'), (1, '#305FCF')]
- 
+    circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'),
+                    (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'),
+                    (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'),
+                    (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'),
+                    (1, '#305FCF')]
     index = 0
     for radius, color in circle_stuff:
         index += 1
         linestyle = 'solid' if index % 2 == 0 else 'dashed'
-        cir = matplotlib.pyplot.Circle((0,0), edgecolor='.25', linestyle=linestyle, radius=radius*max_value/5.0, fc=color)
+        cir = matplotlib.pyplot.Circle((0,0), edgecolor='.25', linestyle=linestyle, radius=radius*max_value/3.5, fc=color)
         matplotlib.pyplot.gca().add_patch(cir)
 
 plot_index = 0
-max_risk_value = 5
+max_risk_value = 10
 for hab_name, stressor_dict in the_dicto.iteritems():
     for stressor_name, aoi_list in stressor_dict.iteritems():
         plot_index += 1
