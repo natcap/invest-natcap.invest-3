@@ -156,3 +156,39 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
 
     raster_utils.vectorize_datasets([cn_uri], season_function, adjusted_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
+
+def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
+    """Adjust the input curve numbers raster for slope.  This corresponds with
+        equation 5 in the Flood Mitigation user's guide.
+
+        cn_avg_uri - a string URI a curve number raster on disk.  Must be a
+            raster than GDAL can open.
+        slope_uri - a string URI to a slope raster on disk.  Must be a raster
+            that GDAL can open.
+        adjusted_uri - a string URI to the location on disk where the output
+            raster should be saved.  If this file exists on disk, it will be
+            overwritten.
+
+        This function saves a GDAL dataset to the URI passed in by the argument
+        `adjusted_uri`.
+
+        Returns nothing."""
+
+    def adjust_for_slope(curve_num, slope):
+        """Adjust the input curve number for slope according to use
+        Williams' empirical equation.
+
+        Returns a float."""
+
+        ratio = (wet_season_adjustment(curve_num) - curve_num) / 3.0
+        quotient = 1.0 - 2.0 ** (-13.86 * slope)
+
+        return ratio * quotient + curve_num
+
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_avg_uri)
+    cn_pixel_size = raster_utils.get_cell_size_from_uri(cn_avg_uri)
+
+    raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
+        adjusted_uri, gdal.GDT_Float32, cn_nodata, cn_pixel_size,
+        'intersection')
+
