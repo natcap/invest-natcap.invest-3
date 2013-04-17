@@ -13,6 +13,11 @@ class FloodMitigationTest(unittest.TestCase):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
 
+        self.args = {
+            'workspace': self.workspace,
+            'curve_numbers': self.curve_numbers
+        }
+
         try:
             os.makedirs(self.workspace)
         except OSError:
@@ -47,3 +52,7 @@ class FloodMitigationTest(unittest.TestCase):
         self.assertRaises(flood_mitigation.InvalidSeason,
             flood_mitigation.adjust_cn_for_season, self.curve_numbers,
             'winter', season_cn)
+
+    def test_regression(self):
+        """Regression test for the flood mitigation model."""
+        flood_mitigation.execute(self.args)
