@@ -183,18 +183,24 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
 
         Returns nothing."""
 
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_avg_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+
     def adjust_for_slope(curve_num, slope):
         """Adjust the input curve number for slope according to use
-        Williams' empirical equation.
+        Williams' empirical equation.  This function returns nodata if either
+        the curve_num or slope is nodata.
 
         Returns a float."""
+
+        if curve_num == cn_nodata or slope == slope_nodata:
+            return cn_nodata
 
         ratio = (_wet_season_adjustment(curve_num) - curve_num) / 3.0
         quotient = 1.0 - 2.0 ** (-13.86 * slope)
 
         return ratio * quotient + curve_num
 
-    cn_nodata = raster_utils.get_nodata_from_uri(cn_avg_uri)
     cn_pixel_size = raster_utils.get_cell_size_from_uri(cn_avg_uri)
 
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
