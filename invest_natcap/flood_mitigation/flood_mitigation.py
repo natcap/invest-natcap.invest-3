@@ -101,57 +101,6 @@ def execute(args):
 
     pass
 
-def adjust_cn_for_dry_season(cn_uri, adjusted_uri):
-    """Adjust the user's Curve Numbers raster for the Dry soil antecedent
-    moisture class.  In the dormant season, this class typically experiences
-    less than 12mm of rainfall, or 36 in the growing season.
-
-    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must be a
-        raster that GDAL can open.
-    adjusted_uri - a string URI to which the adjusted Curve Numbers to be saved.
-        If the file at this URI exists, it will be overwritten with a GDAL
-        dataset.
-
-    Returns None."""
-
-    def pixel_op(curve_num):
-        """Perform dry season adjustment on the pixel level.
-            Returns a float."""
-
-        return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
-
-    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
-    cn_pixel_size = raster_utils.pixel_size(gdal.Open(cn_uri))
-
-    raster_utils.vectorize_datasets([cn_uri], pixel_op, adjusted_uri,
-        gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
-
-
-def adjust_cn_for_wet_season(cn_uri, adjusted_uri):
-    """Adjust the user's Curve Numbers raster for the wet soil antecedent
-    moisture class.  In the dormant season, this class typically experiences
-    over 28mm of rainfall, or over 53mm in the growing season.
-
-    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must be a
-        raster that GDAL can open.
-    adjusted_uri - a string URI to which the adjusted Curve Numbers to be saved.
-        If the file at this URI exists, it will be overwritten with a GDAL
-        dataset.
-
-    Returns None."""
-
-    def pixel_op(curve_num):
-        """Perform dry season adjustment on the pixel level.
-            Returns a float."""
-
-        return ((23 * curve_num) / (10.0 + (0.13 * curve_num)))
-
-    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
-    cn_pixel_size = raster_utils.pixel_size(gdal.Open(cn_uri))
-
-    raster_utils.vectorize_datasets([cn_uri], pixel_op, adjusted_uri,
-        gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
-
 def adjust_cn_for_season(cn_uri, season, adjusted_uri):
     """Adjust the user's Curve Numbers raster for the specified season's soil
     antecedent moisture class.
