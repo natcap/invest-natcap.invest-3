@@ -12,6 +12,10 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('flood_mitigation')
 
+class InvalidSeason(Exception):
+    """An exception to indicate that an invalid season was used."""
+    pass
+
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
     landscape in a flood situation.
@@ -148,3 +152,54 @@ def adjust_cn_for_wet_season(cn_uri, adjusted_uri):
     raster_utils.vectorize_datasets([cn_uri], pixel_op, adjusted_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
 
+def adjust_cn_for_season(cn_uri, season, adjusted_uri):
+    """Adjust the user's Curve Numbers raster for the specified season's soil
+    antecedent moisture class.
+
+    Typical accumulated 5-day rainfall for AMC classes:
+
+    AMC Class   | Dormant Season | Growing Season |
+    ------------+----------------+----------------+
+    Dry (AMC-1) |    < 12mm      |    < 36mm      |
+    ------------+----------------+----------------+
+    Wet (AMC-3) |    > 28mm      |    > 53mm      |
+
+
+    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must be a
+        raster that GDAL can open.
+    season - a string, either 'dry' or 'wet'.  An exception will be raised if
+        any other value is submitted.
+    adjusted_uri - a string URI to which the adjusted Curve Numbers to be saved.
+        If the file at this URI exists, it will be overwritten with a GDAL
+        dataset.
+
+    Returns None."""
+
+    def dry_season_adjustment(curve_num):
+        """Perform dry season adjustment on the pixel level.
+            Returns a float."""
+
+        return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+
+    def wet_season_adjustment(curve_num):
+        """Perform wet season adjustment on the pixel level.
+            Returns a float."""
+
+        return ((23 * curve_num) / (10.0 + (0.13 * curve_num)))
+
+    adjustments = {
+        'dry': dry_season_adjustment,
+        'wet': wet_season_adjustment
+    }
+
+    try:
+        season_function = adjustments[season]
+    except KeyError:
+        raise InvalidSeason('Season must be one of %s, but %s was used' %
+            (adjustments.keys(), season))
+
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+    cn_pixel_size = raster_utils.pixel_size(gdal.Open(cn_uri))
+
+    raster_utils.vectorize_datasets([cn_uri], season_function, adjusted_uri,
+        gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
