@@ -29,28 +29,28 @@
                     "id":"habs_dir",
                     "args_id": "habitats_dir",
                     "type": "hideableFileEntry",
-                    "label": "Use Habitat Layers?",
+                    "label": "Calculate Risk to Habitats?",
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
                     "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
-                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors."
+                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors. This is the path to your habitat layers folder."
                 },
                 {
                     "id":"species_dir",
                     "args_id": "species_dir",
                     "type": "hideableFileEntry",
-                    "label": "Use Species Layers?",
+                    "label": "Calculate Risk to Species?",
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
                     "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers",
-                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors."
+                    "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors. This is the path to the species layers folder."
                 },
                 {
                     "id":"stressor_dir",
                     "type": "folder",
-                    "label": "Directory to stressor layers",
+                    "label": "Directory for Stressors Layers",
                     "required": true,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
@@ -65,6 +65,12 @@
             "collapsible" : false,
             "label": "Criteria",
             "elements": [
+                {
+                    "id": "label",
+                    "type": "label",
+                    "args_id": "label",
+                    "label": "(Choose at least 1 criteria for each category below, at at least 4 total.)",
+                }
                 {
                     "id": "exp_crit",
                     "type": "multi",
@@ -111,7 +117,7 @@
                 "id" : "crit_dir",
                 "args_id" : "criteria_dir",
                 "type": "hideableFileEntry",
-                "label": "Use Shapefile Criteria?",
+                "label": "Use Spatially Explicit Risk Score (shapefiles)",
                 "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
                 "validateAs": {"type": "folder",
                             "mustExist": true},
