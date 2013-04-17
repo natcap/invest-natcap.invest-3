@@ -201,9 +201,11 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
 
         return ratio * quotient + curve_num
 
+    # Using the max of the two pixel sizes.
     cn_pixel_size = raster_utils.get_cell_size_from_uri(cn_avg_uri)
+    slope_pixel_size = raster_utils.get_cell_size_from_uri(slope_uri)
+    pixel_size = max(cn_pixel_size, slope_pixel_size)
 
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
-        adjusted_uri, gdal.GDT_Float32, cn_nodata, cn_pixel_size,
-        'intersection')
+        adjusted_uri, gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection')
 
