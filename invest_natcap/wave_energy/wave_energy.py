@@ -927,7 +927,7 @@ def create_percentile_rasters(
     # original matrix. This helps avoid memory errors.
     tmp_mask_file = raster_utils.temporary_filename()
     matrix_mask = np.memmap(
-        tmp_mask_file, dtype = bool, mode = 'w+', shape = (n_rows, n_cols))
+        tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
     
     # Flatten each array before doing operations so that it can be passed to
     # scipy.scoreatpercentiles later
