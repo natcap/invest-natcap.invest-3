@@ -1064,7 +1064,7 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range_first = start_value + ' - ' + str(percentiles[0]) + units_long
     range_values.append(range_first)
     for index in range(length - 1):
-        range_values.append(str(percentiles[index]) + ' - ' + \
+        range_values.append(str(percentiles[index]) + ' - ' +
                             str(percentiles[index + 1]) + units_short)
     # Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
