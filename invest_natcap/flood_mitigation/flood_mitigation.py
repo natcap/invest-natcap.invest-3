@@ -132,6 +132,42 @@ def execute(args):
         cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
         adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
 
+
+def soil_water_retention_capacity(cn_uri, swrc_uri):
+    """Calculate the capacity of the soil to retain water on the landscape from
+        the user's adjusted curve numbers.  These curve numbers are assumed to
+        have already been adjusted properly according to slope and/or
+        seasonality.
+
+        cn_uri - a URI to a GDAL dataset on disk.
+        swrc_uri - a URI.  If this file exists on disk, it will be overwritted
+            with a GDAL dataset.
+
+        This function saves a GDAL dataset to the URI `swrc_uri`.
+
+        Returns nothing.
+        """
+
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+    pixel_size = raster_utils.get_cell_size_from_uri(cn_uri)
+
+    def calculate_swrc(curve_num):
+        """This function calculates the soil water retention capacity on a
+            per-pixel level based on the input curve number, as long as the
+            `curve_num` is not the nodata value.  This is equation 2
+            in the Flood Mitigation user's guide.
+
+            curve_num - a number.
+
+            Returns a float."""
+
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return ((25400.0 / curve_num) - 254.0)
+
+    raster_utils.vectorize_datasets([cn_uri], calculate_swrc, swrc_uri,
+        gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
+
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
         corresponds with equation 3 in the user's guide.
