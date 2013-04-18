@@ -62,7 +62,10 @@ def execute(args):
             of habitat and stressor.
         args['aoi_tables']- May or may not exist within this model run, but if it
             does, the user desires to have the average risk values by 
-            stressor/habitat using E/C axes for each feature in the AOI layer.
+            stressor/habitat using E/C axes for each feature in the AOI layer
+            specified by 'aoi_tables'. If the risk_eq is 'Euclidea', this will
+            create risk plots, otherwise it will just create the standard HTML
+            table for either 'Euclidean' or 'Multiplicative.'
     
     Outputs:
         --Intermediate--
@@ -118,13 +121,30 @@ def execute(args):
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
     if 'aoi_tables' in args:
+
+        #Let's pre-calc stuff so we don't have to worry about it in the middle of
+        #the file creation.
+        '''    avgs_dict- A multi level dictionary to hold the average values that
+                will be placed into the HTML table.
+
+                {'HabitatName':
+                    {'StressorName':
+                        [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                            {...},
+                        ...
+                        ]
+                    },
+                    ....
+                }
+        '''
+        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, inter_dir, risk_dict, args['aoi_tables'],
-                        args['max_risk'])
+        make_aoi_tables(tables_dir, avgs_dict)
 
-def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
+def make_aoi_tables(out_dir, avgs_dict):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
@@ -156,23 +176,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
      Returns nothing.
     '''
-
-    #Let's pre-calc stuff so we don't have to worry about it in the middle of
-    #the file creation.
-    '''    avgs_dict- A multi level dictionary to hold the average values that
-            will be placed into the HTML table.
-
-            {'HabitatName':
-                {'StressorName':
-                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
-                        {...},
-                    ...
-                    ]
-                },
-                ....
-            }
-    '''
-    avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
 
     filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
                    % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
