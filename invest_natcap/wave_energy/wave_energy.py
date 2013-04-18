@@ -1354,6 +1354,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     # It seems that the capacity max is already set to it's limit in
     # the machine performance table. However, if it needed to be
     # restricted the following line will do it
+    interp_z = np.array(interp_z)
     interp_z[interp_z > cap_max] = cap_max
     
     # Set position variables to use as a check and as an end
