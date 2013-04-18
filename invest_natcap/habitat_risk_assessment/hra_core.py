@@ -8,7 +8,6 @@ import collections
 import math
 import datetime
 import sys
-import webbrowser
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -63,7 +62,10 @@ def execute(args):
             of habitat and stressor.
         args['aoi_tables']- May or may not exist within this model run, but if it
             does, the user desires to have the average risk values by 
-            stressor/habitat using E/C axes for each feature in the AOI layer.
+            stressor/habitat using E/C axes for each feature in the AOI layer
+            specified by 'aoi_tables'. If the risk_eq is 'Euclidea', this will
+            create risk plots, otherwise it will just create the standard HTML
+            table for either 'Euclidean' or 'Multiplicative.'
     
     Outputs:
         --Intermediate--
@@ -119,36 +121,65 @@ def execute(args):
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
     if 'aoi_tables' in args:
+
+        #Let's pre-calc stuff so we don't have to worry about it in the middle of
+        #the file creation.
+        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, inter_dir, risk_dict, args['aoi_tables'],
-                        args['max_risk'])
+        make_aoi_tables(tables_dir, avgs_dict)
 
-def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
+        if args['risk_eq'] == 'Euclidean':
+            make_risk_plots(tables_dir, avgs_dict)
+
+def make_risk_plots(out_dir, avgs_dict):
+    '''This function will produce risk plots when the risk equation is
+    euclidean.
+
+    Input:
+        out_dir- The directory into which the completed risk plots should be
+            placed.
+        avgs_dict- A multi level dictionary that holds the average values that
+                will be placed into the HTML table.
+
+                {'HabitatName':
+                    {'StressorName':
+                        [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                            {...},
+                        ...
+                        ]
+                    },
+                    ....
+                }
+    Output:
+        A set of .png images containing the matplotlib plots for every H-S
+        combination. Within that, each AOI will be displayed as plotted by
+        (E,C) values. 
+
+    
+
+def make_aoi_tables(out_dir, avgs_dict):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
     Input:
         out_dir- The directory into which the completed HTML tables should be
             placed.
-        inter_dir- The directory which contains the individual E and C rasters.
-            We can use these to get the avg. E and C values per area. Since we
-            don't really have these in any sort of dictionary, will probably
-            just need to explicitly call each individual file based on the
-            names that we pull from the risk_dict keys.
-        risk_dict- A simple dictionary that maps a tuple of 
-            (Habitat, Stressor) to the URI for the risk raster created when the 
-            various sub components (H/S/H_S) are combined.
-
-            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
-            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
-            ...
-            }
-        aoi_uri- The location of the AOI zone files. Each feature within this
-            file (identified by a 'name' attribute) will be used to average 
-            an area of E/C/Risk values.
      
+        avgs_dict- A multi level dictionary that holds the average values that
+                will be placed into the HTML table.
+
+                {'HabitatName':
+                    {'StressorName':
+                        [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                            {...},
+                        ...
+                        ]
+                    },
+                    ....
+                }
      Output:
         A set of HTML tables which will contain averaged values of E, C, and
         risk for each H, S pair within each AOI. Additionally, the tables will
@@ -157,23 +188,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
 
      Returns nothing.
     '''
-
-    #Let's pre-calc stuff so we don't have to worry about it in the middle of
-    #the file creation.
-    '''    avgs_dict- A multi level dictionary to hold the average values that
-            will be placed into the HTML table.
-
-            {'HabitatName':
-                {'StressorName':
-                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
-                        {...},
-                    ...
-                    ]
-                },
-                ....
-            }
-    '''
-    avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
 
     filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
                    % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
@@ -236,9 +250,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
     #End of the page.
     file.write("</html>")
     file.close()
-
-    #When the model run is complete, open the page of results.
-    webbrowser.open(filename)
 
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
@@ -551,9 +562,6 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         pixel_size = raster_utils.get_cell_size_from_uri(curr_list[0])
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
-
-        LOGGER.debug("Curr_List: %s", curr_list)
-        LOGGER.debug("Denom?: %s", denoms['Recovery'][h])
         
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, 0., pixel_size, "union", 
