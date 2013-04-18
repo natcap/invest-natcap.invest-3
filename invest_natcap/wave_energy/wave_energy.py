@@ -494,7 +494,7 @@ def execute(args):
             LOGGER.info('Calculating Distances.')
             wave_to_land_dist, wave_to_land_id = calculate_distance(
                     we_points, landing_points)
-            land_to_grid_dist, land_to_grid_id = calculate_distance(
+            land_to_grid_dist, _ = calculate_distance(
                     landing_points,  grid_point)
            
             def add_distance_fields_uri(
@@ -813,7 +813,7 @@ def load_binary_wave_data(wave_file_uri):
 
         key = struct.unpack('ii', line)
 
-        for row_id in range(row):
+        for _ in itertools.repeat(None, row):
             line = wave_file.read(col * 4)
             array = list(struct.unpack('f' * col, line))
             wave_array.append(array)
