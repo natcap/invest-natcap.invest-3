@@ -112,6 +112,24 @@ def execute(args):
         except OSError:
             LOGGER.debug('Folder %s already exists', folder)
 
+    # We need a slope raster for several components of the model.
+    slope_uri = os.path.join(intermediate, 'slope.tif')
+    raster_utils.calculate_slope(args['dem'], slope_uri)
+
+    # Adjust Curve Numbers according to user input
+    # If the user has not selected a seasonality adjustment, only then will we
+    # adjust for slope.  Rich and I made this decision, as Equation 5
+    # (slope adjustments to curve numbers) is not clear which seasonality
+    # adjustment to use or how to use it when the user choses a non-average
+    # seasonality adjustment.  Until we figure this out, we are only adjusting
+    # CNs for slope IFF the user has not selected a seasonality adjustment.
+    if args['cn_adjust'] == True:
+        season = args['cn_season']
+        adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
+        adjust_cn_for_season(args['curve_numbers'], season, adjusted_uri)
+    else:
+        adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
+        adjust_cn_for_slope(args['curve_numbers'], slope_uri, adjusted_uri)
 
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
