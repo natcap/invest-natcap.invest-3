@@ -1,6 +1,7 @@
 """Functions for the InVEST Flood Mitigation model."""
 
 import logging
+import math
 
 from osgeo import gdal
 
@@ -197,7 +198,7 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
             return cn_nodata
 
         ratio = (_wet_season_adjustment(curve_num) - curve_num) / 3.0
-        quotient = 1.0 - 2.0 ** (-13.86 * slope)
+        quotient = 1.0 - 2.0 * math.exp(-13.86 * slope)
 
         return ratio * quotient + curve_num
 
