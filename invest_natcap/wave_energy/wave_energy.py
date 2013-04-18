@@ -936,7 +936,7 @@ def create_percentile_rasters(
 
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
-    neg_float = float(np.finfo(np.float32).min) - 1.0
+    neg_float = float(np.finfo(np.float32).min) + 1.0
     ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
     
     # Create a mask of where the nodata values are
