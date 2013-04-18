@@ -126,11 +126,11 @@ def execute(args):
     # CNs for slope IFF the user has not selected a seasonality adjustment.
     if args['cn_adjust'] == True:
         season = args['cn_season']
-        adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
-        adjust_cn_for_season(args['curve_numbers'], season, adjusted_uri)
+        cn_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
+        adjust_cn_for_season(args['curve_numbers'], season, cn_adjusted_uri)
     else:
-        adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
-        adjust_cn_for_slope(args['curve_numbers'], slope_uri, adjusted_uri)
+        cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
+        adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
 
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
