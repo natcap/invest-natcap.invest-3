@@ -3,11 +3,9 @@ calcs, and return the appropriate outputs.
 '''
 import logging
 import os
-import numpy as np
 import collections 
 import math
 import datetime
-import sys
 import matplotlib
 
 from osgeo import gdal, ogr, osr
@@ -125,12 +123,12 @@ def execute(args):
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
-        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'])
 
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, avgs_dict)
+        make_aoi_tables(tables_dir, avgs_dict, args['max_risk'])
 
         if args['risk_eq'] == 'Euclidean':
             make_risk_plots(tables_dir, avgs_dict, args['max_risk'])
@@ -186,8 +184,13 @@ def make_risk_plots(out_dir, avgs_dict, max_risk):
             matplotlib.pyplot.xlim([0.5, max_risk])
             matplotlib.pyplot.ylim([0.5, max_risk])
 
+            out_uri = os.path.join(out_dir, 'risk_plot' + 'H[' + hab_name+ ']_S[' + \
+                        stressor_name + '].png')
 
-def make_aoi_tables(out_dir, avgs_dict):
+            matplotlib.pyplot.savefig(out_uri, format='png')
+
+
+def make_aoi_tables(out_dir, avgs_dict, max_risk):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
