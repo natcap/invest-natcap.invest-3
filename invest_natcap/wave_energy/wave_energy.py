@@ -1271,8 +1271,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
                 shp_layer.CreateFeature(out_feat)
                 out_feat = None
                 break
-            
-        in_feat = None
+
         in_feat = in_layer.GetNextFeature()
 
 def wave_energy_interp(wave_data, machine_perf):
