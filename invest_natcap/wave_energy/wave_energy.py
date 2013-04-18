@@ -1202,7 +1202,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     # current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(), 
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(),
                                    in_defn.GetGeomType())
     # Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
@@ -1214,9 +1214,9 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         fd_def.SetWidth(src_fd.GetWidth())
         fd_def.SetPrecision(src_fd.GetPrecision())
         shp_layer.CreateField(fd_def)
-    LOGGER.debug('Binding Shapes Feature Count : %s', 
+    LOGGER.debug('Binding Shapes Feature Count : %s',
                  clip_layer.GetFeatureCount())
-    LOGGER.debug('Shape to be Bounds Feature Count : %s', 
+    LOGGER.debug('Shape to be Bounds Feature Count : %s',
                  in_layer.GetFeatureCount())
     # Retrieve all the binding polygon features and save their cloned 
     # geometry references to a list
@@ -1233,6 +1233,8 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         geom = in_feat.GetGeometryRef()
         # Get the spatial reference of the geometry to use in transforming
         target_sr = geom.GetSpatialReference()
+        geom = None
+        in_feat = None
         # Create a coordinate transformation
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         # Transform the polygon geometry into the same format as the 
@@ -1240,8 +1242,6 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         clip_geom.Transform(coord_trans)
         # Add geometry to list
         clip_geom_list.append(clip_geom.Clone())
-        in_feat = None
-        clip_feat = None
         clip_feat = clip_layer.GetNextFeature()
 
     in_layer.ResetReading()
