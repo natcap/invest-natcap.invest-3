@@ -17,7 +17,10 @@ class FloodMitigationTest(unittest.TestCase):
 
         self.args = {
             'workspace': self.workspace,
-            'curve_numbers': self.curve_numbers
+            'curve_numbers': self.curve_numbers,
+            'dem': self.dem,
+            'cn_adjust': True,
+            'cn_season': 'dry'
         }
 
         try:
