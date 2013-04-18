@@ -4,6 +4,7 @@ import os
 import logging
 import csv
 import struct
+import itertools
 
 import numpy as np
 from osgeo import gdal
@@ -494,7 +495,7 @@ def execute(args):
             LOGGER.info('Calculating Distances.')
             wave_to_land_dist, wave_to_land_id = calculate_distance(
                     we_points, landing_points)
-            land_to_grid_dist, land_to_grid_id = calculate_distance(
+            land_to_grid_dist, _ = calculate_distance(
                     landing_points,  grid_point)
            
             def add_distance_fields_uri(
@@ -813,7 +814,7 @@ def load_binary_wave_data(wave_file_uri):
 
         key = struct.unpack('ii', line)
 
-        for row_id in range(row):
+        for _ in itertools.repeat(None, row):
             line = wave_file.read(col * 4)
             array = list(struct.unpack('f' * col, line))
             wave_array.append(array)
@@ -927,12 +928,7 @@ def create_percentile_rasters(
     # original matrix. This helps avoid memory errors.
     tmp_mask_file = raster_utils.temporary_filename()
     matrix_mask = np.memmap(
-        tmp_mask_file, dtype = bool, mode = 'w+', shape = (n_rows, n_cols))
-    
-    tmp_mask_large_file = raster_utils.temporary_filename()
-    large_matrix = np.memmap(
-        tmp_mask_large_file, dtype = bool, mode = 'w+', 
-        shape = (n_rows, n_cols))
+        tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
     
     # Flatten each array before doing operations so that it can be passed to
     # scipy.scoreatpercentiles later
@@ -941,7 +937,7 @@ def create_percentile_rasters(
 
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
-    neg_float = float(np.finfo(np.float32).min) - 1.0
+    neg_float = float(np.finfo(np.float32).min) + 1.0
     ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
     
     # Create a mask of where the nodata values are
@@ -1069,7 +1065,7 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range_first = start_value + ' - ' + str(percentiles[0]) + units_long
     range_values.append(range_first)
     for index in range(length - 1):
-        range_values.append(str(percentiles[index]) + ' - ' + \
+        range_values.append(str(percentiles[index]) + ' - ' +
                             str(percentiles[index + 1]) + units_short)
     # Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
@@ -1177,7 +1173,6 @@ def wave_power(shape_uri):
 
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
-        feat = None
         feat = layer.GetNextFeature()
 
 def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
@@ -1207,7 +1202,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     # current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(), 
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(),
                                    in_defn.GetGeomType())
     # Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
@@ -1219,9 +1214,9 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         fd_def.SetWidth(src_fd.GetWidth())
         fd_def.SetPrecision(src_fd.GetPrecision())
         shp_layer.CreateField(fd_def)
-    LOGGER.debug('Binding Shapes Feature Count : %s', 
+    LOGGER.debug('Binding Shapes Feature Count : %s',
                  clip_layer.GetFeatureCount())
-    LOGGER.debug('Shape to be Bounds Feature Count : %s', 
+    LOGGER.debug('Shape to be Bounds Feature Count : %s',
                  in_layer.GetFeatureCount())
     # Retrieve all the binding polygon features and save their cloned 
     # geometry references to a list
@@ -1238,6 +1233,8 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         geom = in_feat.GetGeometryRef()
         # Get the spatial reference of the geometry to use in transforming
         target_sr = geom.GetSpatialReference()
+        geom = None
+        in_feat = None
         # Create a coordinate transformation
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         # Transform the polygon geometry into the same format as the 
@@ -1245,8 +1242,6 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         clip_geom.Transform(coord_trans)
         # Add geometry to list
         clip_geom_list.append(clip_geom.Clone())
-        in_feat = None
-        clip_feat = None
         clip_feat = clip_layer.GetNextFeature()
 
     in_layer.ResetReading()
@@ -1276,8 +1271,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
                 shp_layer.CreateFeature(out_feat)
                 out_feat = None
                 break
-            
-        in_feat = None
+
         in_feat = in_layer.GetNextFeature()
 
 def wave_energy_interp(wave_data, machine_perf):

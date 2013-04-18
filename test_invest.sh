@@ -68,9 +68,7 @@ then
         timber_test.py
         water_scarcity_test.py
         water_yield_test.py
-        wave_energy_biophysical_test.py
-        wave_energy_core_test.py
-        wave_energy_valuation_test.py
+        wave_energy_test.py
         wind_energy_biophysical_test.py
         wind_energy_core_test.py
         wind_energy_valuation_test.py

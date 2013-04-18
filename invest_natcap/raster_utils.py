@@ -11,6 +11,7 @@ import atexit
 import functools
 import csv
 import math
+import errno
 
 from osgeo import gdal
 from osgeo import osr
@@ -2538,3 +2539,22 @@ def vectorize_points_uri(shapefile_uri, field, output_uri):
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
     vectorize_points(datasource, field, output_raster)
+
+def create_directories(directory_list):
+    """This function is inspired from this thread 
+        http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write
+        it will create any of the directories in the directory list if possible
+        and raise exceptions if something Bad happens.
+
+        directory_list - a list of string uri paths
+
+        returns nothing"""
+
+    for dir_name in directory_list:
+        try:
+            os.makedirs(dir_name)
+        except OSError as exception:
+            #It's okay if the directory already exists, if it fails for
+            #some other reason, raise that exception
+            if exception.errno != errno.EEXIST:
+                raise
