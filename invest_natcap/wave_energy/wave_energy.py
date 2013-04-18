@@ -4,6 +4,7 @@ import os
 import logging
 import csv
 import struct
+import itertools
 
 import numpy as np
 from osgeo import gdal
