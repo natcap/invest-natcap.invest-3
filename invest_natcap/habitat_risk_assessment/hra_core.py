@@ -124,7 +124,24 @@ def execute(args):
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
-        '''    avgs_dict- A multi level dictionary to hold the average values that
+        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+
+        tables_dir = os.path.join(output_dir, 'HTML_Tables')
+        os.mkdir(tables_dir)
+        
+        make_aoi_tables(tables_dir, avgs_dict)
+
+        if args['risk_eq'] == 'Euclidean':
+            make_risk_plots(tables_dir, avgs_dict)
+
+def make_risk_plots(out_dir, avgs_dict):
+    '''This function will produce risk plots when the risk equation is
+    euclidean.
+
+    Input:
+        out_dir- The directory into which the completed risk plots should be
+            placed.
+        avgs_dict- A multi level dictionary that holds the average values that
                 will be placed into the HTML table.
 
                 {'HabitatName':
@@ -136,13 +153,12 @@ def execute(args):
                     },
                     ....
                 }
-        '''
-        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+    Output:
+        A set of .png images containing the matplotlib plots for every H-S
+        combination. Within that, each AOI will be displayed as plotted by
+        (E,C) values. 
 
-        tables_dir = os.path.join(output_dir, 'HTML_Tables')
-        os.mkdir(tables_dir)
-        
-        make_aoi_tables(tables_dir, avgs_dict)
+    
 
 def make_aoi_tables(out_dir, avgs_dict):
     '''This function will take in an shapefile containing multiple AOIs, and
@@ -151,23 +167,19 @@ def make_aoi_tables(out_dir, avgs_dict):
     Input:
         out_dir- The directory into which the completed HTML tables should be
             placed.
-        inter_dir- The directory which contains the individual E and C rasters.
-            We can use these to get the avg. E and C values per area. Since we
-            don't really have these in any sort of dictionary, will probably
-            just need to explicitly call each individual file based on the
-            names that we pull from the risk_dict keys.
-        risk_dict- A simple dictionary that maps a tuple of 
-            (Habitat, Stressor) to the URI for the risk raster created when the 
-            various sub components (H/S/H_S) are combined.
-
-            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
-            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
-            ...
-            }
-        aoi_uri- The location of the AOI zone files. Each feature within this
-            file (identified by a 'name' attribute) will be used to average 
-            an area of E/C/Risk values.
      
+        avgs_dict- A multi level dictionary that holds the average values that
+                will be placed into the HTML table.
+
+                {'HabitatName':
+                    {'StressorName':
+                        [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                            {...},
+                        ...
+                        ]
+                    },
+                    ....
+                }
      Output:
         A set of HTML tables which will contain averaged values of E, C, and
         risk for each H, S pair within each AOI. Additionally, the tables will
