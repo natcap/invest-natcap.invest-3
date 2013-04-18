@@ -28,7 +28,7 @@
                     "label": "Path to Folder with Wave Base Data",
                     "defaultValue": "../WaveEnergy/input/WaveData",
                     "required": true,
-                    "validateAs": {"type": "folder"},
+                    "validateAs": {"type": "folder", "mustExist": true},
                     "helpText": "Select the folder that has the packaged Wave Energy Data."
                 },    
 		        {
