@@ -3,11 +3,13 @@
 import logging
 import math
 import os
+import shutil
 
 from osgeo import gdal
 
 from invest_natcap import raster_utils
-
+from invest_natcap.wind_energy import wind_energy_valuation
+from invest_natcap.invest_core import fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -282,6 +284,8 @@ def convert_precip_to_points(precip_uri, points_uri):
         precip_uri - a uri to a CSV on disk, which must have the following
             columns:
             "STATION" - a string raingauge identifier.
+            "LATI" - the latitude
+            "LONG" - the longitude
             ["1", "2", ... ] - fieldnames corresponding with each time step.
                 Must start at 1.
         points_uri - a string URI to which the output points shapefile will be
@@ -303,3 +307,11 @@ def convert_precip_to_points(precip_uri, points_uri):
         except OSError:
             # Thrown when the points file does not exist.
             LOGGER.debug('File %s not found', points_uri)
+
+    # Extract the data from the precip CSV using the TableHandler class.
+    table_object = fileio.TableHandler(precip_uri)
+    table_dictionary = dict((i, d) for (i, d) in
+        enumerate(table_object.get_table()))
+
+    wind_energy_valuation.dictionary_to_shapefile(table_dictionary,
+        'precip_points', points_uri)
