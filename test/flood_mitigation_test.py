@@ -75,6 +75,17 @@ class FloodMitigationTest(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, regression_slope_cn,
             slope_cn)
 
-    def test_regression(self):
+    def test_regression_dry_season(self):
         """Regression test for the flood mitigation model."""
         flood_mitigation.execute(self.args)
+
+    def test_regression_wet_season(self):
+        self.args['cn_season'] = 'wet'
+        """Regression test for the flood mitigation model."""
+        flood_mitigation.execute(self.args)
+
+    def test_regression_no_season(self):
+        self.args['cn_adjust'] = False
+        """Regression test for the flood mitigation model."""
+        flood_mitigation.execute(self.args)
+
