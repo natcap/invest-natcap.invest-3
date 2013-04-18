@@ -75,6 +75,12 @@ class FloodMitigationTest(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, regression_slope_cn,
             slope_cn)
 
+    def test_swrc_raster(self):
+        """Check the SWRC raster."""
+        swrc_uri = os.path.join(self.workspace, 'soil_water_retention.tif')
+        flood_mitigation.soil_water_retention_capacity(self.curve_numbers,
+            swrc_uri)
+
     def test_regression_dry_season(self):
         """Regression test for the flood mitigation model."""
         flood_mitigation.execute(self.args)
