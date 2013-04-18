@@ -14,6 +14,7 @@ class FloodMitigationTest(unittest.TestCase):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
         self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
+        self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
 
         self.args = {
             'workspace': self.workspace,
@@ -100,3 +101,7 @@ class FloodMitigationTest(unittest.TestCase):
         """Regression test for the flood mitigation model."""
         flood_mitigation.execute(self.args)
 
+    def test_convert_precip_to_points(self):
+        points_uri = os.path.join(self.workspace, 'precip_points')
+        flood_mitigation.convert_precip_to_points(self.precip, self.dem,
+            points_uri)
