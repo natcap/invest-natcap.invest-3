@@ -149,7 +149,7 @@ def soil_water_retention_capacity(cn_uri, swrc_uri):
         """
 
     cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
-    pixel_size = raster_utils.get_cell_size_from_uri(cn_uri)
+    cn_pixel_size = raster_utils.get_cell_size_from_uri(cn_uri)
 
     def calculate_swrc(curve_num):
         """This function calculates the soil water retention capacity on a
