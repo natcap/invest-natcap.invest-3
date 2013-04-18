@@ -929,11 +929,6 @@ def create_percentile_rasters(
     matrix_mask = np.memmap(
         tmp_mask_file, dtype = bool, mode = 'w+', shape = (n_rows, n_cols))
     
-    tmp_mask_large_file = raster_utils.temporary_filename()
-    large_matrix = np.memmap(
-        tmp_mask_large_file, dtype = bool, mode = 'w+', 
-        shape = (n_rows, n_cols))
-    
     # Flatten each array before doing operations so that it can be passed to
     # scipy.scoreatpercentiles later
     dataset_array = np.reshape(matrix, (-1,))
