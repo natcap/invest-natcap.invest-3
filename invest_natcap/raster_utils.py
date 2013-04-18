@@ -11,6 +11,7 @@ import atexit
 import functools
 import csv
 import math
+import errno
 
 from osgeo import gdal
 from osgeo import osr
@@ -2550,5 +2551,10 @@ def create_directories(directory_list):
         returns nothing"""
 
     for dir_name in directory_list:
-        if not os.path.exists(dir_name):
+        try:
             os.makedirs(dir_name)
+        except OSError as exception:
+            #It's okay if the directory already exists, if it fails for
+            #some other reason, raise that exception
+            if exception.errno != errno.EEXIST:
+                raise
