@@ -100,7 +100,18 @@ def execute(args):
 
     This function returns None."""
 
-    pass
+    workspace = args['workspace']
+    intermediate = os.path.join(workspace, 'intermediate')
+    output = os.path.join(workspace, 'output')
+
+    # Create folders in the workspace if they don't already exist
+    for folder in [workspace, intermediate, output]:
+        try:
+            os.makedirs(folder)
+            LOGGER.debug('Created folder %s', folder)
+        except OSError:
+            LOGGER.debug('Folder %s already exists', folder)
+
 
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
@@ -209,4 +220,3 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
 
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
         adjusted_uri, gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection')
-
