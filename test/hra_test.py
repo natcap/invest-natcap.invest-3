@@ -4,6 +4,8 @@ Assessment.'''
 import os
 import unittest
 import logging
+import glob
+import filecmp
 
 import invest_test_core
 
@@ -81,6 +83,55 @@ class TestHRA(unittest.TestCase):
         self.assertRaises(hra.ImproperCriteriaAttributeName,
                         hra.execute, self.args)
 
-    def test_extra_crit_shape(self):
+    def test_euc_full_regression(self):
+        '''Alright. Let's do this shit.'''
+
+        exp_workspace = './data/hra_regression_data/'
+
+        self.args['workspace_dir'] = './data/test_out/HRA/Reg_Folder'
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'Linear'
+        self.args['grid_size'] = 100
+        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions.shp'
+
+        hra.execute(self.args)
+
+        res_inter = os.path.join(self.args['workspace_dir'], 'Intermediate')
+        res_output = os.path.join(self.args['workspace_dir'], 'Output')
+
+        def do_tests(curr_path, item):
+
+            if os.path.isdir(item):
+                dir_name = item.split("/")[-1]
+                contents = glob.glob(os.path.join(item, '*'))
+                for c in contents: 
+                    do_tests(os.path.join(curr_path, dir_name), c)
+            
+            else:
+                head, tail = os.path.splitext(item)
+
+                if tail == '.tif':
+                    #Want to use dataset compare
+                    LOGGER.debug("curr_path: %s", curr_path)
+                    LOGGER.debug("item: %s", item)
+                    LOGGER.debug("basename: %s", os.path.basename(item))
+                    expect_uri = os.path.join(exp_workspace, curr_path, os.path.basename(item))
+                    invest_test_core.assertTwoDatasetEqualURI(self, item, expect_uri)
+
+                elif tail ==  '.shp':
+                    #Want to use dataset compare
+                    expect_uri = os.path.join(exp_workspace, curr_path, os.path.basename(item))
+                    invest_test_core.assertTwoShapesEqualURI(self, item, expect_uri)
+
+                elif tail == '.html':
+                    #There is only one file here that we want to compare against.
+                    #Just explicitly call it so I can be done.
+                    exp_html = './data/hra_regression_data/Output/HTML_Tables/Sub_Region_Averaged_Results_[2013-04-16_14_37].html'
+
+                    self.assertTrue(filecmp.cmp(item, exp_html))
+        
+        for folder in (res_inter, res_output):
+            do_tests('', folder)        
+        
 
         

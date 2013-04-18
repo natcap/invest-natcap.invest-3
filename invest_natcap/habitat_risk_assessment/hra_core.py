@@ -8,7 +8,6 @@ import collections
 import math
 import datetime
 import sys
-import webbrowser
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -205,8 +204,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
             "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
         
         for stressor, s_list in stress_dict.items():
-            LOGGER.debug("Stressor : %s", stressor)
-            LOGGER.debug("Type? %s", type(stressor))
 
             #Want the stressor column to span the number of AOIs that are included
             #within it. 
@@ -238,9 +235,6 @@ def make_aoi_tables(out_dir, inter_dir, risk_dict, aoi_uri, max_risk):
     #End of the page.
     file.write("</html>")
     file.close()
-
-    #When the model run is complete, open the page of results.
-    webbrowser.open(filename)
 
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
@@ -329,8 +323,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
         r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
                         'mean')
 
-        LOGGER.debug("dictionaryyy %s", r_agg_dict)
-
         #GETTING MEANS OF THE E RASTERS HERE
 
         #Just going to have to pull explicitly. Too late to go back and
@@ -354,12 +346,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
             
             name = name_map[ident]
 
-            LOGGER.debug("name: %s", name)           
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
-
-            LOGGER.debug("dictionary is: %s", avgs_dict[h][s])
-        LOGGER.debug(avgs_dict)
 
     return avgs_dict
 
@@ -530,9 +518,6 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
     Returns nothing.
     '''
-#    LOGGER.debug(crit_lists)
-#    LOGGER.debug(denoms)
-
     #Want all of the unique habitat names
     habitats = denoms['Recovery'].keys()
     
@@ -552,6 +537,8 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             
             value = value / denoms['Recovery'][h]
 
+            return value
+
         curr_list = crit_lists['Recovery'][h]
 
         #Need to get the arbitrary first element in order to have a pixel size
@@ -560,7 +547,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         pixel_size = raster_utils.get_cell_size_from_uri(curr_list[0])
 
         out_uri = os.path.join(dir, 'recov_potent_H[' + h + '].tif')
-
+        
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, 0., pixel_size, "union", 
                     resample_method_list=None, dataset_to_align_index=None,
@@ -1039,7 +1026,6 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     denoms = {'Risk': {'h-s': {}, 'h':{}, 's':{}},
                   'Recovery': {}
                  }
-    LOGGER.debug(hab)
     #Now will iterrate through the dictionaries one at a time, since each has
     #to be placed uniquely.
 
@@ -1335,6 +1321,5 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
 
             crit_lists['Risk']['s'][s].append(crit_E_uri)
 
-    LOGGER.debug(denoms)
     #This might help.
     return (crit_lists, denoms)
