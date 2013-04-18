@@ -2538,3 +2538,17 @@ def vectorize_points_uri(shapefile_uri, field, output_uri):
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
     vectorize_points(datasource, field, output_raster)
+
+def create_directories(directory_list):
+    """This function is inspired from this thread 
+        http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write
+        it will create any of the directories in the directory list if possible
+        and raise exceptions if something Bad happens.
+
+        directory_list - a list of string uri paths
+
+        returns nothing"""
+
+    for dir_name in directory_list:
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
