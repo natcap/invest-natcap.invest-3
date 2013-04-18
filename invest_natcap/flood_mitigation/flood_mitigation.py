@@ -275,3 +275,17 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
 
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
         adjusted_uri, gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection')
+
+def convert_precip_to_points(precip_uri, points_uri):
+    """Convert the CSV at `precip_uri` to a points shapefile.
+
+        precip_uri - a uri to a CSV on disk, which must have the following
+            columns:
+            "STATION" - a string raingauge identifier.
+            ["1", "2", ... ] - fieldnames corresponding with each time step.
+                Must start at 1.
+        points_uri - a string URI to which the output points shapefile will be
+            saved as an OGR datasource.
+
+        Returns nothing."""
+    pass
