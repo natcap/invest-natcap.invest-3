@@ -2,6 +2,7 @@
 
 import logging
 import math
+import os
 
 from osgeo import gdal
 
