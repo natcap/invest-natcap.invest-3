@@ -287,5 +287,19 @@ def convert_precip_to_points(precip_uri, points_uri):
         points_uri - a string URI to which the output points shapefile will be
             saved as an OGR datasource.
 
-        Returns nothing."""
-    pass
+    Returns nothing."""
+
+    if os.path.isdir(points_uri):
+        try:
+            shutil.rmtree(points_uri)
+            LOGGER.debug('Folder %s has been removed', points_uri)
+        except OSError:
+            # Thrown when points_uri does not exist on disk.
+            LOGGER.debug('Folder URI %s not found.', points_uri)
+    else:
+        try:
+            os.remove(points_uri)
+            LOGGER.debug('Removed file %s', points_uri)
+        except OSError:
+            # Thrown when the points file does not exist.
+            LOGGER.debug('File %s not found', points_uri)
