@@ -1173,7 +1173,6 @@ def wave_power(shape_uri):
 
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
-        feat = None
         feat = layer.GetNextFeature()
 
 def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
