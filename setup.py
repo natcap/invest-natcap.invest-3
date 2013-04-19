@@ -119,8 +119,6 @@ if platform.system() == 'Windows':
     py2exe_args['console'] = \
         ['invest_carbon_biophysical.py',
          'invest_carbon_valuation.py',
-         'invest_wave_energy_biophysical.py',
-         'invest_wave_energy_valuation.py',
          'invest_wave_energy.py',
          'invest_hra.py',
          'invest_hra_preprocessor.py',
@@ -151,8 +149,6 @@ if platform.system() == 'Windows':
               'invest_natcap/iui/carbon_valuation.json',
               'invest_natcap/iui/timber.json',
               'invest_natcap/iui/aesthetic_quality.json',
-              'invest_natcap/iui/wave_energy_biophysical.json',
-              'invest_natcap/iui/wave_energy_valuation.json',
               'invest_natcap/iui/wave_energy.json',
               'invest_natcap/iui/water_yield.json',
               'invest_natcap/iui/recreation-client-init.json',
