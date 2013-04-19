@@ -68,7 +68,7 @@
                 {
                     "id": "help_label",
                     "type": "label",
-                    "label": "(Choose at least 1 criteria for each category below, at at least 4 total.)"
+                    "label": "(Choose at least 1 criteria for each category below, and at least 4 total.)"
                 },
                 {
                     "id": "exp_crit",
