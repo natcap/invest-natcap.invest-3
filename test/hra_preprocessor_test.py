@@ -19,8 +19,8 @@ class TestHRAPreprocessor(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = './data/test_out/HRA' 
-        args['stressors_dir'] = './data/hra_regression_data/Input/StressorLayers'
+        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA' 
+        args['stressors_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/StressorLayers'
         args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
         args['sensitivity_crits'] = ['temporal overlap', \
                     'frequency of disturbance']
@@ -32,7 +32,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''This will use only the habitats directory as an input to overlap
         stressors, and won't attempt to pull in shapefile criteria.'''
 
-        self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
 
@@ -41,16 +41,16 @@ class TestHRAPreprocessor(unittest.TestCase):
         stressors, and will atempt to use a single shapefile criteria with
         eelgrass and recruitment rate.'''
 
-        self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
-        self.args['criteria_dir'] = './data/hra_regression_data/Shape_Criteria'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/HabitatLayers'
+        self.args['criteria_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Shape_Criteria'
 
         hra_preprocessor.execute(self.args)
 
     @unittest.skip("For later testing.")
     def test_HabsSpecies_NoShapes_smoke(self):
 
-        self.args['species_dir'] = './data/test_out/HRA/Input/SpeciesLayers'
-        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['species_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/SpeciesLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
 
@@ -67,7 +67,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         within our 3 criteria type lists. Should raise a NotEnoughCriteria 
         exception.'''
 
-        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/HabitatLayers'
 
         #Since we had 6 crits to begin with, remove one from each should leave
         #us with 3, want to make sure this causes to error.
@@ -85,7 +85,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''Want to make sure that we are erroring if we don't have any criteria
         values in any of the 3 categories.'''
 
-        self.args['habitats_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/HabitatLayers'
 
         self.args['resilience_crits'] = []
 
@@ -98,14 +98,14 @@ class TestHRAPreprocessor(unittest.TestCase):
         this one. Just need to make sure that the folder we're testing against
         had the proper params enabled within the dir_names.txt file.'''
 
-        csv_folder = './data/hra_regression_data/habitat_stressor_ratings'
+        csv_folder = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/habitat_stressor_ratings'
        
         #since the file paths are coming in through the JSON import, they will
         #be unicode
         expected_dict = \
-            {u'habitats_dir': u'./data/hra_regression_data/Input/HabitatLayers',
-            u'stressors_dir': u'./data/hra_regression_data/Input/StressorLayers',
-            u'criteria_dir': u'./data/hra_regression_data/Shape_Criteria',
+            {u'habitats_dir': u'/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/HabitatLayers',
+            u'stressors_dir': u'/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/StressorLayers',
+            u'criteria_dir': u'/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Shape_Criteria',
             'buffer_dict': {'FinfishAquacultureComm': 1000.0,
                             'ShellfishAquacultureComm': 2000.0},
             'h-s':
