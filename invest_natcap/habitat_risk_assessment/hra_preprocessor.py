@@ -554,7 +554,6 @@ def parse_stressor(uri):
         try:
             stressor_buffer = float(csv_reader.next()[1])
         except ValueError:
-            LOGGER.debug("Unexpected string?: %s", stressor_buffer)
             raise UnexpectedString("Entries in CSV table may not be \
                 strings, and may not be left blank. Check your " + s_name + " CSV \
                 for any leftover strings or spaces within Buffer, Rating, \
@@ -776,14 +775,9 @@ def make_crit_shape_dict(crit_uri):
     exps_dir = os.path.join(crit_uri, 'Exposure')
     sens_dir = os.path.join(crit_uri, 'Sensitivity')
  
-    LOGGER.debug(os.getcwd())
-    LOGGER.debug(crit_uri)
-    LOGGER.debug(glob.glob(os.path.join(crit_uri, '*')))
-    
     for folder in [res_dir, exps_dir, sens_dir]:
         if not os.path.isdir(folder):
     
-            LOGGER.debug("%s doesn't exist.", folder)
             raise IOError("Using spatically explicit critiera requires you to \
                     have subfolders named \"Resilience\", \"Exposure\", and \
                     \"Sensitivity\". Check that all these folders exist, and \
