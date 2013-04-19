@@ -137,7 +137,7 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in args:
-            names = os.list_dir(args[ele])
+            names = os.listdir(args[ele])
             hab_list = fnmatch.filter(names, '*.shp')
             hab_list = \
                 map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
@@ -370,8 +370,8 @@ def parse_hra_tables(workspace_uri):
     
     #Now we can compile and add the other dictionaries
     dir_names = os.listdir(workspace_uri)
-    habitat_paths = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
-    stressor_paths = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
+    habitat_csvs = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
+    stressor_csvs = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
     
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
@@ -786,7 +786,7 @@ def make_crit_shape_dict(crit_uri):
     #species specific. These should all be in the 'Resilience subfolder
     #of raster_criteria.
     res_names = os.listdir(os.path.join(crit_uri, 'Resilience'))
-    res_shps = fnmatch.filter(res_names, '*.shp'))   
+    res_shps = fnmatch.filter(res_names, '*.shp')   
     
     #Now we have a list of all habitat specific shapefile criteria. Now we need
     #to parse them out.
@@ -812,7 +812,7 @@ def make_crit_shape_dict(crit_uri):
     #Now, want to move on to stressor-centric criteria, but will do much the
     #same thing. 
     exps_names = os.listdir(os.path.join(crit_uri, 'Exposure'))
-    exps_shps = fnmatch.filter(exps_names, '*.shp'))   
+    exps_shps = fnmatch.filter(exps_names, '*.shp')   
    
     #Now we have a list of all stressor specific shapefile criteria. 
     #Now we need to parse them out.
@@ -836,7 +836,7 @@ def make_crit_shape_dict(crit_uri):
     
     #Finally, want to get all of our pair-centric shape criteria. 
     sens_names = os.listdir(os.path.join(crit_uri, 'Sensitivity'))
-    sens_shps = fnmatch.filter(sens_names, '*.shp'))   
+    sens_shps = fnmatch.filter(sens_names, '*.shp')   
    
     #Now we have a list of all pair specific shapefile criteria. 
     #Now we need to parse them out.

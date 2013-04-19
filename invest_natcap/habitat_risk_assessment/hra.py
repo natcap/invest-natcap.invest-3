@@ -4,10 +4,9 @@ and pre-processed data from the UI and pass it to the hra_core module.'''
 import os
 import shutil
 import logging
-import glob
+import fnmatch
 import numpy as np
 import math
-import sys
 
 from osgeo import gdal, ogr, osr
 from scipy import ndimage
@@ -228,7 +227,8 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_list += glob.glob(os.path.join(hra_args[ele], '*.shp'))
+            hab_names = os.listdir(hra_args[ele])
+            hab_list += fnmatch.filter(hab_names, '*.shp')
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
@@ -527,7 +527,9 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             rasterized version of the stressor shapefile. It will be placed
             at stressors[stressName]['DS'].
     '''
-    stress_list = glob.glob(os.path.join(stressors_dir, '*.shp'))
+    s_names = os.listdir(stressors_dir)
+    stress_list = fnmatch.filter(s_names, '*.shp')
+
     for shape in stress_list:
 
         #The return of os.path.split is a tuple where everything after the final
