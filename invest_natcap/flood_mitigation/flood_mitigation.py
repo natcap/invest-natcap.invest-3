@@ -1,11 +1,15 @@
 """Functions for the InVEST Flood Mitigation model."""
 
 import logging
+import math
+import os
+import shutil
 
 from osgeo import gdal
 
 from invest_natcap import raster_utils
-
+from invest_natcap.wind_energy import wind_energy_valuation
+from invest_natcap.invest_core import fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -99,7 +103,72 @@ def execute(args):
 
     This function returns None."""
 
-    pass
+    workspace = args['workspace']
+    intermediate = os.path.join(workspace, 'intermediate')
+    output = os.path.join(workspace, 'output')
+
+    # Create folders in the workspace if they don't already exist
+    for folder in [workspace, intermediate, output]:
+        try:
+            os.makedirs(folder)
+            LOGGER.debug('Created folder %s', folder)
+        except OSError:
+            LOGGER.debug('Folder %s already exists', folder)
+
+    # We need a slope raster for several components of the model.
+    slope_uri = os.path.join(intermediate, 'slope.tif')
+    raster_utils.calculate_slope(args['dem'], slope_uri)
+
+    # Adjust Curve Numbers according to user input
+    # If the user has not selected a seasonality adjustment, only then will we
+    # adjust for slope.  Rich and I made this decision, as Equation 5
+    # (slope adjustments to curve numbers) is not clear which seasonality
+    # adjustment to use or how to use it when the user choses a non-average
+    # seasonality adjustment.  Until we figure this out, we are only adjusting
+    # CNs for slope IFF the user has not selected a seasonality adjustment.
+    if args['cn_adjust'] == True:
+        season = args['cn_season']
+        cn_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
+        adjust_cn_for_season(args['curve_numbers'], season, cn_adjusted_uri)
+    else:
+        cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
+        adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
+
+
+def soil_water_retention_capacity(cn_uri, swrc_uri):
+    """Calculate the capacity of the soil to retain water on the landscape from
+        the user's adjusted curve numbers.  These curve numbers are assumed to
+        have already been adjusted properly according to slope and/or
+        seasonality.
+
+        cn_uri - a URI to a GDAL dataset on disk.
+        swrc_uri - a URI.  If this file exists on disk, it will be overwritted
+            with a GDAL dataset.
+
+        This function saves a GDAL dataset to the URI `swrc_uri`.
+
+        Returns nothing.
+        """
+
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+    cn_pixel_size = raster_utils.get_cell_size_from_uri(cn_uri)
+
+    def calculate_swrc(curve_num):
+        """This function calculates the soil water retention capacity on a
+            per-pixel level based on the input curve number, as long as the
+            `curve_num` is not the nodata value.  This is equation 2
+            in the Flood Mitigation user's guide.
+
+            curve_num - a number.
+
+            Returns a float."""
+
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return ((25400.0 / curve_num) - 254.0)
+
+    raster_utils.vectorize_datasets([cn_uri], calculate_swrc, swrc_uri,
+        gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
 
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
@@ -197,7 +266,7 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
             return cn_nodata
 
         ratio = (_wet_season_adjustment(curve_num) - curve_num) / 3.0
-        quotient = 1.0 - 2.0 ** (-13.86 * slope)
+        quotient = 1.0 - 2.0 * math.exp(-13.86 * slope)
 
         return ratio * quotient + curve_num
 
@@ -209,3 +278,26 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
         adjusted_uri, gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection')
 
+def convert_precip_to_points(precip_uri, points_uri):
+    """Convert the CSV at `precip_uri` to a points shapefile.
+
+        precip_uri - a uri to a CSV on disk, which must have the following
+            columns:
+            "STATION" - a string raingauge identifier.
+            "LATI" - the latitude
+            "LONG" - the longitude
+            ["1", "2", ... ] - fieldnames corresponding with each time step.
+                Must start at 1.
+        points_uri - a string URI to which the output points shapefile will be
+            saved as an OGR datasource.
+
+    Returns nothing."""
+
+
+    # Extract the data from the precip CSV using the TableHandler class.
+    table_object = fileio.TableHandler(precip_uri)
+    table_dictionary = dict((i, d) for (i, d) in
+        enumerate(table_object.get_table()))
+
+    wind_energy_valuation.dictionary_to_shapefile(table_dictionary,
+        'precip_points', points_uri)

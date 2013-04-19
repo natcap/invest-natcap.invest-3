@@ -14,10 +14,14 @@ class FloodMitigationTest(unittest.TestCase):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
         self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
+        self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
 
         self.args = {
             'workspace': self.workspace,
-            'curve_numbers': self.curve_numbers
+            'curve_numbers': self.curve_numbers,
+            'dem': self.dem,
+            'cn_adjust': True,
+            'cn_season': 'dry'
         }
 
         try:
@@ -72,6 +76,31 @@ class FloodMitigationTest(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, regression_slope_cn,
             slope_cn)
 
-    def test_regression(self):
+    def test_swrc_raster(self):
+        """Check the SWRC raster."""
+        swrc_uri = os.path.join(self.workspace, 'soil_water_retention.tif')
+        flood_mitigation.soil_water_retention_capacity(self.curve_numbers,
+            swrc_uri)
+
+        regression_swrc_uri = os.path.join(REGRESSION_DATA,
+            'soil_water_retention.tif')
+        invest_test_core.assertTwoDatasetEqualURI(self, regression_swrc_uri,
+            swrc_uri)
+
+    def test_regression_dry_season(self):
         """Regression test for the flood mitigation model."""
         flood_mitigation.execute(self.args)
+
+    def test_regression_wet_season(self):
+        self.args['cn_season'] = 'wet'
+        """Regression test for the flood mitigation model."""
+        flood_mitigation.execute(self.args)
+
+    def test_regression_no_season(self):
+        self.args['cn_adjust'] = False
+        """Regression test for the flood mitigation model."""
+        flood_mitigation.execute(self.args)
+
+    def test_convert_precip_to_points(self):
+        points_uri = os.path.join(self.workspace, 'precip_points')
+        flood_mitigation.convert_precip_to_points(self.precip, points_uri)

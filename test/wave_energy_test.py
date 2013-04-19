@@ -26,7 +26,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Regression test for the wave energy model without any optional
             inputs.
         """
-        raise SkipTest
+        #raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy/no_options'
         
@@ -137,7 +137,7 @@ class TestWaveEnergy(unittest.TestCase):
     def test_wave_energy_regression_aoi(self):
         """Regression test for the wave energy model when using an AOI.
         """
-        raise SkipTest
+        #raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy/aoi'
         
@@ -249,7 +249,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Regression test for the wave energy model when doing valuation and
             using an AOI.
         """
-        raise SkipTest
+        #raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy/aoi_val'
         
@@ -355,7 +355,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Regression test for the wave energy model when doing valuation,
             using an AOI, and a suffix.
         """
-        raise SkipTest
+        #raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy/aoi_val'
         
@@ -460,7 +460,7 @@ class TestWaveEnergy(unittest.TestCase):
     def test_wave_energy_build_point_shapefile(self):
         """A regression test that uses known data and inputs to test
             the validity of the function build_point_shapefile"""
-        raise SkipTest
+        #raise SkipTest
         output_dir = './data/test_out/wave_energy_build_pt_shapefile'
         reg_shape_path = \
             './data/wave_energy_regression_data/LandPts_prj_regression.shp'
@@ -497,7 +497,7 @@ class TestWaveEnergy(unittest.TestCase):
             to be clipped so we would expect the output to be equal to the
             input"""
 
-        raise SkipTest
+        #raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
@@ -524,7 +524,7 @@ class TestWaveEnergy(unittest.TestCase):
             shapefile if the binding polygon does not intersect with the other
             shape's features"""
 
-        raise SkipTest
+        #raise SkipTest
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
@@ -552,7 +552,7 @@ class TestWaveEnergy(unittest.TestCase):
             proper shape after it has been clipped by a polygon shapefile.
             Also check values of features based on known hand given results.
         """
-        raise SkipTest
+        #raise SkipTest
 
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy_clip_shape'
@@ -611,7 +611,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Test captured_wave_energy_to_shape using hand calculated and 
             generated values to pass into the function.
         """
-        raise SkipTest
+        #raise SkipTest
 
         shape_path = './data/wave_energy_data/test_input/pointShapeTest.shp'
         out_dir = \
@@ -670,7 +670,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Test compute_wave_energy_capacity function using hand generated
             values and results."""
 
-        raise SkipTest
+        #raise SkipTest
         #A dictionary representing a mini version of what would be produced
         #from the wave watch text file
         wave_data = {'periods':[1, 2, 3, 4, 5], 'heights':[1, 2, 3, 4],
@@ -709,7 +709,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Test wave_energy_interp by using hand calculations and hand
             calculated results based on the given inputs.
         """
-        raise SkipTest
+        #raise SkipTest
         #Rows/Col
         wave_data = {'periods':[1, 2, 3, 4, 5, 6, 7, 8], 
                      'heights':[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
@@ -742,7 +742,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Test the wave_power function by hand calculating wave power with 
             known variables and creating shapefile with those variables and 
             comparing returned value against known results."""
-        raise SkipTest
+        #raise SkipTest
 
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy_wave_power'
@@ -811,7 +811,7 @@ class TestWaveEnergy(unittest.TestCase):
         
     def test_wave_energy_wave_power_regression(self):
         """A regresssion test for the wave_power function."""
-        raise SkipTest
+        #raise SkipTest
 
         test_dir = './data/wave_energy_data'
         output_dir = './data/test_out/wave_energy_wave_power'
@@ -863,7 +863,7 @@ class TestWaveEnergy(unittest.TestCase):
         """Test the get_points_geometries function by first creating a shapefile
             with assigned points and geometries. Pass shapefile to function
             and checked returned value against calculated ones."""
-        raise SkipTest
+        #raise SkipTest
         shape_path = \
             './data/wave_energy_data/test_input/test_wavepower_withfields.shp'
         out_dir = './data/test_out/wave_energy/get_points_geometries'
@@ -925,94 +925,15 @@ class TestWaveEnergy(unittest.TestCase):
         self.assertTrue(mask_dist.all(),
                         'Not all of the distances were equal.')
         self.assertTrue(mask_id.all(), 'Not all of the IDs matched.')
-        
-#   def test_wave_energy_create_percentile_raster(self):
-#       """A non-trivial test case that passes in a generated 10x10 raster
-#           with values from 1 - 100, along with the other necessary arguments.
-#           It then compares the resulting percentile raster against hand
-#           calculated results."""
-#       
-#       #raise SkipTest
-#       test_dir = './data/wave_energy_data'
-#       reg_dir = './data/wave_energy_regression_data'
-#       output_dir = './data/test_out/wave_energy/we_percentile_raster'
-#       #Output path for created raster
-#       dataset_path = os.path.join(output_dir, 'percentile_ten_by_ten.tif')
-#       perc_path = os.path.join(output_dir, 'percentile_out.tif')
-#       aoi_path = os.path.join(reg_dir, 'percentile_aoi.shp')
-#       
-#       #Add the Output directory onto the given workspace
-#       if not os.path.isdir(output_dir):
-#           os.makedirs(output_dir)
-#       if os.path.isfile(perc_path):
-#           os.remove(perc_path)
-#       #Make a dummy 10 x 10 raster
-#       raster_size = 10
-#       driver = gdal.GetDriverByName('GTiff')
-#       dataset = driver.Create(
-#               dataset_path, raster_size, raster_size, 1, gdal.GDT_Float32)
-#       #Create a 10 x 10 2D numpy array with values ranging from 1 to 100
-#       raster_data = np.reshape(np.arange(1,101),(10,10))
-#       dataset.GetRasterBand(1).WriteArray(raster_data, 0, 0)
-#       calculated_perc_list = [25,50,75,90]
-#       calc_value_array = [1,2,3,4,5]
-#       calc_count_array = [24, 25, 25, 15, 11]
-#       calc_val_range_array = ['1 - 25 the amount of mice per cat (mice/cat)',
-#                               '25 - 50 (mice/cat)',
-#                               '50 - 75 (mice/cat)',
-#                               '75 - 90 (mice/cat)',
-#                               'Greater than 90 (mice/cat)']
-#       calculated_output_raster = np.array([[1,1,1,1,1,1,1,1,1,1],
-#                                           [1,1,1,1,1,1,1,1,1,1],
-#                                           [1,1,1,1,2,2,2,2,2,2],
-#                                           [2,2,2,2,2,2,2,2,2,2],
-#                                           [2,2,2,2,2,2,2,2,2,3],
-#                                           [3,3,3,3,3,3,3,3,3,3],
-#                                           [3,3,3,3,3,3,3,3,3,3],
-#                                           [3,3,3,3,4,4,4,4,4,4],
-#                                           [4,4,4,4,4,4,4,4,4,5],
-#                                           [5,5,5,5,5,5,5,5,5,5]])
-#       units_short = ' (mice/cat)'
-#       units_long = ' the amount of mice per cat (mice/cat)'
-#       dataset = None
-#       wave_energy.create_percentile_rasters(
-#               dataset_path, perc_path, units_short, units_long, '1', 
-#               [25,50,75,90], aoi_path)
-
-#       percentile_raster = gdal.Open(perc_path)
-#       perc_band = percentile_raster.GetRasterBand(1)
-#       perc_matrix = perc_band.ReadAsArray()
-#       LOGGER.debug('percentile matrix: %s', perc_matrix)
-#       LOGGER.debug('matrix: %s', calculated_output_raster)
-#       #Assert that the resulting raster's data is what is expected
-#       self.assertTrue((perc_matrix == calculated_output_raster).all())
-#       #Verify the resulting dbf attribute table is what is expected
-#       try:
-#           db_file = dbf.Dbf(perc_path+'.vat.dbf')
-#           value_array = []
-#           count_array = []
-#           val_range_array = []
-#           for rec in db_file:
-#               value_array.append(rec['VALUE'])
-#               count_array.append(rec['COUNT'])
-#               val_range_array.append(rec['VAL_RANGE'])
-#           LOGGER.debug('ranges : %s : %s', val_range_array, 
-#                        calc_val_range_array)
-#           for i in range(5):
-#               self.assertEqual(value_array[i], calc_value_array[i])
-#               self.assertEqual(count_array[i], calc_count_array[i])
-#               self.assertEqual(val_range_array[i], calc_val_range_array[i])
-#           db_file.close()
-#       except IOError, error:
-#           self.assertTrue(False, 'The dbf file could not be opened')
     
     def test_wave_energy_create_percentile_raster_regression(self):
         """A regression test for create_percentile_raster."""
-        raise SkipTest
+        #raise SkipTest
         
         test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_percentile_raster'
+        output_dir = './data/test_out/wave_energy/create_percentile_raster'
         regression_dir = './data/wave_energy_regression_data'
+        aoi_path = os.path.join(test_dir, 'samp_input/AOI_WCVI.shp')
         #The raster dataset input
         regression_dataset_uri = os.path.join(
                 regression_dir, 'wp_kw_regression.tif')
@@ -1023,23 +944,25 @@ class TestWaveEnergy(unittest.TestCase):
                 regression_dir, 'wp_rc_regression.tif.vat.dbf')
         #The resulting output raster location the function produces
         perc_path = os.path.join(output_dir, 'wp_percentile.tif')
+
         #Add the Output directory onto the given workspace
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
         if os.path.isfile(perc_path):
             os.remove(perc_path)
     
-        regression_dataset = gdal.Open(regression_dataset_uri)
+        #regression_dataset = gdal.Open(regression_dataset_uri)
         units_short = ' (kW/m)'
         units_long = ' wave power per unit width of wave crest length (kW/m)'
-        percentile_raster = wave_energy.create_percentile_rasters(
-                regression_dataset, perc_path, units_short, units_long, 
-                '1', [25,50,75,90], 0)
-        percentile_raster = None
-        regression_dataset = None
+        
+        wave_energy.create_percentile_rasters(
+                regression_dataset_uri, perc_path, units_short, units_long, 
+                '1', [25,50,75,90], aoi_path)
+        
         #Check the resulting raster against the regression raster
         invest_test_core.assertTwoDatasetEqualURI(
                 self, regression_perc_uri, perc_path)
+        
         #Verify the dbf attribute tables are correct
         try:
             regression_table = dbf.Dbf(regression_table_uri)
@@ -1058,38 +981,44 @@ class TestWaveEnergy(unittest.TestCase):
         
     def test_wave_energy_get_percentiles(self):
         """A straight forward test that passes in a list of percentiles
-        and a list of values.  The returned percentile marks are compared
-        against hand calculated results."""
-        raise SkipTest
+            and a list of values.  The returned percentile marks are compared
+            against hand calculated results."""
+        #raise SkipTest
         
         values = np.arange(1,101)
         calc_percentiles = [25, 50, 75, 90]
         perc_list = [25,50,75,90]
-        percentiles = wave_energy.get_percentiles(values, perc_list)
+        min_val = 0
+        max_val = 105
+        percentiles = wave_energy.get_percentiles(
+                values, perc_list, min_val, max_val)
         self.assertTrue(calc_percentiles == percentiles)
         return
     
     def test_wave_energy_create_percentile_ranges(self):
         """A non-trivial test case that compares hand calculated
-        percentile ranges with ranges returned from the function being
-        tested."""
+            percentile ranges with ranges returned from the function being
+            tested."""
         
-        raise SkipTest
+        #raise SkipTest
         units_short = ' (m/s)'
         units_long = ' the rate of time travel in meters per second (m/s)'
         percentiles = [4, 8, 12, 16]
-        ranges = wave_energy.create_percentile_ranges(percentiles, units_short, units_long, '1')
-        calc_ranges = ['1 - 4 the rate of time travel in meters per second (m/s)',
-                       '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 'Greater than 16 (m/s)']
+        ranges = wave_energy.create_percentile_ranges(
+                percentiles, units_short, units_long, '1')
+        calc_ranges = [
+                '1 - 4 the rate of time travel in meters per second (m/s)',
+                '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)',
+                'Greater than 16 (m/s)']
         #Check that the returned ranges as Strings are correct
         self.assertTrue(ranges == calc_ranges)
         return
     
     def test_wave_energy_create_attribute_table(self):
         """A non-trivial test case that compares hand calculated
-        attribute table values against the returned dbf's values
-        from the function being tested."""
-        raise SkipTest
+            attribute table values against the returned dbf's values
+            from the function being tested."""
+        #raise SkipTest
         
         output_dir = './data/test_out/wave_energy_attribute_table'
         raster_uri = os.path.join(output_dir, 'test_attr_table.tif')
@@ -1101,10 +1030,11 @@ class TestWaveEnergy(unittest.TestCase):
             os.remove(dbf_uri)
         #Make pre-calculated attribute table that should match the results
         #the function returns
-        calc_ranges = \
-            ['1 - 4 the rate of time travel in meters per second (m/s)',
-            '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 
-            'Greater than 16 (m/s)']
+        calc_ranges = [
+                '1 - 4 the rate of time travel in meters per second (m/s)',
+                '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 
+                'Greater than 16 (m/s)']
+        
         calc_count = [24, 25, 25, 15, 11]
         calc_values = [1,2,3,4,5]
         wave_energy.create_attribute_table(

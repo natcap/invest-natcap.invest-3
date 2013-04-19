@@ -26,7 +26,7 @@ class NotEnoughCriteria(Exception):
 class ImproperCriteriaSpread(Exception):
     '''An exception for hra_preprocessor which can be passed if there are not
     one or more criteria in each of the 3 criteria categories: resilience,
-    exposure, and sensitivity.'''
+C   exposure, and sensitivity.'''
     pass
 
 class ZeroDQWeightValue(Exception):
@@ -189,7 +189,7 @@ def execute(args):
             '(1) low, (0) no score>',
         'management effectiveness': '<enter (3) not effective, ' +
             '(2) somewhat effective, (1) very effective, (0) no score>',
-        'natural mortality': '<enter (3) 0-20%, (2) 20-50%, ' +
+        'natural mortality rate': '<enter (3) 0-20%, (2) 20-50%, ' +
             '(1) >80% mortality, or (0) no score>',
         'recruitment rate': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, ' +
             '(1) every <1 yrs, or (0) no score>',
@@ -554,7 +554,6 @@ def parse_stressor(uri):
         try:
             stressor_buffer = float(csv_reader.next()[1])
         except ValueError:
-            LOGGER.debug("Unexpected string?: %s", stressor_buffer)
             raise UnexpectedString("Entries in CSV table may not be \
                 strings, and may not be left blank. Check your " + s_name + " CSV \
                 for any leftover strings or spaces within Buffer, Rating, \
@@ -776,14 +775,9 @@ def make_crit_shape_dict(crit_uri):
     exps_dir = os.path.join(crit_uri, 'Exposure')
     sens_dir = os.path.join(crit_uri, 'Sensitivity')
  
-    LOGGER.debug(os.getcwd())
-    LOGGER.debug(crit_uri)
-    LOGGER.debug(glob.glob(os.path.join(crit_uri, '*')))
-    
     for folder in [res_dir, exps_dir, sens_dir]:
         if not os.path.isdir(folder):
     
-            LOGGER.debug("%s doesn't exist.", folder)
             raise IOError("Using spatically explicit critiera requires you to \
                     have subfolders named \"Resilience\", \"Exposure\", and \
                     \"Sensitivity\". Check that all these folders exist, and \

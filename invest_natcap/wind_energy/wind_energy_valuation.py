@@ -3,6 +3,7 @@ import os.path
 import logging
 import csv
 import json
+import shutil
 
 from osgeo import ogr
 from osgeo import osr
@@ -277,7 +278,9 @@ def dictionary_to_shapefile(dict_data, layer_name, output_uri):
     # If the output_uri exists delete it
     if os.path.isfile(output_uri):
         os.remove(output_uri)
-   
+    elif os.path.isdir(output_uri):
+        shutil.rmtree(output_uri)
+
     LOGGER.info('Creating new datasource')
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
