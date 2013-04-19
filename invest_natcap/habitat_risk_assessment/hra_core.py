@@ -184,22 +184,31 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
     for hab_name, stressor_dict in avgs_dict.iteritems():
         
         #Make a separate window for each habitat, have the stressors within it.
-        matplotlib.pyplot.figure(hab_name)
-
+        matplotlib.pyplot.figure(plot_index)
+        plot_index += 1
+        matplotlib.pyplot.suptitle(hab_name)
+        
+        stress_index = 0
         for stressor_name, aoi_list in stressor_dict.iteritems():
-            plot_index += 1
+            stress_index += 1
             #Want to have two across, and make sure there are enough spaces
             #going down for each of the subplots 
-            matplotlib.pyplot.subplot(int(math.ceil(stressor_dict/2.0)), 2, plot_index)
+            matplotlib.pyplot.subplot(int(math.ceil(len(stressor_dict)/2.0)), 2, stress_index)
             plot_background_circle(max_risk)
             for aoi_dict in aoi_list:
-                matplotlib.pyplot.plot(aoi_dict['E'], aoi_dict['C'], 'k^', markerfacecolor='black', markersize=8)
-                matplotlib.pyplot.annotate(aoi_dict['Name'], xy=(aoi_dict['E'], aoi_dict['C']), xytext=(aoi_dict['E'], aoi_dict['C']+0.07))
-            matplotlib.pyplot.title(hab_name + ", " + stressor_name)
+                matplotlib.pyplot.plot(aoi_dict['E'], aoi_dict['C'], 'k^', 
+                        markerfacecolor='black', markersize=8)
+                matplotlib.pyplot.annotate(aoi_dict['Name'], xy=(aoi_dict['E'], 
+                        aoi_dict['C']), xytext=(aoi_dict['E'], aoi_dict['C']+0.07))
+            
+            matplotlib.pyplot.title(stressor_name)
             matplotlib.pyplot.xlim([0.5, max_risk])
             matplotlib.pyplot.ylim([0.5, max_risk])
+            matplotlib.pyplot.xlabel("Exposure")
+            matplotlib.pyplot.ylabel("Consequence")
+            
 
-        out_uri = os.path.join(out_dir, 'risk_plot' + 'H[' + hab_name+ '].png')
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'H[' + hab_name+ '].png')
 
         matplotlib.pyplot.savefig(out_uri, format='png')
 
@@ -207,22 +216,25 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
     max_tot_risk = max_risk * max(num_stress.values())
-    matplotlib.pyplot.figure("Ecosystem Risk")
+    matplotlib.pyplot.figure(plot_index)
+    matplotlib.pyplot.suptitle("Ecosystem Risk")
+    
     plot_background_circle(max_tot_risk)
     
     for hab_name, stressor_dict in avgs_dict.items():
 
         points_dict = {}
-        for stress_name, aoi_dict in stressor_dict.items():
-            for aoi_name, e_c_dict in aoi_dict.items():
-            
+        #Remember, this is a list. You did that for a reason.
+        for stress_name, aoi_list in stressor_dict.items():
+            for e_c_dict in aoi_list:
+           
+                aoi_name = e_c_dict['Name']
                 if aoi_name in points_dict:
                     points_dict[aoi_name]['E'] += e_c_dict['E']
                     points_dict[aoi_name]['C'] += e_c_dict['C']
                 else:
                     points_dict[aoi_name] = {}
                     points_dict[aoi_name]['E'] = e_c_dict['E']
-                    points_dict[aoi_name] = {}
                     points_dict[aoi_name]['C'] = e_c_dict['C']
         
         for aoi_name, p_dict in points_dict.items():
@@ -235,6 +247,8 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
                         
     matplotlib.pyplot.xlim([0.5, max_tot_risk])
     matplotlib.pyplot.ylim([0.5, max_tot_risk])
+    matplotlib.pyplot.xlabel("Exposure (Cumulative)")
+    matplotlib.pyplot.ylabel("Consequence (Cumulative)")
 
     out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
     matplotlib.pyplot.savefig(out_uri, format='png')
