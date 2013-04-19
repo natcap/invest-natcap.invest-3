@@ -3,11 +3,10 @@ calcs, and return the appropriate outputs.
 '''
 import logging
 import os
-import numpy as np
 import collections 
 import math
 import datetime
-import sys
+import matplotlib.pyplot
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -110,7 +109,7 @@ def execute(args):
     #Also want to output a polygonized version of high risk areas in each
     #habitat. Will polygonize everything that falls above a certain percentage
     #of the total raster risk.
-    make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
+    num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
     
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
@@ -124,17 +123,17 @@ def execute(args):
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
-        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, aoi_uri)
+        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'])
 
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, avgs_dict)
+        make_aoi_tables(tables_dir, avgs_dict, args['max_risk'])
 
         if args['risk_eq'] == 'Euclidean':
-            make_risk_plots(tables_dir, avgs_dict)
+            make_risk_plots(tables_dir, avgs_dict, args['max_risk'], num_stress)
 
-def make_risk_plots(out_dir, avgs_dict):
+def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
     '''This function will produce risk plots when the risk equation is
     euclidean.
 
@@ -153,14 +152,108 @@ def make_risk_plots(out_dir, avgs_dict):
                     },
                     ....
                 }
+        num_stress- A dictionary that simply associates every habaitat with the
+            number of stressors associated with it. This will help us determine
+            the max E/C we shoudl be expecting in our overarching ecosystem plot.
     Output:
         A set of .png images containing the matplotlib plots for every H-S
         combination. Within that, each AOI will be displayed as plotted by
-        (E,C) values. 
+        (E,C) values.
 
+        A single png that is the "ecosystem plot" where the E's for each AOI
+        are the summed 
+
+
+    '''
+    def plot_background_circle(max_value):
+        circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'),
+                        (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'),
+                        (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'),
+                        (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'),
+                        (1, '#305FCF')]
+        index = 0
+        for radius, color in circle_stuff:
+            index += 1
+            linestyle = 'solid' if index % 2 == 0 else 'dashed'
+            cir = matplotlib.pyplot.Circle((0,0), edgecolor='.25', linestyle=linestyle, 
+                        radius=radius*max_value/3.5, fc=color)
+            matplotlib.pyplot.gca().add_patch(cir)
     
+    #Create plots for each combination of H,S
+    plot_index = 0
+    for hab_name, stressor_dict in avgs_dict.iteritems():
+        
+        #Make a separate window for each habitat, have the stressors within it.
+        matplotlib.pyplot.figure(plot_index)
+        plot_index += 1
+        matplotlib.pyplot.suptitle(hab_name)
+        
+        stress_index = 0
+        for stressor_name, aoi_list in stressor_dict.iteritems():
+            stress_index += 1
+            #Want to have two across, and make sure there are enough spaces
+            #going down for each of the subplots 
+            matplotlib.pyplot.subplot(int(math.ceil(len(stressor_dict)/2.0)), 2, stress_index)
+            plot_background_circle(max_risk)
+            for aoi_dict in aoi_list:
+                matplotlib.pyplot.plot(aoi_dict['E'], aoi_dict['C'], 'k^', 
+                        markerfacecolor='black', markersize=8)
+                matplotlib.pyplot.annotate(aoi_dict['Name'], xy=(aoi_dict['E'], 
+                        aoi_dict['C']), xytext=(aoi_dict['E'], aoi_dict['C']+0.07))
+            
+            matplotlib.pyplot.title(stressor_name)
+            matplotlib.pyplot.xlim([0.5, max_risk])
+            matplotlib.pyplot.ylim([0.5, max_risk])
+            matplotlib.pyplot.xlabel("Exposure")
+            matplotlib.pyplot.ylabel("Consequence")
+            
 
-def make_aoi_tables(out_dir, avgs_dict):
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'H[' + hab_name+ '].png')
+
+        matplotlib.pyplot.savefig(out_uri, format='png')
+
+    #Create one ecosystem megaplot that plots the points as summed E,C from
+    #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
+    #for all habitats in the ecosystem.
+    max_tot_risk = max_risk * max(num_stress.values())
+    matplotlib.pyplot.figure(plot_index)
+    matplotlib.pyplot.suptitle("Ecosystem Risk")
+    
+    plot_background_circle(max_tot_risk)
+    
+    for hab_name, stressor_dict in avgs_dict.items():
+
+        points_dict = {}
+        #Remember, this is a list. You did that for a reason.
+        for stress_name, aoi_list in stressor_dict.items():
+            for e_c_dict in aoi_list:
+           
+                aoi_name = e_c_dict['Name']
+                if aoi_name in points_dict:
+                    points_dict[aoi_name]['E'] += e_c_dict['E']
+                    points_dict[aoi_name]['C'] += e_c_dict['C']
+                else:
+                    points_dict[aoi_name] = {}
+                    points_dict[aoi_name]['E'] = e_c_dict['E']
+                    points_dict[aoi_name]['C'] = e_c_dict['C']
+        
+        for aoi_name, p_dict in points_dict.items():
+            #Create the points which are H, AOI combos.    
+            matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
+                        markerfacecolor='black', markersize=8)
+            matplotlib.pyplot.annotate('(' + hab_name + ', ' + aoi_name + ')',
+                        xy=(p_dict['E'], p_dict['C']), 
+                        xytext=(p_dict['E'], p_dict['C']+0.07))
+                        
+    matplotlib.pyplot.xlim([0.5, max_tot_risk])
+    matplotlib.pyplot.ylim([0.5, max_tot_risk])
+    matplotlib.pyplot.xlabel("Exposure (Cumulative)")
+    matplotlib.pyplot.ylabel("Consequence (Cumulative)")
+
+    out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
+    matplotlib.pyplot.savefig(out_uri, format='png')
+
+def make_aoi_tables(out_dir, avgs_dict, max_risk):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
@@ -406,7 +499,10 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         Returns a shapefile for every habitat, showing features only for the
         areas that are "high risk" within that habitat.
 
-     Returns nothing.
+     Return:
+        num_stress- A dictionary containing the number of stressors being associated with
+
+            
      '''
     #For each h, want  to know how many stressors are associated with it. This
     #allows us to not have to think about whether or not a h-s pair was zero'd
@@ -451,6 +547,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
         raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
+
+    return num_stress
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     '''This will take in a raster file, and output a shapefile of the same
