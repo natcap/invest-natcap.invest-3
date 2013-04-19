@@ -3,9 +3,9 @@
 import re
 import csv
 import os
-import glob
 import logging
 import json
+import fnmatch
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -137,14 +137,15 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in args:
-            hab_list = hab_list + glob.glob(os.path.join(args[ele], '*.shp'))
+            names = os.list_dir(args[ele])
+            hab_list = fnmatch.filter(names, '*.shp')
             hab_list = \
                 map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                             hab_list)
     
     #And all potential stressors
-    stress_list = []
-    stress_list = stress_list + glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
+    names = os.listdir(args['stressors_dir'])
+    stress_list = fnmatch.filter(names, '*.shp')
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
 
@@ -368,11 +369,9 @@ def parse_hra_tables(workspace_uri):
         parse_dictionary = json.load(infile)
     
     #Now we can compile and add the other dictionaries
-    habitat_paths = os.path.join(workspace_uri, '*_overlap_ratings.csv')
-    stressor_paths = os.path.join(workspace_uri, '*_stressor_ratings.csv')
-
-    habitat_csvs = glob.glob(habitat_paths)
-    stressor_csvs = glob.glob(stressor_paths)
+    dir_names = os.listdir(workspace_uri)
+    habitat_paths = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
+    stressor_paths = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
     
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
@@ -786,8 +785,9 @@ def make_crit_shape_dict(crit_uri):
     #First, want to get the things that are either habitat specific or 
     #species specific. These should all be in the 'Resilience subfolder
     #of raster_criteria.
-    res_shps = glob.glob(os.path.join(crit_uri, 'Resilience', '*.shp'))
-   
+    res_names = os.listdir(os.path.join(crit_uri, 'Resilience'))
+    res_shps = fnmatch.filter(res_names, '*.shp'))   
+    
     #Now we have a list of all habitat specific shapefile criteria. Now we need
     #to parse them out.
     for path in res_shps:
@@ -811,7 +811,8 @@ def make_crit_shape_dict(crit_uri):
     
     #Now, want to move on to stressor-centric criteria, but will do much the
     #same thing. 
-    exps_shps = glob.glob(os.path.join(crit_uri, 'Exposure', '*.shp'))
+    exps_names = os.listdir(os.path.join(crit_uri, 'Exposure'))
+    exps_shps = fnmatch.filter(exps_names, '*.shp'))   
    
     #Now we have a list of all stressor specific shapefile criteria. 
     #Now we need to parse them out.
@@ -834,7 +835,8 @@ def make_crit_shape_dict(crit_uri):
         c_shape_dict['s'][stress_name][crit_name] = path
     
     #Finally, want to get all of our pair-centric shape criteria. 
-    sens_shps = glob.glob(os.path.join(crit_uri, 'Sensitivity', '*.shp'))
+    sens_names = os.listdir(os.path.join(crit_uri, 'Sensitivity'))
+    sens_shps = fnmatch.filter(sens_names, '*.shp'))   
    
     #Now we have a list of all pair specific shapefile criteria. 
     #Now we need to parse them out.
