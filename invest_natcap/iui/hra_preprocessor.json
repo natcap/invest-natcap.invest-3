@@ -14,7 +14,7 @@
 			{		    
                             "id":"alpha_only",
                             "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
-			    "type": "label"
+			                 "type": "label"
 			},
                 {
                     "id":"output_dir",
@@ -66,11 +66,10 @@
             "label": "Criteria",
             "elements": [
                 {
-                    "id": "label",
+                    "id": "help_label",
                     "type": "label",
-                    "args_id": "label",
-                    "label": "(Choose at least 1 criteria for each category below, at at least 4 total.)",
-                }
+                    "label": "(Choose at least 1 criteria for each category below, at at least 4 total.)"
+                },
                 {
                     "id": "exp_crit",
                     "type": "multi",
@@ -80,7 +79,8 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Management Effectiveness", "Intensity"],
+                    "defaultValue": ["Management Effectiveness", "Intensity Rating",
+                                    "Change in Area Rating", "Change in Structure Rating"],
                     "linkText": "Add Another"
                 },  
                 {
@@ -92,7 +92,7 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Temporal Overlap"],
+                    "defaultValue": ["Temporal Overlap", "Frequency of Disturbance"],
                     "linkText": "Add Another"
                 },  
                 {
@@ -104,7 +104,8 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Recruitment Rate"],
+                    "defaultValue": ["Recruitment Rate", "Natural Mortality Rate", 
+                                    "Connectivity Rate", "Recovery Time"],
                     "linkText": "Add Another"
                 }  
             ]

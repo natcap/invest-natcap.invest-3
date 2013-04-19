@@ -26,7 +26,7 @@ class NotEnoughCriteria(Exception):
 class ImproperCriteriaSpread(Exception):
     '''An exception for hra_preprocessor which can be passed if there are not
     one or more criteria in each of the 3 criteria categories: resilience,
-    exposure, and sensitivity.'''
+C   exposure, and sensitivity.'''
     pass
 
 class ZeroDQWeightValue(Exception):
@@ -189,7 +189,7 @@ def execute(args):
             '(1) low, (0) no score>',
         'management effectiveness': '<enter (3) not effective, ' +
             '(2) somewhat effective, (1) very effective, (0) no score>',
-        'natural mortality': '<enter (3) 0-20%, (2) 20-50%, ' +
+        'natural mortality rate': '<enter (3) 0-20%, (2) 20-50%, ' +
             '(1) >80% mortality, or (0) no score>',
         'recruitment rate': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, ' +
             '(1) every <1 yrs, or (0) no score>',
