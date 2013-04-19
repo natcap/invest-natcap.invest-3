@@ -24,8 +24,8 @@
                                     "required": true
                                 },                        
                                 {
-                                    "id" : "aoiFileName",
-                                    "args_id" : "aoiFileName",
+                                    "id" : "aoi_file_name",
+                                    "args_id" : "aoi_file_name",
                                     "type": "file",
                                     "label": "Area of Interest",
                                     "defaultValue": "",
