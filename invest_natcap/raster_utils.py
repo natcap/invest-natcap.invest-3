@@ -98,6 +98,19 @@ def calculate_raster_stats_uri(ds_uri):
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
+def get_statistics_from_uri(dataset_uri):
+    """Retrieves the min, max, mean, stdev from a GDAL Dataset
+
+        dataset_uri - a uri to a gdal dataset
+
+        returns min, max, mean, stddev"""
+
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
+    statistics = band.GetStatistics(0,1)
+    band = None
+    dataset = None
+    return statistics
 
 def get_cell_area_from_uri(dataset_uri):
     return pixel_area(gdal.Open(dataset_uri))
