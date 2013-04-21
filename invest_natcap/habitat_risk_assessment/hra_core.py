@@ -175,8 +175,8 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
         for radius, color in circle_stuff:
             index += 1
             linestyle = 'solid' if index % 2 == 0 else 'dashed'
-            cir = matplotlib.pyplot.Circle((0,0), edgecolor='.25', linestyle=linestyle, 
-                        radius=radius*max_value/3.5, fc=color)
+            cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', linestyle=linestyle, 
+                        radius=radius * max_value/ 3.5, fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
     
     #Create plots for each combination of H,S
