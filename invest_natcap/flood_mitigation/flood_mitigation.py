@@ -8,7 +8,6 @@ import shutil
 from osgeo import gdal
 
 from invest_natcap import raster_utils
-from invest_natcap.wind_energy import wind_energy_valuation
 from invest_natcap.invest_core import fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -299,5 +298,5 @@ def convert_precip_to_points(precip_uri, points_uri):
     table_dictionary = dict((i, d) for (i, d) in
         enumerate(table_object.get_table()))
 
-    wind_energy_valuation.dictionary_to_shapefile(table_dictionary,
+    raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
