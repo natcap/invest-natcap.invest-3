@@ -108,3 +108,7 @@ class FloodMitigationTest(unittest.TestCase):
         regression_points = os.path.join(REGRESSION_DATA, 'precip_points')
         invest_test_core.assertTwoShapesEqualURI(self, points_uri,
             regression_points)
+
+    def test_storm_runoff(self):
+        """Regression test for the storm runoff function."""
+        pass
