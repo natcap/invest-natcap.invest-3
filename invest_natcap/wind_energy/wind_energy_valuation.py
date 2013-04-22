@@ -148,7 +148,7 @@ def execute(args):
         LOGGER.info('Grid points not provided')
         LOGGER.info('Reading in land polygon')
 
-        land_poly = ogr.Open(str(args['land_polygon_uri']))
+        land_poly_uri = str(args['land_polygon_uri'])
         
         land_poly_clipped_uri = os.path.join(
                 inter_dir, 'val_land_poly_clipped' + suffix + '.shp')
@@ -158,8 +158,8 @@ def execute(args):
                 inter_dir, 'val_aoi_proj_to_land_poly' + suffix + '.shp')
         
         land_poly_proj = clip_and_project_datasource(
-                land_poly, aoi, land_poly_clipped_uri, land_poly_projected_uri,
-                aoi_proj_to_land_poly_uri)
+                land_poly_uri, aoi, land_poly_clipped_uri,
+                land_poly_projected_uri, aoi_proj_to_land_poly_uri)
 
         valuation_args['land_polygon'] = land_poly_proj
     else:
@@ -192,9 +192,9 @@ def execute(args):
         # Create a point shapefile from the grid and land point dictionaries.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        grid_point_ds = raster_utils.dictionary_to_point_shapefile(
+        raster_utils.dictionary_to_point_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri) 
-        land_point_ds = raster_utils.dictionary_to_point_shapefile(
+        raster_utils.dictionary_to_point_shapefile(
                 land_dict, 'land_points', land_ds_uri) 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
@@ -214,10 +214,10 @@ def execute(args):
                 inter_dir, 'aoi_proj_to_land_points' + suffix + '.shp')
 
         grid_point_prj = clip_and_project_datasource(
-                grid_point_ds, aoi, grid_clipped_uri, grid_projected_uri,
+                grid_ds_uri, aoi, grid_clipped_uri, grid_projected_uri,
                 aoi_proj_to_grid_uri)
         land_point_prj = clip_and_project_datasource(
-                land_point_ds, aoi, land_clipped_uri, land_projected_uri,
+                land_ds_uri, aoi, land_clipped_uri, land_projected_uri,
                 aoi_proj_to_land_uri)
 
         valuation_args['grid_points'] = grid_point_prj
@@ -226,10 +226,10 @@ def execute(args):
     wind_energy_core.valuation(valuation_args)
 
 def clip_and_project_datasource(
-        dsource, aoi, clipped_uri, projected_uri, aoi_proj_to_uri):
+        dsource_uri, aoi, clipped_uri, projected_uri, aoi_proj_to_uri):
     """Clips and reprojects one OGR datasource to another
         
-        dsource - an OGR datasource to clip and reproject
+        dsource - a uri path to an OGR datasource to clip and reproject
         aoi - an OGR datasource to use as the bounds for clipping and
             reprojecting
         clipped_uri - a string URI path for the clipped datasource
@@ -240,7 +240,7 @@ def clip_and_project_datasource(
         returns - dsource clipped and reprojected to aoi, an OGR datasource
         """
     LOGGER.info('Entering clip_and_project_datasource')
-
+    dsource = ogr.Open(dsource_uri)
     dsource_sr = dsource.GetLayer().GetSpatialRef()
     dsource_wkt = dsource_sr.ExportToWkt()
     aoi_sr = aoi.GetLayer().GetSpatialRef()
