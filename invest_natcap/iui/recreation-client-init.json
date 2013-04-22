@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Recreation Model - Initial Run",
-    "targetScript" : "invest_natcap.recreation.recreation_client_init",
+    "targetScript" : "invest_natcap.recreation.recreation_client",
     "modelName" : "recreation_client_init",
     "localDocURI": "../documentation/recreation.html",
     "height": 600,
@@ -16,6 +16,13 @@
                             "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
 			    "type": "label"
 			},
+                                {
+                                    "id" : "mode",
+                                    "args_id" : "mode",
+                                    "type": "hiddenElement",
+                                    "returns": "initial",
+                                    "required": true
+                                },                        
                                 {
                                     "id" : "workspace_dir",
                                     "args_id" : "workspace_dir",
