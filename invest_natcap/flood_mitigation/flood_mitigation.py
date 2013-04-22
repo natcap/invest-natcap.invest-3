@@ -154,17 +154,25 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
 
         Returns nothing."""
 
-        def calculate_runoff(precip, swrc):
-            """Calculate the runoff on a pixel from the precipitation value and
-            the ability of the soil to retain water (swrc).  Both inputs are
-            floats.  Returns a float."""
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
 
-        # TODO: what happens when precip >= 0.2*swrc???
-        # The user's guide does not define what happens when precip is greater
-        # than 0.2, so until we find out, we should return nodata.
-        if precip == precip_nodata or precip < 0.2 * swrc:
-            return precip_nodata
-        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+    def calculate_runoff(precip, swrc):
+        """Calculate the runoff on a pixel from the precipitation value and
+        the ability of the soil to retain water (swrc).  Both inputs are
+        floats.  Returns a float."""
+
+    # TODO: what happens when precip >= 0.2*swrc???
+    # The user's guide does not define what happens when precip is greater
+    # than 0.2, so until we find out, we should return nodata.
+    if precip == precip_nodata or precip < 0.2 * swrc:
+        return precip_nodata
+    return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+
+    raster_utils.vectorize_datasets([precip_uri, swrc_uri],
+        calculate_runoff, output_uri. gdal.GDT_Float32, precip_nodata,
+        precip_pixel_size, 'intersection')
+
 
 def soil_water_retention_capacity(cn_uri, swrc_uri):
     """Calculate the capacity of the soil to retain water on the landscape from
