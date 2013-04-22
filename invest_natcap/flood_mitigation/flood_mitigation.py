@@ -217,9 +217,28 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
 
     Returns None."""
 
+    # Get the nodata value so we can account for that in our tweaked seasonality
+    # functions here.
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+
+    def adjust_for_dry_season(curve_num):
+        """Custom function to account for nodata values when adjusting curve
+        numbers for the dry season.  curve_num is a float.  Returns a float."""
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return _dry_season_adjustment(curve_num)
+
+
+    def adjust_for_wet_season(curve_num):
+        """Custom function to account for nodata values when adjusting curve
+        numbers for the wet season.  curve_num is a float.  Returns a float."""
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return _wet_season_adjustment(curve_num)
+
     adjustments = {
-        'dry': _dry_season_adjustment,
-        'wet': _wet_season_adjustment
+        'dry': adjust_for_dry_season,
+        'wet': adjust_for_wet_season
     }
 
     try:
