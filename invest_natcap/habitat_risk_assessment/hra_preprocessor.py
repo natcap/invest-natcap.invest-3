@@ -201,8 +201,7 @@ def execute(args):
             '(1) >100km, or (0) no score>'
         }
 
-    default_dq_message = '<enter (3) best, (2) adequate, (1) limited, '  + \
-        'or (0) unknown>'
+    default_dq_message = '<enter (3) best, (2) adequate, (1) limited>'
     default_weight_message = '<enter (3) more important, ' + \
         '(2) equal importance, (1) less important>'
     default_table_headers = ['', 'Rating', 'DQ', 'Weight']
