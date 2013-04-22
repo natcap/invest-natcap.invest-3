@@ -116,8 +116,9 @@ def execute(args):
     #Now we can run the meat of the model. 
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    if os.path.exists(output_dir):
+       os.remove(output_dir)
+       os.makedirs(output_dir)
    
     #Make the dictionary first, then write the JSON file with the directory
     #pathnames if they exist in args
