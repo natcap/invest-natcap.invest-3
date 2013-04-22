@@ -8,7 +8,6 @@ import shutil
 from osgeo import gdal
 
 from invest_natcap import raster_utils
-from invest_natcap.wind_energy import wind_energy_valuation
 from invest_natcap.invest_core import fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -218,9 +217,28 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
 
     Returns None."""
 
+    # Get the nodata value so we can account for that in our tweaked seasonality
+    # functions here.
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+
+    def adjust_for_dry_season(curve_num):
+        """Custom function to account for nodata values when adjusting curve
+        numbers for the dry season.  curve_num is a float.  Returns a float."""
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return _dry_season_adjustment(curve_num)
+
+
+    def adjust_for_wet_season(curve_num):
+        """Custom function to account for nodata values when adjusting curve
+        numbers for the wet season.  curve_num is a float.  Returns a float."""
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return _wet_season_adjustment(curve_num)
+
     adjustments = {
-        'dry': _dry_season_adjustment,
-        'wet': _wet_season_adjustment
+        'dry': adjust_for_dry_season,
+        'wet': adjust_for_wet_season
     }
 
     try:
@@ -299,5 +317,5 @@ def convert_precip_to_points(precip_uri, points_uri):
     table_dictionary = dict((i, d) for (i, d) in
         enumerate(table_object.get_table()))
 
-    wind_energy_valuation.dictionary_to_shapefile(table_dictionary,
+    raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
