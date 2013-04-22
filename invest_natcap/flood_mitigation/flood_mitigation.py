@@ -359,3 +359,21 @@ def convert_precip_to_points(precip_uri, points_uri):
 
     raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
+
+def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_uri):
+    """Create a precipitation raster from a points shapefile for the specified
+        timestep.
+
+        precip_points_uri - a URI to an OGR Datasource on disk.
+        sample_raster_uri - a URI to a GDAL dataset on disk.
+        timestep - an int timestep.  Must be a field in the datasource passed in
+            as `precip_points_uri`.
+        output_uri - a URI to where the output raster will be saved.
+
+        This function saves a GDAL raster dataset to `output_uri`.  This output
+        raster will carry many of the characteristics of the sample_raster_uri,
+        including pixel size and projection.
+
+        This function returns nothing."""
+
+    pass
