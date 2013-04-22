@@ -133,6 +133,9 @@ def execute(args):
         cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
         adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
 
+    # Calculate the Soil Water Retention Capacity (equation 2)
+    swrc_uri = os.path.join(intermediate, 'swrc.tif')
+    soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
 def soil_water_retention_capacity(cn_uri, swrc_uri):
     """Calculate the capacity of the soil to retain water on the landscape from
