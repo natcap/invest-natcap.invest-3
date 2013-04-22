@@ -119,13 +119,13 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if os.path.exists(output_dir):
        shutil.rmtree(output_dir)
-       os.makedirs(output_dir)
+ 
+    os.makedirs(output_dir)
    
     #Make the dictionary first, then write the JSON file with the directory
     #pathnames if they exist in args
     json_uri = os.path.join(output_dir, 'dir_names.txt')
 
-    #syntax error: json_dict = {'stressors_dir': args['stressors_dir']]}
     json_dict = {'stressors_dir': args['stressors_dir']}
     for var in ('criteria_dir', 'habitats_dir', 'species_dir'):
         if var in args:
