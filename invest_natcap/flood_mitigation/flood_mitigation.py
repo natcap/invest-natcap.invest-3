@@ -137,6 +137,24 @@ def execute(args):
     swrc_uri = os.path.join(intermediate, 'swrc.tif')
     soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
+def storm_runoff(precip_uri, swrc_uri, output_uri):
+    """Calculate the storm runoff from the landscape in this timestep.  This
+        function corresponds with equation 1 in the Flood Mitigation user's
+        guide.
+
+        precip_uri - a URI to a GDAL dataset on disk, representing rainfall
+            across the landscape within this timestep.
+        swrc_uri - a URI to a GDAL dataset on disk representing a raster of the
+            soil water retention capacity.
+        output_uri - a URI to the desired location of the output raster from
+            this function.  If this file exists on disk, it will be overwritten
+            with a GDAL dataset.
+
+        This function saves a GDAL dataset to the URI `output_uri`.
+
+        Returns nothing."""
+        pass
+
 def soil_water_retention_capacity(cn_uri, swrc_uri):
     """Calculate the capacity of the soil to retain water on the landscape from
         the user's adjusted curve numbers.  These curve numbers are assumed to
