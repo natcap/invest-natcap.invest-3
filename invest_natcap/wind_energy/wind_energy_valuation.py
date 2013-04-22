@@ -229,7 +229,7 @@ def clip_and_project_datasource(
         dsource_uri, aoi, clipped_uri, projected_uri, aoi_proj_to_uri):
     """Clips and reprojects one OGR datasource to another
         
-        dsource - a uri path to an OGR datasource to clip and reproject
+        dsource_uri - a uri path to an OGR datasource to clip and reproject
         aoi - an OGR datasource to use as the bounds for clipping and
             reprojecting
         clipped_uri - a string URI path for the clipped datasource

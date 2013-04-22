@@ -50,14 +50,11 @@ class TestWindEnergyValuation(unittest.TestCase):
             if os.path.isfile(out_uri):
                 os.remove(out_uri)
 
-        original_shape = ogr.Open(original_shape_uri)
         
-        result_shape = wind_energy_valuation.clip_and_project_datasource(
-            original_shape, aoi, out_clipped_uri, out_projected_uri,
+        wind_energy_valuation.clip_and_project_datasource(
+            original_shape_uri, aoi, out_clipped_uri, out_projected_uri,
             out_aoi_proj_uri)
         
-        result_shape = None
-        original_shape = None
         aoi = None
 
         for reg_uri, out_uri in zip(reg_file_list, out_file_list):
