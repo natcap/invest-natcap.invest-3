@@ -1,0 +1,90 @@
+{
+    "id" : "window",
+    "label": "Monthly Water Yield",
+    "targetScript" : "invest_natcap.monthly_water_yield.monthly_water_yield",
+    "modelName" : "monthly_water_yield",
+    "localDocURI": "../documentation/monthlywateryield.html",
+    "height": 500,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "",
+                    "required": true
+                },          
+				{        
+                    "id" : "precipitation",
+                    "args_id" : "precip_uri",
+                    "type": "file",
+                    "label": "Precipitation",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "potential_evapotranspiration",
+                    "args_id" : "pet_uri",
+                    "type": "file",
+                    "label": "Potential Evapotranspiration",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "soil_depth",
+                    "args_id" : "soil_depth_uri",
+                    "type": "file",
+                    "label": "Soil Depth",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "land_use",
+                    "args_id" : "lulc_uri",
+                    "type": "file",
+                    "label": "Land Use",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },    
+                {
+                    "id" : "watersheds",
+                    "args_id": "watersheds_uri",
+                    "type": "file",
+                    "label": "Watersheds",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "OGR"}
+                 },
+		         {
+                    "id" : "biophysical_table",
+                    "args_id": "biophysical_table_uri",
+                    "type": "file",
+                    "label": "Biophysical Table",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "CSV"}
+                 },
+                 {        
+                    "id" : "results_suffix",
+                    "args_id" : "results_suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "required": false
+                }     
+                
+            ]
+        }
+    ]
+}
