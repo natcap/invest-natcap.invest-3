@@ -162,12 +162,12 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         the ability of the soil to retain water (swrc).  Both inputs are
         floats.  Returns a float."""
 
-    # TODO: what happens when precip >= 0.2*swrc???
-    # The user's guide does not define what happens when precip is greater
-    # than 0.2, so until we find out, we should return nodata.
-    if precip == precip_nodata or precip < 0.2 * swrc:
-        return precip_nodata
-    return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+        # TODO: what happens when precip >= 0.2*swrc???
+        # The user's guide does not define what happens when precip is greater
+        # than 0.2, so until we find out, we should return nodata.
+        if precip == precip_nodata or precip < 0.2 * swrc:
+            return precip_nodata
+        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
 
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
         calculate_runoff, output_uri. gdal.GDT_Float32, precip_nodata,
