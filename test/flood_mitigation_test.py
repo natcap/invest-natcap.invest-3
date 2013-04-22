@@ -1,6 +1,8 @@
 import unittest
 import os
 
+from osgeo import gdal
+
 from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
 import invest_test_core
@@ -111,4 +113,13 @@ class FloodMitigationTest(unittest.TestCase):
 
     def test_storm_runoff(self):
         """Regression test for the storm runoff function."""
-        pass
+
+        # make a sample raster to live at precip_points_uri
+        precip_raster_uri = os.path.join(self.workspace, 'precip_2.tif')
+        precip_nodata = raster_utils.get_nodata_from_uri(self.dem)
+        raster_utils.new_raster_from_base_uri(self.dem, precip_raster_uri,
+            'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)
+
+        precip_points_uri = os.path.join(REGRESSION_DATA, 'precip_points',
+            'precip_points.shp')
+        raster_utils.vectorize_points_uri(precip_points_uri, 2, precip_raster_uri)
