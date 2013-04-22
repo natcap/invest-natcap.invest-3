@@ -252,6 +252,22 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uri
+
 def calc_max_rating(risk_eq, max_rating):
     ''' Should take in the max possible risk, and return the highest possible
     per pixel risk that would be seen on a H-S raster pixel.
