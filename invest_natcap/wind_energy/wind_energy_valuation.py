@@ -192,9 +192,9 @@ def execute(args):
         # Create a point shapefile from the grid and land point dictionaries.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        grid_point_ds = dictionary_to_shapefile(
+        grid_point_ds = raster_utils.dictionary_to_point_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri) 
-        land_point_ds = dictionary_to_shapefile(
+        land_point_ds = raster_utils.dictionary_to_point_shapefile(
                 land_dict, 'land_points', land_ds_uri) 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
@@ -257,89 +257,3 @@ def clip_and_project_datasource(
 
     LOGGER.info('Leaving clip_and_project_datasource')
     return dsource_proj
-
-def dictionary_to_shapefile(dict_data, layer_name, output_uri):
-    """Creates a point shapefile from a dictionary
-        
-        dict_data - a python dictionary with keys being unique id's that point
-            sub-dictionary that has key-value pairs which will represent the
-            field-value pair for the point features. At least two fields are
-            required in the sub-dictionaries, 'lati' and 'long'. These fields
-            determine the geometry of the point
-            0 : {'lati':97, 'long':43, 'field_a':6.3, 'field_n':21},
-            1 : {'lati':55, 'long':51, 'field_a':6.2, 'field_n':32},
-            2 : {'lati':73, 'long':47, 'field_a':6.5, 'field_n':13}
-        layer_name - a python string for the name of the layer
-        output_uri - a uri for the output destination of the shapefile
-
-        return - a OGR Datasource"""
-    LOGGER.info('Entering dictionary_to_shapefile')
-    
-    # If the output_uri exists delete it
-    if os.path.isfile(output_uri):
-        os.remove(output_uri)
-    elif os.path.isdir(output_uri):
-        shutil.rmtree(output_uri)
-
-    LOGGER.info('Creating new datasource')
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(output_uri)
-
-    # Set the spatial reference to WGS84 (lat/long)
-    source_sr = osr.SpatialReference()
-    source_sr.SetWellKnownGeogCS("WGS84")
-    
-    output_layer = output_datasource.CreateLayer(
-            layer_name, source_sr, ogr.wkbPoint)
-
-    # Construct a list of fields to add from the keys of the inner dictionary
-    field_list = dict_data[dict_data.keys()[0]].keys()
-    LOGGER.debug('field_list : %s', field_list)
-    
-    # Create a dictionary to store what variable types the fields are
-    type_dict = {}
-    for field in field_list:
-        # Get a value from the field
-        val = dict_data[dict_data.keys()[0]][field]
-        
-        if isinstance(val, str):
-            type_dict[field] = 'str'
-        else:
-            type_dict[field] = 'number'
-
-    LOGGER.info('Creating fields for the datasource')
-    for field in field_list:
-        field_type = None
-        # Distinguish if the field type is of type String or other. If Other, we
-        # are assuming it to be a float
-        if type_dict[field] == 'str':
-            field_type = ogr.OFTString
-        else:
-            field_type = ogr.OFTReal
-        
-        output_field = ogr.FieldDefn(field, field_type)   
-        output_layer.CreateField(output_field)
-
-    LOGGER.info('Entering iteration to create and set the features')
-    # For each inner dictionary (for each point) create a point
-    for point_dict in dict_data.itervalues():
-        latitude = float(point_dict['lati'])
-        longitude = float(point_dict['long'])
-
-        geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(longitude, latitude)
-
-        output_feature = ogr.Feature(output_layer.GetLayerDefn())
-        
-        for field_name in point_dict:
-            field_index = output_feature.GetFieldIndex(field_name)
-            output_feature.SetField(field_index, point_dict[field_name])
-        
-        output_feature.SetGeometryDirectly(geom)
-        output_layer.CreateFeature(output_feature)
-        output_feature = None
-
-    output_layer.SyncToDisk()
-    LOGGER.info('Leaving wind_data_to_point_shape')
-    return output_datasource
-

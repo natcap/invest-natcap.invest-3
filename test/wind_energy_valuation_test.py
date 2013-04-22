@@ -62,36 +62,3 @@ class TestWindEnergyValuation(unittest.TestCase):
 
         for reg_uri, out_uri in zip(reg_file_list, out_file_list):
             invest_test_core.assertTwoShapesEqualURI(self, reg_uri, out_uri)
-
-
-    def test_wind_energy_valuation_dictionary_to_shapefile(self):
-        """A regression test for making a shapefile from a dictionary"""
-
-        #raise SkipTest
-
-        regression_dir = './data/wind_energy_regression_data/valuation/'
-
-        expected_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
-
-        out_dir = './data/test_out/wind_energy/valuation/dict_to_shape/'
-
-        out_uri = os.path.join(out_dir, 'dict_to_shape.shp')
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        if os.path.isfile(out_uri):
-            os.remove(out_uri)
-
-        expected_dict = {}
-
-        expected_dict[1] = {'lati':97, 'long':43, 'type':'grid'}
-        expected_dict[2] = {'lati':96, 'long':44, 'type':'land'}
-
-        result = wind_energy_valuation.dictionary_to_shapefile(
-                expected_dict, 'tester', out_uri)
-
-        result = None
-
-        invest_test_core.assertTwoShapesEqualURI(
-                self, expected_uri, out_uri)
