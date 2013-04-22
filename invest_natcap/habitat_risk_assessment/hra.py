@@ -266,7 +266,7 @@ def listdir(path):
     file_names = os.listdir(path)
     uris = map(lambda x: os.path.join(path, x), file_names)
 
-    return uri
+    return uris
 
 def calc_max_rating(risk_eq, max_rating):
     ''' Should take in the max possible risk, and return the highest possible

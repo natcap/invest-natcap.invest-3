@@ -314,7 +314,7 @@ def listdir(path):
     file_names = os.listdir(path)
     uris = map(lambda x: os.path.join(path, x), file_names)
 
-    return uri
+    return uris
 
 def parse_hra_tables(workspace_uri):
     #It should be noted here that workspace_uri isn't actually the workspace
