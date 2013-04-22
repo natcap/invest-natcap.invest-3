@@ -736,7 +736,7 @@ def parse_habitat_overlap(uri):
                             raise UnexpectedString("Entries in CSV table may not be \
                                 strings, and may not be left blank. Check your %s CSV \
                                 for any leftover strings or spaces within Rating, \
-                                Data Quality or Weight columns.", hab_name)
+                                Data Quality or Weight columns." % hab_name)
                     else:
                         #Going to do some custom error checking for null values or strings.
                         try:
@@ -746,7 +746,7 @@ def parse_habitat_overlap(uri):
                             raise UnexpectedString("Entries in CSV table may not be \
                                 strings, and may not be left blank. Check your %s CSV \
                                 for any leftover strings or spaces within Rating, \
-                                Data Quality or Weight columns.", hab_name)
+                                Data Quality or Weight columns." % hab_name)
 
                     line = csv_reader.next()
 
