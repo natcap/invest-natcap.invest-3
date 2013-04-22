@@ -227,7 +227,7 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_names = os.listdir(hra_args[ele])
+            hab_names = listdir(hra_args[ele])
             hab_list += fnmatch.filter(hab_names, '*.shp')
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
@@ -543,7 +543,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             rasterized version of the stressor shapefile. It will be placed
             at stressors[stressName]['DS'].
     '''
-    s_names = os.listdir(stressors_dir)
+    s_names = listdir(stressors_dir)
     stress_list = fnmatch.filter(s_names, '*.shp')
 
     for shape in stress_list:
