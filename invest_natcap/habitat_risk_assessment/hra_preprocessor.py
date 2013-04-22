@@ -300,7 +300,22 @@ def execute(args):
                     curr_row = [c_name] + default_rating + curr_row
 
                 stressor_csv_writer.writerow(curr_row)
-            
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris
+
 def parse_hra_tables(workspace_uri):
     #It should be noted here that workspace_uri isn't actually the workspace
     #URI, but is actually the location of the CSV and JSON files that we need
@@ -370,12 +385,14 @@ def parse_hra_tables(workspace_uri):
     
     #Now we can compile and add the other dictionaries
     dir_names = os.listdir(workspace_uri)
+    LOGGER.debug(dir_names)
     habitat_csvs = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
-    stressor_csvs = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
+    stressor_csvs = fnmatch.filter(dir_names, '*_stressor_ratings.csv')
     
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
-        
+      
+        LOGGER.debug("Stressor_URI: %s" % stressor_uri)
         stressor_name = re.search('(.*)_stressor_ratings\.csv', 
                                 os.path.basename(stressor_uri)).group(1)
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
@@ -540,7 +557,8 @@ def parse_stressor(uri):
            }
     """
     stressor_dict = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
-
+    LOGGER.debug("cwd: %s", os.getcwd())
+    LOGGER.debug("URI: %s", uri)
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
       
