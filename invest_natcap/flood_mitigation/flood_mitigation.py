@@ -376,4 +376,4 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
 
         This function returns nothing."""
 
-    pass
+    raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
