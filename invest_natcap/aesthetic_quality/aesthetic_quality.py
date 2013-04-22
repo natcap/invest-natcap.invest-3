@@ -106,7 +106,7 @@ def execute(args):
     nodata_out = -1
     quantile_list = [25,50,75,100]
     datatype_out = gdal.GDT_Int32
-    reclassify_quantile_dataset_uri(visibile_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
+    reclassify_quantile_dataset_uri(visible_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
     
     #find areas with no data for population
     LOGGER.debug("Tabulating population impact.")

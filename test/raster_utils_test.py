@@ -454,3 +454,60 @@ class TestRasterUtils(unittest.TestCase):
             dataset_to_align_index=dataset_to_align_index, aoi_uri=aoi_uri)
         dataset_intersection_regression_uri = os.path.join(regression_dir, 'vectorized_intersection_datasets.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, dataset_intersection_out_uri, dataset_intersection_regression_uri)
+    
+    def test_dictionary_to_point_shapefile(self):
+        """A regression test for making a point shapefile from a dictionary.
+            This test uses a file path for an output."""
+
+        #raise SkipTest
+
+        regression_dir = './data/wind_energy_regression_data/valuation/'
+
+        expected_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
+
+        out_dir = './data/test_out/raster_utils/dict_to_point_shape/'
+
+        out_uri = os.path.join(out_dir, 'dict_to_shape.shp')
+
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        if os.path.isfile(out_uri):
+            os.remove(out_uri)
+
+        expected_dict = {}
+
+        expected_dict[1] = {'lati':97, 'long':43, 'type':'grid'}
+        expected_dict[2] = {'lati':96, 'long':44, 'type':'land'}
+
+        raster_utils.dictionary_to_point_shapefile(
+                expected_dict, 'tester', out_uri)
+
+        invest_test_core.assertTwoShapesEqualURI(
+                self, expected_uri, out_uri)
+    
+    def test_dictionary_to_point_shapefile_2(self):
+        """A regression test for making a point shapefile from a dictionary.
+            This test uses a directory path for an output."""
+
+        #raise SkipTest
+
+        regression_dir = './data/wind_energy_regression_data/valuation/'
+
+        expected_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
+
+        out_dir = './data/test_out/raster_utils/dict_to_point_shape/pt_shape'
+
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        expected_dict = {}
+
+        expected_dict[1] = {'lati':97, 'long':43, 'type':'grid'}
+        expected_dict[2] = {'lati':96, 'long':44, 'type':'land'}
+
+        raster_utils.dictionary_to_point_shapefile(
+                expected_dict, 'tester', out_dir)
+
+        invest_test_core.assertTwoShapesEqualURI(
+                self, expected_uri, out_dir)
