@@ -137,6 +137,26 @@ def execute(args):
     swrc_uri = os.path.join(intermediate, 'swrc.tif')
     soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
+    # Convert precipitation table to a points shapefile.
+    precip_points_uri = os.path.join(intermediate, 'precip_points')
+    convert_precip_to_points(args['precipitation'], points_uri)
+
+    # our timesteps start at 1.
+    for timestep in range(1, args['num_intervals'] + 1):
+
+        # Create the timestamp folder name and make the folder on disk.
+        timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
+        raster_utils.create_directories([timestep_dir])
+
+        # make the precip raster, since it's timestep-dependent.
+        precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
+        raster_utils.vectorize_points_uri(precip_points_uri, timestep,
+            precip_raster_uri)
+
+        # Calculate storm runoff once we have all the data we need.
+        runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
+        storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
         function corresponds with equation 1 in the Flood Mitigation user's
