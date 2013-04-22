@@ -104,3 +104,7 @@ class FloodMitigationTest(unittest.TestCase):
     def test_convert_precip_to_points(self):
         points_uri = os.path.join(self.workspace, 'precip_points')
         flood_mitigation.convert_precip_to_points(self.precip, points_uri)
+
+        regression_points = os.path.join(REGRESSION_DATA, 'precip_points')
+        invest_test_core.assertTwoShapesEqualURI(self, points_uri,
+            regression_points)
