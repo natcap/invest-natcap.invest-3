@@ -117,7 +117,7 @@ def execute(args):
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if os.path.exists(output_dir):
-       os.remove(output_dir)
+       shutil.rmtree(output_dir)
        os.makedirs(output_dir)
    
     #Make the dictionary first, then write the JSON file with the directory
@@ -300,6 +300,7 @@ def execute(args):
                     curr_row = [c_name] + default_rating + curr_row
 
                 stressor_csv_writer.writerow(curr_row)
+
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
