@@ -2,10 +2,10 @@ import os
 from osgeo import gdal, ogr
 gdal.UseExceptions()
 from invest_natcap import raster_utils
-from invest_natcap.wave_energy import wave_energy_core
+
 import logging
 
-from scipy.stats import scoreatpercentile
+import scipy.stats
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -13,10 +13,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('aesthetic_quality')
 
 def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
-    nodata_ds = get_nodata_from_uri(dataset_uri)
+    nodata_ds = raster_utils.get_nodata_from_uri(dataset_uri)
 
     memory_file_uri = raster_utils.temporary_filename()
-    memory_array = load_memory_mapped_array(dataset_uri, memory_file_uri)
+    memory_array = raster_utils.load_memory_mapped_array(dataset_uri, memory_file_uri)
 
     quantile_breaks = [0]
     for quantile in quantile_list:
@@ -31,12 +31,14 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
                     return new_value
         raise ValueError, "Value was not within quantiles."
 
+    cell_size = raster_utils.get_cell_size_from_uri(dataset_uri)
+    
     raster_utils.vectorize_datasets([dataset_uri],
                                     reclass,
                                     dataset_out_uri,
                                     datatype_out,
                                     nodata_out,
-                                    aq_args['cellSize'],
+                                    cell_size,
                                     "union",
                                     dataset_to_align_index=0)
 
