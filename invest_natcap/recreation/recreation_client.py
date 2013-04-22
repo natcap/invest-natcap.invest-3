@@ -83,8 +83,18 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15, log = LOGG
     log.debug("End log check at line %i.", line)
 
     return line
+
+def complete_shapefile(shapefile_name):
+    file_base = os.path.splitext(shapefile_name)[0]
+
+    complete = True
+    for file_extension in ["shp", "shx", "dbf", "prj"]:
+        LOGGER.debug(os.extsep.join([file_base,file_extension]))
+        complete &= os.path.exists(os.extsep.join([file_base,file_extension]))
+
+    return complete
             
-def execute(args):
+def execute(args):    
     # Register the streaming http handlers with urllib2
     register_openers()
 
@@ -98,7 +108,6 @@ def execute(args):
     #VERSION AND RELEASE CHECK
     args["version_info"] = invest_natcap.__version__
     args["is_release"] = invest_natcap.is_release()
-
 
     #constructing model parameters
     attachments = {"version_info" : args["version_info"],
@@ -114,6 +123,7 @@ def execute(args):
     #opening request and comparing session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
+    #saving session id to model parameters
     args["sessid"] = sessid
 
     #check log and echo messages while not done
@@ -128,6 +138,8 @@ def execute(args):
        
     #VALIDATING MODEL PARAMETERS
     LOGGER.debug("Processing parameters.")
+    if not args["mode"] in ["initial", "scenario"]:
+        raise ValueError, "The mode must be specified as \'initial\' or \'scenario\'."
 
     #adding os separator to paths if needed
     if args["workspace_dir"][-1] != os.sep:
@@ -136,19 +148,11 @@ def execute(args):
     if args["data_dir"] != "" and args["data_dir"][-1] != os.sep:
         args["data_dir"] = args["data_dir"] + os.sep  
 
-    #validating shapefile    
-    LOGGER.info("Validating AOI.")
-##    dirname = os.path.dirname(args["aoi_file_name"]) + os.sep
-    file_name_stem = os.path.splitext(args["aoi_file_name"])[0]
-    aoi_shp_file_name = file_name_stem +".shp"
-    aoi_shx_file_name = file_name_stem +".shx"
-    aoi_dbf_file_name = file_name_stem +".dbf"
-    aoi_prj_file_name = file_name_stem +".prj"
-    
-    for file_name in [aoi_shp_file_name, aoi_shx_file_name, aoi_dbf_file_name, aoi_prj_file_name]:
-        if not os.path.exists(file_name):
-            LOGGER.error("The AOI is missing a shapefile component.")
-            raise ValueError, "The AOI is missing a shapefile component."
+    #validating shapefile
+    if args["mode"] == "initial":
+        LOGGER.info("Validating AOI.")
+	if not complete_shapefile(args["aoi_file_name"]):
+            raise ValueError, "The AOI shapefile is missing a component."
 
     #scanning data directory for shapefiles
     LOGGER.info("Processing predictors.")
@@ -181,9 +185,9 @@ def execute(args):
     
     #opening shapefiles
     attachments = {}
-    attachments["sessid"] = args["sessid"]
+    attachments["sessid"] = sessid
     zip_file_uri = temporary_filename()
-    zip_file = zipfile.ZipFile(zip_file_uri, mode = 'w')
+    zip_file = zipfile.ZipFile(zip_file_uri, 'w')
 
     #check if comprssion supported
     try:
@@ -222,34 +226,45 @@ def execute(args):
     #opening request and saving session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
         
-    LOGGER.debug("Server session %s.", args["sessid"])
+    LOGGER.debug("Server session %s.", sessid)
 
     #wait for server to finish saving predictors.
     log_line = log_check(log_url, "End predictors PHP script.", 15, LOGGER, log_line)
 
     #EXECUTING SERVER SIDE PYTHON SCRIPT
-    LOGGER.info("Uploading AOI and running model.")
+    LOGGER.info("Running server side processing.")
     
     #constructing model parameters
-    attachments = {"json" : json.dumps(args, indent = 4),
-                   "aoiSHP": open(aoi_shp_file_name, "rb"),
-                   "aoiSHX": open(aoi_shx_file_name, "rb"),
-                   "aoiDBF": open(aoi_dbf_file_name, "rb"),
-                   "aoiPRJ": open(aoi_prj_file_name, "rb")}
+    attachments = {}
+
+    if args["mode"] == "initial":
+        base_file_name = str(os.path.splitext(args["aoi_file_name"])[0])
+        attachments["aoiSHP"] = open(os.extsep.join([base_file_name, "shp"]), "rb")
+        attachments["aoiSHX"] = open(os.extsep.join([base_file_name, "shx"]), "rb")
+        attachments["aoiDBF"] = open(os.extsep.join([base_file_name, "dbf"]), "rb")
+        attachments["aoiPRJ"] = open(os.extsep.join([base_file_name, "prj"]), "rb")
+    elif args["mode"] == "scenario":
+        attachments["init"] = open(args["json"],'rb')
+    else:
+        raise ValueError, "A valid mode was not detected."
+    
+    attachments["json"] = json.dumps(args, indent = 4)
     
     datagen, headers = multipart_encode(attachments)
     
     #constructing server side recreation python script request
-    url = config["server"] + config["files"]["PHP"]["recreation"]
+    if args["mode"] == "initial":
+        LOGGER.debug("Recreation intial run mode.")
+        url = config["server"] + config["files"]["PHP"]["recreation"]
+    else:
+        LOGGER.debug("Scenario run mode.")
+        url = config["server"] + config["files"]["PHP"]["scenario"]
+        
     LOGGER.info("URL: %s.", url)
     request = urllib2.Request(url, datagen, headers)
     
     #opening request and comparing session id
-    sessid2 = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-
-    if not sessid2 == args["sessid"]:
-        LOGGER.error("There was a session id mismatch.")
-        raise ValueError, "The session id unexpectedly changed."
+    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
     #check log and echo messages while not done
     LOGGER.info("Model running.")
@@ -262,33 +277,33 @@ def execute(args):
 
     #construct server side R script request
     url = config["server"] + config["files"]["PHP"]["regression"]
-    datagen, headers = multipart_encode({"sessid": args["sessid"]})
+
+    attachments = {}
+    attachments = {"sessid": args["sessid"]}
+    
+    datagen, headers = multipart_encode(attachments)
     request = urllib2.Request(url, datagen, headers)
 
     #opening request and comparing session id
-    sessid2 = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-
-    if not sessid2 == args["sessid"]:
-        LOGGER.error("There was a session id mismatch.")
-        raise ValueError, "The session id unexpectedly changed."
+    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
     #check log and echo messages while not done
     log_line = log_check(log_url, "End regression PHP script.", 15, LOGGER, log_line)
 
     #ZIP SERVER SIDE RESULTS
     url = config["server"] + config["files"]["PHP"]["results"]
-    datagen, headers = multipart_encode({"sessid": args["sessid"]})
+
+    attachments = {}
+    attachments = {"sessid": sessid}
+    
+    datagen, headers = multipart_encode(attachments)
     request = urllib2.Request(url, datagen, headers)
 
     #opening request and comparing session id
-    sessid2 = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-
-    if not sessid2 == args["sessid"]:
-        LOGGER.error("There was a session id mismatch.")
-        raise ValueError, "The session id unexpectedly changed."
+    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
     
     #download results
-    url = config["server"] + config["paths"]["relative"]["data"] + args["sessid"] + "/" + config["files"]["results"]
+    url = config["server"] + config["paths"]["relative"]["data"] + sessid + "/" + config["files"]["results"]
     LOGGER.info("URL: %s.", url)
 
     req = urllib2.urlopen(url)
