@@ -6,6 +6,7 @@ import os
 import logging
 import json
 import fnmatch
+import shutil
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
