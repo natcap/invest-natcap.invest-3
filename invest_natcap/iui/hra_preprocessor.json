@@ -92,7 +92,7 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Temporal Overlap", "Frequency of Disturbance"],
+                    "defaultValue": ["Temporal Overlap Rating", "Frequency of Disturbance"],
                     "linkText": "Add Another"
                 },  
                 {
