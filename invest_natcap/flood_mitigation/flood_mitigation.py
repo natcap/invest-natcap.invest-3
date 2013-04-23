@@ -156,7 +156,7 @@ def execute(args):
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
-
+        LOGGER.info('Starting timestep %s', timestep)
         # Create the timestamp folder name and make the folder on disk.
         timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
         raster_utils.create_directories([timestep_dir])
@@ -197,6 +197,7 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
 
         Returns nothing."""
 
+    LOGGER.info('Calculating storm runoff')
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
     precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
 
@@ -219,6 +220,7 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
         calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
         precip_pixel_size, 'intersection')
+    LOGGER.debug('Finished calculating storm runoff')
 
 
 def soil_water_retention_capacity(cn_uri, swrc_uri):
@@ -423,8 +425,10 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
 
         This function returns nothing."""
 
+    LOGGER.info('Starting to make the precipitation raster')
     precip_nodata = raster_utils.get_nodata_from_uri(sample_raster_uri)
     raster_utils.new_raster_from_base_uri(sample_raster_uri, output_uri,
         'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)
 
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
+    LOGGER.info('Finished making the precipitation raster')
