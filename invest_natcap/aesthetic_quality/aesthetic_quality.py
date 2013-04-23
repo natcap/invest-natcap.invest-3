@@ -17,11 +17,13 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
 
     memory_file_uri = raster_utils.temporary_filename()
     memory_array = raster_utils.load_memory_mapped_array(dataset_uri, memory_file_uri)
-
+    memory_array_flat = memory_array.reshape((-1,))
+    
     quantile_breaks = [0]
     for quantile in quantile_list:
-        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array, quantile))
+        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile))
 
+    LOGGER.debug('quantile_breaks %s' % quantile_breaks)
     def reclass(value):
         if value == nodata_ds:
             return nodata_out
