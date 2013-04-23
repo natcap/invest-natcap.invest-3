@@ -201,6 +201,7 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
 
     LOGGER.info('Calculating storm runoff')
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    swrc_nodata = raster_utils.get_nodata_from_uri(swrc_uri)
     precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
 
     def calculate_runoff(precip, swrc):
@@ -208,10 +209,8 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         the ability of the soil to retain water (swrc).  Both inputs are
         floats.  Returns a float."""
 
-        # TODO: what happens when precip <= 0.2*swrc???
-        # The user's guide does not define what happens when precip is greater
-        # than 0.2, so until we find out, we should return nodata.
-        if precip == precip_nodata:
+        # Handle when precip or swrc is nodata.
+        if precip == precip_nodata or swrc == swrc_nodata:
             return precip_nodata
 
         # In response to issue 1913.  Rich says that if P <= 0.2S, we should
