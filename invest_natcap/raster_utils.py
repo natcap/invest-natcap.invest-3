@@ -98,6 +98,19 @@ def calculate_raster_stats_uri(ds_uri):
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
+def get_statistics_from_uri(dataset_uri):
+    """Retrieves the min, max, mean, stdev from a GDAL Dataset
+
+        dataset_uri - a uri to a gdal dataset
+
+        returns min, max, mean, stddev"""
+
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
+    statistics = band.GetStatistics(0,1)
+    band = None
+    dataset = None
+    return statistics
 
 def get_cell_area_from_uri(dataset_uri):
     return pixel_area(gdal.Open(dataset_uri))
@@ -457,6 +470,19 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
+def new_raster_from_base_uri(base_uri, *args, **kwargs):
+    """A wrapper for the function new_raster_from_base that opens up the
+        base_uri before passing it to new_raster_from_base.
+
+        base_uri - a URI to a GDAL dataset on disk.
+
+        All other arguments to new_raster_from_base are passed in.
+
+        Returns a GDAL dataset.
+        """
+    base_raster = gdal.Open(base_uri)
+    return new_raster_from_base(base_raster, *args, **kwargs)
+
 def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
@@ -726,6 +752,8 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
             point_list.append([point[1]+random_offsets[feature_id,1],
                                point[0]+random_offsets[feature_id,0]])
             value_list.append(value)
+
+    LOGGER.debug('points: %s', point_list)
     point_array = numpy.array(point_list)
     value_array = numpy.array(value_list)
 
@@ -2558,3 +2586,99 @@ def create_directories(directory_list):
             #some other reason, raise that exception
             if exception.errno != errno.EEXIST:
                 raise
+
+def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
+    """Creates a point shapefile from a dictionary. The point shapefile created
+        is not projected and uses latitude and longitude for its geometry.
+        
+        dict_data - a python dictionary with keys being unique id's that point
+            to sub-dictionarys that have key-value pairs. These inner key-value
+            pairs will represent the field-value pair for the point features.
+            At least two fields are required in the sub-dictionaries, All the
+            keys in the sub dictionary should have the same name and order. All
+            the values in the sub dictionary should have the same type
+            'lati' and 'long'. These fields determine the geometry of the point
+            0 : {'lati':97, 'long':43, 'field_a':6.3, 'field_b':'Forest',...},
+            1 : {'lati':55, 'long':51, 'field_a':6.2, 'field_b':'Crop',...},
+            2 : {'lati':73, 'long':47, 'field_a':6.5, 'field_b':'Swamp',...}
+        
+        layer_name - a python string for the name of the layer
+        
+        output_uri - a uri for the output path of the point shapefile
+
+        return - Nothing"""
+    
+    LOGGER.debug('Entering dictionary_to_shapefile')
+    
+    # If the output_uri exists delete it
+    if os.path.isfile(output_uri):
+        os.remove(output_uri)
+    elif os.path.isdir(output_uri):
+        shutil.rmtree(output_uri)
+
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    LOGGER.debug('Create New Datasource')
+    output_datasource = output_driver.CreateDataSource(output_uri)
+
+    # Set the spatial reference to WGS84 (lat/long)
+    source_sr = osr.SpatialReference()
+    source_sr.SetWellKnownGeogCS("WGS84")
+   
+    LOGGER.debug('Create New Layer')
+    output_layer = output_datasource.CreateLayer(
+            layer_name, source_sr, ogr.wkbPoint)
+
+    # Outer unique keys
+    outer_keys = dict_data.keys()
+    
+    # Construct a list of fields to add from the keys of the inner dictionary
+    field_list = dict_data[outer_keys[0]].keys()
+    LOGGER.debug('field_list : %s', field_list)
+    
+    # Create a dictionary to store what variable types the fields are
+    type_dict = {}
+    for field in field_list:
+        # Get a value from the field
+        val = dict_data[outer_keys[0]][field]
+        # Check to see if the value is a String of characters or a number. This
+        # will determine the type of field created in the shapefile
+        if isinstance(val, str):
+            type_dict[field] = 'str'
+        else:
+            type_dict[field] = 'number'
+
+    LOGGER.debug('Creating fields for the datasource')
+    for field in field_list:
+        field_type = None
+        # Distinguish if the field type is of type String or other. If Other, we
+        # are assuming it to be a float
+        if type_dict[field] == 'str':
+            field_type = ogr.OFTString
+        else:
+            field_type = ogr.OFTReal
+        
+        output_field = ogr.FieldDefn(field, field_type)   
+        output_layer.CreateField(output_field)
+
+    LOGGER.debug('Entering iteration to create and set the features')
+    # For each inner dictionary (for each point) create a point and set its
+    # fields
+    for point_dict in dict_data.itervalues():
+        latitude = float(point_dict['lati'])
+        longitude = float(point_dict['long'])
+
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+
+        output_feature = ogr.Feature(output_layer.GetLayerDefn())
+        
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+        
+        output_feature.SetGeometryDirectly(geom)
+        output_layer.CreateFeature(output_feature)
+        output_feature = None
+
+    output_layer.SyncToDisk()
+

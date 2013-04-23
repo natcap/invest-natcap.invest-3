@@ -8,7 +8,6 @@ import shutil
 from osgeo import gdal
 
 from invest_natcap import raster_utils
-from invest_natcap.wind_energy import wind_energy_valuation
 from invest_natcap.invest_core import fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -134,6 +133,66 @@ def execute(args):
         cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
         adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
 
+    # Calculate the Soil Water Retention Capacity (equation 2)
+    swrc_uri = os.path.join(intermediate, 'swrc.tif')
+    soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
+
+    # Convert precipitation table to a points shapefile.
+    precip_points_uri = os.path.join(intermediate, 'precip_points')
+    convert_precip_to_points(args['precipitation'], points_uri)
+
+    # our timesteps start at 1.
+    for timestep in range(1, args['num_intervals'] + 1):
+
+        # Create the timestamp folder name and make the folder on disk.
+        timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
+        raster_utils.create_directories([timestep_dir])
+
+        # make the precip raster, since it's timestep-dependent.
+        precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
+        raster_utils.vectorize_points_uri(precip_points_uri, timestep,
+            precip_raster_uri)
+
+        # Calculate storm runoff once we have all the data we need.
+        runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
+        storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+
+def storm_runoff(precip_uri, swrc_uri, output_uri):
+    """Calculate the storm runoff from the landscape in this timestep.  This
+        function corresponds with equation 1 in the Flood Mitigation user's
+        guide.
+
+        precip_uri - a URI to a GDAL dataset on disk, representing rainfall
+            across the landscape within this timestep.
+        swrc_uri - a URI to a GDAL dataset on disk representing a raster of the
+            soil water retention capacity.
+        output_uri - a URI to the desired location of the output raster from
+            this function.  If this file exists on disk, it will be overwritten
+            with a GDAL dataset.
+
+        This function saves a GDAL dataset to the URI `output_uri`.
+
+        Returns nothing."""
+
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
+
+    def calculate_runoff(precip, swrc):
+        """Calculate the runoff on a pixel from the precipitation value and
+        the ability of the soil to retain water (swrc).  Both inputs are
+        floats.  Returns a float."""
+
+        # TODO: what happens when precip <= 0.2*swrc???
+        # The user's guide does not define what happens when precip is greater
+        # than 0.2, so until we find out, we should return nodata.
+        if precip == precip_nodata or precip > 0.2 * swrc:
+            return precip_nodata
+        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+
+    raster_utils.vectorize_datasets([precip_uri, swrc_uri],
+        calculate_runoff, output_uri. gdal.GDT_Float32, precip_nodata,
+        precip_pixel_size, 'intersection')
+
 
 def soil_water_retention_capacity(cn_uri, swrc_uri):
     """Calculate the capacity of the soil to retain water on the landscape from
@@ -218,9 +277,28 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
 
     Returns None."""
 
+    # Get the nodata value so we can account for that in our tweaked seasonality
+    # functions here.
+    cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
+
+    def adjust_for_dry_season(curve_num):
+        """Custom function to account for nodata values when adjusting curve
+        numbers for the dry season.  curve_num is a float.  Returns a float."""
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return _dry_season_adjustment(curve_num)
+
+
+    def adjust_for_wet_season(curve_num):
+        """Custom function to account for nodata values when adjusting curve
+        numbers for the wet season.  curve_num is a float.  Returns a float."""
+        if curve_num == cn_nodata:
+            return cn_nodata
+        return _wet_season_adjustment(curve_num)
+
     adjustments = {
-        'dry': _dry_season_adjustment,
-        'wet': _wet_season_adjustment
+        'dry': adjust_for_dry_season,
+        'wet': adjust_for_wet_season
     }
 
     try:
@@ -299,5 +377,23 @@ def convert_precip_to_points(precip_uri, points_uri):
     table_dictionary = dict((i, d) for (i, d) in
         enumerate(table_object.get_table()))
 
-    wind_energy_valuation.dictionary_to_shapefile(table_dictionary,
+    raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
+
+def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_uri):
+    """Create a precipitation raster from a points shapefile for the specified
+        timestep.
+
+        precip_points_uri - a URI to an OGR Datasource on disk.
+        sample_raster_uri - a URI to a GDAL dataset on disk.
+        timestep - an int timestep.  Must be a field in the datasource passed in
+            as `precip_points_uri`.
+        output_uri - a URI to where the output raster will be saved.
+
+        This function saves a GDAL raster dataset to `output_uri`.  This output
+        raster will carry many of the characteristics of the sample_raster_uri,
+        including pixel size and projection.
+
+        This function returns nothing."""
+
+    raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)

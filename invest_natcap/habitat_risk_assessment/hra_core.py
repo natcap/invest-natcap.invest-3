@@ -175,8 +175,8 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
         for radius, color in circle_stuff:
             index += 1
             linestyle = 'solid' if index % 2 == 0 else 'dashed'
-            cir = matplotlib.pyplot.Circle((0,0), edgecolor='.25', linestyle=linestyle, 
-                        radius=radius*max_value/3.5, fc=color)
+            cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', linestyle=linestyle, 
+                        radius=radius * max_value/ 3.5, fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
     
     #Create plots for each combination of H,S
@@ -442,7 +442,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
 
         #GETTING MEANS OF THE C RASTER HERE
 
-        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
 
         c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
                         'mean')

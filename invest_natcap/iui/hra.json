@@ -33,7 +33,8 @@
                     "label": "Criteria Scores CSV Folder",
                     "defaultValue": "../HabitatRiskAssess/habitat_stressor_ratings",
                     "required": true,
-                    "validateAs": {"type": "folder"},
+                    "validateAs": {"type": "folder",
+                                   "mustExist": true},
                     "helpText": "A folder containing multiple CSV files. Each file refers to the overlap between a habitat and a stressor pulled from habitat and stressor shapefiles during the run of the HRA Preprocessor."
                  },
 		         {

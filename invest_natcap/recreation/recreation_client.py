@@ -1,3 +1,5 @@
+"""The front end to the recreation server side model.
+"""
 import os
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
@@ -16,11 +18,13 @@ from invest_natcap.raster_utils import temporary_filename
 import invest_natcap
 
 logging.basicConfig(format = '%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level = logging.DEBUG, datefmt = '%m/%d/%Y %H:%M:%S ')
+%(message)s', level = logging.INFO, datefmt = '%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('recreation_client_init')
 
 def urlopen(url, request, tries = 3, delay = 15, log = LOGGER):
+    """An error tolerant URL opener with retries and delays.
+    """
     for attempt in range(tries):
         log.info("Trying URL: %s.", url)
         try:
@@ -37,6 +41,8 @@ def urlopen(url, request, tries = 3, delay = 15, log = LOGGER):
     return msg
 
 def relogger(log, msg_type, msg):
+    """Logs a message to a logger using the method named by a string.
+    """
     msg_type = msg_type.strip()
     if msg_type == "INFO":
         log.info(msg)
@@ -50,7 +56,10 @@ def relogger(log, msg_type, msg):
     else:
         log.warn("Unknown logging message type %s: %s" % (msg_type, msg))    
 
-def log_check(url, flag = "Dropped intermediate tables.", delay = 15, log = LOGGER, line = 0):
+def log_check(url, flag = "Dropped intermediate tables.", delay = 15,
+              log = LOGGER, line = 0):
+    """Echoes a remote log until the flag message is found.
+    """
     log.debug("Begin log check at line %i.", line)
     complete = False
     count = 0
@@ -59,10 +68,13 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15, log = LOGG
         server_log = urllib2.urlopen(url).read()
         server_log = server_log.strip().split("\n")
 
-        if (len(server_log) > 0) and (server_log[-1] != "") and (server_log[-1][-1] != "."):
+        if (len(server_log) > 0) and \
+           (server_log[-1] != "") and \
+           (server_log[-1][-1] != "."):
             server_log.pop(-1)
         
-        if (len(server_log[line + count:])) > 0 and (server_log[line + count:] != [""]):
+        if (len(server_log[line + count:]) > 0) and \
+           (server_log[line + count:] != [""]):
             for entry in server_log[line + count:]:
                 log.debug("Parsing log entry: %s.", repr(entry))
                 msg_type, msg = entry.split(",")[1:]
@@ -72,7 +84,7 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15, log = LOGG
                     log.debug("Detected log check exit message.")
                     complete = True
                     if len(server_log[line + count:]) > 0:
-                        log.warn("There are unwritten messages on the remote log.")
+                        log.warn("Unwritten messages on the remote log.")
                     break
             
         else:
@@ -83,13 +95,28 @@ def log_check(url, flag = "Dropped intermediate tables.", delay = 15, log = LOGG
     log.debug("End log check at line %i.", line)
 
     return line
+
+def complete_shapefile(shapefile_name):
+    """Checks that there is a .shp, .shx, .dbf, and .prj file by the same name.
+    """
+    file_name_base = os.path.splitext(shapefile_name)[0]
+
+    complete = True
+    for file_extension in ["shp", "shx", "dbf", "prj"]:
+        LOGGER.debug(os.extsep.join([file_name_base, file_extension]))
+        complete &= os.path.exists(os.extsep.join([file_name_base,
+                                                   file_extension]))
+
+    return complete
             
 def execute(args):
+    """The main function called by IUI.
+    """
     # Register the streaming http handlers with urllib2
     register_openers()
 
     #load configuration
-    config_file_name = os.path.dirname(os.path.abspath(__file__)) + os.sep + "recreation_client_config.json"
+    config_file_name = os.path.splitext(__file__)[0] + "_config.json"
     LOGGER.debug("Loading server configuration from %s.", config_file_name)
     config_file = open(config_file_name, 'r')
     config = json.loads(config_file.read())
@@ -98,7 +125,6 @@ def execute(args):
     #VERSION AND RELEASE CHECK
     args["version_info"] = invest_natcap.__version__
     args["is_release"] = invest_natcap.is_release()
-
 
     #constructing model parameters
     attachments = {"version_info" : args["version_info"],
@@ -114,20 +140,26 @@ def execute(args):
     #opening request and comparing session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
+    #saving session id to model parameters
     args["sessid"] = sessid
 
     #check log and echo messages while not done
-    log_url = config["server"] + "/" + config["paths"]["relative"]["data"] + "/" + args["sessid"] + "/" + config["files"]["log"]
+    session_path = config["server"] + "/" + config["paths"]["relative"]["data"] + "/" + args["sessid"] + "/"
+    log_url = session_path + config["files"]["log"]
     log_line = 0
     
     LOGGER.info("Checking version.")
-    log_line = log_check(log_url, "End version PHP script.", 15, LOGGER, log_line)
+    log_line = log_check(log_url, "End version PHP script.", 15, LOGGER,
+                         log_line)
     
     LOGGER.info("Finished checking version.")
 
        
     #VALIDATING MODEL PARAMETERS
     LOGGER.debug("Processing parameters.")
+    if not args["mode"] in ["initial", "scenario"]:
+        msg = "The mode must be specified as \'initial\' or \'scenario\'."
+        raise ValueError, msg
 
     #adding os separator to paths if needed
     if args["workspace_dir"][-1] != os.sep:
@@ -136,19 +168,11 @@ def execute(args):
     if args["data_dir"] != "" and args["data_dir"][-1] != os.sep:
         args["data_dir"] = args["data_dir"] + os.sep  
 
-    #validating shapefile    
-    LOGGER.info("Validating AOI.")
-##    dirname = os.path.dirname(args["aoi_file_name"]) + os.sep
-    file_name_stem = os.path.splitext(args["aoi_file_name"])[0]
-    aoi_shp_file_name = file_name_stem +".shp"
-    aoi_shx_file_name = file_name_stem +".shx"
-    aoi_dbf_file_name = file_name_stem +".dbf"
-    aoi_prj_file_name = file_name_stem +".prj"
-    
-    for file_name in [aoi_shp_file_name, aoi_shx_file_name, aoi_dbf_file_name, aoi_prj_file_name]:
-        if not os.path.exists(file_name):
-            LOGGER.error("The AOI is missing a shapefile component.")
-            raise ValueError, "The AOI is missing a shapefile component."
+    #validating shapefile
+    if args["mode"] == "initial":
+        LOGGER.info("Validating AOI.")
+        if not complete_shapefile(args["aoi_file_name"]):
+            raise ValueError, "The AOI shapefile is missing a component."
 
     #scanning data directory for shapefiles
     LOGGER.info("Processing predictors.")
@@ -159,31 +183,37 @@ def execute(args):
             file_name_stem, file_extension = os.path.splitext(file_name)
             #checking for complete shapefile
             if file_extension == ".shp":
-                if os.path.exists(args["data_dir"] + file_name_stem + ".shx") and \
-                os.path.exists(args["data_dir"] + file_name_stem + ".shp") and \
-                os.path.exists(args["data_dir"] + file_name_stem + ".prj"):
+                if complete_shapefile(os.path.join(args["data_dir"],
+                                                   file_name)):
                     LOGGER.info("Found %s predictor.", file_name_stem)
                     predictors.append(file_name_stem)
                 else:
-                    LOGGER.error("Predictor %s is missing file(s).", file_name_stem)
+                    LOGGER.error("Predictor %s is missing file(s).",
+                                 file_name_stem)
             #checking if categorization table
             elif file_extension == ".tsv":
                 LOGGER.info("Found %s categorization.", file_name_stem)
                 user_categorization.append(file_name_stem)
 
+##    for cat_table in set(user_categorization).difference(predictors):
+##        msg = "Categorization table %s has no predictor and will be ignored."
+##        LOGGER.warn(msg, cat_table)
+##        user_categorization.pop(user_categorization.index(cat_table))
+
     #making sure there is not landscan categorization
-    if "landscan.tsv" in user_categorization:
-        LOGGER.error("The categorization of the Landscan data is not allowed.")
-        raise ValueError, "The categorization of the Landscan data is not allowed."
+    if "landscan" in user_categorization:
+        msg = "The categorization of the Landscan data is not allowed."
+        LOGGER.error(msg)
+        raise ValueError, msg
 
     #UPLOADING PREDICTORS
     LOGGER.info("Opening predictors for uploading.")
     
     #opening shapefiles
     attachments = {}
-    attachments["sessid"] = args["sessid"]
+    attachments["sessid"] = sessid
     zip_file_uri = temporary_filename()
-    zip_file = zipfile.ZipFile(zip_file_uri, mode = 'w')
+    zip_file = zipfile.ZipFile(zip_file_uri, 'w')
 
     #check if comprssion supported
     try:
@@ -195,14 +225,20 @@ def execute(args):
         LOGGER.debug("Predictors will not be compressed.")
     
     for predictor in predictors:
-        zip_file.write(args["data_dir"] + predictor + ".shp", predictor + ".shp", compression)
-        zip_file.write(args["data_dir"] + predictor + ".shx", predictor + ".shx", compression)
-        zip_file.write(args["data_dir"] + predictor + ".dbf", predictor + ".dbf", compression)
-        zip_file.write(args["data_dir"] + predictor + ".prj", predictor + ".prj", compression)
+        predictor_base = args["data_dir"] + predictor
+        zip_file.write(predictor_base + ".shp", predictor + ".shp",
+                       compression)
+        zip_file.write(predictor_base + ".shx", predictor + ".shx",
+                       compression)
+        zip_file.write(predictor_base + ".dbf", predictor + ".dbf",
+                       compression)
+        zip_file.write(predictor_base + ".prj", predictor + ".prj",
+                       compression)
         
     #opening categorization table
     for tsv in user_categorization:
-        zip_file.write(args["data_dir"] + tsv + ".tsv", tsv + ".tsv", compression)
+        zip_file.write(args["data_dir"] + tsv + ".tsv", tsv + ".tsv",
+                       compression)
 
     zip_file.close()
     attachments["zip_file"] = open(zip_file_uri, 'rb')
@@ -222,38 +258,55 @@ def execute(args):
     #opening request and saving session id
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
         
-    LOGGER.debug("Server session %s.", args["sessid"])
+    LOGGER.debug("Server session %s.", sessid)
 
     #wait for server to finish saving predictors.
-    log_line = log_check(log_url, "End predictors PHP script.", 15, LOGGER, log_line)
+    log_line = log_check(log_url, "End predictors PHP script.", 15, LOGGER,
+                         log_line)
 
     #EXECUTING SERVER SIDE PYTHON SCRIPT
-    LOGGER.info("Uploading AOI and running model.")
+    LOGGER.info("Running server side processing.")
     
     #constructing model parameters
-    attachments = {"json" : json.dumps(args, indent = 4),
-                   "aoiSHP": open(aoi_shp_file_name, "rb"),
-                   "aoiSHX": open(aoi_shx_file_name, "rb"),
-                   "aoiDBF": open(aoi_dbf_file_name, "rb"),
-                   "aoiPRJ": open(aoi_prj_file_name, "rb")}
+    attachments = {}
+
+    if args["mode"] == "initial":
+        base_file_name = str(os.path.splitext(args["aoi_file_name"])[0])
+        attachments["aoiSHP"] = open(os.extsep.join([base_file_name, "shp"]),
+                                     "rb")
+        attachments["aoiSHX"] = open(os.extsep.join([base_file_name, "shx"]),
+                                     "rb")
+        attachments["aoiDBF"] = open(os.extsep.join([base_file_name, "dbf"]),
+                                     "rb")
+        attachments["aoiPRJ"] = open(os.extsep.join([base_file_name, "prj"]),
+                                     "rb")
+    elif args["mode"] == "scenario":
+        attachments["init"] = open(args["json"],'rb')
+    else:
+        raise ValueError, "A valid mode was not detected."
+    
+    attachments["json"] = json.dumps(args, indent = 4)
     
     datagen, headers = multipart_encode(attachments)
     
     #constructing server side recreation python script request
-    url = config["server"] + config["files"]["PHP"]["recreation"]
+    if args["mode"] == "initial":
+        LOGGER.debug("Recreation intial run mode.")
+        url = config["server"] + config["files"]["PHP"]["recreation"]
+    else:
+        LOGGER.debug("Scenario run mode.")
+        url = config["server"] + config["files"]["PHP"]["scenario"]
+        
     LOGGER.info("URL: %s.", url)
     request = urllib2.Request(url, datagen, headers)
     
     #opening request and comparing session id
-    sessid2 = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-
-    if not sessid2 == args["sessid"]:
-        LOGGER.error("There was a session id mismatch.")
-        raise ValueError, "The session id unexpectedly changed."
+    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
     #check log and echo messages while not done
     LOGGER.info("Model running.")
-    log_line = log_check(log_url, "Dropped intermediate tables.", 15, LOGGER, log_line)
+    log_line = log_check(log_url, "Dropped intermediate tables.", 15, LOGGER,
+                         log_line)
     
     LOGGER.info("Finished processing data.")
 
@@ -262,39 +315,40 @@ def execute(args):
 
     #construct server side R script request
     url = config["server"] + config["files"]["PHP"]["regression"]
-    datagen, headers = multipart_encode({"sessid": args["sessid"]})
+
+    attachments = {}
+    attachments = {"sessid": args["sessid"]}
+    
+    datagen, headers = multipart_encode(attachments)
     request = urllib2.Request(url, datagen, headers)
 
     #opening request and comparing session id
-    sessid2 = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-
-    if not sessid2 == args["sessid"]:
-        LOGGER.error("There was a session id mismatch.")
-        raise ValueError, "The session id unexpectedly changed."
+    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
     #check log and echo messages while not done
-    log_line = log_check(log_url, "End regression PHP script.", 15, LOGGER, log_line)
+    log_line = log_check(log_url, "End regression PHP script.", 15, LOGGER,
+                         log_line)
 
     #ZIP SERVER SIDE RESULTS
     url = config["server"] + config["files"]["PHP"]["results"]
-    datagen, headers = multipart_encode({"sessid": args["sessid"]})
+
+    attachments = {}
+    attachments = {"sessid": sessid}
+    
+    datagen, headers = multipart_encode(attachments)
     request = urllib2.Request(url, datagen, headers)
 
     #opening request and comparing session id
-    sessid2 = urlopen(url, request, config["tries"], config["delay"], LOGGER)
-
-    if not sessid2 == args["sessid"]:
-        LOGGER.error("There was a session id mismatch.")
-        raise ValueError, "The session id unexpectedly changed."
+    sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
     
     #download results
-    url = config["server"] + config["paths"]["relative"]["data"] + args["sessid"] + "/" + config["files"]["results"]
+    url = session_path + config["files"]["results"]
     LOGGER.info("URL: %s.", url)
 
     req = urllib2.urlopen(url)
     chunk_size = 16 * 1024
     zip_file_name_format = args["workspace_dir"] + "results%s.zip"
-    zip_file_name = zip_file_name_format %\
+    zip_file_name = zip_file_name_format % \
                     datetime.datetime.now().strftime("-%Y-%m-%d--%H_%M_%S")
     with open(zip_file_name, 'wb') as zip_file:
         while True:

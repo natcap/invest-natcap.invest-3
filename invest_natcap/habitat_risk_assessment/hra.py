@@ -4,10 +4,9 @@ and pre-processed data from the UI and pass it to the hra_core module.'''
 import os
 import shutil
 import logging
-import glob
+import fnmatch
 import numpy as np
 import math
-import sys
 
 from osgeo import gdal, ogr, osr
 from scipy import ndimage
@@ -228,7 +227,8 @@ def execute(args):
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
         if ele in hra_args:
-            hab_list += glob.glob(os.path.join(hra_args[ele], '*.shp'))
+            hab_names = listdir(hra_args[ele])
+            hab_list += fnmatch.filter(hab_names, '*.shp')
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
@@ -251,6 +251,22 @@ def execute(args):
             del hra_args[name]
 
     hra_core.execute(hra_args)
+
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris
 
 def calc_max_rating(risk_eq, max_rating):
     ''' Should take in the max possible risk, and return the highest possible
@@ -527,7 +543,9 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
             rasterized version of the stressor shapefile. It will be placed
             at stressors[stressName]['DS'].
     '''
-    stress_list = glob.glob(os.path.join(stressors_dir, '*.shp'))
+    s_names = listdir(stressors_dir)
+    stress_list = fnmatch.filter(s_names, '*.shp')
+
     for shape in stress_list:
 
         #The return of os.path.split is a tuple where everything after the final
