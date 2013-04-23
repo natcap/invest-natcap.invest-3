@@ -114,6 +114,14 @@ def execute(args):
         except OSError:
             LOGGER.debug('Folder %s already exists', folder)
 
+    # Remove any shapefile folders that exist, since we don't want any conflicts
+    # when creating new shapefiles.
+    precip_points_uri = os.path.join(intermediate, 'precip_points')
+    try:
+        shutil.rmtree(precip_points_uri)
+    except OSError:
+        pass
+
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
@@ -138,8 +146,13 @@ def execute(args):
     soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
     # Convert precipitation table to a points shapefile.
-    precip_points_uri = os.path.join(intermediate, 'precip_points')
-    convert_precip_to_points(args['precipitation'], points_uri)
+    precip_points_latlong_uri = os.path.join(intermediate, 'precip_points_latlong')
+    convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
+
+    # Project the precip points from latlong to the correct projection.
+    dem_wkt = _get_raster_wkt_from_uri(args['dem'])
+    raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
+        precip_points_uri)
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
@@ -150,12 +163,22 @@ def execute(args):
 
         # make the precip raster, since it's timestep-dependent.
         precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
-        raster_utils.vectorize_points_uri(precip_points_uri, timestep,
+        make_precip_raster(precip_points_uri, args['dem'], timestep,
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+
+def _get_raster_wkt_from_uri(raster_uri):
+    """Local function to get a raster's well-known text from a URI.
+
+        raster_uri - a string URI to a raster on disk.
+
+        Returns a string with the raster's well-known text projection
+        information."""
+    raster = gdal.Open(raster_uri)
+    return raster.GetProjection()
 
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
@@ -187,10 +210,14 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         # than 0.2, so until we find out, we should return nodata.
         if precip == precip_nodata or precip > 0.2 * swrc:
             return precip_nodata
-        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+        try:
+            return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+        except ZeroDivisionError:
+            # TODO: figure out why I'm getting zero-division errors.
+            return precip_nodata
 
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
-        calculate_runoff, output_uri. gdal.GDT_Float32, precip_nodata,
+        calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
         precip_pixel_size, 'intersection')
 
 
@@ -395,5 +422,9 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
         including pixel size and projection.
 
         This function returns nothing."""
+
+    precip_nodata = raster_utils.get_nodata_from_uri(sample_raster_uri)
+    raster_utils.new_raster_from_base_uri(sample_raster_uri, output_uri,
+        'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)
 
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
