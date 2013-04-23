@@ -442,7 +442,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
 
         #GETTING MEANS OF THE C RASTER HERE
 
-        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
 
         c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
                         'mean')

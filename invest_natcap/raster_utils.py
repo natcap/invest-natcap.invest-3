@@ -470,6 +470,19 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
+def new_raster_from_base_uri(base_uri, *args, **kwargs):
+    """A wrapper for the function new_raster_from_base that opens up the
+        base_uri before passing it to new_raster_from_base.
+
+        base_uri - a URI to a GDAL dataset on disk.
+
+        All other arguments to new_raster_from_base are passed in.
+
+        Returns a GDAL dataset.
+        """
+    base_raster = gdal.Open(base_uri)
+    return new_raster_from_base(base_raster, *args, **kwargs)
+
 def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
@@ -706,9 +719,6 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
                     gt[3] + gt[5] * raster.RasterYSize]
 
-    LOGGER.debug("bounding_box %s" % bounding_box)
-    LOGGER.debug("gt %s" % str(gt))
-
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
             and point[1] <= bounding_box[1] and point[1] >= bounding_box[3]
@@ -739,6 +749,7 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
             point_list.append([point[1]+random_offsets[feature_id,1],
                                point[0]+random_offsets[feature_id,0]])
             value_list.append(value)
+
     point_array = numpy.array(point_list)
     value_array = numpy.array(value_list)
 
