@@ -211,13 +211,15 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         # TODO: what happens when precip <= 0.2*swrc???
         # The user's guide does not define what happens when precip is greater
         # than 0.2, so until we find out, we should return nodata.
-        if precip == precip_nodata or precip > 0.2 * swrc:
+        if precip == precip_nodata:
             return precip_nodata
-        try:
-            return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
-        except ZeroDivisionError:
-            # TODO: figure out why I'm getting zero-division errors.
-            return precip_nodata
+
+        # In response to issue 1913.  Rich says that if P <= 0.2S, we should
+        # just clamp it to 0.0.
+        if precip <= 0.2 * swrc:
+            return 0.0
+
+        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
 
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
         calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
