@@ -381,7 +381,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
                 ....
             }
     '''
-    
+    LOGGER.debug("RISK DICT: %s", risk_dict) 
     #Since we know that the AOI will be consistent across all of the rasters,
     #want to create the new int field, and the name mapping dictionary upfront
     
@@ -399,7 +399,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
     
     for feature in layer:
 
-        name = feature.items()['name']
+        name = feature.items()['NAME']
         feature.SetField('BURN_ID', count)
         name_map[count] = name
         count += 1
