@@ -399,9 +399,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     name_map = {}
     count = 0
     
-    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
-                feature.items().keys()))
-
     for feature in layer:
 
         name = feature.items()[aoi_key]

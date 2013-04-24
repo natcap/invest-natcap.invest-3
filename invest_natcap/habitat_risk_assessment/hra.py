@@ -386,7 +386,7 @@ def add_crit_rasters(dir, crit_dict, habitats, stressors, h_s, grid_size):
 
             for feature in layer:
                 
-                if lower_attrib = None:
+                if lower_attrib == None:
                     lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
                                 feature.items().keys()))
 
