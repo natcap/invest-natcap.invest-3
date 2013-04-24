@@ -51,9 +51,14 @@ def execute(args):
             list_of_months, 
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
-    
-    # Make point shapefiles based on the current time step
+    for cur_month in list_of_months:
+        
+        cur_step_dict = data_dict[cur_month]
 
+        # Make point shapefiles based on the current time step
+
+    
+    
     # Use vectorize points to construct rasters based on points and fields
 
     # Calculate Evapotranspiration
@@ -90,15 +95,18 @@ def construct_time_step_data(data_uri):
     LOGGER.debug('Lowercase Fieldnames : %s', data_handler.fieldnames)
     
     data_dict = {}
+    unique_id = 0
 
     for row in data_handler:
+        
         try:
-            data_dict[row['date']][(
-                float(row['lati']), float(row['long']))] = float(row['p'])
+            data_dict[row['date']][unique_id] = row
+            unique_id+=1
         except KeyError:
+            unique_id = 0
             data_dict[row['date']] = {}
-            data_dict[row['date']][(
-                float(row['lati']), float(row['long']))] = float(row['p'])
+            data_dict[row['date']][unique_id] = row
+            unique_id+=1
 
     data_file.close()
     return data_dict
