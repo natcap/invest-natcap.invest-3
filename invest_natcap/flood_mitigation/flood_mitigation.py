@@ -148,7 +148,7 @@ def execute(args):
     soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
     # Convert precipitation table to a points shapefile.
-    precip_points_latlong_uri = os.path.join(intermediate, 'precip_points_latlong')
+    precip_points_latlong_uri = _temporary_folder()
     convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
 
     # Project the precip points from latlong to the correct projection.
