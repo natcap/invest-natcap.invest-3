@@ -24,7 +24,9 @@ class FloodMitigationTest(unittest.TestCase):
             'curve_numbers': self.curve_numbers,
             'dem': self.dem,
             'cn_adjust': True,
-            'cn_season': 'dry'
+            'cn_season': 'dry',
+            'precipitation': self.precip,
+            'num_intervals': 6
         }
 
         try:
@@ -116,7 +118,8 @@ class FloodMitigationTest(unittest.TestCase):
         """Regression test for the storm runoff function."""
 
         # make a sample raster to live at precip_points_uri
-        precip_raster_uri = os.path.join(self.workspace, 'precip_2.tif')
+        precip_raster_uri = os.path.join(REGRESSION_DATA, 'rainfall_step2.tif')
+
         precip_nodata = raster_utils.get_nodata_from_uri(self.dem)
         raster_utils.new_raster_from_base_uri(self.dem, precip_raster_uri,
             'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)

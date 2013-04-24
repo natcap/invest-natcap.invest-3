@@ -2678,3 +2678,13 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     output_layer.SyncToDisk()
 
+def get_dataset_projection_wkt_uri(ds_uri):
+    """Get the projection of a GDAL dataset as well known text (WKT)
+
+        ds_uri - A URI for the GDAL dataset
+
+        returns - a string for the WKT"""
+
+    raster_ds = gdal.Open(ds_uri)
+    proj_wkt = raster_ds.GetProjection()
+    return proj_wkt
