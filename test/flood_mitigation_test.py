@@ -17,6 +17,7 @@ class FloodMitigationTest(unittest.TestCase):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
         self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
+        self.dem_small = os.path.join(SAMP_INPUT, 'dem_200m.tif')
         self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
 
         self.args = {
