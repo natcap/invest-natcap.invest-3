@@ -1983,6 +1983,27 @@ def temporary_filename():
     return path
 
 
+def temporary_folder():
+    """Returns a temporary folder using mkdtemp.  The folder is deleted on exit
+        using the atexit register.
+
+        Returns an absolute, unique and temporary folder path."""
+
+    path = tempfile.mkdtemp()
+
+    def remove_folder(path):
+        """Function to remove a folder and handle exceptions encountered.  This
+        function will be registered in atexit."""
+        try:
+            shutil.rmtree(path)
+        except OSError as exception:
+            LOGGER.debug('Tried to remove temp folder %s, but got %s',
+                path, exception)
+
+    atexit.register(remove_folder, path)
+    return path
+
+
 class DatasetUnprojected(Exception): 
     """An exception in case a dataset is unprojected"""
     pass
