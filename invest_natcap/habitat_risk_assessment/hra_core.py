@@ -65,6 +65,8 @@ def execute(args):
             specified by 'aoi_tables'. If the risk_eq is 'Euclidea', this will
             create risk plots, otherwise it will just create the standard HTML
             table for either 'Euclidean' or 'Multiplicative.'
+        args['aoi_key']- The form of the word 'Name' that the aoi layer uses
+            for this particular model run. 
     
     Outputs:
         --Intermediate--
@@ -123,7 +125,7 @@ def execute(args):
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
-        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'])
+        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
 
         tables_dir = os.path.join(output_dir, 'HTML_Tables')
         os.mkdir(tables_dir)
@@ -345,7 +347,7 @@ def make_aoi_tables(out_dir, avgs_dict, max_risk):
     file.close()
 
 
-def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     '''This funtion is a helper to make_aoi_tables, and will just handle
     pre-calculation of the average values for each aoi zone.
 
@@ -397,9 +399,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri):
     name_map = {}
     count = 0
     
+    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                feature.items().keys()))
+
     for feature in layer:
 
-        name = feature.items()['NAME']
+        name = feature.items()[aoi_key]
         feature.SetField('BURN_ID', count)
         name_map[count] = name
         count += 1

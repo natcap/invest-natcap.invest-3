@@ -189,12 +189,23 @@ def execute(args):
         #implimented.
         shape = ogr.Open(args['aoi_tables'])
         layer = shape.GetLayer()
+    
+        lower_attrib = None
         for feature in layer:
-            if 'NAME' not in feature.items():
+            
+            if lower_attrib == None:
+                lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                            feature.items().keys()))
+            
+            if 'name' not in lower_attrib:
                 raise ImproperAOIAttributeName("Risk table layer attributes must \
-                    contain the attribute \"NAME\" in order to be properly used \
+                    contain the attribute \"Name\" in order to be properly used \
                     within the HRA model run.")
-        
+
+        #By this point, we know that the AOI layer contains the 'name' attribute,
+        #in some form. Pass that on to the core so that the name can be easily
+        #pulled from the layers.
+        hra_args['aoi_key'] = lower_attrib['name']        
         hra_args['aoi_tables'] = args['aoi_tables']
 
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
