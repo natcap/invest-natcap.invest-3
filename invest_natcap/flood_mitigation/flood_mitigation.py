@@ -114,6 +114,14 @@ def execute(args):
         except OSError:
             LOGGER.debug('Folder %s already exists', folder)
 
+    # Remove any shapefile folders that exist, since we don't want any conflicts
+    # when creating new shapefiles.
+    precip_points_uri = os.path.join(intermediate, 'precip_points')
+    try:
+        shutil.rmtree(precip_points_uri)
+    except OSError:
+        pass
+
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
@@ -132,6 +140,91 @@ def execute(args):
     else:
         cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
         adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
+
+    # Calculate the Soil Water Retention Capacity (equation 2)
+    swrc_uri = os.path.join(intermediate, 'swrc.tif')
+    soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
+
+    # Convert precipitation table to a points shapefile.
+    precip_points_latlong_uri = os.path.join(intermediate, 'precip_points_latlong')
+    convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
+
+    # Project the precip points from latlong to the correct projection.
+    dem_wkt = _get_raster_wkt_from_uri(args['dem'])
+    raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
+        precip_points_uri)
+
+    # our timesteps start at 1.
+    for timestep in range(1, args['num_intervals'] + 1):
+        LOGGER.info('Starting timestep %s', timestep)
+        # Create the timestamp folder name and make the folder on disk.
+        timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
+        raster_utils.create_directories([timestep_dir])
+
+        # make the precip raster, since it's timestep-dependent.
+        precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
+        make_precip_raster(precip_points_uri, args['dem'], timestep,
+            precip_raster_uri)
+
+        # Calculate storm runoff once we have all the data we need.
+        # TODO: commit a regression storm runoff raster.
+        runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
+        storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+
+
+def _get_raster_wkt_from_uri(raster_uri):
+    """Local function to get a raster's well-known text from a URI.
+
+        raster_uri - a string URI to a raster on disk.
+
+        Returns a string with the raster's well-known text projection
+        information."""
+    raster = gdal.Open(raster_uri)
+    return raster.GetProjection()
+
+def storm_runoff(precip_uri, swrc_uri, output_uri):
+    """Calculate the storm runoff from the landscape in this timestep.  This
+        function corresponds with equation 1 in the Flood Mitigation user's
+        guide.
+
+        precip_uri - a URI to a GDAL dataset on disk, representing rainfall
+            across the landscape within this timestep.
+        swrc_uri - a URI to a GDAL dataset on disk representing a raster of the
+            soil water retention capacity.
+        output_uri - a URI to the desired location of the output raster from
+            this function.  If this file exists on disk, it will be overwritten
+            with a GDAL dataset.
+
+        This function saves a GDAL dataset to the URI `output_uri`.
+
+        Returns nothing."""
+
+    LOGGER.info('Calculating storm runoff')
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
+
+    def calculate_runoff(precip, swrc):
+        """Calculate the runoff on a pixel from the precipitation value and
+        the ability of the soil to retain water (swrc).  Both inputs are
+        floats.  Returns a float."""
+
+        # TODO: what happens when precip <= 0.2*swrc???
+        # The user's guide does not define what happens when precip is greater
+        # than 0.2, so until we find out, we should return nodata.
+        if precip == precip_nodata:
+            return precip_nodata
+
+        # In response to issue 1913.  Rich says that if P <= 0.2S, we should
+        # just clamp it to 0.0.
+        if precip <= 0.2 * swrc:
+            return 0.0
+
+        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+
+    raster_utils.vectorize_datasets([precip_uri, swrc_uri],
+        calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
+        precip_pixel_size, 'intersection')
+    LOGGER.debug('Finished calculating storm runoff')
 
 
 def soil_water_retention_capacity(cn_uri, swrc_uri):
@@ -319,3 +412,27 @@ def convert_precip_to_points(precip_uri, points_uri):
 
     raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
+
+def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_uri):
+    """Create a precipitation raster from a points shapefile for the specified
+        timestep.
+
+        precip_points_uri - a URI to an OGR Datasource on disk.
+        sample_raster_uri - a URI to a GDAL dataset on disk.
+        timestep - an int timestep.  Must be a field in the datasource passed in
+            as `precip_points_uri`.
+        output_uri - a URI to where the output raster will be saved.
+
+        This function saves a GDAL raster dataset to `output_uri`.  This output
+        raster will carry many of the characteristics of the sample_raster_uri,
+        including pixel size and projection.
+
+        This function returns nothing."""
+
+    LOGGER.info('Starting to make the precipitation raster')
+    precip_nodata = raster_utils.get_nodata_from_uri(sample_raster_uri)
+    raster_utils.new_raster_from_base_uri(sample_raster_uri, output_uri,
+        'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)
+
+    raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
+    LOGGER.info('Finished making the precipitation raster')

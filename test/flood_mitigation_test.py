@@ -1,6 +1,9 @@
 import unittest
 import os
 
+from osgeo import gdal
+from osgeo import ogr
+
 from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
 import invest_test_core
@@ -21,7 +24,9 @@ class FloodMitigationTest(unittest.TestCase):
             'curve_numbers': self.curve_numbers,
             'dem': self.dem,
             'cn_adjust': True,
-            'cn_season': 'dry'
+            'cn_season': 'dry',
+            'precipitation': self.precip,
+            'num_intervals': 6
         }
 
         try:
@@ -104,3 +109,28 @@ class FloodMitigationTest(unittest.TestCase):
     def test_convert_precip_to_points(self):
         points_uri = os.path.join(self.workspace, 'precip_points')
         flood_mitigation.convert_precip_to_points(self.precip, points_uri)
+
+        regression_points = os.path.join(REGRESSION_DATA, 'precip_points')
+        invest_test_core.assertTwoShapesEqualURI(self, points_uri,
+            regression_points)
+
+    def test_storm_runoff(self):
+        """Regression test for the storm runoff function."""
+
+        # make a sample raster to live at precip_points_uri
+        precip_raster_uri = os.path.join(REGRESSION_DATA, 'rainfall_step2.tif')
+
+        precip_nodata = raster_utils.get_nodata_from_uri(self.dem)
+        raster_utils.new_raster_from_base_uri(self.dem, precip_raster_uri,
+            'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)
+
+        precip_points_uri = os.path.join(REGRESSION_DATA, 'precip_points',
+            'precip_points.shp')
+        precip_points_reproject = os.path.join(self.workspace,
+            'precip_points_reproject.shp')
+        dem_raster = gdal.Open(self.dem)
+        dem_wkt = dem_raster.GetProjection()
+        raster_utils.reproject_datasource_uri(precip_points_uri,
+            dem_wkt, precip_points_reproject)
+
+        raster_utils.vectorize_points_uri(precip_points_reproject, 2, precip_raster_uri)

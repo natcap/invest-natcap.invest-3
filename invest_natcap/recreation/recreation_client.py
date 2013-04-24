@@ -18,7 +18,7 @@ from invest_natcap.raster_utils import temporary_filename
 import invest_natcap
 
 logging.basicConfig(format = '%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level = logging.INFO, datefmt = '%m/%d/%Y %H:%M:%S ')
+%(message)s', level = logging.DEBUG, datefmt = '%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('recreation_client_init')
 
@@ -112,6 +112,8 @@ def complete_shapefile(shapefile_name):
 def execute(args):
     """The main function called by IUI.
     """
+    LOGGER.setLevel(logging.INFO)
+    
     # Register the streaming http handlers with urllib2
     register_openers()
 
@@ -141,6 +143,7 @@ def execute(args):
     sessid = urlopen(url, request, config["tries"], config["delay"], LOGGER)
 
     #saving session id to model parameters
+    LOGGER.info("Assigned server session id %s.", sessid)
     args["sessid"] = sessid
 
     #check log and echo messages while not done
