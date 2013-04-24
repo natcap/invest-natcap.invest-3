@@ -677,7 +677,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #dictionary
         stressors[name]['DS'] = new_buff_uri
 
-def make_zero_decay_array(dist_array, nodata):
+def make_zero_buff_decay_array(dist_array, nodata):
     '''Creates an array in the case of a zero buffer width, where we should
     have is land and nodata values.
 
