@@ -94,6 +94,7 @@ def execute(args):
     visible_feature_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")
     viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
     viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
+    pop_stats_uri=os.path.join(aq_args['workspace_dir'],"populationStats.html")
 
     #clip DEM by AOI and reclass
     LOGGER.info("Clipping DEM by AOI.")
@@ -144,33 +145,41 @@ def execute(args):
     datatype_out = gdal.GDT_Int32
     reclassify_quantile_dataset_uri(visible_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
 
-    #find areas with no data for population
-    LOGGER.debug("Tabulating population impact.")
+    #tabulate population impact
+    LOGGER.info("Tabulating population impact.")
+    LOGGER.debug("Tabulating unaffected population.")
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
-    LOGGER.debug("The nodata value from the population raster is: %f" % nodata_pop)
     nodata_visible_feature_count = raster_utils.get_nodata_from_uri(visible_feature_count_uri)
-    LOGGER.debug("The nodata value from the viewshed raster is: %f" % nodata_visible_feature_count)
-    nodata_masked_pop = 0
 
-    masked_pop_uri = ''
+    affected_pop = 0
+    unaffected_pop = 0
+##    for row_index in n_rows:
+##        pop_row = pop.ReadAsArray(row_index)
+##        vs_row = vs.ReadAsArray(row_index)
+##
+##        pop_row[pop_row==pop_nodata]=0.0
+##        vs_row[vs_row==vs_nodata]=-1
+##
+##        affected_pop += numpy.sum(pop_rowpvs_row>0])
+##        unaffected_pop += numpy.sum(pop_rowpvs_row==0])
 
-    def mask_pop_by_view(pop, view):
-        if pop == nodata_pop or view == nodata_visible_feature_count:
-            return nodata_masked_pop
-        if view > 0:
-            return pop
-        return 0
+    table="""
+    <html>
+    <title>Marine InVEST</title>
+    <center><H1>Aesthetic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
+    <br><br><HR><br>
+    <H2>Population Statistics</H2>
 
-    raster_utils.vectorize_datasets([aq_args["pop_uri"], visible_feature_count_uri],
-                                    mask_pop_by_view,
-                                    masked_pop_uri,
-                                    gdal.GDT_Float32,
-                                    nodata_masked_pop,
-                                    aq_args['cell_size'],
-                                    "intersection",
-                                    dataset_to_align_index=0,
-                                    aoi_uri=args['aoi_uri'],
-                                    assert_datasets_projected=False)
+    <table border="1", cellpadding="0">
+    <tr><td align="center"><b>Number of Features Visible</b></td><td align="center"><b>Population (estimate)</b></td></tr>
+    <tr><td align="center">None visible<br> (unaffected)</td><td align="center">%i</td>
+    <tr><td align="center">1 or more<br>visible</td><td align="center">%i</td>
+    </table>
+    </html>
+    """
+
+    outfile = open(pop_stats_uri, 'w')
+    outfile.write(table % (unaffected_pop, affected_pop))
 
     #perform overlap analysis
     LOGGER.debug("Performing overlap analysis.")
