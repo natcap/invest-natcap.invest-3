@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#SHPFILECLIP - THE SHAPE TO CLIP FROM
+SHPFILECLIP=$1
+#SHPFILEORIG - INPUT SHAPE TO CLIP
+SHPFILEORIG=$2
+CODE=$3
+
+ogr2ogr -t_srs EPSG:$CODE ./transformed/`basename $SHPFILECLIP .shp`_transformed.shp $SHPFILEORIG
