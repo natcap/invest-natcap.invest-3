@@ -4,6 +4,8 @@ import logging
 import math
 import os
 import shutil
+import tempfile
+import atexit
 
 from osgeo import gdal
 
@@ -146,11 +148,11 @@ def execute(args):
     soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
     # Convert precipitation table to a points shapefile.
-    precip_points_latlong_uri = os.path.join(intermediate, 'precip_points_latlong')
+    precip_points_latlong_uri = _temporary_folder()
     convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
 
     # Project the precip points from latlong to the correct projection.
-    dem_wkt = _get_raster_wkt_from_uri(args['dem'])
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
     raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
         precip_points_uri)
 
@@ -171,6 +173,26 @@ def execute(args):
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
+
+def _temporary_folder():
+    """Returns a temporary folder using mkdtemp.  The folder is deleted on exit
+        using the atexit register.
+
+        Returns an absolute, unique and temporary folder path."""
+
+    path = tempfile.mkdtemp()
+
+    def remove_folder(path):
+        """Function to remove a folder and handle exceptions encountered.  This
+        function will be registered in atexit."""
+        try:
+            shutil.rmtree(path)
+        except OSError as exception:
+            LOGGER.debug('Tried to remove temp folder %s, but got %s',
+                path, exception)
+
+    atexit.register(remove_folder, path)
+    return path
 
 def _get_raster_wkt_from_uri(raster_uri):
     """Local function to get a raster's well-known text from a URI.
@@ -201,6 +223,7 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
 
     LOGGER.info('Calculating storm runoff')
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    swrc_nodata = raster_utils.get_nodata_from_uri(swrc_uri)
     precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
 
     def calculate_runoff(precip, swrc):
@@ -208,10 +231,8 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         the ability of the soil to retain water (swrc).  Both inputs are
         floats.  Returns a float."""
 
-        # TODO: what happens when precip <= 0.2*swrc???
-        # The user's guide does not define what happens when precip is greater
-        # than 0.2, so until we find out, we should return nodata.
-        if precip == precip_nodata:
+        # Handle when precip or swrc is nodata.
+        if precip == precip_nodata or swrc == swrc_nodata:
             return precip_nodata
 
         # In response to issue 1913.  Rich says that if P <= 0.2S, we should
