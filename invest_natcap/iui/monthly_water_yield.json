@@ -19,23 +19,14 @@
                     "defaultValue": "",
                     "required": true
                 },          
-				{        
-                    "id" : "precipitation",
-                    "args_id" : "precip_uri",
+		        {
+                    "id" : "time_step_data",
+                    "args_id": "time_step_data_uri",
                     "type": "file",
-                    "label": "Precipitation",
+                    "label": "Monthly Time Step Data",
                     "defaultValue": "",
                     "required": true,
-                    "validateAs": {"type": "GDAL"}
-                },
-                {        
-                    "id" : "potential_evapotranspiration",
-                    "args_id" : "pet_uri",
-                    "type": "file",
-                    "label": "Potential Evapotranspiration",
-                    "defaultValue": "",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"}
+                    "validateAs": {"type": "CSV"}
                 },
                 {        
                     "id" : "soil_depth",
@@ -43,7 +34,7 @@
                     "type": "file",
                     "label": "Soil Depth",
                     "defaultValue": "",
-                    "required": true,
+                    "required": false,
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
@@ -52,7 +43,16 @@
                     "type": "file",
                     "label": "Land Use",
                     "defaultValue": "",
-                    "required": true,
+                    "required": false,
+                    "validateAs": {"type": "GDAL"}
+                },    
+                {        
+                    "id" : "dem",
+                    "args_id" : "dem_uri",
+                    "type": "file",
+                    "label": "DEM",
+                    "defaultValue": "",
+                    "required": false,
                     "validateAs": {"type": "GDAL"}
                 },    
                 {
@@ -61,17 +61,17 @@
                     "type": "file",
                     "label": "Watersheds",
                     "defaultValue": "",
-                    "required": true,
+                    "required": false,
                     "validateAs": {"type": "OGR"}
                  },
-		         {
-                    "id" : "biophysical_table",
-                    "args_id": "biophysical_table_uri",
+                 {
+                    "id" : "subwatersheds",
+                    "args_id": "sub_watersheds_uri",
                     "type": "file",
-                    "label": "Biophysical Table",
+                    "label": "Sub Watersheds",
                     "defaultValue": "",
-                    "required": true,
-                    "validateAs": {"type": "CSV"}
+                    "required": false,
+                    "validateAs": {"type": "OGR"}
                  },
                  {        
                     "id" : "results_suffix",
