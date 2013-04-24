@@ -197,7 +197,7 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
 
         This function has no return value."""
 
-    raster_list = [flow_length, mannings_uri, slope_uri, runoff_depth_uri]
+    raster_list = [flow_length_uri, mannings_uri, slope_uri, runoff_depth_uri]
 
     # Calculate the minimum cell size
     min_cell_size = _get_cell_size_from_datasets(raster_list)
