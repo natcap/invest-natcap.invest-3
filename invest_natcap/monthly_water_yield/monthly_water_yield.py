@@ -91,10 +91,12 @@ def construct_time_step_data(data_uri):
 
     for row in data_handler:
         try:
-            data_dict[row['date']][(row['lati'], row['long'])] = row['p']
+            data_dict[row['date']][(
+                float(row['lati']), float(row['long']))] = float(row['p'])
         except KeyError:
             data_dict[row['date']] = {}
-            data_dict[row['date']][(row['lati'], row['long'])] = row['p']
+            data_dict[row['date']][(
+                float(row['lati']), float(row['long']))] = float(row['p'])
 
     data_file.close()
     return data_dict

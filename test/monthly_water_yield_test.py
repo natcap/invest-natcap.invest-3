@@ -24,17 +24,18 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestMonthlyWaterYield(unittest.TestCase):
 
     def test_monthly_water_yield_construct_step_data(self):
-        """
+        """A unit test for constructing the dictionary from step data
         """
         #raise SkipTest
-        test_dir = './data/monthly_water_yield_data'
+        test_dir = './data/monthly_water_yield'
         output_dir = './data/test_out/monthly_water_yield/construct_step_data'
         raster_utils.create_directories([output_dir])
 
         samp_data_uri = os.path.join(
                 test_dir, 'regression/sample_step_data.csv')
 
-        result_dict = monthly_water_yield.construct_time_step_data(data_uri)
+        result_dict = monthly_water_yield.construct_time_step_data(
+                samp_data_uri)
 
         expected_dict = {
                 '01/1988':{
@@ -45,7 +46,9 @@ class TestMonthlyWaterYield(unittest.TestCase):
                            (44.642,-123.566):7,(44.597,-123.582):5,
                            (44.341,-123.365):11},
                 '03/1988':{
-                           (41.417,-122.47):6, (41.417,-122.47):2}}
+                           (41.417,-122.47):6, (41.417,-122.47):2}
+                }
+
         self.assertEqual(result_dict, expected_dict)
 
 
