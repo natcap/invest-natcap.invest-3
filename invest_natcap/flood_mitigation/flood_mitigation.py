@@ -167,7 +167,6 @@ def execute(args):
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
-        # TODO: commit a regression storm runoff raster.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
