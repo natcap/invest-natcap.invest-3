@@ -44,6 +44,8 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
                                     "union",
                                     dataset_to_align_index=0)
 
+    raster_utils.calculate_raster_stats_uri(dataset_out_uri)
+
 def execute(args):
     """DOCSTRING"""
     LOGGER.info("Start Aesthetic Quality Model")
@@ -69,29 +71,45 @@ def execute(args):
     aoi_prj_uri=os.path.join(aq_args['workspace_dir'],"aoi_prj.shp")
     visible_feature_count_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
     visible_feature_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")
-##    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
+    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
+    viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
 
     #clip DEM to AOI
     LOGGER.debug("Start clip DEM by AOI.")
 
     LOGGER.debug("Reprojecting AOI to match DEM projection.")
 
-    dem=gdal.Open(aq_args['dem_uri'])    
-    projection = dem.GetProjection()
-    aoi=ogr.Open(aq_args['aoi_uri'])
-    raster_utils.reproject_datasource(aoi, projection, aoi_prj_uri)
-    aoi=None
+    output_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
+
+    LOGGER.debug("Saving projected AOI to %s", aoi_prj_uri)
+    LOGGER.debug("Using WKT %s", repr(output_wkt))
+    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], output_wkt, aoi_prj_uri)
     
-##    LOGGER.debug("Clip DEM by reprojected AOI.")
-##    aoi_prj=ogr.Open(aoi_prj_uri)
-##    raster_utils.clip_dataset(dem, aoi_prj, viewshed_dem_uri)
-##    dem=None
-##    aoi_prj=None
+    LOGGER.debug("Clip DEM by reprojected AOI.")
+    aoi_prj=ogr.Open(aoi_prj_uri)
+    raster_utils.clip_dataset_uri(aq_args['dem'], aoi_prj_uri, viewshed_dem_uri)
     
 
     #portions of the DEM that are below sea-level are converted to a value of "0"
-    LOGGER.debug("Reclass DEM.")
+    nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem'])
+    def no_zeros(value):
+        if value == nodata_dem:
+            return nodata_dem
+        elif value < 0:
+            return 0
+        else:
+            return value
         
+    LOGGER.debug("Reclass DEM.")
+    raster_utils.vectorize_datasets([viewshed_dem_uri],
+                                    no_zeros,
+                                    viewshed_dem_reclass_uri,
+                                    datatype_out,
+                                    nodata_out,
+                                    cell_size,
+                                    "union",
+                                    dataset_to_align_index=0)
+    
     #calculate viewshed
     LOGGER.debug("Start viewshed analysis.")
     LOGGER.debug("Saving viewshed to: %s" % visible_feature_count_uri)
