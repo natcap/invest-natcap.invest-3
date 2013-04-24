@@ -42,16 +42,23 @@ def execute(args):
 
     # Process data from time_step_data
         # Read precip data into a dictionary
-        
-    time_step_data_handler = fileio.TableHandler(time_step_data_uri)
-    time_step_data_list = time_step_data_handler.get_table()
-    LOGGER.debug('Time Step Handler : %s', time_step_data_list)
     
     data_dict = construct_time_step_data(time_step_data_uri)
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
-    # Make point shapefiles based on the current time step
+    list_of_months = data_dict.keys()
+    list_of_months = sorted(
+            list_of_months, 
+            key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
+    for cur_month in list_of_months:
+        
+        cur_step_dict = data_dict[cur_month]
+
+        # Make point shapefiles based on the current time step
+
+    
+    
     # Use vectorize points to construct rasters based on points and fields
 
     # Calculate Evapotranspiration
@@ -88,13 +95,18 @@ def construct_time_step_data(data_uri):
     LOGGER.debug('Lowercase Fieldnames : %s', data_handler.fieldnames)
     
     data_dict = {}
+    unique_id = 0
 
     for row in data_handler:
+        
         try:
-            data_dict[row['date']][(row['lati'], row['long'])] = row['p']
+            data_dict[row['date']][unique_id] = row
+            unique_id+=1
         except KeyError:
+            unique_id = 0
             data_dict[row['date']] = {}
-            data_dict[row['date']][(row['lati'], row['long'])] = row['p']
+            data_dict[row['date']][unique_id] = row
+            unique_id+=1
 
     data_file.close()
     return data_dict
