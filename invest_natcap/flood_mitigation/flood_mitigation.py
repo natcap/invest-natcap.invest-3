@@ -172,16 +172,6 @@ def execute(args):
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
 
-def _get_raster_wkt_from_uri(raster_uri):
-    """Local function to get a raster's well-known text from a URI.
-
-        raster_uri - a string URI to a raster on disk.
-
-        Returns a string with the raster's well-known text projection
-        information."""
-    raster = gdal.Open(raster_uri)
-    return raster.GetProjection()
-
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
         function corresponds with equation 1 in the Flood Mitigation user's
