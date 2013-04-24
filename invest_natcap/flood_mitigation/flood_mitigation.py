@@ -206,6 +206,18 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
 
 
+def _get_cell_size_from_datasets(uri_list):
+    """Get the minimum cell size of all the input datasets.
+
+        uri_list - a list of URIs that all point to GDAL datasets on disk.
+
+        Returns the minimum cell size of all the rasters in `uri_list`."""
+
+    min_cell_size = min(map(raster_utils.get_cell_size_from_uri, uri_list))
+    LOGGER.debug('Minimum cell size of input rasters: %s', min_cell_size)
+    return min_cell_size
+
+
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
         function corresponds with equation 1 in the Flood Mitigation user's
