@@ -23,10 +23,17 @@ def execute(args):
    
         args -
 
+        args[workspace_dir] - a uri to the workspace directory where outputs
+            will be written to disk
         args[time_step_data] - a uri to a CSV file
 
     """
     LOGGER.debug('Start Executing Model')
+    
+    workspace = args['workspace_uri']
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
+    raster_utils.create_directories([intermediate_dir, output_dir])
 
     # Get input URIS
     time_step_data_uri = args['time_step_data_uri']
@@ -40,6 +47,8 @@ def execute(args):
     LOGGER.debug('Time Step Handler : %s', time_step_data_list)
 
 
+    
+    
     # Make point shapefiles based on the current time step
 
     # Use vectorize points to construct rasters based on points and fields
