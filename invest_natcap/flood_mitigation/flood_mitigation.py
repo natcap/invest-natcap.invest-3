@@ -4,6 +4,8 @@ import logging
 import math
 import os
 import shutil
+import tempfile
+import atexit
 
 from osgeo import gdal
 
@@ -171,6 +173,26 @@ def execute(args):
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
+
+def _temporary_folder():
+    """Returns a temporary folder using mkdtemp.  The folder is deleted on exit
+        using the atexit register.
+
+        Returns an absolute, unique and temporary folder path."""
+
+    path = tempfile.mkdtemp()
+
+    def remove_folder(path):
+        """Function to remove a folder and handle exceptions encountered.  This
+        function will be registered in atexit."""
+        try:
+            shutil.rmtree(path)
+        except OSError as exception:
+            LOGGER.debug('Tried to remove temp folder %s, but got %s',
+                path, exception)
+
+    atexit.register(remove_folder, path)
+    return path
 
 def _get_raster_wkt_from_uri(raster_uri):
     """Local function to get a raster's well-known text from a URI.
