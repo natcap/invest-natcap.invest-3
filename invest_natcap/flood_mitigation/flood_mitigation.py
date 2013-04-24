@@ -131,8 +131,7 @@ def execute(args):
     # Calculate the flow direction, needed for flow length and for other
     # functions later on.
     flow_direction_uri = os.path.join(intermediate, 'flow_direction.tif')
-    routing_cython_core.calculate_flow_direction(args['dem'],
-        flow_direction_uri)
+    routing_utils.flow_direction_inf(args['dem'], flow_direction_uri)
 
     # Calculate the flow length here, since we need it for several parts of the
     # model.
