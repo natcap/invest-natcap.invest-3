@@ -649,8 +649,11 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #The array with each value being the distance from its own cell to land
         dist_array = ndimage.distance_transform_edt(swp_array, 
                                                     sampling=grid_size)
-        
-        if decay_eq == 'None':
+
+        #Need to have a special case for 0's, to avoid divide by 0 errors
+        if buff == 0:
+            decay_array = make_zero_buff_decay_arry(dist_arry, nodata)
+        elif decay_eq == 'None':
             decay_array = make_no_decay_array(dist_array, buff, nodata)
         elif decay_eq == 'Exponential':
             decay_array = make_exp_decay_array(dist_array, buff, nodata)
@@ -673,6 +676,27 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
         stressors[name]['DS'] = new_buff_uri
+
+def make_zero_decay_array(dist_array, nodata):
+    '''Creates an array in the case of a zero buffer width, where we should
+    have is land and nodata values.
+
+    Input:
+        dist_array- A numpy array where each pixel value represents the
+            distance to the closest piece of land.
+        nodata- The value which should be placed into anything that is not land.
+    Returns:
+        A numpy array reprsenting land with 1's, and everything else with nodata.
+    '''
+
+    #Since we know anything that is land is currently represented as 0's, want
+    #to turn that back into 1's.
+    dist_array[dist_array == 0] = 1
+
+    #everything else will just be nodata
+    dist_array[dist_array > 1] = nodata
+
+    return dist_arry
 
 def make_lin_decay_array(dist_array, buff, nodata):
     '''Should create an array where the area around land is a function of 
