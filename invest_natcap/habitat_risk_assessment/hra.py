@@ -652,7 +652,7 @@ def add_stress_rasters(dir, stressors, stressors_dir, buffer_dict, decay_eq,
 
         #Need to have a special case for 0's, to avoid divide by 0 errors
         if buff == 0:
-            decay_array = make_zero_buff_decay_arry(dist_arry, nodata)
+            decay_array = make_zero_buff_decay_array(dist_array, nodata)
         elif decay_eq == 'None':
             decay_array = make_no_decay_array(dist_array, buff, nodata)
         elif decay_eq == 'Exponential':
@@ -696,7 +696,7 @@ def make_zero_decay_array(dist_array, nodata):
     #everything else will just be nodata
     dist_array[dist_array > 1] = nodata
 
-    return dist_arry
+    return dist_array
 
 def make_lin_decay_array(dist_array, buff, nodata):
     '''Should create an array where the area around land is a function of 
