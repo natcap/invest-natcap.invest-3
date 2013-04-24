@@ -9,6 +9,7 @@ from osgeo import gdal
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
+from invest_natcap.routing import routing_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -125,6 +126,11 @@ def execute(args):
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
+
+    # Calculate the flow length here, since we need it for several parts of the
+    # model.
+    flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
+    routing_utils.calculate_flow_length(flow_length_uri)
 
     # Adjust Curve Numbers according to user input
     # If the user has not selected a seasonality adjustment, only then will we
