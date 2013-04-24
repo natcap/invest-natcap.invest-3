@@ -20,8 +20,10 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
     memory_array_flat = memory_array.reshape((-1,))
     
     quantile_breaks = [0]
+    min_value = 1
+    max_value = 32767
     for quantile in quantile_list:
-        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile))
+        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile, (min_value, max_value)))
 
     LOGGER.debug('quantile_breaks %s' % quantile_breaks)
     def reclass(value):
@@ -52,6 +54,18 @@ def get_data_type_uri(ds_uri):
     raster_ds = None
 
     return raster_data_type
+
+def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, visible_feature_count_uri, cell_size, aoi_prj_uri):
+    src_filename = "/home/mlacayo/Desktop/aq_tif/dem_vs.tif"
+    dst_filename = visible_feature_count_uri
+    
+    src_ds = gdal.Open( src_filename )
+    driver = gdal.GetDriverByName("GTiff")
+    dst_ds = driver.CreateCopy( dst_filename, src_ds, 0 )
+
+    # Once we're done, close properly the dataset
+    dst_ds = None
+    src_ds = None
 
 def execute(args):
     """DOCSTRING"""
@@ -114,7 +128,7 @@ def execute(args):
     
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    raster_utils.viewshed(aq_args['dem_uri'],
+    viewshed(aq_args['dem_uri'],
                           aq_args['structure_uri'],
                           z_factor,
                           curvature_correction,
@@ -123,12 +137,13 @@ def execute(args):
                           aq_args['cell_size'],
                           aoi_prj_uri)
 
+    LOGGER.info("Ranking viewshed.")
     #rank viewshed
     nodata_out = -1
     quantile_list = [25,50,75,100]
     datatype_out = gdal.GDT_Int32
     reclassify_quantile_dataset_uri(visible_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
-    
+
     #find areas with no data for population
     LOGGER.debug("Tabulating population impact.")
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
