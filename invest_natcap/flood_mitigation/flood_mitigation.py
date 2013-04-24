@@ -150,7 +150,7 @@ def execute(args):
     convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
 
     # Project the precip points from latlong to the correct projection.
-    dem_wkt = _get_raster_wkt_from_uri(args['dem'])
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
     raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
         precip_points_uri)
 
