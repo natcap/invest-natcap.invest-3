@@ -17,11 +17,13 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
 
     memory_file_uri = raster_utils.temporary_filename()
     memory_array = raster_utils.load_memory_mapped_array(dataset_uri, memory_file_uri)
-
+    memory_array_flat = memory_array.reshape((-1,))
+    
     quantile_breaks = [0]
     for quantile in quantile_list:
-        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array, quantile))
+        quantile_breaks.append(scipy.stats.scoreatpercentile(memory_array_flat, quantile))
 
+    LOGGER.debug('quantile_breaks %s' % quantile_breaks)
     def reclass(value):
         if value == nodata_ds:
             return nodata_out
@@ -42,6 +44,15 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
                                     "union",
                                     dataset_to_align_index=0)
 
+    raster_utils.calculate_raster_stats_uri(dataset_out_uri)
+
+def get_data_type_uri(ds_uri):
+    raster_ds = gdal.Open(ds_uri)
+    raster_data_type = raster_ds.GetRasterBand(1).DataType
+    raster_ds = None
+
+    return raster_data_type
+
 def execute(args):
     """DOCSTRING"""
     LOGGER.info("Start Aesthetic Quality Model")
@@ -53,7 +64,7 @@ def execute(args):
     LOGGER.debug("Validating parameters.")
     dem_cell_size=raster_utils.get_cell_size_from_uri(args['dem_uri'])
     LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    if aq_args['cellSize'] < dem_cell_size:
+    if aq_args['cell_size'] < dem_cell_size:
         raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
 
     if not os.path.isdir(args['workspace_dir']):
@@ -67,39 +78,49 @@ def execute(args):
     aoi_prj_uri=os.path.join(aq_args['workspace_dir'],"aoi_prj.shp")
     visible_feature_count_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
     visible_feature_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")
-##    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
+    viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
+    viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
 
-    #clip DEM to AOI
-    LOGGER.debug("Start clip DEM by AOI.")
+    #clip DEM by AOI and reclass
+    LOGGER.info("Clipping DEM by AOI.")
 
-    LOGGER.debug("Reprojecting AOI to match DEM projection.")
-
-    dem=gdal.Open(aq_args['dem_uri'])    
-    projection = dem.GetProjection()
-    aoi=ogr.Open(aq_args['aoi_uri'])
-    raster_utils.reproject_datasource(aoi, projection, aoi_prj_uri)
-    aoi=None
+    LOGGER.debug("Saving projected AOI to %s", aoi_prj_uri)
+    output_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])    
+    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], output_wkt, aoi_prj_uri)
     
-##    LOGGER.debug("Clip DEM by reprojected AOI.")
-##    aoi_prj=ogr.Open(aoi_prj_uri)
-##    raster_utils.clip_dataset(dem, aoi_prj, viewshed_dem_uri)
-##    dem=None
-##    aoi_prj=None
-    
+    LOGGER.debug("Clipping DEM by projected AOI.")
+    raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_prj_uri, viewshed_dem_uri, False)
 
-    #portions of the DEM that are below sea-level are converted to a value of "0"
-    LOGGER.debug("Reclass DEM.")
-        
+    LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
+    LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
+
+    nodata_dem = raster_utils.get_nodata_from_uri(aq_args['dem_uri'])
+
+    def no_zeros(value):
+        if value == nodata_dem:
+            return nodata_dem
+        elif value < 0:
+            return 0
+        else:
+            return value
+
+    raster_utils.vectorize_datasets([viewshed_dem_uri],
+                                    no_zeros,
+                                    viewshed_dem_reclass_uri,
+                                    get_data_type_uri(viewshed_dem_uri),
+                                    nodata_dem,
+                                    aq_args["cell_size"],
+                                    "union")
+    
     #calculate viewshed
-    LOGGER.debug("Start viewshed analysis.")
-    LOGGER.debug("Saving viewshed to: %s" % visible_feature_count_uri)
+    LOGGER.info("Calculating viewshed.")
     raster_utils.viewshed(aq_args['dem_uri'],
                           aq_args['structure_uri'],
                           z_factor,
                           curvature_correction,
                           aq_args['refraction'],
                           visible_feature_count_uri,
-                          aq_args['cellSize'],
+                          aq_args['cell_size'],
                           aoi_prj_uri)
 
     #rank viewshed
@@ -130,7 +151,7 @@ def execute(args):
                                     masked_pop_uri,
                                     gdal.GDT_Float32,
                                     nodata_masked_pop,
-                                    aq_args['cellSize'],
+                                    aq_args['cell_size'],
                                     "intersection",
                                     dataset_to_align_index=0,
                                     aoi_uri=args['aoi_uri'],
