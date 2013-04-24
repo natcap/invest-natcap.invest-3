@@ -193,7 +193,17 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
         `output_uri`.  If a file exists at that path, it will be overwritten.
 
         This function has no return value."""
-    pass
+
+    # Cast to a float, just in case the user passed in an int.
+    time_interval = float(time_interval)
+
+    def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
+        """Calculate the overland travel time on this pixel.  All inputs are
+            floats.  Returns a float."""
+
+        stormflow_intensity = runoff_depth / time_interval
+        return (((flow_length ** 0.6) * (roughness ** 0.6)) /
+            ((stormflow_intensity ** 0.4) * (slope **0.3)))
 
 
 def storm_runoff(precip_uri, swrc_uri, output_uri):
