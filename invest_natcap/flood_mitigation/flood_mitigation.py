@@ -176,6 +176,12 @@ def execute(args):
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
+        # Calculate the overland travel time.
+        overland_travel_time_uri = os.path.join(timestep_dir,
+            'overland_travel_time.tif')
+        overland_travel_time(args['time_interval'], runoff_uri, slope_uri,
+            flow_length_uri, mannings_uri, overland_travel_time_uri)
+
 
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     flow_length_uri, mannings_uri, output_uri):
