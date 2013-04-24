@@ -173,7 +173,7 @@ def execute(args):
 
 
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
-    mannings_uri, output_uri):
+    flow_length_uri, mannings_uri, output_uri):
     """Calculate the overland travel time for this timestep.  This function is a
         combination of equations 8 and 9 from the flood mitigation user's
         guide.
@@ -183,6 +183,8 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
             the storm runoff raster.
         slope_uri - A string URI to a GDAL dataset on disk representing the
             slope of the DEM.
+        flow_length_uri - A string URI to a GDAL dataset on disk representing the
+            flow length, calculated from the DEM.
         mannings_uri - A string URI to a GDAL dataset on disk representing the
             Manning's numbers for the user's Land Use/Land Cover raster.  This
             number corresponds with soil roughness.
@@ -191,8 +193,14 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
 
         This function will save a GDAL dataet to the path designated by
         `output_uri`.  If a file exists at that path, it will be overwritten.
+            - nodata is taken from the raster at `runoff_depth_uri`
 
         This function has no return value."""
+
+    raster_list = [flow_length, mannings_uri, slope_uri, runoff_depth_uri]
+
+    # Calculate the minimum cell size
+    min_cell_size = _get_cell_size_from_datasets(raster_list)
 
     # Cast to a float, just in case the user passed in an int.
     time_interval = float(time_interval)
@@ -204,6 +212,13 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
         stormflow_intensity = runoff_depth / time_interval
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
+
+    # Extract the nodata from the runoff depth raster.
+    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
+
+    raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
+        output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
+        'intersection')
 
 
 def _get_cell_size_from_datasets(uri_list):
