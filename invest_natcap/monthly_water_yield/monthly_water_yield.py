@@ -42,14 +42,16 @@ def execute(args):
 
     # Process data from time_step_data
         # Read precip data into a dictionary
-        
-    time_step_data_handler = fileio.TableHandler(time_step_data_uri)
-    time_step_data_list = time_step_data_handler.get_table()
-    LOGGER.debug('Time Step Handler : %s', time_step_data_list)
     
     data_dict = construct_time_step_data(time_step_data_uri)
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
+    list_of_months = data_dict.keys()
+    list_of_months = sorted(
+            list_of_months, 
+            key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
+
+    
     # Make point shapefiles based on the current time step
 
     # Use vectorize points to construct rasters based on points and fields
