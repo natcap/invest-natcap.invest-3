@@ -172,6 +172,30 @@ def execute(args):
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
 
+def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
+    mannings_uri):
+    """Calculate the overland travel time for this timestep.  This function is a
+        combination of equations 8 and 9 from the flood mitigation user's
+        guide.
+
+        time_interval - A number.  The number of seconds in this time interval.
+        runoff_depth_uri - A string URI to a GDAL dataset on disk representing
+            the storm runoff raster.
+        slope_uri - A string URI to a GDAL dataset on disk representing the
+            slope of the DEM.
+        mannings_uri - A string URI to a GDAL dataset on disk representing the
+            Manning's numbers for the user's Land Use/Land Cover raster.  This
+            number corresponds with soil roughness.
+        output_uri - A String URI to a GDAL dataset on disk to where the
+            overland travel time raster will be saved.
+
+        This function will save a GDAL dataet to the path designated by
+        `output_uri`.  If a file exists at that path, it will be overwritten.
+
+        This function has no return value."""
+    pass
+
+
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
         function corresponds with equation 1 in the Flood Mitigation user's
