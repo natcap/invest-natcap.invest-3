@@ -173,7 +173,7 @@ def execute(args):
 
 
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
-    mannings_uri):
+    mannings_uri, output_uri):
     """Calculate the overland travel time for this timestep.  This function is a
         combination of equations 8 and 9 from the flood mitigation user's
         guide.
