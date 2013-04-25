@@ -719,9 +719,6 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
                     gt[3] + gt[5] * raster.RasterYSize]
 
-    LOGGER.debug("bounding_box %s" % bounding_box)
-    LOGGER.debug("gt %s" % str(gt))
-
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
             and point[1] <= bounding_box[1] and point[1] >= bounding_box[3]
@@ -753,7 +750,6 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
                                point[0]+random_offsets[feature_id,0]])
             value_list.append(value)
 
-    LOGGER.debug('points: %s', point_list)
     point_array = numpy.array(point_list)
     value_array = numpy.array(value_list)
 
