@@ -55,8 +55,10 @@ def execute(args):
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
     for cur_month in list_of_months:
-        
+        # Get the dictionary for the current time step month
         cur_step_dict = data_dict[cur_month]
+        # Since the time step signature has a 'slash' we need to replace it with
+        # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
         cur_month_name = cur_field_name + '.shp'
         cur_point_uri = os.path.join(intermediate_dir, cur_month_name)
