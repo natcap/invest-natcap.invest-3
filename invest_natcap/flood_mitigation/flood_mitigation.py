@@ -9,6 +9,8 @@ from osgeo import gdal
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
+from invest_natcap.routing import routing_utils
+import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -114,9 +116,27 @@ def execute(args):
         except OSError:
             LOGGER.debug('Folder %s already exists', folder)
 
+    # Remove any shapefile folders that exist, since we don't want any conflicts
+    # when creating new shapefiles.
+    precip_points_uri = os.path.join(intermediate, 'precip_points')
+    try:
+        shutil.rmtree(precip_points_uri)
+    except OSError:
+        pass
+
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
+
+    # Calculate the flow direction, needed for flow length and for other
+    # functions later on.
+    flow_direction_uri = os.path.join(intermediate, 'flow_direction.tif')
+    routing_utils.flow_direction_inf(args['dem'], flow_direction_uri)
+
+    # Calculate the flow length here, since we need it for several parts of the
+    # model.
+    flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
+    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
 
     # Adjust Curve Numbers according to user input
     # If the user has not selected a seasonality adjustment, only then will we
@@ -138,24 +158,97 @@ def execute(args):
     soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
 
     # Convert precipitation table to a points shapefile.
-    precip_points_uri = os.path.join(intermediate, 'precip_points')
-    convert_precip_to_points(args['precipitation'], points_uri)
+    precip_points_latlong_uri = raster_utils.temporary_folder()
+    convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
+
+    # Project the precip points from latlong to the correct projection.
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
+    raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
+        precip_points_uri)
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
-
+        LOGGER.info('Starting timestep %s', timestep)
         # Create the timestamp folder name and make the folder on disk.
         timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
         raster_utils.create_directories([timestep_dir])
 
         # make the precip raster, since it's timestep-dependent.
         precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
-        raster_utils.vectorize_points_uri(precip_points_uri, timestep,
+        make_precip_raster(precip_points_uri, args['dem'], timestep,
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+
+        # Calculate the overland travel time.
+        overland_travel_time_uri = os.path.join(timestep_dir,
+            'overland_travel_time.tif')
+        overland_travel_time(args['time_interval'], runoff_uri, slope_uri,
+            flow_length_uri, mannings_uri, overland_travel_time_uri)
+
+
+def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
+    flow_length_uri, mannings_uri, output_uri):
+    """Calculate the overland travel time for this timestep.  This function is a
+        combination of equations 8 and 9 from the flood mitigation user's
+        guide.
+
+        time_interval - A number.  The number of seconds in this time interval.
+        runoff_depth_uri - A string URI to a GDAL dataset on disk representing
+            the storm runoff raster.
+        slope_uri - A string URI to a GDAL dataset on disk representing the
+            slope of the DEM.
+        flow_length_uri - A string URI to a GDAL dataset on disk representing the
+            flow length, calculated from the DEM.
+        mannings_uri - A string URI to a GDAL dataset on disk representing the
+            Manning's numbers for the user's Land Use/Land Cover raster.  This
+            number corresponds with soil roughness.
+        output_uri - A String URI to a GDAL dataset on disk to where the
+            overland travel time raster will be saved.
+
+        This function will save a GDAL dataet to the path designated by
+        `output_uri`.  If a file exists at that path, it will be overwritten.
+            - nodata is taken from the raster at `runoff_depth_uri`
+
+        This function has no return value."""
+
+    raster_list = [flow_length_uri, mannings_uri, slope_uri, runoff_depth_uri]
+
+    # Calculate the minimum cell size
+    min_cell_size = _get_cell_size_from_datasets(raster_list)
+
+    # Cast to a float, just in case the user passed in an int.
+    time_interval = float(time_interval)
+
+    def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
+        """Calculate the overland travel time on this pixel.  All inputs are
+            floats.  Returns a float."""
+
+        stormflow_intensity = runoff_depth / time_interval
+        return (((flow_length ** 0.6) * (roughness ** 0.6)) /
+            ((stormflow_intensity ** 0.4) * (slope **0.3)))
+
+    # Extract the nodata from the runoff depth raster.
+    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
+
+    raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
+        output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
+        'intersection')
+
+
+def _get_cell_size_from_datasets(uri_list):
+    """Get the minimum cell size of all the input datasets.
+
+        uri_list - a list of URIs that all point to GDAL datasets on disk.
+
+        Returns the minimum cell size of all the rasters in `uri_list`."""
+
+    min_cell_size = min(map(raster_utils.get_cell_size_from_uri, uri_list))
+    LOGGER.debug('Minimum cell size of input rasters: %s', min_cell_size)
+    return min_cell_size
+
 
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
@@ -174,7 +267,9 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
 
         Returns nothing."""
 
+    LOGGER.info('Calculating storm runoff')
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    swrc_nodata = raster_utils.get_nodata_from_uri(swrc_uri)
     precip_pixel_size = raster_utils.get_cell_size_from_uri(precip_uri)
 
     def calculate_runoff(precip, swrc):
@@ -182,16 +277,21 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         the ability of the soil to retain water (swrc).  Both inputs are
         floats.  Returns a float."""
 
-        # TODO: what happens when precip <= 0.2*swrc???
-        # The user's guide does not define what happens when precip is greater
-        # than 0.2, so until we find out, we should return nodata.
-        if precip == precip_nodata or precip > 0.2 * swrc:
+        # Handle when precip or swrc is nodata.
+        if precip == precip_nodata or swrc == swrc_nodata:
             return precip_nodata
+
+        # In response to issue 1913.  Rich says that if P <= 0.2S, we should
+        # just clamp it to 0.0.
+        if precip <= 0.2 * swrc:
+            return 0.0
+
         return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
 
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
-        calculate_runoff, output_uri. gdal.GDT_Float32, precip_nodata,
+        calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
         precip_pixel_size, 'intersection')
+    LOGGER.debug('Finished calculating storm runoff')
 
 
 def soil_water_retention_capacity(cn_uri, swrc_uri):
@@ -396,4 +496,10 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
 
         This function returns nothing."""
 
+    LOGGER.info('Starting to make the precipitation raster')
+    precip_nodata = raster_utils.get_nodata_from_uri(sample_raster_uri)
+    raster_utils.new_raster_from_base_uri(sample_raster_uri, output_uri,
+        'GTiff', precip_nodata, gdal.GDT_Float32, precip_nodata)
+
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
+    LOGGER.info('Finished making the precipitation raster')

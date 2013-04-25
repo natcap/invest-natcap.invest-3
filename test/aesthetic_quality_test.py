@@ -36,3 +36,4 @@ class AestheticQualityTest(unittest.TestCase):
                                                           dataset_out_uri,
                                                           datatype_out,
                                                           nodata_out)
+

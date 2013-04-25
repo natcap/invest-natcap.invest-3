@@ -1983,6 +1983,27 @@ def temporary_filename():
     return path
 
 
+def temporary_folder():
+    """Returns a temporary folder using mkdtemp.  The folder is deleted on exit
+        using the atexit register.
+
+        Returns an absolute, unique and temporary folder path."""
+
+    path = tempfile.mkdtemp()
+
+    def remove_folder(path):
+        """Function to remove a folder and handle exceptions encountered.  This
+        function will be registered in atexit."""
+        try:
+            shutil.rmtree(path)
+        except OSError as exception:
+            LOGGER.debug('Tried to remove temp folder %s, but got %s',
+                path, exception)
+
+    atexit.register(remove_folder, path)
+    return path
+
+
 class DatasetUnprojected(Exception): 
     """An exception in case a dataset is unprojected"""
     pass
@@ -2678,3 +2699,13 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     output_layer.SyncToDisk()
 
+def get_dataset_projection_wkt_uri(ds_uri):
+    """Get the projection of a GDAL dataset as well known text (WKT)
+
+        ds_uri - A URI for the GDAL dataset
+
+        returns - a string for the WKT"""
+
+    raster_ds = gdal.Open(ds_uri)
+    proj_wkt = raster_ds.GetProjection()
+    return proj_wkt
