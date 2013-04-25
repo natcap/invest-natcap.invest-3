@@ -45,6 +45,9 @@ def execute(args):
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
 
+    # Set out_nodata value
+    float_nodata = float(np.finfo(np.float32).min) + 1.0
+
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     # A list of the fields from the time step table we are interested in and
@@ -86,6 +89,11 @@ def execute(args):
             out_uri_name = cur_month_name + '_' + field + '.tif'
             output_uri = os.path.join(intermediate_dir, out_uri_name)
             raster_uri_list.append(output_uri)
+            
+            _ = raster_utils.new_raster_from_base_uri(
+                    dem_uri, output_uri, 'GTIFF', float_nodata,
+                    gdal.GDT_Float32, fill_value=float_nodata)
+
             raster_utils.vectorize_points_uri(cur_point_uri, field, output_uri)
 
 
