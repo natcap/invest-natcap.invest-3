@@ -266,6 +266,12 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
             roughness == roughness_nodata:
             return runoff_depth_nodata
 
+        # If we don't check for 0-division errors here, we'll get them if either
+        # there is no runoff depth or the slope is 0.  Personally, I think it
+        # makes sense to return 0 if either of these is the case.
+        if runoff_depth == 0 or slope == 0:
+            return 0.0
+
         stormflow_intensity = runoff_depth / time_interval
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
