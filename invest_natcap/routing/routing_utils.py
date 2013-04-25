@@ -85,6 +85,7 @@ def route_flux(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri)
 
+
 def flow_accumulation(dem_uri, flux_output_uri):
     """A helper function to calculate flow accumulation, also returns
         intermediate rasters for future calculation.
@@ -285,3 +286,19 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
     flow_accumulation_uri = raster_utils.temporary_filename()
     flow_accumulation(dem_uri, flow_accumulation_uri)
     stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri)
+
+
+def flow_direction_inf(dem_uri, flow_direction_uri):
+    """Calculates the D-infinity flow algorithm.  The output is a float
+        raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
+
+       dem_uri - (input) a uri to a single band GDAL Dataset with elevation 
+           values
+       flow_direction_uri - (output) a uri to a single band GDAL dataset
+           with d infinity flow directions in it.
+       
+       returns nothing"""
+    routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)
