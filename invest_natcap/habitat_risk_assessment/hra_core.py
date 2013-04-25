@@ -127,7 +127,7 @@ def execute(args):
         #the file creation.
         avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
 
-        tables_dir = os.path.join(output_dir, 'HTML_Tables')
+        tables_dir = os.path.join(output_dir, 'HTML_Plots')
         os.mkdir(tables_dir)
         
         make_aoi_tables(tables_dir, avgs_dict, args['max_risk'])
@@ -227,7 +227,7 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
 
         points_dict = {}
         #Remember, this is a list. You did that for a reason.
-        for stress_name, aoi_list in stressor_dict.items():
+        for aoi_list in stressor_dict.values():
             for e_c_dict in aoi_list:
            
                 aoi_name = e_c_dict['Name']
@@ -549,8 +549,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         old_ds_uri = h_dict[h]
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
-        out_uri_r = os.path.join(dir, h + '_HIGH_RISK.tif') 
-        out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
+        out_uri_r = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.tif') 
+        out_uri = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.shp')
         
         raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, out_uri_r,
                         gdal.GDT_Float32, 0., grid_size, "union", 
