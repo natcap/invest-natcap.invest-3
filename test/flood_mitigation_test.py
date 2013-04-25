@@ -27,7 +27,8 @@ class FloodMitigationTest(unittest.TestCase):
             'cn_adjust': True,
             'cn_season': 'dry',
             'precipitation': self.precip,
-            'num_intervals': 6
+            'num_intervals': 6,
+            'time_interval': 120.0  # 2 minutes
         }
 
         try:
@@ -128,3 +129,4 @@ class FloodMitigationTest(unittest.TestCase):
             'storm_runoff_step2.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, storm_runoff_uri,
             regression_storm_runoff)
+
