@@ -398,9 +398,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
 
     name_map = {}
     count = 0
-    
+    ids = []
+
     for feature in layer:
 
+        ids.append(count)
         name = feature.items()[aoi_key]
         feature.SetField('BURN_ID', count)
         name_map[count] = name
@@ -409,7 +411,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         layer.SetFeature(feature)
         
     layer.ResetReading()
-
 
     #Now we will loop through all of the various pairings to deal with all their
     #component parts across our AOI. Want to make sure to use our new field as
@@ -424,14 +425,23 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         if s not in avgs_dict[h]:
             avgs_dict[h][s] = []
 
+        #The way that aggregate_raster_values is written, it does not include an
+        #entry for any AOI feature that does not overlap a valid pixel.
+        #Thus, we want to initialize ALL to 0, then just update if there is any
+        #change.
+        r_agg_dict = dict.fromkeys(ids, 0)
+        e_agg_dict = dict.fromkeys(ids, 0)
+        c_agg_dict = dict.fromkeys(ids, 0)
+
         #GETTING MEANS OF THE RISK RASTERS HERE
 
         r_raster_uri = risk_dict[pair]
 
-        #We know explicitly that the user will have a 'name' attribute on each
-        #feature, since we already threw an error if they didn't.
-        r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
+        #We explicitly placed the 'BURN_ID' feature on each layer. Since we know
+        #currently there is a 0 value for all means, can just update each entry
+        #if there is a real mean found.
+        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean'))
 
         #GETTING MEANS OF THE E RASTERS HERE
 
@@ -439,15 +449,15 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
+        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean'))
 
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
 
-        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean'))
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
@@ -455,7 +465,9 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         for ident in r_agg_dict:
             
             name = name_map[ident]
-
+           
+            LOGGER.debug("Looking at %s" % e_rast_uri)
+            LOGGER.debug("E Dict: %s" % e_agg_dict)
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
 
