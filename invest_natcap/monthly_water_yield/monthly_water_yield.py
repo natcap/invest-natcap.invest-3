@@ -71,8 +71,13 @@ def execute(args):
                 cur_step_dict, cur_field_name, cur_point_uri)
     
 
+        raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
-        
+        for field in data_fields:
+            out_uri_name = cur_month_name + '_' + field + '.tif'
+            output_uri = os.path.join(intermediate_dir, out_uri_name)
+            raster_uri_list.append(output_uri)
+            raster_utils.vectorize_points_uri(cur_point_uri, field, output_uri)
 
 
     # Calculate Evapotranspiration
