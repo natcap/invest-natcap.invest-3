@@ -44,6 +44,9 @@ def execute(args):
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
+    # A list of the fields from the time step table we are interested in and
+    # need.
+    data_fields = ['p']
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
     # Get the keys from the time step dictionary, which will be the month/year
@@ -67,8 +70,10 @@ def execute(args):
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
     
-    
-    # Use vectorize points to construct rasters based on points and fields
+
+        # Use vectorize points to construct rasters based on points and fields
+        
+
 
     # Calculate Evapotranspiration
 
