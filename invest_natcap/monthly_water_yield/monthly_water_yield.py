@@ -42,13 +42,14 @@ def execute(args):
     time_step_data_uri = args['time_step_data_uri']
 
 
-    # Process data from time_step_data
-        # Read precip data into a dictionary
-    
+    # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
+    # Get the keys from the time step dictionary, which will be the month/year
+    # signature
     list_of_months = data_dict.keys()
+    # Sort the list of months chronologically. 
     list_of_months = sorted(
             list_of_months, 
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
