@@ -69,7 +69,9 @@ def execute(args):
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
-    
+   
+        # Project point shapefile
+        raster_utils.reproject_datasource()
 
         raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
