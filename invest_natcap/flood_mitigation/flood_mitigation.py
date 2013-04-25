@@ -208,7 +208,13 @@ def mannings_raster(landover_uri, mannings_table_uri, mannings_raster_uri):
             the raster at `landcover_uri`.
 
         Returns none."""
-    pass
+    mannings_table = fileio.TableHandler(mannings_table_uri)
+    mannings_mapping = mannings_table.get_map('lulc', 'roughness')
+
+    lulc_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
+
+    raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
+        mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
 
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     flow_length_uri, mannings_uri, output_uri):
