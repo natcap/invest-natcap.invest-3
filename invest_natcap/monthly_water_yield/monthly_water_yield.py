@@ -40,7 +40,10 @@ def execute(args):
 
     # Get input URIS
     time_step_data_uri = args['time_step_data_uri']
+    dem_uri = args['dem_uri']
 
+    # Get DEM WKT
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
@@ -63,15 +66,19 @@ def execute(args):
         # Since the time step signature has a 'slash' we need to replace it with
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
-        cur_month_name = cur_field_name + '.shp'
+        cur_month_name = cur_field_name + '_points.shp'
         cur_point_uri = os.path.join(intermediate_dir, cur_month_name)
 
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
    
+        projected_point_name = cur_month_name + '_proj_points.shp'
+        projected_point_uri = os.path.join(
+                intermediate_dir, projected_point_name)
         # Project point shapefile
-        raster_utils.reproject_datasource()
+        raster_utils.reproject_datasource_uri(
+                cur_point_uri, dem_wkt, projected_point_uri) 
 
         raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
