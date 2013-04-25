@@ -227,7 +227,7 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
 
         points_dict = {}
         #Remember, this is a list. You did that for a reason.
-        for stress_name, aoi_list in stressor_dict.items():
+        for aoi_list in stressor_dict.values():
             for e_c_dict in aoi_list:
            
                 aoi_name = e_c_dict['Name']
