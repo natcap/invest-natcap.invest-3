@@ -253,16 +253,24 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     # Cast to a float, just in case the user passed in an int.
     time_interval = float(time_interval)
 
+    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
+    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    roughness_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
+
     def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
         """Calculate the overland travel time on this pixel.  All inputs are
             floats.  Returns a float."""
 
+        if flow_length == flow_length_nodata or\
+            runoff_depth == runoff_depth_nodata or\
+            slope == slope_nodata or\
+            roughness == roughness_nodata:
+            return runoff_depth_nodata
+
         stormflow_intensity = runoff_depth / time_interval
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
-
-    # Extract the nodata from the runoff depth raster.
-    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
 
     raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
         output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
