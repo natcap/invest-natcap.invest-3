@@ -86,7 +86,7 @@ def execute(args):
         raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
         for field in data_fields:
-            out_uri_name = cur_month_name + '_' + field + '.tif'
+            out_uri_name = cur_field_name + '_' + field + '.tif'
             output_uri = os.path.join(intermediate_dir, out_uri_name)
             raster_uri_list.append(output_uri)
             
@@ -94,7 +94,8 @@ def execute(args):
                     dem_uri, output_uri, 'GTIFF', float_nodata,
                     gdal.GDT_Float32, fill_value=float_nodata)
 
-            raster_utils.vectorize_points_uri(cur_point_uri, field, output_uri)
+            raster_utils.vectorize_points_uri(
+                    projected_point_uri, field, output_uri)
 
 
     # Calculate Evapotranspiration
