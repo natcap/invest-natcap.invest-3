@@ -142,20 +142,19 @@ def execute(args):
     flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
     routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
 
-    # Adjust Curve Numbers according to user input
-    # If the user has not selected a seasonality adjustment, only then will we
-    # adjust for slope.  Rich and I made this decision, as Equation 5
-    # (slope adjustments to curve numbers) is not clear which seasonality
-    # adjustment to use or how to use it when the user choses a non-average
-    # seasonality adjustment.  Until we figure this out, we are only adjusting
-    # CNs for slope IFF the user has not selected a seasonality adjustment.
+    # We always want to adjust for slope.
+    cn_slope_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
+    adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_slope_adjusted_uri)
+
     if args['cn_adjust'] == True:
         season = args['cn_season']
-        cn_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
-        adjust_cn_for_season(args['curve_numbers'], season, cn_adjusted_uri)
+        cn_season_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
+        adjust_cn_for_season(cn_slope_adjusted_uri, season, cn_season_adjusted_uri)
     else:
-        cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
-        adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
+        # If the user did not select seasonality adjustment, just use the
+        # adjusted slope CN numbers instead.
+        cn_season_adjusted_uri = cn_slope_adjusted_uri
+
 
     # Calculate the Soil Water Retention Capacity (equation 2)
     swrc_uri = os.path.join(intermediate, 'swrc.tif')
