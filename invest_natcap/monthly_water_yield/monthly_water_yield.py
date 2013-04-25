@@ -3,6 +3,8 @@ import math
 import os.path
 import logging
 import csv
+import datetime
+import re
 
 from osgeo import osr
 from osgeo import gdal
@@ -54,9 +56,13 @@ def execute(args):
     for cur_month in list_of_months:
         
         cur_step_dict = data_dict[cur_month]
+        cur_field_name = re.sub('\/', '_', cur_month)
+        cur_month_name = cur_field_name + '.shp'
+        cur_point_uri = os.path.join(intermediate_dir, cur_month_name)
 
         # Make point shapefiles based on the current time step
-
+        raster_utils.dictionary_to_point_shapefile(
+                cur_step_dict, cur_field_name, cur_point_uri)
     
     
     # Use vectorize points to construct rasters based on points and fields
