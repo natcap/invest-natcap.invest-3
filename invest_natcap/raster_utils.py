@@ -1551,7 +1551,22 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
                         gdal.GRA_Bilinear)
 
     return output_dataset
+
+def reproject_datasource_uri(original_ds_uri, output_wkt, output_uri):
+    """URI wrapper for reproject_datasource that takes in the uri for the
+        datasource that is to be projected instead of the datasource itself.
+        This function directly calls reproject_datasource.
+
+        original_ds_uri - a uri to an ogr datasource
+        output_wkt - the desired projection as Well Known Text 
+            (by layer.GetSpatialRef().ExportToWkt())
+        output_uri - The path to where the new shapefile should be written to disk.
     
+        returns - Nothing."""
+
+    original_ds = ogr.Open(original_ds_uri)
+    _ = reproject_datasource(original_ds, output_wkt, output_uri)
+
 def reproject_datasource(original_datasource, output_wkt, output_uri):
     """Changes the projection of an ogr datasource by creating a new 
         shapefile based on the output_wkt passed in.  The new shapefile 
