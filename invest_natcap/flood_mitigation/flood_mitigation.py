@@ -376,7 +376,7 @@ def _dry_season_adjustment(curve_num):
 
         Returns a float."""
 
-    return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+    return ((4.2 * curve_num) / (10.0 - (0.058 * curve_num)))
 
 def _wet_season_adjustment(curve_num):
     """Perform wet season adjustment on the pixel level.  This corresponds with
