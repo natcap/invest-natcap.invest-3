@@ -124,6 +124,10 @@ def execute(args):
     except OSError:
         pass
 
+    # Reclassify the LULC to get the manning's raster.
+    mannings_uri = os.path.join(intermediate, 'mannings.tif')
+    mannings_raster(args['landuse'], args['mannings'], mannings_uri)
+
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
@@ -189,7 +193,7 @@ def execute(args):
             flow_length_uri, mannings_uri, overland_travel_time_uri)
 
 
-def mannings_raster(landover_uri, mannings_table_uri, mannings_raster_uri):
+def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
         mannings numbers table passed in as input.
 
