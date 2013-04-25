@@ -189,6 +189,27 @@ def execute(args):
             flow_length_uri, mannings_uri, overland_travel_time_uri)
 
 
+def mannings_raster(landover_uri, mannings_table_uri, mannings_raster_uri):
+    """Reclassify the input land use/land cover raster according to the
+        mannings numbers table passed in as input.
+
+        landcover_uri - a URI to a GDAL dataset with land use/land cover codes
+            as pixel values.
+        mannings_table_uri - a URI to a CSV table on disk.  This table must have
+            at least the following columns:
+                "LULC" - an integer landcover code matching a code in the inputs
+                    land use/land cover raster.
+                "ROUGHNESS" - a floating-point number indicating the roughness
+                    of the pixel.  See the user's guide for help on creating
+                    this number for your landcover classes.
+        mannings_raster_uri - a URI to a location on disk where the output
+            raster should be saved.  If this file exists on disk, it will be
+            overwritten.  This output raster will be a reclassified version of
+            the raster at `landcover_uri`.
+
+        Returns none."""
+    pass
+
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     flow_length_uri, mannings_uri, output_uri):
     """Calculate the overland travel time for this timestep.  This function is a
