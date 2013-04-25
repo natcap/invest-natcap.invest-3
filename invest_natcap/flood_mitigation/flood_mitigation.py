@@ -124,6 +124,10 @@ def execute(args):
     except OSError:
         pass
 
+    # Reclassify the LULC to get the manning's raster.
+    mannings_uri = os.path.join(intermediate, 'mannings.tif')
+    mannings_raster(args['landuse'], args['mannings'], mannings_uri)
+
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
@@ -189,6 +193,33 @@ def execute(args):
             flow_length_uri, mannings_uri, overland_travel_time_uri)
 
 
+def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
+    """Reclassify the input land use/land cover raster according to the
+        mannings numbers table passed in as input.
+
+        landcover_uri - a URI to a GDAL dataset with land use/land cover codes
+            as pixel values.
+        mannings_table_uri - a URI to a CSV table on disk.  This table must have
+            at least the following columns:
+                "LULC" - an integer landcover code matching a code in the inputs
+                    land use/land cover raster.
+                "ROUGHNESS" - a floating-point number indicating the roughness
+                    of the pixel.  See the user's guide for help on creating
+                    this number for your landcover classes.
+        mannings_raster_uri - a URI to a location on disk where the output
+            raster should be saved.  If this file exists on disk, it will be
+            overwritten.  This output raster will be a reclassified version of
+            the raster at `landcover_uri`.
+
+        Returns none."""
+    mannings_table = fileio.TableHandler(mannings_table_uri)
+    mannings_mapping = mannings_table.get_map('lulc', 'roughness')
+
+    lulc_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
+
+    raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
+        mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
+
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     flow_length_uri, mannings_uri, output_uri):
     """Calculate the overland travel time for this timestep.  This function is a
@@ -222,16 +253,24 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     # Cast to a float, just in case the user passed in an int.
     time_interval = float(time_interval)
 
+    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
+    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    roughness_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
+
     def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
         """Calculate the overland travel time on this pixel.  All inputs are
             floats.  Returns a float."""
 
+        if flow_length == flow_length_nodata or\
+            runoff_depth == runoff_depth_nodata or\
+            slope == slope_nodata or\
+            roughness == roughness_nodata:
+            return runoff_depth_nodata
+
         stormflow_intensity = runoff_depth / time_interval
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
-
-    # Extract the nodata from the runoff depth raster.
-    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
 
     raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
         output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,

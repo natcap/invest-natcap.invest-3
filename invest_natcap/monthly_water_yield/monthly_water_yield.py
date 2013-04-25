@@ -40,7 +40,13 @@ def execute(args):
 
     # Get input URIS
     time_step_data_uri = args['time_step_data_uri']
+    dem_uri = args['dem_uri']
 
+    # Get DEM WKT
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
+
+    # Set out_nodata value
+    float_nodata = float(np.finfo(np.float32).min) + 1.0
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
@@ -63,23 +69,33 @@ def execute(args):
         # Since the time step signature has a 'slash' we need to replace it with
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
-        cur_month_name = cur_field_name + '.shp'
+        cur_month_name = cur_field_name + '_points.shp'
         cur_point_uri = os.path.join(intermediate_dir, cur_month_name)
 
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
    
+        projected_point_name = cur_month_name + '_proj_points.shp'
+        projected_point_uri = os.path.join(
+                intermediate_dir, projected_point_name)
         # Project point shapefile
-        raster_utils.reproject_datasource()
+        raster_utils.reproject_datasource_uri(
+                cur_point_uri, dem_wkt, projected_point_uri) 
 
         raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
         for field in data_fields:
-            out_uri_name = cur_month_name + '_' + field + '.tif'
+            out_uri_name = cur_field_name + '_' + field + '.tif'
             output_uri = os.path.join(intermediate_dir, out_uri_name)
             raster_uri_list.append(output_uri)
-            raster_utils.vectorize_points_uri(cur_point_uri, field, output_uri)
+            
+            _ = raster_utils.new_raster_from_base_uri(
+                    dem_uri, output_uri, 'GTIFF', float_nodata,
+                    gdal.GDT_Float32, fill_value=float_nodata)
+
+            raster_utils.vectorize_points_uri(
+                    projected_point_uri, field, output_uri)
 
 
     # Calculate Evapotranspiration
