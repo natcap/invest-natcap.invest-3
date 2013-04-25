@@ -10,7 +10,6 @@ from osgeo import gdal
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
-import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -158,7 +157,7 @@ def execute(args):
 
     # Calculate the Soil Water Retention Capacity (equation 2)
     swrc_uri = os.path.join(intermediate, 'swrc.tif')
-    soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
+    soil_water_retention_capacity(cn_season_adjusted_uri, swrc_uri)
 
     # Convert precipitation table to a points shapefile.
     precip_points_latlong_uri = raster_utils.temporary_folder()
