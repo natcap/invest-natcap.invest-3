@@ -6,6 +6,7 @@ from invest_natcap import raster_utils
 import logging
 
 import scipy.stats
+import numpy
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -151,17 +152,30 @@ def execute(args):
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
     nodata_visible_feature_count = raster_utils.get_nodata_from_uri(visible_feature_count_uri)
 
+    pop = gdal.Open(aq_args["pop_uri"])
+    #LOGGER.debug(pop)
+    pop_band = pop.GetRasterBand(1)
+    #LOGGER.debug(pop_band)
+    vs = gdal.Open(visible_feature_count_uri)
+    vs_band = vs.GetRasterBand(1)
+
     affected_pop = 0
     unaffected_pop = 0
-##    for row_index in n_rows:
-##        pop_row = pop.ReadAsArray(row_index)
-##        vs_row = vs.ReadAsArray(row_index)
-##
-##        pop_row[pop_row==pop_nodata]=0.0
-##        vs_row[vs_row==vs_nodata]=-1
-##
-##        affected_pop += numpy.sum(pop_rowpvs_row>0])
-##        unaffected_pop += numpy.sum(pop_rowpvs_row==0])
+    for row_index in range(vs_band.YSize):
+        pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
+        #LOGGER.debug(pop_row)
+        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1)
+
+        pop_row[pop_row == nodata_pop]=0.0
+        vs_row[vs_row == nodata_visible_feature_count]=-1
+
+        affected_pop += numpy.sum(pop_row[vs_row > 0])
+        unaffected_pop += numpy.sum(pop_row[vs_row == 0])
+
+    pop_band = None
+    pop = None
+    vs_band = None
+    vs = None
 
     table="""
     <html>
@@ -180,6 +194,7 @@ def execute(args):
 
     outfile = open(pop_stats_uri, 'w')
     outfile.write(table % (unaffected_pop, affected_pop))
+    outfile.close()
 
     #perform overlap analysis
     LOGGER.debug("Performing overlap analysis.")
