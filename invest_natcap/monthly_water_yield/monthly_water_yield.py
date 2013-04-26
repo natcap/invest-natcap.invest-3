@@ -29,6 +29,7 @@ def execute(args):
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
         args[time_step_data] - a uri to a CSV file
+        args[soil_max_uri] - a uri to a gdal raster for soil max
 
     """
     LOGGER.debug('Start Executing Model')
@@ -52,7 +53,7 @@ def execute(args):
     data_dict = construct_time_step_data(time_step_data_uri)
     # A list of the fields from the time step table we are interested in and
     # need.
-    data_fields = ['p']
+    data_fields = ['p', 'pet']
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
     # Get the keys from the time step dictionary, which will be the month/year
