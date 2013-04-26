@@ -135,7 +135,10 @@ def execute(args):
         'precip_points' : _intermediate_uri('precip_points'),
         'mannings' : _intermediate_uri('mannings.tif'),
         'slope' : _intermediate_uri('slope.tif'),
-        'flow_direction' : _intermediate_uri('flow_direction')
+        'flow_direction' : _intermediate_uri('flow_direction.tif'),
+        'flow_length': _intermediate_uri('flow_length.tif'),
+        'cn_slope': _intermediate_uri('cn_slope.tif'),
+        'swrc': _intermediate_uri('swrc.tif')
     }
 
     # Create folders in the workspace if they don't already exist
@@ -178,6 +181,7 @@ def execute(args):
 
     if args['cn_adjust'] == True:
         season = args['cn_season']
+        paths['cn_season'] = _intermediate_uri('cn_season_%s.tif' % season)
         cn_season_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
         adjust_cn_for_season(cn_slope_adjusted_uri, season, cn_season_adjusted_uri)
     else:
