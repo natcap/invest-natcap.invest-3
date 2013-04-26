@@ -4,7 +4,7 @@
     "targetScript": "invest_natcap.habitat_risk_assessment.hra_preprocessor",
     "modelName": "hra_preprocess",
     "localDocURI": "../documentation/habitat_risk_assessment.html",
-    "height": 500,
+    "height": 700,
     "width": 700,
     "elements": [
         {
