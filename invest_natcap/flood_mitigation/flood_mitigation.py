@@ -4,13 +4,12 @@ import logging
 import math
 import os
 import shutil
-import tempfile
-import atexit
 
 from osgeo import gdal
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
+from invest_natcap.routing import routing_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -124,31 +123,44 @@ def execute(args):
     except OSError:
         pass
 
+    # Reclassify the LULC to get the manning's raster.
+    mannings_uri = os.path.join(intermediate, 'mannings.tif')
+    mannings_raster(args['landuse'], args['mannings'], mannings_uri)
+
     # We need a slope raster for several components of the model.
     slope_uri = os.path.join(intermediate, 'slope.tif')
     raster_utils.calculate_slope(args['dem'], slope_uri)
 
-    # Adjust Curve Numbers according to user input
-    # If the user has not selected a seasonality adjustment, only then will we
-    # adjust for slope.  Rich and I made this decision, as Equation 5
-    # (slope adjustments to curve numbers) is not clear which seasonality
-    # adjustment to use or how to use it when the user choses a non-average
-    # seasonality adjustment.  Until we figure this out, we are only adjusting
-    # CNs for slope IFF the user has not selected a seasonality adjustment.
+    # Calculate the flow direction, needed for flow length and for other
+    # functions later on.
+    flow_direction_uri = os.path.join(intermediate, 'flow_direction.tif')
+    routing_utils.flow_direction_inf(args['dem'], flow_direction_uri)
+
+    # Calculate the flow length here, since we need it for several parts of the
+    # model.
+    flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
+    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+
+    # We always want to adjust for slope.
+    cn_slope_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
+    adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_slope_adjusted_uri)
+
     if args['cn_adjust'] == True:
         season = args['cn_season']
-        cn_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
-        adjust_cn_for_season(args['curve_numbers'], season, cn_adjusted_uri)
+        cn_season_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
+        adjust_cn_for_season(cn_slope_adjusted_uri, season, cn_season_adjusted_uri)
     else:
-        cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
-        adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
+        # If the user did not select seasonality adjustment, just use the
+        # adjusted slope CN numbers instead.
+        cn_season_adjusted_uri = cn_slope_adjusted_uri
+
 
     # Calculate the Soil Water Retention Capacity (equation 2)
     swrc_uri = os.path.join(intermediate, 'swrc.tif')
-    soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
+    soil_water_retention_capacity(cn_season_adjusted_uri, swrc_uri)
 
     # Convert precipitation table to a points shapefile.
-    precip_points_latlong_uri = _temporary_folder()
+    precip_points_latlong_uri = raster_utils.temporary_folder()
     convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
 
     # Project the precip points from latlong to the correct projection.
@@ -169,40 +181,117 @@ def execute(args):
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
-        # TODO: commit a regression storm runoff raster.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
         storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
 
+        # Calculate the overland travel time.
+        overland_travel_time_uri = os.path.join(timestep_dir,
+            'overland_travel_time.tif')
+        overland_travel_time(args['time_interval'], runoff_uri, slope_uri,
+            flow_length_uri, mannings_uri, overland_travel_time_uri)
 
-def _temporary_folder():
-    """Returns a temporary folder using mkdtemp.  The folder is deleted on exit
-        using the atexit register.
 
-        Returns an absolute, unique and temporary folder path."""
+def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
+    """Reclassify the input land use/land cover raster according to the
+        mannings numbers table passed in as input.
 
-    path = tempfile.mkdtemp()
+        landcover_uri - a URI to a GDAL dataset with land use/land cover codes
+            as pixel values.
+        mannings_table_uri - a URI to a CSV table on disk.  This table must have
+            at least the following columns:
+                "LULC" - an integer landcover code matching a code in the inputs
+                    land use/land cover raster.
+                "ROUGHNESS" - a floating-point number indicating the roughness
+                    of the pixel.  See the user's guide for help on creating
+                    this number for your landcover classes.
+        mannings_raster_uri - a URI to a location on disk where the output
+            raster should be saved.  If this file exists on disk, it will be
+            overwritten.  This output raster will be a reclassified version of
+            the raster at `landcover_uri`.
 
-    def remove_folder(path):
-        """Function to remove a folder and handle exceptions encountered.  This
-        function will be registered in atexit."""
-        try:
-            shutil.rmtree(path)
-        except OSError as exception:
-            LOGGER.debug('Tried to remove temp folder %s, but got %s',
-                path, exception)
+        Returns none."""
+    mannings_table = fileio.TableHandler(mannings_table_uri)
+    mannings_mapping = mannings_table.get_map('lulc', 'roughness')
 
-    atexit.register(remove_folder, path)
-    return path
+    lulc_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
 
-def _get_raster_wkt_from_uri(raster_uri):
-    """Local function to get a raster's well-known text from a URI.
+    raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
+        mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
 
-        raster_uri - a string URI to a raster on disk.
+def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
+    flow_length_uri, mannings_uri, output_uri):
+    """Calculate the overland travel time for this timestep.  This function is a
+        combination of equations 8 and 9 from the flood mitigation user's
+        guide.
 
-        Returns a string with the raster's well-known text projection
-        information."""
-    raster = gdal.Open(raster_uri)
-    return raster.GetProjection()
+        time_interval - A number.  The number of seconds in this time interval.
+        runoff_depth_uri - A string URI to a GDAL dataset on disk representing
+            the storm runoff raster.
+        slope_uri - A string URI to a GDAL dataset on disk representing the
+            slope of the DEM.
+        flow_length_uri - A string URI to a GDAL dataset on disk representing the
+            flow length, calculated from the DEM.
+        mannings_uri - A string URI to a GDAL dataset on disk representing the
+            Manning's numbers for the user's Land Use/Land Cover raster.  This
+            number corresponds with soil roughness.
+        output_uri - A String URI to a GDAL dataset on disk to where the
+            overland travel time raster will be saved.
+
+        This function will save a GDAL dataet to the path designated by
+        `output_uri`.  If a file exists at that path, it will be overwritten.
+            - nodata is taken from the raster at `runoff_depth_uri`
+
+        This function has no return value."""
+
+    raster_list = [flow_length_uri, mannings_uri, slope_uri, runoff_depth_uri]
+
+    # Calculate the minimum cell size
+    min_cell_size = _get_cell_size_from_datasets(raster_list)
+
+    # Cast to a float, just in case the user passed in an int.
+    time_interval = float(time_interval)
+
+    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
+    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    roughness_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
+
+    def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
+        """Calculate the overland travel time on this pixel.  All inputs are
+            floats.  Returns a float."""
+
+        if flow_length == flow_length_nodata or\
+            runoff_depth == runoff_depth_nodata or\
+            slope == slope_nodata or\
+            roughness == roughness_nodata:
+            return runoff_depth_nodata
+
+        # If we don't check for 0-division errors here, we'll get them if either
+        # there is no runoff depth or the slope is 0.  Personally, I think it
+        # makes sense to return 0 if either of these is the case.
+        if runoff_depth == 0 or slope == 0:
+            return 0.0
+
+        stormflow_intensity = runoff_depth / time_interval
+        return (((flow_length ** 0.6) * (roughness ** 0.6)) /
+            ((stormflow_intensity ** 0.4) * (slope **0.3)))
+
+    raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
+        output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
+        'intersection')
+
+
+def _get_cell_size_from_datasets(uri_list):
+    """Get the minimum cell size of all the input datasets.
+
+        uri_list - a list of URIs that all point to GDAL datasets on disk.
+
+        Returns the minimum cell size of all the rasters in `uri_list`."""
+
+    min_cell_size = min(map(raster_utils.get_cell_size_from_uri, uri_list))
+    LOGGER.debug('Minimum cell size of input rasters: %s', min_cell_size)
+    return min_cell_size
+
 
 def storm_runoff(precip_uri, swrc_uri, output_uri):
     """Calculate the storm runoff from the landscape in this timestep.  This
@@ -292,7 +381,7 @@ def _dry_season_adjustment(curve_num):
 
         Returns a float."""
 
-    return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+    return ((4.2 * curve_num) / (10.0 - (0.058 * curve_num)))
 
 def _wet_season_adjustment(curve_num):
     """Perform wet season adjustment on the pixel level.  This corresponds with

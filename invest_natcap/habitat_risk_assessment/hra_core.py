@@ -127,7 +127,7 @@ def execute(args):
         #the file creation.
         avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
 
-        tables_dir = os.path.join(output_dir, 'HTML_Tables')
+        tables_dir = os.path.join(output_dir, 'HTML_Plots')
         os.mkdir(tables_dir)
         
         make_aoi_tables(tables_dir, avgs_dict, args['max_risk'])
@@ -227,7 +227,7 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
 
         points_dict = {}
         #Remember, this is a list. You did that for a reason.
-        for stress_name, aoi_list in stressor_dict.items():
+        for aoi_list in stressor_dict.values():
             for e_c_dict in aoi_list:
            
                 aoi_name = e_c_dict['Name']
@@ -398,9 +398,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
 
     name_map = {}
     count = 0
-    
+    ids = []
+
     for feature in layer:
 
+        ids.append(count)
         name = feature.items()[aoi_key]
         feature.SetField('BURN_ID', count)
         name_map[count] = name
@@ -409,7 +411,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         layer.SetFeature(feature)
         
     layer.ResetReading()
-
 
     #Now we will loop through all of the various pairings to deal with all their
     #component parts across our AOI. Want to make sure to use our new field as
@@ -424,14 +425,23 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         if s not in avgs_dict[h]:
             avgs_dict[h][s] = []
 
+        #The way that aggregate_raster_values is written, it does not include an
+        #entry for any AOI feature that does not overlap a valid pixel.
+        #Thus, we want to initialize ALL to 0, then just update if there is any
+        #change.
+        r_agg_dict = dict.fromkeys(ids, 0)
+        e_agg_dict = dict.fromkeys(ids, 0)
+        c_agg_dict = dict.fromkeys(ids, 0)
+
         #GETTING MEANS OF THE RISK RASTERS HERE
 
         r_raster_uri = risk_dict[pair]
 
-        #We know explicitly that the user will have a 'name' attribute on each
-        #feature, since we already threw an error if they didn't.
-        r_agg_dict = raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
+        #We explicitly placed the 'BURN_ID' feature on each layer. Since we know
+        #currently there is a 0 value for all means, can just update each entry
+        #if there is a real mean found.
+        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean'))
 
         #GETTING MEANS OF THE E RASTERS HERE
 
@@ -439,15 +449,15 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        e_agg_dict = raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
+        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean'))
 
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
 
-        c_agg_dict = raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean')
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
+                        'mean'))
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
@@ -455,7 +465,9 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         for ident in r_agg_dict:
             
             name = name_map[ident]
-
+           
+            LOGGER.debug("Looking at %s" % e_rast_uri)
+            LOGGER.debug("E Dict: %s" % e_agg_dict)
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
 
@@ -466,6 +478,10 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
     percentage of risk over potential risk) are the only existing polygonized
     areas.
+
+    Additonally, we also want to create a shapefile which is only the "low risk"
+    areas- actually, those that are just not high risk (it's the combination of
+    low risk areas and medium risk areas). 
     
     Since the raster_utils function can only take in ints, want to predetermine
     what areas are or are not going to be shapefile, and pass in a raster that
@@ -498,8 +514,9 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
             SUM(s) for a given h.
 
      Output:
-        Returns a shapefile for every habitat, showing features only for the
-        areas that are "high risk" within that habitat.
+        Returns two shapefiles for every habitat, one which shows features only for the
+        areas that are "high risk" within that habitat, and one which shows features only
+        for the combined low + medium risk areas. 
 
      Return:
         num_stress- A dictionary containing the number of stressors being associated with
@@ -531,16 +548,27 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         else:
             return 0.
 
+    def low_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
+        #areas are.
+        if 0 < percent <= 50.0:
+            return 1
+        else:
+            return 0.
+
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
         curr_top_risk = num_stress[h] * max_risk
         old_ds_uri = h_dict[h]
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
-        out_uri_r = os.path.join(dir, h + '_HIGH_RISK.tif') 
-        out_uri = os.path.join(dir, h + '_HIGH_RISK.shp')
+        h_out_uri_r = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.tif') 
+        h_out_uri = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, out_uri_r,
+        raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, h_out_uri_r,
                         gdal.GDT_Float32, 0., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
@@ -548,7 +576,22 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #Use gdal.Polygonize to take the raster, which should have only
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
-        raster_to_polygon(out_uri_r, out_uri, h, 'VALUE')
+        raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
+
+        
+        #Now, want to do the low + medium areas as well.
+        l_out_uri_r = os.path.join(dir, 'H[' + h + ']_LOW_RISK.tif') 
+        l_out_uri = os.path.join(dir, 'H[' + h + ']_LOW_RISK.shp')
+        
+        raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, l_out_uri_r,
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
 
     return num_stress
 

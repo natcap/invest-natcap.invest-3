@@ -19,6 +19,8 @@ class FloodMitigationTest(unittest.TestCase):
         self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
         self.dem_small = os.path.join(SAMP_INPUT, 'dem_200m.tif')
         self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
+        self.landcover = os.path.join('data', 'base_data', 'terrestrial', 'lulc_samp_cur')
+        self.mannings = os.path.join(SAMP_INPUT, 'mannings.csv')
 
         self.args = {
             'workspace': self.workspace,
@@ -27,7 +29,10 @@ class FloodMitigationTest(unittest.TestCase):
             'cn_adjust': True,
             'cn_season': 'dry',
             'precipitation': self.precip,
-            'num_intervals': 6
+            'num_intervals': 6,
+            'time_interval': 120.0,  # 2 minutes
+            'landuse': self.landcover,
+            'mannings': self.mannings
         }
 
         try:
@@ -128,3 +133,4 @@ class FloodMitigationTest(unittest.TestCase):
             'storm_runoff_step2.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, storm_runoff_uri,
             regression_storm_runoff)
+
