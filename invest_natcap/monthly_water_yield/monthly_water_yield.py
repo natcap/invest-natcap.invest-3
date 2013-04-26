@@ -42,6 +42,11 @@ def execute(args):
     # Get input URIS
     time_step_data_uri = args['time_step_data_uri']
     dem_uri = args['dem_uri']
+    smax_uri = args['soil_max_uri']
+
+    # I have yet to determine how the sandy coefficient will be provided as an
+    # input, so I am just hard coding in a value for now
+    sandy_sa = 0.25
 
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
