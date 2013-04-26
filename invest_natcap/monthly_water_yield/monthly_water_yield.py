@@ -54,6 +54,10 @@ def execute(args):
     # Set out_nodata value
     float_nodata = float(np.finfo(np.float32).min) + 1.0
 
+    # Calculate the slope raster from the DEM
+    slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    raster_utils.calculate_slope(dem_uri, slope_uri)
+
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     # A list of the fields from the time step table we are interested in and
