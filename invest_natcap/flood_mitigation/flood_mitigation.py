@@ -105,10 +105,6 @@ def execute(args):
 
     This function returns None."""
 
-    workspace = args['workspace']
-    intermediate = os.path.join(workspace, 'intermediate')
-    output = os.path.join(workspace, 'output')
-
     try:
         suffix = args['suffix']
         if len(suffix) == 0:
@@ -123,13 +119,13 @@ def execute(args):
             return "%s_%s%s" % (file_base, suffix, extension)
         return file_name
 
-    def _intermediate_uri(file_name):
+    def _intermediate_uri(file_name=''):
         """Make an intermediate URI."""
-        return os.path.join(workspace, 'intermediate', _add_suffix(file_name))
+        return os.path.join(args['workspace'], 'intermediate', _add_suffix(file_name))
 
-    def _output_uri(file_name):
+    def _output_uri(file_name=''):
         """Make an ouput URI."""
-        return os.path.join(workspace, 'output', _add_suffix(file_name))
+        return os.path.join(args['workspace'], 'output', _add_suffix(file_name))
 
     paths = {
         'precip_points' : _intermediate_uri('precip_points'),
@@ -142,7 +138,7 @@ def execute(args):
     }
 
     # Create folders in the workspace if they don't already exist
-    for folder in [workspace, intermediate, output]:
+    for folder in [args['workspace'], _intermediate_uri(), _output_uri()]:
         try:
             os.makedirs(folder)
             LOGGER.debug('Created folder %s', folder)
@@ -151,9 +147,8 @@ def execute(args):
 
     # Remove any shapefile folders that exist, since we don't want any conflicts
     # when creating new shapefiles.
-    precip_points_uri = os.path.join(intermediate, 'precip_points')
     try:
-        shutil.rmtree(precip_points_uri)
+        shutil.rmtree(paths['precip_points'])
     except OSError:
         pass
 
@@ -186,8 +181,7 @@ def execute(args):
 
 
     # Calculate the Soil Water Retention Capacity (equation 2)
-    swrc_uri = os.path.join(intermediate, 'swrc.tif')
-    soil_water_retention_capacity(cn_season_adjusted_uri, swrc_uri)
+    soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
     # Convert precipitation table to a points shapefile.
     precip_points_latlong_uri = raster_utils.temporary_folder()
@@ -196,23 +190,23 @@ def execute(args):
     # Project the precip points from latlong to the correct projection.
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
     raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
-        precip_points_uri)
+        paths['precip_points'])
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
         LOGGER.info('Starting timestep %s', timestep)
         # Create the timestamp folder name and make the folder on disk.
-        timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
+        timestep_dir = os.path.join(_intermediate_uri(), 'timestep_%s' % timestep)
         raster_utils.create_directories([timestep_dir])
 
         # make the precip raster, since it's timestep-dependent.
         precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
-        make_precip_raster(precip_points_uri, args['dem'], timestep,
+        make_precip_raster(paths['precip_points'], args['dem'], timestep,
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
-        storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+        storm_runoff(precip_raster_uri, paths['swrc'], runoff_uri)
 
         # Calculate the overland travel time.
         overland_travel_time_uri = os.path.join(timestep_dir,
