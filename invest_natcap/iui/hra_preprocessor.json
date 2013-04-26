@@ -4,18 +4,13 @@
     "targetScript": "invest_natcap.habitat_risk_assessment.hra_preprocessor",
     "modelName": "hra_preprocess",
     "localDocURI": "../documentation/habitat_risk_assessment.html",
-    "height": 500,
+    "height": 700,
     "width": 700,
     "elements": [
         {
             "id": "hra_preprocess_list",
             "type": "list",
             "elements": [
-			{		    
-                            "id":"alpha_only",
-                            "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
-			                 "type": "label"
-			},
                 {
                     "id":"output_dir",
                     "type": "folder",
@@ -23,7 +18,7 @@
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "args_id": "workspace_dir",
-                    "defaultValue": "../HabitatRiskAssess"
+                    "defaultValue": "../HabitatRiskAssess_3_0"
                 },
                 {
                     "id":"habs_dir",
@@ -33,7 +28,7 @@
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                    "defaultValue": "../HabitatRiskAssess_3_0/Input/HabitatLayers",
                     "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors. This is the path to your habitat layers folder."
                 },
                 {
@@ -44,7 +39,7 @@
                     "required": false,
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
-                    "defaultValue": "../HabitatRiskAssess/Input/SpeciesLayers",
+                    "defaultValue": "../HabitatRiskAssess_3_0/Input/SpeciesLayers",
                     "helpText": "By checking this box, you are indicating that you would like to use species as a base for overlap with provided stressors. This is the path to the species layers folder."
                 },
                 {
@@ -55,7 +50,7 @@
                     "validateAs": {"type": "folder",
 		    		  "mustExist": true},
                     "args_id": "stressors_dir",
-                    "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
+                    "defaultValue": "../HabitatRiskAssess_3_0/Input/StressorLayers"
                 }
             ]
         },
@@ -79,9 +74,9 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Management Effectiveness", "Intensity Rating",
-                                    "Change in Area Rating", "Change in Structure Rating"],
-                    "linkText": "Add Another"
+                    "defaultValue": ["Management Effectiveness", "Intensity Rating"],
+                    "linkText": "Add Another",
+                    "helpText": "Exposure criteria apply ONLY to the stressors being used within this model run."
                 },  
                 {
                     "id": "sens_crit",
@@ -92,8 +87,10 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Temporal Overlap Rating", "Frequency of Disturbance"],
-                    "linkText": "Add Another"
+                    "defaultValue": ["Temporal Overlap Rating", "Frequency of Disturbance", "Change in Area Rating", "Change in Structure Rating"],
+                    "linkText": "Add Another",
+                    "helpText": "Sensitivity criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run."
+                
                 },  
                 {
                     "id": "res_crit",
@@ -106,7 +103,8 @@
                                       "validateAs": {"type": "text"}},
                     "defaultValue": ["Recruitment Rate", "Natural Mortality Rate", 
                                     "Connectivity Rate", "Recovery Time"],
-                    "linkText": "Add Another"
+                    "linkText": "Add Another",
+                    "helpText": "Resilience criteria apply ONLY to the habitats or species being used within this model run."
                 }  
             ]
         },
@@ -119,7 +117,7 @@
                 "args_id" : "criteria_dir",
                 "type": "hideableFileEntry",
                 "label": "Use Spatially Explicit Risk Score (shapefiles)",
-                "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                "defaultValue": "../HabitatRiskAssess_3_0/Input/Spatially_Explicit_Criteria",
                 "validateAs": {"type": "folder",
                             "mustExist": true},
                 "required": false,

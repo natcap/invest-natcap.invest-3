@@ -61,134 +61,153 @@ def execute(args):
         'cn_amc_class' - A string indicating the Antecedent Soil Moisture class
             that should be used for CN adjustment.  One of ['Wet', 'Dry',
             'Average'].  Required only if args['cn_adjust'] == True.
+        'suffix' - (optional) a string to add to the end of all outputs from
+            this model
 
     The following files are saved to the user's disk, relative to the defined
     workspace:
         Rasters produced during preprocessing:
-        <workspace>/intermediate/mannings_coeff.tif
+        <workspace>/intermediate/mannings_coeff_<suffix>.tif
             A raster of the user's input Land Use/Land Cover, reclassified
             according to the user's defined table of Manning's numbers.
-        <workspace>/intermediate/slope.tif
+        <workspace>/intermediate/slope_<suffix>.tif
             A raster of the slope on the landscape.  Calculated from the DEM
             provided by the user as input to this model.
-        <workspace>/intermediate/flow_length.tif
+        <workspace>/intermediate/flow_length_<suffix>.tif
             TODO: Figure out if this is even an output raster.
-        <workspace>/intermediate/flow_direction.tif
+        <workspace>/intermediate/flow_direction_<suffix>.tif
             TODO: Figure out if this is even an output raster.
-        <workspace>/intermediate/fractional_flow.tif
+        <workspace>/intermediate/fractional_flow_<suffix>.tif
             TODO: Figure out if this is even an output raster.
 
         Rasters produced while calculating the Soil and Water Conservation
         Service's stormflow estimation model:
-        <workspace>/intermediate/cn_season_adjusted.tif
+        <workspace>/intermediate/cn_season_adjusted_<suffix>.tif
             A raster of the user's Curve Numbers, adjusted for the user's
             specified seasonality.
-        <workspace>/intermediate/cn_slope_adjusted.tif
+        <workspace>/intermediate/cn_slope_adjusted_<suffix>.tif
             A raster of the user's Curve Numbers that have been adjusted for
             seasonality and then adjusted for slope.
-        <workspace>/intermediate/soil_water_retention.tif
+        <workspace>/intermediate/soil_water_retention_<suffix>.tif
             A raster of the capcity of a given pixel to retain water in the
             soils on that pixel.
-        <workspace>/output/<time_step>/runoff_depth.tif
+        <workspace>/output/<time_step>/runoff_depth_<suffix>.tif
             A raster of the storm runoff depth per pixel in this timestep.
 
         Rasters produced while calculating the flow of water on the landscape
         over time:
-        <workspace>/output/<time_step>/floodwater_discharge.tif
+        <workspace>/output/<time_step>/floodwater_discharge_<suffix>.tif
             A raster of the floodwater discharge on the landscape in this time
             interval.
-        <workspace>/output/<time_step>/hydrograph.tif
+        <workspace>/output/<time_step>/hydrograph_<suffix>.tif
             A raster of the height of flood waters on the landscape at this time
             interval.
 
     This function returns None."""
 
-    workspace = args['workspace']
-    intermediate = os.path.join(workspace, 'intermediate')
-    output = os.path.join(workspace, 'output')
+    try:
+        suffix = args['suffix']
+        if len(suffix) == 0:
+            suffix = None
+    except KeyError:
+        suffix = None
+
+    def _add_suffix(file_name):
+        """Add a suffix to the input file name and return the result."""
+        if suffix != None:
+            file_base, extension = os.path.splitext(file_name)
+            return "%s_%s%s" % (file_base, suffix, extension)
+        return file_name
+
+    def _intermediate_uri(file_name=''):
+        """Make an intermediate URI."""
+        return os.path.join(args['workspace'], 'intermediate', _add_suffix(file_name))
+
+    def _output_uri(file_name=''):
+        """Make an ouput URI."""
+        return os.path.join(args['workspace'], 'output', _add_suffix(file_name))
+
+    paths = {
+        'precip_latlong': raster_utils.temporary_folder(),
+        'precip_points' : _intermediate_uri('precip_points'),
+        'mannings' : _intermediate_uri('mannings.tif'),
+        'slope' : _intermediate_uri('slope.tif'),
+        'flow_direction' : _intermediate_uri('flow_direction.tif'),
+        'flow_length': _intermediate_uri('flow_length.tif'),
+        'cn_slope': _intermediate_uri('cn_slope.tif'),
+        'swrc': _intermediate_uri('swrc.tif')
+    }
 
     # Create folders in the workspace if they don't already exist
-    for folder in [workspace, intermediate, output]:
-        try:
-            os.makedirs(folder)
-            LOGGER.debug('Created folder %s', folder)
-        except OSError:
-            LOGGER.debug('Folder %s already exists', folder)
+    raster_utils.create_directories([args['workspace'], _intermediate_uri(),
+        _output_uri()])
 
     # Remove any shapefile folders that exist, since we don't want any conflicts
     # when creating new shapefiles.
-    precip_points_uri = os.path.join(intermediate, 'precip_points')
     try:
-        shutil.rmtree(precip_points_uri)
+        shutil.rmtree(paths['precip_points'])
     except OSError:
         pass
 
     # Reclassify the LULC to get the manning's raster.
-    mannings_uri = os.path.join(intermediate, 'mannings.tif')
-    mannings_raster(args['landuse'], args['mannings'], mannings_uri)
+    mannings_raster(args['landuse'], args['mannings'], paths['mannings'])
 
     # We need a slope raster for several components of the model.
-    slope_uri = os.path.join(intermediate, 'slope.tif')
-    raster_utils.calculate_slope(args['dem'], slope_uri)
+    raster_utils.calculate_slope(args['dem'], paths['slope'])
 
     # Calculate the flow direction, needed for flow length and for other
     # functions later on.
-    flow_direction_uri = os.path.join(intermediate, 'flow_direction.tif')
-    routing_utils.flow_direction_inf(args['dem'], flow_direction_uri)
+    routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
 
     # Calculate the flow length here, since we need it for several parts of the
     # model.
-    flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
-    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+    routing_utils.calculate_flow_length(paths['flow_direction'],
+        paths['flow_length'])
 
     # We always want to adjust for slope.
-    cn_slope_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
-    adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_slope_adjusted_uri)
+    adjust_cn_for_slope(args['curve_numbers'], paths['slope'], paths['cn_slope'])
 
     if args['cn_adjust'] == True:
         season = args['cn_season']
-        cn_season_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
-        adjust_cn_for_season(cn_slope_adjusted_uri, season, cn_season_adjusted_uri)
+        cn_season_adjusted_uri = _intermediate_uri('cn_season_%s.tif' % season)
+        adjust_cn_for_season(paths['cn_slope'], season, cn_season_adjusted_uri)
     else:
         # If the user did not select seasonality adjustment, just use the
         # adjusted slope CN numbers instead.
-        cn_season_adjusted_uri = cn_slope_adjusted_uri
-
+        cn_season_adjusted_uri = paths['cn_slope']
 
     # Calculate the Soil Water Retention Capacity (equation 2)
-    swrc_uri = os.path.join(intermediate, 'swrc.tif')
-    soil_water_retention_capacity(cn_season_adjusted_uri, swrc_uri)
+    soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
     # Convert precipitation table to a points shapefile.
-    precip_points_latlong_uri = raster_utils.temporary_folder()
-    convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
+    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
 
     # Project the precip points from latlong to the correct projection.
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
-    raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
-        precip_points_uri)
+    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
+        paths['precip_points'])
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
         LOGGER.info('Starting timestep %s', timestep)
         # Create the timestamp folder name and make the folder on disk.
-        timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
+        timestep_dir = os.path.join(_intermediate_uri(), 'timestep_%s' % timestep)
         raster_utils.create_directories([timestep_dir])
 
         # make the precip raster, since it's timestep-dependent.
         precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
-        make_precip_raster(precip_points_uri, args['dem'], timestep,
+        make_precip_raster(paths['precip_points'], args['dem'], timestep,
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
-        storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+        storm_runoff(precip_raster_uri, paths['swrc'], runoff_uri)
 
         # Calculate the overland travel time.
         overland_travel_time_uri = os.path.join(timestep_dir,
             'overland_travel_time.tif')
-        overland_travel_time(args['time_interval'], runoff_uri, slope_uri,
-            flow_length_uri, mannings_uri, overland_travel_time_uri)
+        overland_travel_time(args['time_interval'], runoff_uri, paths['slope'],
+            paths['flow_length'], paths['mannings'], overland_travel_time_uri)
 
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
