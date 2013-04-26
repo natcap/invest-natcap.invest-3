@@ -139,12 +139,8 @@ def execute(args):
     }
 
     # Create folders in the workspace if they don't already exist
-    for folder in [args['workspace'], _intermediate_uri(), _output_uri()]:
-        try:
-            os.makedirs(folder)
-            LOGGER.debug('Created folder %s', folder)
-        except OSError:
-            LOGGER.debug('Folder %s already exists', folder)
+    raster_utils.create_directories([args['workspace'], _intermediate_uri(),
+        _output_uri()])
 
     # Remove any shapefile folders that exist, since we don't want any conflicts
     # when creating new shapefiles.
