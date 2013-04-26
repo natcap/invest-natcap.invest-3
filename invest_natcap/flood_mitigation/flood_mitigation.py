@@ -109,6 +109,28 @@ def execute(args):
     intermediate = os.path.join(workspace, 'intermediate')
     output = os.path.join(workspace, 'output')
 
+    try:
+        suffix = args['suffix']
+        if len(suffix) == 0:
+            suffix = None
+    except KeyError:
+        suffix = None
+
+    def _add_suffix(file_name):
+        """Add a suffix to the input file name and return the result."""
+        if suffix != None:
+            file_base, extension = os.path.splitext(basename)
+            return "%s_%s%s" % (file_base, suffix, extension)
+        return file_name
+
+    def _intermediate_uri(file_name):
+        """Make an intermediate URI."""
+        return os.path.join(workspace, 'intermediate', _add_suffix(file_name))
+
+    def _output_uri(file_name):
+        """Make an ouput URI."""
+        return os.path.join(workspace, 'output', _add_suffix(file_name))
+
     # Create folders in the workspace if they don't already exist
     for folder in [workspace, intermediate, output]:
         try:
