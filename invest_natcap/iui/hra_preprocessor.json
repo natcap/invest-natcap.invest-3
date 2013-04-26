@@ -11,11 +11,6 @@
             "id": "hra_preprocess_list",
             "type": "list",
             "elements": [
-			{		    
-                            "id":"alpha_only",
-                            "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
-			                 "type": "label"
-			},
                 {
                     "id":"output_dir",
                     "type": "folder",
@@ -79,8 +74,7 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Management Effectiveness", "Intensity Rating",
-                                    "Change in Area Rating", "Change in Structure Rating"],
+                    "defaultValue": ["Management Effectiveness", "Intensity Rating"],
                     "linkText": "Add Another",
                     "helpText": "Exposure criteria apply ONLY to the stressors being used within this model run."
                 },  
@@ -93,7 +87,7 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Temporal Overlap Rating", "Frequency of Disturbance"],
+                    "defaultValue": ["Temporal Overlap Rating", "Frequency of Disturbance", "Change in Area Rating", "Change in Structure Rating"],
                     "linkText": "Add Another",
                     "helpText": "Sensitivity criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run."
                 
@@ -109,7 +103,7 @@
                                       "validateAs": {"type": "text"}},
                     "defaultValue": ["Recruitment Rate", "Natural Mortality Rate", 
                                     "Connectivity Rate", "Recovery Time"],
-                    "linkText": "Add Another"
+                    "linkText": "Add Another",
                     "helpText": "Resilience criteria apply ONLY to the habitats or species being used within this model run."
                 }  
             ]
