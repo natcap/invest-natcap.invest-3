@@ -158,36 +158,31 @@ def execute(args):
         pass
 
     # Reclassify the LULC to get the manning's raster.
-    mannings_uri = os.path.join(intermediate, 'mannings.tif')
-    mannings_raster(args['landuse'], args['mannings'], mannings_uri)
+    mannings_raster(args['landuse'], args['mannings'], paths['mannings'])
 
     # We need a slope raster for several components of the model.
-    slope_uri = os.path.join(intermediate, 'slope.tif')
-    raster_utils.calculate_slope(args['dem'], slope_uri)
+    raster_utils.calculate_slope(args['dem'], paths['slope'])
 
     # Calculate the flow direction, needed for flow length and for other
     # functions later on.
-    flow_direction_uri = os.path.join(intermediate, 'flow_direction.tif')
-    routing_utils.flow_direction_inf(args['dem'], flow_direction_uri)
+    routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
 
     # Calculate the flow length here, since we need it for several parts of the
     # model.
-    flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
-    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+    routing_utils.calculate_flow_length(paths['flow_direction'],
+        paths['flow_length'])
 
     # We always want to adjust for slope.
-    cn_slope_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
-    adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_slope_adjusted_uri)
+    adjust_cn_for_slope(args['curve_numbers'], paths['slope'], paths['cn_slope'])
 
     if args['cn_adjust'] == True:
         season = args['cn_season']
-        paths['cn_season'] = _intermediate_uri('cn_season_%s.tif' % season)
-        cn_season_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
-        adjust_cn_for_season(cn_slope_adjusted_uri, season, cn_season_adjusted_uri)
+        cn_season_adjusted_uri = _intermediate_uri('cn_season_%s.tif' % season)
+        adjust_cn_for_season(paths['cn_slope'], season, cn_season_adjusted_uri)
     else:
         # If the user did not select seasonality adjustment, just use the
         # adjusted slope CN numbers instead.
-        cn_season_adjusted_uri = cn_slope_adjusted_uri
+        cn_season_adjusted_uri = paths['cn_slope']
 
 
     # Calculate the Soil Water Retention Capacity (equation 2)
