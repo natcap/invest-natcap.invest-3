@@ -132,10 +132,10 @@ def execute(args):
         return os.path.join(workspace, 'output', _add_suffix(file_name))
 
     paths = {
-        'precip_points' = _intermediate_uri('precip_points'),
-        'mannings' = _intermediate_uri('mannings.tif'),
-        'slope' = _intermediate_uri('slope.tif'),
-        'flow_direction' = _intermediate_uri('flow_direction')
+        'precip_points' : _intermediate_uri('precip_points'),
+        'mannings' : _intermediate_uri('mannings.tif'),
+        'slope' : _intermediate_uri('slope.tif'),
+        'flow_direction' : _intermediate_uri('flow_direction')
     }
 
     # Create folders in the workspace if they don't already exist
