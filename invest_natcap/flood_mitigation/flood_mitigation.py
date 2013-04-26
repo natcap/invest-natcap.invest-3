@@ -128,6 +128,7 @@ def execute(args):
         return os.path.join(args['workspace'], 'output', _add_suffix(file_name))
 
     paths = {
+        'precip_latlong': raster_utils.temporary_folder(),
         'precip_points' : _intermediate_uri('precip_points'),
         'mannings' : _intermediate_uri('mannings.tif'),
         'slope' : _intermediate_uri('slope.tif'),
@@ -179,17 +180,15 @@ def execute(args):
         # adjusted slope CN numbers instead.
         cn_season_adjusted_uri = paths['cn_slope']
 
-
     # Calculate the Soil Water Retention Capacity (equation 2)
     soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
     # Convert precipitation table to a points shapefile.
-    precip_points_latlong_uri = raster_utils.temporary_folder()
-    convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
+    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
 
     # Project the precip points from latlong to the correct projection.
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
-    raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
+    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
         paths['precip_points'])
 
     # our timesteps start at 1.
