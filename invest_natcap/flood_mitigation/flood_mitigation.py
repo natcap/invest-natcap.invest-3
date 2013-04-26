@@ -119,7 +119,7 @@ def execute(args):
     def _add_suffix(file_name):
         """Add a suffix to the input file name and return the result."""
         if suffix != None:
-            file_base, extension = os.path.splitext(basename)
+            file_base, extension = os.path.splitext(file_name)
             return "%s_%s%s" % (file_base, suffix, extension)
         return file_name
 
@@ -217,8 +217,8 @@ def execute(args):
         # Calculate the overland travel time.
         overland_travel_time_uri = os.path.join(timestep_dir,
             'overland_travel_time.tif')
-        overland_travel_time(args['time_interval'], runoff_uri, slope_uri,
-            flow_length_uri, mannings_uri, overland_travel_time_uri)
+        overland_travel_time(args['time_interval'], runoff_uri, paths['slope'],
+            paths['flow_length'], paths['mannings'], overland_travel_time_uri)
 
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
