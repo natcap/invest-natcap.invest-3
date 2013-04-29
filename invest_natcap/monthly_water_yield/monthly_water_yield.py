@@ -133,8 +133,10 @@ def execute(args):
 
 
         # Calculate Evapotranspiration
-            
-
+        def evapotranspiration_op(precip, pet, alpha, init_soil, smax):
+            alpha_coef = 1.0 - alpha
+            precip_calc = precip * alpha_coef
+            soil_calc = init_soil * alpha_coef
 
     # Calculate Direct Flow (Runoff)
 
