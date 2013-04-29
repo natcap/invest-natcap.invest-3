@@ -3,7 +3,7 @@
     "label": "Habitat Risk Assessment",
     "targetScript" : "invest_natcap.habitat_risk_assessment.hra",
     "modelName" : "habitat_risk_assessment",
-    "localDocURI": "./documentation/habitat_risk.html",
+    "localDocURI": "../documentation/habitat_risk_assessment.html",
     "height": 550,
     "width" : 700,
     "elements": [
