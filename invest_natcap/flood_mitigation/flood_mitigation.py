@@ -6,10 +6,12 @@ import os
 import shutil
 
 from osgeo import gdal
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
+import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -569,8 +571,14 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
     LOGGER.info('Finished making the precipitation raster')
 
+def _extract_matrix(raster_uri):
+    """Extract the Numpy matrix from a GDAL dataset."""
+    dataset = gdal.Open(raster_uri)
+    band = dataset.GetRasterBand(1)
+    return band.ReadAsArray()
+
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -585,4 +593,22 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             overwritten.
 
         Returns nothing."""
-    pass
+
+    # Get the flow graph
+    routing_cython_core.calculate_flow_graph(flow_direction_uri,
+        outflow_weights_uri, outflow_direction_uri)
+
+    # make a new numpy matrix of the same size and dimensions as the outflow
+    # matrices.
+    discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+    raster_utils.new_raster_from_base_uri(flow_direction_uri, output_uri,
+        'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
+
+    # Get the numpy matrix of the new discharge raster.
+    discharge_matrix = _extract_matrix(output_uri)
+    runoff_matrix = _extract_matrix(runoff_uri)
+
+    iterator = numpy.nditer([discharge_matrix, runoff_matrix], flags=['multi_index'])
+    for pixel in iterator:
+        print(pixel, iterator.multi_index)
+
