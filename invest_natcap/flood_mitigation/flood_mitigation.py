@@ -594,6 +594,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         Returns nothing."""
 
+    # Determine the pixel area from the runoff raster
+    pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
+
     # Get the flow graph
     routing_cython_core.calculate_flow_graph(flow_direction_uri,
         outflow_weights_uri, outflow_direction_uri)
@@ -612,6 +615,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
+    outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
     inflow_neighbors = {
         0: [3, 4],
         1: [4, 5],
@@ -620,20 +624,21 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         4: [7, 0],
         5: [0, 1],
         6: [1, 2],
-        7: [2, 3]
+        7: [2, 3],
+        outflow_direction_nodata: []
     }
 
     # list of neighbor ids and their indices relative to the current pixel
     # index offsets are row, column.
     neighbor_indices = {
-        0: {'row_offset': 0, 'col_offset': 1),
-        1: {'row_offset': 1, 'col_offset': 1),
-        2: {'row_offset': -1, 'col_offset': 0),
-        3: {'row_offset': -1, 'col_offset': -1),
-        4: {'row_offset': 0, 'col_offset': -1),
-        5: {'row_offset': 1, 'col_offset': -1),
-        6: {'row_offset': 1, 'col_offset': 0),
-        7: {'row_offset': 1, 'col_offset': 1)
+        0: {'row_offset': 0, 'col_offset': 1},
+        1: {'row_offset': 1, 'col_offset': 1},
+        2: {'row_offset': -1, 'col_offset': 0},
+        3: {'row_offset': -1, 'col_offset': -1},
+        4: {'row_offset': 0, 'col_offset': -1},
+        5: {'row_offset': 1, 'col_offset': -1},
+        6: {'row_offset': 1, 'col_offset': 0},
+        7: {'row_offset': 1, 'col_offset': 1}
     }
     neighbors = neighbor_indices.iteritems()
 
@@ -642,6 +647,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     for discharge, runoff in iterator:
         index = iterator.multi_index
         print(discharge, runoff, iterator.multi_index)
+
+        discharge_sum = 0.0
 
         for neighbor_id, neighbor_location in neighbors:
             neighbor_index = (index[0] + neighbor_location['row_offset'],
@@ -656,8 +663,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     fractional_flow = first_neighbor_weight
                 else:
                     fractional_flow = 1.0 - first_neighbor_weight
+                discharge_sum += runoff * fractional_flow * pixel_area
 
-
+        print discharge_sum
 
         return
 
