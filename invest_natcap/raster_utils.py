@@ -1558,9 +1558,12 @@ def reproject_datasource_uri(original_ds_uri, output_wkt, output_uri):
         This function directly calls reproject_datasource.
 
         original_ds_uri - a uri to an ogr datasource
+        
         output_wkt - the desired projection as Well Known Text 
             (by layer.GetSpatialRef().ExportToWkt())
-        output_uri - The path to where the new shapefile should be written to disk.
+        
+        output_uri - The path to where the new shapefile should be
+            written to disk.
     
         returns - Nothing."""
 
@@ -2554,22 +2557,6 @@ def get_spatial_ref_uri(ds_uri):
     layer = shape_ds.GetLayer()
     spat_ref = layer.GetSpatialRef()
     return spat_ref
-    
-def reproject_datasource_uri(original_datasource_uri, output_wkt, output_uri):
-    """A wrapper function for raster_utils.reproject_datasource that
-        allows for uri passing.
-
-        original_datasource_uri - a uri to an ogr datasource to be
-            reprojected
-        output_wkt - a string of Well Known Text that is the desired
-            output projection
-        output_uri - a uri path to disk for the reprojected datasource
-
-        returns - Nothing"""
-
-    original_ds = ogr.Open(original_datasource_uri)
-    
-    _ = reproject_datasource(original_ds, output_wkt, output_uri)
         
 def copy_datasource_uri(shape_uri, copy_uri):
     """Create a copy of an ogr shapefile
