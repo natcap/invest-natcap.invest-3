@@ -607,8 +607,57 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # Get the numpy matrix of the new discharge raster.
     discharge_matrix = _extract_matrix(output_uri)
     runoff_matrix = _extract_matrix(runoff_uri)
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
 
+    # A mapping of which indices might flow into this pixel. If the neighbor
+    # pixel's value is 
+    inflow_neighbors = {
+        0: [3, 4],
+        1: [4, 5],
+        2: [5, 6],
+        3: [6, 7],
+        4: [7, 0],
+        5: [0, 1],
+        6: [1, 2],
+        7: [2, 3]
+    }
+
+    # list of neighbor ids and their indices relative to the current pixel
+    # index offsets are row, column.
+    neighbor_indices = {
+        0: {'row_offset': 0, 'col_offset': 1),
+        1: {'row_offset': 1, 'col_offset': 1),
+        2: {'row_offset': -1, 'col_offset': 0),
+        3: {'row_offset': -1, 'col_offset': -1),
+        4: {'row_offset': 0, 'col_offset': -1),
+        5: {'row_offset': 1, 'col_offset': -1),
+        6: {'row_offset': 1, 'col_offset': 0),
+        7: {'row_offset': 1, 'col_offset': 1)
+    }
+    neighbors = neighbor_indices.iteritems()
+
+    radius = 1
     iterator = numpy.nditer([discharge_matrix, runoff_matrix], flags=['multi_index'])
-    for pixel in iterator:
-        print(pixel, iterator.multi_index)
+    for discharge, runoff in iterator:
+        index = iterator.multi_index
+        print(discharge, runoff, iterator.multi_index)
+
+        for neighbor_id, neighbor_location in neighbors:
+            neighbor_index = (index[0] + neighbor_location['row_offset'],
+                index[1] + neighbor_location['col_offset'])
+            neighbor_value = outflow_direction_matrix[neighbor_index]
+
+            possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+            if neighbor_id in possible_inflow_neighbors:
+                # determine fractional flow
+                first_neighbor_weight = outflow_weights_matrix[neighbor_index]
+                if possible_inflow_neighbors.index(neighbor_id) == 0:
+                    fractional_flow = first_neighbor_weight
+                else:
+                    fractional_flow = 1.0 - first_neighbor_weight
+
+
+
+        return
 
