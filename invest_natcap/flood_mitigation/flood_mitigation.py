@@ -266,6 +266,7 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
 
     # Calculate the minimum cell size
     min_cell_size = _get_cell_size_from_datasets(raster_list)
+    LOGGER.debug('Minimum pixel size: %s', min_cell_size)
 
     # Cast to a float, just in case the user passed in an int.
     time_interval = float(time_interval)
@@ -295,9 +296,11 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
 
+    LOGGER.info('Calculating overland travel time raster')
     raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
         output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
         'intersection')
+    LOGGER.info('Finished calculating overland travel time.')
 
 
 def _get_cell_size_from_datasets(uri_list):
