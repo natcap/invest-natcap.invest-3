@@ -53,10 +53,28 @@ def execute(args):
 
     # Set out_nodata value
     float_nodata = float(np.finfo(np.float32).min) + 1.0
+    dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
+    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
 
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     raster_utils.calculate_slope(dem_uri, slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    LOGGER.debug('Slope nodata : %s', slope_nodata)
+
+    # Calculate alpha one from equation 10 in users doc
+    def alpha_one_op(slope_pix):
+        if slope_pix == -1.0:
+            return float_nodata
+        else:
+            return 0.068 + (0.0059 * slope_pix) - (0.002 * sandy_sa)
+
+    alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
+    
+    raster_utils.vectorize_datasets(
+            [slope_uri], alpha_one_op, alpha_one_uri, gdal.GDT_Float32,
+            float_nodata, dem_cell_size, 'intersection')
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
