@@ -568,3 +568,21 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
 
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
     LOGGER.info('Finished making the precipitation raster')
+
+def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
+    output_uri):
+    """Calculate the flood water discharge in a single timestep.  This
+    corresponds to equation 11 in the user's guide.
+
+        runoff_uri - a URI to a GDAL dataset on disk.  This is a raster of the
+            stormwater runoff from the landscape as modeled by the SCS model.
+        flow_direction_uri - a URI to a GDAL dataset of the flow direction on
+            the landscape, calculated from the user's DEM.
+        time_interval - a number indicating the length of this timestep (in
+            seconds).
+        output_uri - a URI to the file location where the output raster should
+            be saved.  If a file exists at this location, it will be
+            overwritten.
+
+        Returns nothing."""
+    pass
