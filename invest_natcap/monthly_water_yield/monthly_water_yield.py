@@ -29,6 +29,7 @@ def execute(args):
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
         args[time_step_data] - a uri to a CSV file
+        args[soil_max_uri] - a uri to a gdal raster for soil max
 
     """
     LOGGER.debug('Start Executing Model')
@@ -41,18 +42,51 @@ def execute(args):
     # Get input URIS
     time_step_data_uri = args['time_step_data_uri']
     dem_uri = args['dem_uri']
+    smax_uri = args['soil_max_uri']
+
+    # I have yet to determine how the sandy coefficient will be provided as an
+    # input, so I am just hard coding in a value for now
+    sandy_sa = 0.25
 
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
 
     # Set out_nodata value
     float_nodata = float(np.finfo(np.float32).min) + 1.0
+    dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
+    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
+
+    # Create initial S_t-1 for now
+    init_soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
+    _ = raster_utils.new_raster_from_base_uri(
+            dem_uri, init_soil_storage__uri, 'GTIFF', float_nodata,
+            gdal.GDT_Float32, fill_value=0.0)
+
+    # Calculate the slope raster from the DEM
+    slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    raster_utils.calculate_slope(dem_uri, slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    LOGGER.debug('Slope nodata : %s', slope_nodata)
+
+    # Calculate alpha one from equation 10 in users doc
+    def alpha_one_op(slope_pix):
+        if slope_pix == -1.0:
+            return float_nodata
+        else:
+            return 0.068 + (0.0059 * slope_pix) - (0.002 * sandy_sa)
+
+    alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
+    
+    raster_utils.vectorize_datasets(
+            [slope_uri], alpha_one_op, alpha_one_uri, gdal.GDT_Float32,
+            float_nodata, dem_cell_size, 'intersection')
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     # A list of the fields from the time step table we are interested in and
     # need.
-    data_fields = ['p']
+    data_fields = ['p', 'pet']
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
     # Get the keys from the time step dictionary, which will be the month/year
@@ -98,7 +132,11 @@ def execute(args):
                     projected_point_uri, field, output_uri)
 
 
-    # Calculate Evapotranspiration
+        # Calculate Evapotranspiration
+        def evapotranspiration_op(precip, pet, alpha, init_soil, smax):
+            alpha_coef = 1.0 - alpha
+            precip_calc = precip * alpha_coef
+            soil_calc = init_soil * alpha_coef
 
     # Calculate Direct Flow (Runoff)
 

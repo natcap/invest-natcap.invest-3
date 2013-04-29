@@ -29,12 +29,12 @@
                     "validateAs": {"type": "CSV"}
                 },
                 {        
-                    "id" : "soil_depth",
-                    "args_id" : "soil_depth_uri",
+                    "id" : "soil_max",
+                    "args_id" : "soil_max_uri",
                     "type": "file",
-                    "label": "Soil Depth",
+                    "label": "Soil Max",
                     "defaultValue": "",
-                    "required": false,
+                    "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
