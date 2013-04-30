@@ -652,7 +652,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         6: [1, 2],
         7: [2, 3],
         outflow_direction_nodata: [],
-        None: []  # value is None when there is an indexing error.
     }
 
     # list of neighbor ids and their indices relative to the current pixel
@@ -669,11 +668,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     }
     neighbors = list(neighbor_indices.iteritems())
 
-    iterator = numpy.nditer([discharge_matrix, runoff_matrix],
-        flags=['multi_index'], op_flags=['readwrite'])
-    for discharge, runoff in iterator:
+    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
+    for runoff in iterator:
         index = iterator.multi_index
-        #print(discharge, runoff, iterator.multi_index)
 
         if runoff_matrix[index] == runoff_nodata:
             discharge_sum = discharge_nodata
@@ -681,18 +678,18 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 #        elif outflow_direction_matrix[index] == outflow_direction_nodata:
 #            discharge_sum = discharge_nodata
         else:
-            discharge_sum = 0.0
+            discharge_sum = 0.0  # re-initialize the discharge sum
             for neighbor_id, index_offset in neighbors:
                 # Add the index offsets to the current index to get the
                 # neighbor's index.
                 neighbor_index = tuple(map(sum, zip(index, index_offset)))
                 try:
                     neighbor_value = outflow_direction_matrix[neighbor_index]
+                    possible_inflow_neighbors = inflow_neighbors[neighbor_value]
                 except IndexError:
                     # happens when the neighbor does not exist.
-                    neighbor_value = None
+                    possible_inflow_neighbors = []
 
-                possible_inflow_neighbors = inflow_neighbors[neighbor_value]
                 if neighbor_id in possible_inflow_neighbors:
                     # determine fractional flow
                     first_neighbor_weight = outflow_weights_matrix[neighbor_index]
