@@ -176,6 +176,13 @@ def calculate_alphas(
     smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
 
     def alpha_one_op(slope_pix):
+        """Vectorization operation to calculate the alpha one variable used in
+            equations throughout the monthly water yield model
+
+            slope_pix - the slope value for a pixel
+
+            returns - out_nodata if slope_pix is a nodata value, else returns
+                the alpha one value"""
         if slope_pix == slope_nodata:
             return out_nodata
         else:
@@ -183,6 +190,13 @@ def calculate_alphas(
                         (alpha_one['c_one'] * sandy_sa))
 
     def alpha_two_op(smax_pix):
+        """Vectorization operation to calculate the alpha two variable used in
+            equations throughout the monthly water yield model
+
+            smax_pix - the soil water content maximum value for a pixel
+
+            returns - out_nodata if smax_pix is a nodata value, else returns
+                the alpha two value"""
         if smax_pix == smax_nodata:
             return out_nodata
         else:
@@ -191,6 +205,13 @@ def calculate_alphas(
                     math.pow(smax_pix, -1 * alpha_two['b_two']))
     
     def alpha_three_op(smax):
+        """Vectorization operation to calculate the alpha three variable used in
+            equations throughout the monthly water yield model
+
+            smax_pix - the soil water content maximum value for a pixel
+
+            returns - out_nodata if smax_pix is a nodata value, else returns
+                the alpha three value"""
         if smax_pix == smax_nodata:
             return out_nodata
         else:
@@ -200,15 +221,15 @@ def calculate_alphas(
 
     raster_utils.vectorize_datasets(
             [slope_uri], alpha_one_op, output_uri_list[0], gdal.GDT_Float32,
-            float_nodata, slope_cell_size, 'intersection')
+            out_nodata, slope_cell_size, 'intersection')
 
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_two_op, output_uri_list[1], gdal.GDT_Float32,
-            float_nodata, smax_cell_size, 'intersection')
+            out_nodata, smax_cell_size, 'intersection')
     
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
-            float_nodata, smax_cell_size, 'intersection')
+            out_nodata, smax_cell_size, 'intersection')
 
 def construct_time_step_data(data_uri):
     """Parse the CSV data file and construct a dictionary using the time step
