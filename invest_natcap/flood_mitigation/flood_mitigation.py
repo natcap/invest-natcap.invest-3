@@ -619,10 +619,15 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)[100:103, 150:153]
-    runoff_matrix = _extract_matrix(runoff_uri)[100:103, 150:153]
-    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:103, 150:153]
-    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:103, 150:153]
+#    discharge_matrix = _extract_matrix(output_uri)[100:103, 150:153]
+#    runoff_matrix = _extract_matrix(runoff_uri)[100:103, 150:153]
+#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:103, 150:153]
+#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:103, 150:153]
+#
+    discharge_matrix = _extract_matrix(output_uri)
+    runoff_matrix = _extract_matrix(runoff_uri)
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
 
     print discharge_matrix
     print runoff_matrix
@@ -676,7 +681,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             except IndexError:
                 # happens when the neighbor does not exist.
                 neighbor_value = None
-            print('neighbor value', neighbor_value)
+#            print('neighbor value', neighbor_value)
 
             possible_inflow_neighbors = inflow_neighbors[neighbor_value]
             if neighbor_id in possible_inflow_neighbors:
@@ -687,12 +692,12 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                 else:
                     fractional_flow = 1.0 - first_neighbor_weight
                 discharge = runoff * fractional_flow * pixel_area
-                print('discharge', discharge)
+#                print('discharge', discharge)
                 discharge_sum += discharge
 
-        print('sum:%s' % discharge_sum)
+#        print('sum:%s' % discharge_sum)
         discharge_matrix[index] = discharge_sum
 
-    #_write_matrix(output_uri, discharge_matrix)
+    _write_matrix(output_uri, discharge_matrix)
     print discharge_matrix
     
