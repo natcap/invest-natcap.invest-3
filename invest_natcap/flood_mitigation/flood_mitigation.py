@@ -677,6 +677,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
     for runoff in iterator:
         index = iterator.multi_index
+        LOGGER.debug('')
         LOGGER.debug('index=%s', index)
 
         if runoff_matrix[index] == runoff_nodata:
@@ -703,6 +704,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     neighbor_value = outflow_direction_matrix[neighbor_index]
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
+                    LOGGER.debug('Neighbor_value: %s, inflow_neighbors=%s',
+                            neighbor_value, possible_inflow_neighbors)
                     if neighbor_id in possible_inflow_neighbors:
                         # determine fractional flow
                         first_neighbor_weight = outflow_weights_matrix[neighbor_index]
@@ -712,7 +715,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         else:
                             fractional_flow = first_neighbor_weight
                         LOGGER.debug('Fractional flow: %s', fractional_flow)
-                        discharge = runoff * fractional_flow * pixel_area
+                        LOGGER.debug('Runoff: %s', runoff)
+                        neighbor_runoff = runoff_matrix[neighbor_index]
+                        discharge = neighbor_runoff * fractional_flow * pixel_area
                         discharge_sum += discharge
                 except IndexError:
                     # happens when the neighbor does not exist.
