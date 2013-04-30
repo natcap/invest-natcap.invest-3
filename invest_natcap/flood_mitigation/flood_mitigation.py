@@ -601,6 +601,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         output_uri - a URI to the file location where the output raster should
             be saved.  If a file exists at this location, it will be
             overwritten.
+        outflow_weights_uri - a URI to the target outflow weights raster.
+        outflow_direction_uri - a URI to the target outflow direction raster.
 
         Returns nothing."""
 
