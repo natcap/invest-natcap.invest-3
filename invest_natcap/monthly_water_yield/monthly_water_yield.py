@@ -60,7 +60,7 @@ def execute(args):
     # Create initial S_t-1 for now
     init_soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
     _ = raster_utils.new_raster_from_base_uri(
-            dem_uri, init_soil_storage__uri, 'GTIFF', float_nodata,
+            dem_uri, init_soil_storage_uri, 'GTIFF', float_nodata,
             gdal.GDT_Float32, fill_value=0.0)
 
     # Calculate the slope raster from the DEM
@@ -69,6 +69,18 @@ def execute(args):
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     LOGGER.debug('Slope nodata : %s', slope_nodata)
 
+    # Calculate the alpha rasters
+    alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
+    alpha_two_uri = os.path.join(intermediate_dir, 'alpha_two.tif')
+    alpha_three_uri = os.path.join(intermediate_dir, 'alpha_three.tif')
+    alpha_uri_list = [alpha_one_uri, alpha_two_uri, alpha_three_uri]
+    
+    alpha_table = {'alpha_one':{'a_one':0.07, 'b_one':0.01, 'c_one':0.002},
+                   'alpha_two':{'a_two':0.2, 'b_two':2.2},
+                   'alpha_three':{'a_three':1.44, 'b_three':0.68}}
+
+    calculate_alphas(
+        slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata, alpha_uri_list)
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
@@ -119,13 +131,6 @@ def execute(args):
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, output_uri)
 
-
-        # Calculate Evapotranspiration
-        def evapotranspiration_op(precip, pet, alpha, init_soil, smax):
-            alpha_coef = 1.0 - alpha
-            precip_calc = precip * alpha_coef
-            soil_calc = init_soil * alpha_coef
-
     # Calculate Direct Flow (Runoff)
 
     # Calculate Interflow
@@ -142,13 +147,13 @@ def execute(args):
     # Move on to next month
 
 def calculate_alphas(
-        slope_uri, sandy, smax_uri, alpha_table, out_nodata, output_uri_list):
+        slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
     """Calculates and creates gdal datasets for three alpha values used in
         various equations throughout the monthly water yield model
 
         slope_uri - a uri to a gdal dataset for the slope
         
-        sandy - could be a uri to a dataset, but right now just passing in a
+        sandy_sa - could be a uri to a dataset, but right now just passing in a
             constant value. Need to learn more from Yonas
         
         smax_uri - a uri to a gdal dataset for the maximum soil water content
@@ -172,6 +177,7 @@ def calculate_alphas(
 
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
+    LOGGER.debug('SMAX NODATA: %s', smax_nodata)
     slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
     smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
 
@@ -204,7 +210,7 @@ def calculate_alphas(
                     alpha_two['a_two'] * 
                     math.pow(smax_pix, -1 * alpha_two['b_two']))
     
-    def alpha_three_op(smax):
+    def alpha_three_op(smax_pix):
         """Vectorization operation to calculate the alpha three variable used in
             equations throughout the monthly water yield model
 
