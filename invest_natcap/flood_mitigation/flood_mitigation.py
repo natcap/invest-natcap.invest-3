@@ -686,19 +686,22 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                 try:
                     neighbor_value = outflow_direction_matrix[neighbor_index]
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+
+                    if neighbor_id in possible_inflow_neighbors:
+                        # determine fractional flow
+                        first_neighbor_weight = outflow_weights_matrix[neighbor_index]
+
+                        if possible_inflow_neighbors[0] == neighbor_id:
+                            fractional_flow = first_neighbor_weight
+                        else:
+                            fractional_flow = 1.0 - first_neighbor_weight
+                        discharge = runoff * fractional_flow * pixel_area
+                        discharge_sum += discharge
                 except IndexError:
                     # happens when the neighbor does not exist.
-                    possible_inflow_neighbors = []
-
-                if neighbor_id in possible_inflow_neighbors:
-                    # determine fractional flow
-                    first_neighbor_weight = outflow_weights_matrix[neighbor_index]
-                    if possible_inflow_neighbors.index(neighbor_id) == 0:
-                        fractional_flow = first_neighbor_weight
-                    else:
-                        fractional_flow = 1.0 - first_neighbor_weight
-                    discharge = runoff * fractional_flow * pixel_area
-                    discharge_sum += discharge
+                    # In this case, we assume there is no inflow from this
+                    # neighbor.
+                    pass
 
             discharge_sum = discharge_sum / time_interval
 
