@@ -269,9 +269,6 @@ def execute(args):
                                                       "sum",
                                                       ignore_nodata = True)
 
-##    for key in values:
-##        values[key] = values[key] * aq_args["cell_size"]
-
     def calculate_percent(feature):
         if feature.GetFieldAsInteger(id_name) in values:
             return (values[feature.GetFieldAsInteger(id_name)] * aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
@@ -280,17 +277,3 @@ def execute(args):
         
     LOGGER.debug("Set area field values.")
     set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
-
-##    fs_uri=overlap_uri
-##    id_field_name= id_name
-##    value_field_name = area_name
-##    rules = values
-##    
-##    shapefile = ogr.Open(fs_uri, 1)
-##    layer = shapefile.GetLayer()
-##
-##    for feature_id in xrange(layer.GetFeatureCount()):
-##        feature = layer.GetFeature(feature_id)
-##        feature.SetField(value_field_name, rules[feature.GetFieldAsInteger(id_field_name)])
-##        layer.SetFeature(feature)
-##    shapefile = None    
