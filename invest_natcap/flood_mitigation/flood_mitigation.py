@@ -658,14 +658,14 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # list of neighbor ids and their indices relative to the current pixel
     # index offsets are row, column.
     neighbor_indices = {
-        0: {'row_offset': 0, 'col_offset': 1},
-        1: {'row_offset': 1, 'col_offset': 1},
-        2: {'row_offset': -1, 'col_offset': 0},
-        3: {'row_offset': -1, 'col_offset': -1},
-        4: {'row_offset': 0, 'col_offset': -1},
-        5: {'row_offset': 1, 'col_offset': -1},
-        6: {'row_offset': 1, 'col_offset': 0},
-        7: {'row_offset': 1, 'col_offset': 1}
+        0: (0, 1),
+        1: (1, 1),
+        2: (-1, 0),
+        3: (-1, -1),
+        4: (0, -1),
+        5: (1, -1),
+        6: (1, 0),
+        7: (1, 1)
     }
     neighbors = list(neighbor_indices.iteritems())
 
@@ -682,9 +682,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 #            discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0
-            for neighbor_id, neighbor_location in neighbors:
-                neighbor_index = (index[0] + neighbor_location['row_offset'],
-                    index[1] + neighbor_location['col_offset'])
+            for neighbor_id, index_offset in neighbors:
+                # Add the index offsets to the current index to get the
+                # neighbor's index.
+                neighbor_index = tuple(map(sum, zip(index, index_offset)))
                 try:
                     neighbor_value = outflow_direction_matrix[neighbor_index]
                 except IndexError:
