@@ -607,6 +607,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         Returns nothing."""
 
     time_interval = float(time_interval)  # must be a float.
+    LOGGER.debug('Using time interval %s', time_interval)
 
     # Determine the pixel area from the runoff raster
     pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
@@ -623,15 +624,15 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-#    discharge_matrix = _extract_matrix(output_uri)[100:103, 150:153]
-#    runoff_matrix = _extract_matrix(runoff_uri)[100:103, 150:153]
-#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:103, 150:153]
-#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:103, 150:153]
-#
-    discharge_matrix = _extract_matrix(output_uri)
-    runoff_matrix = _extract_matrix(runoff_uri)
-    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
-    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+    discharge_matrix = _extract_matrix(output_uri)[100:104, 150:154]
+    runoff_matrix = _extract_matrix(runoff_uri)[100:104, 150:154]
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:104, 150:154]
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:104, 150:154]
+
+#    discharge_matrix = _extract_matrix(output_uri)
+#    runoff_matrix = _extract_matrix(runoff_uri)
+#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
+#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
 
     print discharge_matrix
     print runoff_matrix
@@ -658,7 +659,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # index offsets are row, column.
     neighbor_indices = {
         0: (0, 1),
-        1: (1, 1),
+        1: (-1, 1),
         2: (-1, 0),
         3: (-1, -1),
         4: (0, -1),
@@ -676,6 +677,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
     for runoff in iterator:
         index = iterator.multi_index
+        LOGGER.debug('index=%s', index)
 
         if runoff_matrix[index] == runoff_nodata:
             discharge_sum = discharge_nodata
@@ -688,7 +690,16 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                 # Add the index offsets to the current index to get the
                 # neighbor's index.
                 neighbor_index = tuple(map(sum, zip(index, index_offset)))
+                LOGGER.debug('Neighbor index=%s', neighbor_index)
                 try:
+                    if neighbor_index[0] < 0 or neighbor_index[1] < 0:
+                        # The neighbor index is beyond the bounds of the matrix
+                        # We need a special case check here because a negative
+                        # index will actually return a correct pixel value, just
+                        # from the other side of the matrix, which we don't
+                        # want.
+                        raise IndexError
+
                     neighbor_value = outflow_direction_matrix[neighbor_index]
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
@@ -697,16 +708,19 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         first_neighbor_weight = outflow_weights_matrix[neighbor_index]
 
                         if possible_inflow_neighbors[0] == neighbor_id:
-                            fractional_flow = first_neighbor_weight
-                        else:
                             fractional_flow = 1.0 - first_neighbor_weight
+                        else:
+                            fractional_flow = first_neighbor_weight
+                        LOGGER.debug('Fractional flow: %s', fractional_flow)
                         discharge = runoff * fractional_flow * pixel_area
                         discharge_sum += discharge
                 except IndexError:
                     # happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
+                    LOGGER.debug('index could not be accessed')
                     pass
+            LOGGER.debug('Discharge_sum=%s', discharge_sum)
 
             discharge_sum = discharge_sum / time_interval
 
