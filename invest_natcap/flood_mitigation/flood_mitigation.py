@@ -624,15 +624,15 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)[100:104, 150:154]
-    runoff_matrix = _extract_matrix(runoff_uri)[100:104, 150:154]
-    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:104, 150:154]
-    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:104, 150:154]
+#    discharge_matrix = _extract_matrix(output_uri)[100:104, 150:154]
+#    runoff_matrix = _extract_matrix(runoff_uri)[100:104, 150:154]
+#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:104, 150:154]
+#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:104, 150:154]
 
-#    discharge_matrix = _extract_matrix(output_uri)
-#    runoff_matrix = _extract_matrix(runoff_uri)
-#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
-#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+    discharge_matrix = _extract_matrix(output_uri)
+    runoff_matrix = _extract_matrix(runoff_uri)
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
 
     print discharge_matrix
     print runoff_matrix
@@ -677,10 +677,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
     for runoff in iterator:
         index = iterator.multi_index
-        LOGGER.debug('')
-        LOGGER.debug('index=%s', index)
 
-        if runoff_matrix[index] == runoff_nodata:
+        if runoff == runoff_nodata:
             discharge_sum = discharge_nodata
 # TODO: What does a value of nodata in outflow_direction raster mean?
 #        elif outflow_direction_matrix[index] == outflow_direction_nodata:
@@ -691,7 +689,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                 # Add the index offsets to the current index to get the
                 # neighbor's index.
                 neighbor_index = tuple(map(sum, zip(index, index_offset)))
-                LOGGER.debug('Neighbor index=%s', neighbor_index)
                 try:
                     if neighbor_index[0] < 0 or neighbor_index[1] < 0:
                         # The neighbor index is beyond the bounds of the matrix
@@ -704,8 +701,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     neighbor_value = outflow_direction_matrix[neighbor_index]
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
-                    LOGGER.debug('Neighbor_value: %s, inflow_neighbors=%s',
-                            neighbor_value, possible_inflow_neighbors)
                     if neighbor_id in possible_inflow_neighbors:
                         # determine fractional flow
                         first_neighbor_weight = outflow_weights_matrix[neighbor_index]
@@ -714,8 +709,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                             fractional_flow = 1.0 - first_neighbor_weight
                         else:
                             fractional_flow = first_neighbor_weight
-                        LOGGER.debug('Fractional flow: %s', fractional_flow)
-                        LOGGER.debug('Runoff: %s', runoff)
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         discharge = neighbor_runoff * fractional_flow * pixel_area
                         discharge_sum += discharge
@@ -723,9 +716,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     # happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
-                    LOGGER.debug('index could not be accessed')
                     pass
-            LOGGER.debug('Discharge_sum=%s', discharge_sum)
 
             discharge_sum = discharge_sum / time_interval
 
