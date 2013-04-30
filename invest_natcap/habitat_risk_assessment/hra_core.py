@@ -267,14 +267,17 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
     
     for aoi_name, aoi_list in aoi_pairs.items():
 
-        if aoi_name in points_dict:
-            points_dict[aoi_name]['E'] += element[2]
-            points_dict[aoi_name]['C'] += element[3]
-        else:
-            points_dict[aoi_name] = {}
-            points_dict[aoi_name]['E'] = 0
-            points_dict[aoi_name]['C'] = 0
+        for element in aoi_list:
         
+            if aoi_name in points_dict:
+                points_dict[aoi_name]['E'] += element[2]
+                points_dict[aoi_name]['C'] += element[3]
+            else:
+                points_dict[aoi_name] = {}
+                points_dict[aoi_name]['E'] = 0
+                points_dict[aoi_name]['C'] = 0
+
+    LOGGER.debug("POINTS_DICT %s" % points_dict)    
     for aoi_name, p_dict in points_dict.items():
         #Create the points which are summed AOI's across all Habitats.    
         matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
