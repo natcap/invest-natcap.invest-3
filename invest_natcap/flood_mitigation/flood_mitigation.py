@@ -652,7 +652,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         5: [0, 1],
         6: [1, 2],
         7: [2, 3],
-        outflow_direction_nodata: [],
     }
 
     # list of neighbor ids and their indices relative to the current pixel
@@ -712,9 +711,12 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         discharge = neighbor_runoff * fractional_flow * pixel_area
                         discharge_sum += discharge
-                except IndexError:
-                    # happens when the neighbor does not exist.
+                except (IndexError, KeyError):
+                    # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
+                    # neighbor.
+                    # KeyError happens when the neighbor has a nodata value.
+                    # When this happens, we assume there is no inflow from this
                     # neighbor.
                     pass
 
