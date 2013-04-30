@@ -29,6 +29,7 @@ def execute(args):
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
         args[time_step_data] - a uri to a CSV file
+        args[soil_max_uri] - a uri to a gdal raster for soil max
 
     """
     LOGGER.debug('Start Executing Model')
@@ -40,13 +41,52 @@ def execute(args):
 
     # Get input URIS
     time_step_data_uri = args['time_step_data_uri']
+    dem_uri = args['dem_uri']
+    smax_uri = args['soil_max_uri']
 
+    # I have yet to determine how the sandy coefficient will be provided as an
+    # input, so I am just hard coding in a value for now
+    sandy_sa = 0.25
+
+    # Get DEM WKT
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
+
+    # Set out_nodata value
+    float_nodata = float(np.finfo(np.float32).min) + 1.0
+    dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
+    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
+
+    # Create initial S_t-1 for now
+    init_soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
+    _ = raster_utils.new_raster_from_base_uri(
+            dem_uri, init_soil_storage__uri, 'GTIFF', float_nodata,
+            gdal.GDT_Float32, fill_value=0.0)
+
+    # Calculate the slope raster from the DEM
+    slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    raster_utils.calculate_slope(dem_uri, slope_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    LOGGER.debug('Slope nodata : %s', slope_nodata)
+
+    # Calculate alpha one from equation 10 in users doc
+    def alpha_one_op(slope_pix):
+        if slope_pix == -1.0:
+            return float_nodata
+        else:
+            return 0.068 + (0.0059 * slope_pix) - (0.002 * sandy_sa)
+
+    alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
+    
+    raster_utils.vectorize_datasets(
+            [slope_uri], alpha_one_op, alpha_one_uri, gdal.GDT_Float32,
+            float_nodata, dem_cell_size, 'intersection')
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     # A list of the fields from the time step table we are interested in and
     # need.
-    data_fields = ['p']
+    data_fields = ['p', 'pet']
     LOGGER.debug('Constructed DATA : %s', data_dict)
 
     # Get the keys from the time step dictionary, which will be the month/year
@@ -63,26 +103,40 @@ def execute(args):
         # Since the time step signature has a 'slash' we need to replace it with
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
-        cur_month_name = cur_field_name + '.shp'
+        cur_month_name = cur_field_name + '_points.shp'
         cur_point_uri = os.path.join(intermediate_dir, cur_month_name)
 
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
    
+        projected_point_name = cur_month_name + '_proj_points.shp'
+        projected_point_uri = os.path.join(
+                intermediate_dir, projected_point_name)
         # Project point shapefile
-        raster_utils.reproject_datasource()
+        raster_utils.reproject_datasource_uri(
+                cur_point_uri, dem_wkt, projected_point_uri) 
 
         raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
         for field in data_fields:
-            out_uri_name = cur_month_name + '_' + field + '.tif'
+            out_uri_name = cur_field_name + '_' + field + '.tif'
             output_uri = os.path.join(intermediate_dir, out_uri_name)
             raster_uri_list.append(output_uri)
-            raster_utils.vectorize_points_uri(cur_point_uri, field, output_uri)
+            
+            _ = raster_utils.new_raster_from_base_uri(
+                    dem_uri, output_uri, 'GTIFF', float_nodata,
+                    gdal.GDT_Float32, fill_value=float_nodata)
+
+            raster_utils.vectorize_points_uri(
+                    projected_point_uri, field, output_uri)
 
 
-    # Calculate Evapotranspiration
+        # Calculate Evapotranspiration
+        def evapotranspiration_op(precip, pet, alpha, init_soil, smax):
+            alpha_coef = 1.0 - alpha
+            precip_calc = precip * alpha_coef
+            soil_calc = init_soil * alpha_coef
 
     # Calculate Direct Flow (Runoff)
 

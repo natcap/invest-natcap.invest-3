@@ -6,6 +6,7 @@ import os
 import shutil
 
 from osgeo import gdal
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
@@ -62,132 +63,181 @@ def execute(args):
         'cn_amc_class' - A string indicating the Antecedent Soil Moisture class
             that should be used for CN adjustment.  One of ['Wet', 'Dry',
             'Average'].  Required only if args['cn_adjust'] == True.
+        'suffix' - (optional) a string to add to the end of all outputs from
+            this model
 
     The following files are saved to the user's disk, relative to the defined
     workspace:
         Rasters produced during preprocessing:
-        <workspace>/intermediate/mannings_coeff.tif
+        <workspace>/intermediate/mannings_coeff_<suffix>.tif
             A raster of the user's input Land Use/Land Cover, reclassified
             according to the user's defined table of Manning's numbers.
-        <workspace>/intermediate/slope.tif
+        <workspace>/intermediate/slope_<suffix>.tif
             A raster of the slope on the landscape.  Calculated from the DEM
             provided by the user as input to this model.
-        <workspace>/intermediate/flow_length.tif
+        <workspace>/intermediate/flow_length_<suffix>.tif
             TODO: Figure out if this is even an output raster.
-        <workspace>/intermediate/flow_direction.tif
+        <workspace>/intermediate/flow_direction_<suffix>.tif
             TODO: Figure out if this is even an output raster.
-        <workspace>/intermediate/fractional_flow.tif
+        <workspace>/intermediate/fractional_flow_<suffix>.tif
             TODO: Figure out if this is even an output raster.
 
         Rasters produced while calculating the Soil and Water Conservation
         Service's stormflow estimation model:
-        <workspace>/intermediate/cn_season_adjusted.tif
+        <workspace>/intermediate/cn_season_adjusted_<suffix>.tif
             A raster of the user's Curve Numbers, adjusted for the user's
             specified seasonality.
-        <workspace>/intermediate/cn_slope_adjusted.tif
+        <workspace>/intermediate/cn_slope_adjusted_<suffix>.tif
             A raster of the user's Curve Numbers that have been adjusted for
             seasonality and then adjusted for slope.
-        <workspace>/intermediate/soil_water_retention.tif
+        <workspace>/intermediate/soil_water_retention_<suffix>.tif
             A raster of the capcity of a given pixel to retain water in the
             soils on that pixel.
-        <workspace>/output/<time_step>/runoff_depth.tif
+        <workspace>/output/<time_step>/runoff_depth_<suffix>.tif
             A raster of the storm runoff depth per pixel in this timestep.
 
         Rasters produced while calculating the flow of water on the landscape
         over time:
-        <workspace>/output/<time_step>/floodwater_discharge.tif
+        <workspace>/output/<time_step>/floodwater_discharge_<suffix>.tif
             A raster of the floodwater discharge on the landscape in this time
             interval.
-        <workspace>/output/<time_step>/hydrograph.tif
+        <workspace>/output/<time_step>/hydrograph_<suffix>.tif
             A raster of the height of flood waters on the landscape at this time
             interval.
 
     This function returns None."""
 
-    workspace = args['workspace']
-    intermediate = os.path.join(workspace, 'intermediate')
-    output = os.path.join(workspace, 'output')
+    try:
+        suffix = args['suffix']
+        if len(suffix) == 0:
+            suffix = None
+    except KeyError:
+        suffix = None
+
+    def _add_suffix(file_name):
+        """Add a suffix to the input file name and return the result."""
+        if suffix != None:
+            file_base, extension = os.path.splitext(file_name)
+            return "%s_%s%s" % (file_base, suffix, extension)
+        return file_name
+
+    def _intermediate_uri(file_name=''):
+        """Make an intermediate URI."""
+        return os.path.join(args['workspace'], 'intermediate', _add_suffix(file_name))
+
+    def _output_uri(file_name=''):
+        """Make an ouput URI."""
+        return os.path.join(args['workspace'], 'output', _add_suffix(file_name))
+
+    paths = {
+        'precip_latlong': raster_utils.temporary_folder(),
+        'precip_points' : _intermediate_uri('precip_points'),
+        'mannings' : _intermediate_uri('mannings.tif'),
+        'slope' : _intermediate_uri('slope.tif'),
+        'flow_direction' : _intermediate_uri('flow_direction.tif'),
+        'flow_length': _intermediate_uri('flow_length.tif'),
+        'cn_slope': _intermediate_uri('cn_slope.tif'),
+        'swrc': _intermediate_uri('swrc.tif')
+    }
 
     # Create folders in the workspace if they don't already exist
-    for folder in [workspace, intermediate, output]:
-        try:
-            os.makedirs(folder)
-            LOGGER.debug('Created folder %s', folder)
-        except OSError:
-            LOGGER.debug('Folder %s already exists', folder)
+    raster_utils.create_directories([args['workspace'], _intermediate_uri(),
+        _output_uri()])
 
     # Remove any shapefile folders that exist, since we don't want any conflicts
     # when creating new shapefiles.
-    precip_points_uri = os.path.join(intermediate, 'precip_points')
     try:
-        shutil.rmtree(precip_points_uri)
+        shutil.rmtree(paths['precip_points'])
     except OSError:
         pass
 
+    # Reclassify the LULC to get the manning's raster.
+    mannings_raster(args['landuse'], args['mannings'], paths['mannings'])
+
     # We need a slope raster for several components of the model.
-    slope_uri = os.path.join(intermediate, 'slope.tif')
-    raster_utils.calculate_slope(args['dem'], slope_uri)
+    raster_utils.calculate_slope(args['dem'], paths['slope'])
 
     # Calculate the flow direction, needed for flow length and for other
     # functions later on.
-    flow_direction_uri = os.path.join(intermediate, 'flow_direction.tif')
-    routing_utils.flow_direction_inf(args['dem'], flow_direction_uri)
+    routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
 
     # Calculate the flow length here, since we need it for several parts of the
     # model.
-    flow_length_uri = os.path.join(intermediate, 'flow_length.tif')
-    routing_utils.calculate_flow_length(flow_direction_uri, flow_length_uri)
+    routing_utils.calculate_flow_length(paths['flow_direction'],
+        paths['flow_length'])
 
-    # Adjust Curve Numbers according to user input
-    # If the user has not selected a seasonality adjustment, only then will we
-    # adjust for slope.  Rich and I made this decision, as Equation 5
-    # (slope adjustments to curve numbers) is not clear which seasonality
-    # adjustment to use or how to use it when the user choses a non-average
-    # seasonality adjustment.  Until we figure this out, we are only adjusting
-    # CNs for slope IFF the user has not selected a seasonality adjustment.
+    # We always want to adjust for slope.
+    adjust_cn_for_slope(args['curve_numbers'], paths['slope'], paths['cn_slope'])
+
     if args['cn_adjust'] == True:
         season = args['cn_season']
-        cn_adjusted_uri = os.path.join(intermediate, 'cn_season_%s.tif' % season)
-        adjust_cn_for_season(args['curve_numbers'], season, cn_adjusted_uri)
+        cn_season_adjusted_uri = _intermediate_uri('cn_season_%s.tif' % season)
+        adjust_cn_for_season(paths['cn_slope'], season, cn_season_adjusted_uri)
     else:
-        cn_adjusted_uri = os.path.join(intermediate, 'cn_slope.tif')
-        adjust_cn_for_slope(args['curve_numbers'], slope_uri, cn_adjusted_uri)
+        # If the user did not select seasonality adjustment, just use the
+        # adjusted slope CN numbers instead.
+        cn_season_adjusted_uri = paths['cn_slope']
 
     # Calculate the Soil Water Retention Capacity (equation 2)
-    swrc_uri = os.path.join(intermediate, 'swrc.tif')
-    soil_water_retention_capacity(cn_adjusted_uri, swrc_uri)
+    soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
     # Convert precipitation table to a points shapefile.
-    precip_points_latlong_uri = raster_utils.temporary_folder()
-    convert_precip_to_points(args['precipitation'], precip_points_latlong_uri)
+    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
 
     # Project the precip points from latlong to the correct projection.
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
-    raster_utils.reproject_datasource_uri(precip_points_latlong_uri, dem_wkt,
-        precip_points_uri)
+    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
+        paths['precip_points'])
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
         LOGGER.info('Starting timestep %s', timestep)
         # Create the timestamp folder name and make the folder on disk.
-        timestep_dir = os.path.join(intermediate, 'timestep_%s' % timestep)
+        timestep_dir = os.path.join(_intermediate_uri(), 'timestep_%s' % timestep)
         raster_utils.create_directories([timestep_dir])
 
         # make the precip raster, since it's timestep-dependent.
         precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
-        make_precip_raster(precip_points_uri, args['dem'], timestep,
+        make_precip_raster(paths['precip_points'], args['dem'], timestep,
             precip_raster_uri)
 
         # Calculate storm runoff once we have all the data we need.
         runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
-        storm_runoff(precip_raster_uri, swrc_uri, runoff_uri)
+        storm_runoff(precip_raster_uri, paths['swrc'], runoff_uri)
 
         # Calculate the overland travel time.
         overland_travel_time_uri = os.path.join(timestep_dir,
             'overland_travel_time.tif')
-        overland_travel_time(args['time_interval'], runoff_uri, slope_uri,
-            flow_length_uri, mannings_uri, overland_travel_time_uri)
+        overland_travel_time(args['time_interval'], runoff_uri, paths['slope'],
+            paths['flow_length'], paths['mannings'], overland_travel_time_uri)
 
+
+def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
+    """Reclassify the input land use/land cover raster according to the
+        mannings numbers table passed in as input.
+
+        landcover_uri - a URI to a GDAL dataset with land use/land cover codes
+            as pixel values.
+        mannings_table_uri - a URI to a CSV table on disk.  This table must have
+            at least the following columns:
+                "LULC" - an integer landcover code matching a code in the inputs
+                    land use/land cover raster.
+                "ROUGHNESS" - a floating-point number indicating the roughness
+                    of the pixel.  See the user's guide for help on creating
+                    this number for your landcover classes.
+        mannings_raster_uri - a URI to a location on disk where the output
+            raster should be saved.  If this file exists on disk, it will be
+            overwritten.  This output raster will be a reclassified version of
+            the raster at `landcover_uri`.
+
+        Returns none."""
+    mannings_table = fileio.TableHandler(mannings_table_uri)
+    mannings_mapping = mannings_table.get_map('lulc', 'roughness')
+
+    lulc_nodata = raster_utils.get_nodata_from_uri(landcover_uri)
+
+    raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
+        mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
 
 def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
     flow_length_uri, mannings_uri, output_uri):
@@ -218,24 +268,41 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
 
     # Calculate the minimum cell size
     min_cell_size = _get_cell_size_from_datasets(raster_list)
+    LOGGER.debug('Minimum pixel size: %s', min_cell_size)
 
     # Cast to a float, just in case the user passed in an int.
     time_interval = float(time_interval)
+
+    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
+    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    roughness_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
 
     def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
         """Calculate the overland travel time on this pixel.  All inputs are
             floats.  Returns a float."""
 
+        if flow_length == flow_length_nodata or\
+            runoff_depth == runoff_depth_nodata or\
+            slope == slope_nodata or\
+            roughness == roughness_nodata:
+            return runoff_depth_nodata
+
+        # If we don't check for 0-division errors here, we'll get them if either
+        # there is no runoff depth or the slope is 0.  Personally, I think it
+        # makes sense to return 0 if either of these is the case.
+        if runoff_depth == 0 or slope == 0:
+            return 0.0
+
         stormflow_intensity = runoff_depth / time_interval
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
 
-    # Extract the nodata from the runoff depth raster.
-    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
-
+    LOGGER.info('Calculating overland travel time raster')
     raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
         output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
         'intersection')
+    LOGGER.info('Finished calculating overland travel time.')
 
 
 def _get_cell_size_from_datasets(uri_list):
@@ -338,7 +405,7 @@ def _dry_season_adjustment(curve_num):
 
         Returns a float."""
 
-    return ((4.2 - curve_num) / (10.0 - (0.058 * curve_num)))
+    return ((4.2 * curve_num) / (10.0 - (0.058 * curve_num)))
 
 def _wet_season_adjustment(curve_num):
     """Perform wet season adjustment on the pixel level.  This corresponds with
@@ -503,3 +570,134 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
 
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
     LOGGER.info('Finished making the precipitation raster')
+
+def _extract_matrix(raster_uri):
+    """Extract the Numpy matrix from a GDAL dataset."""
+    dataset = gdal.Open(raster_uri)
+    band = dataset.GetRasterBand(1)
+    return band.ReadAsArray()
+
+def _write_matrix(raster_uri, matrix):
+    dataset = gdal.Open(raster_uri, gdal.GA_Update)
+    band = dataset.GetRasterBand(1)
+    band.WriteArray(matrix)
+    band.FlushCache()
+    dataset.FlushCache()
+    band = None
+    dataset = None
+    raster_utils.calculate_raster_stats_uri(raster_uri)
+
+def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
+    output_uri, outflow_weights_uri, outflow_direction_uri):
+    """Calculate the flood water discharge in a single timestep.  This
+    corresponds to equation 11 in the user's guide.
+
+        runoff_uri - a URI to a GDAL dataset on disk.  This is a raster of the
+            stormwater runoff from the landscape as modeled by the SCS model.
+        flow_direction_uri - a URI to a GDAL dataset of the flow direction on
+            the landscape, calculated from the user's DEM.
+        time_interval - a number indicating the length of this timestep (in
+            seconds).
+        output_uri - a URI to the file location where the output raster should
+            be saved.  If a file exists at this location, it will be
+            overwritten.
+
+        Returns nothing."""
+
+    # Determine the pixel area from the runoff raster
+    pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
+    LOGGER.debug('Discharge pixel area: %s', pixel_area)
+
+    # Get the flow graph
+    routing_cython_core.calculate_flow_graph(flow_direction_uri,
+        outflow_weights_uri, outflow_direction_uri)
+
+    # make a new numpy matrix of the same size and dimensions as the outflow
+    # matrices.
+    discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+    raster_utils.new_raster_from_base_uri(flow_direction_uri, output_uri,
+        'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
+
+    # Get the numpy matrix of the new discharge raster.
+#    discharge_matrix = _extract_matrix(output_uri)[100:103, 150:153]
+#    runoff_matrix = _extract_matrix(runoff_uri)[100:103, 150:153]
+#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:103, 150:153]
+#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:103, 150:153]
+#
+    discharge_matrix = _extract_matrix(output_uri)
+    runoff_matrix = _extract_matrix(runoff_uri)
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+
+    print discharge_matrix
+    print runoff_matrix
+    print outflow_weights_matrix
+    print outflow_direction_matrix
+
+    # A mapping of which indices might flow into this pixel. If the neighbor
+    # pixel's value is 
+    outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
+    inflow_neighbors = {
+        0: [3, 4],
+        1: [4, 5],
+        2: [5, 6],
+        3: [6, 7],
+        4: [7, 0],
+        5: [0, 1],
+        6: [1, 2],
+        7: [2, 3],
+        outflow_direction_nodata: [],
+        None: []  # value is None when there is an indexing error.
+    }
+
+    # list of neighbor ids and their indices relative to the current pixel
+    # index offsets are row, column.
+    neighbor_indices = {
+        0: {'row_offset': 0, 'col_offset': 1},
+        1: {'row_offset': 1, 'col_offset': 1},
+        2: {'row_offset': -1, 'col_offset': 0},
+        3: {'row_offset': -1, 'col_offset': -1},
+        4: {'row_offset': 0, 'col_offset': -1},
+        5: {'row_offset': 1, 'col_offset': -1},
+        6: {'row_offset': 1, 'col_offset': 0},
+        7: {'row_offset': 1, 'col_offset': 1}
+    }
+    neighbors = list(neighbor_indices.iteritems())
+
+    radius = 1
+    iterator = numpy.nditer([discharge_matrix, runoff_matrix],
+        flags=['multi_index'], op_flags=['readwrite'])
+    for discharge, runoff in iterator:
+        index = iterator.multi_index
+        #print(discharge, runoff, iterator.multi_index)
+
+        discharge_sum = 0.0
+
+        for neighbor_id, neighbor_location in neighbors:
+            neighbor_index = (index[0] + neighbor_location['row_offset'],
+                index[1] + neighbor_location['col_offset'])
+            try:
+                neighbor_value = outflow_direction_matrix[neighbor_index]
+            except IndexError:
+                # happens when the neighbor does not exist.
+                neighbor_value = None
+#            print('neighbor value', neighbor_value)
+
+            possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+            if neighbor_id in possible_inflow_neighbors:
+                # determine fractional flow
+                first_neighbor_weight = outflow_weights_matrix[neighbor_index]
+                if possible_inflow_neighbors.index(neighbor_id) == 0:
+                    fractional_flow = first_neighbor_weight
+                else:
+                    fractional_flow = 1.0 - first_neighbor_weight
+                discharge = runoff * fractional_flow * pixel_area
+#                print('discharge', discharge)
+                discharge_sum += discharge
+
+#        print('sum:%s' % discharge_sum)
+        discharge_matrix[index] = discharge_sum
+
+    _write_matrix(output_uri, discharge_matrix)
+    print discharge_matrix
+    

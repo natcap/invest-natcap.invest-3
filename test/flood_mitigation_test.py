@@ -7,6 +7,7 @@ from osgeo import ogr
 from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
 import invest_test_core
+from invest_natcap.routing import routing_utils
 
 TEST_DATA = os.path.join('data', 'flood_mitigation')
 SAMP_INPUT = os.path.join(TEST_DATA, 'samp_input')
@@ -19,6 +20,8 @@ class FloodMitigationTest(unittest.TestCase):
         self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
         self.dem_small = os.path.join(SAMP_INPUT, 'dem_200m.tif')
         self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
+        self.landcover = os.path.join('data', 'base_data', 'terrestrial', 'lulc_samp_cur')
+        self.mannings = os.path.join(SAMP_INPUT, 'mannings.csv')
 
         self.args = {
             'workspace': self.workspace,
@@ -28,7 +31,9 @@ class FloodMitigationTest(unittest.TestCase):
             'cn_season': 'dry',
             'precipitation': self.precip,
             'num_intervals': 6,
-            'time_interval': 120.0  # 2 minutes
+            'time_interval': 120.0,  # 2 minutes
+            'landuse': self.landcover,
+            'mannings': self.mannings
         }
 
         try:
@@ -129,4 +134,21 @@ class FloodMitigationTest(unittest.TestCase):
             'storm_runoff_step2.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, storm_runoff_uri,
             regression_storm_runoff)
+
+    def test_flood_water_discharge(self):
+        storm_runoff = os.path.join(REGRESSION_DATA, 'storm_runoff_step2.tif')
+        flood_water_discharge = os.path.join(self.workspace, 'fw_discharge.tif')
+        outflow_weights_uri = os.path.join(self.workspace, 'outflow_weights.tif')
+        outflow_direction_uri = os.path.join(self.workspace, 'outflow_dir.tif')
+        flow_direction_uri = os.path.join(self.workspace, 'flow_direction.tif')
+
+        resampled_runoff_uri = os.path.join(self.workspace, 'runoff_resamp.tif')
+        raster_utils.resample_dataset(storm_runoff, 200, resampled_runoff_uri)
+
+        routing_utils.flow_direction_inf(self.dem_small, flow_direction_uri)
+
+        flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
+            self.args['time_interval'], flood_water_discharge,
+            outflow_weights_uri, outflow_direction_uri)
+
 
