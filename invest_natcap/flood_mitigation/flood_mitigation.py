@@ -617,7 +617,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         outflow_weights_uri, outflow_direction_uri)
 
     # make a new numpy matrix of the same size and dimensions as the outflow
-    # matrices.
+    # matrices and fill it with 0's.
     discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
     raster_utils.new_raster_from_base_uri(flow_direction_uri, output_uri,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
@@ -638,9 +638,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     print outflow_weights_matrix
     print outflow_direction_matrix
 
-
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
-    discharge_nodata = raster_utils.get_nodata_from_uri(output_uri)
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
@@ -670,6 +668,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     }
     neighbors = list(neighbor_indices.iteritems())
 
+    # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
+    # numpy.nditer allows us to index into the matrix while always knowing the
+    # index that we are currently accessing.  This way we can easily access
+    # pixels immediately adjacent to this pixel by index (the index offsets for
+    # which are in the neighbors list, made from the neighbor_indices dict).
     iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
     for runoff in iterator:
         index = iterator.multi_index
@@ -707,6 +710,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
             discharge_sum = discharge_sum / time_interval
 
+        # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
 
     _write_matrix(output_uri, discharge_matrix)
