@@ -125,35 +125,55 @@ def execute(args):
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
-        avgs_dict = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
-
+        avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
+        aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
+        
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, avgs_dict, args['max_risk'])
+        make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
 
         if args['risk_eq'] == 'Euclidean':
-            make_risk_plots(tables_dir, avgs_dict, args['max_risk'], num_stress)
+            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress, len(h_risk_dict))
 
-def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
+def rewrite_avgs_dict(avgs_dict, aoi_names):
+    '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
+    centric instead. Should produce something like the following:
+    
+    {'AOIName':
+        [(HName, SName, E, C, Risk), ...],
+        ....
+    }
+    '''
+    pair_dict = {}
+
+    for aoi_name in aoi_names:
+        pair_dict[aoi_name] = []
+
+        for h_name, h_dict in avgs_dict.items():
+            for s_name, s_list in h_dict.items():
+                        
+                for aoi_dict in s_list:
+                    if aoi_dict['Name'] == aoi_name:
+                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']))
+
+    return pair_dict
+
+def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
     '''This function will produce risk plots when the risk equation is
     euclidean.
 
     Input:
         out_dir- The directory into which the completed risk plots should be
             placed.
-        avgs_dict- A multi level dictionary that holds the average values that
-                will be placed into the HTML table.
+        
+        aoi_pairs-
 
-                {'HabitatName':
-                    {'StressorName':
-                        [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
-                            {...},
-                        ...
-                        ]
-                    },
-                    ....
-                }
+            {'AOIName':
+                [(HName, SName, E, C, Risk), ...],
+                ....
+            }
+
         num_stress- A dictionary that simply associates every habaitat with the
             number of stressors associated with it. This will help us determine
             the max E/C we shoudl be expecting in our overarching ecosystem plot.
@@ -180,72 +200,96 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
             cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', linestyle=linestyle, 
                         radius=radius * max_value/ 3.5, fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
+
     
-    #Create plots for each combination of H,S
+    #Create plots for each combination of AOI, Hab
     plot_index = 0
-    for hab_name, stressor_dict in avgs_dict.iteritems():
-        
-        #Make a separate window for each habitat, have the stressors within it.
+
+    for aoi_name, aoi_list in aoi_pairs.iteritems():
+
         matplotlib.pyplot.figure(plot_index)
         plot_index += 1
-        matplotlib.pyplot.suptitle(hab_name)
-        
-        stress_index = 0
-        for stressor_name, aoi_list in stressor_dict.iteritems():
-            stress_index += 1
-            #Want to have two across, and make sure there are enough spaces
-            #going down for each of the subplots 
-            matplotlib.pyplot.subplot(int(math.ceil(len(stressor_dict)/2.0)), 2, stress_index)
-            plot_background_circle(max_risk)
-            for aoi_dict in aoi_list:
-                matplotlib.pyplot.plot(aoi_dict['E'], aoi_dict['C'], 'k^', 
+        matplotlib.pyplot.suptitle(aoi_name)
+
+        hab_index = 0
+        curr_hab_name = aoi_list[0][0]
+
+        #Elements look like: (HabName, StressName, E, C, Risk)
+        for element in aoi_list:
+            if element == aoi_list[0]:
+
+                max_risk = max_h_s_risk * num_stress[curr_hab_name]
+
+                #Want to have two across, and make sure there are enough spaces
+                #going down for each of the subplots 
+                matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+                plot_background_circle(max_risk)
+                matplotlib.pyplot.title(curr_hab_name)
+                matplotlib.pyplot.xlim([0.5, max_risk])
+                matplotlib.pyplot.ylim([0.5, max_risk])
+                matplotlib.pyplot.xlabel("Exposure")
+                matplotlib.pyplot.ylabel("Consequence")
+
+            hab_name = element[0]
+            if curr_hab_name == hab_name:
+
+                matplotlib.pyplot.plot(element[2], element[3], 'k^', 
                         markerfacecolor='black', markersize=8)
-                matplotlib.pyplot.annotate(aoi_dict['Name'], xy=(aoi_dict['E'], 
-                        aoi_dict['C']), xytext=(aoi_dict['E'], aoi_dict['C']+0.07))
+                matplotlib.pyplot.annotate(element[1], xy=(element[2], 
+                        element[3]), xytext=(element[2], element[3]+0.07))
+                continue    
             
-            matplotlib.pyplot.title(stressor_name)
+            #We get here once we get to the next habitat
+            hab_index += 1
+            matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+            plot_background_circle(max_risk)
+        
+            curr_hab_name = hab_name
+
+            max_risk = max_h_s_risk * num_stress[curr_hab_name]
+            
+            matplotlib.pyplot.title(curr_hab_name)
             matplotlib.pyplot.xlim([0.5, max_risk])
             matplotlib.pyplot.ylim([0.5, max_risk])
             matplotlib.pyplot.xlabel("Exposure")
             matplotlib.pyplot.ylabel("Consequence")
-            
 
-        out_uri = os.path.join(out_dir, 'risk_plot_' + 'H[' + hab_name+ '].png')
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
 
         matplotlib.pyplot.savefig(out_uri, format='png')
 
     #Create one ecosystem megaplot that plots the points as summed E,C from
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
-    max_tot_risk = max_risk * max(num_stress.values())
+    plot_index += 1
+    max_tot_risk = max_risk * max(num_stress.values()) * num_habs 
     matplotlib.pyplot.figure(plot_index)
     matplotlib.pyplot.suptitle("Ecosystem Risk")
     
     plot_background_circle(max_tot_risk)
     
-    for hab_name, stressor_dict in avgs_dict.items():
+    points_dict = {}
+    
+    for aoi_name, aoi_list in aoi_pairs.items():
 
-        points_dict = {}
-        #Remember, this is a list. You did that for a reason.
-        for aoi_list in stressor_dict.values():
-            for e_c_dict in aoi_list:
-           
-                aoi_name = e_c_dict['Name']
-                if aoi_name in points_dict:
-                    points_dict[aoi_name]['E'] += e_c_dict['E']
-                    points_dict[aoi_name]['C'] += e_c_dict['C']
-                else:
-                    points_dict[aoi_name] = {}
-                    points_dict[aoi_name]['E'] = e_c_dict['E']
-                    points_dict[aoi_name]['C'] = e_c_dict['C']
+        for element in aoi_list:
         
-        for aoi_name, p_dict in points_dict.items():
-            #Create the points which are H, AOI combos.    
-            matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
-                        markerfacecolor='black', markersize=8)
-            matplotlib.pyplot.annotate('(' + hab_name + ', ' + aoi_name + ')',
-                        xy=(p_dict['E'], p_dict['C']), 
-                        xytext=(p_dict['E'], p_dict['C']+0.07))
+            if aoi_name in points_dict:
+                points_dict[aoi_name]['E'] += element[2]
+                points_dict[aoi_name]['C'] += element[3]
+            else:
+                points_dict[aoi_name] = {}
+                points_dict[aoi_name]['E'] = 0
+                points_dict[aoi_name]['C'] = 0
+
+    LOGGER.debug("POINTS_DICT %s" % points_dict)    
+    for aoi_name, p_dict in points_dict.items():
+        #Create the points which are summed AOI's across all Habitats.    
+        matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
+                    markerfacecolor='black', markersize=8)
+        matplotlib.pyplot.annotate(aoi_name,
+                    xy=(p_dict['E'], p_dict['C']), 
+                    xytext=(p_dict['E'], p_dict['C']+0.07))
                         
     matplotlib.pyplot.xlim([0.5, max_tot_risk])
     matplotlib.pyplot.ylim([0.5, max_tot_risk])
@@ -255,26 +299,20 @@ def make_risk_plots(out_dir, avgs_dict, max_risk, num_stress):
     out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
     matplotlib.pyplot.savefig(out_uri, format='png')
 
-def make_aoi_tables(out_dir, avgs_dict, max_risk):
+def make_aoi_tables(out_dir, aoi_pairs, max_risk):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
     Input:
         out_dir- The directory into which the completed HTML tables should be
             placed.
-     
-        avgs_dict- A multi level dictionary that holds the average values that
-                will be placed into the HTML table.
+        aoi_pairs- Replacement for avgs_dict, holds all the averaged values on
+            a H, S basis.
 
-                {'HabitatName':
-                    {'StressorName':
-                        [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
-                            {...},
-                        ...
-                        ]
-                    },
-                    ....
-                }
+            {'AOIName':
+                [(HName, SName, E, C, Risk), ...],
+                ....
+            }
      Output:
         A set of HTML tables which will contain averaged values of E, C, and
         risk for each H, S pair within each AOI. Additionally, the tables will
@@ -302,44 +340,31 @@ def make_aoi_tables(out_dir, avgs_dict, max_risk):
     file.write("<br><br>")
     file.write("<HR>")
 
-    #Now, all of the actual calculations within the table. We want to make one
-    #table for each habitat that is present within this model run.
-    for habitat, stress_dict in avgs_dict.items():
 
-        file.write("<H2>" + habitat + "</H2>")
+    #Now, all of the actual calculations within the table. We want to make one
+    #table for each AOi used on the subregions shapefile.
+    for aoi_name, aoi_list in aoi_pairs.items():
+        
+        file.write("<H2>" + aoi_name + "</H2>")
         file.write('<table border="1", cellpadding="5">')
 
         #Headers row
-        file.write("<tr><b><td>Stressor Name</td><td>AOI Name</td><td>E</td>" + \
+        file.write("<tr><b><td>Habitat Name</td><td>Stressor Name</td><td>E</td>" + \
             "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
-        
-        for stressor, s_list in stress_dict.items():
 
-            #Want the stressor column to span the number of AOIs that are included
-            #within it. 
-            file.write("<tr><td rowspan = \"" + str(len(s_list)) + "\">" + stressor + "</td>")
+        #Element looks like (HabName, StressName, E, C, Risk)
+        for element in aoi_list:
+
+            file.write("<tr>")
+            file.write("<td>" + element[0]+ "</td>")
+            file.write("<td>" + element[1] + "</td>")
+            file.write("<td>" + str(round(element[2], 2)) + "</td>")
+            file.write("<td>" + str(round(element[3], 2)) + "</td>")
+            file.write("<td>" + str(round(element[4], 2)) + "</td>")
+            file.write("<td>" + str(round(element[4] * 100 / max_risk, 2)) + "</td>")
+            file.write("</tr>")
             
-            #Want to set the first AOI here so that it's in the first row, along
-            #with the "beginning" of the stressor cell. Recall that dict[h][s]
-            #is a list, so we can index directly.
-            file.write("<td>" + s_list[0]['Name'] + \
-                "</td><td>" +  str(round(s_list[0]['E'], 2)) + \
-                "</td><td>" + str(round(s_list[0]['C'], 2)) + \
-                "</td><td>" +  str(round(s_list[0]['Risk'], 2)) + \
-                "</td><td>" + str(round(s_list[0]['Risk'] * 100 / max_risk, 2)) + "</td></tr>")
-
-            #For all remaining AOIs on that H-S pairing.
-            for element in s_list[1::]:
-
-                file.write("<tr>")
-                file.write("<td>" + element['Name']+ "</td>")
-                file.write("<td>" + str(round(element['E'], 2)) + "</td>")
-                file.write("<td>" + str(round(element['C'], 2)) + "</td>")
-                file.write("<td>" + str(round(element['Risk'], 2)) + "</td>")
-                file.write("<td>" + str(round(element['Risk'] * 100 / max_risk, 2)) + "</td>")
-                file.write("</tr>")
-
-        #End of the habitat-specific table
+        #End of the AOI-specific table
         file.write("</table>")
 
     #End of the page.
@@ -382,6 +407,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
                 },
                 ....
             }
+       aoi_names- Quick and dirty way of getting the AOI keys.
     '''
     LOGGER.debug("RISK DICT: %s", risk_dict) 
     #Since we know that the AOI will be consistent across all of the rasters,
@@ -471,7 +497,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
 
-    return avgs_dict
+    return avgs_dict, name_map.values()
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each
