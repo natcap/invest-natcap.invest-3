@@ -634,6 +634,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     print outflow_weights_matrix
     print outflow_direction_matrix
 
+
+    runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
+    discharge_nodata = raster_utils.get_nodata_from_uri(output_uri)
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
@@ -671,29 +674,31 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         index = iterator.multi_index
         #print(discharge, runoff, iterator.multi_index)
 
-        discharge_sum = 0.0
+        if runoff_matrix[index] == runoff_nodata:
+            discharge_sum = discharge_nodata
+        else:
+            discharge_sum = 0.0
+            for neighbor_id, neighbor_location in neighbors:
+                neighbor_index = (index[0] + neighbor_location['row_offset'],
+                    index[1] + neighbor_location['col_offset'])
+                try:
+                    neighbor_value = outflow_direction_matrix[neighbor_index]
+                except IndexError:
+                    # happens when the neighbor does not exist.
+                    neighbor_value = None
+    #            print('neighbor value', neighbor_value)
 
-        for neighbor_id, neighbor_location in neighbors:
-            neighbor_index = (index[0] + neighbor_location['row_offset'],
-                index[1] + neighbor_location['col_offset'])
-            try:
-                neighbor_value = outflow_direction_matrix[neighbor_index]
-            except IndexError:
-                # happens when the neighbor does not exist.
-                neighbor_value = None
-#            print('neighbor value', neighbor_value)
-
-            possible_inflow_neighbors = inflow_neighbors[neighbor_value]
-            if neighbor_id in possible_inflow_neighbors:
-                # determine fractional flow
-                first_neighbor_weight = outflow_weights_matrix[neighbor_index]
-                if possible_inflow_neighbors.index(neighbor_id) == 0:
-                    fractional_flow = first_neighbor_weight
-                else:
-                    fractional_flow = 1.0 - first_neighbor_weight
-                discharge = runoff * fractional_flow * pixel_area
-#                print('discharge', discharge)
-                discharge_sum += discharge
+                possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+                if neighbor_id in possible_inflow_neighbors:
+                    # determine fractional flow
+                    first_neighbor_weight = outflow_weights_matrix[neighbor_index]
+                    if possible_inflow_neighbors.index(neighbor_id) == 0:
+                        fractional_flow = first_neighbor_weight
+                    else:
+                        fractional_flow = 1.0 - first_neighbor_weight
+                    discharge = runoff * fractional_flow * pixel_area
+    #                print('discharge', discharge)
+                    discharge_sum += discharge
 
 #        print('sum:%s' % discharge_sum)
         discharge_matrix[index] = discharge_sum
