@@ -577,6 +577,16 @@ def _extract_matrix(raster_uri):
     band = dataset.GetRasterBand(1)
     return band.ReadAsArray()
 
+def _write_matrix(raster_uri, matrix):
+    dataset = gdal.Open(raster_uri, gdal.GA_Update)
+    band = dataset.GetRasterBand(1)
+    band.WriteArray(matrix)
+    band.FlushCache()
+    dataset.FlushCache()
+    band = None
+    dataset = None
+    raster_utils.calculate_raster_stats_uri(raster_uri)
+
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     output_uri, outflow_weights_uri, outflow_direction_uri):
     """Calculate the flood water discharge in a single timestep.  This
@@ -596,6 +606,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
     # Determine the pixel area from the runoff raster
     pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
+    LOGGER.debug('Discharge pixel area: %s', pixel_area)
 
     # Get the flow graph
     routing_cython_core.calculate_flow_graph(flow_direction_uri,
@@ -608,10 +619,13 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)
-    runoff_matrix = _extract_matrix(runoff_uri)
+    discharge_matrix = _extract_matrix(output_uri)[100:103, 150:153]
+    runoff_matrix = _extract_matrix(runoff_uri)[100:103, 150:153]
     outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+
+    print discharge_matrix
+    print runoff_matrix
 
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
@@ -625,7 +639,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         5: [0, 1],
         6: [1, 2],
         7: [2, 3],
-        outflow_direction_nodata: []
+        outflow_direction_nodata: [],
+        None: []  # value is None when there is an indexing error.
     }
 
     # list of neighbor ids and their indices relative to the current pixel
@@ -640,20 +655,26 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         6: {'row_offset': 1, 'col_offset': 0},
         7: {'row_offset': 1, 'col_offset': 1}
     }
-    neighbors = neighbor_indices.iteritems()
+    neighbors = list(neighbor_indices.iteritems())
 
     radius = 1
-    iterator = numpy.nditer([discharge_matrix, runoff_matrix], flags=['multi_index'])
+    iterator = numpy.nditer([discharge_matrix, runoff_matrix],
+        flags=['multi_index'], op_flags=['readwrite'])
     for discharge, runoff in iterator:
         index = iterator.multi_index
-        print(discharge, runoff, iterator.multi_index)
+        #print(discharge, runoff, iterator.multi_index)
 
         discharge_sum = 0.0
 
         for neighbor_id, neighbor_location in neighbors:
             neighbor_index = (index[0] + neighbor_location['row_offset'],
                 index[1] + neighbor_location['col_offset'])
-            neighbor_value = outflow_direction_matrix[neighbor_index]
+            try:
+                neighbor_value = outflow_direction_matrix[neighbor_index]
+            except IndexError:
+                # happens when the neighbor does not exist.
+                neighbor_value = None
+            print('neighbor value', neighbor_value)
 
             possible_inflow_neighbors = inflow_neighbors[neighbor_value]
             if neighbor_id in possible_inflow_neighbors:
@@ -665,7 +686,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     fractional_flow = 1.0 - first_neighbor_weight
                 discharge_sum += runoff * fractional_flow * pixel_area
 
-        print discharge_sum
+        print('sum:%s' % discharge_sum)
+        discharge_matrix[index] = discharge_sum
 
-        return
-
+    #_write_matrix(output_uri, discharge_matrix)
+    print discharge_matrix
+    
