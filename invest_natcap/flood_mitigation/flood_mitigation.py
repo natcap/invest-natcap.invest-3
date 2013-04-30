@@ -640,6 +640,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     print outflow_direction_matrix
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
+    LOGGER.debug('Runoff nodata=%s', runoff_nodata)
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
@@ -667,6 +668,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         7: (1, 1)
     }
     neighbors = list(neighbor_indices.iteritems())
+
+    class NeighborHasNoRunoffData(Exception):
+        """An exception for skipping a neighbor when that neighbor's runoff
+        value is nodata."""
+        pass
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
@@ -701,6 +707,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
                     if neighbor_id in possible_inflow_neighbors:
+                        neighbor_runoff = runoff_matrix[neighbor_index]
+                        if neighbor_runoff == runoff_nodata:
+                            raise NeighborHasNoRunoffData
+
                         # determine fractional flow
                         first_neighbor_weight = outflow_weights_matrix[neighbor_index]
 
@@ -708,16 +718,19 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                             fractional_flow = 1.0 - first_neighbor_weight
                         else:
                             fractional_flow = first_neighbor_weight
-                        neighbor_runoff = runoff_matrix[neighbor_index]
+
                         discharge = neighbor_runoff * fractional_flow * pixel_area
                         discharge_sum += discharge
-                except (IndexError, KeyError):
+
+                except (IndexError, KeyError, NeighborHasNoRunoffData):
                     # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
                     # KeyError happens when the neighbor has a nodata value.
                     # When this happens, we assume there is no inflow from this
                     # neighbor.
+                    # NeighborHasNoRunoffData happens when the neighbor's runoff
+                    # value is nodata.
                     pass
 
             discharge_sum = discharge_sum / time_interval
