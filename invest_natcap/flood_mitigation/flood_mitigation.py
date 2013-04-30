@@ -621,11 +621,13 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # Get the numpy matrix of the new discharge raster.
     discharge_matrix = _extract_matrix(output_uri)[100:103, 150:153]
     runoff_matrix = _extract_matrix(runoff_uri)[100:103, 150:153]
-    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
-    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:103, 150:153]
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:103, 150:153]
 
     print discharge_matrix
     print runoff_matrix
+    print outflow_weights_matrix
+    print outflow_direction_matrix
 
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
@@ -684,7 +686,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     fractional_flow = first_neighbor_weight
                 else:
                     fractional_flow = 1.0 - first_neighbor_weight
-                discharge_sum += runoff * fractional_flow * pixel_area
+                discharge = runoff * fractional_flow * pixel_area
+                print('discharge', discharge)
+                discharge_sum += discharge
 
         print('sum:%s' % discharge_sum)
         discharge_matrix[index] = discharge_sum
