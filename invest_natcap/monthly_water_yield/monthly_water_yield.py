@@ -57,6 +57,12 @@ def execute(args):
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
 
+    # Create initial S_t-1 for now
+    init_soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
+    _ = raster_utils.new_raster_from_base_uri(
+            dem_uri, init_soil_storage__uri, 'GTIFF', float_nodata,
+            gdal.GDT_Float32, fill_value=0.0)
+
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     raster_utils.calculate_slope(dem_uri, slope_uri)
@@ -126,7 +132,11 @@ def execute(args):
                     projected_point_uri, field, output_uri)
 
 
-    # Calculate Evapotranspiration
+        # Calculate Evapotranspiration
+        def evapotranspiration_op(precip, pet, alpha, init_soil, smax):
+            alpha_coef = 1.0 - alpha
+            precip_calc = precip * alpha_coef
+            soil_calc = init_soil * alpha_coef
 
     # Calculate Direct Flow (Runoff)
 

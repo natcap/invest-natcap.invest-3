@@ -543,7 +543,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
         #Will need to be specified what percentage the cutoff for 'HIGH RISK'
         #areas are.
-        if percent > 50.0:
+        if percent > 66.6:
             return 1
         else:
             return 0.
@@ -554,7 +554,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
         #Will need to be specified what percentage the cutoff for 'HIGH RISK'
         #areas are.
-        if 0 < percent <= 50.0:
+        if 0 < percent <= 66.6:
             return 1
         else:
             return 0.
