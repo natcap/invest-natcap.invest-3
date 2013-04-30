@@ -678,6 +678,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         if runoff_matrix[index] == runoff_nodata:
             discharge_sum = discharge_nodata
+# TODO: What does a value of nodata in outflow_direction raster mean?
+#        elif outflow_direction_matrix[index] == outflow_direction_nodata:
+#            discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0
             for neighbor_id, neighbor_location in neighbors:
