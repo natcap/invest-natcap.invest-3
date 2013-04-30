@@ -604,6 +604,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         Returns nothing."""
 
+    time_interval = float(time_interval)  # must be a float.
+
     # Determine the pixel area from the runoff raster
     pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
     LOGGER.debug('Discharge pixel area: %s', pixel_area)
@@ -700,9 +702,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     #                print('discharge', discharge)
                     discharge_sum += discharge
 
+            discharge_sum = discharge_sum / time_interval
+
 #        print('sum:%s' % discharge_sum)
         discharge_matrix[index] = discharge_sum
 
     _write_matrix(output_uri, discharge_matrix)
     print discharge_matrix
-    
