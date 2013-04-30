@@ -669,7 +669,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     }
     neighbors = list(neighbor_indices.iteritems())
 
-    radius = 1
     iterator = numpy.nditer([discharge_matrix, runoff_matrix],
         flags=['multi_index'], op_flags=['readwrite'])
     for discharge, runoff in iterator:
