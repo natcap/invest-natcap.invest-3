@@ -159,7 +159,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
 
     return pair_dict
 
-def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
+def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
     '''This function will produce risk plots when the risk equation is
     euclidean.
 
@@ -217,7 +217,9 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
         #Elements look like: (HabName, StressName, E, C, Risk)
         for element in aoi_list:
             if element == aoi_list[0]:
-            
+
+                max_risk = max_h_s_risk * num_stress[curr_hab_name]
+
                 #Want to have two across, and make sure there are enough spaces
                 #going down for each of the subplots 
                 matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
@@ -243,6 +245,9 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
             plot_background_circle(max_risk)
         
             curr_hab_name = hab_name
+
+            max_risk = max_h_s_risk * num_stress[curr_hab_name]
+            
             matplotlib.pyplot.title(curr_hab_name)
             matplotlib.pyplot.xlim([0.5, max_risk])
             matplotlib.pyplot.ylim([0.5, max_risk])
