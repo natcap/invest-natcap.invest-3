@@ -624,20 +624,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-#    discharge_matrix = _extract_matrix(output_uri)[100:104, 150:154]
-#    runoff_matrix = _extract_matrix(runoff_uri)[100:104, 150:154]
-#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:104, 150:154]
-#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:104, 150:154]
-
     discharge_matrix = _extract_matrix(output_uri)
     runoff_matrix = _extract_matrix(runoff_uri)
     outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
-
-    print discharge_matrix
-    print runoff_matrix
-    print outflow_weights_matrix
-    print outflow_direction_matrix
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
     LOGGER.debug('Runoff nodata=%s', runoff_nodata)
@@ -685,9 +675,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         if runoff == runoff_nodata:
             discharge_sum = discharge_nodata
-# TODO: What does a value of nodata in outflow_direction raster mean?
-#        elif outflow_direction_matrix[index] == outflow_direction_nodata:
-#            discharge_sum = discharge_nodata
+        elif outflow_direction_matrix[index] == outflow_direction_nodata:
+            discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0  # re-initialize the discharge sum
             for neighbor_id, index_offset in neighbors:
@@ -739,4 +728,3 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         discharge_matrix[index] = discharge_sum
 
     _write_matrix(output_uri, discharge_matrix)
-    print discharge_matrix
