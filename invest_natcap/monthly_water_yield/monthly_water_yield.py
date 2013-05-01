@@ -170,14 +170,13 @@ def calculate_alphas(
             [alpha_one_out_uri, alpha_two_out_uri, alpha_three_out_uri]
 
         returns - nothing"""
-
+    LOGGER.debug('Calculating Alpha Rasters')
     alpha_one = alpha_table['alpha_one'] 
     alpha_two = alpha_table['alpha_two'] 
     alpha_three = alpha_table['alpha_three'] 
 
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
-    LOGGER.debug('SMAX NODATA: %s', smax_nodata)
     slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
     smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
 
