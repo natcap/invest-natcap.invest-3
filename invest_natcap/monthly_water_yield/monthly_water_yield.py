@@ -148,7 +148,7 @@ def execute(args):
 
 def calculate_direct_flow(
         imperv_area_uri, dem_uri, precip_uri, alpha_one_uri,  dt_out_uri,
-        tp_out_uri):
+        tp_out_uri, out_nodata):
     """This function calculates the direct flow over the catchment
     
         imperv_area_uri - a URI to a gdal dataset for the impervious area in
@@ -165,11 +165,28 @@ def calculate_direct_flow(
         
         tp_out_uri - a URI path for the total precip output as a gdal dataset
 
+        out_nodata - a float for the output nodata value
+
         returns - Nothing
     """
 
-    
+    def direct_flow(imperv_pix, tot_p_pix, alpha_pix):
+        """Vectorize function for computing direct flow
+        
+            imperv_pix - a float value for the impervious area in fraction
+            tot_p_pix - a float value for the precipitation
+            alpha_pix - a float value for the alpha variable
 
+            returns - direct flow"""
+        return (imperv_pix * tot_p_pix) + (
+                (1 - imperv_pix) * alpha_pix * tot_p_pix)
+
+    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_area_uri, precip_uri, alpha_one_uri], direct_flow,
+            dt_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
 
 
 def calculate_alphas(
