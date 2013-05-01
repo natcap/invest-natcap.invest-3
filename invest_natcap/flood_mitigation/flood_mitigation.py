@@ -670,6 +670,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # pixels immediately adjacent to this pixel by index (the index offsets for
     # which are in the neighbors list, made from the neighbor_indices dict).
     iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
+    LOGGER.info('Checking neighbors for flow contributions to storm runoff')
     for runoff in iterator:
         index = iterator.multi_index
 
@@ -696,11 +697,14 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
                     if neighbor_id in possible_inflow_neighbors:
+                        # Only get the neighbor's runoff value if we know that
+                        # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
                             raise NeighborHasNoRunoffData
 
-                        # determine fractional flow
+                        # determine fractional flow from this neighbor into this
+                        # pixel.
                         first_neighbor_weight = outflow_weights_matrix[neighbor_index]
 
                         if possible_inflow_neighbors[0] == neighbor_id:
@@ -726,5 +730,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
+    LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
