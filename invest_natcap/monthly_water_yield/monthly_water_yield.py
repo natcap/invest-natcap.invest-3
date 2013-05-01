@@ -60,7 +60,7 @@ def execute(args):
     # Create initial S_t-1 for now
     init_soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
     _ = raster_utils.new_raster_from_base_uri(
-            dem_uri, init_soil_storage__uri, 'GTIFF', float_nodata,
+            dem_uri, init_soil_storage_uri, 'GTIFF', float_nodata,
             gdal.GDT_Float32, fill_value=0.0)
 
     # Calculate the slope raster from the DEM
@@ -69,18 +69,18 @@ def execute(args):
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     LOGGER.debug('Slope nodata : %s', slope_nodata)
 
-    # Calculate alpha one from equation 10 in users doc
-    def alpha_one_op(slope_pix):
-        if slope_pix == -1.0:
-            return float_nodata
-        else:
-            return 0.068 + (0.0059 * slope_pix) - (0.002 * sandy_sa)
-
+    # Calculate the alpha rasters
     alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
+    alpha_two_uri = os.path.join(intermediate_dir, 'alpha_two.tif')
+    alpha_three_uri = os.path.join(intermediate_dir, 'alpha_three.tif')
+    alpha_uri_list = [alpha_one_uri, alpha_two_uri, alpha_three_uri]
     
-    raster_utils.vectorize_datasets(
-            [slope_uri], alpha_one_op, alpha_one_uri, gdal.GDT_Float32,
-            float_nodata, dem_cell_size, 'intersection')
+    alpha_table = {'alpha_one':{'a_one':0.07, 'b_one':0.01, 'c_one':0.002},
+                   'alpha_two':{'a_two':0.2, 'b_two':2.2},
+                   'alpha_three':{'a_three':1.44, 'b_three':0.68}}
+
+    calculate_alphas(
+        slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata, alpha_uri_list)
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
@@ -131,13 +131,6 @@ def execute(args):
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, output_uri)
 
-
-        # Calculate Evapotranspiration
-        def evapotranspiration_op(precip, pet, alpha, init_soil, smax):
-            alpha_coef = 1.0 - alpha
-            precip_calc = precip * alpha_coef
-            soil_calc = init_soil * alpha_coef
-
     # Calculate Direct Flow (Runoff)
 
     # Calculate Interflow
@@ -152,6 +145,97 @@ def execute(args):
     # Add values to output table
 
     # Move on to next month
+
+def calculate_alphas(
+        slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
+    """Calculates and creates gdal datasets for three alpha values used in
+        various equations throughout the monthly water yield model
+
+        slope_uri - a uri to a gdal dataset for the slope
+        
+        sandy_sa - could be a uri to a dataset, but right now just passing in a
+            constant value. Need to learn more from Yonas
+        
+        smax_uri - a uri to a gdal dataset for the maximum soil water content
+        
+        alpha_table - a dictionary for the constant coefficients used in
+            calculating the alpha variables
+            alpha_table = {'alpha_one':{'a_one':5, 'b_one':2, 'c_one':1},
+                           'alpha_two':{'a_two':2, 'b_two':5},
+                           'alpha_three':{'a_three':6, 'b_three':2}}
+
+        out_nodata - a floating point value for the output nodata
+
+        output_uri_list - a python list of output uri's as follows:
+            [alpha_one_out_uri, alpha_two_out_uri, alpha_three_out_uri]
+
+        returns - nothing"""
+
+    alpha_one = alpha_table['alpha_one'] 
+    alpha_two = alpha_table['alpha_two'] 
+    alpha_three = alpha_table['alpha_three'] 
+
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
+    LOGGER.debug('SMAX NODATA: %s', smax_nodata)
+    slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
+    smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
+
+    def alpha_one_op(slope_pix):
+        """Vectorization operation to calculate the alpha one variable used in
+            equations throughout the monthly water yield model
+
+            slope_pix - the slope value for a pixel
+
+            returns - out_nodata if slope_pix is a nodata value, else returns
+                the alpha one value"""
+        if slope_pix == slope_nodata:
+            return out_nodata
+        else:
+            return (alpha_one['a_one'] + (alpha_one['b_one'] * slope_pix) -
+                        (alpha_one['c_one'] * sandy_sa))
+
+    def alpha_two_op(smax_pix):
+        """Vectorization operation to calculate the alpha two variable used in
+            equations throughout the monthly water yield model
+
+            smax_pix - the soil water content maximum value for a pixel
+
+            returns - out_nodata if smax_pix is a nodata value, else returns
+                the alpha two value"""
+        if smax_pix == smax_nodata:
+            return out_nodata
+        else:
+            return (
+                    alpha_two['a_two'] * 
+                    math.pow(smax_pix, -1 * alpha_two['b_two']))
+    
+    def alpha_three_op(smax_pix):
+        """Vectorization operation to calculate the alpha three variable used in
+            equations throughout the monthly water yield model
+
+            smax_pix - the soil water content maximum value for a pixel
+
+            returns - out_nodata if smax_pix is a nodata value, else returns
+                the alpha three value"""
+        if smax_pix == smax_nodata:
+            return out_nodata
+        else:
+            return (
+                    alpha_three['a_three'] * 
+                    math.pow(smax_pix, -1 * alpha_three['b_three']))
+
+    raster_utils.vectorize_datasets(
+            [slope_uri], alpha_one_op, output_uri_list[0], gdal.GDT_Float32,
+            out_nodata, slope_cell_size, 'intersection')
+
+    raster_utils.vectorize_datasets(
+            [smax_uri], alpha_two_op, output_uri_list[1], gdal.GDT_Float32,
+            out_nodata, smax_cell_size, 'intersection')
+    
+    raster_utils.vectorize_datasets(
+            [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
+            out_nodata, smax_cell_size, 'intersection')
 
 def construct_time_step_data(data_uri):
     """Parse the CSV data file and construct a dictionary using the time step

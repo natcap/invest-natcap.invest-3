@@ -88,16 +88,14 @@ def add_id_feature_set_uri(fs_uri, id_name):
         layer.SetFeature(feature)
     shapefile = None
 
-def set_field_by_dictionary_feature_set_uri(fs_uri, id_field_name, value_field_name, rules):
+def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
     shapefile = ogr.Open(fs_uri, 1)
     layer = shapefile.GetLayer()
 
     for feature_id in xrange(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
-        key = feature.GetFieldAsInteger(id_field_name)
-        if key in rules:
-            feature.SetField(value_field_name, float(rules[key]))
-            layer.SetFeature(feature)
+        feature.SetField(value_field_name, op(feature))
+        layer.SetFeature(feature)
     shapefile = None    
     
 def execute(args):
@@ -271,22 +269,11 @@ def execute(args):
                                                       "sum",
                                                       ignore_nodata = True)
 
-    for key in values:
-        values[key] = values[key] * aq_args["cell_size"]
-
+    def calculate_percent(feature):
+        if feature.GetFieldAsInteger(id_name) in values:
+            return (values[feature.GetFieldAsInteger(id_name)] * aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
+        else:
+            return 0
+        
     LOGGER.debug("Set area field values.")
-    set_field_by_dictionary_feature_set_uri(overlap_uri, id_name, area_name, values)
-
-##    fs_uri=overlap_uri
-##    id_field_name= id_name
-##    value_field_name = area_name
-##    rules = values
-##    
-##    shapefile = ogr.Open(fs_uri, 1)
-##    layer = shapefile.GetLayer()
-##
-##    for feature_id in xrange(layer.GetFeatureCount()):
-##        feature = layer.GetFeature(feature_id)
-##        feature.SetField(value_field_name, rules[feature.GetFieldAsInteger(id_field_name)])
-##        layer.SetFeature(feature)
-##    shapefile = None    
+    set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
