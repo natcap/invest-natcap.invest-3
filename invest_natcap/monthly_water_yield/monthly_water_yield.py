@@ -150,6 +150,41 @@ def execute(args):
     # Move on to next month
 
 def calculate_intermediate_interflow(
+        alpha_three_uri, soil_storage_uri, beta, baseflow_out_uri,  out_nodata):
+    """This function calculates the baseflow
+
+        alpha_three_uri - a URI to a gdal dataset of alpha_three values
+
+        soil_storage_uri - a URI to a gdal datasaet for the soil water content
+            from the previous time step
+
+        beta - a constant number
+
+        baseflow_out_uri - a URI path for the baseflow output to be written
+            to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+        def baseflow_op(alpha_pix, soil_pix):
+            """A vectorize operation for calculating the baseflow value
+
+                alpha_pix - a float value for the alpha coefficients
+                soil_pix - a float value for the soil water content
+
+                returns - the baseflow value
+            """
+            return alpha_pix * soil_pix**beta
+
+    cellsize = raster_utils.get_cell_size_from_uri(alpha_three_uri)
+
+    raster_utils.vectorize_datasets(
+            [alpha_three_uri, soil_storage_uri], baseflow_op,
+            baseflow_out_uri, gdal.GDT_Float32, out_nodata,
+            cell_size, 'intersection')
+
+def calculate_intermediate_interflow(
         alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
         interflow_out_uri,  out_nodata):
     """This function calculates the intermediate interflow
