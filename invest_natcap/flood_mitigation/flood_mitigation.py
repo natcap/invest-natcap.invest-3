@@ -6,10 +6,12 @@ import os
 import shutil
 
 from osgeo import gdal
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
+import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -266,6 +268,7 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
 
     # Calculate the minimum cell size
     min_cell_size = _get_cell_size_from_datasets(raster_list)
+    LOGGER.debug('Minimum pixel size: %s', min_cell_size)
 
     # Cast to a float, just in case the user passed in an int.
     time_interval = float(time_interval)
@@ -295,9 +298,11 @@ def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
         return (((flow_length ** 0.6) * (roughness ** 0.6)) /
             ((stormflow_intensity ** 0.4) * (slope **0.3)))
 
+    LOGGER.info('Calculating overland travel time raster')
     raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
         output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
         'intersection')
+    LOGGER.info('Finished calculating overland travel time.')
 
 
 def _get_cell_size_from_datasets(uri_list):
@@ -565,3 +570,173 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
 
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
     LOGGER.info('Finished making the precipitation raster')
+
+def _extract_matrix(raster_uri):
+    """Extract the Numpy matrix from a GDAL dataset."""
+    dataset = gdal.Open(raster_uri)
+    band = dataset.GetRasterBand(1)
+    return band.ReadAsArray()
+
+def _write_matrix(raster_uri, matrix):
+    dataset = gdal.Open(raster_uri, gdal.GA_Update)
+    band = dataset.GetRasterBand(1)
+    band.WriteArray(matrix)
+    band.FlushCache()
+    dataset.FlushCache()
+    band = None
+    dataset = None
+    raster_utils.calculate_raster_stats_uri(raster_uri)
+
+def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
+    output_uri, outflow_weights_uri, outflow_direction_uri):
+    """Calculate the flood water discharge in a single timestep.  This
+    corresponds to equation 11 in the user's guide.
+
+        runoff_uri - a URI to a GDAL dataset on disk.  This is a raster of the
+            stormwater runoff from the landscape as modeled by the SCS model.
+        flow_direction_uri - a URI to a GDAL dataset of the flow direction on
+            the landscape, calculated from the user's DEM.
+        time_interval - a number indicating the length of this timestep (in
+            seconds).
+        output_uri - a URI to the file location where the output raster should
+            be saved.  If a file exists at this location, it will be
+            overwritten.
+        outflow_weights_uri - a URI to the target outflow weights raster.
+        outflow_direction_uri - a URI to the target outflow direction raster.
+
+        Returns nothing."""
+
+    time_interval = float(time_interval)  # must be a float.
+    LOGGER.debug('Using time interval %s', time_interval)
+
+    # Determine the pixel area from the runoff raster
+    pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
+    LOGGER.debug('Discharge pixel area: %s', pixel_area)
+
+    # Get the flow graph
+    routing_cython_core.calculate_flow_graph(flow_direction_uri,
+        outflow_weights_uri, outflow_direction_uri)
+
+    # make a new numpy matrix of the same size and dimensions as the outflow
+    # matrices and fill it with 0's.
+    discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+    raster_utils.new_raster_from_base_uri(flow_direction_uri, output_uri,
+        'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
+
+    # Get the numpy matrix of the new discharge raster.
+#    discharge_matrix = _extract_matrix(output_uri)[100:104, 150:154]
+#    runoff_matrix = _extract_matrix(runoff_uri)[100:104, 150:154]
+#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:104, 150:154]
+#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:104, 150:154]
+
+    discharge_matrix = _extract_matrix(output_uri)
+    runoff_matrix = _extract_matrix(runoff_uri)
+    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+
+    print discharge_matrix
+    print runoff_matrix
+    print outflow_weights_matrix
+    print outflow_direction_matrix
+
+    runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
+    LOGGER.debug('Runoff nodata=%s', runoff_nodata)
+    # A mapping of which indices might flow into this pixel. If the neighbor
+    # pixel's value is 
+    outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
+    inflow_neighbors = {
+        0: [3, 4],
+        1: [4, 5],
+        2: [5, 6],
+        3: [6, 7],
+        4: [7, 0],
+        5: [0, 1],
+        6: [1, 2],
+        7: [2, 3],
+    }
+
+    # list of neighbor ids and their indices relative to the current pixel
+    # index offsets are row, column.
+    neighbor_indices = {
+        0: (0, 1),
+        1: (-1, 1),
+        2: (-1, 0),
+        3: (-1, -1),
+        4: (0, -1),
+        5: (1, -1),
+        6: (1, 0),
+        7: (1, 1)
+    }
+    neighbors = list(neighbor_indices.iteritems())
+
+    class NeighborHasNoRunoffData(Exception):
+        """An exception for skipping a neighbor when that neighbor's runoff
+        value is nodata."""
+        pass
+
+    # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
+    # numpy.nditer allows us to index into the matrix while always knowing the
+    # index that we are currently accessing.  This way we can easily access
+    # pixels immediately adjacent to this pixel by index (the index offsets for
+    # which are in the neighbors list, made from the neighbor_indices dict).
+    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
+    for runoff in iterator:
+        index = iterator.multi_index
+
+        if runoff == runoff_nodata:
+            discharge_sum = discharge_nodata
+# TODO: What does a value of nodata in outflow_direction raster mean?
+#        elif outflow_direction_matrix[index] == outflow_direction_nodata:
+#            discharge_sum = discharge_nodata
+        else:
+            discharge_sum = 0.0  # re-initialize the discharge sum
+            for neighbor_id, index_offset in neighbors:
+                # Add the index offsets to the current index to get the
+                # neighbor's index.
+                neighbor_index = tuple(map(sum, zip(index, index_offset)))
+                try:
+                    if neighbor_index[0] < 0 or neighbor_index[1] < 0:
+                        # The neighbor index is beyond the bounds of the matrix
+                        # We need a special case check here because a negative
+                        # index will actually return a correct pixel value, just
+                        # from the other side of the matrix, which we don't
+                        # want.
+                        raise IndexError
+
+                    neighbor_value = outflow_direction_matrix[neighbor_index]
+                    possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+
+                    if neighbor_id in possible_inflow_neighbors:
+                        neighbor_runoff = runoff_matrix[neighbor_index]
+                        if neighbor_runoff == runoff_nodata:
+                            raise NeighborHasNoRunoffData
+
+                        # determine fractional flow
+                        first_neighbor_weight = outflow_weights_matrix[neighbor_index]
+
+                        if possible_inflow_neighbors[0] == neighbor_id:
+                            fractional_flow = 1.0 - first_neighbor_weight
+                        else:
+                            fractional_flow = first_neighbor_weight
+
+                        discharge = neighbor_runoff * fractional_flow * pixel_area
+                        discharge_sum += discharge
+
+                except (IndexError, KeyError, NeighborHasNoRunoffData):
+                    # IndexError happens when the neighbor does not exist.
+                    # In this case, we assume there is no inflow from this
+                    # neighbor.
+                    # KeyError happens when the neighbor has a nodata value.
+                    # When this happens, we assume there is no inflow from this
+                    # neighbor.
+                    # NeighborHasNoRunoffData happens when the neighbor's runoff
+                    # value is nodata.
+                    pass
+
+            discharge_sum = discharge_sum / time_interval
+
+        # Set the discharge matrix value to the calculated discharge value.
+        discharge_matrix[index] = discharge_sum
+
+    _write_matrix(output_uri, discharge_matrix)
+    print discharge_matrix

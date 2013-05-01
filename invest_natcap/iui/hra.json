@@ -3,7 +3,7 @@
     "label": "Habitat Risk Assessment",
     "targetScript" : "invest_natcap.habitat_risk_assessment.hra",
     "modelName" : "habitat_risk_assessment",
-    "localDocURI": "./documentation/habitat_risk.html",
+    "localDocURI": "../documentation/habitat_risk_assessment.html",
     "height": 550,
     "width" : 700,
     "elements": [
@@ -75,6 +75,7 @@
                     "defaultValue": "3",
                     "required": true,
                     "validateAs": {"type": "number"},
+                    "validText": "[1-9][0-9]*",
                     "dataType": "int",
                     "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the Rating column of the habitat, species, and stressor CSVs."
                 },
