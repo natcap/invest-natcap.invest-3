@@ -146,6 +146,32 @@ def execute(args):
 
     # Move on to next month
 
+def calculate_direct_flow(
+        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri,  dt_out_uri,
+        tp_out_uri):
+    """This function calculates the direct flow over the catchment
+    
+        imperv_area_uri - a URI to a gdal dataset for the impervious area in
+            fraction
+
+        dem_uri - a URI to a gdal dataset of an elevation map
+        
+        precip_uri - a URI to a gdal dataset of the precipitation over the
+            landscape
+        
+        alpha_one_uri - a URI to a gdal dataset of alpha_one values
+        
+        dt_out_uri - a URI path for the direct flow output as a gdal dataset
+        
+        tp_out_uri - a URI path for the total precip output as a gdal dataset
+
+        returns - Nothing
+    """
+
+    
+
+
+
 def calculate_alphas(
         slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
     """Calculates and creates gdal datasets for three alpha values used in
