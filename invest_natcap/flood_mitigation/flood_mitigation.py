@@ -138,7 +138,9 @@ def execute(args):
         'flow_length': _intermediate_uri('flow_length.tif'),
         'cn_slope': _intermediate_uri('cn_slope.tif'),
         'swrc': _intermediate_uri('swrc.tif'),
-        'prev_discharge': _intermediate_uri('init_discharge.tif')
+        'prev_discharge': _intermediate_uri('init_discharge.tif'),
+        'outflow_weights': _intermediate_uri('outflow_weights.tif'),
+        'outflow_direction': _intermediate_uri('outflow_direction.tif')
     }
 
     # Create folders in the workspace if they don't already exist
@@ -218,6 +220,17 @@ def execute(args):
             'overland_travel_time.tif')
         overland_travel_time(args['time_interval'], runoff_uri, paths['slope'],
             paths['flow_length'], paths['mannings'], overland_travel_time_uri)
+
+        ##################
+        # Channel Routing.
+        discharge_uri = os.path.join(timestep_dir, 'flood_water_discharge.tif')
+        flood_water_discharge(runoff_uri, paths['flow_direction'],
+            args['time_interval'], discharge_uri, paths['outflow_weights'],
+            paths['outflow_direction'], paths['prev_discharge'])
+
+        # Set the previous discharge path to the discharge_uri so we can use it
+        # later on.
+        paths['prev_discharge'] = discharge_uri
 
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
@@ -616,6 +629,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             was no previous step.
 
         Returns nothing."""
+
+    LOGGER.info('Starting to calculate flood water discharge')
+    LOGGER.debug('Discharge uri=%s', output_uri)
+    LOGGER.debug('Previous discharge uri=%s', prev_discharge_uri)
 
     time_interval = float(time_interval)  # must be a float.
     LOGGER.debug('Using time interval %s', time_interval)
