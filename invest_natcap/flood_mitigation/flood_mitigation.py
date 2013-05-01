@@ -137,7 +137,8 @@ def execute(args):
         'flow_direction' : _intermediate_uri('flow_direction.tif'),
         'flow_length': _intermediate_uri('flow_length.tif'),
         'cn_slope': _intermediate_uri('cn_slope.tif'),
-        'swrc': _intermediate_uri('swrc.tif')
+        'swrc': _intermediate_uri('swrc.tif'),
+        'prev_discharge': _intermediate_uri('init_discharge.tif')
     }
 
     # Create folders in the workspace if they don't already exist
@@ -188,6 +189,13 @@ def execute(args):
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
     raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
         paths['precip_points'])
+
+    # We need a previous flood water discharge raster to be created before we
+    # actually start iterating through the timesteps.
+    discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+    raster_utils.new_raster_from_base_uri(flow_direction_uri,
+        paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
+        fill_value=0.0)
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
