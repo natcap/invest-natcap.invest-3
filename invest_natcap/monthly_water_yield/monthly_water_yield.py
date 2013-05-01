@@ -149,7 +149,7 @@ def execute(args):
 
     # Move on to next month
 
-def calculate_intermediate_interflow(
+def calculate_baseflow(
         alpha_three_uri, soil_storage_uri, beta, baseflow_out_uri,  out_nodata):
     """This function calculates the baseflow
 
