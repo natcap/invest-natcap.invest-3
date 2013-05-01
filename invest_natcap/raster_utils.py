@@ -1901,9 +1901,12 @@ def reclassify_dataset(
     #Doing two loops here for performance purposes, this saves us from
     for row_index in xrange(in_band.YSize):
         row_array = in_band.ReadAsArray(0, row_index, in_band.XSize, 1)
-        #Remaps pesky nodata values to something to the last index in 
-        #map_array
-        row_array[row_array == in_nodata] = map_array_size - 1
+        
+        #It's possible for in_nodata to be None if the original raster
+        #is none, we need to skip the index trick in that case.
+        if in_nodata != None:
+            #Remaps pesky nodata values the last index in map_array
+            row_array[row_array == in_nodata] = map_array_size - 1
 
         if exception_flag == 'values_required':
             unique_set = set(row_array[0])
