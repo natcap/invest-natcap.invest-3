@@ -148,6 +148,40 @@ def execute(args):
     # Add values to output table
 
     # Move on to next month
+def calculate_water_amt(
+        imperv_area_uri, total_precip_uri, alpha_one_uri water_out_uri,
+        out_nodata):
+    """Calculates the water available on a pixel
+
+        imperv_area_uri - a URI to a gdal dataset for the impervious area in
+            fraction
+        total_precip_uri - a URI to a gdal dataset for the total precipiation
+
+        alpha_one_uri - a URI to a gdal dataset of alpha_one values
+
+        water_out_uri - a URI path for the water output to be written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing
+    """
+
+    def water_op(imperv_pix, alpha_pix, precip_pix):
+        """Vectorize function for computing water value
+        
+            imperv_pix - a float value for the impervious area in fraction
+            tot_p_pix - a float value for the precipitation
+            alpha_pix - a float value for the alpha variable
+
+            returns - value for water"""
+        return (1 - imperv_pix) * (1 - alpha_pix) * precip_pix
+
+    cell_size = raster_utils.get_cell_size_from_uri(alpha_one_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_area_uri, alpha_one_uri, total_precip_uri], water_op,
+            water_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
 
 def calculate_evaporation(
         soil_storage_uri, pawc_uri, w_uri, evap_out_uri, etc_out_uri,
@@ -175,7 +209,18 @@ def calculate_evaporation(
     # Possible calculate ETc unless this is somehow being input
 
     # Calculate E
-    def actual_evap(w_pix, soil_pix, etc_pix, pawc_pix):
+    def actual_evap(water_pix, soil_pix, etc_pix, pawc_pix):
+        """Vectorize Operation for computing actual evaporation
+
+            water_pix - a float for the water value
+            soil_pix - a float for the soil water content value of the previous
+                time step
+            etc_pix - a float for the plant potential evapotranspiration rate
+                value
+            pawc_pix - a float value for the plant available water content
+
+            returns - the actual evaporation value
+        """
         if w_pix < etc_pix:
             return w_pix + soil_pix * math.fabs(
                     math.expm1(-1 * ((etc_pix - w_pix) / pawc_pix)))
