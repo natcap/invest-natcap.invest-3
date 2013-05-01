@@ -149,6 +149,69 @@ def execute(args):
 
     # Move on to next month
 
+def calculate_final_interflow(
+        dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
+        water_uri, intermediate_interflow_uri, interflow_out_uri, out_nodata):
+    """This function calculates the final interflow
+
+        dflow_uri - a URI to a gdal dataset of the direct flow
+
+        soil_storage_uri - a URI to a gdal datasaet for the soil water content
+            from the previous time step
+
+        evap_uri - a URI to a gdal dataset for the actual evaporation 
+
+        baseflow_uri - a URI to a gdal dataset for the baseflow
+
+        smax_uri - a URI to a gdal dataset for the soil water content max
+
+        water_uri - a URI to a gdal dataset for the water avaiable on a pixel
+
+        intermediate_interflow_uri - a URI to a gdal dataset for the
+            intermediate interflow
+
+        interflow_out_uri - a URI path for the interflow output to be written
+            to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+        def interflow_op(
+                soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
+                water_pix, inter_pix):
+            """A vectorize operation for calculating the baseflow value
+
+                alpha_pix - a float value for the alpha coefficients
+                soil_pix - a float value for the soil water content
+                dflow_pix - a float value for the direct flow
+                evap_pix - a float value for the actual evaporation
+                bflow_pix - a float value for the baseflow
+                smax_pix - a float value for the soil water content max
+                water_pix - a float value for the water available
+                inter_pix - a float value for the intermediate interflow
+
+                returns - the interflow value
+            """
+            conditional = (
+                    soil_pix + water_pix - (
+                        evap_pix - dflow_pix - inter_pix - bflow_pix))
+
+            if conditional <= smax_pix:
+                return inter_pix
+            else:
+                return (
+                        soil_pix + water_pix - (
+                            evap_pix - dflow_pix - bflow_pix - smax_pix))
+
+    cellsize = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
+
+    raster_utils.vectorize_datasets(
+            [soil_storage_uri, dflow_uri, evap_uri, bflow_uri, smax_uri,
+                water_uri, intermediate_interflow_uri], interflow_op,
+            interflow_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
+
 def calculate_baseflow(
         alpha_three_uri, soil_storage_uri, beta, baseflow_out_uri,  out_nodata):
     """This function calculates the baseflow
