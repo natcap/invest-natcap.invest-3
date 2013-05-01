@@ -30,6 +30,8 @@ def execute(args):
             will be written to disk
         args[time_step_data] - a uri to a CSV file
         args[soil_max_uri] - a uri to a gdal raster for soil max
+        args[pawc_uri] - a uri to a gdal raster for plant available water
+            content
 
     """
     LOGGER.debug('Start Executing Model')
@@ -66,8 +68,6 @@ def execute(args):
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     raster_utils.calculate_slope(dem_uri, slope_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
-    LOGGER.debug('Slope nodata : %s', slope_nodata)
 
     # Calculate the alpha rasters
     alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')

@@ -38,6 +38,15 @@
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
+                    "id" : "pawc",
+                    "args_id" : "pawc_uri",
+                    "type": "file",
+                    "label": "Plant Available Water Content (PAWC)",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
                     "id" : "land_use",
                     "args_id" : "lulc_uri",
                     "type": "file",
