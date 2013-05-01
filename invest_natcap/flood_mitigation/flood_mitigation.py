@@ -572,10 +572,10 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
     LOGGER.info('Finished making the precipitation raster')
 
 def _extract_matrix(raster_uri):
-    """Extract the Numpy matrix from a GDAL dataset."""
-    dataset = gdal.Open(raster_uri)
-    band = dataset.GetRasterBand(1)
-    return band.ReadAsArray()
+    """Extract the Numpy matrix from a GDAL dataset.  The returned matrix is a
+    memory-mapped matrix."""
+    memory_file = raster_utils.temporary_filename()
+    return raster_utils.load_memory_mapped_array(raster_uri, memory_file)
 
 def _write_matrix(raster_uri, matrix):
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
