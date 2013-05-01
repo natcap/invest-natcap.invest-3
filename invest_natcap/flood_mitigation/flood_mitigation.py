@@ -588,7 +588,7 @@ def _write_matrix(raster_uri, matrix):
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -603,6 +603,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             overwritten.
         outflow_weights_uri - a URI to the target outflow weights raster.
         outflow_direction_uri - a URI to the target outflow direction raster.
+        prev_discharge_raster - a URI to the discharge raster from the previous
+            step.  This should be a raster filled with 0's (or nodata) if there
+            was no previous step.
 
         Returns nothing."""
 
@@ -625,6 +628,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
     # Get the numpy matrix of the new discharge raster.
     discharge_matrix = _extract_matrix(output_uri)
+    prev_discharge_matrix = _extract_matrix(prev_discharge_uri)
     runoff_matrix = _extract_matrix(runoff_uri)
     outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
@@ -669,9 +673,9 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # index that we are currently accessing.  This way we can easily access
     # pixels immediately adjacent to this pixel by index (the index offsets for
     # which are in the neighbors list, made from the neighbor_indices dict).
-    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
+    iterator = numpy.nditer([runoff_matrix, prev_discharge_matrix], flags=['multi_index'])
     LOGGER.info('Checking neighbors for flow contributions to storm runoff')
-    for runoff in iterator:
+    for runoff, prev_discharge in iterator:
         index = iterator.multi_index
 
         if runoff == runoff_nodata:
@@ -726,7 +730,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     # value is nodata.
                     pass
 
-            discharge_sum = discharge_sum / time_interval
+            discharge_sum = (discharge_sum / time_interval) + prev_discharge
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
