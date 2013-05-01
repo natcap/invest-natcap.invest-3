@@ -28,8 +28,11 @@ def execute(args):
 
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
+        
         args[time_step_data] - a uri to a CSV file
+        
         args[soil_max_uri] - a uri to a gdal raster for soil max
+        
         args[pawc_uri] - a uri to a gdal raster for plant available water
             content
 
@@ -145,6 +148,47 @@ def execute(args):
     # Add values to output table
 
     # Move on to next month
+
+def calculate_evaporation(
+        soil_storage_uri, pawc_uri, w_uri, evap_out_uri, etc_out_uri,
+        out_nodata):
+    """This function calculates the actual evaporation
+
+        soil_storage_uri - a URI to a gdal dataset for the previous time steps
+            soil water content
+        
+        pawc_uri - a URI to a gdal dataset for plant available water conent
+        
+        w_uri - a URI to a gdal dataset for the W
+        
+        evap_out_uri - a URI path for the actual evaporation output to be
+            written to disk
+        
+        etc_out_uri - a URI path for the plant potential evapotranspiration
+            rate output to be written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing
+    """
+
+    # Possible calculate ETc unless this is somehow being input
+
+    # Calculate E
+    def actual_evap(w_pix, soil_pix, etc_pix, pawc_pix):
+        if w_pix < etc_pix:
+            return w_pix + soil_pix * math.fabs(
+                    math.expm1(-1 * ((etc_pix - w_pix) / pawc_pix)))
+        else:
+            return etc_pix
+        
+
+    cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
+
+    raster_utils.vectorize_datasets(
+            [w_uri, soil_uri, etc_uri, pawc_uri], actual_evap,
+            evap_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
 
 def calculate_direct_flow(
         imperv_area_uri, dem_uri, precip_uri, alpha_one_uri,  dt_out_uri,
