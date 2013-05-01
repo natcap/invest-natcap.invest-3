@@ -148,6 +148,51 @@ def execute(args):
     # Add values to output table
 
     # Move on to next month
+
+def calculate_intermediate_interflow(
+        alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
+        interflow_out_uri,  out_nodata):
+    """This function calculates the intermediate interflow
+
+        alpha_two_uri - a URI to a gdal dataset of alpha_two values
+
+        soil_storage_uri - a URI to a gdal datasaet for the soil water content
+            from the previous time step
+
+        water_uri - a URI to a gdal dataset for the water
+
+        evap_uri - a URI to a gdal dataset for the actual evaporation
+
+        beta - a constant number
+
+        interflow_out_uri - a URI path for the intermediate interflow output to
+            be written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+        def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
+            """A vectorize operation for calculating the interflow value
+
+                alpha_pix - a float value for the alpha coefficients
+                soil_pix - a float value for the soil water content
+                water_pix - a float value for the water
+                evap_pix - a float value for the actual evaporation
+
+                returns - the interflow value
+            """
+            return alpha_pix * soil_pix**beta * (
+                    water_pix - evap_pix * (1 - math.exp(
+                        -1 * (water_pix / evap_pix)))
+
+    cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
+
+    raster_utils.vectorize_datasets(
+            [alpha_two_uri, soil_storage_uri, water_uri, evap_uri],
+            interflow_op, interflow_out_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
+
 def calculate_water_amt(
         imperv_area_uri, total_precip_uri, alpha_one_uri water_out_uri,
         out_nodata):
