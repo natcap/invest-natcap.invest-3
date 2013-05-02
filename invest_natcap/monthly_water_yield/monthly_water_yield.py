@@ -55,6 +55,20 @@ def execute(args):
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
     pawc_uri = args['pawc_uri']
+    lulc_uri = args['lulc_uri']
+    lulc_data_uri = args['lulc_data_uri']
+   
+    # Set out_nodata value
+    float_nodata = float(np.finfo(np.float32).min) + 1.0
+    
+    # Get the impervious fraction mapping from lulc codes
+    imperv_dict = construct_lulc_lookup_dict(lulc_data_uri, 'imperv_fract')
+    # Reclassify lulc by impervious fraction
+    imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, imperv_dict, imperv_area_uri, gdal.GDT_Float32,
+            float_nodata)
+
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
@@ -63,8 +77,6 @@ def execute(args):
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
 
-    # Set out_nodata value
-    float_nodata = float(np.finfo(np.float32).min) + 1.0
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
@@ -142,9 +154,9 @@ def execute(args):
                     projected_point_uri, field, out_uri)
 
         # Calculate Direct Flow (Runoff)
-        calculate_direct_flow(
-                imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dt_out_uri,
-                tp_out_uri, float_nodata)
+        #calculate_direct_flow(
+        #        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dt_out_uri,
+        #        tp_out_uri, float_nodata)
         # Calculate Interflow
 
         # Calculate Baseflow
