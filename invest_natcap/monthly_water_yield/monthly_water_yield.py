@@ -127,6 +127,9 @@ def execute(args):
    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
+    water_out_uri = os.path.join(intermediate_dir, 'water_amt.tif')
+    evap_out_uri = os.path.join(intermediate_dir, 'evaporation.tif')
+    etc_out_uri = os.path.join(intermediate_dir, 'etc.tif')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -163,7 +166,13 @@ def execute(args):
         calculate_direct_flow(
                 imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
                 total_precip_uri, float_nodata)
-       
+        
+        # Calculate water amount (W)
+        clean_uri([water_out_uri])
+        calculate_water_amt(
+                imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
+                float_nodata)
+
         # Calculate Evaopration
         clean_uri([evap_out_uri, etc_out_uri])
         #calculate_evaporation(
