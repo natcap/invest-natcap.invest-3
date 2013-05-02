@@ -263,7 +263,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
     #for all habitats in the ecosystem.
     plot_index += 1
     max_tot_risk = max_h_s_risk * max(num_stress.values()) * num_habs 
-    LOGGER.debug("Max_Risk is %s" % max(num_stress.values()))
+    
     matplotlib.pyplot.figure(plot_index)
     matplotlib.pyplot.suptitle("Ecosystem Risk")
     
@@ -283,7 +283,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
                 points_dict[aoi_name]['E'] = 0
                 points_dict[aoi_name]['C'] = 0
 
-    LOGGER.debug("POINTS_DICT %s" % points_dict)    
     for aoi_name, p_dict in points_dict.items():
         #Create the points which are summed AOI's across all Habitats.    
         matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
@@ -410,7 +409,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
             }
        aoi_names- Quick and dirty way of getting the AOI keys.
     '''
-    LOGGER.debug("RISK DICT: %s", risk_dict) 
     #Since we know that the AOI will be consistent across all of the rasters,
     #want to create the new int field, and the name mapping dictionary upfront
     
@@ -493,8 +491,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
             
             name = name_map[ident]
            
-            LOGGER.debug("Looking at %s" % e_rast_uri)
-            LOGGER.debug("E Dict: %s" % e_agg_dict)
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                                     'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
 
