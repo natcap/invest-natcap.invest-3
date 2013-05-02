@@ -813,6 +813,9 @@ def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
             flow_length == flow_length_nodata:
             return discharge_nodata
 
+        if slope == 0.0 or discharge == 0.0:
+            return 0.0
+
         return ((flow_length * (roughness ** 0.75)) /
             ((slope ** 0.38) * discharge ** 0.25))
 
