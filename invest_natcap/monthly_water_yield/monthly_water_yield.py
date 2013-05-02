@@ -36,6 +36,12 @@ def execute(args):
         args[pawc_uri] - a uri to a gdal raster for plant available water
             content
 
+        args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
+        
+        args[lulc_data_uri] - a URI to a CSV file for the land cover code lookup
+            table
+
+        returns - nothing
     """
     LOGGER.debug('Start Executing Model')
     
