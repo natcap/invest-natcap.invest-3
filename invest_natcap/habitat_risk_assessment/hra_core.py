@@ -262,7 +262,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
     plot_index += 1
-    max_tot_risk = max_risk * max(num_stress.values()) * num_habs 
+    max_tot_risk = max_h_s_risk * max(num_stress.values()) * num_habs 
+    LOGGER.debug("Max_Risk is %s" % max(num_stress.values()))
     matplotlib.pyplot.figure(plot_index)
     matplotlib.pyplot.suptitle("Ecosystem Risk")
     
