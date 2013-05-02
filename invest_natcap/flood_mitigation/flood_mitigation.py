@@ -11,6 +11,7 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
+from invest_natcap.pollination import pollination_core
 import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
@@ -207,7 +208,8 @@ def execute(args):
             'runoff': _timestep_uri('storm_runoff.tif'),
             'overland_time': _timestep_uri('overland_travel_time.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'channel_time': _timestep_uri('channel_travel_time.tif')
+            'channel_time': _timestep_uri('channel_travel_time.tif'),
+            'travel_time_sum': raster_utils.temporary_filename()
         }
 
         # Create the timestamp folder name and make the folder on disk.
@@ -251,6 +253,14 @@ def execute(args):
         channel_travel_time(paths['mannings'], paths['slope'],
             timestep_rasters['discharge'], paths['flow_length'],
             timestep_rasters['channel_time'])
+
+        ###########################
+        # Flood waters calculations
+
+        # Sum the two travel time rasters.
+        pollination_core.add_two_rasters(timestep_rasters['overland_time'],
+            timestep_rasters['channel_time'],
+            timestep_rasters['travel_time_sum'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
