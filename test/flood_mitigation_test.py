@@ -156,4 +156,36 @@ class FloodMitigationTest(unittest.TestCase):
             self.args['time_interval'], flood_water_discharge,
             outflow_weights_uri, outflow_direction_uri, prev_discharge)
 
+    def test_flood_water_discharge_convolution(self):
+        import numpy
+        from scipy import ndimage
+        runoff = numpy.array([
+            [25.51, 10.75, 0,     80],
+            [2.52,  10.75, 10.75, 51.70],
+            [22.82, 51.7,  51.7,  22.82],
+            [22.82, 0,     10,    22.82]])
+
+        outflow_weights = numpy.array([
+            [0.875, 1, 1, -1],
+            [0.11,  1, 1, 1],
+            [0.2,   1, 1, 1],
+            [1,     1, 1, 1]])
+
+        outflow_direction = numpy.array([
+            [0, 0, 2, 9],
+            [7, 0, 2, 3],
+            [7, 7, 2, 1],
+            [0, 1, 1, 1]])
+
+        # I can't seem to figure out how to have a kernel based off of both the
+        # outflow weights and the outflow direction ... Is this problem even
+        # possible to implement as a convolution?
+        kernel = numpy.array([
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1]])
+
+
+        convolved = ndimage.convolve(runoff, kernel, mode='constant', cval=0.0)
+        print numpy.divide(convolved, 120)
 
