@@ -651,7 +651,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # make a new numpy matrix of the same size and dimensions as the outflow
     # matrices and fill it with 0's.
     discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
-    raster_utils.new_raster_from_base_uri(flow_direction_uri, output_uri,
+    raster_utils.new_raster_from_base_uri(runoff_uri, output_uri,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
@@ -660,6 +660,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     runoff_matrix = _extract_matrix(runoff_uri)
     outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+
+    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
+    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge_matrix.shape)
+    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
     LOGGER.debug('Runoff nodata=%s', runoff_nodata)
