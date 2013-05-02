@@ -13,8 +13,9 @@ from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
 import routing_cython_core
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
+    %(levelname)-8s %(message)s', level=logging.DEBUG,
+    datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('flood_mitigation')
 
