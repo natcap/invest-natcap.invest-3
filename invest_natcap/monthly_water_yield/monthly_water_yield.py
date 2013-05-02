@@ -119,19 +119,18 @@ def execute(args):
         raster_utils.reproject_datasource_uri(
                 cur_point_uri, dem_wkt, projected_point_uri) 
 
-        raster_uri_list = []
+        precip_uri = os.path.join(intermediate_dir, 'precip.tif')
+        pet_uri = os.path.join(intermediate_dir, 'pet.tif')
+        raster_uri_list = [precip_uri, pet_uri]
+
         # Use vectorize points to construct rasters based on points and fields
-        for field in data_fields:
-            out_uri_name = cur_field_name + '_' + field + '.tif'
-            output_uri = os.path.join(intermediate_dir, out_uri_name)
-            raster_uri_list.append(output_uri)
-            
+        for field, out_uri in zip(data_fields, raster_uri_list):
             _ = raster_utils.new_raster_from_base_uri(
-                    dem_uri, output_uri, 'GTIFF', float_nodata,
+                    dem_uri, out_uri, 'GTIFF', float_nodata,
                     gdal.GDT_Float32, fill_value=float_nodata)
 
             raster_utils.vectorize_points_uri(
-                    projected_point_uri, field, output_uri)
+                    projected_point_uri, field, out_uri)
 
         # Calculate Direct Flow (Runoff)
 
