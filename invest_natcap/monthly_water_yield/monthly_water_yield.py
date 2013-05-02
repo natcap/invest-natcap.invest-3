@@ -82,9 +82,9 @@ def execute(args):
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
 
     # Create initial S_t-1 for now
-    init_soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
+    soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
     _ = raster_utils.new_raster_from_base_uri(
-            dem_uri, init_soil_storage_uri, 'GTIFF', float_nodata,
+            dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
             gdal.GDT_Float32, fill_value=0.0)
 
     # Calculate the slope raster from the DEM
@@ -102,7 +102,8 @@ def execute(args):
                    'alpha_three':{'a_three':1.44, 'b_three':0.68}}
 
     calculate_alphas(
-        slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata, alpha_uri_list)
+        slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata,
+        alpha_uri_list)
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
@@ -162,6 +163,12 @@ def execute(args):
         calculate_direct_flow(
                 imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
                 total_precip_uri, float_nodata)
+       
+        # Calculate Evaopration
+        clean_uri([evap_out_uri, etc_out_uri])
+        #calculate_evaporation(
+        #        soil_storage_uri, pawc_uri, w_uri, evap_out_uri, etc_out_uri,
+        #        float_nodata)
         
         # Calculate Interflow
 
