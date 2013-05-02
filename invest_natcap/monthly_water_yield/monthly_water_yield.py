@@ -157,9 +157,9 @@ def execute(args):
 
         # Calculate Direct Flow (Runoff)
         clean_uri([dflow_uri, total_precip_uri])
-        #calculate_direct_flow(
-        #        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
-        #        total_precip_uri, float_nodata)
+        calculate_direct_flow(
+                imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
+                total_precip_uri, float_nodata)
         
         # Calculate Interflow
 
@@ -437,6 +437,8 @@ def calculate_direct_flow(
 
         returns - Nothing
     """
+    def copy_precip(precip_pix):
+        return precip_pix
 
     def direct_flow(imperv_pix, tot_p_pix, alpha_pix):
         """Vectorize function for computing direct flow
@@ -451,11 +453,18 @@ def calculate_direct_flow(
 
     cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
 
-    raster_utils.vectorize_datasets(
-            [imperv_area_uri, precip_uri, alpha_one_uri], direct_flow,
-            dt_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
-            'intersection')
+    #raster_utils.vectorize_datasets(
+    #        [imperv_area_uri, precip_uri, alpha_one_uri], direct_flow,
+    #        dt_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+    #        'intersection')
 
+    raster_utils.vectorize_datasets(
+            [precip_uri], copy_precip, dt_out_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
+    
+    raster_utils.vectorize_datasets(
+            [precip_uri], copy_precip, tp_out_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
 
 def calculate_alphas(
         slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
