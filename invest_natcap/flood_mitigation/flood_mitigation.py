@@ -192,13 +192,6 @@ def execute(args):
     raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
         paths['precip_points'])
 
-    # We need a previous flood water discharge raster to be created before we
-    # actually start iterating through the timesteps.
-    discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
-    raster_utils.new_raster_from_base_uri(flow_direction_uri,
-        paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
-        fill_value=0.0)
-
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
         LOGGER.info('Starting timestep %s', timestep)
@@ -223,6 +216,15 @@ def execute(args):
 
         ##################
         # Channel Routing.
+        if timestep == 1:
+            # We need a previous flood water discharge raster to be created before we
+            # actually start iterating through the timesteps.
+            discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
+            raster_utils.new_raster_from_base_uri(runoff_uri,
+                paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
+                fill_value=0.0)
+
+
         discharge_uri = os.path.join(timestep_dir, 'flood_water_discharge.tif')
         flood_water_discharge(runoff_uri, paths['flow_direction'],
             args['time_interval'], discharge_uri, paths['outflow_weights'],
@@ -633,6 +635,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     LOGGER.info('Starting to calculate flood water discharge')
     LOGGER.debug('Discharge uri=%s', output_uri)
     LOGGER.debug('Previous discharge uri=%s', prev_discharge_uri)
+    LOGGER.debug('Runoff URI=%s', runoff_uri)
 
     time_interval = float(time_interval)  # must be a float.
     LOGGER.debug('Using time interval %s', time_interval)
