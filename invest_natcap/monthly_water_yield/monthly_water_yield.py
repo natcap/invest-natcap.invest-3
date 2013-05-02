@@ -136,7 +136,9 @@ def execute(args):
                     projected_point_uri, field, out_uri)
 
         # Calculate Direct Flow (Runoff)
-
+        calculate_direct_flow(
+                imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dt_out_uri,
+                tp_out_uri, float_nodata)
         # Calculate Interflow
 
         # Calculate Baseflow
@@ -149,7 +151,14 @@ def execute(args):
         # Add values to output table
 
         # Move on to next month
+
 def clean_uri(in_uri):
+    """Removes a file by its URI if it exists
+        
+        in_uri - a URI for a file path
+
+        returns - nothing"""
+
     if os.path.isfile(in_uri):
         os.remove(in_uri)
 
