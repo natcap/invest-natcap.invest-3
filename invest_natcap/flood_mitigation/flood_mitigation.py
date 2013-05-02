@@ -790,4 +790,17 @@ def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
 
         This function returns nothing.
         """
-    pass
+
+    def _vectorized_travel_time(flow_length, roughness, slope, discharge):
+        """A function for the per-pixel calculation of channel travel time.
+            All inputs are floats.  This function returns a float."""
+        return ((flow_length * (roughness ** 0.75)) /
+            ((slope ** 0.38) * discharge ** 0.25))
+
+    discharge_nodata = raster_utils.get_nodata_from_uri(discharge_uri)
+    raster_list = [flow_length_uri, mannings_uri, slope_uri, discharge_uri]
+    channel_cell_size = _get_cell_size_from_datasets(raster_list)
+
+    raster_utils.vectorize_datasets(raster_list, _vectorized_travel_time,
+        output_uri, gdal.GDT_Float32, discharge_nodata, channel_cell_size,
+        'intersection')
