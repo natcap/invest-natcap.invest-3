@@ -211,23 +211,20 @@ def execute(args):
         }
 
         # Create the timestamp folder name and make the folder on disk.
-        timestep_dir = os.path.join(_intermediate_uri(), 'timestep_%s' % timestep)
-        raster_utils.create_directories([timestep_dir])
+        raster_utils.create_directories([_timestep_uri()])
 
         # make the precip raster, since it's timestep-dependent.
-        precip_raster_uri = os.path.join(timestep_dir, 'precip.tif')
         make_precip_raster(paths['precip_points'], args['dem'], timestep,
-            precip_raster_uri)
+            timestep_rasters['precip'])
 
         # Calculate storm runoff once we have all the data we need.
-        runoff_uri = os.path.join(timestep_dir, 'storm_runoff.tif')
-        storm_runoff(precip_raster_uri, paths['swrc'], runoff_uri)
+        storm_runoff(timestep_rasters['precip'], paths['swrc'],
+            timestep_rasters['runoff'])
 
         # Calculate the overland travel time.
-        overland_travel_time_uri = os.path.join(timestep_dir,
-            'overland_travel_time.tif')
-        overland_travel_time(args['time_interval'], runoff_uri, paths['slope'],
-            paths['flow_length'], paths['mannings'], overland_travel_time_uri)
+        overland_travel_time(args['time_interval'], timestep_rasters['runoff'],
+            paths['slope'], paths['flow_length'], paths['mannings'],
+            timestep_rasters['overland_time'])
 
         ##################
         # Channel Routing.
@@ -235,26 +232,25 @@ def execute(args):
             # We need a previous flood water discharge raster to be created before we
             # actually start iterating through the timesteps.
             discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
-            raster_utils.new_raster_from_base_uri(runoff_uri,
+            raster_utils.new_raster_from_base_uri(timestep_rasters['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
                 fill_value=0.0)
 
 
-        discharge_uri = os.path.join(timestep_dir, 'flood_water_discharge.tif')
-        flood_water_discharge(runoff_uri, paths['flow_direction'],
-            args['time_interval'], discharge_uri, paths['outflow_weights'],
-            paths['outflow_direction'], paths['prev_discharge'])
+        flood_water_discharge(timestep_rasters['runoff'], paths['flow_direction'],
+            args['time_interval'], timestep_rasters['discharge'],
+            paths['outflow_weights'], paths['outflow_direction'],
+            paths['prev_discharge'])
 
         # Set the previous discharge path to the discharge_uri so we can use it
         # later on.
-        paths['prev_discharge'] = discharge_uri
+        paths['prev_discharge'] = timestep_rasters['discharge']
 
         # Calculate channel travel time with the newly calculated flood water
         # discharge and other inputs.
-        channel_travel_time_uri = os.path.join(timestep_dir,
-            'channel_travel_time.tif')
-        channel_travel_time(paths['mannings'], paths['slope'], discharge_uri,
-            paths['flow_length'], channel_travel_time_uri)
+        channel_travel_time(paths['mannings'], paths['slope'],
+            timestep_rasters['discharge'], paths['flow_length'],
+            timestep_rasters['channel_time'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
