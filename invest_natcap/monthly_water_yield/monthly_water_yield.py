@@ -123,7 +123,10 @@ def execute(args):
     precip_uri = os.path.join(intermediate_dir, 'precip.tif')
     pet_uri = os.path.join(intermediate_dir, 'pet.tif')
     raster_uri_list = [precip_uri, pet_uri]
-    
+   
+    dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
+    total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
+
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
         cur_step_dict = data_dict[cur_month]
@@ -131,20 +134,19 @@ def execute(args):
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
         cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
-        clean_uri(cur_point_uri) 
+        clean_uri([cur_point_uri, projected_point_uri]) 
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
    
         projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
-        clean_uri(projected_point_uri) 
         # Project point shapefile
         raster_utils.reproject_datasource_uri(
                 cur_point_uri, dem_wkt, projected_point_uri) 
 
         # Use vectorize points to construct rasters based on points and fields
         for field, out_uri in zip(data_fields, raster_uri_list):
-            clean_uri(out_uri) 
+            clean_uri([out_uri]) 
             
             raster_utils.new_raster_from_base_uri(
                     dem_uri, out_uri, 'GTIFF', float_nodata,
@@ -154,9 +156,11 @@ def execute(args):
                     projected_point_uri, field, out_uri)
 
         # Calculate Direct Flow (Runoff)
+        clean_uri([dflow_uri, total_precip_uri])
         #calculate_direct_flow(
-        #        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dt_out_uri,
-        #        tp_out_uri, float_nodata)
+        #        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
+        #        total_precip_uri, float_nodata)
+        
         # Calculate Interflow
 
         # Calculate Baseflow
@@ -170,15 +174,16 @@ def execute(args):
 
         # Move on to next month
 
-def clean_uri(in_uri):
+def clean_uri(in_uri_list):
     """Removes a file by its URI if it exists
         
-        in_uri - a URI for a file path
+        in_uri_list - a list of URIs for a file path
 
         returns - nothing"""
 
-    if os.path.isfile(in_uri):
-        os.remove(in_uri)
+    for uri in in_uri_list:
+        if os.path.isfile(uri):
+            os.remove(uri)
 
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
