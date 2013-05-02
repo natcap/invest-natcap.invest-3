@@ -524,6 +524,30 @@ def calculate_alphas(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
             out_nodata, smax_cell_size, 'intersection')
 
+def construct_lulc_lookup_dict(lulc_data_uri, field):
+    """Parse a LULC lookup CSV table and construct a dictionary mapping the LULC
+        codes to the value of 'field'
+
+        lulc_data_uri - a URI to a CSV lulc lookup table
+
+        field - a python string for the interested field to map to
+
+        returns - a dictionary of the mapped lulc codes to the specified field
+    """
+    data_file = open(lulc_data_uri)
+    data_handler = csv.DictReader(data_file)
+    
+    # Make the fieldnames lowercase
+    data_handler.fieldnames = [f.lower() for f in data_handler.fieldnames]
+    LOGGER.debug('Lowercase Fieldnames : %s', data_handler.fieldnames)
+
+    lulc_dict = {}
+
+    for row in data_handler:
+        lulc_dict[int(row['lulc'])] = float(row[field])
+
+    return lulc_dict
+
 def construct_time_step_data(data_uri):
     """Parse the CSV data file and construct a dictionary using the time step
         dates as keys. Each unique date will then have a dictionary of the
