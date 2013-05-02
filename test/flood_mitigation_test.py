@@ -21,6 +21,7 @@ class FloodMitigationTest(unittest.TestCase):
         self.dem_small = os.path.join(SAMP_INPUT, 'dem_200m.tif')
         self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
         self.landcover = os.path.join('data', 'base_data', 'terrestrial', 'lulc_samp_cur')
+        self.landcover_small = os.path.join(SAMP_INPUT, 'landuse_cur_200m.tif')
         self.mannings = os.path.join(SAMP_INPUT, 'mannings.csv')
 
         self.args = {
@@ -98,6 +99,11 @@ class FloodMitigationTest(unittest.TestCase):
             'soil_water_retention.tif')
         invest_test_core.assertTwoDatasetEqualURI(self, regression_swrc_uri,
             swrc_uri)
+
+    def test_regression_dry_season_200m(self):
+        self.args['dem'] = self.dem_small
+        self.args['landuse'] = self.landcover_small
+        flood_mitigation.execute(self.args)
 
     def test_regression_dry_season(self):
         """Regression test for the flood mitigation model."""
