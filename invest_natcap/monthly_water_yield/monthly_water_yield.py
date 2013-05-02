@@ -230,6 +230,12 @@ def calculate_final_interflow(
         out_nodata - a float for the output nodata value
 
         returns - nothing"""
+    
+    no_data_list = []
+    for raster_uri in [dflow_uri, soil_storage_uri, evap_uri, baseflow_uri,
+            smax_uri, water_uri, intermediate_interflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
 
     def interflow_op(
             soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
@@ -247,6 +253,11 @@ def calculate_final_interflow(
 
             returns - the interflow value
         """
+        for pix in [dflow_pix, soil_pix, evap_pix, bflow_pix, smax_pix,
+                water_pix, inter_pix]:
+            if pix in no_data_list:
+                return out_nodata
+        
         conditional = (
                 soil_pix + water_pix - (
                     evap_pix - dflow_pix - inter_pix - bflow_pix))
@@ -283,6 +294,11 @@ def calculate_baseflow(
         out_nodata - a float for the output nodata value
 
         returns - nothing"""
+    
+    no_data_list = []
+    for raster_uri in [alpha_three_uri, soil_storage_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
 
     def baseflow_op(alpha_pix, soil_pix):
         """A vectorize operation for calculating the baseflow value
@@ -292,6 +308,10 @@ def calculate_baseflow(
 
             returns - the baseflow value
         """
+        for pix in [alpha_pix, soil_pix]:
+            if pix in no_data_list:
+                return out_nodata
+
         return alpha_pix * soil_pix**beta
 
     cellsize = raster_utils.get_cell_size_from_uri(alpha_three_uri)
@@ -323,6 +343,11 @@ def calculate_intermediate_interflow(
         out_nodata - a float for the output nodata value
 
         returns - nothing"""
+    
+    no_data_list = []
+    for raster_uri in [alpha_two_uri, soil_storage_uri, water_uri, evap_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
 
     def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
         """A vectorize operation for calculating the interflow value
@@ -334,6 +359,10 @@ def calculate_intermediate_interflow(
 
             returns - the interflow value
         """
+        for pix in [alpha_pix, soil_pix, water_pix, evap_pix]:
+            if pix in no_data_list:
+                return out_nodata
+        
         return alpha_pix * soil_pix**beta * (
                 water_pix - evap_pix * (1 - math.exp(
                     -1 * (water_pix / evap_pix))))
@@ -410,6 +439,10 @@ def calculate_evaporation(
 
         returns - nothing
     """
+    no_data_list = []
+    for raster_uri in [soil_storage_uri, pawc_uri, w_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
 
     # Possible calculate ETc unless this is somehow being input
 
@@ -426,6 +459,10 @@ def calculate_evaporation(
 
             returns - the actual evaporation value
         """
+        for pix in [water_pix, soil_pix, etc_pix, pawc_pix]:
+            if pix in no_data_list:
+                return out_nodata
+        
         if w_pix < etc_pix:
             return w_pix + soil_pix * math.fabs(
                     math.expm1(-1 * ((etc_pix - w_pix) / pawc_pix)))
@@ -463,8 +500,16 @@ def calculate_direct_flow(
 
         returns - Nothing
     """
+    no_data_list = []
+    for raster_uri in [imperv_area_uri, dem_uri,precip_uri, alpha_one_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+    
     def copy_precip(precip_pix):
-        return precip_pix
+        if precip_pix in no_data_list:
+            return out_nodata
+        else:
+            return precip_pix
 
     def direct_flow(imperv_pix, tot_p_pix, alpha_pix):
         """Vectorize function for computing direct flow
@@ -474,6 +519,9 @@ def calculate_direct_flow(
             alpha_pix - a float value for the alpha variable
 
             returns - direct flow"""
+        for pix in [imperv_pix, alpha_pix, tot_p_pix]:
+            if pix in no_data_list:
+                return out_nodata
         return (imperv_pix * tot_p_pix) + (
                 (1 - imperv_pix) * alpha_pix * tot_p_pix)
 
