@@ -235,6 +235,12 @@ def execute(args):
         # later on.
         paths['prev_discharge'] = discharge_uri
 
+        # Calculate channel travel time with the newly calculated flood water
+        # discharge and other inputs.
+        channel_travel_time_uri = os.path.join(timestep_dir,
+            'channel_travel_time.tif')
+        channel_travel_time(paths['mannings'], paths['slope'], discharge_uri,
+            paths['flow_length'], channel_travel_time_uri)
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -791,6 +797,7 @@ def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
         This function returns nothing.
         """
 
+    # TODO: check for nodata values in this function.
     def _vectorized_travel_time(flow_length, roughness, slope, discharge):
         """A function for the per-pixel calculation of channel travel time.
             All inputs are floats.  This function returns a float."""
