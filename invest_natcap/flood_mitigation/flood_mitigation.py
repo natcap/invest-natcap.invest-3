@@ -137,7 +137,10 @@ def execute(args):
         'flow_direction' : _intermediate_uri('flow_direction.tif'),
         'flow_length': _intermediate_uri('flow_length.tif'),
         'cn_slope': _intermediate_uri('cn_slope.tif'),
-        'swrc': _intermediate_uri('swrc.tif')
+        'swrc': _intermediate_uri('swrc.tif'),
+        'prev_discharge': _intermediate_uri('init_discharge.tif'),
+        'outflow_weights': _intermediate_uri('outflow_weights.tif'),
+        'outflow_direction': _intermediate_uri('outflow_direction.tif')
     }
 
     # Create folders in the workspace if they don't already exist
@@ -210,6 +213,26 @@ def execute(args):
             'overland_travel_time.tif')
         overland_travel_time(args['time_interval'], runoff_uri, paths['slope'],
             paths['flow_length'], paths['mannings'], overland_travel_time_uri)
+
+        ##################
+        # Channel Routing.
+        if timestep == 1:
+            # We need a previous flood water discharge raster to be created before we
+            # actually start iterating through the timesteps.
+            discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
+            raster_utils.new_raster_from_base_uri(runoff_uri,
+                paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
+                fill_value=0.0)
+
+
+        discharge_uri = os.path.join(timestep_dir, 'flood_water_discharge.tif')
+        flood_water_discharge(runoff_uri, paths['flow_direction'],
+            args['time_interval'], discharge_uri, paths['outflow_weights'],
+            paths['outflow_direction'], paths['prev_discharge'])
+
+        # Set the previous discharge path to the discharge_uri so we can use it
+        # later on.
+        paths['prev_discharge'] = discharge_uri
 
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
@@ -572,10 +595,10 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_ur
     LOGGER.info('Finished making the precipitation raster')
 
 def _extract_matrix(raster_uri):
-    """Extract the Numpy matrix from a GDAL dataset."""
-    dataset = gdal.Open(raster_uri)
-    band = dataset.GetRasterBand(1)
-    return band.ReadAsArray()
+    """Extract the Numpy matrix from a GDAL dataset.  The returned matrix is a
+    memory-mapped matrix."""
+    memory_file = raster_utils.temporary_filename()
+    return raster_utils.load_memory_mapped_array(raster_uri, memory_file)
 
 def _write_matrix(raster_uri, matrix):
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
@@ -588,7 +611,7 @@ def _write_matrix(raster_uri, matrix):
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -603,8 +626,16 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             overwritten.
         outflow_weights_uri - a URI to the target outflow weights raster.
         outflow_direction_uri - a URI to the target outflow direction raster.
+        prev_discharge_raster - a URI to the discharge raster from the previous
+            step.  This should be a raster filled with 0's (or nodata) if there
+            was no previous step.
 
         Returns nothing."""
+
+    LOGGER.info('Starting to calculate flood water discharge')
+    LOGGER.debug('Discharge uri=%s', output_uri)
+    LOGGER.debug('Previous discharge uri=%s', prev_discharge_uri)
+    LOGGER.debug('Runoff URI=%s', runoff_uri)
 
     time_interval = float(time_interval)  # must be a float.
     LOGGER.debug('Using time interval %s', time_interval)
@@ -624,20 +655,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-#    discharge_matrix = _extract_matrix(output_uri)[100:104, 150:154]
-#    runoff_matrix = _extract_matrix(runoff_uri)[100:104, 150:154]
-#    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)[100:104, 150:154]
-#    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)[100:104, 150:154]
-
     discharge_matrix = _extract_matrix(output_uri)
+    prev_discharge_matrix = _extract_matrix(prev_discharge_uri)
     runoff_matrix = _extract_matrix(runoff_uri)
     outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
-
-    print discharge_matrix
-    print runoff_matrix
-    print outflow_weights_matrix
-    print outflow_direction_matrix
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
     LOGGER.debug('Runoff nodata=%s', runoff_nodata)
@@ -679,15 +701,15 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # index that we are currently accessing.  This way we can easily access
     # pixels immediately adjacent to this pixel by index (the index offsets for
     # which are in the neighbors list, made from the neighbor_indices dict).
-    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
-    for runoff in iterator:
+    iterator = numpy.nditer([runoff_matrix, prev_discharge_matrix], flags=['multi_index'])
+    LOGGER.info('Checking neighbors for flow contributions to storm runoff')
+    for runoff, prev_discharge in iterator:
         index = iterator.multi_index
 
         if runoff == runoff_nodata:
             discharge_sum = discharge_nodata
-# TODO: What does a value of nodata in outflow_direction raster mean?
-#        elif outflow_direction_matrix[index] == outflow_direction_nodata:
-#            discharge_sum = discharge_nodata
+        elif outflow_direction_matrix[index] == outflow_direction_nodata:
+            discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0  # re-initialize the discharge sum
             for neighbor_id, index_offset in neighbors:
@@ -707,11 +729,14 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
                     if neighbor_id in possible_inflow_neighbors:
+                        # Only get the neighbor's runoff value if we know that
+                        # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
                             raise NeighborHasNoRunoffData
 
-                        # determine fractional flow
+                        # determine fractional flow from this neighbor into this
+                        # pixel.
                         first_neighbor_weight = outflow_weights_matrix[neighbor_index]
 
                         if possible_inflow_neighbors[0] == neighbor_id:
@@ -733,10 +758,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     # value is nodata.
                     pass
 
-            discharge_sum = discharge_sum / time_interval
+            discharge_sum = (discharge_sum / time_interval) + prev_discharge
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
+    LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
-    print discharge_matrix
