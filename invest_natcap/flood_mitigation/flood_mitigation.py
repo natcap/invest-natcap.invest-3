@@ -770,3 +770,24 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
+
+def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
+        flow_length_uri, output_uri):
+    """Calculate the channel travel time.  This function corresponds to equation
+        14 of the Flood Mitigation user's guide.  Note that the model no longer
+        uses equation 12, as a user-defined channel layer is not provided nor
+        used in this model.  Thus, this function is the only function for
+        calculating the channel travel time.
+
+        mannings_uri - a URI to a raster of roughness coefficients based on land
+            cover and soil types.
+        slope_uri - a URI to a raster of slope on the landscape.
+        discharge_uri - a URI to a raster of flood water discharge.
+        flow_length_uri - a URI to a raster of the flow length, calculated from
+            a DEM.
+        output_uri - a URI to the location on disk where the user would like the
+            output raster from this function to be stored.
+
+        This function returns nothing.
+        """
+    pass
