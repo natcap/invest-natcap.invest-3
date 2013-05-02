@@ -177,32 +177,32 @@ def calculate_final_interflow(
 
         returns - nothing"""
 
-        def interflow_op(
-                soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
-                water_pix, inter_pix):
-            """A vectorize operation for calculating the baseflow value
+    def interflow_op(
+            soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
+            water_pix, inter_pix):
+        """A vectorize operation for calculating the baseflow value
 
-                alpha_pix - a float value for the alpha coefficients
-                soil_pix - a float value for the soil water content
-                dflow_pix - a float value for the direct flow
-                evap_pix - a float value for the actual evaporation
-                bflow_pix - a float value for the baseflow
-                smax_pix - a float value for the soil water content max
-                water_pix - a float value for the water available
-                inter_pix - a float value for the intermediate interflow
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
+            dflow_pix - a float value for the direct flow
+            evap_pix - a float value for the actual evaporation
+            bflow_pix - a float value for the baseflow
+            smax_pix - a float value for the soil water content max
+            water_pix - a float value for the water available
+            inter_pix - a float value for the intermediate interflow
 
-                returns - the interflow value
-            """
-            conditional = (
+            returns - the interflow value
+        """
+        conditional = (
+                soil_pix + water_pix - (
+                    evap_pix - dflow_pix - inter_pix - bflow_pix))
+
+        if conditional <= smax_pix:
+            return inter_pix
+        else:
+            return (
                     soil_pix + water_pix - (
-                        evap_pix - dflow_pix - inter_pix - bflow_pix))
-
-            if conditional <= smax_pix:
-                return inter_pix
-            else:
-                return (
-                        soil_pix + water_pix - (
-                            evap_pix - dflow_pix - bflow_pix - smax_pix))
+                        evap_pix - dflow_pix - bflow_pix - smax_pix))
 
     cellsize = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
 
@@ -230,15 +230,15 @@ def calculate_baseflow(
 
         returns - nothing"""
 
-        def baseflow_op(alpha_pix, soil_pix):
-            """A vectorize operation for calculating the baseflow value
+    def baseflow_op(alpha_pix, soil_pix):
+        """A vectorize operation for calculating the baseflow value
 
-                alpha_pix - a float value for the alpha coefficients
-                soil_pix - a float value for the soil water content
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
 
-                returns - the baseflow value
-            """
-            return alpha_pix * soil_pix**beta
+            returns - the baseflow value
+        """
+        return alpha_pix * soil_pix**beta
 
     cellsize = raster_utils.get_cell_size_from_uri(alpha_three_uri)
 
@@ -270,19 +270,19 @@ def calculate_intermediate_interflow(
 
         returns - nothing"""
 
-        def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
-            """A vectorize operation for calculating the interflow value
+    def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
+        """A vectorize operation for calculating the interflow value
 
-                alpha_pix - a float value for the alpha coefficients
-                soil_pix - a float value for the soil water content
-                water_pix - a float value for the water
-                evap_pix - a float value for the actual evaporation
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
+            water_pix - a float value for the water
+            evap_pix - a float value for the actual evaporation
 
-                returns - the interflow value
-            """
-            return alpha_pix * soil_pix**beta * (
-                    water_pix - evap_pix * (1 - math.exp(
-                        -1 * (water_pix / evap_pix)))
+            returns - the interflow value
+        """
+        return alpha_pix * soil_pix**beta * (
+                water_pix - evap_pix * (1 - math.exp(
+                    -1 * (water_pix / evap_pix))))
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
 
@@ -292,7 +292,7 @@ def calculate_intermediate_interflow(
             out_nodata, cell_size, 'intersection')
 
 def calculate_water_amt(
-        imperv_area_uri, total_precip_uri, alpha_one_uri water_out_uri,
+        imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
         out_nodata):
     """Calculates the water available on a pixel
 
