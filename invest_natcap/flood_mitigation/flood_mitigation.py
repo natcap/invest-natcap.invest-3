@@ -13,8 +13,9 @@ from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
 import routing_cython_core
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
+    %(levelname)-8s %(message)s', level=logging.DEBUG,
+    datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('flood_mitigation')
 
@@ -234,6 +235,12 @@ def execute(args):
         # later on.
         paths['prev_discharge'] = discharge_uri
 
+        # Calculate channel travel time with the newly calculated flood water
+        # discharge and other inputs.
+        channel_travel_time_uri = os.path.join(timestep_dir,
+            'channel_travel_time.tif')
+        channel_travel_time(paths['mannings'], paths['slope'], discharge_uri,
+            paths['flow_length'], channel_travel_time_uri)
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -651,7 +658,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # make a new numpy matrix of the same size and dimensions as the outflow
     # matrices and fill it with 0's.
     discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
-    raster_utils.new_raster_from_base_uri(flow_direction_uri, output_uri,
+    raster_utils.new_raster_from_base_uri(runoff_uri, output_uri,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
@@ -660,6 +667,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     runoff_matrix = _extract_matrix(runoff_uri)
     outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+
+    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
+    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge_matrix.shape)
+    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
     LOGGER.debug('Runoff nodata=%s', runoff_nodata)
@@ -765,3 +776,52 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
+
+def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
+        flow_length_uri, output_uri):
+    """Calculate the channel travel time.  This function corresponds to equation
+        14 of the Flood Mitigation user's guide.  Note that the model no longer
+        uses equation 12, as a user-defined channel layer is not provided nor
+        used in this model.  Thus, this function is the only function for
+        calculating the channel travel time.
+
+        mannings_uri - a URI to a raster of roughness coefficients based on land
+            cover and soil types.
+        slope_uri - a URI to a raster of slope on the landscape.
+        discharge_uri - a URI to a raster of flood water discharge.
+        flow_length_uri - a URI to a raster of the flow length, calculated from
+            a DEM.
+        output_uri - a URI to the location on disk where the user would like the
+            output raster from this function to be stored.
+
+        This function returns nothing.
+        """
+
+    # TODO: check for nodata values in this function.
+    discharge_nodata = raster_utils.get_nodata_from_uri(discharge_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
+    mannings_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
+    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
+
+    def _vectorized_travel_time(flow_length, roughness, slope, discharge):
+        """A function for the per-pixel calculation of channel travel time.
+            All inputs are floats.  This function returns a float."""
+
+        if discharge == discharge_nodata or\
+            slope == slope_nodata or\
+            roughness == mannings_nodata or\
+            flow_length == flow_length_nodata:
+            return discharge_nodata
+
+        if slope == 0.0 or discharge == 0.0:
+            return 0.0
+
+        return ((flow_length * (roughness ** 0.75)) /
+            ((slope ** 0.38) * discharge ** 0.25))
+
+    raster_list = [flow_length_uri, mannings_uri, slope_uri, discharge_uri]
+    channel_cell_size = _get_cell_size_from_datasets(raster_list)
+
+    raster_utils.vectorize_datasets(raster_list, _vectorized_travel_time,
+        output_uri, gdal.GDT_Float32, discharge_nodata, channel_cell_size,
+        'intersection')
