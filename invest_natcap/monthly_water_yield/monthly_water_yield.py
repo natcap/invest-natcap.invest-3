@@ -133,13 +133,15 @@ def execute(args):
         # Since the time step signature has a 'slash' we need to replace it with
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
+        
         cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
+        projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
         clean_uri([cur_point_uri, projected_point_uri]) 
+        
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
    
-        projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
         # Project point shapefile
         raster_utils.reproject_datasource_uri(
                 cur_point_uri, dem_wkt, projected_point_uri) 
