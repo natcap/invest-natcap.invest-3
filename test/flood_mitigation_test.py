@@ -147,8 +147,13 @@ class FloodMitigationTest(unittest.TestCase):
 
         routing_utils.flow_direction_inf(self.dem_small, flow_direction_uri)
 
+        discharge_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+        prev_discharge = os.path.join(self.workspace, 'prev_discharge.tif')
+        raster_utils.new_raster_from_base_uri(flow_direction_uri, prev_discharge,
+            'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
+
         flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
             self.args['time_interval'], flood_water_discharge,
-            outflow_weights_uri, outflow_direction_uri)
+            outflow_weights_uri, outflow_direction_uri, prev_discharge)
 
 
