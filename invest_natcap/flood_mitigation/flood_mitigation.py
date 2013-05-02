@@ -195,6 +195,11 @@ def execute(args):
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
+        def _timestep_uri(file_name=''):
+            """Make a URI for a timestep-based folder."""
+            return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
+                _add_suffix(file_name))
+
         LOGGER.info('Starting timestep %s', timestep)
         # Create the timestamp folder name and make the folder on disk.
         timestep_dir = os.path.join(_intermediate_uri(), 'timestep_%s' % timestep)
