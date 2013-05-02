@@ -48,6 +48,7 @@ def execute(args):
     time_step_data_uri = args['time_step_data_uri']
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
+    pawc_uri = args['pawc_uri']
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
@@ -87,10 +88,11 @@ def execute(args):
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
+    LOGGER.debug('Constructed DATA : %s', data_dict)
+    
     # A list of the fields from the time step table we are interested in and
     # need.
     data_fields = ['p', 'pet']
-    LOGGER.debug('Constructed DATA : %s', data_dict)
 
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
@@ -134,20 +136,20 @@ def execute(args):
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, output_uri)
 
-    # Calculate Direct Flow (Runoff)
+        # Calculate Direct Flow (Runoff)
 
-    # Calculate Interflow
+        # Calculate Interflow
 
-    # Calculate Baseflow
+        # Calculate Baseflow
 
-    # Calculate Streamflow
+        # Calculate Streamflow
 
-    # Calculate Soil Moisture for current time step, to be used as previous time
-    # step in the next iteration
+        # Calculate Soil Moisture for current time step, to be used as previous time
+        # step in the next iteration
 
-    # Add values to output table
+        # Add values to output table
 
-    # Move on to next month
+        # Move on to next month
 
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
