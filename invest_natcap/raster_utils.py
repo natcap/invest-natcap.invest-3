@@ -480,7 +480,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
         Returns a GDAL dataset.
         """
     base_raster = gdal.Open(base_uri)
-    return new_raster_from_base(base_raster, *args, **kwargs)
+    new_raster_from_base(base_raster, *args, **kwargs)
 
 def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
