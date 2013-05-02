@@ -48,6 +48,7 @@ def execute(args):
     time_step_data_uri = args['time_step_data_uri']
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
+    pawc_uri = args['pawc_uri']
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
@@ -87,10 +88,11 @@ def execute(args):
 
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
+    LOGGER.debug('Constructed DATA : %s', data_dict)
+    
     # A list of the fields from the time step table we are interested in and
     # need.
     data_fields = ['p', 'pet']
-    LOGGER.debug('Constructed DATA : %s', data_dict)
 
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
@@ -100,54 +102,65 @@ def execute(args):
             list_of_months, 
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
+    precip_uri = os.path.join(intermediate_dir, 'precip.tif')
+    pet_uri = os.path.join(intermediate_dir, 'pet.tif')
+    raster_uri_list = [precip_uri, pet_uri]
+    
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
         cur_step_dict = data_dict[cur_month]
         # Since the time step signature has a 'slash' we need to replace it with
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
-        cur_month_name = cur_field_name + '_points.shp'
-        cur_point_uri = os.path.join(intermediate_dir, cur_month_name)
-
+        cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
+        clean_uri(cur_point_uri) 
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
    
-        projected_point_name = cur_month_name + '_proj_points.shp'
-        projected_point_uri = os.path.join(
-                intermediate_dir, projected_point_name)
+        projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
+        clean_uri(projected_point_uri) 
         # Project point shapefile
         raster_utils.reproject_datasource_uri(
                 cur_point_uri, dem_wkt, projected_point_uri) 
 
-        raster_uri_list = []
         # Use vectorize points to construct rasters based on points and fields
-        for field in data_fields:
-            out_uri_name = cur_field_name + '_' + field + '.tif'
-            output_uri = os.path.join(intermediate_dir, out_uri_name)
-            raster_uri_list.append(output_uri)
+        for field, out_uri in zip(data_fields, raster_uri_list):
+            clean_uri(out_uri) 
             
-            _ = raster_utils.new_raster_from_base_uri(
-                    dem_uri, output_uri, 'GTIFF', float_nodata,
+            raster_utils.new_raster_from_base_uri(
+                    dem_uri, out_uri, 'GTIFF', float_nodata,
                     gdal.GDT_Float32, fill_value=float_nodata)
-
+            
             raster_utils.vectorize_points_uri(
-                    projected_point_uri, field, output_uri)
+                    projected_point_uri, field, out_uri)
 
-    # Calculate Direct Flow (Runoff)
+        # Calculate Direct Flow (Runoff)
+        calculate_direct_flow(
+                imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dt_out_uri,
+                tp_out_uri, float_nodata)
+        # Calculate Interflow
 
-    # Calculate Interflow
+        # Calculate Baseflow
 
-    # Calculate Baseflow
+        # Calculate Streamflow
 
-    # Calculate Streamflow
+        # Calculate Soil Moisture for current time step, to be used as previous time
+        # step in the next iteration
 
-    # Calculate Soil Moisture for current time step, to be used as previous time
-    # step in the next iteration
+        # Add values to output table
 
-    # Add values to output table
+        # Move on to next month
 
-    # Move on to next month
+def clean_uri(in_uri):
+    """Removes a file by its URI if it exists
+        
+        in_uri - a URI for a file path
+
+        returns - nothing"""
+
+    if os.path.isfile(in_uri):
+        os.remove(in_uri)
 
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
@@ -177,32 +190,32 @@ def calculate_final_interflow(
 
         returns - nothing"""
 
-        def interflow_op(
-                soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
-                water_pix, inter_pix):
-            """A vectorize operation for calculating the baseflow value
+    def interflow_op(
+            soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
+            water_pix, inter_pix):
+        """A vectorize operation for calculating the baseflow value
 
-                alpha_pix - a float value for the alpha coefficients
-                soil_pix - a float value for the soil water content
-                dflow_pix - a float value for the direct flow
-                evap_pix - a float value for the actual evaporation
-                bflow_pix - a float value for the baseflow
-                smax_pix - a float value for the soil water content max
-                water_pix - a float value for the water available
-                inter_pix - a float value for the intermediate interflow
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
+            dflow_pix - a float value for the direct flow
+            evap_pix - a float value for the actual evaporation
+            bflow_pix - a float value for the baseflow
+            smax_pix - a float value for the soil water content max
+            water_pix - a float value for the water available
+            inter_pix - a float value for the intermediate interflow
 
-                returns - the interflow value
-            """
-            conditional = (
+            returns - the interflow value
+        """
+        conditional = (
+                soil_pix + water_pix - (
+                    evap_pix - dflow_pix - inter_pix - bflow_pix))
+
+        if conditional <= smax_pix:
+            return inter_pix
+        else:
+            return (
                     soil_pix + water_pix - (
-                        evap_pix - dflow_pix - inter_pix - bflow_pix))
-
-            if conditional <= smax_pix:
-                return inter_pix
-            else:
-                return (
-                        soil_pix + water_pix - (
-                            evap_pix - dflow_pix - bflow_pix - smax_pix))
+                        evap_pix - dflow_pix - bflow_pix - smax_pix))
 
     cellsize = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
 
@@ -230,15 +243,15 @@ def calculate_baseflow(
 
         returns - nothing"""
 
-        def baseflow_op(alpha_pix, soil_pix):
-            """A vectorize operation for calculating the baseflow value
+    def baseflow_op(alpha_pix, soil_pix):
+        """A vectorize operation for calculating the baseflow value
 
-                alpha_pix - a float value for the alpha coefficients
-                soil_pix - a float value for the soil water content
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
 
-                returns - the baseflow value
-            """
-            return alpha_pix * soil_pix**beta
+            returns - the baseflow value
+        """
+        return alpha_pix * soil_pix**beta
 
     cellsize = raster_utils.get_cell_size_from_uri(alpha_three_uri)
 
@@ -270,19 +283,19 @@ def calculate_intermediate_interflow(
 
         returns - nothing"""
 
-        def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
-            """A vectorize operation for calculating the interflow value
+    def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
+        """A vectorize operation for calculating the interflow value
 
-                alpha_pix - a float value for the alpha coefficients
-                soil_pix - a float value for the soil water content
-                water_pix - a float value for the water
-                evap_pix - a float value for the actual evaporation
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
+            water_pix - a float value for the water
+            evap_pix - a float value for the actual evaporation
 
-                returns - the interflow value
-            """
-            return alpha_pix * soil_pix**beta * (
-                    water_pix - evap_pix * (1 - math.exp(
-                        -1 * (water_pix / evap_pix)))
+            returns - the interflow value
+        """
+        return alpha_pix * soil_pix**beta * (
+                water_pix - evap_pix * (1 - math.exp(
+                    -1 * (water_pix / evap_pix))))
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
 
@@ -292,7 +305,7 @@ def calculate_intermediate_interflow(
             out_nodata, cell_size, 'intersection')
 
 def calculate_water_amt(
-        imperv_area_uri, total_precip_uri, alpha_one_uri water_out_uri,
+        imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
         out_nodata):
     """Calculates the water available on a pixel
 
@@ -510,6 +523,30 @@ def calculate_alphas(
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
             out_nodata, smax_cell_size, 'intersection')
+
+def construct_lulc_lookup_dict(lulc_data_uri, field):
+    """Parse a LULC lookup CSV table and construct a dictionary mapping the LULC
+        codes to the value of 'field'
+
+        lulc_data_uri - a URI to a CSV lulc lookup table
+
+        field - a python string for the interested field to map to
+
+        returns - a dictionary of the mapped lulc codes to the specified field
+    """
+    data_file = open(lulc_data_uri)
+    data_handler = csv.DictReader(data_file)
+    
+    # Make the fieldnames lowercase
+    data_handler.fieldnames = [f.lower() for f in data_handler.fieldnames]
+    LOGGER.debug('Lowercase Fieldnames : %s', data_handler.fieldnames)
+
+    lulc_dict = {}
+
+    for row in data_handler:
+        lulc_dict[int(row['lulc'])] = float(row[field])
+
+    return lulc_dict
 
 def construct_time_step_data(data_uri):
     """Parse the CSV data file and construct a dictionary using the time step
