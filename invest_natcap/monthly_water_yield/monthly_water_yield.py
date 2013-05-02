@@ -28,8 +28,13 @@ def execute(args):
 
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
+        
         args[time_step_data] - a uri to a CSV file
+        
         args[soil_max_uri] - a uri to a gdal raster for soil max
+        
+        args[pawc_uri] - a uri to a gdal raster for plant available water
+            content
 
     """
     LOGGER.debug('Start Executing Model')
@@ -66,8 +71,6 @@ def execute(args):
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
     raster_utils.calculate_slope(dem_uri, slope_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
-    LOGGER.debug('Slope nodata : %s', slope_nodata)
 
     # Calculate the alpha rasters
     alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
@@ -145,6 +148,278 @@ def execute(args):
     # Add values to output table
 
     # Move on to next month
+
+def calculate_final_interflow(
+        dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
+        water_uri, intermediate_interflow_uri, interflow_out_uri, out_nodata):
+    """This function calculates the final interflow
+
+        dflow_uri - a URI to a gdal dataset of the direct flow
+
+        soil_storage_uri - a URI to a gdal datasaet for the soil water content
+            from the previous time step
+
+        evap_uri - a URI to a gdal dataset for the actual evaporation 
+
+        baseflow_uri - a URI to a gdal dataset for the baseflow
+
+        smax_uri - a URI to a gdal dataset for the soil water content max
+
+        water_uri - a URI to a gdal dataset for the water avaiable on a pixel
+
+        intermediate_interflow_uri - a URI to a gdal dataset for the
+            intermediate interflow
+
+        interflow_out_uri - a URI path for the interflow output to be written
+            to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+        def interflow_op(
+                soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
+                water_pix, inter_pix):
+            """A vectorize operation for calculating the baseflow value
+
+                alpha_pix - a float value for the alpha coefficients
+                soil_pix - a float value for the soil water content
+                dflow_pix - a float value for the direct flow
+                evap_pix - a float value for the actual evaporation
+                bflow_pix - a float value for the baseflow
+                smax_pix - a float value for the soil water content max
+                water_pix - a float value for the water available
+                inter_pix - a float value for the intermediate interflow
+
+                returns - the interflow value
+            """
+            conditional = (
+                    soil_pix + water_pix - (
+                        evap_pix - dflow_pix - inter_pix - bflow_pix))
+
+            if conditional <= smax_pix:
+                return inter_pix
+            else:
+                return (
+                        soil_pix + water_pix - (
+                            evap_pix - dflow_pix - bflow_pix - smax_pix))
+
+    cellsize = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
+
+    raster_utils.vectorize_datasets(
+            [soil_storage_uri, dflow_uri, evap_uri, bflow_uri, smax_uri,
+                water_uri, intermediate_interflow_uri], interflow_op,
+            interflow_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
+
+def calculate_baseflow(
+        alpha_three_uri, soil_storage_uri, beta, baseflow_out_uri,  out_nodata):
+    """This function calculates the baseflow
+
+        alpha_three_uri - a URI to a gdal dataset of alpha_three values
+
+        soil_storage_uri - a URI to a gdal datasaet for the soil water content
+            from the previous time step
+
+        beta - a constant number
+
+        baseflow_out_uri - a URI path for the baseflow output to be written
+            to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+        def baseflow_op(alpha_pix, soil_pix):
+            """A vectorize operation for calculating the baseflow value
+
+                alpha_pix - a float value for the alpha coefficients
+                soil_pix - a float value for the soil water content
+
+                returns - the baseflow value
+            """
+            return alpha_pix * soil_pix**beta
+
+    cellsize = raster_utils.get_cell_size_from_uri(alpha_three_uri)
+
+    raster_utils.vectorize_datasets(
+            [alpha_three_uri, soil_storage_uri], baseflow_op,
+            baseflow_out_uri, gdal.GDT_Float32, out_nodata,
+            cell_size, 'intersection')
+
+def calculate_intermediate_interflow(
+        alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
+        interflow_out_uri,  out_nodata):
+    """This function calculates the intermediate interflow
+
+        alpha_two_uri - a URI to a gdal dataset of alpha_two values
+
+        soil_storage_uri - a URI to a gdal datasaet for the soil water content
+            from the previous time step
+
+        water_uri - a URI to a gdal dataset for the water
+
+        evap_uri - a URI to a gdal dataset for the actual evaporation
+
+        beta - a constant number
+
+        interflow_out_uri - a URI path for the intermediate interflow output to
+            be written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+        def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
+            """A vectorize operation for calculating the interflow value
+
+                alpha_pix - a float value for the alpha coefficients
+                soil_pix - a float value for the soil water content
+                water_pix - a float value for the water
+                evap_pix - a float value for the actual evaporation
+
+                returns - the interflow value
+            """
+            return alpha_pix * soil_pix**beta * (
+                    water_pix - evap_pix * (1 - math.exp(
+                        -1 * (water_pix / evap_pix)))
+
+    cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
+
+    raster_utils.vectorize_datasets(
+            [alpha_two_uri, soil_storage_uri, water_uri, evap_uri],
+            interflow_op, interflow_out_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
+
+def calculate_water_amt(
+        imperv_area_uri, total_precip_uri, alpha_one_uri water_out_uri,
+        out_nodata):
+    """Calculates the water available on a pixel
+
+        imperv_area_uri - a URI to a gdal dataset for the impervious area in
+            fraction
+        total_precip_uri - a URI to a gdal dataset for the total precipiation
+
+        alpha_one_uri - a URI to a gdal dataset of alpha_one values
+
+        water_out_uri - a URI path for the water output to be written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing
+    """
+
+    def water_op(imperv_pix, alpha_pix, precip_pix):
+        """Vectorize function for computing water value
+        
+            imperv_pix - a float value for the impervious area in fraction
+            tot_p_pix - a float value for the precipitation
+            alpha_pix - a float value for the alpha variable
+
+            returns - value for water"""
+        return (1 - imperv_pix) * (1 - alpha_pix) * precip_pix
+
+    cell_size = raster_utils.get_cell_size_from_uri(alpha_one_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_area_uri, alpha_one_uri, total_precip_uri], water_op,
+            water_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
+
+def calculate_evaporation(
+        soil_storage_uri, pawc_uri, w_uri, evap_out_uri, etc_out_uri,
+        out_nodata):
+    """This function calculates the actual evaporation
+
+        soil_storage_uri - a URI to a gdal dataset for the previous time steps
+            soil water content
+        
+        pawc_uri - a URI to a gdal dataset for plant available water conent
+        
+        w_uri - a URI to a gdal dataset for the W
+        
+        evap_out_uri - a URI path for the actual evaporation output to be
+            written to disk
+        
+        etc_out_uri - a URI path for the plant potential evapotranspiration
+            rate output to be written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing
+    """
+
+    # Possible calculate ETc unless this is somehow being input
+
+    # Calculate E
+    def actual_evap(water_pix, soil_pix, etc_pix, pawc_pix):
+        """Vectorize Operation for computing actual evaporation
+
+            water_pix - a float for the water value
+            soil_pix - a float for the soil water content value of the previous
+                time step
+            etc_pix - a float for the plant potential evapotranspiration rate
+                value
+            pawc_pix - a float value for the plant available water content
+
+            returns - the actual evaporation value
+        """
+        if w_pix < etc_pix:
+            return w_pix + soil_pix * math.fabs(
+                    math.expm1(-1 * ((etc_pix - w_pix) / pawc_pix)))
+        else:
+            return etc_pix
+        
+
+    cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
+
+    raster_utils.vectorize_datasets(
+            [w_uri, soil_uri, etc_uri, pawc_uri], actual_evap,
+            evap_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
+
+def calculate_direct_flow(
+        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri,  dt_out_uri,
+        tp_out_uri, out_nodata):
+    """This function calculates the direct flow over the catchment
+    
+        imperv_area_uri - a URI to a gdal dataset for the impervious area in
+            fraction
+
+        dem_uri - a URI to a gdal dataset of an elevation map
+        
+        precip_uri - a URI to a gdal dataset of the precipitation over the
+            landscape
+        
+        alpha_one_uri - a URI to a gdal dataset of alpha_one values
+        
+        dt_out_uri - a URI path for the direct flow output as a gdal dataset
+        
+        tp_out_uri - a URI path for the total precip output as a gdal dataset
+
+        out_nodata - a float for the output nodata value
+
+        returns - Nothing
+    """
+
+    def direct_flow(imperv_pix, tot_p_pix, alpha_pix):
+        """Vectorize function for computing direct flow
+        
+            imperv_pix - a float value for the impervious area in fraction
+            tot_p_pix - a float value for the precipitation
+            alpha_pix - a float value for the alpha variable
+
+            returns - direct flow"""
+        return (imperv_pix * tot_p_pix) + (
+                (1 - imperv_pix) * alpha_pix * tot_p_pix)
+
+    cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_area_uri, precip_uri, alpha_one_uri], direct_flow,
+            dt_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            'intersection')
+
 
 def calculate_alphas(
         slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
