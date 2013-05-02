@@ -195,12 +195,21 @@ def execute(args):
 
     # our timesteps start at 1.
     for timestep in range(1, args['num_intervals'] + 1):
+        LOGGER.info('Starting timestep %s', timestep)
+
         def _timestep_uri(file_name=''):
             """Make a URI for a timestep-based folder."""
             return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
                 _add_suffix(file_name))
 
-        LOGGER.info('Starting timestep %s', timestep)
+        timestep_rasters = {
+            'precip': _timestep_uri('precip.tif'),
+            'runoff': _timestep_uri('storm_runoff.tif'),
+            'overland_time': _timestep_uri('overland_travel_time.tif'),
+            'discharge': _timestep_uri('flood_water_discharge.tif'),
+            'channel_time': _timestep_uri('channel_travel_time.tif')
+        }
+
         # Create the timestamp folder name and make the folder on disk.
         timestep_dir = os.path.join(_intermediate_uri(), 'timestep_%s' % timestep)
         raster_utils.create_directories([timestep_dir])
