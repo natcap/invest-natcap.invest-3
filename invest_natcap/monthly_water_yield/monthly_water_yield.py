@@ -36,6 +36,12 @@ def execute(args):
         args[pawc_uri] - a uri to a gdal raster for plant available water
             content
 
+        args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
+        
+        args[lulc_data_uri] - a URI to a CSV file for the land cover code lookup
+            table
+
+        returns - nothing
     """
     LOGGER.debug('Start Executing Model')
     
@@ -49,6 +55,20 @@ def execute(args):
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
     pawc_uri = args['pawc_uri']
+    lulc_uri = args['lulc_uri']
+    lulc_data_uri = args['lulc_data_uri']
+   
+    # Set out_nodata value
+    float_nodata = float(np.finfo(np.float32).min) + 1.0
+    
+    # Get the impervious fraction mapping from lulc codes
+    imperv_dict = construct_lulc_lookup_dict(lulc_data_uri, 'imperv_fract')
+    # Reclassify lulc by impervious fraction
+    imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, imperv_dict, imperv_area_uri, gdal.GDT_Float32,
+            float_nodata)
+
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
@@ -57,8 +77,6 @@ def execute(args):
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
 
-    # Set out_nodata value
-    float_nodata = float(np.finfo(np.float32).min) + 1.0
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
@@ -136,7 +154,9 @@ def execute(args):
                     projected_point_uri, field, out_uri)
 
         # Calculate Direct Flow (Runoff)
-
+        #calculate_direct_flow(
+        #        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dt_out_uri,
+        #        tp_out_uri, float_nodata)
         # Calculate Interflow
 
         # Calculate Baseflow
@@ -149,7 +169,14 @@ def execute(args):
         # Add values to output table
 
         # Move on to next month
+
 def clean_uri(in_uri):
+    """Removes a file by its URI if it exists
+        
+        in_uri - a URI for a file path
+
+        returns - nothing"""
+
     if os.path.isfile(in_uri):
         os.remove(in_uri)
 
@@ -514,6 +541,30 @@ def calculate_alphas(
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
             out_nodata, smax_cell_size, 'intersection')
+
+def construct_lulc_lookup_dict(lulc_data_uri, field):
+    """Parse a LULC lookup CSV table and construct a dictionary mapping the LULC
+        codes to the value of 'field'
+
+        lulc_data_uri - a URI to a CSV lulc lookup table
+
+        field - a python string for the interested field to map to
+
+        returns - a dictionary of the mapped lulc codes to the specified field
+    """
+    data_file = open(lulc_data_uri)
+    data_handler = csv.DictReader(data_file)
+    
+    # Make the fieldnames lowercase
+    data_handler.fieldnames = [f.lower() for f in data_handler.fieldnames]
+    LOGGER.debug('Lowercase Fieldnames : %s', data_handler.fieldnames)
+
+    lulc_dict = {}
+
+    for row in data_handler:
+        lulc_dict[int(row['lulc'])] = float(row[field])
+
+    return lulc_dict
 
 def construct_time_step_data(data_uri):
     """Parse the CSV data file and construct a dictionary using the time step
