@@ -362,6 +362,10 @@ def calculate_water_amt(
 
         returns - nothing
     """
+    no_data_list = []
+    for raster_uri in [imperv_area_uri, total_precip_uri, alpha_one_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
 
     def water_op(imperv_pix, alpha_pix, precip_pix):
         """Vectorize function for computing water value
@@ -371,6 +375,10 @@ def calculate_water_amt(
             alpha_pix - a float value for the alpha variable
 
             returns - value for water"""
+        for pix in [imperv_pix, alpha_pix, precip_pix]:
+            if pix in no_data_list:
+                return out_nodata
+
         return (1 - imperv_pix) * (1 - alpha_pix) * precip_pix
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_one_uri)
