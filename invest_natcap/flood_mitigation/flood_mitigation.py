@@ -751,6 +751,9 @@ def hydrograph(discharge_uri, mannings_uri, slope_uri, output_uri):
         if slope == slope_nodata:
             return discharge_nodata
 
+        if slope == 0:
+            return 0.0
+
         return ((discharge * mannings) / slope ** (0.5)) ** (0.375)
 
     raster_utils.vectorize_datasets(raster_list, _vectorized_hydrograph,
