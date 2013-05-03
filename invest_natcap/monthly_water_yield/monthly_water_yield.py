@@ -133,6 +133,7 @@ def execute(args):
     etc_uri = os.path.join(intermediate_dir, 'etc.tif')
     intermed_interflow_uri = os.path.join(
             intermediate_dir, 'intermediate_interflow.tif')
+    baseflow_uri = os.path.join(intermediate_dir, 'baseflow.tif')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -189,6 +190,10 @@ def execute(args):
                 intermed_interflow_uri, float_nodata)
 
         # Calculate Baseflow
+        clean_uri([baseflow_uri])
+        calculate_baseflow(
+                alpha_three_uri, soil_storage_uri, beta, baseflow_uri,
+                float_nodata)
 
         # Calculate Streamflow
 
@@ -321,7 +326,7 @@ def calculate_baseflow(
 
         return alpha_pix * soil_pix**beta
 
-    cellsize = raster_utils.get_cell_size_from_uri(alpha_three_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(alpha_three_uri)
 
     raster_utils.vectorize_datasets(
             [alpha_three_uri, soil_storage_uri], baseflow_op,
