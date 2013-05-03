@@ -895,3 +895,26 @@ def arrival_time(dem_uri, travel_time_uri, timestep, time_interval,
     routing_utils.stream_threshold(flow_accumulation_uri, stream_threshold,
         stream_uri)
 
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
+    stream_threshold_nodata = raster_utils.get_nodata_from_uri(stream_threshold_uri)
+    def _filter_flow_accumulation(flow_accum, stream):
+        """A function to filter out the flow accumulation pixels from the stream
+            pixels.  All inputs are floats.  Returns a float."""
+
+        if flow_accumu == flow_accumulation_nodata:
+            return flow_accumulation_nodata
+
+        if stream == stream_threshold_nodata:
+            return flow_accumulation_nodata
+
+        if stream == 1:
+            return flow_accum
+        return 0.0
+
+
+    raster_list = [flow_accumulation_uri, stream_threshold_uri]
+    min_pixel_size = _get_cell_size_from_datasets(raster_list)
+    raster_utils.vectorize_datasets(raster_list, _filter_flow_accumulation,
+        output_uri, gdal.GDT_Float32, flow_accumulation_nodata, min_pixel_size,
+        'intersection')
+
