@@ -205,6 +205,7 @@ def execute(args):
 
         timestep_rasters = {
             'precip': _timestep_uri('precip.tif'),
+            'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif')
         }
 
@@ -214,6 +215,15 @@ def execute(args):
         # make the precip raster, since it's timestep-dependent.
         make_precip_raster(paths['precip_points'], args['dem'], timestep,
             timestep_rasters['precip'])
+
+        # Calculate storm runoff once we have all the data we need.
+        storm_runoff(timestep_rasters['precip'], paths['swrc'],
+            timestep_rasters['runoff'])
+
+        # Calculate the overland travel time.
+        overland_travel_time(args['time_interval'], timestep_rasters['runoff'],
+            paths['slope'], paths['flow_length'], paths['mannings'],
+            timestep_rasters['overland_time'])
 
         ##################
         # Channel Routing.
