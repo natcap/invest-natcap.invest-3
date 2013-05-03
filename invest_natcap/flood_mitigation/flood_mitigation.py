@@ -211,23 +211,22 @@ def execute(args):
             return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
                 _add_suffix(_ts_suffix(file_name)))
 
-        timestep_rasters = {
+        paths['timesteps'][timestep] = {
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif')
         }
-        paths
 
         # Create the timestamp folder name and make the folder on disk.
         raster_utils.create_directories([_timestep_uri()])
 
         # make the precip raster, since it's timestep-dependent.
         make_precip_raster(paths['precip_points'], args['dem'], timestep,
-            timestep_rasters['precip'])
+            paths['timesteps'][timestep]['precip'])
 
         # Calculate storm runoff once we have all the data we need.
-        storm_runoff(timestep_rasters['precip'], paths['swrc'],
-            timestep_rasters['runoff'])
+        storm_runoff(paths['timesteps'][timestep]['precip'], paths['swrc'],
+            paths['timesteps'][timestep]['runoff'])
 
         ##################
         # Channel Routing.
@@ -235,19 +234,19 @@ def execute(args):
             # We need a previous flood water discharge raster to be created before we
             # actually start iterating through the timesteps.
             discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
-            raster_utils.new_raster_from_base_uri(timestep_rasters['runoff'],
+            raster_utils.new_raster_from_base_uri(paths['timesteps'][timestep]['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
                 fill_value=0.0)
 
 
-        flood_water_discharge(timestep_rasters['runoff'], paths['flow_direction'],
-            args['time_interval'], timestep_rasters['discharge'],
+        flood_water_discharge(paths['timesteps'][timestep]['runoff'], paths['flow_direction'],
+            args['time_interval'], paths['timesteps'][timestep]['discharge'],
             paths['outflow_weights'], paths['outflow_direction'],
             paths['prev_discharge'])
 
         # Set the previous discharge path to the discharge_uri so we can use it
         # later on.
-        paths['prev_discharge'] = timestep_rasters['discharge']
+        paths['prev_discharge'] = paths['timesteps'][timestep]['discharge']
 
         ###########################
         # Flood waters calculations
