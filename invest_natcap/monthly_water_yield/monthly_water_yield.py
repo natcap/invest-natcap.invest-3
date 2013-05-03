@@ -35,6 +35,8 @@ def execute(args):
         
         args[pawc_uri] - a uri to a gdal raster for plant available water
             content
+        
+        args[pet_uri] - a uri to a gdal raster for potential evapotranspiration 
 
         args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
         
@@ -57,6 +59,7 @@ def execute(args):
     pawc_uri = args['pawc_uri']
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
+    pet_uri = args['pet_uri']
    
     # Set out_nodata value
     float_nodata = float(np.finfo(np.float32).min) + 1.0
