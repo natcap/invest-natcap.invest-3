@@ -142,7 +142,8 @@ def execute(args):
         'swrc': _intermediate_uri('swrc.tif'),
         'prev_discharge': _intermediate_uri('init_discharge.tif'),
         'outflow_weights': _intermediate_uri('outflow_weights.tif'),
-        'outflow_direction': _intermediate_uri('outflow_direction.tif')
+        'outflow_direction': _intermediate_uri('outflow_direction.tif'),
+        'timesteps': {}
     }
 
     # Create folders in the workspace if they don't already exist
@@ -198,16 +199,24 @@ def execute(args):
     for timestep in range(1, args['num_intervals'] + 1):
         LOGGER.info('Starting timestep %s', timestep)
 
+        def _ts_suffix(file_name=''):
+            """give the filename a suffix that includes the timestep."""
+            if file_name != '':
+                file_base, extension = os.path.splitext(file_name)
+                return "%s_%s%s" % (file_base, timestep, extension)
+            return ''
+
         def _timestep_uri(file_name=''):
             """Make a URI for a timestep-based folder."""
             return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
-                _add_suffix(file_name))
+                _add_suffix(_ts_suffix(file_name)))
 
         timestep_rasters = {
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif')
         }
+        paths
 
         # Create the timestamp folder name and make the folder on disk.
         raster_utils.create_directories([_timestep_uri()])
