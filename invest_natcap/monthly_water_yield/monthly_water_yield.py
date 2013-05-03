@@ -69,6 +69,13 @@ def execute(args):
             lulc_uri, imperv_dict, imperv_area_uri, gdal.GDT_Float32,
             float_nodata)
 
+    # Get the crop coefficient mapping from lulc codes
+    crop_dict = construct_lulc_lookup_dict(lulc_data_uri, 'crop_fract')
+    # Reclassify lulc by crop fraction
+    crop_uri = os.path.join(intermediate_dir, 'crop.tif')
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, crop_dict, crop_uri, gdal.GDT_Float32,
+            float_nodata)
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
@@ -222,6 +229,50 @@ def clean_uri(in_uri_list):
     for uri in in_uri_list:
         if os.path.isfile(uri):
             os.remove(uri)
+
+def calculate_intermediate_streamflow(
+        dflow_uri, interflow_uri, baseflow_uri, inter_streamflow_uri,
+        out_nodata):
+    """This function calculates the baseflow
+
+        dflow_uri - a URI to a gdal dataset of the direct flow
+
+        interflow_uri - a URI to a gdal datasaet for the interflow
+
+        baseflow_uri - a URI to a gdal datasaet for the baseflow
+
+        inter_streamflow_uri - a URI path for the streamflow output to be
+            written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+    
+    no_data_list = []
+    for raster_uri in [dflow_uri, interflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def baseflow_op(alpha_pix, soil_pix):
+        """A vectorize operation for calculating the baseflow value
+
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
+
+            returns - the baseflow value
+        """
+        for pix in [alpha_pix, soil_pix]:
+            if pix in no_data_list:
+                return out_nodata
+
+        return alpha_pix * soil_pix**beta
+
+    cell_size = raster_utils.get_cell_size_from_uri(dflow_uri)
+
+    raster_utils.vectorize_datasets(
+            [dflow_uri, interflow_uri], baseflow_op,
+            baseflow_out_uri, gdal.GDT_Float32, out_nodata,
+            cell_size, 'intersection')
 
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
