@@ -175,9 +175,9 @@ def execute(args):
 
         # Calculate Evaopration
         clean_uri([evap_uri, etc_uri])
-        #calculate_evaporation(
-        #        soil_storage_uri, pawc_uri, water_uri, evap_uri, etc_uri,
-        #        float_nodata)
+        calculate_evaporation(
+                soil_storage_uri, pawc_uri, water_uri, evap_uri, etc_uri,
+                float_nodata)
         
         # Calculate Interflow
 
@@ -418,7 +418,7 @@ def calculate_water_amt(
             'intersection')
 
 def calculate_evaporation(
-        soil_storage_uri, pawc_uri, water_uri, evap_out_uri, etc_out_uri,
+        soil_storage_uri, pawc_uri, water_uri, evap_out_uri, etc_uri,
         out_nodata):
     """This function calculates the actual evaporation
 
@@ -432,7 +432,7 @@ def calculate_evaporation(
         evap_out_uri - a URI path for the actual evaporation output to be
             written to disk
         
-        etc_out_uri - a URI path for the plant potential evapotranspiration
+        etc_uri - a URI path for the plant potential evapotranspiration
             rate output to be written to disk
 
         out_nodata - a float for the output nodata value
@@ -444,8 +444,23 @@ def calculate_evaporation(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
+    ###################################
+    # COPYING WATER RASTER AND MULTIPLYING VALUES BY .9 TO GET SOMETHING TO WORK
+    # WITH. ASK RICH / YONAS HOW ETC SHOULD BE CALCULATE
     # Possible calculate ETc unless this is somehow being input
+    def copy_precip(water_pix):
+        if water_pix in no_data_list:
+            return out_nodata
+        else:
+            return water_pix * 0.9
+    
+    cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
 
+    raster_utils.vectorize_datasets(
+            [water_uri], copy_precip, etc_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
+    ###################################
+    
     # Calculate E
     def actual_evap(water_pix, soil_pix, etc_pix, pawc_pix):
         """Vectorize Operation for computing actual evaporation
@@ -463,13 +478,13 @@ def calculate_evaporation(
             if pix in no_data_list:
                 return out_nodata
         
-        if w_pix < etc_pix:
-            return w_pix + soil_pix * math.fabs(
-                    math.expm1(-1 * ((etc_pix - w_pix) / pawc_pix)))
+        if water_pix < etc_pix:
+            return water_pix + soil_pix * math.fabs(
+                    math.expm1(-1 * ((etc_pix - water_pix) / pawc_pix)))
         else:
             return etc_pix
         
-    cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
+    #cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
 
     raster_utils.vectorize_datasets(
             [water_uri, soil_storage_uri, etc_uri, pawc_uri], actual_evap,
