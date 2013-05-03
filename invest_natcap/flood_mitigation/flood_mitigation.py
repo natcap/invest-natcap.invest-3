@@ -146,6 +146,28 @@ def execute(args):
         'timesteps': {}
     }
 
+    for timestep in range(1, args['num_intervals'] + 1):
+        def _ts_suffix(file_name=''):
+            """give the filename a suffix that includes the timestep."""
+            if file_name != '':
+                file_base, extension = os.path.splitext(file_name)
+                return "%s_%s%s" % (file_base, timestep, extension)
+            return ''
+
+        def _timestep_uri(file_name=''):
+            """Make a URI for a timestep-based folder."""
+            return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
+                _add_suffix(_ts_suffix(file_name)))
+
+        paths['timesteps'][timestep] = {
+            'precip': _timestep_uri('precip.tif'),
+            'runoff': _timestep_uri('storm_runoff.tif'),
+            'discharge': _timestep_uri('flood_water_discharge.tif')
+        }
+
+        # Create the timestamp folder name and make the folder on disk.
+        raster_utils.create_directories([_timestep_uri()])
+
     # Create folders in the workspace if they don't already exist
     raster_utils.create_directories([args['workspace'], _intermediate_uri(),
         _output_uri()])
@@ -196,37 +218,15 @@ def execute(args):
         paths['precip_points'])
 
     # our timesteps start at 1.
-    for timestep in range(1, args['num_intervals'] + 1):
+    for timestep, ts_paths in paths['timesteps'].iteritems():
         LOGGER.info('Starting timestep %s', timestep)
-
-        def _ts_suffix(file_name=''):
-            """give the filename a suffix that includes the timestep."""
-            if file_name != '':
-                file_base, extension = os.path.splitext(file_name)
-                return "%s_%s%s" % (file_base, timestep, extension)
-            return ''
-
-        def _timestep_uri(file_name=''):
-            """Make a URI for a timestep-based folder."""
-            return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
-                _add_suffix(_ts_suffix(file_name)))
-
-        paths['timesteps'][timestep] = {
-            'precip': _timestep_uri('precip.tif'),
-            'runoff': _timestep_uri('storm_runoff.tif'),
-            'discharge': _timestep_uri('flood_water_discharge.tif')
-        }
-
-        # Create the timestamp folder name and make the folder on disk.
-        raster_utils.create_directories([_timestep_uri()])
 
         # make the precip raster, since it's timestep-dependent.
         make_precip_raster(paths['precip_points'], args['dem'], timestep,
-            paths['timesteps'][timestep]['precip'])
+            ts_paths['precip'])
 
         # Calculate storm runoff once we have all the data we need.
-        storm_runoff(paths['timesteps'][timestep]['precip'], paths['swrc'],
-            paths['timesteps'][timestep]['runoff'])
+        storm_runoff(ts_paths['precip'], paths['swrc'], ts_paths['runoff'])
 
         ##################
         # Channel Routing.
@@ -234,19 +234,19 @@ def execute(args):
             # We need a previous flood water discharge raster to be created before we
             # actually start iterating through the timesteps.
             discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
-            raster_utils.new_raster_from_base_uri(paths['timesteps'][timestep]['runoff'],
+            raster_utils.new_raster_from_base_uri(ts_paths['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
                 fill_value=0.0)
 
 
-        flood_water_discharge(paths['timesteps'][timestep]['runoff'], paths['flow_direction'],
-            args['time_interval'], paths['timesteps'][timestep]['discharge'],
+        flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
+            args['time_interval'], ts_paths['discharge'],
             paths['outflow_weights'], paths['outflow_direction'],
             paths['prev_discharge'])
 
         # Set the previous discharge path to the discharge_uri so we can use it
         # later on.
-        paths['prev_discharge'] = paths['timesteps'][timestep]['discharge']
+        paths['prev_discharge'] = ts_paths['discharge']
 
         ###########################
         # Flood waters calculations
