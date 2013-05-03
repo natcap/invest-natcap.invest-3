@@ -638,8 +638,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     }
     neighbors = list(neighbor_indices.iteritems())
 
-    class NeighborHasNoRunoffData(Exception):
-        """An exception for skipping a neighbor when that neighbor's runoff
+    class NeighborHasNoData(Exception):
+        """An exception for skipping a neighbor when that neighbor's
         value is nodata."""
         pass
 
@@ -680,7 +680,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
-                            raise NeighborHasNoRunoffData
+                            raise NeighborHasNoData
+
+                        neighbor_prev_discharge = prev_discharge_matrix[neighbor_index]
+                        if neighbor_prev_discharge == discharge_nodata:
+                            raise NeighborHasNoData
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
@@ -691,10 +695,13 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         else:
                             fractional_flow = first_neighbor_weight
 
-                        discharge = neighbor_runoff * fractional_flow * pixel_area
+                        discharge = (((neighbor_runoff * pixel_area) +
+                            (neighbor_prev_discharge * time_interval)) *
+                            fractional_flow)
+
                         discharge_sum += discharge
 
-                except (IndexError, KeyError, NeighborHasNoRunoffData):
+                except (IndexError, KeyError, NeighborHasNoData):
                     # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
@@ -705,7 +712,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     # value is nodata.
                     pass
 
-            discharge_sum = (discharge_sum / time_interval) + prev_discharge
+            discharge_sum = discharge_sum / time_interval
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
