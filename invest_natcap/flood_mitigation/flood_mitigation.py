@@ -176,22 +176,23 @@ def execute(args):
     except OSError:
         pass
 
-    # Reclassify the LULC to get the manning's raster.
+
+    #######################
+    # Preprocessing
     mannings_raster(args['landuse'], args['mannings'], paths['mannings'])
-
-    # We need a slope raster for several components of the model.
     raster_utils.calculate_slope(args['dem'], paths['slope'])
-
-    # Calculate the flow direction, needed for flow length and for other
-    # functions later on.
     routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
-
-    # Calculate the flow length here, since we need it for several parts of the
-    # model.
     routing_utils.calculate_flow_length(paths['flow_direction'],
         paths['flow_length'])
 
-    # We always want to adjust for slope.
+    # Convert the precip table from CSV to ESRI Shapefile and reproject it.
+    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
+    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
+        paths['precip_points'])
+
+    #######################
+    # Adjusting curve numbers
     adjust_cn_for_slope(args['curve_numbers'], paths['slope'], paths['cn_slope'])
 
     if args['cn_adjust'] == True:
@@ -206,13 +207,6 @@ def execute(args):
     # Calculate the Soil Water Retention Capacity (equation 2)
     soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
-    # Convert precipitation table to a points shapefile.
-    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
-
-    # Project the precip points from latlong to the correct projection.
-    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
-    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
-        paths['precip_points'])
 
     # our timesteps start at 1.
     for timestep, ts_paths in paths['timesteps'].iteritems():
