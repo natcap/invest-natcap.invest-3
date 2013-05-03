@@ -147,17 +147,14 @@ def execute(args):
     }
 
     for timestep in range(1, args['num_intervals'] + 1):
-        def _ts_suffix(file_name=''):
-            """give the filename a suffix that includes the timestep."""
-            if file_name != '':
-                file_base, extension = os.path.splitext(file_name)
-                return "%s_%s%s" % (file_base, timestep, extension)
-            return ''
-
         def _timestep_uri(file_name=''):
             """Make a URI for a timestep-based folder."""
+            if file_name != '':
+                file_base, extension = os.path.splitext(file_name)
+                file_name = "%s_%s%s" % (file_base, timestep, extension)
+
             return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
-                _add_suffix(_ts_suffix(file_name)))
+                _add_suffix(file_name))
 
         paths['timesteps'][timestep] = {
             'precip': _timestep_uri('precip.tif'),
