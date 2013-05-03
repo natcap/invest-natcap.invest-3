@@ -60,22 +60,18 @@ def execute(args):
    
     # Set out_nodata value
     float_nodata = float(np.finfo(np.float32).min) + 1.0
-    
-    # Get the impervious fraction mapping from lulc codes
-    imperv_dict = construct_lulc_lookup_dict(lulc_data_uri, 'imperv_fract')
-    # Reclassify lulc by impervious fraction
+   
     imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
-    raster_utils.reclassify_dataset_uri(
-            lulc_uri, imperv_dict, imperv_area_uri, gdal.GDT_Float32,
-            float_nodata)
-
-    # Get the crop coefficient mapping from lulc codes
-    crop_dict = construct_lulc_lookup_dict(lulc_data_uri, 'crop_fract')
-    # Reclassify lulc by crop fraction
     crop_uri = os.path.join(intermediate_dir, 'crop.tif')
-    raster_utils.reclassify_dataset_uri(
-            lulc_uri, crop_dict, crop_uri, gdal.GDT_Float32,
-            float_nodata)
+    
+    for code_uri, field in zip(
+            [imperv_area_uri, crop_uri],['imperv_fract', 'crop_fract']):
+        # Map the field to the lulc code in a dictionary
+        lulc_code_dict = construct_lulc_lookup_dict(lulc_data_uri, field)
+        # Reclassify lulc raster using lulc code to field mapping
+        raster_utils.reclassify_dataset_uri(
+                lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
+                float_nodata)
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
