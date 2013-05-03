@@ -11,6 +11,7 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
+from invest_natcap.pollination import pollination_core
 import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
@@ -207,7 +208,8 @@ def execute(args):
             'runoff': _timestep_uri('storm_runoff.tif'),
             'overland_time': _timestep_uri('overland_travel_time.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'channel_time': _timestep_uri('channel_travel_time.tif')
+            'channel_time': _timestep_uri('channel_travel_time.tif'),
+            'travel_time_sum': raster_utils.temporary_filename()
         }
 
         # Create the timestamp folder name and make the folder on disk.
@@ -251,6 +253,14 @@ def execute(args):
         channel_travel_time(paths['mannings'], paths['slope'],
             timestep_rasters['discharge'], paths['flow_length'],
             timestep_rasters['channel_time'])
+
+        ###########################
+        # Flood waters calculations
+
+        # Sum the two travel time rasters.
+        pollination_core.add_two_rasters(timestep_rasters['overland_time'],
+            timestep_rasters['channel_time'],
+            timestep_rasters['travel_time_sum'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -835,3 +845,76 @@ def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
     raster_utils.vectorize_datasets(raster_list, _vectorized_travel_time,
         output_uri, gdal.GDT_Float32, discharge_nodata, channel_cell_size,
         'intersection')
+
+def arrival_time(dem_uri, travel_time_uri, timestep, time_interval,
+    stream_threshold, output_uri):
+    """Calculate the arrival time on the landscape.  This corresponds with
+        equation 15 in the Flood Mitigation user's guide.
+
+        dem_uri - a URI to a GDAL dataset of a DEM.
+        travel_time_uri - a URI to a GDAL dataset of travel times on the
+            landscape for this timestep.  This should be the sum of the channel
+            travel time and the overland travel time rasters.
+        timestep - an int.  This is the numeric identifier of this timestep
+            (i.e. one of [1, 2, 3, ... T]
+        time_interval - the duration of the timestep, in seconds.
+        stream_threshold - a number indicating the thredhold after we declare a
+            pixel to be a stream.
+        output_uri - the URI to the place on disk where the arrival time raster
+            will be saved.  If a file exists at this location , it will be
+            overwritten.
+
+        This function returns nothing.
+        """
+
+    modified_travel_time_uri = raster_utils.temporary_filename()
+    flow_accumulation_uri = raster_utils.temporary_filename()
+    travel_time_nodata = raster_utils.get_nodata_from_uri(travel_time_uri)
+    travel_time_pixel_size = raster_utils.get_cell_size_from_uri(travel_time_uri)
+
+    def _vectorized_travel_time(travel_time):
+        """The per-pixel component of the arrival time calculations."""
+        if travel_time == travel_time_nodata:
+            return travel_time_nodata
+        return travel_time + ((timestep - 1) * time_interval)
+
+    raster_utils.vectorize_datasets([travel_time_nodata],
+        _vectorized_travel_time, modified_travel_time_uri, gdal.GDT_Float32,
+        travel_time_nodata, travel_time_pixel_size, 'intersection')
+
+
+    flux_absorption_uri = raster_utils.temporary_filename()
+    routing_utils.make_constant_raster_from_base(dem_uri, 0.0, flux_absorption_uri)
+
+    loss_uri = raster_utils.temporary_filename()
+
+    routing_utils.route_flux(dem_uri, modified_travel_time_uri,
+        flux_absorption_uri, loss_uri, flow_accumulation_uri)
+
+    stream_uri = raster_utils.temporary_filename()
+    routing_utils.stream_threshold(flow_accumulation_uri, stream_threshold,
+        stream_uri)
+
+    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
+    stream_threshold_nodata = raster_utils.get_nodata_from_uri(stream_threshold_uri)
+    def _filter_flow_accumulation(flow_accum, stream):
+        """A function to filter out the flow accumulation pixels from the stream
+            pixels.  All inputs are floats.  Returns a float."""
+
+        if flow_accumu == flow_accumulation_nodata:
+            return flow_accumulation_nodata
+
+        if stream == stream_threshold_nodata:
+            return flow_accumulation_nodata
+
+        if stream == 1:
+            return flow_accum
+        return 0.0
+
+
+    raster_list = [flow_accumulation_uri, stream_threshold_uri]
+    min_pixel_size = _get_cell_size_from_datasets(raster_list)
+    raster_utils.vectorize_datasets(raster_list, _filter_flow_accumulation,
+        output_uri, gdal.GDT_Float32, flow_accumulation_nodata, min_pixel_size,
+        'intersection')
+
