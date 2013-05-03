@@ -207,7 +207,6 @@ def execute(args):
     # Calculate the Soil Water Retention Capacity (equation 2)
     soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
-
     # our timesteps start at 1.
     for timestep, ts_paths in paths['timesteps'].iteritems():
         LOGGER.info('Starting timestep %s', timestep)
@@ -719,4 +718,15 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
     _write_matrix(output_uri, discharge_matrix)
 
+def hydrograph(discharge_uri, mannings_uri, slope_uri, output_uri):
+    """Calculate the hydrograph according to equation 19 in the user's guide.
 
+        discharge_uri - a URI to a GDAL dataset on disk representing the flood
+            water discharge in this timestep.
+        mannings_uri - a URI to a GDAL dataset representing the soil roughness.
+        slope_uri - a URI to a GDAL dataset of slope
+        output_uri - an output URI to where the hydrograph raster will be
+            writte on disk.
+
+        Returns nothing."""
+    pass
