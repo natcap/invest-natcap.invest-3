@@ -73,6 +73,7 @@ def execute(args):
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
     sandy_sa = 0.25
+    beta = 2.0
 
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
@@ -130,6 +131,8 @@ def execute(args):
     water_uri = os.path.join(intermediate_dir, 'water_amt.tif')
     evap_uri = os.path.join(intermediate_dir, 'evaporation.tif')
     etc_uri = os.path.join(intermediate_dir, 'etc.tif')
+    intermed_interflow_uri = os.path.join(
+            intermediate_dir, 'intermediate_interflow.tif')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -180,6 +183,10 @@ def execute(args):
                 float_nodata)
         
         # Calculate Interflow
+        clean_uri([intermed_interflow_uri])
+        calculate_intermediate_interflow(
+                alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
+                intermed_interflow_uri, float_nodata)
 
         # Calculate Baseflow
 
