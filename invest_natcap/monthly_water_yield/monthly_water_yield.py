@@ -134,6 +134,7 @@ def execute(args):
     intermed_interflow_uri = os.path.join(
             intermediate_dir, 'intermediate_interflow.tif')
     baseflow_uri = os.path.join(intermediate_dir, 'baseflow.tif')
+    interflow_uri = os.path.join(intermediate_dir, 'interflow.tif')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -183,7 +184,7 @@ def execute(args):
                 soil_storage_uri, pawc_uri, water_uri, evap_uri, etc_uri,
                 float_nodata)
         
-        # Calculate Interflow
+        # Calculate Intermediate Interflow
         clean_uri([intermed_interflow_uri])
         calculate_intermediate_interflow(
                 alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
@@ -193,6 +194,13 @@ def execute(args):
         clean_uri([baseflow_uri])
         calculate_baseflow(
                 alpha_three_uri, soil_storage_uri, beta, baseflow_uri,
+                float_nodata)
+        
+        # Calculate Final Interflow
+        clean_uri([interflow_uri])
+        calculate_final_interflow(
+                dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
+                water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
 
         # Calculate Streamflow
@@ -281,10 +289,10 @@ def calculate_final_interflow(
                     soil_pix + water_pix - (
                         evap_pix - dflow_pix - bflow_pix - smax_pix))
 
-    cellsize = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
 
     raster_utils.vectorize_datasets(
-            [soil_storage_uri, dflow_uri, evap_uri, bflow_uri, smax_uri,
+            [soil_storage_uri, dflow_uri, evap_uri, baseflow_uri, smax_uri,
                 water_uri, intermediate_interflow_uri], interflow_op,
             interflow_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
             'intersection')
