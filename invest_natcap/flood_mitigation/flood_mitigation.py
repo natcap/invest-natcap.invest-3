@@ -220,11 +220,6 @@ def execute(args):
         storm_runoff(timestep_rasters['precip'], paths['swrc'],
             timestep_rasters['runoff'])
 
-        # Calculate the overland travel time.
-        overland_travel_time(args['time_interval'], timestep_rasters['runoff'],
-            paths['slope'], paths['flow_length'], paths['mannings'],
-            timestep_rasters['overland_time'])
-
         ##################
         # Channel Routing.
         if timestep == 1:
