@@ -219,15 +219,6 @@ def execute(args):
         make_precip_raster(paths['precip_points'], args['dem'], timestep,
             timestep_rasters['precip'])
 
-        # Calculate storm runoff once we have all the data we need.
-        storm_runoff(timestep_rasters['precip'], paths['swrc'],
-            timestep_rasters['runoff'])
-
-        # Calculate the overland travel time.
-        overland_travel_time(args['time_interval'], timestep_rasters['runoff'],
-            paths['slope'], paths['flow_length'], paths['mannings'],
-            timestep_rasters['overland_time'])
-
         ##################
         # Channel Routing.
         if timestep == 1:
@@ -248,19 +239,9 @@ def execute(args):
         # later on.
         paths['prev_discharge'] = timestep_rasters['discharge']
 
-        # Calculate channel travel time with the newly calculated flood water
-        # discharge and other inputs.
-        channel_travel_time(paths['mannings'], paths['slope'],
-            timestep_rasters['discharge'], paths['flow_length'],
-            timestep_rasters['channel_time'])
-
         ###########################
         # Flood waters calculations
 
-        # Sum the two travel time rasters.
-        pollination_core.add_two_rasters(timestep_rasters['overland_time'],
-            timestep_rasters['channel_time'],
-            timestep_rasters['travel_time_sum'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
