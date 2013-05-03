@@ -159,7 +159,8 @@ def execute(args):
         paths['timesteps'][timestep] = {
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
-            'discharge': _timestep_uri('flood_water_discharge.tif')
+            'discharge': _timestep_uri('flood_water_discharge.tif'),
+            'hydrograph': _timestep_uri('hydrograph.tif')
         }
 
         # Create the timestamp folder name and make the folder on disk.
@@ -240,7 +241,8 @@ def execute(args):
 
         ###########################
         # Flood waters calculations
-
+        hydrograph(ts_paths['discharge'], paths['mannings'], paths['slope'],
+            ts_paths['hydrograph'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
