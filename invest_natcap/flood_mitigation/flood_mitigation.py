@@ -865,8 +865,11 @@ def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
         """
 
     flow_accumulation_uri = raster_utils.temporary_filename()
+    travel_time_nodata = raster_utils.get_nodata_from_uri(travel_time_uri)
     travel_time_pixel_size = raster_utils.get_cell_size_from_uri(travel_time_uri)
 
     def _vectorized_arrival_time(travel_time):
         """The per-pixel component of the arrival time calculations."""
+        if travel_time == travel_time_nodata:
+            return travel_time_nodata
         return travel_time + ((timestep - 1) * time_interval)
