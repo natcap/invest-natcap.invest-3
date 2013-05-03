@@ -878,3 +878,12 @@ def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
     raster_utils.vectorize_datasets([travel_time_nodata],
         _vectorized_arrival_time, modified_travel_time_uri, gdal.GDT_Float32,
         travel_time_nodata, travel_time_pixel_size, 'intersection')
+
+
+    flux_absorption_uri = raster_utils.temporary_filename()
+    routing_utils.make_constant_raster_from_base(dem_uri, 0.0, flux_absorption_uri)
+
+    loss_uri = raster_utils.temporary_filename()
+
+    routing_utils.route_flux(dem_uri, modified_travel_time_uri,
+        flux_absorption_uri, loss_uri, flow_accumulation_uri)
