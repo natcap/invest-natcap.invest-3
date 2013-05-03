@@ -845,3 +845,22 @@ def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
     raster_utils.vectorize_datasets(raster_list, _vectorized_travel_time,
         output_uri, gdal.GDT_Float32, discharge_nodata, channel_cell_size,
         'intersection')
+
+def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
+    """Calculate the arrival time on the landscape.  This corresponds with
+        equation 15 in the Flood Mitigation user's guide.
+
+        dem_uri - a URI to a GDAL dataset of a DEM.
+        travel_time_uri - a URI to a GDAL dataset of travel times on the
+            landscape for this timestep.  This should be the sum of the channel
+            travel time and the overland travel time rasters.
+        timestep - an int.  This is the numeric identifier of this timestep
+            (i.e. one of [1, 2, 3, ... T]
+        time_interval - the duration of the timestep, in seconds.
+        output_uri - the URI to the place on disk where the arrival time raster
+            will be saved.  If a file exists at this location , it will be
+            overwritten.
+
+        This function returns nothing.
+        """
+    pass
