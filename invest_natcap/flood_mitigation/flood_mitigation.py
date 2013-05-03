@@ -846,7 +846,8 @@ def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
         output_uri, gdal.GDT_Float32, discharge_nodata, channel_cell_size,
         'intersection')
 
-def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
+def arrival_time(dem_uri, travel_time_uri, timestep, time_interval,
+    stream_threshold, output_uri):
     """Calculate the arrival time on the landscape.  This corresponds with
         equation 15 in the Flood Mitigation user's guide.
 
@@ -857,6 +858,8 @@ def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
         timestep - an int.  This is the numeric identifier of this timestep
             (i.e. one of [1, 2, 3, ... T]
         time_interval - the duration of the timestep, in seconds.
+        stream_threshold - a number indicating the thredhold after we declare a
+            pixel to be a stream.
         output_uri - the URI to the place on disk where the arrival time raster
             will be saved.  If a file exists at this location , it will be
             overwritten.
@@ -869,14 +872,14 @@ def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
     travel_time_nodata = raster_utils.get_nodata_from_uri(travel_time_uri)
     travel_time_pixel_size = raster_utils.get_cell_size_from_uri(travel_time_uri)
 
-    def _vectorized_arrival_time(travel_time):
+    def _vectorized_travel_time(travel_time):
         """The per-pixel component of the arrival time calculations."""
         if travel_time == travel_time_nodata:
             return travel_time_nodata
         return travel_time + ((timestep - 1) * time_interval)
 
     raster_utils.vectorize_datasets([travel_time_nodata],
-        _vectorized_arrival_time, modified_travel_time_uri, gdal.GDT_Float32,
+        _vectorized_travel_time, modified_travel_time_uri, gdal.GDT_Float32,
         travel_time_nodata, travel_time_pixel_size, 'intersection')
 
 
@@ -887,3 +890,8 @@ def arrival_time(dem_uri, travel_time_uri, timestep, time_interval, output_uri):
 
     routing_utils.route_flux(dem_uri, modified_travel_time_uri,
         flux_absorption_uri, loss_uri, flow_accumulation_uri)
+
+    stream_uri = raster_utils.temporary_filename()
+    routing_utils.stream_threshold(flow_accumulation_uri, stream_threshold,
+        stream_uri)
+
