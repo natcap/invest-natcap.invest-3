@@ -127,9 +127,9 @@ def execute(args):
    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
-    water_out_uri = os.path.join(intermediate_dir, 'water_amt.tif')
-    evap_out_uri = os.path.join(intermediate_dir, 'evaporation.tif')
-    etc_out_uri = os.path.join(intermediate_dir, 'etc.tif')
+    water_uri = os.path.join(intermediate_dir, 'water_amt.tif')
+    evap_uri = os.path.join(intermediate_dir, 'evaporation.tif')
+    etc_uri = os.path.join(intermediate_dir, 'etc.tif')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -168,15 +168,15 @@ def execute(args):
                 total_precip_uri, float_nodata)
         
         # Calculate water amount (W)
-        clean_uri([water_out_uri])
+        clean_uri([water_uri])
         calculate_water_amt(
-                imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
+                imperv_area_uri, total_precip_uri, alpha_one_uri, water_uri,
                 float_nodata)
 
         # Calculate Evaopration
-        clean_uri([evap_out_uri, etc_out_uri])
+        clean_uri([evap_uri, etc_uri])
         #calculate_evaporation(
-        #        soil_storage_uri, pawc_uri, w_uri, evap_out_uri, etc_out_uri,
+        #        soil_storage_uri, pawc_uri, water_uri, evap_uri, etc_uri,
         #        float_nodata)
         
         # Calculate Interflow
@@ -418,7 +418,7 @@ def calculate_water_amt(
             'intersection')
 
 def calculate_evaporation(
-        soil_storage_uri, pawc_uri, w_uri, evap_out_uri, etc_out_uri,
+        soil_storage_uri, pawc_uri, water_uri, evap_out_uri, etc_out_uri,
         out_nodata):
     """This function calculates the actual evaporation
 
@@ -427,7 +427,7 @@ def calculate_evaporation(
         
         pawc_uri - a URI to a gdal dataset for plant available water conent
         
-        w_uri - a URI to a gdal dataset for the W
+        water_uri - a URI to a gdal dataset for the W
         
         evap_out_uri - a URI path for the actual evaporation output to be
             written to disk
@@ -440,7 +440,7 @@ def calculate_evaporation(
         returns - nothing
     """
     no_data_list = []
-    for raster_uri in [soil_storage_uri, pawc_uri, w_uri]:
+    for raster_uri in [soil_storage_uri, pawc_uri, water_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
@@ -469,11 +469,10 @@ def calculate_evaporation(
         else:
             return etc_pix
         
-
     cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
 
     raster_utils.vectorize_datasets(
-            [w_uri, soil_uri, etc_uri, pawc_uri], actual_evap,
+            [water_uri, soil_storage_uri, etc_uri, pawc_uri], actual_evap,
             evap_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
             'intersection')
 
