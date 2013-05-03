@@ -205,11 +205,7 @@ def execute(args):
 
         timestep_rasters = {
             'precip': _timestep_uri('precip.tif'),
-            'runoff': _timestep_uri('storm_runoff.tif'),
-            'overland_time': _timestep_uri('overland_travel_time.tif'),
-            'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'channel_time': _timestep_uri('channel_travel_time.tif'),
-            'travel_time_sum': raster_utils.temporary_filename()
+            'discharge': _timestep_uri('flood_water_discharge.tif')
         }
 
         # Create the timestamp folder name and make the folder on disk.
