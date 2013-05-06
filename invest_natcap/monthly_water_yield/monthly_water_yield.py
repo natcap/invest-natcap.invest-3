@@ -142,6 +142,7 @@ def execute(args):
             intermediate_dir, 'intermediate_interflow.tif')
     baseflow_uri = os.path.join(intermediate_dir, 'baseflow.tif')
     interflow_uri = os.path.join(intermediate_dir, 'interflow.tif')
+    watershed_table_uri = os.path.join(intermediate_dir, 'wshed_table.csv')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -219,6 +220,37 @@ def execute(args):
 
         # Move on to next month
 
+def write_new_table(filename, fields, data):
+    """Create a new csv table from a dictionary
+
+        filename - a URI path for the new table to be written to disk
+        
+        fields - a python list of the column names. The order of the fields in
+            the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+        
+        data - a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to a
+            dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+        returns - nothing
+    """
+    csv_file = open(filename, 'wb')
+
+    # Sort the keys so that the rows are written in order
+    row_keys = data.keys().sort()
+    
+    csv_writer = csv.DictWriter(csv_file, fields)
+    # Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn,fn) for fn in fields))
+
+    for index in keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
+
 def clean_uri(in_uri_list):
     """Removes a file by its URI if it exists
         
@@ -249,15 +281,17 @@ def calculate_intermediate_streamflow(
         returns - nothing"""
     
     no_data_list = []
-    for raster_uri in [dflow_uri, interflow_uri]:
+    for raster_uri in [dflow_uri, interflow_uri, baseflow_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def baseflow_op(alpha_pix, soil_pix):
-        """A vectorize operation for calculating the baseflow value
+    def streamflow_op(dflow_pix, interflow_pix, baseflow_pix):
+        """A vectorize operation for calculating the intermediate 
+            streamflow
 
-            alpha_pix - a float value for the alpha coefficients
-            soil_pix - a float value for the soil water content
+            dflow_pix - a float value for the direct flow
+            interflow_pix - a float value for the interflow
+            baseflow_pix - a float value for the baseflow
 
             returns - the baseflow value
         """
@@ -265,13 +299,13 @@ def calculate_intermediate_streamflow(
             if pix in no_data_list:
                 return out_nodata
 
-        return alpha_pix * soil_pix**beta
+        return dflow_pix + interflow_pix + baseflow_pix 
 
     cell_size = raster_utils.get_cell_size_from_uri(dflow_uri)
 
     raster_utils.vectorize_datasets(
-            [dflow_uri, interflow_uri], baseflow_op,
-            baseflow_out_uri, gdal.GDT_Float32, out_nodata,
+            [dflow_uri, interflow_uri, baseflow_uri], streamflow_op,
+            inter_streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
 def calculate_final_interflow(
