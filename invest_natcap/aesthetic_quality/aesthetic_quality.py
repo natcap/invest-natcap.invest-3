@@ -221,7 +221,7 @@ def execute(args):
     #clip population
     LOGGER.debug("Projecting AOI for population raster clip.")
     pop_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
-    raster_utils.reproject_dataset_uri(aq_args['aoi_uri'],
+    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'],
                                           pop_wkt,
                                           aoi_pop_uri)
 
@@ -230,18 +230,22 @@ def execute(args):
                                   aoi_pop_uri,
                                   pop_clip_uri,
                                   False)
-
-    #reproject clipped population
+    
+    #reproject (and resample) clipped population
     LOGGER.debug("Reprojecting clipped population raster.")
     vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
-    raster_utils.reproject_datasource_uri(pop_clip_uri, vs_wkt, pop_prj_uri)
+    raster_utils.reproject_dataset_uri(pop_clip_uri,
+                                       aq_args["cell_size"],
+                                       vs_wkt,
+                                       pop_vs_uri,
+                                       get_data_type_uri(pop_clip_uri))
 
-    #resampling clipped
-    LOGGER.debud("Resampling population raster.")
-    raster_utils.resample_dataset(pop_prj_uri,
-                                  aq_args["cell_size"],
-                                  pop_vs_uri,
-                                  gdal.GRA_Bilinear)
+##    #resampling clipped
+##    LOGGER.debud("Resampling population raster.")
+##    raster_utils.resample_dataset(pop_prj_uri,
+##                                  aq_args["cell_size"],
+##                                  pop_vs_uri,
+##                                  gdal.GRA_Bilinear)
     
     pop = gdal.Open(pop_vs_uri)
     #LOGGER.debug(pop)
