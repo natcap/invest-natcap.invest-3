@@ -142,6 +142,7 @@ def execute(args):
             intermediate_dir, 'intermediate_interflow.tif')
     baseflow_uri = os.path.join(intermediate_dir, 'baseflow.tif')
     interflow_uri = os.path.join(intermediate_dir, 'interflow.tif')
+    watershed_table_uri = os.path.join(intermediate_dir, 'wshed_table.csv')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -218,6 +219,37 @@ def execute(args):
         # Add values to output table
 
         # Move on to next month
+
+def write_new_table(filename, fields, data):
+    """Create a new csv table from a dictionary
+
+        filename - a URI path for the new table to be written to disk
+        
+        fields - a python list of the column names. The order of the fields in
+            the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+        
+        data - a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to a
+            dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+        returns - nothing
+    """
+    csv_file = open(filename, 'wb')
+
+    # Sort the keys so that the rows are written in order
+    row_keys = data.keys().sort()
+    
+    csv_writer = csv.DictWriter(csv_file, fields)
+    # Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn,fn) for fn in fields))
+
+    for index in keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
 
 def clean_uri(in_uri_list):
     """Removes a file by its URI if it exists
