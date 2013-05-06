@@ -1491,6 +1491,18 @@ def resample_dataset(
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         gdal.GRA_Bilinear)
 
+def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
+    """A URI wrapper for reproject dataset that opens the original_dataset_uri
+        before passing it to reproject_dataset.
+
+       original_dataset_uri - a URI to a gdal Dataset on disk
+
+       All other arguments to reproject_dataset are passed in.
+
+       return - nothing"""
+
+    original_dataset = gdal.Open(original_dataset_uri)
+    reproject_dataset(original_dataset, *args, **kwargs)
 
 def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
