@@ -1,7 +1,8 @@
 import os
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 gdal.UseExceptions()
 from invest_natcap import raster_utils
+#from invest_natcap.overlap_analysis import overlap_analysis
 
 import logging
 
@@ -19,7 +20,7 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
     memory_file_uri = raster_utils.temporary_filename()
     memory_array = raster_utils.load_memory_mapped_array(dataset_uri, memory_file_uri)
     memory_array_flat = memory_array.reshape((-1,))
-    
+
     quantile_breaks = [0]
     min_value = 1
     max_value = 32767
@@ -37,7 +38,7 @@ def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri,
         raise ValueError, "Value was not within quantiles."
 
     cell_size = raster_utils.get_cell_size_from_uri(dataset_uri)
-    
+
     raster_utils.vectorize_datasets([dataset_uri],
                                     reclass,
                                     dataset_out_uri,
@@ -57,9 +58,9 @@ def get_data_type_uri(ds_uri):
     return raster_data_type
 
 def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, visible_feature_count_uri, cell_size, aoi_prj_uri):
-    src_filename = "/home/mlacayo/Desktop/aq_tif/dem_vs.tif"
+    src_filename = "/home/mlacayo/Desktop/aq_sample/Output/vshed.tif"
     dst_filename = visible_feature_count_uri
-    
+
     src_ds = gdal.Open( src_filename )
     driver = gdal.GetDriverByName("GTiff")
     dst_ds = driver.CreateCopy( dst_filename, src_ds, 0 )
@@ -68,6 +69,43 @@ def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction,
     dst_ds = None
     src_ds = None
 
+def add_field_feature_set_uri(fs_uri, field_name, field_type):
+    shapefile = ogr.Open(fs_uri, 1)
+    layer = shapefile.GetLayer()
+    new_field = ogr.FieldDefn(field_name, field_type)
+    layer.CreateField(new_field)
+    shapefile = None    
+
+def add_id_feature_set_uri(fs_uri, id_name):
+    shapefile = ogr.Open(fs_uri, 1)
+    layer = shapefile.GetLayer()
+    new_field = ogr.FieldDefn(id_name, ogr.OFTInteger)
+    layer.CreateField(new_field)
+
+    for feature_id in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        feature.SetField(id_name, feature_id)
+        layer.SetFeature(feature)
+    shapefile = None
+
+def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
+    shapefile = ogr.Open(fs_uri, 1)
+    layer = shapefile.GetLayer()
+
+    for feature_id in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        feature.SetField(value_field_name, op(feature))
+        layer.SetFeature(feature)
+    shapefile = None
+
+def get_count_feature_set_uri(fs_uri):
+    shapefile = ogr.Open(fs_uri)
+    layer = shapefile.GetLayer()
+    count = layer.GetFeatureCount()
+    shapefile = None
+
+    return count
+    
 def execute(args):
     """DOCSTRING"""
     LOGGER.info("Start Aesthetic Quality Model")
@@ -96,14 +134,27 @@ def execute(args):
     viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
     viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
     pop_stats_uri=os.path.join(aq_args['workspace_dir'],"populationStats.html")
+    visible_feature_count_reclass_uri=os.path.join(aq_args['workspace_dir'],"vshed_bool.tif")
+    overlap_uri=os.path.join(aq_args['workspace_dir'],"vp_overlap.shp")
+    visible_feature_count_polygon_uri=os.path.join(aq_args['workspace_dir'],"vshed.shp")
 
+    features = get_count_feature_set_uri(aq_args['structure_uri'])
+    if features < 2 ** 16:
+        viewshed_type = gdal.GDT_UInt16
+        viewshed_nodata = (2 ** 16) - 1
+    elif features < 2 ** 32:
+        viewshed_type = gdal.GDT_UInt32
+        viewshed_nodata = (2 ** 32) - 1
+    else:
+        raise ValueError, "Too many structures."
+    
     #clip DEM by AOI and reclass
     LOGGER.info("Clipping DEM by AOI.")
 
     LOGGER.debug("Saving projected AOI to %s", aoi_prj_uri)
-    output_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])    
+    output_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
     raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], output_wkt, aoi_prj_uri)
-    
+
     LOGGER.debug("Clipping DEM by projected AOI.")
     raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_prj_uri, viewshed_dem_uri, False)
 
@@ -127,24 +178,26 @@ def execute(args):
                                     nodata_dem,
                                     aq_args["cell_size"],
                                     "union")
-    
+
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
     viewshed(aq_args['dem_uri'],
-                          aq_args['structure_uri'],
-                          z_factor,
-                          curvature_correction,
-                          aq_args['refraction'],
-                          visible_feature_count_uri,
-                          aq_args['cell_size'],
-                          aoi_prj_uri)
+             aq_args['structure_uri'],
+             z_factor,
+             curvature_correction,
+             aq_args['refraction'],
+             visible_feature_count_uri,
+             aq_args['cell_size'],
+             aoi_prj_uri)
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
-    nodata_out = -1
     quantile_list = [25,50,75,100]
-    datatype_out = gdal.GDT_Int32
-    reclassify_quantile_dataset_uri(visible_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
+    reclassify_quantile_dataset_uri(visible_feature_count_uri,
+                                    quantile_list,
+                                    visible_feature_quality_uri,
+                                    viewshed_type,
+                                    viewshed_nodata)
 
     #tabulate population impact
     LOGGER.info("Tabulating population impact.")
@@ -197,4 +250,50 @@ def execute(args):
     outfile.close()
 
     #perform overlap analysis
-    LOGGER.debug("Performing overlap analysis.")
+    LOGGER.info("Performing overlap analysis.")
+
+    LOGGER.debug("Reclassifying viewshed")
+
+    nodata_vs_bool = 0
+    def non_zeros(value):
+        if value == nodata_vs_bool:
+            return nodata_vs_bool
+        elif value > 0:
+            return 1
+        else:
+            return nodata_vs_bool
+
+    raster_utils.vectorize_datasets([visible_feature_count_uri],
+                                    non_zeros,
+                                    visible_feature_count_reclass_uri,
+                                    gdal.GDT_Byte,
+                                    nodata_vs_bool,
+                                    aq_args["cell_size"],
+                                    "union")
+
+    LOGGER.debug("Copying overlap analysis features.")
+    raster_utils.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
+
+    LOGGER.debug("Adding id field to overlap features.")
+    id_name = "investID"
+    add_id_feature_set_uri(overlap_uri, id_name)
+
+    LOGGER.debug("Add area field to overlap features.")
+    area_name = "overlap"
+    add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
+    
+    LOGGER.debug("Count overlapping pixels per area.")
+    values = raster_utils.aggregate_raster_values_uri(visible_feature_count_reclass_uri,
+                                                      overlap_uri,
+                                                      id_name,
+                                                      "sum",
+                                                      ignore_nodata = True)
+
+    def calculate_percent(feature):
+        if feature.GetFieldAsInteger(id_name) in values:
+            return (values[feature.GetFieldAsInteger(id_name)] * aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
+        else:
+            return 0
+        
+    LOGGER.debug("Set area field values.")
+    set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)

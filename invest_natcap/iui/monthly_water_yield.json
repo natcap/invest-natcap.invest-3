@@ -38,14 +38,41 @@
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
+                    "id" : "pawc",
+                    "args_id" : "pawc_uri",
+                    "type": "file",
+                    "label": "Plant Available Water Content (PAWC)",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "pet",
+                    "args_id" : "pet_uri",
+                    "type": "file",
+                    "label": "Potential Evapotranspiration (PET)",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
                     "id" : "land_use",
                     "args_id" : "lulc_uri",
                     "type": "file",
-                    "label": "Land Use",
+                    "label": "LULC Raster",
                     "defaultValue": "",
-                    "required": false,
+                    "required": true,
                     "validateAs": {"type": "GDAL"}
                 },    
+		        {
+                    "id" : "lulc_data",
+                    "args_id": "lulc_data_uri",
+                    "type": "file",
+                    "label": "LULC Lookup Table",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "CSV"}
+                },
                 {        
                     "id" : "dem",
                     "args_id" : "dem_uri",
