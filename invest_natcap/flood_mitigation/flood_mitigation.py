@@ -142,8 +142,29 @@ def execute(args):
         'swrc': _intermediate_uri('swrc.tif'),
         'prev_discharge': _intermediate_uri('init_discharge.tif'),
         'outflow_weights': _intermediate_uri('outflow_weights.tif'),
-        'outflow_direction': _intermediate_uri('outflow_direction.tif')
+        'outflow_direction': _intermediate_uri('outflow_direction.tif'),
+        'timesteps': {}
     }
+
+    for timestep in range(1, args['num_intervals'] + 1):
+        def _timestep_uri(file_name=''):
+            """Make a URI for a timestep-based folder."""
+            if file_name != '':
+                file_base, extension = os.path.splitext(file_name)
+                file_name = "%s_%s%s" % (file_base, timestep, extension)
+
+            return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
+                _add_suffix(file_name))
+
+        paths['timesteps'][timestep] = {
+            'precip': _timestep_uri('precip.tif'),
+            'runoff': _timestep_uri('storm_runoff.tif'),
+            'discharge': _timestep_uri('flood_water_discharge.tif'),
+            'hydrograph': _timestep_uri('hydrograph.tif')
+        }
+
+        # Create the timestamp folder name and make the folder on disk.
+        raster_utils.create_directories([_timestep_uri()])
 
     # Create folders in the workspace if they don't already exist
     raster_utils.create_directories([args['workspace'], _intermediate_uri(),
@@ -156,22 +177,23 @@ def execute(args):
     except OSError:
         pass
 
-    # Reclassify the LULC to get the manning's raster.
+
+    #######################
+    # Preprocessing
     mannings_raster(args['landuse'], args['mannings'], paths['mannings'])
-
-    # We need a slope raster for several components of the model.
     raster_utils.calculate_slope(args['dem'], paths['slope'])
-
-    # Calculate the flow direction, needed for flow length and for other
-    # functions later on.
     routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
-
-    # Calculate the flow length here, since we need it for several parts of the
-    # model.
     routing_utils.calculate_flow_length(paths['flow_direction'],
         paths['flow_length'])
 
-    # We always want to adjust for slope.
+    # Convert the precip table from CSV to ESRI Shapefile and reproject it.
+    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
+    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
+        paths['precip_points'])
+
+    #######################
+    # Adjusting curve numbers
     adjust_cn_for_slope(args['curve_numbers'], paths['slope'], paths['cn_slope'])
 
     if args['cn_adjust'] == True:
@@ -186,47 +208,16 @@ def execute(args):
     # Calculate the Soil Water Retention Capacity (equation 2)
     soil_water_retention_capacity(cn_season_adjusted_uri, paths['swrc'])
 
-    # Convert precipitation table to a points shapefile.
-    convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
-
-    # Project the precip points from latlong to the correct projection.
-    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
-    raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
-        paths['precip_points'])
-
     # our timesteps start at 1.
-    for timestep in range(1, args['num_intervals'] + 1):
+    for timestep, ts_paths in paths['timesteps'].iteritems():
         LOGGER.info('Starting timestep %s', timestep)
-
-        def _timestep_uri(file_name=''):
-            """Make a URI for a timestep-based folder."""
-            return os.path.join(_intermediate_uri(), 'timestep_%s' % timestep,
-                _add_suffix(file_name))
-
-        timestep_rasters = {
-            'precip': _timestep_uri('precip.tif'),
-            'runoff': _timestep_uri('storm_runoff.tif'),
-            'overland_time': _timestep_uri('overland_travel_time.tif'),
-            'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'channel_time': _timestep_uri('channel_travel_time.tif'),
-            'travel_time_sum': raster_utils.temporary_filename()
-        }
-
-        # Create the timestamp folder name and make the folder on disk.
-        raster_utils.create_directories([_timestep_uri()])
 
         # make the precip raster, since it's timestep-dependent.
         make_precip_raster(paths['precip_points'], args['dem'], timestep,
-            timestep_rasters['precip'])
+            ts_paths['precip'])
 
         # Calculate storm runoff once we have all the data we need.
-        storm_runoff(timestep_rasters['precip'], paths['swrc'],
-            timestep_rasters['runoff'])
-
-        # Calculate the overland travel time.
-        overland_travel_time(args['time_interval'], timestep_rasters['runoff'],
-            paths['slope'], paths['flow_length'], paths['mannings'],
-            timestep_rasters['overland_time'])
+        storm_runoff(ts_paths['precip'], paths['swrc'], ts_paths['runoff'])
 
         ##################
         # Channel Routing.
@@ -234,33 +225,24 @@ def execute(args):
             # We need a previous flood water discharge raster to be created before we
             # actually start iterating through the timesteps.
             discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
-            raster_utils.new_raster_from_base_uri(timestep_rasters['runoff'],
+            raster_utils.new_raster_from_base_uri(ts_paths['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
                 fill_value=0.0)
 
 
-        flood_water_discharge(timestep_rasters['runoff'], paths['flow_direction'],
-            args['time_interval'], timestep_rasters['discharge'],
+        flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
+            args['time_interval'], ts_paths['discharge'],
             paths['outflow_weights'], paths['outflow_direction'],
             paths['prev_discharge'])
 
         # Set the previous discharge path to the discharge_uri so we can use it
         # later on.
-        paths['prev_discharge'] = timestep_rasters['discharge']
-
-        # Calculate channel travel time with the newly calculated flood water
-        # discharge and other inputs.
-        channel_travel_time(paths['mannings'], paths['slope'],
-            timestep_rasters['discharge'], paths['flow_length'],
-            timestep_rasters['channel_time'])
+        paths['prev_discharge'] = ts_paths['discharge']
 
         ###########################
         # Flood waters calculations
-
-        # Sum the two travel time rasters.
-        pollination_core.add_two_rasters(timestep_rasters['overland_time'],
-            timestep_rasters['channel_time'],
-            timestep_rasters['travel_time_sum'])
+        hydrograph(ts_paths['discharge'], paths['mannings'], paths['slope'],
+            ts_paths['hydrograph'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -288,72 +270,6 @@ def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
 
     raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
         mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
-
-def overland_travel_time(time_interval, runoff_depth_uri, slope_uri,
-    flow_length_uri, mannings_uri, output_uri):
-    """Calculate the overland travel time for this timestep.  This function is a
-        combination of equations 8 and 9 from the flood mitigation user's
-        guide.
-
-        time_interval - A number.  The number of seconds in this time interval.
-        runoff_depth_uri - A string URI to a GDAL dataset on disk representing
-            the storm runoff raster.
-        slope_uri - A string URI to a GDAL dataset on disk representing the
-            slope of the DEM.
-        flow_length_uri - A string URI to a GDAL dataset on disk representing the
-            flow length, calculated from the DEM.
-        mannings_uri - A string URI to a GDAL dataset on disk representing the
-            Manning's numbers for the user's Land Use/Land Cover raster.  This
-            number corresponds with soil roughness.
-        output_uri - A String URI to a GDAL dataset on disk to where the
-            overland travel time raster will be saved.
-
-        This function will save a GDAL dataet to the path designated by
-        `output_uri`.  If a file exists at that path, it will be overwritten.
-            - nodata is taken from the raster at `runoff_depth_uri`
-
-        This function has no return value."""
-
-    raster_list = [flow_length_uri, mannings_uri, slope_uri, runoff_depth_uri]
-
-    # Calculate the minimum cell size
-    min_cell_size = _get_cell_size_from_datasets(raster_list)
-    LOGGER.debug('Minimum pixel size: %s', min_cell_size)
-
-    # Cast to a float, just in case the user passed in an int.
-    time_interval = float(time_interval)
-
-    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
-    runoff_depth_nodata = raster_utils.get_nodata_from_uri(runoff_depth_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
-    roughness_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
-
-    def _overland_travel_time(flow_length, roughness, slope, runoff_depth):
-        """Calculate the overland travel time on this pixel.  All inputs are
-            floats.  Returns a float."""
-
-        if flow_length == flow_length_nodata or\
-            runoff_depth == runoff_depth_nodata or\
-            slope == slope_nodata or\
-            roughness == roughness_nodata:
-            return runoff_depth_nodata
-
-        # If we don't check for 0-division errors here, we'll get them if either
-        # there is no runoff depth or the slope is 0.  Personally, I think it
-        # makes sense to return 0 if either of these is the case.
-        if runoff_depth == 0 or slope == 0:
-            return 0.0
-
-        stormflow_intensity = runoff_depth / time_interval
-        return (((flow_length ** 0.6) * (roughness ** 0.6)) /
-            ((stormflow_intensity ** 0.4) * (slope **0.3)))
-
-    LOGGER.info('Calculating overland travel time raster')
-    raster_utils.vectorize_datasets(raster_list, _overland_travel_time,
-        output_uri,gdal.GDT_Float32, runoff_depth_nodata, min_cell_size,
-        'intersection')
-    LOGGER.info('Finished calculating overland travel time.')
-
 
 def _get_cell_size_from_datasets(uri_list):
     """Get the minimum cell size of all the input datasets.
@@ -722,8 +638,8 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     }
     neighbors = list(neighbor_indices.iteritems())
 
-    class NeighborHasNoRunoffData(Exception):
-        """An exception for skipping a neighbor when that neighbor's runoff
+    class NeighborHasNoData(Exception):
+        """An exception for skipping a neighbor when that neighbor's
         value is nodata."""
         pass
 
@@ -764,7 +680,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
-                            raise NeighborHasNoRunoffData
+                            raise NeighborHasNoData
+
+                        neighbor_prev_discharge = prev_discharge_matrix[neighbor_index]
+                        if neighbor_prev_discharge == discharge_nodata:
+                            raise NeighborHasNoData
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
@@ -775,10 +695,13 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         else:
                             fractional_flow = first_neighbor_weight
 
-                        discharge = neighbor_runoff * fractional_flow * pixel_area
+                        discharge = (((neighbor_runoff * pixel_area) +
+                            (neighbor_prev_discharge * time_interval)) *
+                            fractional_flow)
+
                         discharge_sum += discharge
 
-                except (IndexError, KeyError, NeighborHasNoRunoffData):
+                except (IndexError, KeyError, NeighborHasNoData):
                     # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
@@ -789,7 +712,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     # value is nodata.
                     pass
 
-            discharge_sum = (discharge_sum / time_interval) + prev_discharge
+            discharge_sum = discharge_sum / time_interval
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
@@ -797,124 +720,42 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
     _write_matrix(output_uri, discharge_matrix)
 
-def channel_travel_time(mannings_uri, slope_uri, discharge_uri,
-        flow_length_uri, output_uri):
-    """Calculate the channel travel time.  This function corresponds to equation
-        14 of the Flood Mitigation user's guide.  Note that the model no longer
-        uses equation 12, as a user-defined channel layer is not provided nor
-        used in this model.  Thus, this function is the only function for
-        calculating the channel travel time.
+def hydrograph(discharge_uri, mannings_uri, slope_uri, output_uri):
+    """Calculate the hydrograph according to equation 19 in the user's guide.
 
-        mannings_uri - a URI to a raster of roughness coefficients based on land
-            cover and soil types.
-        slope_uri - a URI to a raster of slope on the landscape.
-        discharge_uri - a URI to a raster of flood water discharge.
-        flow_length_uri - a URI to a raster of the flow length, calculated from
-            a DEM.
-        output_uri - a URI to the location on disk where the user would like the
-            output raster from this function to be stored.
+        discharge_uri - a URI to a GDAL dataset on disk representing the flood
+            water discharge in this timestep.
+        mannings_uri - a URI to a GDAL dataset representing the soil roughness.
+        slope_uri - a URI to a GDAL dataset of slope
+        output_uri - an output URI to where the hydrograph raster will be
+            writte on disk.
 
-        This function returns nothing.
-        """
+        Returns nothing."""
 
-    # TODO: check for nodata values in this function.
+    raster_list = [discharge_uri, mannings_uri, slope_uri]
+    min_pixel_size = _get_cell_size_from_datasets(raster_list)
+
     discharge_nodata = raster_utils.get_nodata_from_uri(discharge_uri)
-    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     mannings_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
-    flow_length_nodata = raster_utils.get_nodata_from_uri(flow_length_uri)
+    slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
 
-    def _vectorized_travel_time(flow_length, roughness, slope, discharge):
-        """A function for the per-pixel calculation of channel travel time.
-            All inputs are floats.  This function returns a float."""
-
-        if discharge == discharge_nodata or\
-            slope == slope_nodata or\
-            roughness == mannings_nodata or\
-            flow_length == flow_length_nodata:
+    def _vectorized_hydrograph(discharge, mannings, slope):
+        """Per-pixel operation to get the hydrograph.  All inputs are floats.
+        Returns a float."""
+        if discharge == discharge_nodata:
             return discharge_nodata
 
-        if slope == 0.0 or discharge == 0.0:
+        if mannings == mannings_nodata:
+            return discharge_nodata
+
+        if slope == slope_nodata:
+            return discharge_nodata
+
+        if slope == 0:
             return 0.0
 
-        return ((flow_length * (roughness ** 0.75)) /
-            ((slope ** 0.38) * discharge ** 0.25))
+        return ((discharge * mannings) / slope ** (0.5)) ** (0.375)
 
-    raster_list = [flow_length_uri, mannings_uri, slope_uri, discharge_uri]
-    channel_cell_size = _get_cell_size_from_datasets(raster_list)
-
-    raster_utils.vectorize_datasets(raster_list, _vectorized_travel_time,
-        output_uri, gdal.GDT_Float32, discharge_nodata, channel_cell_size,
+    raster_utils.vectorize_datasets(raster_list, _vectorized_hydrograph,
+        output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
-
-def arrival_time(dem_uri, travel_time_uri, timestep, time_interval,
-    stream_threshold, output_uri):
-    """Calculate the arrival time on the landscape.  This corresponds with
-        equation 15 in the Flood Mitigation user's guide.
-
-        dem_uri - a URI to a GDAL dataset of a DEM.
-        travel_time_uri - a URI to a GDAL dataset of travel times on the
-            landscape for this timestep.  This should be the sum of the channel
-            travel time and the overland travel time rasters.
-        timestep - an int.  This is the numeric identifier of this timestep
-            (i.e. one of [1, 2, 3, ... T]
-        time_interval - the duration of the timestep, in seconds.
-        stream_threshold - a number indicating the thredhold after we declare a
-            pixel to be a stream.
-        output_uri - the URI to the place on disk where the arrival time raster
-            will be saved.  If a file exists at this location , it will be
-            overwritten.
-
-        This function returns nothing.
-        """
-
-    modified_travel_time_uri = raster_utils.temporary_filename()
-    flow_accumulation_uri = raster_utils.temporary_filename()
-    travel_time_nodata = raster_utils.get_nodata_from_uri(travel_time_uri)
-    travel_time_pixel_size = raster_utils.get_cell_size_from_uri(travel_time_uri)
-
-    def _vectorized_travel_time(travel_time):
-        """The per-pixel component of the arrival time calculations."""
-        if travel_time == travel_time_nodata:
-            return travel_time_nodata
-        return travel_time + ((timestep - 1) * time_interval)
-
-    raster_utils.vectorize_datasets([travel_time_nodata],
-        _vectorized_travel_time, modified_travel_time_uri, gdal.GDT_Float32,
-        travel_time_nodata, travel_time_pixel_size, 'intersection')
-
-
-    flux_absorption_uri = raster_utils.temporary_filename()
-    routing_utils.make_constant_raster_from_base(dem_uri, 0.0, flux_absorption_uri)
-
-    loss_uri = raster_utils.temporary_filename()
-
-    routing_utils.route_flux(dem_uri, modified_travel_time_uri,
-        flux_absorption_uri, loss_uri, flow_accumulation_uri)
-
-    stream_uri = raster_utils.temporary_filename()
-    routing_utils.stream_threshold(flow_accumulation_uri, stream_threshold,
-        stream_uri)
-
-    flow_accumulation_nodata = raster_utils.get_nodata_from_uri(flow_accumulation_uri)
-    stream_threshold_nodata = raster_utils.get_nodata_from_uri(stream_threshold_uri)
-    def _filter_flow_accumulation(flow_accum, stream):
-        """A function to filter out the flow accumulation pixels from the stream
-            pixels.  All inputs are floats.  Returns a float."""
-
-        if flow_accumu == flow_accumulation_nodata:
-            return flow_accumulation_nodata
-
-        if stream == stream_threshold_nodata:
-            return flow_accumulation_nodata
-
-        if stream == 1:
-            return flow_accum
-        return 0.0
-
-
-    raster_list = [flow_accumulation_uri, stream_threshold_uri]
-    min_pixel_size = _get_cell_size_from_datasets(raster_list)
-    raster_utils.vectorize_datasets(raster_list, _filter_flow_accumulation,
-        output_uri, gdal.GDT_Float32, flow_accumulation_nodata, min_pixel_size,
-        'intersection')
-

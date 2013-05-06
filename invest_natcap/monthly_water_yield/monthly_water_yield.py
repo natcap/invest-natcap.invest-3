@@ -35,6 +35,8 @@ def execute(args):
         
         args[pawc_uri] - a uri to a gdal raster for plant available water
             content
+        
+        args[pet_uri] - a uri to a gdal raster for potential evapotranspiration 
 
         args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
         
@@ -57,18 +59,22 @@ def execute(args):
     pawc_uri = args['pawc_uri']
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
+    pet_uri = args['pet_uri']
    
     # Set out_nodata value
     float_nodata = float(np.finfo(np.float32).min) + 1.0
-    
-    # Get the impervious fraction mapping from lulc codes
-    imperv_dict = construct_lulc_lookup_dict(lulc_data_uri, 'imperv_fract')
-    # Reclassify lulc by impervious fraction
+   
     imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
-    raster_utils.reclassify_dataset_uri(
-            lulc_uri, imperv_dict, imperv_area_uri, gdal.GDT_Float32,
-            float_nodata)
-
+    crop_uri = os.path.join(intermediate_dir, 'crop.tif')
+    
+    for code_uri, field in zip(
+            [imperv_area_uri, crop_uri],['imperv_fract', 'crop_fract']):
+        # Map the field to the lulc code in a dictionary
+        lulc_code_dict = construct_lulc_lookup_dict(lulc_data_uri, field)
+        # Reclassify lulc raster using lulc code to field mapping
+        raster_utils.reclassify_dataset_uri(
+                lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
+                float_nodata)
 
     # I have yet to determine how the sandy coefficient will be provided as an
     # input, so I am just hard coding in a value for now
@@ -123,8 +129,9 @@ def execute(args):
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
     precip_uri = os.path.join(intermediate_dir, 'precip.tif')
-    pet_uri = os.path.join(intermediate_dir, 'pet.tif')
-    raster_uri_list = [precip_uri, pet_uri]
+    #pet_uri = os.path.join(intermediate_dir, 'pet.tif')
+    #raster_uri_list = [precip_uri, pet_uri]
+    raster_uri_list = [precip_uri]
    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
@@ -181,8 +188,8 @@ def execute(args):
         # Calculate Evaopration
         clean_uri([evap_uri, etc_uri])
         calculate_evaporation(
-                soil_storage_uri, pawc_uri, water_uri, evap_uri, etc_uri,
-                float_nodata)
+                soil_storage_uri, pawc_uri, water_uri, pet_uri, crop_uri,
+                evap_uri, etc_uri, float_nodata)
         
         # Calculate Intermediate Interflow
         clean_uri([intermed_interflow_uri])
@@ -222,6 +229,50 @@ def clean_uri(in_uri_list):
     for uri in in_uri_list:
         if os.path.isfile(uri):
             os.remove(uri)
+
+def calculate_intermediate_streamflow(
+        dflow_uri, interflow_uri, baseflow_uri, inter_streamflow_uri,
+        out_nodata):
+    """This function calculates the baseflow
+
+        dflow_uri - a URI to a gdal dataset of the direct flow
+
+        interflow_uri - a URI to a gdal datasaet for the interflow
+
+        baseflow_uri - a URI to a gdal datasaet for the baseflow
+
+        inter_streamflow_uri - a URI path for the streamflow output to be
+            written to disk
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+    
+    no_data_list = []
+    for raster_uri in [dflow_uri, interflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def baseflow_op(alpha_pix, soil_pix):
+        """A vectorize operation for calculating the baseflow value
+
+            alpha_pix - a float value for the alpha coefficients
+            soil_pix - a float value for the soil water content
+
+            returns - the baseflow value
+        """
+        for pix in [alpha_pix, soil_pix]:
+            if pix in no_data_list:
+                return out_nodata
+
+        return alpha_pix * soil_pix**beta
+
+    cell_size = raster_utils.get_cell_size_from_uri(dflow_uri)
+
+    raster_utils.vectorize_datasets(
+            [dflow_uri, interflow_uri], baseflow_op,
+            baseflow_out_uri, gdal.GDT_Float32, out_nodata,
+            cell_size, 'intersection')
 
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
@@ -438,8 +489,8 @@ def calculate_water_amt(
             'intersection')
 
 def calculate_evaporation(
-        soil_storage_uri, pawc_uri, water_uri, evap_out_uri, etc_uri,
-        out_nodata):
+        soil_storage_uri, pawc_uri, water_uri, pet_uri, crop_uri, evap_uri,
+        etc_uri, out_nodata):
     """This function calculates the actual evaporation
 
         soil_storage_uri - a URI to a gdal dataset for the previous time steps
@@ -449,11 +500,15 @@ def calculate_evaporation(
         
         water_uri - a URI to a gdal dataset for the W
         
-        evap_out_uri - a URI path for the actual evaporation output to be
+        pet_uri - a URI to a gdal dataset for the potential evapotranspiration
+        
+        crop_uri - a URI to a gdal dataset for the crop coefficients
+        
+        evap_uri - a URI path for the actual evaporation output to be
             written to disk
         
-        etc_uri - a URI path for the plant potential evapotranspiration
-            rate output to be written to disk
+        etc_uri - a URI path for the plant specific potential
+            evapotranspiration rate to be written to disk
 
         out_nodata - a float for the output nodata value
 
@@ -464,24 +519,27 @@ def calculate_evaporation(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    ###################################
-    # COPYING WATER RASTER AND MULTIPLYING VALUES BY .9 TO GET SOMETHING TO WORK
-    # WITH. ASK RICH / YONAS HOW ETC SHOULD BE CALCULATE
-    # Possible calculate ETc unless this is somehow being input
-    def copy_precip(water_pix):
-        if water_pix in no_data_list:
-            return out_nodata
-        else:
-            return water_pix * 0.9
+    def etc_op(pet_pix, crop_pix):
+        """Vectorize operation for calculating the plant potential
+            evapotranspiration
+        
+            pet_pix - a float value for PET
+            crop_pix - a float value for Crop coefficient
+
+            returns - a float value for ETc"""
+
+        for pix in [pet_pix, crop_pix]:
+            if pix in no_data_list:
+                return out_nodata
     
+        return pet_pix * crop_pix
+
     cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
 
     raster_utils.vectorize_datasets(
-            [water_uri], copy_precip, etc_uri, gdal.GDT_Float32,
+            [pet_uri, crop_uri], etc_op, etc_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
-    ###################################
     
-    # Calculate E
     def actual_evap(water_pix, soil_pix, etc_pix, pawc_pix):
         """Vectorize Operation for computing actual evaporation
 
@@ -504,11 +562,9 @@ def calculate_evaporation(
         else:
             return etc_pix
         
-    #cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
-
     raster_utils.vectorize_datasets(
             [water_uri, soil_storage_uri, etc_uri, pawc_uri], actual_evap,
-            evap_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
+            evap_uri, gdal.GDT_Float32, out_nodata, cell_size,
             'intersection')
 
 def calculate_direct_flow(
