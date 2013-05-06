@@ -160,7 +160,7 @@ def execute(args):
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'flood_height': _timestep_uri('hydrograph.tif')
+            'flood_height': _timestep_uri('flood_height.tif')
         }
 
         # Create the timestamp folder name and make the folder on disk.
