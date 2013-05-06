@@ -96,7 +96,15 @@ def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
         feature = layer.GetFeature(feature_id)
         feature.SetField(value_field_name, op(feature))
         layer.SetFeature(feature)
-    shapefile = None    
+    shapefile = None
+
+def get_count_feature_set_uri(fs_uri):
+    shapefile = ogr.Open(fs_uri)
+    layer = shapefile.GetLayer()
+    count = layer.GetFeatureCount()
+    shapefile = None
+
+    return count
     
 def execute(args):
     """DOCSTRING"""
@@ -130,6 +138,16 @@ def execute(args):
     overlap_uri=os.path.join(aq_args['workspace_dir'],"vp_overlap.shp")
     visible_feature_count_polygon_uri=os.path.join(aq_args['workspace_dir'],"vshed.shp")
 
+    features = get_count_feature_set_uri(aq_args['structure_uri'])
+    if features < 2 ** 16:
+        viewshed_type = gdal.GDT_UInt16
+        viewshed_nodata = (2 ** 16) - 1
+    elif features < 2 ** 32:
+        viewshed_type = gdal.GDT_UInt32
+        viewshed_nodata = (2 ** 32) - 1
+    else:
+        raise ValueError, "Too many structures."
+    
     #clip DEM by AOI and reclass
     LOGGER.info("Clipping DEM by AOI.")
 
@@ -164,20 +182,22 @@ def execute(args):
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
     viewshed(aq_args['dem_uri'],
-                          aq_args['structure_uri'],
-                          z_factor,
-                          curvature_correction,
-                          aq_args['refraction'],
-                          visible_feature_count_uri,
-                          aq_args['cell_size'],
-                          aoi_prj_uri)
+             aq_args['structure_uri'],
+             z_factor,
+             curvature_correction,
+             aq_args['refraction'],
+             visible_feature_count_uri,
+             aq_args['cell_size'],
+             aoi_prj_uri)
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
-    nodata_out = -1
     quantile_list = [25,50,75,100]
-    datatype_out = gdal.GDT_Int32
-    reclassify_quantile_dataset_uri(visible_feature_count_uri, quantile_list, visible_feature_quality_uri, datatype_out, nodata_out)
+    reclassify_quantile_dataset_uri(visible_feature_count_uri,
+                                    quantile_list,
+                                    visible_feature_quality_uri,
+                                    viewshed_type,
+                                    viewshed_nodata)
 
     #tabulate population impact
     LOGGER.info("Tabulating population impact.")
