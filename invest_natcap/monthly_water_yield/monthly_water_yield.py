@@ -249,15 +249,17 @@ def calculate_intermediate_streamflow(
         returns - nothing"""
     
     no_data_list = []
-    for raster_uri in [dflow_uri, interflow_uri]:
+    for raster_uri in [dflow_uri, interflow_uri, baseflow_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def baseflow_op(alpha_pix, soil_pix):
-        """A vectorize operation for calculating the baseflow value
+    def streamflow_op(dflow_pix, interflow_pix, baseflow_pix):
+        """A vectorize operation for calculating the intermediate 
+            streamflow
 
-            alpha_pix - a float value for the alpha coefficients
-            soil_pix - a float value for the soil water content
+            dflow_pix - a float value for the direct flow
+            interflow_pix - a float value for the interflow
+            baseflow_pix - a float value for the baseflow
 
             returns - the baseflow value
         """
@@ -265,13 +267,13 @@ def calculate_intermediate_streamflow(
             if pix in no_data_list:
                 return out_nodata
 
-        return alpha_pix * soil_pix**beta
+        return dflow_pix + interflow_pix + baseflow_pix 
 
     cell_size = raster_utils.get_cell_size_from_uri(dflow_uri)
 
     raster_utils.vectorize_datasets(
-            [dflow_uri, interflow_uri], baseflow_op,
-            baseflow_out_uri, gdal.GDT_Float32, out_nodata,
+            [dflow_uri, interflow_uri, baseflow_uri], streamflow_op,
+            inter_streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
 def calculate_final_interflow(
