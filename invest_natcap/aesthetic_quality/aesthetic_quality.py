@@ -58,7 +58,7 @@ def get_data_type_uri(ds_uri):
     return raster_data_type
 
 def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, visible_feature_count_uri, cell_size, aoi_prj_uri):
-    src_filename = "/home/mlacayo/Desktop/aq_tif/dem_vs.tif"
+    src_filename = "/home/mlacayo/Desktop/aq_sample/Output/vshed.tif"
     dst_filename = visible_feature_count_uri
 
     src_ds = gdal.Open( src_filename )
