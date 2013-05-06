@@ -103,7 +103,7 @@ def execute(args):
         <workspace>/output/<time_step>/floodwater_discharge_<suffix>.tif
             A raster of the floodwater discharge on the landscape in this time
             interval.
-        <workspace>/output/<time_step>/hydrograph_<suffix>.tif
+        <workspace>/output/<time_step>/flood_height_<suffix>.tif
             A raster of the height of flood waters on the landscape at this time
             interval.
 
@@ -160,7 +160,7 @@ def execute(args):
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'hydrograph': _timestep_uri('hydrograph.tif')
+            'flood_height': _timestep_uri('hydrograph.tif')
         }
 
         # Create the timestamp folder name and make the folder on disk.
@@ -241,8 +241,8 @@ def execute(args):
 
         ###########################
         # Flood waters calculations
-        hydrograph(ts_paths['discharge'], paths['mannings'], paths['slope'],
-            ts_paths['hydrograph'])
+        flood_height(ts_paths['discharge'], paths['mannings'], paths['slope'],
+            ts_paths['flood_height'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -720,14 +720,14 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
     _write_matrix(output_uri, discharge_matrix)
 
-def hydrograph(discharge_uri, mannings_uri, slope_uri, output_uri):
-    """Calculate the hydrograph according to equation 19 in the user's guide.
+def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
+    """Calculate the flood_height according to equation 19 in the user's guide.
 
         discharge_uri - a URI to a GDAL dataset on disk representing the flood
             water discharge in this timestep.
         mannings_uri - a URI to a GDAL dataset representing the soil roughness.
         slope_uri - a URI to a GDAL dataset of slope
-        output_uri - an output URI to where the hydrograph raster will be
+        output_uri - an output URI to where the flood_height raster will be
             writte on disk.
 
         Returns nothing."""
@@ -739,8 +739,8 @@ def hydrograph(discharge_uri, mannings_uri, slope_uri, output_uri):
     mannings_nodata = raster_utils.get_nodata_from_uri(mannings_uri)
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
 
-    def _vectorized_hydrograph(discharge, mannings, slope):
-        """Per-pixel operation to get the hydrograph.  All inputs are floats.
+    def _vectorized_flood_height(discharge, mannings, slope):
+        """Per-pixel operation to get the flood_height.  All inputs are floats.
         Returns a float."""
         if discharge == discharge_nodata:
             return discharge_nodata
@@ -756,6 +756,6 @@ def hydrograph(discharge_uri, mannings_uri, slope_uri, output_uri):
 
         return ((discharge * mannings) / slope ** (0.5)) ** (0.375)
 
-    raster_utils.vectorize_datasets(raster_list, _vectorized_hydrograph,
+    raster_utils.vectorize_datasets(raster_list, _vectorized_flood_height,
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
