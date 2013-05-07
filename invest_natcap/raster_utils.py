@@ -1504,6 +1504,80 @@ def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     original_dataset = gdal.Open(original_dataset_uri)
     reproject_dataset(original_dataset, *args, **kwargs)
 
+def _experimental_reproject_dataset_uri(
+        original_dataset, pixel_spacing, output_wkt, output_uri,
+        output_type = gdal.GDT_Float32):
+    """A function to reproject and resample a GDAL dataset given an output pixel size
+        and output reference and uri.
+
+       original_dataset - a gdal Dataset to written to disk
+       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
+       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
+       output_uri - location on disk to dump the reprojected dataset
+       output_type - gdal type of the output    
+
+       return projected dataset"""
+    
+    #original_dataset = gdal.Open(original_dataset_uri)
+    
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+
+    #output_sr = osr.SpatialReference()
+    #output_sr.ImportFromWkt(output_wkt)
+
+    #tx = osr.CoordinateTransformation(original_sr, output_sr)
+
+    vrt = gdal.AutoCreateWarpedVRT(
+            original_dataset, None, output_wkt, gdal.GRA_Bilinear)
+    
+    geo_t = vrt.GetGeoTransform()
+    x_size = vrt.RasterXSize # Raster xsize
+    y_size = vrt.RasterYSize # Raster ysize
+
+    # Get the Geotransform vector
+#   geo_t = original_dataset.GetGeoTransform()
+#   x_size = original_dataset.RasterXSize # Raster xsize
+#   y_size = original_dataset.RasterYSize # Raster ysize
+#   # Work out the boundaries of the new dataset in the target projection
+#   (ulx, uly, _) = tx.TransformPoint(geo_t[0], geo_t[3])
+#   (lrx, lry, _) = tx.TransformPoint(geo_t[0] + geo_t[1]*x_size,
+#                                     geo_t[3] + geo_t[5]*y_size)
+
+    (ulx, uly) = (geo_t[0], geo_t[3])
+    (lrx, lry) = (geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
+    
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    # The size of the raster is given the new projection and pixel spacing
+    # Using the values we calculated above. Also, setting it to store one band
+    # and to use Float32 data type.
+
+    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
+
+    output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing), 
+                              int((uly - lry)/pixel_spacing), 1, output_type)
+    
+    # Set the nodata value
+    out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
+    LOGGER.debug('OUT NODATA: %s', out_nodata)
+    output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
+    output_dataset.GetRasterBand(1).Fill(out_nodata)
+
+    # Calculate the new geotransform
+    output_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(output_geo)
+    output_dataset.SetProjection(output_wkt)
+
+    # Perform the projection/resampling 
+    gdal.ReprojectImage(
+            original_dataset, output_dataset, original_sr.ExportToWkt(),
+            output_wkt, gdal.GRA_Bilinear)
+
+    return output_dataset
+
+
 def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
     """A function to reproject and resample a GDAL dataset given an output pixel size
