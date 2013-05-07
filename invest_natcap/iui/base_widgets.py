@@ -1284,12 +1284,19 @@ class FileEntry(DynamicText):
         """initialize the object"""
         # Set default validation based on whether this element is for a file or
         # a folder.
+
+        if attributes['type'] == 'folder':
+            validate_type = 'folder'
+            default_permissions = 'r'
+        else:  # type is assumed to be a file
+            validate_type = 'exists'
+            default_permissions = 'r'
+
         if 'validateAs' not in attributes:
-            if attributes['type'] == 'folder':
-                validate_type = 'folder'
-            else:  # type is assumed to be file
-                validate_type = 'exists'
             attributes['validateAs'] = {"type": validate_type}
+
+        if 'permissions' not in attributes['validateAs']:
+            attributes['validateAs']['permissions'] = default_permissions
 
         self.textField = self.FileField()
 
