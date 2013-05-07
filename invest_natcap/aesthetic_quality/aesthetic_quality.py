@@ -283,8 +283,8 @@ def execute(args):
     LOGGER.debug("Tabulating unaffected population.")
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
     LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
-    nodata_visible_feature_count = raster_utils.get_nodata_from_uri(viewshed_uri)
-    LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_visible_feature_count))
+    nodata_viewshed = raster_utils.get_nodata_from_uri(viewshed_uri)
+    LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
 
     #clip population
     LOGGER.debug("Projecting AOI for population raster clip.")
@@ -304,15 +304,26 @@ def execute(args):
     vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
     reproject_dataset_uri(pop_clip_uri,
                                        vs_wkt,
-                                       pop_vs_uri,
+                                       pop_prj_uri,
                                        get_data_type_uri(pop_clip_uri))
 
     #align and resample population
-    LOGGER.debug("Resampling population raster.")
-    raster_utils.resample_dataset(pop_prj_uri,
-                                  aq_args["cell_size"],
-                                  pop_vs_uri,
-                                  gdal.GRA_Bilinear)
+    def copy(value1, value2):
+        if value2 == nodata_viewshed:
+            return nodata_pop
+        else:
+            return value1
+    
+    LOGGER.debug("Resampling and aligning population raster.")
+    raster_utils.vectorize_datasets([pop_prj_uri, viewshed_uri],
+                                   copy,
+                                   pop_vs_uri,
+                                   get_data_type_uri(pop_prj_uri),
+                                   nodata_pop,
+                                   aq_args["cell_size"],
+                                   "intersection",
+                                   ["bilinear", "bilinear"],
+                                   1)
     
     pop = gdal.Open(pop_vs_uri)
     #LOGGER.debug(pop)
@@ -328,7 +339,7 @@ def execute(args):
         vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(numpy.float64)
 
         pop_row[pop_row == nodata_pop]=0.0
-        vs_row[vs_row == nodata_visible_feature_count]=-1
+        vs_row[vs_row == nodata_viewshed]=-1
 
         affected_pop += numpy.sum(pop_row[vs_row > 0])
         unaffected_pop += numpy.sum(pop_row[vs_row == 0])
