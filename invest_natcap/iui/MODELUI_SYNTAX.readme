@@ -223,6 +223,7 @@ Example file object from carbon_biophysical:
     "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
     "validateAs": {"type": "GDAL"},
     "required": true,
+    "permissions": "r",
     "returns": {"ifEmpty": "pass"}
 },
 
@@ -237,18 +238,20 @@ Currently, the following filetypes are supported:
 
     Filetype     | Available validation operations
     -------------|-------------------------------------------------------------
-    generic file | open file
+    generic file | open file, check permissions
     -------------|-------------------------------------------------------------
-    GDAL         | open file, verify filetype
+    GDAL         | open file, check permissions, verify filetype
     -------------|-------------------------------------------------------------
-    OGR          | open file, verify filetype, verify layer exists,
+    OGR          | open file, check permissions, verify filetype, verify layer exists,
                  | check field names, validate field contents
     -------------|-------------------------------------------------------------
-    DBF          | open file, verify filetype, check field names, validate 
+    DBF          | open file, check permissions, verify filetype, check field names, validate 
                  | field contents as regexp, validate field against other fields
     -------------|-------------------------------------------------------------
-    CSV          | open file, verify filetype, check field names, validate field
+    CSV          | open file, check permissions, verify filetype, check field names, validate field
                  | contents as regexp, validate field against other fields.
+    -------------|-------------------------------------------------------------
+
 
     NOTE: Before any other filetype-specific validation takes place, the file's
           URI is checked to ensure that it exists on the present filesystem.  If
@@ -259,13 +262,16 @@ Individual checks will only be performed if the option exists in the
 configuration.  The only required validation option is the "type" option.  All
 others are optional.
 
+NOTE: For details on validating file permissions, see the permissions section
+later in this document.
+
 
     generic file:
     ------------------------
     This checker is a fallback validator for an input file.  If possible, use a
     specialized filetype or define a custom input filetype if further validation
     is desired.  Validation for this file is limited to ensuring that the file
-    exists and that it can be opened by Python.
+    exists, that it can be opened by Python, and that it has necessary file permissions.
 
     example:
     ------------------------
@@ -501,6 +507,7 @@ the filesystem.  It is configured with the following syntax:
 
     "validateAs": {"type": "folder",
                    "mustExist": false,
+                   "permissions": "rwx",
                    "contains": ['file_1.tif', 'file_2.shp']}
 
 The contains attribute is not used if it is not provided.
@@ -510,8 +517,8 @@ must be a boolean.  NOTE: if you do not specify validation for a folder element,
 validation defaults to "validateAs": {"type": "folder", "mustExist": false}.  To
 disable validation, use "validateAs": {"type": "disabled"}.
 
-
-
+The folder, like all other URI-based element, can validate permissions.  See the
+relevant permissions section later in this document for details.
 
 Example folder object from carbon_biophysical:
 {
@@ -716,6 +723,38 @@ Example checkbox from carbon_biophysical:
 }
 
 
+VALIDATING PERMISSIONS:
+=================================
+To check permissions on files or folders (any URI-based input) use the 'permissions'
+flag.  For example:
 
+    "validateAs": {"type":"GDAL",
+                   "permissions": "r"}
 
+Like the file permission modes in the Linux/Unix OS, there are similar checks
+available to validation.  Note that all permissions checks are done only for the
+user, not for 'group' or 'other'.  Available permissions checks are:
+
+    'r' - Check that the user has read-access to this file
+    'w' - Check that the user has write-access to this file
+    'x' - Check that the user has executable access to this file.
+
+These mode characters may be combined to form a string of permissions checks,
+though it will not significantly affect validation: each permissions check will
+at most be performed once.  Here are some example permission check strings:
+
+    "permissions": "rw"  // this will check read and write.
+    "permissions": "wx"  // check write and execute
+    "permissions": ""    // performs no permissions checks
+    "permissions": "rwx" // perform all permissions checks
+
+While it is up to the developer to select sensible permissions for your specific
+use-case, IUI does assume certain defaults, which you may override in your 
+UI's JSON configuration file.  Here are the defaults IUI assumes:
+
+    folder: "r"
+    file: "r"
+
+For validating a workspace, a common class of folder, you will probably want
+to add the "w" mode so that your model can write its output files there.
 
