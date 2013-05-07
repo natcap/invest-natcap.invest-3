@@ -4,6 +4,7 @@ invest_natcap.iui.iui_validator."""
 import unittest
 import os
 import pdb
+import platform
 
 
 from invest_natcap.iui import iui_validator
@@ -114,6 +115,38 @@ class FolderCheckerTester(CheckerTester):
         self.validate_as['contains'] = ['not_there.csv']
         self.validate_as['value'] = os.path.join(TEST_DATA, 'iui')
         self.assertError()
+
+    def test_permissions_read(self):
+        """Assert FolderChecker fails if given a folder without read access"""
+        self.validate_as['permissions'] = 'r'
+        self.validate_as['value'] = '/'
+        self.assertNoError()
+
+    def test_permissions_write(self):
+        """Assert FolderChecker passes when given a folder with write access"""
+        self.validate_as['permissions'] = 'w'
+        self.validate_as['value'] = TEST_DATA
+        self.assertNoError()
+
+    def test_permissions_no_write(self):
+        """Assert FolderChecker fails when given a folder without write access"""
+        self.validate_as['permissions'] = 'w'
+
+        if platform.system() == 'Linux':
+            self.validate_as['value'] = '/etc'
+        elif platform.system() == 'Windows':
+            self.validate_as['value'] = 'C:\Program Files'
+        else:
+            raise Exception('Don\'t know what folder to use as restricted')
+
+        self.assertError()
+
+    def test_permissions_execute(self):
+        """Assert FolderChecker passes when folder has execute permissions."""
+        self.validate_as['permissions'] = 'x'
+        self.validate_as['value'] = TEST_DATA
+        self.assertNoError()
+
 
 class GDALCheckerTester(CheckerTester):
     """Test the class iui_validate.GDALChecker"""
