@@ -370,18 +370,31 @@ class URIChecker(Checker):
             Returns a string with and error message, if one is found, or else
             None."""
 
+        # A data structure for making a clean way of looping over available
+        # modes.  First elemnt is the user-defined mode character.  Second
+        # element is the OS package constant to pass to os.access.  Third
+        # element is the string permission type to insert into the error string.
+        file_modes = [
+            ('r', os.R_OK, 'read'),
+            ('w', os.W_OK, 'write'),
+            ('x', os.X_OK, 'execute')
+        ]
+
+        def _verify_permissions(uri):
+            for letter, mode, descriptor in file_modes:
+                if letter in permissions and not os.access(uri, mode):
+                    return 'You must have %s access to %s' % (descriptor, uri)
+
         # If the file does not exist, we don't have access to it.
         # We therefore need to check that the file exists before we can
         # assert that we do not have access to it.
+        # If the file does not exist, check that we have permissions to the
+        # parent folder instead, so that we can create the folder there.
         if os.path.exists(self.uri):
-            if 'r' in permissions and not os.access(self.uri, os.R_OK):
-                return 'You must have read access to %s' % self.uri
-
-            if 'w' in permissions and not os.access(self.uri, os.W_OK):
-                return 'You must have write access to %s' % self.uri
-
-            if 'x' in permissions and not os.access(self.uri, os.X_OK):
-                return 'You must have execute access to %s' % self.uri
+            return _verify_permissions(self.uri)
+        else:
+            parent_folder = os.path.dirname(self.uri)
+            return _verify_permissions(parent_folder)
 
 
 class FolderChecker(URIChecker):
