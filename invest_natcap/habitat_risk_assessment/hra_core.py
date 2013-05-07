@@ -136,6 +136,11 @@ def execute(args):
         if args['risk_eq'] == 'Euclidean':
             make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress, len(h_risk_dict))
 
+    #Want to clean up the intermediate folder containing the added r/dq*w
+    #rasters, since it serves no purpose for the users.
+    unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
+    os.removedirs(unecessary_folder)
+
 def rewrite_avgs_dict(avgs_dict, aoi_names):
     '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
     centric instead. Should produce something like the following:
@@ -412,7 +417,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     #Since we know that the AOI will be consistent across all of the rasters,
     #want to create the new int field, and the name mapping dictionary upfront
     
-    driver = ogr.GetDriverByName('ESRI Shapefile')
+    driver = ogr.GetDriverByName('Memory')
     aoi = ogr.Open(aoi_uri)
     cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
     cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)

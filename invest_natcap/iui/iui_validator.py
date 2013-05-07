@@ -346,7 +346,8 @@ class URIChecker(Checker):
         self.uri = None  # initialize to none
         self.add_check_function(self.check_exists)
 
-        updates = {'mustExist': self.check_exists}
+        updates = {'mustExist': self.check_exists,
+                   'permissions': self.check_permissions}
         self.update_map(updates)
 
     def check_exists(self, valid_dict):
@@ -356,6 +357,45 @@ class URIChecker(Checker):
 
         if os.path.exists(self.uri) == False:
             return str('File not found: %s' % self.uri)
+
+    def check_permissions(self, permissions):
+        """Verify that the URI has the given permissions.
+
+            permissions - a string containing the characters 'r' for readable,
+                'w' for writeable, and/or 'x' for executable.  Multiple
+                characters may be specified, and all specified permissions will
+                be checked.  'rwx' will check all 3 permissions.  'rx' will
+                check only read and execute.  '' will not check any permissions.
+
+            Returns a string with and error message, if one is found, or else
+            None."""
+
+        # A data structure for making a clean way of looping over available
+        # modes.  First elemnt is the user-defined mode character.  Second
+        # element is the OS package constant to pass to os.access.  Third
+        # element is the string permission type to insert into the error string.
+        file_modes = [
+            ('r', os.R_OK, 'read'),
+            ('w', os.W_OK, 'write'),
+            ('x', os.X_OK, 'execute')
+        ]
+
+        def _verify_permissions(uri):
+            for letter, mode, descriptor in file_modes:
+                if letter in permissions and not os.access(uri, mode):
+                    return 'You must have %s access to %s' % (descriptor, uri)
+
+        # If the file does not exist, we don't have access to it.
+        # We therefore need to check that the file exists before we can
+        # assert that we do not have access to it.
+        # If the file does not exist, check that we have permissions to the
+        # parent folder instead, so that we can create the folder there.
+        if os.path.exists(self.uri):
+            return _verify_permissions(self.uri)
+        else:
+            parent_folder = os.path.dirname(self.uri)
+            return _verify_permissions(parent_folder)
+
 
 class FolderChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a folder."""
@@ -398,6 +438,7 @@ class FolderChecker(URIChecker):
         for uri in files:
             if not os.path.exists(os.path.join(self.uri, uri)):
                 return 'File "%s" must exist in "%s"' % (uri, self.uri)
+
 
 class FileChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a file on disk.
