@@ -346,7 +346,8 @@ class URIChecker(Checker):
         self.uri = None  # initialize to none
         self.add_check_function(self.check_exists)
 
-        updates = {'mustExist': self.check_exists}
+        updates = {'mustExist': self.check_exists,
+                   'permissions': self.check_permissions}
         self.update_map(updates)
 
     def check_exists(self, valid_dict):
@@ -356,6 +357,28 @@ class URIChecker(Checker):
 
         if os.path.exists(self.uri) == False:
             return str('File not found: %s' % self.uri)
+
+    def check_permissions(self, permissions):
+        """Verify that the URI has the given permissions.
+
+            permissions - a string containing the characters 'r' for readable,
+                'w' for writeable, and/or 'x' for executable.  Multiple
+                characters may be specified, and all specified permissions will
+                be checked.  'rwx' will check all 3 permissions.  'rx' will
+                check only read and execute.  '' will not check any permissions.
+
+            Returns a string with and error message, if one is found, or else
+            None."""
+
+        if 'r' in permissions and not os.access(self.uri, os.R_OK):
+            return 'You must have read access to %s' % self.uri
+
+        if 'w' in permissions and not os.access(self.uri, os.W_OK):
+            return 'You must have write access to %s' % self.uri
+
+        if 'x' in permissions and not os.access(self.uri, os.X_OK):
+            return 'You must have execute access to %s' % self.uri
+
 
 class FolderChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a folder."""
@@ -398,6 +421,7 @@ class FolderChecker(URIChecker):
         for uri in files:
             if not os.path.exists(os.path.join(self.uri, uri)):
                 return 'File "%s" must exist in "%s"' % (uri, self.uri)
+
 
 class FileChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a file on disk.
