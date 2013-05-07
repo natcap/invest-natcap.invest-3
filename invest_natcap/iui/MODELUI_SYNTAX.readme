@@ -758,3 +758,6 @@ UI's JSON configuration file.  Here are the defaults IUI assumes:
 For validating a workspace, a common class of folder, you will probably want
 to add the "w" mode so that your model can write its output files there.
 
+IMPORTANT: permissions validation ONLY works if the file or folder it is
+validating exists on disk.  If the path does not exist, we cannot validate its
+permissions.  When this happens, permissions validation is not performed.

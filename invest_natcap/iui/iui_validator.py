@@ -370,14 +370,18 @@ class URIChecker(Checker):
             Returns a string with and error message, if one is found, or else
             None."""
 
-        if 'r' in permissions and not os.access(self.uri, os.R_OK):
-            return 'You must have read access to %s' % self.uri
+        # If the file does not exist, we don't have access to it.
+        # We therefore need to check that the file exists before we can
+        # assert that we do not have access to it.
+        if os.path.exists(self.uri):
+            if 'r' in permissions and not os.access(self.uri, os.R_OK):
+                return 'You must have read access to %s' % self.uri
 
-        if 'w' in permissions and not os.access(self.uri, os.W_OK):
-            return 'You must have write access to %s' % self.uri
+            if 'w' in permissions and not os.access(self.uri, os.W_OK):
+                return 'You must have write access to %s' % self.uri
 
-        if 'x' in permissions and not os.access(self.uri, os.X_OK):
-            return 'You must have execute access to %s' % self.uri
+            if 'x' in permissions and not os.access(self.uri, os.X_OK):
+                return 'You must have execute access to %s' % self.uri
 
 
 class FolderChecker(URIChecker):
