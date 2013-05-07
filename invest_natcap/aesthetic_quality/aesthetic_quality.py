@@ -57,9 +57,9 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, visible_feature_count_uri, cell_size, aoi_prj_uri):
+def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, viewshed_uri, cell_size, aoi_dem_uri):
     src_filename = "/home/mlacayo/Desktop/aq_sample/Output/vshed.tif"
-    dst_filename = visible_feature_count_uri
+    dst_filename = viewshed_uri
 
     src_ds = gdal.Open( src_filename )
     driver = gdal.GetDriverByName("GTiff")
@@ -128,16 +128,27 @@ def execute(args):
     z_factor=1
     curvature_correction=aq_args['refraction']
 
-    aoi_prj_uri=os.path.join(aq_args['workspace_dir'],"aoi_prj.shp")
-    visible_feature_count_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
-    visible_feature_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")
+    #intermediate files
+    aoi_dem_uri=os.path.join(aq_args['workspace_dir'],"aoi_dem.shp")
+    aoi_pop_uri=os.path.join(aq_args['workspace_dir'],"aoi_pop.shp")
+
     viewshed_dem_uri=os.path.join(aq_args['workspace_dir'],"dem_vs.tif")
     viewshed_dem_reclass_uri=os.path.join(aq_args['workspace_dir'],"dem_vs_re.tif")
-    pop_stats_uri=os.path.join(aq_args['workspace_dir'],"populationStats.html")
-    visible_feature_count_reclass_uri=os.path.join(aq_args['workspace_dir'],"vshed_bool.tif")
-    overlap_uri=os.path.join(aq_args['workspace_dir'],"vp_overlap.shp")
-    visible_feature_count_polygon_uri=os.path.join(aq_args['workspace_dir'],"vshed.shp")
 
+    pop_clip_uri=os.path.join(aq_args['workspace_dir'],"pop_clip.tif")
+    pop_prj_uri=os.path.join(aq_args['workspace_dir'],"pop_prj.tif")
+    pop_vs_uri=os.path.join(aq_args['workspace_dir'],"pop_vs.tif")
+
+    viewshed_reclass_uri=os.path.join(aq_args['workspace_dir'],"vshed_bool.tif")
+    viewshed_polygon_uri=os.path.join(aq_args['workspace_dir'],"vshed.shp")
+
+    #outputs
+    viewshed_uri=os.path.join(aq_args['workspace_dir'],"vshed.tif")
+    viewshed_quality_uri=os.path.join(aq_args['workspace_dir'],"vshed_qual.tif")    
+    pop_stats_uri=os.path.join(aq_args['workspace_dir'],"populationStats.html")
+    overlap_uri=os.path.join(aq_args['workspace_dir'],"vp_overlap.shp")
+
+    #determining best data type for viewshed
     features = get_count_feature_set_uri(aq_args['structure_uri'])
     if features < 2 ** 16:
         viewshed_type = gdal.GDT_UInt16
@@ -151,12 +162,12 @@ def execute(args):
     #clip DEM by AOI and reclass
     LOGGER.info("Clipping DEM by AOI.")
 
-    LOGGER.debug("Saving projected AOI to %s", aoi_prj_uri)
-    output_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
-    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], output_wkt, aoi_prj_uri)
+    LOGGER.debug("Projecting AOI for DEM.")
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
+    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
 
     LOGGER.debug("Clipping DEM by projected AOI.")
-    raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_prj_uri, viewshed_dem_uri, False)
+    raster_utils.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
 
     LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
     LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
@@ -186,16 +197,16 @@ def execute(args):
              z_factor,
              curvature_correction,
              aq_args['refraction'],
-             visible_feature_count_uri,
+             viewshed_uri,
              aq_args['cell_size'],
-             aoi_prj_uri)
+             aoi_dem_uri)
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
     quantile_list = [25,50,75,100]
-    reclassify_quantile_dataset_uri(visible_feature_count_uri,
+    reclassify_quantile_dataset_uri(viewshed_uri,
                                     quantile_list,
-                                    visible_feature_quality_uri,
+                                    viewshed_quality_uri,
                                     viewshed_type,
                                     viewshed_nodata)
 
@@ -203,21 +214,51 @@ def execute(args):
     LOGGER.info("Tabulating population impact.")
     LOGGER.debug("Tabulating unaffected population.")
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
-    nodata_visible_feature_count = raster_utils.get_nodata_from_uri(visible_feature_count_uri)
+    LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
+    nodata_visible_feature_count = raster_utils.get_nodata_from_uri(viewshed_uri)
+    LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_visible_feature_count))
 
-    pop = gdal.Open(aq_args["pop_uri"])
+    #clip population
+    LOGGER.debug("Projecting AOI for population raster clip.")
+    pop_wkt = raster_utils.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
+    raster_utils.reproject_datasource_uri(aq_args['aoi_uri'],
+                                          pop_wkt,
+                                          aoi_pop_uri)
+
+    LOGGER.debug("Clipping population raster by projected AOI.")
+    raster_utils.clip_dataset_uri(aq_args['pop_uri'],
+                                  aoi_pop_uri,
+                                  pop_clip_uri,
+                                  False)
+    
+    #reproject (and resample) clipped population
+    LOGGER.debug("Reprojecting clipped population raster.")
+    vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
+    raster_utils.reproject_dataset_uri(pop_clip_uri,
+                                       aq_args["cell_size"],
+                                       vs_wkt,
+                                       pop_vs_uri,
+                                       get_data_type_uri(pop_clip_uri))
+
+##    #resampling clipped
+##    LOGGER.debud("Resampling population raster.")
+##    raster_utils.resample_dataset(pop_prj_uri,
+##                                  aq_args["cell_size"],
+##                                  pop_vs_uri,
+##                                  gdal.GRA_Bilinear)
+    
+    pop = gdal.Open(pop_vs_uri)
     #LOGGER.debug(pop)
     pop_band = pop.GetRasterBand(1)
     #LOGGER.debug(pop_band)
-    vs = gdal.Open(visible_feature_count_uri)
+    vs = gdal.Open(viewshed_uri)
     vs_band = vs.GetRasterBand(1)
 
     affected_pop = 0
     unaffected_pop = 0
     for row_index in range(vs_band.YSize):
         pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
-        #LOGGER.debug(pop_row)
-        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1)
+        vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(numpy.float64)
 
         pop_row[pop_row == nodata_pop]=0.0
         vs_row[vs_row == nodata_visible_feature_count]=-1
@@ -263,9 +304,9 @@ def execute(args):
         else:
             return nodata_vs_bool
 
-    raster_utils.vectorize_datasets([visible_feature_count_uri],
+    raster_utils.vectorize_datasets([viewshed_uri],
                                     non_zeros,
-                                    visible_feature_count_reclass_uri,
+                                    viewshed_reclass_uri,
                                     gdal.GDT_Byte,
                                     nodata_vs_bool,
                                     aq_args["cell_size"],
@@ -283,7 +324,7 @@ def execute(args):
     add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
     
     LOGGER.debug("Count overlapping pixels per area.")
-    values = raster_utils.aggregate_raster_values_uri(visible_feature_count_reclass_uri,
+    values = raster_utils.aggregate_raster_values_uri(viewshed_reclass_uri,
                                                       overlap_uri,
                                                       id_name,
                                                       "sum",
