@@ -9,6 +9,7 @@ import pdb
 from invest_natcap.iui import iui_validator
 
 TEST_DATA = 'data/'
+IUI_TEST_DATA = os.path.join(TEST_DATA, 'iui')
 
 class CheckerTester(unittest.TestCase):
     """This class defines commonly-used methods for checker classes in
@@ -63,6 +64,26 @@ class FileCheckerTester(CheckerTester):
     def test_nonexistent_uri(self):
         """Assert that the FileChecker fails if given a false URI."""
         self.validate_as['value'] += 'a'
+        self.assertError()
+
+    def test_permissions_read(self):
+        """Assert that the FileChecker fails if given a file without read
+        permissions."""
+        self.validate_as['permissions'] = 'r'
+        self.assertNoError()
+
+    def test_permissions_write(self):
+        """Assert that the FileChecker fails if given a file without read
+        permissions."""
+
+        self.validate_as['permissions'] = 'w'
+        self.assertNoError()
+
+    def test_permissions_no_execute(self):
+        """Assert that the FileChecker fails if given a file without read
+        permissions."""
+
+        self.validate_as['permissions'] = 'x'
         self.assertError()
 
 class FolderCheckerTester(CheckerTester):
