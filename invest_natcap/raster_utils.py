@@ -1518,15 +1518,8 @@ def _experimental_reproject_dataset_uri(
 
        return projected dataset"""
     
-    #original_dataset = gdal.Open(original_dataset_uri)
-    
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
-
-    #output_sr = osr.SpatialReference()
-    #output_sr.ImportFromWkt(output_wkt)
-
-    #tx = osr.CoordinateTransformation(original_sr, output_sr)
 
     vrt = gdal.AutoCreateWarpedVRT(
             original_dataset, None, output_wkt, gdal.GRA_Bilinear)
@@ -1534,15 +1527,6 @@ def _experimental_reproject_dataset_uri(
     geo_t = vrt.GetGeoTransform()
     x_size = vrt.RasterXSize # Raster xsize
     y_size = vrt.RasterYSize # Raster ysize
-
-    # Get the Geotransform vector
-#   geo_t = original_dataset.GetGeoTransform()
-#   x_size = original_dataset.RasterXSize # Raster xsize
-#   y_size = original_dataset.RasterYSize # Raster ysize
-#   # Work out the boundaries of the new dataset in the target projection
-#   (ulx, uly, _) = tx.TransformPoint(geo_t[0], geo_t[3])
-#   (lrx, lry, _) = tx.TransformPoint(geo_t[0] + geo_t[1]*x_size,
-#                                     geo_t[3] + geo_t[5]*y_size)
 
     (ulx, uly) = (geo_t[0], geo_t[3])
     (lrx, lry) = (geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
@@ -1559,9 +1543,7 @@ def _experimental_reproject_dataset_uri(
     
     # Set the nodata value
     out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
-    LOGGER.debug('OUT NODATA: %s', out_nodata)
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
-    output_dataset.GetRasterBand(1).Fill(out_nodata)
 
     # Calculate the new geotransform
     output_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
@@ -1574,6 +1556,8 @@ def _experimental_reproject_dataset_uri(
     gdal.ReprojectImage(
             original_dataset, output_dataset, original_sr.ExportToWkt(),
             output_wkt, gdal.GRA_Bilinear)
+
+    calculate_raster_stats(output_dataset)
 
     return output_dataset
 
