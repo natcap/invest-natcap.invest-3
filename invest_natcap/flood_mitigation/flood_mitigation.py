@@ -759,3 +759,20 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     raster_utils.vectorize_datasets(raster_list, _vectorized_flood_height,
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
+
+def flood_inundation_depth():
+    """This function estimates flood inundation depth from flood height,
+        elevation, and curve numbers.  This is equation 20 from the flood
+        mitigation user's guide.
+
+        flood_height_uri - a URI to a GDAL datset representing flood height over
+            the landscape.
+        dem_uri - a URI to a GDAL raster of the digital elevation model.
+        cn_uri - a URI to a GDAL raster of the user's curve numbers.
+        output_uri - a URI to where the output GDAL raster dataset should be
+            stored.
+
+        This function returns nothing.
+    """
+
+    pass
