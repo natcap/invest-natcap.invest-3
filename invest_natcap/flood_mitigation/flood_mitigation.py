@@ -65,6 +65,8 @@ def execute(args):
         'cn_amc_class' - A string indicating the Antecedent Soil Moisture class
             that should be used for CN adjustment.  One of ['Wet', 'Dry',
             'Average'].  Required only if args['cn_adjust'] == True.
+        'flow_threshold' - a number representing the flow threshold before the
+            flow becomes a stream.
         'suffix' - (optional) a string to add to the end of all outputs from
             this model
 
@@ -143,6 +145,7 @@ def execute(args):
         'prev_discharge': _intermediate_uri('init_discharge.tif'),
         'outflow_weights': _intermediate_uri('outflow_weights.tif'),
         'outflow_direction': _intermediate_uri('outflow_direction.tif'),
+        'channels': _intermediate_uri('channels.tif'),
         'timesteps': {}
     }
 
@@ -160,7 +163,8 @@ def execute(args):
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'flood_height': _timestep_uri('flood_height.tif')
+            'flood_height': _timestep_uri('flood_height.tif'),
+            'inundation': _timestep_uri('flood_inundation.tif')
         }
 
         # Create the timestamp folder name and make the folder on disk.
@@ -185,6 +189,8 @@ def execute(args):
     routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
     routing_utils.calculate_flow_length(paths['flow_direction'],
         paths['flow_length'])
+    routing_utils.calculate_stream(args['dem'], args['flow_threshold'],
+        paths['channels'])
 
     # Convert the precip table from CSV to ESRI Shapefile and reproject it.
     convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
@@ -243,6 +249,10 @@ def execute(args):
         # Flood waters calculations
         flood_height(ts_paths['discharge'], paths['mannings'], paths['slope'],
             ts_paths['flood_height'])
+
+        flood_inundation_depth(ts_paths['flood_height'], args['dem'],
+            cn_season_adjusted_uri, 4000, paths['channels'],
+            ts_paths['inundation'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -772,7 +782,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
         cn_uri - a URI to a GDAL raster of the user's curve numbers.
         flow_threshold - the numeric value to determine if a flow pixel is a
             stream pixel.
-        channels_uri - a URI to an output GDAL dataset of the channel network.
+        channels_uri - a URI to a GDAL dataset of the channel network.
         output_uri - a URI to where the output GDAL raster dataset should be
             stored.
 
@@ -781,7 +791,6 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
 
     flood_height_matrix = _extract_matrix(flood_height_uri)
 
-    routing_utils.calculate_stream(dem_uri, 400, channels_uri)
     channel_matrix = _extract_matrix(channels_uri)
     dem_matrix = _extract_matrix(dem_uri)
     cn_matrix = _extract_matrix(cn_uri)
