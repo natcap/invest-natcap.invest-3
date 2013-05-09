@@ -799,8 +799,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
 
         Returns a numpy matrix of the calculated flood inundation height."""
 
-    output = flood_height.copy()
-    output.fill(0.0)
+    output = numpy.zeros(flood_height.shape)
 
     indices = [
         (0, 1),
