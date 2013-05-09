@@ -760,7 +760,7 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
 
-def flood_inundation_depth():
+def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, output_uri):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
         mitigation user's guide.
