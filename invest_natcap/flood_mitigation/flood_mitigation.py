@@ -826,21 +826,26 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
             n_index = tuple(map(sum, zip(index, neighbor_offset)))
 
             try:
+                if n_index[0] < 0 or n_index[1] < 0:
+                    raise IndexError
+
                 if channels[n_index] == 0:  # only do FID if not a channel cell.
                     fid = _fid(n_index, floodwater_channel, channel_elevation)
+                    LOGGER.debug('FID on index %s is %s', index, fid)
 
                     if fid > 0:
                         output[n_index] = max(output[n_index], fid)
                     else:
                         output[n_index] = fid
             except IndexError:
-                LOGGER.debug('index %s does not exist', n_index)
+                LOGGER.warn('index %s does not exist', n_index)
 
     iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
     for is_channel, floodwater, elevation in iterator:
         index = iterator.multi_index
 
         if is_channel != 0:
+            LOGGER.debug('index %s is a channel cell', index)
             _distribute_flood_water(index, floodwater, elevation)
 
     return output
