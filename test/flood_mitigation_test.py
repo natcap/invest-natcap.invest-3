@@ -35,7 +35,8 @@ class FloodMitigationTest(unittest.TestCase):
             'num_intervals': 6,
             'time_interval': 120.0,  # 2 minutes
             'landuse': self.landcover,
-            'mannings': self.mannings
+            'mannings': self.mannings,
+            'flow_threshold': 4000
         }
 
         try:
