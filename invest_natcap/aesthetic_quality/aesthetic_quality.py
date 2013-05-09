@@ -14,6 +14,74 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('aesthetic_quality')
 
+def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
+    """A URI wrapper for reproject dataset that opens the original_dataset_uri
+        before passing it to reproject_dataset.
+
+       original_dataset_uri - a URI to a gdal Dataset on disk
+
+       All other arguments to reproject_dataset are passed in.
+
+       return - nothing"""
+
+    original_dataset = gdal.Open(original_dataset_uri)
+    reproject_dataset(original_dataset, *args, **kwargs)
+
+    raster_utils.calculate_raster_stats_uri(original_dataset_uri)
+
+def reproject_dataset(original_dataset, output_wkt, output_uri,
+                      output_type = gdal.GDT_Float32):
+    """A function to reproject and resample a GDAL dataset given an output pixel size
+        and output reference and uri.
+
+       original_dataset - a gdal Dataset to reproject
+       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
+       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
+       output_uri - location on disk to dump the reprojected dataset
+       output_type - gdal type of the output    
+
+       return projected dataset"""
+
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_wkt)
+
+    vrt = gdal.AutoCreateWarpedVRT(original_dataset, None, output_wkt, gdal.GRA_Bilinear) 
+
+    # Get the Geotransform vector
+    geo_t = vrt.GetGeoTransform()
+    x_size = vrt.RasterXSize # Raster xsize
+    y_size = vrt.RasterYSize # Raster ysize
+
+    # Work out the boundaries of the new dataset in the target projection
+    
+
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    # The size of the raster is given the new projection and pixel spacing
+    # Using the values we calculated above. Also, setting it to store one band
+    # and to use Float32 data type.
+
+    output_dataset = gdal_driver.Create(output_uri, x_size, 
+                              y_size, 1, output_type)
+
+    # Set the nodata value
+    out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
+    output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(geo_t)
+    output_dataset.SetProjection (output_sr.ExportToWkt())
+
+    # Perform the projection/resampling 
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), output_sr.ExportToWkt(),
+                        gdal.GRA_Bilinear)
+    
+    return output_dataset
+
+
 def reclassify_quantile_dataset_uri(dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
     nodata_ds = raster_utils.get_nodata_from_uri(dataset_uri)
 
@@ -215,8 +283,8 @@ def execute(args):
     LOGGER.debug("Tabulating unaffected population.")
     nodata_pop = raster_utils.get_nodata_from_uri(aq_args["pop_uri"])
     LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
-    nodata_visible_feature_count = raster_utils.get_nodata_from_uri(viewshed_uri)
-    LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_visible_feature_count))
+    nodata_viewshed = raster_utils.get_nodata_from_uri(viewshed_uri)
+    LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
 
     #clip population
     LOGGER.debug("Projecting AOI for population raster clip.")
@@ -231,21 +299,31 @@ def execute(args):
                                   pop_clip_uri,
                                   False)
     
-    #reproject (and resample) clipped population
+    #reproject clipped population
     LOGGER.debug("Reprojecting clipped population raster.")
     vs_wkt = raster_utils.get_dataset_projection_wkt_uri(viewshed_uri)
-    raster_utils.reproject_dataset_uri(pop_clip_uri,
-                                       aq_args["cell_size"],
+    reproject_dataset_uri(pop_clip_uri,
                                        vs_wkt,
-                                       pop_vs_uri,
+                                       pop_prj_uri,
                                        get_data_type_uri(pop_clip_uri))
 
-##    #resampling clipped
-##    LOGGER.debud("Resampling population raster.")
-##    raster_utils.resample_dataset(pop_prj_uri,
-##                                  aq_args["cell_size"],
-##                                  pop_vs_uri,
-##                                  gdal.GRA_Bilinear)
+    #align and resample population
+    def copy(value1, value2):
+        if value2 == nodata_viewshed:
+            return nodata_pop
+        else:
+            return value1
+    
+    LOGGER.debug("Resampling and aligning population raster.")
+    raster_utils.vectorize_datasets([pop_prj_uri, viewshed_uri],
+                                   copy,
+                                   pop_vs_uri,
+                                   get_data_type_uri(pop_prj_uri),
+                                   nodata_pop,
+                                   aq_args["cell_size"],
+                                   "intersection",
+                                   ["bilinear", "bilinear"],
+                                   1)
     
     pop = gdal.Open(pop_vs_uri)
     #LOGGER.debug(pop)
@@ -261,7 +339,7 @@ def execute(args):
         vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(numpy.float64)
 
         pop_row[pop_row == nodata_pop]=0.0
-        vs_row[vs_row == nodata_visible_feature_count]=-1
+        vs_row[vs_row == nodata_viewshed]=-1
 
         affected_pop += numpy.sum(pop_row[vs_row > 0])
         unaffected_pop += numpy.sum(pop_row[vs_row == 0])
