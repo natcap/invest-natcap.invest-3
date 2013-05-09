@@ -203,7 +203,7 @@ class FloodMitigationTest(unittest.TestCase):
             [0, 0, 0, 0, 1],
             [0, 0, 0, 1, 0],
             [1, 1, 0, 1, 0],
-            [0, 1, 0, 1, 0].
+            [0, 1, 0, 1, 0],
             [0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0]])
 
@@ -224,8 +224,11 @@ class FloodMitigationTest(unittest.TestCase):
             [0, 0, 0, 0, 3],
             [0, 0, 0, 3, 0],
             [3, 3, 0, 3, 0],
-            [0, 3, 0, 3, 0].
+            [0, 3, 0, 3, 0],
             [0, 0, 3, 0, 0],
             [0, 0, 0, 0, 0]])
 
-
+        # Call the numpy-only function for testing out the core algorithm,
+        # without all the raster stuff implied in URIs.
+        flood_mitigation._calculate_fid(flood_height_matrix, dem_matrix,
+            cn_matrix, output_matrix)
