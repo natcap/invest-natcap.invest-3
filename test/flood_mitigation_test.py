@@ -208,15 +208,15 @@ class FloodMitigationTest(unittest.TestCase):
             [0, 0, 0, 0, 0]])
 
         dem_matrix = numpy.array([
-            [10, 14, 13, 12, 9 ],
-            [9,  13, 14, 8,  12],
+            [3,   3, 13, 12, 9 ],
+            [4,  13, 14, 8,  12],
             [2,  2,  12, 8,  12],
             [7,  3,  9,  6,  11],
             [9,  6,  4,  8,  12],
             [10, 10, 8, 10,  9]])
 
         # Just for fun, assume constant CN value
-        cn_matrix = dem_matrix.copy()
+        cn_matrix = numpy.zeros(dem_matrix.shape)
         cn_matrix.fill(0.125)
 
         flood_height_matrix = numpy.array([
@@ -229,6 +229,7 @@ class FloodMitigationTest(unittest.TestCase):
 
         print channel_matrix
         print dem_matrix
+        print cn_matrix
         # Call the numpy-only function for testing out the core algorithm,
         # without all the raster stuff implied in URIs.
         fid = flood_mitigation._calculate_fid(flood_height_matrix, dem_matrix,
