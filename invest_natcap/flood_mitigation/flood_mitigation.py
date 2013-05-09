@@ -786,3 +786,16 @@ def flood_inundation_depth():
     # get the CN matrix
     nc_matrix = None
 
+def _calculate_fid(flood_height, dem, curve_nums, output):
+    """Actually perform the matrix calculations for the flood inundation depth
+        function.  This is equation 20 from the flood mitigation user's guide.
+
+        flood_height - a numpy matrix of flood water heights.
+        dem - a numpy matrix of elevations.
+        curve_nums - a numpy matrix of curve numbers.
+        output - a numpy matrix.
+
+        All matrices MUST have the same sizes.
+
+        Returns a numpy matrix of the calculated flood inundation height."""
+    pass
