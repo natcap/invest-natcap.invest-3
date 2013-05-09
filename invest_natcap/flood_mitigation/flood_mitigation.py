@@ -786,16 +786,59 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, output_uri):
     # get the CN matrix
     nc_matrix = None
 
-def _calculate_fid(flood_height, dem, curve_nums, output):
+def _calculate_fid(flood_height, dem, channels, curve_nums, output):
     """Actually perform the matrix calculations for the flood inundation depth
         function.  This is equation 20 from the flood mitigation user's guide.
 
         flood_height - a numpy matrix of flood water heights.
         dem - a numpy matrix of elevations.
+        channels - a numpy matrix of channels.
         curve_nums - a numpy matrix of curve numbers.
         output - a numpy matrix.
 
         All matrices MUST have the same sizes.
 
         Returns a numpy matrix of the calculated flood inundation height."""
-    pass
+
+    indices = [
+        (0, 1),
+        (-1, 1),
+        (-1, 0),
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (1, 0),
+        (1, 1)
+    ]
+
+    def _fid(index, channel_floodwater, channel_elevation):
+        elevation_diff = dem[index] - channel_elevation
+        flooding = channel_floodwater - elevation_diff - curve_nums[index]
+
+        if flooding <= 0:
+            return 0.0
+        return flooding
+
+    def _distribute_flood_water(index, floodwater_channel, channel_elevation):
+        for neighbor_offset in indices:
+            n_index = tuple(map(sum, zip(index, neighbor_offset)))
+
+            try:
+                if channels[n_index] == 0:  # only do FID if not a channel cell.
+                    fid = _fid(n_index, floodwater_channel, channel_elevation)
+
+                    if fid > 0:
+                        output[n_index] = max(output[n_index], fid)
+                    else:
+                        output[n_index] = fid
+            except IndexError:
+                LOGGER.debug('index %s does not exist', n_index)
+
+    iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
+    for is_channel, floodwater, elevation in iterator:
+        index = iterator.multi_index
+
+        if is_channel != 0:
+            _distribute_flood_water(index, floodwater, elevation)
+
+    return output
