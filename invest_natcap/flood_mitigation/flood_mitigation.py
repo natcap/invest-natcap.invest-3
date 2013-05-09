@@ -800,6 +800,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
         Returns a numpy matrix of the calculated flood inundation height."""
 
     output = numpy.zeros(flood_height.shape)
+    visited = numpy.zeros(flood_height.shape, dtype=numpy.int)
 
     indices = [
         (0, 1),
@@ -820,7 +821,12 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
             return 0.0
         return flooding
 
+    class AlreadyVisited(Exception):pass
+
     def _distribute_flood_water(index, floodwater_channel, channel_elevation):
+        LOGGER.debug('Distributing flood water from %s', index)
+        visited[index] = 1
+
         for neighbor_offset in indices:
             n_index = tuple(map(sum, zip(index, neighbor_offset)))
 
@@ -828,19 +834,27 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
                 if n_index[0] < 0 or n_index[1] < 0:
                     raise IndexError
 
+                if visited[n_index]:
+                    raise AlreadyVisited
+
                 if channels[n_index] == 0:  # only do FID if not a channel cell.
                     fid = _fid(n_index, floodwater_channel, channel_elevation)
                     LOGGER.debug('FID on index %s is %s', n_index, fid)
 
                     if fid > 0:
                         output[n_index] = max(output[n_index], fid)
+                        _distribute_flood_water(n_index, floodwater_channel,
+                            channel_elevation)
                     else:
                         output[n_index] = fid
+
                 else:
                     output[n_index] = floodwater_channel
 
             except IndexError:
                 LOGGER.warn('index %s does not exist', n_index)
+            except AlreadyVisited:
+                LOGGER.info('Already visited index %s, not distributing.', n_index)
 
     iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
     for is_channel, floodwater, elevation in iterator:
