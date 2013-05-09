@@ -760,7 +760,8 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
 
-def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, output_uri):
+def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
+    channels_uri, output_uri):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
         mitigation user's guide.
@@ -769,22 +770,28 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, output_uri):
             the landscape.
         dem_uri - a URI to a GDAL raster of the digital elevation model.
         cn_uri - a URI to a GDAL raster of the user's curve numbers.
+        flow_threshold - the numeric value to determine if a flow pixel is a
+            stream pixel.
+        channels_uri - a URI to an output GDAL dataset of the channel network.
         output_uri - a URI to where the output GDAL raster dataset should be
             stored.
 
         This function returns nothing.
     """
-    # get the matrix of channel cells
-    channel_matrix = None
 
-    # get the output matrix
-    output_matrix = None
+    flood_height_matrix = _extract_matrix(flood_height_uri)
 
-    # get the dem matrix
-    dem_matrix = None
+    routing_utils.calculate_stream(dem_uri, 400, channels_uri)
+    channel_matrix = _extract_matrix(channels_uri)
+    dem_matrix = _extract_matrix(dem_uri)
+    cn_matrix = _extract_matrix(cn_uri)
 
-    # get the CN matrix
-    nc_matrix = None
+    fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
+        channel_matrix, cn_matrix)
+
+    raster_utils.new_raster_from_base_uri(dem_matrix, output_uri, 'GTiff', -1,
+        gdal.GDT_Float32)
+    _write_matrix(fid_matrix, output_uri)
 
 def _calculate_fid(flood_height, dem, channels, curve_nums):
     """Actually perform the matrix calculations for the flood inundation depth
