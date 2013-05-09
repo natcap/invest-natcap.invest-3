@@ -3,6 +3,7 @@ import os
 
 from osgeo import gdal
 from osgeo import ogr
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
@@ -194,4 +195,37 @@ class FloodMitigationTest(unittest.TestCase):
 
         convolved = ndimage.convolve(runoff, kernel, mode='constant', cval=0.0)
         print numpy.divide(convolved, 120)
+
+    def test_flood_inundation_depth(self):
+        """Test for the flood inundation depth function."""
+
+        channel_matrix = numpy.array([
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0].
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0]])
+
+        output_matrix = channel_matrix.copy().fill(0.0)
+
+        dem_matrix = numpy.array([
+            [10, 14, 13, 12, 9 ],
+            [9,  13, 14, 8,  12],
+            [2,  2,  12, 8,  12],
+            [7,  3,  9,  6,  11],
+            [9,  6,  4,  8,  12],
+            [10, 10, 8, 10,  9]])
+
+        # Just for fun, assume constant CN value
+        cn_matrix = output_matrix.copy().fill(0.125)
+
+        flood_height_matrix = numpy.array([
+            [0, 0, 0, 0, 3],
+            [0, 0, 0, 3, 0],
+            [3, 3, 0, 3, 0],
+            [0, 3, 0, 3, 0].
+            [0, 0, 3, 0, 0],
+            [0, 0, 0, 0, 0]])
+
 
