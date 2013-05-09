@@ -774,5 +774,15 @@ def flood_inundation_depth():
 
         This function returns nothing.
     """
+    # get the matrix of channel cells
+    channel_matrix = None
 
-    pass
+    # get the output matrix
+    output_matrix = None
+
+    # get the dem matrix
+    dem_matrix = None
+
+    # get the CN matrix
+    nc_matrix = None
+
