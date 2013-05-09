@@ -225,14 +225,28 @@ class FloodMitigationTest(unittest.TestCase):
             [3, 3, 0, 3, 0],
             [0, 3, 0, 3, 0],
             [0, 0, 3, 0, 0],
-            [0, 0, 0, 0, 0]])
+            [0, 0, 0, 0, 0]], dtype=numpy.float)
 
-        print channel_matrix
-        print dem_matrix
-        print cn_matrix
         # Call the numpy-only function for testing out the core algorithm,
         # without all the raster stuff implied in URIs.
         fid = flood_mitigation._calculate_fid(flood_height_matrix, dem_matrix,
             channel_matrix, cn_matrix)
 
-        print fid
+
+        matrices = [
+            ('fid', fid),
+            ('channels', channel_matrix),
+            ('flood height', flood_height_matrix),
+            ('dem', dem_matrix),
+            ('curve_nums', cn_matrix)
+        ]
+
+        for label, matrix in matrices:
+            print label
+            print matrix
+            print ""
+
+##        print fid
+##        print channel_matrix
+##        print dem_matrix
+##        print cn_matrix
