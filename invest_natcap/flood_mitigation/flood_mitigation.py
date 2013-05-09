@@ -831,12 +831,15 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
 
                 if channels[n_index] == 0:  # only do FID if not a channel cell.
                     fid = _fid(n_index, floodwater_channel, channel_elevation)
-                    LOGGER.debug('FID on index %s is %s', index, fid)
+                    LOGGER.debug('FID on index %s is %s', n_index, fid)
 
                     if fid > 0:
                         output[n_index] = max(output[n_index], fid)
                     else:
                         output[n_index] = fid
+                else:
+                    output[n_index] = floodwater_channel
+
             except IndexError:
                 LOGGER.warn('index %s does not exist', n_index)
 
