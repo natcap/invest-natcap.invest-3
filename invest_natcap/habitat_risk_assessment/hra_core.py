@@ -140,6 +140,9 @@ def execute(args):
     #rasters, since it serves no purpose for the users.
     unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
     os.removedirs(unecessary_folder)
+    #Want to remove that AOI copy that we used for ID number->name translation.
+    unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
+    os.remove(unecessary_file)
 
 def rewrite_avgs_dict(avgs_dict, aoi_names):
     '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
