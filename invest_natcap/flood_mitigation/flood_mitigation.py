@@ -802,7 +802,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
         gdal.GDT_Float32)
     _write_matrix(fid_matrix, output_uri)
 
-def _calculate_fid(flood_height, dem, channels, curve_nums):
+def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, pixel_size):
     """Actually perform the matrix calculations for the flood inundation depth
         function.  This is equation 20 from the flood mitigation user's guide.
 
@@ -810,6 +810,10 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
         dem - a numpy matrix of elevations.
         channels - a numpy matrix of channels.
         curve_nums - a numpy matrix of curve numbers.
+        outflow_direction - a numpy matrix indicating which pixels flow into one
+            another.  See routing_utils for details on this matrix.
+        pixel_size -a numpy indicating the mean of the height and width of a
+            pixel.
 
         All matrices MUST have the same sizes.
 
@@ -817,17 +821,38 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
 
     output = numpy.copy(flood_height)
     visited = numpy.zeros(flood_height.shape, dtype=numpy.int)
+    travel_distance = numpy.zeros(flood_height.shape, dtype=numpy.float)
+
+    diagonal_distance = pixel_size + math.sqrt(2)
 
     indices = [
-        (0, 1),
-        (-1, 1),
-        (-1, 0),
-        (-1, -1),
-        (0, -1),
-        (1, -1),
-        (1, 0),
-        (1, 1)
+        (0, (0, 1), pixel_size),
+        (1, (-1, 1), diagonal_distance),
+        (2, (-1, 0), pixel_size),
+        (3, (-1, -1), diagonal_distance),
+        (4, (0, -1), pixel_size),
+        (5, (1, -1), diagonal_distance),
+        (6, (1, 0), pixel_size),
+        (7, (1, 1), diagonal_distance)
     ]
+
+    inflow_neighbors = {
+        0: [3, 4],
+        1: [4, 5],
+        2: [5, 6],
+        3: [6, 7],
+        4: [7, 0],
+        5: [0, 1],
+        6: [1, 2],
+        7: [2, 3],
+    }
+
+    def _flows_to(source_index, neighbor_id, dest_index):
+        neighbor_value = outflow_direction[source_index]
+        possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+        if neighbor_id in possible_inflow_neighbors:
+            return True
+        return False
 
     def _fid(index, channel_floodwater, channel_elevation):
         elevation_diff = dem[index] - channel_elevation
@@ -838,46 +863,45 @@ def _calculate_fid(flood_height, dem, channels, curve_nums):
         return flooding
 
     class AlreadyVisited(Exception):pass
+    class SkipNeighbor(Exception): pass
 
-    def _distribute_flood_water(index, floodwater_channel, channel_elevation):
-        LOGGER.debug('Distributing flood water from %s', index)
-        visited[index] = 1
-
-        for neighbor_offset in indices:
-            n_index = tuple(map(sum, zip(index, neighbor_offset)))
-
-            try:
-                if n_index[0] < 0 or n_index[1] < 0:
-                    raise IndexError
-
-                if visited[n_index]:
-                    raise AlreadyVisited
-
-                if channels[n_index] == 0:  # only do FID if not a channel cell.
-                    fid = _fid(n_index, floodwater_channel, channel_elevation)
-                    LOGGER.debug('FID on index %s is %s', n_index, fid)
-
-                    if fid > 0:
-                        output[n_index] = max(output[n_index], fid)
-                        _distribute_flood_water(n_index, floodwater_channel,
-                            channel_elevation)
-                    else:
-                        output[n_index] = fid
-
-                else:
-                    output[n_index] = floodwater_channel
-
-            except IndexError:
-                LOGGER.warn('index %s does not exist', n_index)
-            except AlreadyVisited:
-                LOGGER.info('Already visited index %s, not distributing.', n_index)
 
     iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
-    for is_channel, floodwater, elevation in iterator:
-        index = iterator.multi_index
+    for channel, channel_floodwater, channel_elevation in iterator:
+        channel_index = iterator.multi_index
+        pixels_to_visit = [channel_index]
 
-        if is_channel != 0:
-            LOGGER.debug('index %s is a channel cell', index)
-            _distribute_flood_water(index, floodwater, elevation)
+        LOGGER.debug('Distributing flood water from %s', channel_index)
+        visited[channel_index] = 1
+
+        for pixel_index in pixels_to_visit:
+            for n_id, neighbor_offset, n_distance in indices:
+                n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
+
+                try:
+                    if n_index[0] < 0 or n_index[1] < 0:
+                        raise IndexError
+
+                    if channel == 1:
+                        raise SkipNeighbor
+
+                    if _flows_to(n_index, n_id, pixel_index):
+                        fid = _fid(n_index, channel_floodwater, channel_elevation)
+                        if fid > 0:
+                            dist_to_n = travel_distance[pixel_index] + n_distance
+                            if visited[n_index] == 0 or (visited[n_index] == 1 and
+                                dist_to_n < travel_distance[n_index]):
+                                travel_distance[n_index] = dist_to_n
+                                #nearest_channel = channel_index
+                                output[n_index] = fid
+                                pixels_to_visit.append(n_index)
+
+
+                except SkipNeighbor:
+                    LOGGER.debug('Skipping neighbor %s', n_index)
+                except IndexError:
+                    LOGGER.warn('index %s does not exist', n_index)
+                except AlreadyVisited:
+                    LOGGER.info('Already visited index %s, not distributing.', n_index)
 
     return output
