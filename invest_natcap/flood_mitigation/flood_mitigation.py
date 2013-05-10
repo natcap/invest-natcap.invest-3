@@ -799,7 +799,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
     pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
     fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
-        channel_matrix, cn_matrix, outflow_direction_matrix, pixel_size)
+        channel_matrix, cn_matrix, outflow_direction_matrix, pixel_size)[0]
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
