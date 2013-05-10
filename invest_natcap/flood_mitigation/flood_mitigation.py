@@ -904,4 +904,4 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                 except AlreadyVisited:
                     LOGGER.info('Already visited index %s, not distributing.', n_index)
 
-    return output
+    return (output, travel_distance)
