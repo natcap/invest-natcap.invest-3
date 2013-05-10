@@ -824,7 +824,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
     travel_distance = numpy.zeros(flood_height.shape, dtype=numpy.float)
     nearest_channel = numpy.zeros(flood_height.shape + (2,), dtype=numpy.int)
 
-    diagonal_distance = pixel_size + math.sqrt(2)
+    diagonal_distance = pixel_size * math.sqrt(2)
 
     indices = [
         (0, (0, 1), pixel_size),
