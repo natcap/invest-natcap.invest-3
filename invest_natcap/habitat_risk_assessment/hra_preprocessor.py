@@ -213,7 +213,7 @@ def execute(args):
     for habitat_name in hab_list:
 
         csv_filename = os.path.join(output_dir, habitat_name + \
-            '_overlap_ratings.csv')
+            '_ratings.csv')
         
         with open(csv_filename, 'wb') as habitat_csv_file:
             habitat_csv_writer = csv.writer(habitat_csv_file)
@@ -387,9 +387,10 @@ def parse_hra_tables(workspace_uri):
     
     #Now we can compile and add the other dictionaries
     dir_names = listdir(workspace_uri)
-    LOGGER.debug(dir_names)
-    habitat_csvs = fnmatch.filter(dir_names, '*_overlap_ratings.csv')
+    
+    all_csvs = [f for f in l if f.endswith('_ratings.csv')]
     stressor_csvs = fnmatch.filter(dir_names, '*_stressor_ratings.csv')
+    habitat_csvs = set(all_csvs) - set(stressor_csvs)
     
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
@@ -404,7 +405,7 @@ def parse_hra_tables(workspace_uri):
 
     for habitat_uri in habitat_csvs:
         
-        habitat_name = re.search('(.*)_overlap_ratings\.csv', 
+        habitat_name = re.search('_ratings\.csv', 
                                 os.path.basename(habitat_uri)).group(1)
 
         #Since each habitat CSV has both habitat individual ratings and habitat

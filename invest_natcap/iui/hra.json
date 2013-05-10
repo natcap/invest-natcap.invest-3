@@ -26,7 +26,7 @@
                     "args_id" : "csv_uri",
                     "type": "folder",
                     "label": "Criteria Scores CSV Folder",
-                    "defaultValue": "../HabitatRiskAssess_3_0/habitat_stressor_ratings",
+                    "defaultValue": "../HabitatRiskAssess_3_0/habitat_stressor_ratings_sample",
                     "required": true,
                     "validateAs": {"type": "folder",
                                    "mustExist": true},
