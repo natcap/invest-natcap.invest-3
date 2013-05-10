@@ -319,6 +319,10 @@ def execute(args):
             i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
             j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
             depth = dem_matrix[j][i]
+            # There are cases where the DEM may be to coarse and thus a wave
+            # energy point falls on land. If the depth value taken from the DEM
+            # is greater than or equal to zero we need to delete that point as
+            # it should not be used in calculations
             if depth >= 0.0:
                 clipped_wave_layer.DeleteFeature(feature.GetFID())
                 feature = clipped_wave_layer.GetNextFeature()
@@ -327,7 +331,9 @@ def execute(args):
                 clipped_wave_layer.SetFeature(feature)
                 feature = None
                 feature = clipped_wave_layer.GetNextFeature()
-
+        # It is not enough to just delete a feature from the layer. The database
+        # where the information is stored must be re-packed so that feature
+        # entry is properly removed
         clipped_wave_shape.ExecuteSQL(
                 'REPACK ' + clipped_wave_layer.GetName())
 
