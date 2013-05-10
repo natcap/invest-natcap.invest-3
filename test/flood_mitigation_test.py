@@ -3,6 +3,7 @@ import os
 
 from osgeo import gdal
 from osgeo import ogr
+import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
@@ -34,7 +35,8 @@ class FloodMitigationTest(unittest.TestCase):
             'num_intervals': 6,
             'time_interval': 120.0,  # 2 minutes
             'landuse': self.landcover,
-            'mannings': self.mannings
+            'mannings': self.mannings,
+            'flow_threshold': 4000
         }
 
         try:
@@ -195,3 +197,57 @@ class FloodMitigationTest(unittest.TestCase):
         convolved = ndimage.convolve(runoff, kernel, mode='constant', cval=0.0)
         print numpy.divide(convolved, 120)
 
+    def test_flood_inundation_depth(self):
+        """Test for the flood inundation depth function."""
+
+        channel_matrix = numpy.array([
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0]])
+
+        dem_matrix = numpy.array([
+            [3,   3, 13, 12, 9 ],
+            [4,  13, 14, 8,  12],
+            [2,  2,  12, 8,  12],
+            [7,  3,  9,  6,  11],
+            [9,  6,  4,  8,  12],
+            [10, 10, 8, 10,  9]])
+
+        # Just for fun, assume constant CN value
+        cn_matrix = numpy.zeros(dem_matrix.shape)
+        cn_matrix.fill(0.125)
+
+        flood_height_matrix = numpy.array([
+            [0, 0, 0, 0, 3],
+            [0, 0, 0, 3, 0],
+            [3, 3, 0, 3, 0],
+            [0, 3, 0, 3, 0],
+            [0, 0, 3, 0, 0],
+            [0, 0, 0, 0, 0]], dtype=numpy.float)
+
+        # Call the numpy-only function for testing out the core algorithm,
+        # without all the raster stuff implied in URIs.
+        fid = flood_mitigation._calculate_fid(flood_height_matrix, dem_matrix,
+            channel_matrix, cn_matrix)
+
+
+        matrices = [
+            ('fid', fid),
+            ('channels', channel_matrix),
+            ('flood height', flood_height_matrix),
+            ('dem', dem_matrix),
+            ('curve_nums', cn_matrix)
+        ]
+
+        for label, matrix in matrices:
+            print label
+            print matrix
+            print ""
+
+##        print fid
+##        print channel_matrix
+##        print dem_matrix
+##        print cn_matrix
