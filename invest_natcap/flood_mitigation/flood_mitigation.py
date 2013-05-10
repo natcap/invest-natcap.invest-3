@@ -252,7 +252,7 @@ def execute(args):
 
         flood_inundation_depth(ts_paths['flood_height'], args['dem'],
             cn_season_adjusted_uri, 4000, paths['channels'],
-            ts_paths['inundation'])
+            paths['outflow_direction'], ts_paths['inundation'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
