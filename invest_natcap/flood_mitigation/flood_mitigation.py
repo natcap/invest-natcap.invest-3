@@ -875,6 +875,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
             LOGGER.debug('Distributing flood water from %s', channel_index)
             visited[channel_index] = 1
+            nearest_channel[channel_index][0] = channel_index[0]
+            nearest_channel[channel_index][1] = channel_index[1]
 
             for pixel_index in pixels_to_visit:
                 for n_id, neighbor_offset, n_distance in indices:
