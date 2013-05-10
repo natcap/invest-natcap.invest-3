@@ -822,6 +822,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
     output = numpy.copy(flood_height)
     visited = numpy.zeros(flood_height.shape, dtype=numpy.int)
     travel_distance = numpy.zeros(flood_height.shape, dtype=numpy.float)
+    nearest_channel = numpy.zeros(flood_height.shape + (2,), dtype=numpy.int)
 
     diagonal_distance = pixel_size + math.sqrt(2)
 
@@ -892,7 +893,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                             if visited[n_index] == 0 or (visited[n_index] == 1 and
                                 dist_to_n < travel_distance[n_index]):
                                 travel_distance[n_index] = dist_to_n
-                                #nearest_channel = channel_index
+                                nearest_channel[n_index][0] = channel_index[0]
+                                nearest_channel[n_index][1] = channel_index[1]
                                 output[n_index] = fid
                                 pixels_to_visit.append(n_index)
 
@@ -904,4 +906,4 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                 except AlreadyVisited:
                     LOGGER.info('Already visited index %s, not distributing.', n_index)
 
-    return (output, travel_distance)
+    return (output, travel_distance, nearest_channel)
