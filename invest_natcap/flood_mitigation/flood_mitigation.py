@@ -771,7 +771,7 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         'intersection')
 
 def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
-    channels_uri, output_uri):
+    channels_uri, outflow_direction_uri, output_uri):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
         mitigation user's guide.
@@ -783,6 +783,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
         flow_threshold - the numeric value to determine if a flow pixel is a
             stream pixel.
         channels_uri - a URI to a GDAL dataset of the channel network.
+        outflow_direction_uri - a URI to the outflow direction raster.
         output_uri - a URI to where the output GDAL raster dataset should be
             stored.
 
@@ -794,9 +795,11 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
     channel_matrix = _extract_matrix(channels_uri)
     dem_matrix = _extract_matrix(dem_uri)
     cn_matrix = _extract_matrix(cn_uri)
+    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+    pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
     fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
-        channel_matrix, cn_matrix)
+        channel_matrix, cn_matrix, outflow_direction_matrix, pixel_size)
 
     raster_utils.new_raster_from_base_uri(dem_matrix, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
