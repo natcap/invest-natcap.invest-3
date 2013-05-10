@@ -869,41 +869,42 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
     iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
     for channel, channel_floodwater, channel_elevation in iterator:
-        channel_index = iterator.multi_index
-        pixels_to_visit = [channel_index]
+        if channel == 1:
+            channel_index = iterator.multi_index
+            pixels_to_visit = [channel_index]
 
-        LOGGER.debug('Distributing flood water from %s', channel_index)
-        visited[channel_index] = 1
+            LOGGER.debug('Distributing flood water from %s', channel_index)
+            visited[channel_index] = 1
 
-        for pixel_index in pixels_to_visit:
-            for n_id, neighbor_offset, n_distance in indices:
-                n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
+            for pixel_index in pixels_to_visit:
+                for n_id, neighbor_offset, n_distance in indices:
+                    n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
 
-                try:
-                    if n_index[0] < 0 or n_index[1] < 0:
-                        raise IndexError
+                    try:
+                        if n_index[0] < 0 or n_index[1] < 0:
+                            raise IndexError
 
-                    if channel == 1:
-                        raise SkipNeighbor
+                        if channels[n_index] == 1:
+                            raise SkipNeighbor
 
-                    if _flows_to(n_index, n_id, pixel_index):
-                        fid = _fid(n_index, channel_floodwater, channel_elevation)
-                        if fid > 0:
-                            dist_to_n = travel_distance[pixel_index] + n_distance
-                            if visited[n_index] == 0 or (visited[n_index] == 1 and
-                                dist_to_n < travel_distance[n_index]):
-                                travel_distance[n_index] = dist_to_n
-                                nearest_channel[n_index][0] = channel_index[0]
-                                nearest_channel[n_index][1] = channel_index[1]
-                                output[n_index] = fid
-                                pixels_to_visit.append(n_index)
+                        if _flows_to(n_index, n_id, pixel_index):
+                            fid = _fid(n_index, channel_floodwater, channel_elevation)
+                            if fid > 0:
+                                dist_to_n = travel_distance[pixel_index] + n_distance
+                                if visited[n_index] == 0 or (visited[n_index] == 1 and
+                                    dist_to_n < travel_distance[n_index]):
+                                    travel_distance[n_index] = dist_to_n
+                                    nearest_channel[n_index][0] = channel_index[0]
+                                    nearest_channel[n_index][1] = channel_index[1]
+                                    output[n_index] = fid
+                                    pixels_to_visit.append(n_index)
 
 
-                except SkipNeighbor:
-                    LOGGER.debug('Skipping neighbor %s', n_index)
-                except IndexError:
-                    LOGGER.warn('index %s does not exist', n_index)
-                except AlreadyVisited:
-                    LOGGER.info('Already visited index %s, not distributing.', n_index)
+                    except SkipNeighbor:
+                        LOGGER.debug('Skipping neighbor %s', n_index)
+                    except IndexError:
+                        LOGGER.warn('index %s does not exist', n_index)
+                    except AlreadyVisited:
+                        LOGGER.info('Already visited index %s, not distributing.', n_index)
 
     return (output, travel_distance, nearest_channel)
