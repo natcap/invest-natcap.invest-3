@@ -852,8 +852,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         neighbor_value = outflow_direction[source_index]
         possible_inflow_neighbors = inflow_neighbors[neighbor_value]
         if neighbor_id in possible_inflow_neighbors:
-            return True
-        return False
+            return False
+        return True
 
     def _fid(index, channel_floodwater, channel_elevation):
         elevation_diff = dem[index] - channel_elevation
@@ -878,7 +878,14 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
             nearest_channel[channel_index][0] = channel_index[0]
             nearest_channel[channel_index][1] = channel_index[1]
 
-            for pixel_index in pixels_to_visit:
+            while True:
+                try:
+                    pixel_index = pixels_to_visit.pop(0)
+                    print (pixel_index, pixels_to_visit)
+                except IndexError:
+                    # No more indexes to process.
+                    break
+
                 for n_id, neighbor_offset, n_distance in indices:
                     n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
 
@@ -891,16 +898,18 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
                         if _flows_to(n_index, n_id, pixel_index):
                             fid = _fid(n_index, channel_floodwater, channel_elevation)
+                            print(n_index, fid)
                             if fid > 0:
                                 dist_to_n = travel_distance[pixel_index] + n_distance
                                 if visited[n_index] == 0 or (visited[n_index] == 1 and
                                     dist_to_n < travel_distance[n_index]):
+                                    visited[n_index] = 1
                                     travel_distance[n_index] = dist_to_n
                                     nearest_channel[n_index][0] = channel_index[0]
                                     nearest_channel[n_index][1] = channel_index[1]
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
-
+                                    print(pixels_to_visit)
 
                     except SkipNeighbor:
                         LOGGER.debug('Skipping neighbor %s', n_index)
