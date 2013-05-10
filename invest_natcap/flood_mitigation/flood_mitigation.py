@@ -848,7 +848,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         7: [2, 3],
     }
 
-    def _flows_to(source_index, neighbor_id, dest_index):
+    def _flows_to(source_index, neighbor_id):
         neighbor_value = outflow_direction[source_index]
         possible_inflow_neighbors = inflow_neighbors[neighbor_value]
         if neighbor_id in possible_inflow_neighbors:
@@ -896,7 +896,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                         if channels[n_index] == 1:
                             raise SkipNeighbor
 
-                        if _flows_to(n_index, n_id, pixel_index):
+                        if _flows_to(n_index, n_id):
                             fid = _fid(n_index, channel_floodwater, channel_elevation)
                             print(n_index, fid)
                             if fid > 0:
