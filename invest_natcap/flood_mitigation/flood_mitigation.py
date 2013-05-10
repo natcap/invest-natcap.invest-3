@@ -801,9 +801,9 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
     fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
         channel_matrix, cn_matrix, outflow_direction_matrix, pixel_size)
 
-    raster_utils.new_raster_from_base_uri(dem_matrix, output_uri, 'GTiff', -1,
+    raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
-    _write_matrix(fid_matrix, output_uri)
+    _write_matrix(output_uri, fid_matrix)
 
 def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, pixel_size):
     """Actually perform the matrix calculations for the flood inundation depth
