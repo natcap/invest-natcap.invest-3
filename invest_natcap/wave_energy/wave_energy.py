@@ -141,6 +141,22 @@ def execute(args):
              'ww3_uri': os.path.join(
                  wave_base_data_uri, 'NAmerica_EastCoast_4m.txt.bin')
             },
+            'North Sea 4 meter resolution': {
+             'point_shape': os.path.join(
+                wave_base_data_uri, 'North_Sea_4m.shp'),
+             'extract_shape': os.path.join(
+                 wave_base_data_uri, 'North_Sea_4m_Extract.shp'),
+             'ww3_uri': os.path.join(
+                 wave_base_data_uri, 'North_Sea_4m.bin')
+            },
+            'North Sea 10 meter resolution': {
+             'point_shape': os.path.join(
+                wave_base_data_uri, 'North_Sea_10m_update.shp'),
+             'extract_shape': os.path.join(
+                 wave_base_data_uri, 'North_Sea_10m_Extract.shp'),
+             'ww3_uri': os.path.join(
+                 wave_base_data_uri, 'North_Sea_10m.bin')
+            },
             'Global': {
              'point_shape': os.path.join(wave_base_data_uri, 'Global.shp'),
              'extract_shape': os.path.join(
@@ -287,7 +303,7 @@ def execute(args):
         clipped_wave_layer = clipped_wave_shape.GetLayer()
         clipped_wave_layer.CreateField(field_defn)
         feature = clipped_wave_layer.GetNextFeature()
-
+        
         # For all the features (points) add the proper depth value from the DEM
         while feature is not None:
             depth_index = feature.GetFieldIndex(field_name)
@@ -303,10 +319,23 @@ def execute(args):
             i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
             j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
             depth = dem_matrix[j][i]
-            feature.SetField(int(depth_index), float(depth))
-            clipped_wave_layer.SetFeature(feature)
-            feature = None
-            feature = clipped_wave_layer.GetNextFeature()
+            # There are cases where the DEM may be to coarse and thus a wave
+            # energy point falls on land. If the depth value taken from the DEM
+            # is greater than or equal to zero we need to delete that point as
+            # it should not be used in calculations
+            if depth >= 0.0:
+                clipped_wave_layer.DeleteFeature(feature.GetFID())
+                feature = clipped_wave_layer.GetNextFeature()
+            else:
+                feature.SetField(int(depth_index), float(depth))
+                clipped_wave_layer.SetFeature(feature)
+                feature = None
+                feature = clipped_wave_layer.GetNextFeature()
+        # It is not enough to just delete a feature from the layer. The database
+        # where the information is stored must be re-packed so that feature
+        # entry is properly removed
+        clipped_wave_shape.ExecuteSQL(
+                'REPACK ' + clipped_wave_layer.GetName())
 
         dem_matrix = None
     
@@ -371,6 +400,7 @@ def execute(args):
     wp_units_short = ' (kW/m)'
     wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
     starting_percentile_range = '1'
+    
     create_percentile_rasters(wave_energy_path, capwe_rc_path,
             capwe_units_short, capwe_units_long, starting_percentile_range,
             percentiles, aoi_shape_path)
@@ -378,6 +408,7 @@ def execute(args):
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
             wp_units_long, starting_percentile_range, percentiles,
             aoi_shape_path)
+    
     
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -642,8 +673,7 @@ def execute(args):
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
-    create_percentile_rasters(
-            npv_out_uri, npv_rc_path, ' (US$)',
+    create_percentile_rasters( npv_out_uri, npv_rc_path, ' (US$)',
             ' thousands of US dollars (US$)', '1', percentiles,
             aoi_shape_path)
 
@@ -921,7 +951,7 @@ def create_percentile_rasters(
     # scipy.scoreatpercentiles later
     dataset_array = np.reshape(matrix, (-1,))
     dataset_nodata_flat = np.reshape(matrix_mask, (-1))
-
+    
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
     neg_float = float(np.finfo(np.float32).min) + 1.0
@@ -929,6 +959,7 @@ def create_percentile_rasters(
     
     # Create a mask of where the nodata values are
     np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
+    
     # Using the above mask, replace the nodata values with a very large negative
     # number
     dataset_array[dataset_nodata_flat] = neg_float 

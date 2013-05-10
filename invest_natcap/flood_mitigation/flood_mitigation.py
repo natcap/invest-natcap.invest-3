@@ -65,6 +65,8 @@ def execute(args):
         'cn_amc_class' - A string indicating the Antecedent Soil Moisture class
             that should be used for CN adjustment.  One of ['Wet', 'Dry',
             'Average'].  Required only if args['cn_adjust'] == True.
+        'flow_threshold' - a number representing the flow threshold before the
+            flow becomes a stream.
         'suffix' - (optional) a string to add to the end of all outputs from
             this model
 
@@ -143,6 +145,7 @@ def execute(args):
         'prev_discharge': _intermediate_uri('init_discharge.tif'),
         'outflow_weights': _intermediate_uri('outflow_weights.tif'),
         'outflow_direction': _intermediate_uri('outflow_direction.tif'),
+        'channels': _intermediate_uri('channels.tif'),
         'timesteps': {}
     }
 
@@ -160,7 +163,8 @@ def execute(args):
             'precip': _timestep_uri('precip.tif'),
             'runoff': _timestep_uri('storm_runoff.tif'),
             'discharge': _timestep_uri('flood_water_discharge.tif'),
-            'flood_height': _timestep_uri('flood_height.tif')
+            'flood_height': _timestep_uri('flood_height.tif'),
+            'inundation': _timestep_uri('flood_inundation.tif')
         }
 
         # Create the timestamp folder name and make the folder on disk.
@@ -185,6 +189,8 @@ def execute(args):
     routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
     routing_utils.calculate_flow_length(paths['flow_direction'],
         paths['flow_length'])
+    routing_utils.calculate_stream(args['dem'], args['flow_threshold'],
+        paths['channels'])
 
     # Convert the precip table from CSV to ESRI Shapefile and reproject it.
     convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
@@ -243,6 +249,10 @@ def execute(args):
         # Flood waters calculations
         flood_height(ts_paths['discharge'], paths['mannings'], paths['slope'],
             ts_paths['flood_height'])
+
+        flood_inundation_depth(ts_paths['flood_height'], args['dem'],
+            cn_season_adjusted_uri, 4000, paths['channels'],
+            ts_paths['inundation'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -759,3 +769,115 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     raster_utils.vectorize_datasets(raster_list, _vectorized_flood_height,
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
+
+def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
+    channels_uri, output_uri):
+    """This function estimates flood inundation depth from flood height,
+        elevation, and curve numbers.  This is equation 20 from the flood
+        mitigation user's guide.
+
+        flood_height_uri - a URI to a GDAL datset representing flood height over
+            the landscape.
+        dem_uri - a URI to a GDAL raster of the digital elevation model.
+        cn_uri - a URI to a GDAL raster of the user's curve numbers.
+        flow_threshold - the numeric value to determine if a flow pixel is a
+            stream pixel.
+        channels_uri - a URI to a GDAL dataset of the channel network.
+        output_uri - a URI to where the output GDAL raster dataset should be
+            stored.
+
+        This function returns nothing.
+    """
+
+    flood_height_matrix = _extract_matrix(flood_height_uri)
+
+    channel_matrix = _extract_matrix(channels_uri)
+    dem_matrix = _extract_matrix(dem_uri)
+    cn_matrix = _extract_matrix(cn_uri)
+
+    fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
+        channel_matrix, cn_matrix)
+
+    raster_utils.new_raster_from_base_uri(dem_matrix, output_uri, 'GTiff', -1,
+        gdal.GDT_Float32)
+    _write_matrix(fid_matrix, output_uri)
+
+def _calculate_fid(flood_height, dem, channels, curve_nums):
+    """Actually perform the matrix calculations for the flood inundation depth
+        function.  This is equation 20 from the flood mitigation user's guide.
+
+        flood_height - a numpy matrix of flood water heights.
+        dem - a numpy matrix of elevations.
+        channels - a numpy matrix of channels.
+        curve_nums - a numpy matrix of curve numbers.
+
+        All matrices MUST have the same sizes.
+
+        Returns a numpy matrix of the calculated flood inundation height."""
+
+    output = numpy.copy(flood_height)
+    visited = numpy.zeros(flood_height.shape, dtype=numpy.int)
+
+    indices = [
+        (0, 1),
+        (-1, 1),
+        (-1, 0),
+        (-1, -1),
+        (0, -1),
+        (1, -1),
+        (1, 0),
+        (1, 1)
+    ]
+
+    def _fid(index, channel_floodwater, channel_elevation):
+        elevation_diff = dem[index] - channel_elevation
+        flooding = channel_floodwater - elevation_diff - curve_nums[index]
+
+        if flooding <= 0:
+            return 0.0
+        return flooding
+
+    class AlreadyVisited(Exception):pass
+
+    def _distribute_flood_water(index, floodwater_channel, channel_elevation):
+        LOGGER.debug('Distributing flood water from %s', index)
+        visited[index] = 1
+
+        for neighbor_offset in indices:
+            n_index = tuple(map(sum, zip(index, neighbor_offset)))
+
+            try:
+                if n_index[0] < 0 or n_index[1] < 0:
+                    raise IndexError
+
+                if visited[n_index]:
+                    raise AlreadyVisited
+
+                if channels[n_index] == 0:  # only do FID if not a channel cell.
+                    fid = _fid(n_index, floodwater_channel, channel_elevation)
+                    LOGGER.debug('FID on index %s is %s', n_index, fid)
+
+                    if fid > 0:
+                        output[n_index] = max(output[n_index], fid)
+                        _distribute_flood_water(n_index, floodwater_channel,
+                            channel_elevation)
+                    else:
+                        output[n_index] = fid
+
+                else:
+                    output[n_index] = floodwater_channel
+
+            except IndexError:
+                LOGGER.warn('index %s does not exist', n_index)
+            except AlreadyVisited:
+                LOGGER.info('Already visited index %s, not distributing.', n_index)
+
+    iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
+    for is_channel, floodwater, elevation in iterator:
+        index = iterator.multi_index
+
+        if is_channel != 0:
+            LOGGER.debug('index %s is a channel cell', index)
+            _distribute_flood_water(index, floodwater, elevation)
+
+    return output
