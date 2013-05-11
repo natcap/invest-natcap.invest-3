@@ -151,7 +151,7 @@ def execute(args):
             },
             'North Sea 10 meter resolution': {
              'point_shape': os.path.join(
-                wave_base_data_uri, 'North_Sea_10m_update.shp'),
+                wave_base_data_uri, 'North_Sea_10m.shp'),
              'extract_shape': os.path.join(
                  wave_base_data_uri, 'North_Sea_10m_Extract.shp'),
              'ww3_uri': os.path.join(
