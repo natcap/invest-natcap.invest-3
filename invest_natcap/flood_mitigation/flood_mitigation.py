@@ -146,6 +146,9 @@ def execute(args):
         'outflow_weights': _intermediate_uri('outflow_weights.tif'),
         'outflow_direction': _intermediate_uri('outflow_direction.tif'),
         'channels': _intermediate_uri('channels.tif'),
+        'landuse': _intermediate_uri('landuse_resized.tif'),
+        'dem': _intermediate_uri('dem_resized.tif'),
+        'curve_numbers': _intermediate_uri('cn_resized.tif'),
         'timesteps': {}
     }
 
@@ -181,26 +184,43 @@ def execute(args):
     except OSError:
         pass
 
+    def _get_datatype_uri(raster_uri):
+        dataset = gdal.Open(raster_uri)
+        band = dataset.GetRasterBand(1)
+        return band.DataType
+
+    rasters = [args['landuse'], args['dem'], args['curve_numbers']]
+    cell_size = raster_utils.get_cell_size_from_uri(args['dem'])
+    for raster, resized_uri, func in [
+        (args['landuse'], paths['landuse'], lambda x,y,z:x),
+        (args['dem'], paths['dem'], lambda x,y,z:y),
+        (args['curve_numbers'], paths['curve_numbers'], lambda x,y,z:z)]:
+
+        datatype = _get_datatype_uri(raster)
+        nodata = raster_utils.get_nodata_from_uri(raster)
+        cell_size = raster_utils.get_cell_size_from_uri(raster)
+        raster_utils.vectorize_datasets(rasters, func, resized_uri, datatype,
+            nodata, cell_size, 'intersection')
 
     #######################
     # Preprocessing
-    mannings_raster(args['landuse'], args['mannings'], paths['mannings'])
-    raster_utils.calculate_slope(args['dem'], paths['slope'])
-    routing_utils.flow_direction_inf(args['dem'], paths['flow_direction'])
+    mannings_raster(paths['landuse'], args['mannings'], paths['mannings'])
+    raster_utils.calculate_slope(paths['dem'], paths['slope'])
+    routing_utils.flow_direction_inf(paths['dem'], paths['flow_direction'])
     routing_utils.calculate_flow_length(paths['flow_direction'],
         paths['flow_length'])
-    routing_utils.calculate_stream(args['dem'], args['flow_threshold'],
+    routing_utils.calculate_stream(paths['dem'], args['flow_threshold'],
         paths['channels'])
 
     # Convert the precip table from CSV to ESRI Shapefile and reproject it.
     convert_precip_to_points(args['precipitation'], paths['precip_latlong'])
-    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(args['dem'])
+    dem_wkt = raster_utils.get_dataset_projection_wkt_uri(paths['dem'])
     raster_utils.reproject_datasource_uri(paths['precip_latlong'], dem_wkt,
         paths['precip_points'])
 
     #######################
     # Adjusting curve numbers
-    adjust_cn_for_slope(args['curve_numbers'], paths['slope'], paths['cn_slope'])
+    adjust_cn_for_slope(paths['curve_numbers'], paths['slope'], paths['cn_slope'])
 
     if args['cn_adjust'] == True:
         season = args['cn_season']
@@ -219,7 +239,7 @@ def execute(args):
         LOGGER.info('Starting timestep %s', timestep)
 
         # make the precip raster, since it's timestep-dependent.
-        make_precip_raster(paths['precip_points'], args['dem'], timestep,
+        make_precip_raster(paths['precip_points'], paths['dem'], timestep,
             ts_paths['precip'])
 
         # Calculate storm runoff once we have all the data we need.
@@ -250,8 +270,8 @@ def execute(args):
         flood_height(ts_paths['discharge'], paths['mannings'], paths['slope'],
             ts_paths['flood_height'])
 
-        flood_inundation_depth(ts_paths['flood_height'], args['dem'],
-            cn_season_adjusted_uri, 4000, paths['channels'],
+        flood_inundation_depth(ts_paths['flood_height'], paths['dem'],
+            cn_season_adjusted_uri, paths['channels'],
             paths['outflow_direction'], ts_paths['inundation'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
@@ -770,7 +790,7 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
 
-def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
+def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     channels_uri, outflow_direction_uri, output_uri):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
@@ -780,8 +800,6 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
             the landscape.
         dem_uri - a URI to a GDAL raster of the digital elevation model.
         cn_uri - a URI to a GDAL raster of the user's curve numbers.
-        flow_threshold - the numeric value to determine if a flow pixel is a
-            stream pixel.
         channels_uri - a URI to a GDAL dataset of the channel network.
         outflow_direction_uri - a URI to the outflow direction raster.
         output_uri - a URI to where the output GDAL raster dataset should be
@@ -798,8 +816,10 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri, flow_threshold,
     outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
     pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
+    LOGGER.info('Distributing flood waters')
     fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
         channel_matrix, cn_matrix, outflow_direction_matrix, pixel_size)[0]
+    LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
@@ -853,7 +873,11 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
     def _flows_to(source_index, neighbor_id):
         neighbor_value = outflow_direction[source_index]
-        possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+        try:
+            possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+        except KeyError:
+            return False
+
         if neighbor_id in possible_inflow_neighbors:
             return False
         return True
@@ -884,7 +908,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
             while True:
                 try:
                     pixel_index = pixels_to_visit.pop(0)
-                    print (pixel_index, pixels_to_visit)
+                    #print (pixel_index, pixels_to_visit)
                 except IndexError:
                     # No more indexes to process.
                     break
@@ -901,7 +925,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
                         if _flows_to(n_index, n_id):
                             fid = _fid(n_index, channel_floodwater, channel_elevation)
-                            print(n_index, fid)
+                            #print(n_index, fid)
                             if fid > 0:
                                 dist_to_n = travel_distance[pixel_index] + n_distance
                                 if visited[n_index] == 0 or (visited[n_index] == 1 and
@@ -912,13 +936,16 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                                     nearest_channel[n_index][1] = channel_index[1]
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
-                                    print(pixels_to_visit)
+                                    #print(pixels_to_visit)
 
                     except SkipNeighbor:
-                        LOGGER.debug('Skipping neighbor %s', n_index)
+                        pass
+                        #LOGGER.debug('Skipping neighbor %s', n_index)
                     except IndexError:
-                        LOGGER.warn('index %s does not exist', n_index)
+                        pass
+                        #LOGGER.warn('index %s does not exist', n_index)
                     except AlreadyVisited:
-                        LOGGER.info('Already visited index %s, not distributing.', n_index)
+                        pass
+                        #LOGGER.info('Already visited index %s, not distributing.', n_index)
 
     return (output, travel_distance, nearest_channel)
