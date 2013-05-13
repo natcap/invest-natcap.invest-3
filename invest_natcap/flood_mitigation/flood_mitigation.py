@@ -893,8 +893,16 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         return True
 
     def _fid(index, channel_floodwater, channel_elevation):
-        elevation_diff = dem_matrix[index] - channel_elevation
-        flooding = channel_floodwater - elevation_diff - cn_matrix[index]
+        pixel_elevation = dem_matrix[index]
+        curve_num = cn_matrix[index]
+
+        if channel_elevation == channels_nodata or\
+            pixel_elevation == dem_nodata or\
+            curve_num == cn_nodata:
+            return 0.0
+
+        elevation_diff = pixel_elevation - channel_elevation
+        flooding = channel_floodwater - elevation_diff - curve_num
 
         if flooding <= 0:
             return 0.0
