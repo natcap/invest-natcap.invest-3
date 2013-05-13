@@ -808,17 +808,21 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
         This function returns nothing.
     """
 
-    flood_height_matrix = _extract_matrix(flood_height_uri)
+    def _extract_matrix_and_nodata(uri):
+        matrix = _extract_matrix(uri)
+        nodata = raster_utils.get_nodata_from_uri(uri)
+        return(matrix, nodata)
 
-    channel_matrix = _extract_matrix(channels_uri)
-    dem_matrix = _extract_matrix(dem_uri)
-    cn_matrix = _extract_matrix(cn_uri)
-    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+    flood_height_tuple = _extract_matrix_and_nodata(flood_height_uri)
+    channel_tuple = _extract_matrix_and_nodata(channels_uri)
+    dem_tuple = _extract_matrix_and_nodata(dem_uri)
+    cn_tuple = _extract_matrix_and_nodata(cn_uri)
+    outflow_direction_tuple = _extract_matrix_and_nodata(outflow_direction_uri)
     pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
     LOGGER.info('Distributing flood waters')
-    fid_matrix = _calculate_fid(flood_height_matrix, dem_matrix,
-        channel_matrix, cn_matrix, outflow_direction_matrix, pixel_size)[0]
+    fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
+        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)[0]
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
@@ -842,10 +846,16 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
         Returns a numpy matrix of the calculated flood inundation height."""
 
-    output = numpy.copy(flood_height)
-    visited = numpy.zeros(flood_height.shape, dtype=numpy.int)
-    travel_distance = numpy.zeros(flood_height.shape, dtype=numpy.float)
-    nearest_channel = numpy.zeros(flood_height.shape + (2,), dtype=numpy.int)
+    flood_height_matrix, flood_height_nodata = flood_height
+    dem_matrix, dem_nodata = dem
+    channels_matrix, channels_nodata = channels
+    cn_matrix, cn_nodata = curve_nums
+    outflow_direction_matrix, outflow_direction_nodata = outflow_direction
+
+    output = numpy.copy(flood_height_matrix)
+    visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
+    travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
+    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,), dtype=numpy.int)
 
     diagonal_distance = pixel_size * math.sqrt(2)
 
@@ -872,7 +882,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
     }
 
     def _flows_to(source_index, neighbor_id):
-        neighbor_value = outflow_direction[source_index]
+        neighbor_value = outflow_direction_matrix[source_index]
         try:
             possible_inflow_neighbors = inflow_neighbors[neighbor_value]
         except KeyError:
@@ -883,8 +893,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         return True
 
     def _fid(index, channel_floodwater, channel_elevation):
-        elevation_diff = dem[index] - channel_elevation
-        flooding = channel_floodwater - elevation_diff - curve_nums[index]
+        elevation_diff = dem_matrix[index] - channel_elevation
+        flooding = channel_floodwater - elevation_diff - cn_matrix[index]
 
         if flooding <= 0:
             return 0.0
@@ -894,7 +904,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
     class SkipNeighbor(Exception): pass
 
 
-    iterator = numpy.nditer([channels, flood_height, dem], flags=['multi_index'])
+    iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
+        flags=['multi_index'])
     for channel, channel_floodwater, channel_elevation in iterator:
         if channel == 1:
             channel_index = iterator.multi_index
@@ -920,7 +931,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                         if n_index[0] < 0 or n_index[1] < 0:
                             raise IndexError
 
-                        if channels[n_index] == 1:
+                        if channels_matrix[n_index] == 1:
                             raise SkipNeighbor
 
                         if _flows_to(n_index, n_id):
