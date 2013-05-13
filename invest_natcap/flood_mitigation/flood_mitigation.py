@@ -642,15 +642,15 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge = _extract_matrix(output_uri)
+    discharge_matrix = _extract_matrix(output_uri)
     prev_discharge = _extract_matrix(prev_discharge_uri)
-    runoff = _extract_matrix(runoff_uri)
+    runoff_matrix = _extract_matrix(runoff_uri)
     outflow_weights = _extract_matrix(outflow_weights_uri)
     outflow_direction = _extract_matrix(outflow_direction_uri)
 
-    LOGGER.debug('Output discharge matrix size=%s', discharge.shape)
+    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
     LOGGER.debug('Previous discharge matrix size=%s', prev_discharge.shape)
-    LOGGER.debug('Runoff matrix size=%s', runoff.shape)
+    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
     LOGGER.debug('Runoff nodata=%s', runoff_nodata)
@@ -683,7 +683,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # index that we are currently accessing.  This way we can easily access
     # pixels immediately adjacent to this pixel by index (the index offsets for
     # which are in the neighbors list, made from the neighbor_indices dict).
-    iterator = numpy.nditer([runoff], flags=['multi_index'])
+    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
     LOGGER.info('Checking neighbors for flow contributions to storm runoff')
     for runoff in iterator:
         index = iterator.multi_index
@@ -713,7 +713,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                     if neighbor_id in possible_inflow_neighbors:
                         # Only get the neighbor's runoff value if we know that
                         # the neighbor flows into this pixel.
-                        neighbor_runoff = runoff[neighbor_index]
+                        neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
                             raise NeighborHasNoData
 
@@ -750,10 +750,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             discharge_sum = discharge_sum / time_interval
 
         # Set the discharge matrix value to the calculated discharge value.
-        discharge[index] = discharge_sum
+        discharge_matrix[index] = discharge_sum
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
-    _write_matrix(output_uri, discharge)
+    _write_matrix(output_uri, discharge_matrix)
 
 def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     """Calculate the flood_height according to equation 19 in the user's guide.
