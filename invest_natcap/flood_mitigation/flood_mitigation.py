@@ -11,7 +11,6 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
-from invest_natcap.pollination import pollination_core
 import routing_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
@@ -909,8 +908,13 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
             return 0.0
         return flooding
 
-    class AlreadyVisited(Exception):pass
-    class SkipNeighbor(Exception): pass
+    class AlreadyVisited(Exception):
+        """An exception to indicate that we've already visited this pixel."""
+        pass
+
+    class SkipNeighbor(Exception):
+        """An exception to indicate that we wish to skip this neighbor pixel"""
+        pass
 
 
     iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
