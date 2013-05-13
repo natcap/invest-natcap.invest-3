@@ -813,6 +813,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
         This function returns nothing.
     """
 
+    LOGGER.debug('Starting to calculate flood inundation depth')
     def _extract_matrix_and_nodata(uri):
         """Return a tuple of the numpy matrix and the nodata value for the input
         raster at URI."""
@@ -835,6 +836,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
     _write_matrix(output_uri, fid_matrix)
+    LOGGER.debug('Finished calculating flood inundation depth')
 
 def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     pixel_size):
@@ -945,7 +947,6 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             channel_index = iterator.multi_index
             pixels_to_visit = [channel_index]
 
-            LOGGER.debug('Distributing flood water from %s', channel_index)
             visited[channel_index] = 1
             nearest_channel[channel_index][0] = channel_index[0]
             nearest_channel[channel_index][1] = channel_index[1]
