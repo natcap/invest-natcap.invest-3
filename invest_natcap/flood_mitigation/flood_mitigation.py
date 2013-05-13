@@ -869,8 +869,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     # to track our nearest channel cell, create a matrix that has two values for
     # each of the elements in the 2-d matrix.  These two extra values represent
     # the index of the closes channel cell.
-    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,),
-        dtype=numpy.int)
+#    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,),
+#        dtype=numpy.int)
 
     # We know the diagonal distance thanks to trigonometry.  We're assuming that
     # we measure from the center of this pixel to the center of the neighboring
@@ -948,8 +948,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             pixels_to_visit = [channel_index]
 
             visited[channel_index] = 1
-            nearest_channel[channel_index][0] = channel_index[0]
-            nearest_channel[channel_index][1] = channel_index[1]
+#            nearest_channel[channel_index][0] = channel_index[0]
+#            nearest_channel[channel_index][1] = channel_index[1]
 
             while True:
                 try:
@@ -979,8 +979,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     dist_to_n < travel_distance[n_index]):
                                     visited[n_index] = 1
                                     travel_distance[n_index] = dist_to_n
-                                    nearest_channel[n_index][0] = channel_index[0]
-                                    nearest_channel[n_index][1] = channel_index[1]
+#                                    nearest_channel[n_index][0] = channel_index[0]
+#                                    nearest_channel[n_index][1] = channel_index[1]
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
 
@@ -995,4 +995,5 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                         #LOGGER.info('Already visited index %s, not distributing.',
                         #    n_index)
 
-    return (output, travel_distance, nearest_channel)
+    #return (output, travel_distance, nearest_channel)
+    return (output, travel_distance)
