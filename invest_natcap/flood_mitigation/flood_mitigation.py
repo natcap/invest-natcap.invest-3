@@ -211,7 +211,6 @@ def execute(args):
 
         datatype = _get_datatype_uri(raster)
         nodata = raster_utils.get_nodata_from_uri(raster)
-        cell_size = raster_utils.get_cell_size_from_uri(raster)
         raster_utils.vectorize_datasets(rasters, func, resized_uri, datatype,
             nodata, cell_size, 'intersection')
 
