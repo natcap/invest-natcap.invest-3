@@ -895,8 +895,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         pixel_elevation = dem_matrix[index]
         curve_num = cn_matrix[index]
 
-        if channel_elevation == channels_nodata or\
-            channel_floodwater == flood_height_nodata or\
+        if channel_floodwater == flood_height_nodata or\
             pixel_elevation == dem_nodata or\
             curve_num == cn_nodata:
             return 0.0
@@ -944,7 +943,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                         if n_index[0] < 0 or n_index[1] < 0:
                             raise IndexError
 
-                        if channels_matrix[n_index] == 1:
+                        if channels_matrix[n_index] in [1, channels_nodata]:
                             raise SkipNeighbor
 
                         if _flows_to(n_index, n_id):
