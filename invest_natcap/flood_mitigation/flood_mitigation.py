@@ -747,10 +747,10 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
             discharge_sum = discharge_sum / time_interval
 
         # Set the discharge matrix value to the calculated discharge value.
-        discharge_matrix[index] = discharge_sum
+        discharge[index] = discharge_sum
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
-    _write_matrix(output_uri, discharge_matrix)
+    _write_matrix(output_uri, discharge)
 
 def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     """Calculate the flood_height according to equation 19 in the user's guide.
