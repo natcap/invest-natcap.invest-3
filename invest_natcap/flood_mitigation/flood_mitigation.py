@@ -883,10 +883,10 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
 
     def _flows_to(source_index, neighbor_id):
         neighbor_value = outflow_direction_matrix[source_index]
-        try:
-            possible_inflow_neighbors = inflow_neighbors[neighbor_value]
-        except KeyError:
+        if neighbor_value == outflow_direction_nodata:
             return False
+
+        possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
         if neighbor_id in possible_inflow_neighbors:
             return False
@@ -897,6 +897,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         curve_num = cn_matrix[index]
 
         if channel_elevation == channels_nodata or\
+            channel_floodwater == flood_height_nodata or\
             pixel_elevation == dem_nodata or\
             curve_num == cn_nodata:
             return 0.0
