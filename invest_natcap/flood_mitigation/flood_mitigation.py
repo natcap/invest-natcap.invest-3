@@ -860,11 +860,17 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     output = numpy.copy(flood_height_matrix)
     visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
     travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
+
+    # to track our nearest channel cell, create a matrix that has two values for
+    # each of the elements in the 2-d matrix.  These two extra values represent
+    # the index of the closes channel cell.
     nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,),
         dtype=numpy.int)
 
+    # We know the diagonal distance thanks to trigonometry.  We're assuming that
+    # we measure from the center of this pixel to the center of the neighboring
+    # pixel.
     diagonal_distance = pixel_size * math.sqrt(2)
-
     indices = [
         (0, (0, 1), pixel_size),
         (1, (-1, 1), diagonal_distance),
