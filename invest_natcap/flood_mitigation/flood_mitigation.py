@@ -866,6 +866,17 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
     travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
 
+    for name, matrix in [
+        ('flood height', flood_height_matrix),
+        ('dem', dem_matrix),
+        ('channels', channels_matrix),
+        ('curve numbers', cn_matrix),
+        ('outflow direction',outflow_direction_matrix),
+        ('output', output),
+        ('visited', visited),
+        ('travel distance', travel_distance)]:
+        LOGGER.debug('Matrix %s has a size of %s', name, matrix.shape)
+
     # to track our nearest channel cell, create a matrix that has two values for
     # each of the elements in the 2-d matrix.  These two extra values represent
     # the index of the closes channel cell.
