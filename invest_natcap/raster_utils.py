@@ -69,6 +69,21 @@ def get_nodata_from_uri(ds_uri):
     return nodata
 
 
+def get_row_col_from_uri(ds_uri):
+    """Returns a tuple of number of rows and columns of that dataset
+        uri.
+
+        ds_uri - a uri to a gdal dataset
+
+        returns nodata value for ds band 1"""
+
+    ds = gdal.Open(ds_uri)
+    n_rows = ds.RasterYSize
+    n_cols = ds.RasterXSize
+    ds = None
+    return (n_rows, n_cols)
+    
+
 def calculate_raster_stats(ds):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
