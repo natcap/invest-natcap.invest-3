@@ -897,6 +897,19 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
         return True
 
     def _fid(index, channel_floodwater, channel_elevation):
+        """Calculate the on-pixel flood inundation depth, as represented by
+            equation 20 in the flood mitigation user's guide.
+
+            index - the tuple index of the pixel on which to calculate FID
+            channel_floodwater - the numeric depth of the closest channel cell's
+                floodwaters
+            channel_elevation - the numeric depth of the closest channel cell's
+                elevation
+
+            Note that for this equation to be accurate, the dem and the
+            floodwaters must be in the same units.
+
+            Returns a float."""
         pixel_elevation = dem_matrix[index]
         curve_num = cn_matrix[index]
 
