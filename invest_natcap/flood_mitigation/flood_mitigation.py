@@ -19,6 +19,19 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
 
 LOGGER = logging.getLogger('flood_mitigation')
 
+# This dictionary represents the outflow_matrix values that flow into the
+# current pixel.  It's used in several of the flood_mitigation functions.
+INFLOW_NEIGHBORS = {
+    0: [3, 4],
+    1: [4, 5],
+    2: [5, 6],
+    3: [6, 7],
+    4: [7, 0],
+    5: [0, 1],
+    6: [1, 2],
+    7: [2, 3],
+}
+
 class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
     pass
@@ -645,16 +658,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # pixel's value is 
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
-    inflow_neighbors = {
-        0: [3, 4],
-        1: [4, 5],
-        2: [5, 6],
-        3: [6, 7],
-        4: [7, 0],
-        5: [0, 1],
-        6: [1, 2],
-        7: [2, 3],
-    }
 
     # list of neighbor ids and their indices relative to the current pixel
     # index offsets are row, column.
@@ -705,7 +708,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         raise IndexError
 
                     neighbor_value = outflow_direction[neighbor_index]
-                    possible_inflow_neighbors = inflow_neighbors[neighbor_value]
+                    possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
 
                     if neighbor_id in possible_inflow_neighbors:
                         # Only get the neighbor's runoff value if we know that
@@ -882,17 +885,6 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         (7, (1, 1), diagonal_distance)
     ]
 
-    inflow_neighbors = {
-        0: [3, 4],
-        1: [4, 5],
-        2: [5, 6],
-        3: [6, 7],
-        4: [7, 0],
-        5: [0, 1],
-        6: [1, 2],
-        7: [2, 3],
-    }
-
     def _flows_from(source_index, neighbor_id):
         """Indicate whether the source pixel flows into the neighbor identified
         by neighbor_id.  This function returns a boolean."""
@@ -904,8 +896,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         if neighbor_value == outflow_direction_nodata:
             return False
 
-        possible_inflow_neighbors = inflow_neighbors[neighbor_value]
-        if neighbor_id in possible_inflow_neighbors:
+        if neighbor_id in INFLOW_NEIGHBORS[neighbor_value]:
             return False
         return True
 
