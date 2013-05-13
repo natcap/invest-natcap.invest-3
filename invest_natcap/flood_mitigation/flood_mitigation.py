@@ -126,7 +126,8 @@ def execute(args):
 
     def _intermediate_uri(file_name=''):
         """Make an intermediate URI."""
-        return os.path.join(args['workspace'], 'intermediate', _add_suffix(file_name))
+        return os.path.join(args['workspace'], 'intermediate',
+            _add_suffix(file_name))
 
     def _output_uri(file_name=''):
         """Make an ouput URI."""
@@ -247,12 +248,12 @@ def execute(args):
         ##################
         # Channel Routing.
         if timestep == 1:
-            # We need a previous flood water discharge raster to be created before we
-            # actually start iterating through the timesteps.
+            # We need a previous flood water discharge raster to be created
+            # before we actually start iterating through the timesteps.
             discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
             raster_utils.new_raster_from_base_uri(ts_paths['runoff'],
-                paths['prev_discharge'], 'GTiff', discharge_nodata, gdal.GDT_Float32,
-                fill_value=0.0)
+                paths['prev_discharge'], 'GTiff', discharge_nodata,
+                gdal.GDT_Float32, fill_value=0.0)
 
 
         flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
@@ -542,7 +543,8 @@ def convert_precip_to_points(precip_uri, points_uri):
     raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
 
-def make_precip_raster(precip_points_uri, sample_raster_uri, timestep, output_uri):
+def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
+    output_uri):
     """Create a precipitation raster from a points shapefile for the specified
         timestep.
 
@@ -627,21 +629,22 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)
-    prev_discharge_matrix = _extract_matrix(prev_discharge_uri)
-    runoff_matrix = _extract_matrix(runoff_uri)
-    outflow_weights_matrix = _extract_matrix(outflow_weights_uri)
-    outflow_direction_matrix = _extract_matrix(outflow_direction_uri)
+    discharge = _extract_matrix(output_uri)
+    prev_discharge = _extract_matrix(prev_discharge_uri)
+    runoff = _extract_matrix(runoff_uri)
+    outflow_weights = _extract_matrix(outflow_weights_uri)
+    outflow_direction = _extract_matrix(outflow_direction_uri)
 
-    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
-    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge_matrix.shape)
-    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
+    LOGGER.debug('Output discharge matrix size=%s', discharge.shape)
+    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge.shape)
+    LOGGER.debug('Runoff matrix size=%s', runoff.shape)
 
     runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
     LOGGER.debug('Runoff nodata=%s', runoff_nodata)
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
-    outflow_direction_nodata = raster_utils.get_nodata_from_uri(outflow_direction_uri)
+    outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+        outflow_direction_uri)
     inflow_neighbors = {
         0: [3, 4],
         1: [4, 5],
@@ -677,14 +680,14 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     # index that we are currently accessing.  This way we can easily access
     # pixels immediately adjacent to this pixel by index (the index offsets for
     # which are in the neighbors list, made from the neighbor_indices dict).
-    iterator = numpy.nditer([runoff_matrix, prev_discharge_matrix], flags=['multi_index'])
+    iterator = numpy.nditer([runoff], flags=['multi_index'])
     LOGGER.info('Checking neighbors for flow contributions to storm runoff')
-    for runoff, prev_discharge in iterator:
+    for runoff in iterator:
         index = iterator.multi_index
 
         if runoff == runoff_nodata:
             discharge_sum = discharge_nodata
-        elif outflow_direction_matrix[index] == outflow_direction_nodata:
+        elif outflow_direction[index] == outflow_direction_nodata:
             discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0  # re-initialize the discharge sum
@@ -701,23 +704,23 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         # want.
                         raise IndexError
 
-                    neighbor_value = outflow_direction_matrix[neighbor_index]
+                    neighbor_value = outflow_direction[neighbor_index]
                     possible_inflow_neighbors = inflow_neighbors[neighbor_value]
 
                     if neighbor_id in possible_inflow_neighbors:
                         # Only get the neighbor's runoff value if we know that
                         # the neighbor flows into this pixel.
-                        neighbor_runoff = runoff_matrix[neighbor_index]
+                        neighbor_runoff = runoff[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
                             raise NeighborHasNoData
 
-                        neighbor_prev_discharge = prev_discharge_matrix[neighbor_index]
+                        neighbor_prev_discharge = prev_discharge[neighbor_index]
                         if neighbor_prev_discharge == discharge_nodata:
                             raise NeighborHasNoData
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
-                        first_neighbor_weight = outflow_weights_matrix[neighbor_index]
+                        first_neighbor_weight = outflow_weights[neighbor_index]
 
                         if possible_inflow_neighbors[0] == neighbor_id:
                             fractional_flow = 1.0 - first_neighbor_weight
@@ -808,6 +811,8 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     """
 
     def _extract_matrix_and_nodata(uri):
+        """Return a tuple of the numpy matrix and the nodata value for the input
+        raster at URI."""
         matrix = _extract_matrix(uri)
         nodata = raster_utils.get_nodata_from_uri(uri)
         return(matrix, nodata)
@@ -828,7 +833,8 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
         gdal.GDT_Float32)
     _write_matrix(output_uri, fid_matrix)
 
-def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, pixel_size):
+def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
+    pixel_size):
     """Actually perform the matrix calculations for the flood inundation depth
         function.  This is equation 20 from the flood mitigation user's guide.
 
@@ -854,7 +860,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
     output = numpy.copy(flood_height_matrix)
     visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
     travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
-    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,), dtype=numpy.int)
+    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,),
+        dtype=numpy.int)
 
     diagonal_distance = pixel_size * math.sqrt(2)
 
@@ -965,8 +972,9 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                             raise SkipNeighbor
 
                         if _flows_from(n_index, n_id):
-                            fid = _fid(n_index, channel_floodwater, channel_elevation)
-                            #print(n_index, fid)
+                            fid = _fid(n_index, channel_floodwater,
+                                channel_elevation)
+
                             if fid > 0:
                                 dist_to_n = travel_distance[pixel_index] + n_distance
                                 if visited[n_index] == 0 or (visited[n_index] == 1 and
@@ -977,7 +985,6 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                                     nearest_channel[n_index][1] = channel_index[1]
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
-                                    #print(pixels_to_visit)
 
                     except SkipNeighbor:
                         pass
@@ -987,6 +994,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction, p
                         #LOGGER.warn('index %s does not exist', n_index)
                     except AlreadyVisited:
                         pass
-                        #LOGGER.info('Already visited index %s, not distributing.', n_index)
+                        #LOGGER.info('Already visited index %s, not distributing.',
+                        #    n_index)
 
     return (output, travel_distance, nearest_channel)
