@@ -36,7 +36,7 @@ class FloodMitigationTest(unittest.TestCase):
             'time_interval': 120.0,  # 2 minutes
             'landuse': self.landcover,
             'mannings': self.mannings,
-            'flow_threshold': 4000
+            'flow_threshold': 400
         }
 
         try:
@@ -228,14 +228,28 @@ class FloodMitigationTest(unittest.TestCase):
             [0, 0, 3, 0, 0],
             [0, 0, 0, 0, 0]], dtype=numpy.float)
 
+        #  3 2 1
+        #  4 p 0
+        #  5 6 7
+        outflow_direction_matrix = numpy.array([
+            [0, 4, 4, 6, 5],
+            [6, 6, 5, 6, 4],
+            [4, 4, 4, 6, 5],
+            [1, 2, 3, 5, 4],
+            [1, 2, 3, 4, 3],
+            [1, 1, 2, 3, 3]])
+
+
         # Call the numpy-only function for testing out the core algorithm,
         # without all the raster stuff implied in URIs.
-        fid = flood_mitigation._calculate_fid(flood_height_matrix, dem_matrix,
-            channel_matrix, cn_matrix)
+        fid, distance, nearest_channel = flood_mitigation._calculate_fid(flood_height_matrix, dem_matrix,
+            channel_matrix, cn_matrix, outflow_direction_matrix, 1)
 
 
         matrices = [
             ('fid', fid),
+            ('distance', distance),
+            ('nearest_channel', nearest_channel),
             ('channels', channel_matrix),
             ('flood height', flood_height_matrix),
             ('dem', dem_matrix),
