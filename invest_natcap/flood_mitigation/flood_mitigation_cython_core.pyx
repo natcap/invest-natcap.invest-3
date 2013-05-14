@@ -86,7 +86,12 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     cdef int neighbor_id
     cdef float neighbor_prev_discharge
     cdef int neighbor_value
+#    cdef float neighbor_runoff
+#    cdef float fractional_flow
     #cdef float discharge_sum, discharge
+
+#    cdef float n_rows = runoff_matrix.shape[0]
+#    cdef float n_cols = runoff_matrix.shape[1]
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
