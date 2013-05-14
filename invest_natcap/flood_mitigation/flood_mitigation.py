@@ -874,7 +874,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         ('output', output, -1),
         ('visited', visited, None),
         ('travel distance', travel_distance, None)]:
-        LOGGER.debug('Matrix %s, sise=%s, nodata=%s', name, matrix.shape,
+        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
             nodata)
 
     # to track our nearest channel cell, create a matrix that has two values for
@@ -966,6 +966,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
     iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
         flags=['multi_index'])
+
+    LOGGER.debug('Visiting channel pixels')
     for channel, channel_floodwater, channel_elevation in iterator:
         if channel == 1:
             channel_index = iterator.multi_index
@@ -1013,4 +1015,5 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                     except (SkipNeighbor, IndexError, AlreadyVisited):
                         pass
 
+    LOGGER.debug('Finished visiting channel pixels')
     return output
