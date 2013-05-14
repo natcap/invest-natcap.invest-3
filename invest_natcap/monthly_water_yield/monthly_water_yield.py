@@ -140,6 +140,7 @@ def execute(args):
    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
+    in_source_uri = os.path.join(intermediate_dir, 'in_source.tif')
     water_uri = os.path.join(intermediate_dir, 'water_amt.tif')
     evap_uri = os.path.join(intermediate_dir, 'evaporation.tif')
     etc_uri = os.path.join(intermediate_dir, 'etc.tif')
@@ -182,8 +183,8 @@ def execute(args):
         # Calculate Direct Flow (Runoff)
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
-                imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
-                total_precip_uri, float_nodata)
+                dem_uri, precip_uri, precip_uri, in_absorption_uri, dflow_uri,
+                total_precip_uri, in_source_uri, float_nodata)
         
         # Calculate water amount (W)
         clean_uri([water_uri])
