@@ -119,7 +119,6 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                 # neighbor's index.
                 n_index_row = row_index + row_offset
                 n_index_col = col_index + col_offset
-                neighbor_index = (n_index_row, n_index_col)
                 try:
                     if n_index_row < 0 or n_index_col < 0:
                         # The neighbor index is beyond the bounds of the matrix
@@ -129,23 +128,23 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                         # want.
                         raise IndexError
 
-                    neighbor_value = outflow_direction[neighbor_index]
+                    neighbor_value = outflow_direction[n_index_row, n_index_col]
                     possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
 
                     if neighbor_id in possible_inflow_neighbors:
                         # Only get the neighbor's runoff value if we know that
                         # the neighbor flows into this pixel.
-                        neighbor_runoff = runoff_matrix[neighbor_index]
+                        neighbor_runoff = runoff_matrix[n_index_row, n_index_col]
                         if neighbor_runoff == runoff_nodata:
                             raise SkipNeighbor
 
-                        neighbor_prev_discharge = prev_discharge[neighbor_index]
+                        neighbor_prev_discharge = prev_discharge[n_index_row, n_index_col]
                         if neighbor_prev_discharge == discharge_nodata:
                             raise SkipNeighbor
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
-                        first_neighbor_weight = outflow_weights[neighbor_index]
+                        first_neighbor_weight = outflow_weights[n_index_row, n_index_col]
 
                         if possible_inflow_neighbors[0] == neighbor_id:
                             fractional_flow = 1.0 - first_neighbor_weight
