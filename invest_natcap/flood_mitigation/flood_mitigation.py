@@ -614,7 +614,8 @@ def _write_matrix(raster_uri, matrix):
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri,
+    cython=False):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -673,9 +674,14 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         value is nodata."""
         pass
 
-    discharge_matrix = _flood_discharge(runoff_tuple, outflow_direction_tuple,
-        outflow_weights, prev_discharge, discharge_nodata,
-        pixel_area, time_interval)
+    if cython:
+        discharge_matrix = flood_mitigation_cython_core.flood_discharge(runoff_tuple,
+            outflow_direction_tuple, outflow_weights, prev_discharge,
+            discharge_nodata, pixel_area, time_interval)
+    else:
+        discharge_matrix = _flood_discharge(runoff_tuple, outflow_direction_tuple,
+            outflow_weights, prev_discharge, discharge_nodata,
+            pixel_area, time_interval)
 
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
