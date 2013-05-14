@@ -86,6 +86,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     cdef int neighbor_id
     cdef float neighbor_prev_discharge
     cdef int neighbor_value
+    #cdef float discharge_sum, discharge
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
@@ -143,7 +144,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                             (neighbor_prev_discharge * time_interval)) *
                             fractional_flow)
 
-                        discharge_sum += discharge
+                        discharge_sum = discharge_sum + discharge
 
                 except (IndexError, KeyError, SkipNeighbor):
                     # IndexError happens when the neighbor does not exist.
