@@ -1,5 +1,6 @@
 import unittest
 import os
+import time
 
 from osgeo import gdal
 from osgeo import ogr
@@ -163,9 +164,19 @@ class FloodMitigationTest(unittest.TestCase):
         raster_utils.new_raster_from_base_uri(flow_direction_uri, prev_discharge,
             'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
+        orig_time = time.time()
         flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
             self.args['time_interval'], flood_water_discharge,
             outflow_weights_uri, outflow_direction_uri, prev_discharge)
+        elapsed_time = time.time() - orig_time
+        print('old runtime = %s' % elapsed_time)
+
+        orig_time = time.time()
+        flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
+            self.args['time_interval'], flood_water_discharge,
+            outflow_weights_uri, outflow_direction_uri, prev_discharge, True)
+        elapsed_time = time.time() - orig_time
+        print('cythonized runtime = %s' % elapsed_time)
 
     def test_flood_water_discharge_convolution(self):
         import numpy
