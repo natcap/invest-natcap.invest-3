@@ -90,14 +90,18 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
 #    cdef float fractional_flow
     #cdef float discharge_sum, discharge
 
-#    cdef float n_rows = runoff_matrix.shape[0]
-#    cdef float n_cols = runoff_matrix.shape[1]
+    cdef int n_rows = runoff_matrix.shape[0]
+    cdef int n_cols = runoff_matrix.shape[1]
+    cdef int row_index, col_index
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
     # index that we are currently accessing.  This way we can easily access
     # pixels immediately adjacent to this pixel by index (the index offsets for
     # which are in the neighbors list, made from the neighbor_indices dict).
+#    for row_index in xrange(n_rows):
+#        for col_index in xrange(n_cols):
+
     iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
     LOGGER.info('Checking neighbors for flow contributions to storm runoff')
     for runoff in iterator:
