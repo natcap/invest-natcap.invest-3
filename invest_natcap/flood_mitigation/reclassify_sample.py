@@ -67,8 +67,10 @@ def reclassify_lulc_samp_cur():
     }
 
     # setting the lulc_samp_cur path relative to the invest-3 root
-    lulc_path = os.path.join('test', 'data', 'flood_mitigation', 'samp_input',
-        'landuse_cur_200m.tif')
+    #lulc_path = os.path.join('test', 'data', 'flood_mitigation', 'samp_input',
+    #    'landuse_cur_200m.tif')
+    lulc_path = os.path.join('test', 'data', 'base_data', 'terrestrial',
+        'lulc_samp_cur', 'hdr.adf')
     output_path = 'curve_numbers.tif'
 
     raster_utils.reclassify_by_dictionary(gdal.Open(lulc_path), reclass,

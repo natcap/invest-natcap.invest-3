@@ -18,6 +18,7 @@ class FloodMitigationTest(unittest.TestCase):
     def setUp(self):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
+        self.curve_numbers_30m = os.path.join(SAMP_INPUT, 'curve_numbers_30m.tif')
         self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
         self.dem_small = os.path.join(SAMP_INPUT, 'dem_200m.tif')
         self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
@@ -109,6 +110,7 @@ class FloodMitigationTest(unittest.TestCase):
 
     def test_regression_dry_season(self):
         """Regression test for the flood mitigation model."""
+        self.args['curve_numbers'] = self.curve_numbers_30m
         flood_mitigation.execute(self.args)
 
     def test_regression_wet_season(self):
