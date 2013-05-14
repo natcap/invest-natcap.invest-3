@@ -110,7 +110,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
 
         if runoff == runoff_nodata:
             discharge_sum = discharge_nodata
-        elif outflow_direction[index] == outflow_direction_nodata:
+        elif outflow_direction[row_index, col_index] == outflow_direction_nodata:
             discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0  # re-initialize the discharge sum
@@ -171,5 +171,5 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
             discharge_sum = discharge_sum / time_interval
 
         # Set the discharge matrix value to the calculated discharge value.
-        discharge_matrix[index] = discharge_sum
+        discharge_matrix[row_index, col_index] = discharge_sum
     return discharge_matrix
