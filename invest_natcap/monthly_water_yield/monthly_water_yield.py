@@ -112,6 +112,10 @@ def execute(args):
         slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata,
         alpha_uri_list)
 
+    absorption_uri = os.path.join(intermediate_dir, 'absorption.tif')
+    calculate_in_absorption_rate(
+            imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
+
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     LOGGER.debug('Constructed DATA : %s', data_dict)
