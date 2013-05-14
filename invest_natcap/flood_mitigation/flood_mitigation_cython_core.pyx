@@ -82,6 +82,11 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     }
     neighbors = list(neighbor_indices.iteritems())
 
+    cdef float first_neighbor_weight
+    cdef int neighbor_id
+    cdef float neighbor_prev_discharge
+    cdef int neighbor_value
+
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
     # index that we are currently accessing.  This way we can easily access
