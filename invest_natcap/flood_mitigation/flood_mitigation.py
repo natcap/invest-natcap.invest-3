@@ -36,6 +36,15 @@ class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
     pass
 
+class AlreadyVisited(Exception):
+    """An exception to indicate that we've already visited this pixel."""
+    pass
+
+class SkipNeighbor(Exception):
+    """An exception to indicate that we wish to skip this neighbor pixel"""
+    pass
+
+
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
     landscape in a flood situation.
@@ -714,11 +723,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
-                            raise NeighborHasNoData
+                            raise SkipNeighbor
 
                         neighbor_prev_discharge = prev_discharge[neighbor_index]
                         if neighbor_prev_discharge == discharge_nodata:
-                            raise NeighborHasNoData
+                            raise SkipNeighbor
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
@@ -735,7 +744,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
                         discharge_sum += discharge
 
-                except (IndexError, KeyError, NeighborHasNoData):
+                except (IndexError, KeyError, SkipNeighbor):
                     # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
@@ -954,15 +963,6 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 #                'c_elevation=%s'), pixel_elevation, curve_num,
 #                channel_floodwater, flooding, channel_elevation)
         return flooding
-
-    class AlreadyVisited(Exception):
-        """An exception to indicate that we've already visited this pixel."""
-        pass
-
-    class SkipNeighbor(Exception):
-        """An exception to indicate that we wish to skip this neighbor pixel"""
-        pass
-
 
     iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
         flags=['multi_index'])
