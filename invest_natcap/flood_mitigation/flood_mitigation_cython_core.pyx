@@ -105,6 +105,8 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     LOGGER.info('Checking neighbors for flow contributions to storm runoff')
     for runoff in iterator:
         index = iterator.multi_index
+        row_index = index[0]
+        col_index = index[1]
 
         if runoff == runoff_nodata:
             discharge_sum = discharge_nodata
@@ -115,8 +117,8 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
             for neighbor_id, row_offset, col_offset in neighbor_indices:
                 # Add the index offsets to the current index to get the
                 # neighbor's index.
-                n_index_row = index[0] + row_offset
-                n_index_col = index[1] + col_offset
+                n_index_row = row_index + row_offset
+                n_index_col = col_index + col_offset
                 neighbor_index = (n_index_row, n_index_col)
                 try:
                     if n_index_row < 0 or n_index_col < 0:
