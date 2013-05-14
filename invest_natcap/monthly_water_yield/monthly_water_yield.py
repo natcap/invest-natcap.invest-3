@@ -183,7 +183,7 @@ def execute(args):
         # Calculate Direct Flow (Runoff)
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
-                dem_uri, precip_uri, precip_uri, in_absorption_uri, dflow_uri,
+                dem_uri, precip_uri, absorption_uri, dflow_uri,
                 total_precip_uri, in_source_uri, float_nodata)
         
         # Calculate water amount (W)
@@ -333,6 +333,12 @@ def calculate_in_absorption_rate(
         no_data_list.append(uri_nodata)
    
     def in_absorption_rate(imperv_pix, alpha_pix):
+        """A vectorize operation for calculating the in absorption rate value
+
+            imperv_pix - a float value for the impervious area in fraction
+            alpha_pix - a float value for the alpha coefficients
+
+            returns - in absorption rate value"""
         for pix in [imperv_pix, alpha_pix]:
             if pix in no_data_list:
                 return out_nodata
@@ -342,7 +348,7 @@ def calculate_in_absorption_rate(
     cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
 
     raster_utils.vectorize_datasets(
-            [imperv_uri, alpha_one_uri], calculate_in_absorption_rate,
+            [imperv_uri, alpha_one_uri], in_absorption_rate,
             out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_final_interflow(
