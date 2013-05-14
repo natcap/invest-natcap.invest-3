@@ -91,7 +91,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
 
     cdef int n_rows = runoff_matrix.shape[0]
     cdef int n_cols = runoff_matrix.shape[1]
-    cdef int row_index, col_index
+    cdef int row_index, col_index, n_index_row, n_index_col, row_offset, col_offset
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
@@ -119,7 +119,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                 n_index_col = index[1] + col_offset
                 neighbor_index = (n_index_row, n_index_col)
                 try:
-                    if neighbor_index[0] < 0 or neighbor_index[1] < 0:
+                    if n_index_row < 0 or n_index_col < 0:
                         # The neighbor index is beyond the bounds of the matrix
                         # We need a special case check here because a negative
                         # index will actually return a correct pixel value, just
