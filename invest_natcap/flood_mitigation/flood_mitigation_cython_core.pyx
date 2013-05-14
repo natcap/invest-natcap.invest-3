@@ -50,12 +50,23 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     return 0
 
 def flood_discharge(runoff_tuple, outflow_direction_tuple,
-    outflow_weights, prev_discharge, discharge_nodata, pixel_area,
-    time_interval):
+    outflow_weights_matrix, prev_discharge_matrix, out_discharge_nodata, in_pixel_area,
+    in_time_interval):
 
-    runoff_matrix, runoff_nodata = runoff_tuple
-    outflow_direction, outflow_direction_nodata = outflow_direction_tuple
-    discharge_matrix = prev_discharge.copy()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] runoff_matrix = runoff_tuple[0]
+    cdef int runoff_nodata = runoff_tuple[1]
+
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction = outflow_direction_tuple[0]
+    cdef int outflow_direction_nodata = outflow_direction_tuple[1]
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights = outflow_weights_matrix
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] prev_discharge = prev_discharge_matrix
+
+    cdef int discharge_nodata = out_discharge_nodata
+    cdef float pixel_area = in_pixel_area
+    cdef float time_interval = in_time_interval
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] discharge_matrix = prev_discharge.copy()
 
     # list of neighbor ids and their indices relative to the current pixel
     # index offsets are row, column.
