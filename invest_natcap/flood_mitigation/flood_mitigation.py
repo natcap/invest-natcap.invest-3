@@ -596,6 +596,13 @@ def _extract_matrix(raster_uri):
     memory_file = raster_utils.temporary_filename()
     return raster_utils.load_memory_mapped_array(raster_uri, memory_file)
 
+def _extract_matrix_and_nodata(uri):
+    """Return a tuple of the numpy matrix and the nodata value for the input
+    raster at URI."""
+    matrix = _extract_matrix(uri)
+    nodata = raster_utils.get_nodata_from_uri(uri)
+    return(matrix, nodata)
+
 def _write_matrix(raster_uri, matrix):
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
@@ -651,22 +658,36 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)
     prev_discharge = _extract_matrix(prev_discharge_uri)
-    runoff_matrix = _extract_matrix(runoff_uri)
+    runoff_tuple = _extract_matrix_and_nodata(runoff_uri)
     outflow_weights = _extract_matrix(outflow_weights_uri)
-    outflow_direction = _extract_matrix(outflow_direction_uri)
+    outflow_direction_tuple = _extract_matrix_and_nodata(outflow_direction_uri)
 
-    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
-    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge.shape)
-    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
-
-    runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
-    LOGGER.debug('Runoff nodata=%s', runoff_nodata)
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
+
+    class NeighborHasNoData(Exception):
+        """An exception for skipping a neighbor when that neighbor's
+        value is nodata."""
+        pass
+
+    discharge_matrix = _flood_discharge(runoff_tuple, outflow_direction_tuple,
+        outflow_weights, prev_discharge, discharge_nodata,
+        pixel_area, time_interval)
+
+    LOGGER.info('Finished checking neighbors for flood water discharge.')
+
+    _write_matrix(output_uri, discharge_matrix)
+
+def _flood_discharge(runoff_tuple, outflow_direction_tuple,
+    outflow_weights, prev_discharge, discharge_nodata, pixel_area,
+    time_interval):
+
+    runoff_matrix, runoff_nodata = runoff_tuple
+    outflow_direction, outflow_direction_nodata = outflow_direction_tuple
+    discharge_matrix = prev_discharge.copy()
 
     # list of neighbor ids and their indices relative to the current pixel
     # index offsets are row, column.
@@ -681,11 +702,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         7: (1, 1)
     }
     neighbors = list(neighbor_indices.iteritems())
-
-    class NeighborHasNoData(Exception):
-        """An exception for skipping a neighbor when that neighbor's
-        value is nodata."""
-        pass
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
@@ -760,9 +776,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
-    LOGGER.info('Finished checking neighbors for flood water discharge.')
-
-    _write_matrix(output_uri, discharge_matrix)
+    return discharge_matrix
 
 def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     """Calculate the flood_height according to equation 19 in the user's guide.
@@ -823,12 +837,6 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     """
 
     LOGGER.debug('Starting to calculate flood inundation depth')
-    def _extract_matrix_and_nodata(uri):
-        """Return a tuple of the numpy matrix and the nodata value for the input
-        raster at URI."""
-        matrix = _extract_matrix(uri)
-        nodata = raster_utils.get_nodata_from_uri(uri)
-        return(matrix, nodata)
 
     flood_height_tuple = _extract_matrix_and_nodata(flood_height_uri)
     channel_tuple = _extract_matrix_and_nodata(channels_uri)
