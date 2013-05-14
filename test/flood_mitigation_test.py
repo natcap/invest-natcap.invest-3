@@ -147,7 +147,8 @@ class FloodMitigationTest(unittest.TestCase):
 
     def test_flood_water_discharge(self):
         storm_runoff = os.path.join(REGRESSION_DATA, 'storm_runoff_step2.tif')
-        flood_water_discharge = os.path.join(self.workspace, 'fw_discharge.tif')
+        flood_water_discharge = os.path.join(self.workspace,
+                'fw_discharge_nditer.tif')
         outflow_weights_uri = os.path.join(self.workspace, 'outflow_weights.tif')
         outflow_direction_uri = os.path.join(self.workspace, 'outflow_dir.tif')
         flow_direction_uri = os.path.join(self.workspace, 'flow_direction.tif')
