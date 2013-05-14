@@ -930,9 +930,13 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         pixel_elevation = dem_matrix[index]
         curve_num = cn_matrix[index]
 
+        if channel_floodwater == 0:
+            return 0.0
+
         if channel_floodwater == flood_height_nodata or\
             pixel_elevation == dem_nodata or\
-            curve_num == cn_nodata:
+            curve_num == cn_nodata or\
+            channel_elevation == dem_nodata:
             return 0.0
 
         elevation_diff = pixel_elevation - channel_elevation
@@ -940,6 +944,10 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
         if flooding <= 0:
             return 0.0
+#        if flooding > channel_floodwater:
+#            LOGGER.debug(str('p_elevation=%s, cn=%s, c_floodwater=%s, fid=%s, '
+#                'c_elevation=%s'), pixel_elevation, curve_num,
+#                channel_floodwater, flooding, channel_elevation)
         return flooding
 
     class AlreadyVisited(Exception):
@@ -985,6 +993,9 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                 channel_elevation)
 
                             if fid > 0:
+#                                if fid > channel_floodwater:
+#                                    raise Exception('fid=%s, floodwater=%s' %
+#                                        (fid, channel_floodwater))
                                 dist_to_n = travel_distance[pixel_index] + n_distance
                                 if visited[n_index] == 0 or (visited[n_index] == 1 and
                                     dist_to_n < travel_distance[n_index]):
