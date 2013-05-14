@@ -173,7 +173,7 @@ class FloodMitigationTest(unittest.TestCase):
 
         orig_time = time.time()
         cython_discharge_uri = os.path.join(self.workspace,
-                'cython_discharge.tif')
+                'fw_discharge_cython.tif')
         flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
             self.args['time_interval'], cython_discharge_uri,
             outflow_weights_uri, outflow_direction_uri, prev_discharge, True)
