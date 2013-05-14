@@ -69,18 +69,17 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] discharge_matrix = prev_discharge.copy()
 
     # list of neighbor ids and their indices relative to the current pixel
-    # index offsets are row, column.
-    neighbor_indices = {
-        0: (0, 1),
-        1: (-1, 1),
-        2: (-1, 0),
-        3: (-1, -1),
-        4: (0, -1),
-        5: (1, -1),
-        6: (1, 0),
-        7: (1, 1)
-    }
-    neighbors = list(neighbor_indices.iteritems())
+    # tuple items are: neighbor_id, row_offset, col_offset.
+    neighbor_indices = [
+        (0, 0, 1),
+        (1, -1, 1),
+        (2, -1, 0),
+        (3, -1, -1),
+        (4, 0, -1),
+        (5, 1, -1),
+        (6, 1, 0),
+        (7, 1, 1)
+    ]
 
     cdef float first_neighbor_weight
     cdef int neighbor_id
@@ -113,10 +112,12 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
             discharge_sum = discharge_nodata
         else:
             discharge_sum = 0.0  # re-initialize the discharge sum
-            for neighbor_id, index_offset in neighbors:
+            for neighbor_id, row_offset, col_offset in neighbor_indices:
                 # Add the index offsets to the current index to get the
                 # neighbor's index.
-                neighbor_index = tuple(map(sum, zip(index, index_offset)))
+                n_index_row = index[0] + row_offset
+                n_index_col = index[1] + col_offset
+                neighbor_index = (n_index_row, n_index_col)
                 try:
                     if neighbor_index[0] < 0 or neighbor_index[1] < 0:
                         # The neighbor index is beyond the bounds of the matrix
