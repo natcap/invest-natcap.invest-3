@@ -308,17 +308,36 @@ def calculate_intermediate_streamflow(
             inter_streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
-def calculate_in_absorption_rater(imperv_uri, alpha_one_uri, out_uri):
+def calculate_in_absorption_rate(
+        imperv_uri, alpha_one_uri, out_uri, out_nodata):
     """This function calculates the in absorption rate to be used for
         calculating direct flow
 
         imperv_uri - a URI to a gdal dataset of the impervious area
 
         alpha_one_uri - a URI to a gdal dataset for the alpha one values
+        
+        out_nodata - a float for the output nodata value
 
         returns - nothing"""
 
+    no_data_list = []
+    for raster_uri in [imperv_uri, alpha_one_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+   
+    def in_absorption_rate(imperv_pix, alpha_pix):
+        for pix in [imperv_pix, alpha_pix]:
+            if pix in no_data_list:
+                return out_nodata
 
+        return imperv_pix + (1.0 - imperv_pix) * alpha_pix
+    
+    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_uri, alpha_one_uri], calculate_in_absorption_rate,
+            out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
