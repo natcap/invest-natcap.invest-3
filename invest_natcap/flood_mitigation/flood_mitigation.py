@@ -829,7 +829,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
 
     LOGGER.info('Distributing flood waters')
     fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
-        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)[0]
+        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
@@ -973,7 +973,6 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             while True:
                 try:
                     pixel_index = pixels_to_visit.pop(0)
-                    #print (pixel_index, pixels_to_visit)
                 except IndexError:
                     # No more indexes to process.
                     break
@@ -1006,16 +1005,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
 
-                    except SkipNeighbor:
+                    except (SkipNeighbor, IndexError, AlreadyVisited):
                         pass
-                        #LOGGER.debug('Skipping neighbor %s', n_index)
-                    except IndexError:
-                        pass
-                        #LOGGER.warn('index %s does not exist', n_index)
-                    except AlreadyVisited:
-                        pass
-                        #LOGGER.info('Already visited index %s, not distributing.',
-                        #    n_index)
 
-    #return (output, travel_distance, nearest_channel)
-    return (output, travel_distance)
+    return output
