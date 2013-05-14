@@ -930,6 +930,11 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         pixel_elevation = dem_matrix[index]
         curve_num = cn_matrix[index]
 
+        # If there is a channel cell that has no flood inundation on it, we
+        # should reasonably assume that there will not be any flood waters
+        # distributed from that cell.
+        # NOTE: This behavior is not explicitly stated in the user's guide.
+        # TODO: Verify with Rich and/or Yonas that this behavior is correct
         if channel_floodwater == 0:
             return 0.0
 
