@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import shutil
+import collections
 
 from osgeo import gdal
 import numpy
@@ -971,7 +972,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     for channel, channel_floodwater, channel_elevation in iterator:
         if channel == 1:
             channel_index = iterator.multi_index
-            pixels_to_visit = [channel_index]
+            pixels_to_visit = collections.deque([channel_index])
 
             visited[channel_index] = 1
 #            nearest_channel[channel_index][0] = channel_index[0]
@@ -979,7 +980,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
             while True:
                 try:
-                    pixel_index = pixels_to_visit.pop(0)
+                    pixel_index = pixels_to_visit.pop()
                 except IndexError:
                     # No more indexes to process.
                     break
