@@ -933,10 +933,10 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         if channel_floodwater == 0:
             return 0.0
 
-        if channel_floodwater == flood_height_nodata or\
-            pixel_elevation == dem_nodata or\
-            curve_num == cn_nodata or\
-            channel_elevation == dem_nodata:
+        if (channel_floodwater == flood_height_nodata or
+            pixel_elevation == dem_nodata or
+            curve_num == cn_nodata or
+            channel_elevation == dem_nodata):
             return 0.0
 
         elevation_diff = pixel_elevation - channel_elevation
