@@ -221,13 +221,33 @@ class FloodMitigationTest(unittest.TestCase):
 
         flood_height_uri = 'aaa'
         dem_uri = self.dem_small
-        cn_uri = self.cn_small
+        cn_uri = self.curve_numbers
 
         channels_uri = os.path.join(self.workspace, 'channels.tif')
         outflow_direction = os.path.join(self.workspace, 'outflow_dir.tif')
         python_output_uri = os.path.join(self.workspace, 'fid_python.tif')
         cython_output_uri = os.path.join(self.workspace, 'fid_cython.tif')
 
+        # Make the channels and the flow direction from the DEM.
+        routing_utils.calculate_stream(dem_uri, self.args['flow_threshold'],
+            channels_uri)
+        routing_utils.flow_direction_inf(dem_uri, outflow_direction)
+
+        py_start_time = time.time()
+        flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
+            cn_uri, channels_uri, outflow_direction, python_output_uri)
+        py_duration = time.time() - py_start_time
+        print 'Python runtime: %s' % py_duration
+
+        cy_start_time = time.time()
+        flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
+            cn_uri, channels_uri, outflow_direction, cython_output_uri, True)
+        cy_duration = time.time() - cy_start_time
+        print 'Cython runtime: %s' % cy_duration
+        print 'Speedup: %s' % py_duration / cy_duration
+
+        invest_test_core.assertTwoDatasetEqualURI(self, python_output_uri,
+            cython_output_uri)
 
 
     def test_flood_inundation_depth(self):
