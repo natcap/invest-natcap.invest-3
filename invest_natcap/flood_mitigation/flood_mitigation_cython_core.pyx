@@ -329,7 +329,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                         break
 
                     for n_id in xrange(8):
-                    #for n_id, neighbor_offset, n_distance in indices:
                         n_row = pixel_row_index + neighbor_row_offset[n_id]
                         n_col = pixel_col_index + neighbor_col_offset[n_id]
 
@@ -337,8 +336,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                             n_distance = pixel_size
                         else:
                             n_distance = diagonal_distance
-
-                        #n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
 
                         try:
                             if n_row < 0 or n_col < 0:
@@ -352,9 +349,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     channel_elevation)
 
                                 if fid > 0:
-    #                                if fid > channel_floodwater:
-    #                                    raise Exception('fid=%s, floodwater=%s' %
-    #                                        (fid, channel_floodwater))
                                     dist_to_n = travel_distance[pixel_index] + n_distance
                                     if (visited[n_row, n_col] == 0 or
                                         (visited[n_row, n_col] == 1 and
