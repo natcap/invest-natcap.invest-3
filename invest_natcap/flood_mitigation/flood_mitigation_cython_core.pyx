@@ -200,8 +200,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef int num_rows = flood_height_matrix.shape[0]
     cdef int num_cols = flood_height_matrix.shape[1]
 
-    visited = numpy.zeros([num_rows, num_cols], dtype=numpy.int)
-    travel_distance = numpy.zeros([num_rows, num_cols], dtype=numpy.float)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] visited = numpy.zeros([num_rows,
+        num_cols], dtype=numpy.byte)
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] travel_distance = numpy.zeros(
+        [num_rows, num_cols], dtype=numpy.float32)
 
     for name, matrix, nodata in [
         ('flood height', flood_height_matrix, flood_height_nodata),
@@ -297,6 +299,8 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 #                'c_elevation=%s'), pixel_elevation, curve_num,
 #                channel_floodwater, flooding, channel_elevation)
         return flooding
+
+    cdef double channel_floodwater, channel_elevation
 
     LOGGER.debug('Visiting channel pixels')
     for channel_row in xrange(num_rows):
