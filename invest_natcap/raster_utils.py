@@ -68,6 +68,17 @@ def get_nodata_from_uri(ds_uri):
     nodata = band.GetNoDataValue()
     return nodata
 
+def get_datatype_from_uri(ds_uri):
+    """Returns the datatype for the first band from a gdal dataset
+
+        ds_uri - a uri to a gdal dataset
+
+        returns the datatype for ds band 1"""
+
+    ds = gdal.Open(ds_uri)
+    band = ds.GetRasterBand(1)
+    datatype = band.DataType
+    return datatype
 
 def get_row_col_from_uri(ds_uri):
     """Returns a tuple of number of rows and columns of that dataset
@@ -1520,44 +1531,51 @@ def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     reproject_dataset(original_dataset, *args, **kwargs)
 
 def _experimental_reproject_dataset_uri(
-        original_dataset, pixel_spacing, output_wkt, output_uri,
-        output_type = gdal.GDT_Float32):
-    """A function to reproject and resample a GDAL dataset given an output pixel size
-        and output reference and uri.
+        original_dataset_uri, pixel_spacing, output_wkt, output_uri):
+    """A function to reproject and resample a GDAL dataset given an output
+        pixel size and output reference. Will use the datatype and nodata value
+        from the original dataset.
 
-       original_dataset - a gdal Dataset to written to disk
+       original_dataset_uri - a URI to a gdal Dataset to written to disk
        pixel_spacing - output dataset pixel size in projected linear units (probably meters)
        output_wkt - output project in Well Known Text (the result of ds.GetProjection())
        output_uri - location on disk to dump the reprojected dataset
-       output_type - gdal type of the output    
 
        return projected dataset"""
-    
-    original_sr = osr.SpatialReference()
-    original_sr.ImportFromWkt(original_dataset.GetProjection())
+    # Get the nodata value and datatype from the original dataset 
+    output_type = get_datatype_from_uri(original_dataset_uri)
+    out_nodata = get_nodata_from_uri(original_dataset_uri) 
+   
+    original_dataset = gdal.Open(original_dataset_uri)
 
+    original_wkt = original_dataset.GetProjection()
+
+    # Create a virtual raster that is projected based on the output WKT. This
+    # vrt does not save to disk and is used to get the proper projected bounding
+    # box and size. 
     vrt = gdal.AutoCreateWarpedVRT(
             original_dataset, None, output_wkt, gdal.GRA_Bilinear)
     
     geo_t = vrt.GetGeoTransform()
     x_size = vrt.RasterXSize # Raster xsize
     y_size = vrt.RasterYSize # Raster ysize
-
+    
+    # Calculate the extents of the projected dataset. These values will be used
+    # to properly set the resampled size for the output dataset
     (ulx, uly) = (geo_t[0], geo_t[3])
     (lrx, lry) = (geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size)
     
-    gdal_driver = gdal.GetDriverByName('GTiff')
-    # The size of the raster is given the new projection and pixel spacing
-    # Using the values we calculated above. Also, setting it to store one band
-    # and to use Float32 data type.
-
     LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
+   
+    gdal_driver = gdal.GetDriverByName('GTiff')
 
-    output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing), 
-                              int((uly - lry)/pixel_spacing), 1, output_type)
-    
-    # Set the nodata value
-    out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
+    # Create the output dataset to receive the projected output, with the proper
+    # resampled arrangement. 
+    output_dataset = gdal_driver.Create(
+            output_uri, int((lrx - ulx)/pixel_spacing),
+            int((uly - lry)/pixel_spacing), 1, output_type)
+
+    # Set the nodata value for the output dataset  
     output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
 
     # Calculate the new geotransform
@@ -1569,13 +1587,10 @@ def _experimental_reproject_dataset_uri(
 
     # Perform the projection/resampling 
     gdal.ReprojectImage(
-            original_dataset, output_dataset, original_sr.ExportToWkt(),
-            output_wkt, gdal.GRA_Bilinear)
+            original_dataset, output_dataset, original_wkt, output_wkt,
+            gdal.GRA_Bilinear)
 
     calculate_raster_stats(output_dataset)
-
-    return output_dataset
-
 
 def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
