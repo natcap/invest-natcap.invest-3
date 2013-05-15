@@ -298,56 +298,57 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 #                channel_floodwater, flooding, channel_elevation)
         return flooding
 
-    iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
-        flags=['multi_index'])
-
     LOGGER.debug('Visiting channel pixels')
-    for channel, channel_floodwater, channel_elevation in iterator:
-        if channel == 1:
-            channel_index = iterator.multi_index
-            pixels_to_visit = collections.deque([channel_index])
+    for channel_row in xrange(num_rows):
+        for channel_col in xrange(num_cols):
+            channel = channels_matrix[channel_row, channel_col]
 
-            visited[channel_index] = 1
-#            nearest_channel[channel_index][0] = channel_index[0]
-#            nearest_channel[channel_index][1] = channel_index[1]
+            if channel == 1:
+                channel_floodwater = flood_height_matrix[channel_row, channel_col]
+                channel_elevation = dem_matrix[channel_row, channel_col]
+                pixels_to_visit = collections.deque([(channel_row, channel_col)])
 
-            while True:
-                try:
-                    pixel_index = pixels_to_visit.pop()
-                except IndexError:
-                    # No more indexes to process.
-                    break
+                visited[channel_row, channel_col] = 1
+    #            nearest_channel[channel_index][0] = channel_index[0]
+    #            nearest_channel[channel_index][1] = channel_index[1]
 
-                for n_id, neighbor_offset, n_distance in indices:
-                    n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
-
+                while True:
                     try:
-                        if n_index[0] < 0 or n_index[1] < 0:
-                            raise IndexError
+                        pixel_index = pixels_to_visit.pop()
+                    except IndexError:
+                        # No more indexes to process.
+                        break
 
-                        if channels_matrix[n_index] in [1, channels_nodata]:
-                            raise SkipNeighbor
+                    for n_id, neighbor_offset, n_distance in indices:
+                        n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
 
-                        if _flows_from(n_index, n_id):
-                            fid = _fid(n_index, channel_floodwater,
-                                channel_elevation)
+                        try:
+                            if n_index[0] < 0 or n_index[1] < 0:
+                                raise IndexError
 
-                            if fid > 0:
-#                                if fid > channel_floodwater:
-#                                    raise Exception('fid=%s, floodwater=%s' %
-#                                        (fid, channel_floodwater))
-                                dist_to_n = travel_distance[pixel_index] + n_distance
-                                if visited[n_index] == 0 or (visited[n_index] == 1 and
-                                    dist_to_n < travel_distance[n_index]):
-                                    visited[n_index] = 1
-                                    travel_distance[n_index] = dist_to_n
-#                                    nearest_channel[n_index][0] = channel_index[0]
-#                                    nearest_channel[n_index][1] = channel_index[1]
-                                    output[n_index] = fid
-                                    pixels_to_visit.append(n_index)
+                            if channels_matrix[n_index] in [1, channels_nodata]:
+                                raise SkipNeighbor
 
-                    except (SkipNeighbor, IndexError, AlreadyVisited):
-                        pass
+                            if _flows_from(n_index, n_id):
+                                fid = _fid(n_index, channel_floodwater,
+                                    channel_elevation)
+
+                                if fid > 0:
+    #                                if fid > channel_floodwater:
+    #                                    raise Exception('fid=%s, floodwater=%s' %
+    #                                        (fid, channel_floodwater))
+                                    dist_to_n = travel_distance[pixel_index] + n_distance
+                                    if visited[n_index] == 0 or (visited[n_index] == 1 and
+                                        dist_to_n < travel_distance[n_index]):
+                                        visited[n_index] = 1
+                                        travel_distance[n_index] = dist_to_n
+    #                                    nearest_channel[n_index][0] = channel_index[0]
+    #                                    nearest_channel[n_index][1] = channel_index[1]
+                                        output[n_index] = fid
+                                        pixels_to_visit.append(n_index)
+
+                        except (SkipNeighbor, IndexError, AlreadyVisited):
+                            pass
 
     LOGGER.debug('Finished visiting channel pixels')
     return output
