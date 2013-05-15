@@ -216,6 +216,20 @@ class FloodMitigationTest(unittest.TestCase):
         convolved = ndimage.convolve(runoff, kernel, mode='constant', cval=0.0)
         print numpy.divide(convolved, 120)
 
+    def test_flood_inundation_depth_uri(self):
+        """A test for comparing the original to the cythonized FID function."""
+
+        flood_height_uri = 'aaa'
+        dem_uri = self.dem_small
+        cn_uri = self.cn_small
+
+        channels_uri = os.path.join(self.workspace, 'channels.tif')
+        outflow_direction = os.path.join(self.workspace, 'outflow_dir.tif')
+        python_output_uri = os.path.join(self.workspace, 'fid_python.tif')
+        cython_output_uri = os.path.join(self.workspace, 'fid_cython.tif')
+
+
+
     def test_flood_inundation_depth(self):
         """Test for the flood inundation depth function."""
 
