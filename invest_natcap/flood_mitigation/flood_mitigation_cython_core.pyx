@@ -116,8 +116,6 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                         neighbor_value = outflow_direction[n_index_row, n_index_col]
                         possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
 
-                        #if neighbor_id == first_inflow_neighbor[neighbor_value] or\
-                        #    neighbor_id == second_inflow_neighbor[neighbor_value]:
                         if neighbor_id in possible_inflow_neighbors:
                             # Only get the neighbor's runoff value if we know that
                             # the neighbor flows into this pixel.
