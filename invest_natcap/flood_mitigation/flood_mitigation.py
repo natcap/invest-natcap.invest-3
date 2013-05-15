@@ -282,7 +282,7 @@ def execute(args):
         flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
             args['time_interval'], ts_paths['discharge'],
             paths['outflow_weights'], paths['outflow_direction'],
-            paths['prev_discharge'])
+            paths['prev_discharge'], True)
 
         # Set the previous discharge path to the discharge_uri so we can use it
         # later on.
@@ -295,7 +295,7 @@ def execute(args):
 
         flood_inundation_depth(ts_paths['flood_height'], paths['dem'],
             cn_season_adjusted_uri, paths['channels'],
-            paths['outflow_direction'], ts_paths['inundation'])
+            paths['outflow_direction'], ts_paths['inundation'], True)
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -828,7 +828,7 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         'intersection')
 
 def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
-    channels_uri, outflow_direction_uri, output_uri):
+    channels_uri, outflow_direction_uri, output_uri, cython=False):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
         mitigation user's guide.
@@ -855,8 +855,12 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
     LOGGER.info('Distributing flood waters')
-    fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
-        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
+    if cython:
+        fid_matrix = flood_mitigation_cython_core.calculate_fid(flood_height_tuple, dem_tuple,
+            channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
+    else:
+        fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
+            channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
