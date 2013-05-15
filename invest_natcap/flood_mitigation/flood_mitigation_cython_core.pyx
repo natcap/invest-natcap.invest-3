@@ -180,30 +180,43 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
         Returns a numpy matrix of the calculated flood inundation height."""
 
-    flood_height_matrix, flood_height_nodata = flood_height
-    dem_matrix, dem_nodata = dem
-    channels_matrix, channels_nodata = channels
-    cn_matrix, cn_nodata = curve_nums
-    outflow_direction_matrix, outflow_direction_nodata = outflow_direction
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flood_height_matrix = flood_height[0]
+    cdef int flood_height_nodata = flood_height[1]
 
-    output = numpy.copy(flood_height_matrix)
-    visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
-    travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] channels_matrix = channels[0]
+    cdef int channels_nodata = channels[1]
 
-    matrix_shape = flood_height_matrix.shape
-    for name, matrix, nodata in [
-        ('flood height', flood_height_matrix, flood_height_nodata),
-        ('dem', dem_matrix, dem_nodata),
-        ('channels', channels_matrix, channels_nodata),
-        ('curve numbers', cn_matrix, cn_nodata),
-        ('outflow direction',outflow_direction_matrix, outflow_direction_nodata),
-        ('output', output, -1),
-        ('visited', visited, None),
-        ('travel distance', travel_distance, None)]:
-        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
-            nodata)
-        assert matrix.shape == matrix_shape, ('Input rasters must all be the '
-            'same size.  %s, %s found.' % matrix.shape, matrix_shape)
+    cn_matrix = curve_nums[0]
+    cdef int cn_nodata = curve_nums[1]
+
+    dem_matrix = dem[0]
+    cdef int dem_nodata = dem[1]
+
+    outflow_direction_matrix = outflow_direction[0]
+    cdef int outflow_direction_nodata = outflow_direction[1]
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] output = numpy.copy(flood_height_matrix)
+
+    cdef int num_rows = flood_height_matrix.shape[0]
+    cdef int num_cols = flood_height_matrix.shape[1]
+
+    visited = numpy.zeros([num_rows, num_cols], dtype=numpy.int)
+    travel_distance = numpy.zeros([num_rows, num_cols], dtype=numpy.float)
+
+#    matrix_shape = flood_height_matrix.shape
+#    for name, matrix, nodata in [
+#        ('flood height', flood_height_matrix, flood_height_nodata),
+#        ('dem', dem_matrix, dem_nodata),
+#        ('channels', channels_matrix, channels_nodata),
+#        ('curve numbers', cn_matrix, cn_nodata),
+#        ('outflow direction',outflow_direction_matrix, outflow_direction_nodata),
+#        ('output', output, -1),
+#        ('visited', visited, None),
+#        ('travel distance', travel_distance, None)]:
+#        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
+#            nodata)
+#        assert matrix.shape == matrix_shape, ('Input rasters must all be the '
+#            'same size.  %s, %s found.' % matrix.shape, matrix_shape)
 
 
     # to track our nearest channel cell, create a matrix that has two values for
