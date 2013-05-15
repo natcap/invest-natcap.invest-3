@@ -163,7 +163,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     return discharge_matrix
 
 def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
-    pixel_size):
+    in_pixel_size):
     """Actually perform the matrix calculations for the flood inundation depth
         function.  This is equation 20 from the flood mitigation user's guide.
 
@@ -228,7 +228,8 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     # We know the diagonal distance thanks to trigonometry.  We're assuming that
     # we measure from the center of this pixel to the center of the neighboring
     # pixel.
-    diagonal_distance = pixel_size * math.sqrt(2)
+    cdef double pixel_size = in_pixel_size
+    cdef double diagonal_distance = pixel_size * math.sqrt(2)
     indices = [
         (0, (0, 1), pixel_size),
         (1, (-1, 1), diagonal_distance),
