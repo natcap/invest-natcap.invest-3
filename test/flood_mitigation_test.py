@@ -10,6 +10,7 @@ from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
 import invest_test_core
 from invest_natcap.routing import routing_utils
+import routing_cython_core
 
 TEST_DATA = os.path.join('data', 'flood_mitigation')
 SAMP_INPUT = os.path.join(TEST_DATA, 'samp_input')
@@ -224,7 +225,9 @@ class FloodMitigationTest(unittest.TestCase):
         cn_uri = self.curve_numbers
 
         channels_uri = os.path.join(self.workspace, 'channels.tif')
-        outflow_direction = os.path.join(self.workspace, 'outflow_dir.tif')
+        flow_direction = os.path.join(self.workspace, 'flow_dir.tif')
+        outflow_weights = os.path.join(self.workspace, 'outflow_weights.tif')
+        outflow_direction = os.path.join(self.workspace, 'outflow_direction.tif')
         python_output_uri = os.path.join(self.workspace, 'fid_python.tif')
         cython_output_uri = os.path.join(self.workspace, 'fid_cython.tif')
 
@@ -239,7 +242,9 @@ class FloodMitigationTest(unittest.TestCase):
         # Make the channels and the flow direction from the DEM.
         routing_utils.calculate_stream(dem_uri, self.args['flow_threshold'],
             channels_uri)
-        routing_utils.flow_direction_inf(dem_uri, outflow_direction)
+        routing_utils.flow_direction_inf(dem_uri, flow_direction)
+        routing_cython_core.calculate_flow_graph(flow_direction,
+            outflow_weights, outflow_direction)
 
         py_start_time = time.time()
         flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
@@ -252,7 +257,7 @@ class FloodMitigationTest(unittest.TestCase):
             cn_resized_uri, channels_uri, outflow_direction, cython_output_uri, True)
         cy_duration = time.time() - cy_start_time
         print 'Cython runtime: %s' % cy_duration
-        print 'Speedup: %s' % py_duration / cy_duration
+        print 'Speedup: %s' % (py_duration / cy_duration)
 
         invest_test_core.assertTwoDatasetEqualURI(self, python_output_uri,
             cython_output_uri)
