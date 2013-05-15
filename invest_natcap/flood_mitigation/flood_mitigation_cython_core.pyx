@@ -73,6 +73,9 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
     cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
 
+    cdef int *first_inflow_neighbor = [3, 4, 5, 6, 7, 0, 1, 2]
+    cdef int *second_inflow_neighbor = [4, 5, 6, 7, 0, 1, 2, 3]
+
     cdef float first_neighbor_weight
     cdef int neighbor_id
     cdef float neighbor_prev_discharge
@@ -113,6 +116,8 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                         neighbor_value = outflow_direction[n_index_row, n_index_col]
                         possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
 
+                        #if neighbor_id == first_inflow_neighbor[neighbor_value] or\
+                        #    neighbor_id == second_inflow_neighbor[neighbor_value]:
                         if neighbor_id in possible_inflow_neighbors:
                             # Only get the neighbor's runoff value if we know that
                             # the neighbor flows into this pixel.
@@ -128,7 +133,7 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                             # pixel.
                             first_neighbor_weight = outflow_weights[n_index_row, n_index_col]
 
-                            if possible_inflow_neighbors[0] == neighbor_id:
+                            if first_inflow_neighbor[neighbor_value] == neighbor_id:
                                 fractional_flow = 1.0 - first_neighbor_weight
                             else:
                                 fractional_flow = first_neighbor_weight
