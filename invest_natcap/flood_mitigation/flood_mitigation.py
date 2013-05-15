@@ -36,6 +36,15 @@ class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
     pass
 
+class AlreadyVisited(Exception):
+    """An exception to indicate that we've already visited this pixel."""
+    pass
+
+class SkipNeighbor(Exception):
+    """An exception to indicate that we wish to skip this neighbor pixel"""
+    pass
+
+
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
     landscape in a flood situation.
@@ -714,11 +723,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
-                            raise NeighborHasNoData
+                            raise SkipNeighbor
 
                         neighbor_prev_discharge = prev_discharge[neighbor_index]
                         if neighbor_prev_discharge == discharge_nodata:
-                            raise NeighborHasNoData
+                            raise SkipNeighbor
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
@@ -735,7 +744,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
                         discharge_sum += discharge
 
-                except (IndexError, KeyError, NeighborHasNoData):
+                except (IndexError, KeyError, SkipNeighbor):
                     # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
@@ -829,7 +838,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
 
     LOGGER.info('Distributing flood waters')
     fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
-        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)[0]
+        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
@@ -874,7 +883,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         ('output', output, -1),
         ('visited', visited, None),
         ('travel distance', travel_distance, None)]:
-        LOGGER.debug('Matrix %s, sise=%s, nodata=%s', name, matrix.shape,
+        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
             nodata)
 
     # to track our nearest channel cell, create a matrix that has two values for
@@ -930,9 +939,18 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         pixel_elevation = dem_matrix[index]
         curve_num = cn_matrix[index]
 
-        if channel_floodwater == flood_height_nodata or\
-            pixel_elevation == dem_nodata or\
-            curve_num == cn_nodata:
+        # If there is a channel cell that has no flood inundation on it, we
+        # should reasonably assume that there will not be any flood waters
+        # distributed from that cell.
+        # NOTE: This behavior is not explicitly stated in the user's guide.
+        # TODO: Verify with Rich and/or Yonas that this behavior is correct
+        if channel_floodwater == 0:
+            return 0.0
+
+        if (channel_floodwater == flood_height_nodata or
+            pixel_elevation == dem_nodata or
+            curve_num == cn_nodata or
+            channel_elevation == dem_nodata):
             return 0.0
 
         elevation_diff = pixel_elevation - channel_elevation
@@ -940,19 +958,16 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
         if flooding <= 0:
             return 0.0
+#        if flooding > channel_floodwater:
+#            LOGGER.debug(str('p_elevation=%s, cn=%s, c_floodwater=%s, fid=%s, '
+#                'c_elevation=%s'), pixel_elevation, curve_num,
+#                channel_floodwater, flooding, channel_elevation)
         return flooding
-
-    class AlreadyVisited(Exception):
-        """An exception to indicate that we've already visited this pixel."""
-        pass
-
-    class SkipNeighbor(Exception):
-        """An exception to indicate that we wish to skip this neighbor pixel"""
-        pass
-
 
     iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
         flags=['multi_index'])
+
+    LOGGER.debug('Visiting channel pixels')
     for channel, channel_floodwater, channel_elevation in iterator:
         if channel == 1:
             channel_index = iterator.multi_index
@@ -965,7 +980,6 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             while True:
                 try:
                     pixel_index = pixels_to_visit.pop(0)
-                    #print (pixel_index, pixels_to_visit)
                 except IndexError:
                     # No more indexes to process.
                     break
@@ -985,6 +999,9 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                 channel_elevation)
 
                             if fid > 0:
+#                                if fid > channel_floodwater:
+#                                    raise Exception('fid=%s, floodwater=%s' %
+#                                        (fid, channel_floodwater))
                                 dist_to_n = travel_distance[pixel_index] + n_distance
                                 if visited[n_index] == 0 or (visited[n_index] == 1 and
                                     dist_to_n < travel_distance[n_index]):
@@ -995,16 +1012,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
 
-                    except SkipNeighbor:
+                    except (SkipNeighbor, IndexError, AlreadyVisited):
                         pass
-                        #LOGGER.debug('Skipping neighbor %s', n_index)
-                    except IndexError:
-                        pass
-                        #LOGGER.warn('index %s does not exist', n_index)
-                    except AlreadyVisited:
-                        pass
-                        #LOGGER.info('Already visited index %s, not distributing.',
-                        #    n_index)
 
-    #return (output, travel_distance, nearest_channel)
-    return (output, travel_distance)
+    LOGGER.debug('Finished visiting channel pixels')
+    return output
