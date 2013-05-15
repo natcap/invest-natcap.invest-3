@@ -70,16 +70,8 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
 
     # list of neighbor ids and their indices relative to the current pixel
     # tuple items are: neighbor_id, row_offset, col_offset.
-    neighbor_indices = [
-        (0, 0, 1),
-        (1, -1, 1),
-        (2, -1, 0),
-        (3, -1, -1),
-        (4, 0, -1),
-        (5, 1, -1),
-        (6, 1, 0),
-        (7, 1, 1)
-    ]
+    cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
+    cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
 
     cdef float first_neighbor_weight
     cdef int neighbor_id
@@ -103,11 +95,12 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
                 discharge_sum = discharge_nodata
             else:
                 discharge_sum = 0.0  # re-initialize the discharge sum
-                for neighbor_id, row_offset, col_offset in neighbor_indices:
+
+                for neighbor_id in xrange(8):
                     # Add the index offsets to the current index to get the
                     # neighbor's index.
-                    n_index_row = row_index + row_offset
-                    n_index_col = col_index + col_offset
+                    n_index_row = row_index + neighbor_row_offset[neighbor_id]
+                    n_index_col = col_index + neighbor_col_offset[neighbor_id]
                     try:
                         if n_index_row < 0 or n_index_col < 0:
                             # The neighbor index is beyond the bounds of the matrix
