@@ -243,11 +243,11 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         (7, (1, 1), diagonal_distance)
     ]
 
-    def _flows_from(source_index, neighbor_id):
+    def _flows_from(s_row, s_col, neighbor_id):
         """Indicate whether the source pixel flows into the neighbor identified
         by neighbor_id.  This function returns a boolean."""
 
-        neighbor_value = outflow_direction_matrix[source_index]
+        neighbor_value = outflow_direction_matrix[s_row, s_col]
 
         # If there is no outflow direction, then there is no flow to the
         # neighbor and we return False.
@@ -258,7 +258,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             return False
         return True
 
-    def _fid(index, channel_floodwater, channel_elevation):
+    def _fid(i_row, i_col, channel_floodwater, channel_elevation):
         """Calculate the on-pixel flood inundation depth, as represented by
             equation 20 in the flood mitigation user's guide.
 
@@ -272,8 +272,8 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             floodwaters must be in the same units.
 
             Returns a float."""
-        pixel_elevation = dem_matrix[index]
-        curve_num = cn_matrix[index]
+        pixel_elevation = dem_matrix[i_row, i_col]
+        curve_num = cn_matrix[i_row, i_col]
 
         # If there is a channel cell that has no flood inundation on it, we
         # should reasonably assume that there will not be any flood waters
@@ -301,6 +301,9 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         return flooding
 
     cdef double channel_floodwater, channel_elevation
+    cdef int pixel_col_index, pixel_row_index
+    cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
+    cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
 
     LOGGER.debug('Visiting channel pixels')
     for channel_row in xrange(num_rows):
@@ -319,22 +322,33 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                 while True:
                     try:
                         pixel_index = pixels_to_visit.pop()
+                        pixel_row_index = pixel_index[0]
+                        pixel_col_index = pixel_index[1]
                     except IndexError:
                         # No more indexes to process.
                         break
 
-                    for n_id, neighbor_offset, n_distance in indices:
-                        n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
+                    for n_id in xrange(8):
+                    #for n_id, neighbor_offset, n_distance in indices:
+                        n_row = pixel_row_index + neighbor_row_offset[n_id]
+                        n_col = pixel_row_index + neighbor_col_offset[n_id]
+
+                        if n_id % 2 == 0:
+                            n_distance = pixel_size
+                        else:
+                            n_distance = diagonal_distance
+
+                        #n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
 
                         try:
-                            if n_index[0] < 0 or n_index[1] < 0:
+                            if n_row < 0 or n_col < 0:
                                 raise IndexError
 
-                            if channels_matrix[n_index] in [1, channels_nodata]:
+                            if channels_matrix[n_row, n_col] in [1, channels_nodata]:
                                 raise SkipNeighbor
 
-                            if _flows_from(n_index, n_id):
-                                fid = _fid(n_index, channel_floodwater,
+                            if _flows_from(n_row, n_col, n_id):
+                                fid = _fid(n_row, n_col, channel_floodwater,
                                     channel_elevation)
 
                                 if fid > 0:
@@ -342,14 +356,16 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     #                                    raise Exception('fid=%s, floodwater=%s' %
     #                                        (fid, channel_floodwater))
                                     dist_to_n = travel_distance[pixel_index] + n_distance
-                                    if visited[n_index] == 0 or (visited[n_index] == 1 and
-                                        dist_to_n < travel_distance[n_index]):
-                                        visited[n_index] = 1
-                                        travel_distance[n_index] = dist_to_n
-    #                                    nearest_channel[n_index][0] = channel_index[0]
-    #                                    nearest_channel[n_index][1] = channel_index[1]
-                                        output[n_index] = fid
-                                        pixels_to_visit.append(n_index)
+                                    if (visited[n_row, n_col] == 0 or
+                                        (visited[n_row, n_col] == 1 and
+                                        dist_to_n < travel_distance[n_row,
+                                            n_col])):
+                                        visited[n_row, n_col] = 1
+                                        travel_distance[n_row, n_col] = dist_to_n
+    #                                    nearest_channel[n_row, n_col][0] = channel_index[0]
+    #                                    nearest_channel[n_row, n_col][1] = channel_index[1]
+                                        output[n_row, n_col] = fid
+                                        pixels_to_visit.append((n_row, n_col))
 
                         except (SkipNeighbor, IndexError, AlreadyVisited):
                             pass
