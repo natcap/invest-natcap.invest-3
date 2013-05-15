@@ -85,9 +85,8 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     cdef int neighbor_id
     cdef float neighbor_prev_discharge
     cdef int neighbor_value
-#    cdef float neighbor_runoff
-#    cdef float fractional_flow
-    #cdef float discharge_sum, discharge
+    cdef double fractional_flow, neighbor_runoff
+    cdef double discharge_sum, discharge
 
     cdef float runoff
     cdef int n_rows = runoff_matrix.shape[0]
