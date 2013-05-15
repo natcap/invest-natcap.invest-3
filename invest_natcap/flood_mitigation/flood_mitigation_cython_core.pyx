@@ -89,87 +89,77 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
 #    cdef float fractional_flow
     #cdef float discharge_sum, discharge
 
+    cdef float runoff
     cdef int n_rows = runoff_matrix.shape[0]
     cdef int n_cols = runoff_matrix.shape[1]
     cdef int row_index, col_index, n_index_row, n_index_col, row_offset, col_offset
 
-    # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
-    # numpy.nditer allows us to index into the matrix while always knowing the
-    # index that we are currently accessing.  This way we can easily access
-    # pixels immediately adjacent to this pixel by index (the index offsets for
-    # which are in the neighbors list, made from the neighbor_indices dict).
-#    for row_index in xrange(n_rows):
-#        for col_index in xrange(n_cols):
+    for row_index in xrange(n_rows):
+        for col_index in xrange(n_cols):
+            runoff = runoff_matrix[row_index, col_index]
 
-    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
-    LOGGER.info('Checking neighbors for flow contributions to storm runoff')
-    for runoff in iterator:
-        index = iterator.multi_index
-        row_index = index[0]
-        col_index = index[1]
+            if runoff == runoff_nodata:
+                discharge_sum = discharge_nodata
+            elif outflow_direction[row_index, col_index] == outflow_direction_nodata:
+                discharge_sum = discharge_nodata
+            else:
+                discharge_sum = 0.0  # re-initialize the discharge sum
+                for neighbor_id, row_offset, col_offset in neighbor_indices:
+                    # Add the index offsets to the current index to get the
+                    # neighbor's index.
+                    n_index_row = row_index + row_offset
+                    n_index_col = col_index + col_offset
+                    try:
+                        if n_index_row < 0 or n_index_col < 0:
+                            # The neighbor index is beyond the bounds of the matrix
+                            # We need a special case check here because a negative
+                            # index will actually return a correct pixel value, just
+                            # from the other side of the matrix, which we don't
+                            # want.
+                            raise IndexError
 
-        if runoff == runoff_nodata:
-            discharge_sum = discharge_nodata
-        elif outflow_direction[row_index, col_index] == outflow_direction_nodata:
-            discharge_sum = discharge_nodata
-        else:
-            discharge_sum = 0.0  # re-initialize the discharge sum
-            for neighbor_id, row_offset, col_offset in neighbor_indices:
-                # Add the index offsets to the current index to get the
-                # neighbor's index.
-                n_index_row = row_index + row_offset
-                n_index_col = col_index + col_offset
-                try:
-                    if n_index_row < 0 or n_index_col < 0:
-                        # The neighbor index is beyond the bounds of the matrix
-                        # We need a special case check here because a negative
-                        # index will actually return a correct pixel value, just
-                        # from the other side of the matrix, which we don't
-                        # want.
-                        raise IndexError
+                        neighbor_value = outflow_direction[n_index_row, n_index_col]
+                        possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
 
-                    neighbor_value = outflow_direction[n_index_row, n_index_col]
-                    possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
+                        if neighbor_id in possible_inflow_neighbors:
+                            # Only get the neighbor's runoff value if we know that
+                            # the neighbor flows into this pixel.
+                            neighbor_runoff = runoff_matrix[n_index_row, n_index_col]
+                            if neighbor_runoff == runoff_nodata:
+                                raise SkipNeighbor
 
-                    if neighbor_id in possible_inflow_neighbors:
-                        # Only get the neighbor's runoff value if we know that
-                        # the neighbor flows into this pixel.
-                        neighbor_runoff = runoff_matrix[n_index_row, n_index_col]
-                        if neighbor_runoff == runoff_nodata:
-                            raise SkipNeighbor
+                            neighbor_prev_discharge = prev_discharge[n_index_row, n_index_col]
+                            if neighbor_prev_discharge == discharge_nodata:
+                                raise SkipNeighbor
 
-                        neighbor_prev_discharge = prev_discharge[n_index_row, n_index_col]
-                        if neighbor_prev_discharge == discharge_nodata:
-                            raise SkipNeighbor
+                            # determine fractional flow from this neighbor into this
+                            # pixel.
+                            first_neighbor_weight = outflow_weights[n_index_row, n_index_col]
 
-                        # determine fractional flow from this neighbor into this
-                        # pixel.
-                        first_neighbor_weight = outflow_weights[n_index_row, n_index_col]
+                            if possible_inflow_neighbors[0] == neighbor_id:
+                                fractional_flow = 1.0 - first_neighbor_weight
+                            else:
+                                fractional_flow = first_neighbor_weight
 
-                        if possible_inflow_neighbors[0] == neighbor_id:
-                            fractional_flow = 1.0 - first_neighbor_weight
-                        else:
-                            fractional_flow = first_neighbor_weight
+                            discharge = (((neighbor_runoff * pixel_area) +
+                                (neighbor_prev_discharge * time_interval)) *
+                                fractional_flow)
 
-                        discharge = (((neighbor_runoff * pixel_area) +
-                            (neighbor_prev_discharge * time_interval)) *
-                            fractional_flow)
+                            discharge_sum = discharge_sum + discharge
 
-                        discharge_sum = discharge_sum + discharge
+                    except (IndexError, KeyError, SkipNeighbor):
+                        # IndexError happens when the neighbor does not exist.
+                        # In this case, we assume there is no inflow from this
+                        # neighbor.
+                        # KeyError happens when the neighbor has a nodata value.
+                        # When this happens, we assume there is no inflow from this
+                        # neighbor.
+                        # NeighborHasNoRunoffData happens when the neighbor's runoff
+                        # value is nodata.
+                        pass
 
-                except (IndexError, KeyError, SkipNeighbor):
-                    # IndexError happens when the neighbor does not exist.
-                    # In this case, we assume there is no inflow from this
-                    # neighbor.
-                    # KeyError happens when the neighbor has a nodata value.
-                    # When this happens, we assume there is no inflow from this
-                    # neighbor.
-                    # NeighborHasNoRunoffData happens when the neighbor's runoff
-                    # value is nodata.
-                    pass
+                discharge_sum = discharge_sum / time_interval
 
-            discharge_sum = discharge_sum / time_interval
-
-        # Set the discharge matrix value to the calculated discharge value.
-        discharge_matrix[row_index, col_index] = discharge_sum
+            # Set the discharge matrix value to the calculated discharge value.
+            discharge_matrix[row_index, col_index] = discharge_sum
     return discharge_matrix
