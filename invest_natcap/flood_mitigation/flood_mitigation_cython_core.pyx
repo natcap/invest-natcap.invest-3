@@ -203,20 +203,20 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     visited = numpy.zeros([num_rows, num_cols], dtype=numpy.int)
     travel_distance = numpy.zeros([num_rows, num_cols], dtype=numpy.float)
 
-#    matrix_shape = flood_height_matrix.shape
-#    for name, matrix, nodata in [
-#        ('flood height', flood_height_matrix, flood_height_nodata),
-#        ('dem', dem_matrix, dem_nodata),
-#        ('channels', channels_matrix, channels_nodata),
-#        ('curve numbers', cn_matrix, cn_nodata),
-#        ('outflow direction',outflow_direction_matrix, outflow_direction_nodata),
-#        ('output', output, -1),
-#        ('visited', visited, None),
-#        ('travel distance', travel_distance, None)]:
-#        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
-#            nodata)
-#        assert matrix.shape == matrix_shape, ('Input rasters must all be the '
-#            'same size.  %s, %s found.' % matrix.shape, matrix_shape)
+    for name, matrix, nodata in [
+        ('flood height', flood_height_matrix, flood_height_nodata),
+        ('dem', dem_matrix, dem_nodata),
+        ('channels', channels_matrix, channels_nodata),
+        ('curve numbers', cn_matrix, cn_nodata),
+        ('outflow direction',outflow_direction_matrix, outflow_direction_nodata),
+        ('output', output, -1),
+        ('visited', visited, None),
+        ('travel distance', travel_distance, None)]:
+        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
+            nodata)
+        assert ((matrix.shape[0] == num_rows) and (matrix.shape[1] == num_cols)), ('Input'
+            'rasters must all be the '
+            'same size.  %s, %s found.' % matrix.shape, (num_rows, num_cols))
 
 
     # to track our nearest channel cell, create a matrix that has two values for
