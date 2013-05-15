@@ -5,6 +5,7 @@ import math
 import os
 import shutil
 import collections
+import time
 
 from osgeo import gdal
 import numpy
@@ -277,7 +278,6 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(ts_paths['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata,
                 gdal.GDT_Float32, fill_value=0.0)
-
 
         flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
             args['time_interval'], ts_paths['discharge'],
@@ -637,6 +637,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         Returns nothing."""
 
+    start_time = time.time()
     LOGGER.info('Starting to calculate flood water discharge')
     LOGGER.debug('Discharge uri=%s', output_uri)
     LOGGER.debug('Previous discharge uri=%s', prev_discharge_uri)
@@ -687,6 +688,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
+    LOGGER.debug('Elapsed time for flood water discharge:%s', time.time() - start_time)
 
 def _flood_discharge(runoff_tuple, outflow_direction_tuple,
     outflow_weights, prev_discharge, discharge_nodata, pixel_area,
