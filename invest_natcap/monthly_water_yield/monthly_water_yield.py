@@ -15,6 +15,7 @@ from scipy.sparse.csgraph import _validation
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
+from invest_natcap.routing import routing_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -112,6 +113,10 @@ def execute(args):
         slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata,
         alpha_uri_list)
 
+    absorption_uri = os.path.join(intermediate_dir, 'absorption.tif')
+    calculate_in_absorption_rate(
+            imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
+
     # Construct a dictionary from the time step data
     data_dict = construct_time_step_data(time_step_data_uri)
     LOGGER.debug('Constructed DATA : %s', data_dict)
@@ -135,6 +140,7 @@ def execute(args):
    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
+    in_source_uri = os.path.join(intermediate_dir, 'in_source.tif')
     water_uri = os.path.join(intermediate_dir, 'water_amt.tif')
     evap_uri = os.path.join(intermediate_dir, 'evaporation.tif')
     etc_uri = os.path.join(intermediate_dir, 'etc.tif')
@@ -177,8 +183,8 @@ def execute(args):
         # Calculate Direct Flow (Runoff)
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
-                imperv_area_uri, dem_uri, precip_uri, alpha_one_uri, dflow_uri,
-                total_precip_uri, float_nodata)
+                dem_uri, precip_uri, absorption_uri, dflow_uri,
+                total_precip_uri, in_source_uri, float_nodata)
         
         # Calculate water amount (W)
         clean_uri([water_uri])
@@ -308,6 +314,43 @@ def calculate_intermediate_streamflow(
             inter_streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
+def calculate_in_absorption_rate(
+        imperv_uri, alpha_one_uri, out_uri, out_nodata):
+    """This function calculates the in absorption rate to be used for
+        calculating direct flow
+
+        imperv_uri - a URI to a gdal dataset of the impervious area
+
+        alpha_one_uri - a URI to a gdal dataset for the alpha one values
+        
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+    no_data_list = []
+    for raster_uri in [imperv_uri, alpha_one_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+   
+    def in_absorption_rate(imperv_pix, alpha_pix):
+        """A vectorize operation for calculating the in absorption rate value
+
+            imperv_pix - a float value for the impervious area in fraction
+            alpha_pix - a float value for the alpha coefficients
+
+            returns - in absorption rate value"""
+        for pix in [imperv_pix, alpha_pix]:
+            if pix in no_data_list:
+                return out_nodata
+
+        return imperv_pix + (1.0 - imperv_pix) * alpha_pix
+    
+    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_uri, alpha_one_uri], in_absorption_rate,
+            out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+
 def calculate_final_interflow(
         dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
         water_uri, intermediate_interflow_uri, interflow_out_uri, out_nodata):
@@ -347,7 +390,6 @@ def calculate_final_interflow(
             water_pix, inter_pix):
         """A vectorize operation for calculating the baseflow value
 
-            alpha_pix - a float value for the alpha coefficients
             soil_pix - a float value for the soil water content
             dflow_pix - a float value for the direct flow
             evap_pix - a float value for the actual evaporation
@@ -602,20 +644,20 @@ def calculate_evaporation(
             'intersection')
 
 def calculate_direct_flow(
-        imperv_area_uri, dem_uri, precip_uri, alpha_one_uri,  dt_out_uri,
-        tp_out_uri, out_nodata):
+        dem_uri, precip_uri, in_absorption_uri, dt_out_uri, tp_out_uri,
+        in_source_uri, out_nodata):
     """This function calculates the direct flow over the catchment
     
-        imperv_area_uri - a URI to a gdal dataset for the impervious area in
-            fraction
-
         dem_uri - a URI to a gdal dataset of an elevation map
         
         precip_uri - a URI to a gdal dataset of the precipitation over the
             landscape
-        
-        alpha_one_uri - a URI to a gdal dataset of alpha_one values
-        
+       
+        in_absorption_uri - a URI to a gdal dataset of the in absorption rate
+            values
+
+        in_source_uri - a URI path for the in source output as a gdal dataset
+
         dt_out_uri - a URI path for the direct flow output as a gdal dataset
         
         tp_out_uri - a URI path for the total precip output as a gdal dataset
@@ -625,44 +667,54 @@ def calculate_direct_flow(
         returns - Nothing
     """
     no_data_list = []
-    for raster_uri in [imperv_area_uri, dem_uri,precip_uri, alpha_one_uri]:
+    for raster_uri in [in_absorption_uri, dem_uri, precip_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
-    
-    def copy_precip(precip_pix):
-        if precip_pix in no_data_list:
-            return out_nodata
-        else:
-            return precip_pix
 
-    def direct_flow(imperv_pix, tot_p_pix, alpha_pix):
-        """Vectorize function for computing direct flow
-        
-            imperv_pix - a float value for the impervious area in fraction
-            tot_p_pix - a float value for the precipitation
-            alpha_pix - a float value for the alpha variable
+    # CALCULATE IN_SOURCE: P(i,t) * in_absorption_rate
+    def in_source_op(precip_pix, in_absorption_pix):
+        """Vectorize function for computing in source value
+       
+           precip_pix - a float value for the precipitation amount
+           in_absorption_pix - a float value for the in absorption rate
 
-            returns - direct flow"""
-        for pix in [imperv_pix, alpha_pix, tot_p_pix]:
+           returns - in source value"""
+        for pix in [precip_pix, in_absorption_pix]:
             if pix in no_data_list:
                 return out_nodata
-        return (imperv_pix * tot_p_pix) + (
-                (1 - imperv_pix) * alpha_pix * tot_p_pix)
-
+        
+        return precip_pix * in_absorption_pix
+    
     cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
 
-    #raster_utils.vectorize_datasets(
-    #        [imperv_area_uri, precip_uri, alpha_one_uri], direct_flow,
-    #        dt_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
-    #        'intersection')
-
     raster_utils.vectorize_datasets(
-            [precip_uri], copy_precip, dt_out_uri, gdal.GDT_Float32,
-            out_nodata, cell_size, 'intersection')
+            [precip_uri, in_absorption_uri], in_source_op, in_source_uri,
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+
+    # CALCULATE ROUTE_FLUX
+    temp_uri = raster_utils.temporary_filename()
+
+    routing_utils.route_flux(
+            dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri)
+
+
+    # CALCULATE TOTAL PRECIP
+    def total_precip_op(direct_pix, in_absorption_pix):
+        """Vectorize function for computing the total precipitation value
+       
+           direct_pix - a float value for the direct flow
+           in_absorption_pix - a float value for the in absorption rate
+
+           returns - total precipitation value"""
+        for pix in [direct_pix, in_absorption_pix]:
+            if pix in no_data_list:
+                return out_nodata
+        
+        return direct_pix / in_absorption_pix
     
     raster_utils.vectorize_datasets(
-            [precip_uri], copy_precip, tp_out_uri, gdal.GDT_Float32,
-            out_nodata, cell_size, 'intersection')
+            [dt_out_uri, in_absorption_uri], total_precip_op, tp_out_uri,
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_alphas(
         slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):

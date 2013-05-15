@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import shutil
+import collections
 
 from osgeo import gdal
 import numpy
@@ -12,6 +13,7 @@ from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
 import routing_cython_core
+import flood_mitigation_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
     %(levelname)-8s %(message)s', level=logging.DEBUG,
@@ -35,6 +37,15 @@ INFLOW_NEIGHBORS = {
 class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
     pass
+
+class AlreadyVisited(Exception):
+    """An exception to indicate that we've already visited this pixel."""
+    pass
+
+class SkipNeighbor(Exception):
+    """An exception to indicate that we wish to skip this neighbor pixel"""
+    pass
+
 
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
@@ -586,6 +597,13 @@ def _extract_matrix(raster_uri):
     memory_file = raster_utils.temporary_filename()
     return raster_utils.load_memory_mapped_array(raster_uri, memory_file)
 
+def _extract_matrix_and_nodata(uri):
+    """Return a tuple of the numpy matrix and the nodata value for the input
+    raster at URI."""
+    matrix = _extract_matrix(uri)
+    nodata = raster_utils.get_nodata_from_uri(uri)
+    return(matrix, nodata)
+
 def _write_matrix(raster_uri, matrix):
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
@@ -597,7 +615,8 @@ def _write_matrix(raster_uri, matrix):
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri,
+    cython=False):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -641,22 +660,41 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)
     prev_discharge = _extract_matrix(prev_discharge_uri)
-    runoff_matrix = _extract_matrix(runoff_uri)
+    runoff_tuple = _extract_matrix_and_nodata(runoff_uri)
     outflow_weights = _extract_matrix(outflow_weights_uri)
-    outflow_direction = _extract_matrix(outflow_direction_uri)
+    outflow_direction_tuple = _extract_matrix_and_nodata(outflow_direction_uri)
 
-    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
-    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge.shape)
-    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
-
-    runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
-    LOGGER.debug('Runoff nodata=%s', runoff_nodata)
     # A mapping of which indices might flow into this pixel. If the neighbor
     # pixel's value is 
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
+
+    class NeighborHasNoData(Exception):
+        """An exception for skipping a neighbor when that neighbor's
+        value is nodata."""
+        pass
+
+    if cython:
+        discharge_matrix = flood_mitigation_cython_core.flood_discharge(runoff_tuple,
+            outflow_direction_tuple, outflow_weights, prev_discharge,
+            discharge_nodata, pixel_area, time_interval)
+    else:
+        discharge_matrix = _flood_discharge(runoff_tuple, outflow_direction_tuple,
+            outflow_weights, prev_discharge, discharge_nodata,
+            pixel_area, time_interval)
+
+    LOGGER.info('Finished checking neighbors for flood water discharge.')
+
+    _write_matrix(output_uri, discharge_matrix)
+
+def _flood_discharge(runoff_tuple, outflow_direction_tuple,
+    outflow_weights, prev_discharge, discharge_nodata, pixel_area,
+    time_interval):
+
+    runoff_matrix, runoff_nodata = runoff_tuple
+    outflow_direction, outflow_direction_nodata = outflow_direction_tuple
+    discharge_matrix = prev_discharge.copy()
 
     # list of neighbor ids and their indices relative to the current pixel
     # index offsets are row, column.
@@ -671,11 +709,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         7: (1, 1)
     }
     neighbors = list(neighbor_indices.iteritems())
-
-    class NeighborHasNoData(Exception):
-        """An exception for skipping a neighbor when that neighbor's
-        value is nodata."""
-        pass
 
     # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
     # numpy.nditer allows us to index into the matrix while always knowing the
@@ -714,11 +747,11 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
                         # the neighbor flows into this pixel.
                         neighbor_runoff = runoff_matrix[neighbor_index]
                         if neighbor_runoff == runoff_nodata:
-                            raise NeighborHasNoData
+                            raise SkipNeighbor
 
                         neighbor_prev_discharge = prev_discharge[neighbor_index]
                         if neighbor_prev_discharge == discharge_nodata:
-                            raise NeighborHasNoData
+                            raise SkipNeighbor
 
                         # determine fractional flow from this neighbor into this
                         # pixel.
@@ -735,7 +768,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
                         discharge_sum += discharge
 
-                except (IndexError, KeyError, NeighborHasNoData):
+                except (IndexError, KeyError, SkipNeighbor):
                     # IndexError happens when the neighbor does not exist.
                     # In this case, we assume there is no inflow from this
                     # neighbor.
@@ -750,9 +783,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         # Set the discharge matrix value to the calculated discharge value.
         discharge_matrix[index] = discharge_sum
-    LOGGER.info('Finished checking neighbors for flood water discharge.')
-
-    _write_matrix(output_uri, discharge_matrix)
+    return discharge_matrix
 
 def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     """Calculate the flood_height according to equation 19 in the user's guide.
@@ -813,12 +844,6 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     """
 
     LOGGER.debug('Starting to calculate flood inundation depth')
-    def _extract_matrix_and_nodata(uri):
-        """Return a tuple of the numpy matrix and the nodata value for the input
-        raster at URI."""
-        matrix = _extract_matrix(uri)
-        nodata = raster_utils.get_nodata_from_uri(uri)
-        return(matrix, nodata)
 
     flood_height_tuple = _extract_matrix_and_nodata(flood_height_uri)
     channel_tuple = _extract_matrix_and_nodata(channels_uri)
@@ -829,7 +854,7 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
 
     LOGGER.info('Distributing flood waters')
     fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
-        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)[0]
+        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
@@ -865,6 +890,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
     travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
 
+    matrix_shape = flood_height_matrix.shape
     for name, matrix, nodata in [
         ('flood height', flood_height_matrix, flood_height_nodata),
         ('dem', dem_matrix, dem_nodata),
@@ -874,8 +900,11 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         ('output', output, -1),
         ('visited', visited, None),
         ('travel distance', travel_distance, None)]:
-        LOGGER.debug('Matrix %s, sise=%s, nodata=%s', name, matrix.shape,
+        LOGGER.debug('Matrix %-20s size=%-16s nodata=%-10s', name, matrix.shape,
             nodata)
+        assert matrix.shape == matrix_shape, ('Input rasters must all be the '
+            'same size.  %s, %s found.' % matrix.shape, matrix_shape)
+
 
     # to track our nearest channel cell, create a matrix that has two values for
     # each of the elements in the 2-d matrix.  These two extra values represent
@@ -930,13 +959,18 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         pixel_elevation = dem_matrix[index]
         curve_num = cn_matrix[index]
 
+        # If there is a channel cell that has no flood inundation on it, we
+        # should reasonably assume that there will not be any flood waters
+        # distributed from that cell.
+        # NOTE: This behavior is not explicitly stated in the user's guide.
+        # TODO: Verify with Rich and/or Yonas that this behavior is correct
         if channel_floodwater == 0:
             return 0.0
 
-        if channel_floodwater == flood_height_nodata or\
-            pixel_elevation == dem_nodata or\
-            curve_num == cn_nodata or\
-            channel_elevation == dem_nodata:
+        if (channel_floodwater == flood_height_nodata or
+            pixel_elevation == dem_nodata or
+            curve_num == cn_nodata or
+            channel_elevation == dem_nodata):
             return 0.0
 
         elevation_diff = pixel_elevation - channel_elevation
@@ -950,21 +984,14 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 #                channel_floodwater, flooding, channel_elevation)
         return flooding
 
-    class AlreadyVisited(Exception):
-        """An exception to indicate that we've already visited this pixel."""
-        pass
-
-    class SkipNeighbor(Exception):
-        """An exception to indicate that we wish to skip this neighbor pixel"""
-        pass
-
-
     iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
         flags=['multi_index'])
+
+    LOGGER.debug('Visiting channel pixels')
     for channel, channel_floodwater, channel_elevation in iterator:
         if channel == 1:
             channel_index = iterator.multi_index
-            pixels_to_visit = [channel_index]
+            pixels_to_visit = collections.deque([channel_index])
 
             visited[channel_index] = 1
 #            nearest_channel[channel_index][0] = channel_index[0]
@@ -972,8 +999,7 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
             while True:
                 try:
-                    pixel_index = pixels_to_visit.pop(0)
-                    #print (pixel_index, pixels_to_visit)
+                    pixel_index = pixels_to_visit.pop()
                 except IndexError:
                     # No more indexes to process.
                     break
@@ -1006,16 +1032,8 @@ def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     output[n_index] = fid
                                     pixels_to_visit.append(n_index)
 
-                    except SkipNeighbor:
+                    except (SkipNeighbor, IndexError, AlreadyVisited):
                         pass
-                        #LOGGER.debug('Skipping neighbor %s', n_index)
-                    except IndexError:
-                        pass
-                        #LOGGER.warn('index %s does not exist', n_index)
-                    except AlreadyVisited:
-                        pass
-                        #LOGGER.info('Already visited index %s, not distributing.',
-                        #    n_index)
 
-    #return (output, travel_distance, nearest_channel)
-    return (output, travel_distance)
+    LOGGER.debug('Finished visiting channel pixels')
+    return output
