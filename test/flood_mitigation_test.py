@@ -219,7 +219,7 @@ class FloodMitigationTest(unittest.TestCase):
     def test_flood_inundation_depth_uri(self):
         """A test for comparing the original to the cythonized FID function."""
 
-        flood_height_uri = 'aaa'
+        flood_height_uri = os.path.join(REGRESSION_DATA, 'flood_height_2.tif')
         dem_uri = self.dem_small
         cn_uri = self.curve_numbers
 
