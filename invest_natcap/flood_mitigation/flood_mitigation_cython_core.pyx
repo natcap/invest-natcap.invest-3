@@ -1,5 +1,7 @@
 import tempfile
 import logging
+import math
+import collections
 
 import gdal
 import numpy
@@ -22,6 +24,10 @@ INFLOW_NEIGHBORS = {
 
 class SkipNeighbor(Exception):
     """An exception to indicate that we wish to skip this neighbor pixel"""
+    pass
+
+class AlreadyVisited(Exception):
+    """An exception to indicate that we've already visited this pixel."""
     pass
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
