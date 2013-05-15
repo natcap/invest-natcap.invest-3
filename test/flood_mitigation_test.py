@@ -228,6 +228,14 @@ class FloodMitigationTest(unittest.TestCase):
         python_output_uri = os.path.join(self.workspace, 'fid_python.tif')
         cython_output_uri = os.path.join(self.workspace, 'fid_cython.tif')
 
+        # resize the cn to the dem
+        cn_resized_uri = os.path.join(self.workspace, 'cn_resized.tif')
+        datatype = gdal.GDT_Float32
+        nodata = raster_utils.get_nodata_from_uri(cn_uri)
+        cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+        raster_utils.vectorize_datasets([cn_uri, dem_uri], lambda x,y: x,
+            cn_resized_uri, datatype, nodata, cell_size, 'intersection')
+
         # Make the channels and the flow direction from the DEM.
         routing_utils.calculate_stream(dem_uri, self.args['flow_threshold'],
             channels_uri)
@@ -235,13 +243,13 @@ class FloodMitigationTest(unittest.TestCase):
 
         py_start_time = time.time()
         flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
-            cn_uri, channels_uri, outflow_direction, python_output_uri)
+            cn_resized_uri, channels_uri, outflow_direction, python_output_uri)
         py_duration = time.time() - py_start_time
         print 'Python runtime: %s' % py_duration
 
         cy_start_time = time.time()
         flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
-            cn_uri, channels_uri, outflow_direction, cython_output_uri, True)
+            cn_resized_uri, channels_uri, outflow_direction, cython_output_uri, True)
         cy_duration = time.time() - cy_start_time
         print 'Cython runtime: %s' % cy_duration
         print 'Speedup: %s' % py_duration / cy_duration
