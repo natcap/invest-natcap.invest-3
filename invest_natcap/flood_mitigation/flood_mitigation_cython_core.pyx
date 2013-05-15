@@ -76,14 +76,11 @@ def flood_discharge(runoff_tuple, outflow_direction_tuple,
     cdef int *first_inflow_neighbor = [3, 4, 5, 6, 7, 0, 1, 2]
     cdef int *second_inflow_neighbor = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef float first_neighbor_weight
-    cdef int neighbor_id
-    cdef float neighbor_prev_discharge
-    cdef int neighbor_value
+    cdef float first_neighbor_weight, neighbor_prev_discharge, runoff
+    cdef int neighbor_value, neighbor_id
     cdef double fractional_flow, neighbor_runoff
     cdef double discharge_sum, discharge
 
-    cdef float runoff
     cdef int n_rows = runoff_matrix.shape[0]
     cdef int n_cols = runoff_matrix.shape[1]
     cdef int row_index, col_index, n_index_row, n_index_col, row_offset, col_offset
