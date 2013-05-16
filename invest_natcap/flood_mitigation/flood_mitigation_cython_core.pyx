@@ -258,7 +258,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             return False
         return True
 
-    def _fid(i_row, i_col, channel_floodwater, channel_elevation):
+    def _fid(in_i_row, in_i_col, in_channel_floodwater, in_channel_elevation):
         """Calculate the on-pixel flood inundation depth, as represented by
             equation 20 in the flood mitigation user's guide.
 
@@ -272,8 +272,15 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             floodwaters must be in the same units.
 
             Returns a float."""
-        pixel_elevation = dem_matrix[i_row, i_col]
-        curve_num = cn_matrix[i_row, i_col]
+
+        cdef int i_row = in_i_row
+        cdef int i_col = in_i_col
+        cdef double channel_floodwater = in_channel_floodwater
+        cdef double channel_elevation = in_channel_elevation
+
+        cdef double pixel_elevation = dem_matrix[i_row, i_col]
+        cdef double curve_num = cn_matrix[i_row, i_col]
+        cdef double flooding
 
         # If there is a channel cell that has no flood inundation on it, we
         # should reasonably assume that there will not be any flood waters
