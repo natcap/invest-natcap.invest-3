@@ -242,13 +242,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             'rasters must all be the '
             'same size.  %s, %s found.' % matrix.shape, (num_rows, num_cols))
 
-
-    # to track our nearest channel cell, create a matrix that has two values for
-    # each of the elements in the 2-d matrix.  These two extra values represent
-    # the index of the closes channel cell.
-#    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,),
-#        dtype=numpy.int)
-
     # We know the diagonal distance thanks to trigonometry.  We're assuming that
     # we measure from the center of this pixel to the center of the neighboring
     # pixel.
@@ -347,9 +340,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                 pixels_to_visit = collections.deque([(channel_row, channel_col)])
 
                 visited[channel_row, channel_col] = 1
-    #            nearest_channel[channel_index][0] = channel_index[0]
-    #            nearest_channel[channel_index][1] = channel_index[1]
-
                 while True:
                     try:
                         pixel_index = pixels_to_visit.pop()
@@ -408,12 +398,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                             n_col])):
                                         visited[n_row, n_col] = 1
                                         travel_distance[n_row, n_col] = dist_to_n
-    #                                    nearest_channel[n_row, n_col][0] = channel_index[0]
-    #                                    nearest_channel[n_row, n_col][1] = channel_index[1]
                                         output[n_row, n_col] = fid
                                         pixels_to_visit.append((n_row, n_col))
 
-                        except (SkipNeighbor, IndexError, AlreadyVisited):
+                        except (SkipNeighbor, IndexError):
                             pass
 
     LOGGER.debug('Finished visiting channel pixels')
