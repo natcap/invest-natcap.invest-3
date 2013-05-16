@@ -168,18 +168,36 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     """Actually perform the matrix calculations for the flood inundation depth
         function.  This is equation 20 from the flood mitigation user's guide.
 
-        flood_height - a numpy matrix of flood water heights.
-        dem - a numpy matrix of elevations.
-        channels - a numpy matrix of channels.
-        curve_nums - a numpy matrix of curve numbers.
-        outflow_direction - a numpy matrix indicating which pixels flow into one
-            another.  See routing_utils for details on this matrix.
-        pixel_size -a numpy indicating the mean of the height and width of a
+        flood_height - A tuple: flood_height[0] must be a 2d numpy matrix of flood
+            water heights, and have a datatype of numpy.float32.
+            flood_height[1] is the numeric value representing nodata for the
+            matrix at flood_height[0].
+        dem - A tuple: dem[0] is a 2d numpy matrix of elevations that has a
+            datatype of numpy.float32.  dem[0] is the numeric value representing
+            nodata for the dem matrix.
+        channels - A tuple: channels[0] is a 2d numpy matrix where a value of 1
+            means that the pixel is a channel pixel and a value of 0 means that
+            the pixel is not a channel pixel.  This must have a datatype of
+            numpy.byte.  channels[1] is the nodata value for the channels
+            matrix.
+        curve_nums - A tuple: curve_nums[0] is a 2d numpy matrix of curve
+            numbers on the landscape (see the documentation for guidance on
+            creating this matrix).  This matrix must have the datatype
+            numpy.float32.  curve_nums[1] is the nodata value for the curve_nums
+            matrix.
+        outflow_direction - A tuple: outflow_direction[0] is a 2d numpy matrix
+            indicating which pixels flow into one another.  See routing_utils
+            for details on this matrix.  This matrix must have a datatype of
+            numpy.byte.  outflow_direction[1] is the nodata value for the
+            outflow direction matrix.
+        pixel_size -a number indicating the mean of the height and width of a
             pixel.
 
-        All matrices MUST have the same sizes.
+        All matrices MUST have identical sizes.
 
-        Returns a numpy matrix of the calculated flood inundation height."""
+        Returns a numpy matrix of the calculated flood inundation height.  This
+        matrix has the same size and shape as the input matrices and has a
+        datatype of numpy.float32.  The nodata value is -1."""
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] flood_height_matrix = flood_height[0]
     cdef int flood_height_nodata = flood_height[1]
@@ -196,11 +214,14 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_matrix = outflow_direction[0]
     cdef int outflow_direction_nodata = outflow_direction[1]
 
+    # Output matrix is based on the size and shape of the flood height matrix.
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] output = numpy.copy(flood_height_matrix)
 
     cdef int num_rows = flood_height_matrix.shape[0]
     cdef int num_cols = flood_height_matrix.shape[1]
 
+    # visited and travel_distance are used in the dynamic programming solution
+    # to this function down below.
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] visited = numpy.zeros([num_rows,
         num_cols], dtype=numpy.byte)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] travel_distance = numpy.zeros(
@@ -234,6 +255,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef double pixel_size = in_pixel_size
     cdef double diagonal_distance = pixel_size * math.sqrt(2)
 
+    # If I uncomment this decorator, the compiler for cython complains about an
+    # unused numpy-related import.  Leaving it commented out causes a slight
+    # slowdown (since this function is not pure c), but it means that the
+    # program works just fine.
 #    @cython.cfunc
     @cython.returns(cython.bint)
     @cython.locals(neighbor_id=cython.int, neighbor_value=cython.int)
@@ -250,6 +275,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             return False
         return True
 
+    # See the comment above for this cfunc decorator.
 #    @cython.cfunc
     @cython.returns(cython.double)
     @cython.locals(channel_floodwater=cython.double,
@@ -299,6 +325,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef int n_row, n_col, n_id, n_dir
     cdef double pixel_elevation, curve_num
 
+    # Implementing these as c arrays eliminates expensive python loops.
     cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
     cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
 
@@ -307,9 +334,16 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         for channel_col in xrange(num_cols):
             channel = channels_matrix[channel_row, channel_col]
 
+            # We only care about when this channel pixel is actually a channel.
+            # If it's 0 or nodata, we don't care.
             if channel == 1:
                 channel_floodwater = flood_height_matrix[channel_row, channel_col]
                 channel_elevation = dem_matrix[channel_row, channel_col]
+
+                # I use python's deque here because:
+                #   1.  It's easier to understand what it's doing and
+                #   2.  Implementing the same functionality with a C queue
+                #       provides no significant speedup.
                 pixels_to_visit = collections.deque([(channel_row, channel_col)])
 
                 visited[channel_row, channel_col] = 1
@@ -322,22 +356,35 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                         pixel_row_index = pixel_index[0]
                         pixel_col_index = pixel_index[1]
                     except IndexError:
-                        # No more indexes to process.
+                        # No more indexes to process in the pixel queue, so we
+                        # can move on to the next channel cell.
                         break
 
+                    # Looping over the range of available neighbors is faster
+                    # than a python list, and we already know the index offsets
+                    # (declared above).
                     for n_id in xrange(8):
                         n_row = pixel_row_index + neighbor_row_offset[n_id]
                         n_col = pixel_col_index + neighbor_col_offset[n_id]
 
+                        # The distance to the pixel is determined by its
+                        # position.  If its neighbor id is even, it's
+                        # immediately above, below or next to us.  Otherwise, we
+                        # need the distance along the diagonal.
                         if n_id % 2 == 0:
                             n_distance = pixel_size
                         else:
                             n_distance = diagonal_distance
 
                         try:
+                            # If either neighbor index is negative, numpy will
+                            # happily index into the other side of the matrix.
+                            # We therefore need to skip the neighbor entirely.
                             if n_row < 0 or n_col < 0:
                                 raise IndexError
 
+                            # If the neighbor is a channel cell or has no
+                            # channel data, we also want to skip it.
                             if channels_matrix[n_row, n_col] in [1, channels_nodata]:
                                 raise SkipNeighbor
 
@@ -349,6 +396,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     channel_elevation, pixel_elevation,
                                     curve_num)
 
+                                # we only care about distributing water when the
+                                # flood inundation depth > 0.  If there's no
+                                # water to distribute, we don't care about this
+                                # neighbor.
                                 if fid > 0:
                                     dist_to_n = travel_distance[n_row, n_col] + n_distance
                                     if (visited[n_row, n_col] == 0 or
