@@ -6,6 +6,7 @@ import collections
 import gdal
 import numpy
 cimport numpy
+import cython
 
 from invest_natcap import raster_utils
 
@@ -252,7 +253,11 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             return False
         return True
 
-    def _fid(in_i_row, in_i_col, in_channel_floodwater, in_channel_elevation):
+#    @cython.cfunc
+    @cython.returns(cython.double)
+    @cython.locals(i_row=cython.int, i_col=cython.int,
+        channel_floodwater=cython.double, channel_elevation=cython.double)
+    def _fid(i_row, i_col, channel_floodwater, channel_elevation):
         """Calculate the on-pixel flood inundation depth, as represented by
             equation 20 in the flood mitigation user's guide.
 
@@ -266,11 +271,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             floodwaters must be in the same units.
 
             Returns a float."""
-
-        cdef int i_row = in_i_row
-        cdef int i_col = in_i_col
-        cdef double channel_floodwater = in_channel_floodwater
-        cdef double channel_elevation = in_channel_elevation
 
         cdef double pixel_elevation = dem_matrix[i_row, i_col]
         cdef double curve_num = cn_matrix[i_row, i_col]
