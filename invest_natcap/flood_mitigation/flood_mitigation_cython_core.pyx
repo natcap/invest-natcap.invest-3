@@ -367,15 +367,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                         n_row = pixel_row_index + neighbor_row_offset[n_id]
                         n_col = pixel_col_index + neighbor_col_offset[n_id]
 
-                        # The distance to the pixel is determined by its
-                        # position.  If its neighbor id is even, it's
-                        # immediately above, below or next to us.  Otherwise, we
-                        # need the distance along the diagonal.
-                        if n_id % 2 == 0:
-                            n_distance = pixel_size
-                        else:
-                            n_distance = diagonal_distance
-
                         try:
                             # If either neighbor index is negative, numpy will
                             # happily index into the other side of the matrix.
@@ -401,6 +392,15 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                 # water to distribute, we don't care about this
                                 # neighbor.
                                 if fid > 0:
+                                    # The distance to the pixel is determined by its
+                                    # position.  If its neighbor id is even, it's
+                                    # immediately above, below or next to us.  Otherwise, we
+                                    # need the distance along the diagonal.
+                                    if n_id % 2 == 0:
+                                        n_distance = pixel_size
+                                    else:
+                                        n_distance = diagonal_distance
+
                                     dist_to_n = travel_distance[n_row, n_col] + n_distance
                                     if (visited[n_row, n_col] == 0 or
                                         (visited[n_row, n_col] == 1 and
