@@ -232,16 +232,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     # pixel.
     cdef double pixel_size = in_pixel_size
     cdef double diagonal_distance = pixel_size * math.sqrt(2)
-    indices = [
-        (0, (0, 1), pixel_size),
-        (1, (-1, 1), diagonal_distance),
-        (2, (-1, 0), pixel_size),
-        (3, (-1, -1), diagonal_distance),
-        (4, (0, -1), pixel_size),
-        (5, (1, -1), diagonal_distance),
-        (6, (1, 0), pixel_size),
-        (7, (1, 1), diagonal_distance)
-    ]
 
     def _flows_from(in_s_row, in_s_col, in_neighbor_id):
         """Indicate whether the source pixel flows into the neighbor identified
