@@ -221,8 +221,11 @@ class FloodMitigationTest(unittest.TestCase):
         """A test for comparing the original to the cythonized FID function."""
 
         flood_height_uri = os.path.join(REGRESSION_DATA, 'flood_height_2.tif')
-        dem_uri = self.dem_small
-        cn_uri = self.curve_numbers
+        flood_height_resized_uri = os.path.join(REGRESSION_DATA,
+            'flood_height_2_resized.tif')
+        dem_uri = self.dem
+        dem_resized_uri = os.path.join(self.workspace, 'dem_resized.tif')
+        cn_uri = self.curve_numbers_30m
 
         channels_uri = os.path.join(self.workspace, 'channels.tif')
         flow_direction = os.path.join(self.workspace, 'flow_dir.tif')
@@ -231,29 +234,40 @@ class FloodMitigationTest(unittest.TestCase):
         python_output_uri = os.path.join(self.workspace, 'fid_python.tif')
         cython_output_uri = os.path.join(self.workspace, 'fid_cython.tif')
 
-        # resize the cn to the dem
+        # resize the cn and flood height to the dem
         cn_resized_uri = os.path.join(self.workspace, 'cn_resized.tif')
         datatype = gdal.GDT_Float32
         nodata = raster_utils.get_nodata_from_uri(cn_uri)
         cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
-        raster_utils.vectorize_datasets([cn_uri, dem_uri], lambda x,y: x,
+        raster_utils.vectorize_datasets([cn_uri, flood_height_uri, dem_uri],
+                lambda x,y,z: x,
             cn_resized_uri, datatype, nodata, cell_size, 'intersection')
 
+        nodata = raster_utils.get_nodata_from_uri(flood_height_uri)
+        raster_utils.vectorize_datasets([flood_height_uri, cn_uri,  dem_uri],
+                lambda x,y,z: x,
+            flood_height_resized_uri, datatype, nodata, cell_size, 'intersection')
+
+        nodata = raster_utils.get_nodata_from_uri(flood_height_uri)
+        raster_utils.vectorize_datasets([cn_uri, flood_height_uri, dem_uri],
+                lambda x,z,y: y,
+            dem_resized_uri, datatype, nodata, cell_size, 'intersection')
+
         # Make the channels and the flow direction from the DEM.
-        routing_utils.calculate_stream(dem_uri, self.args['flow_threshold'],
+        routing_utils.calculate_stream(dem_resized_uri, self.args['flow_threshold'],
             channels_uri)
-        routing_utils.flow_direction_inf(dem_uri, flow_direction)
+        routing_utils.flow_direction_inf(dem_resized_uri, flow_direction)
         routing_cython_core.calculate_flow_graph(flow_direction,
             outflow_weights, outflow_direction)
 
         py_start_time = time.time()
-        flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
+        flood_mitigation.flood_inundation_depth(flood_height_resized_uri, dem_resized_uri,
             cn_resized_uri, channels_uri, outflow_direction, python_output_uri)
         py_duration = time.time() - py_start_time
         print 'Python runtime: %s' % py_duration
 
         cy_start_time = time.time()
-        flood_mitigation.flood_inundation_depth(flood_height_uri, dem_uri,
+        flood_mitigation.flood_inundation_depth(flood_height_resized_uri, dem_resized_uri,
             cn_resized_uri, channels_uri, outflow_direction, cython_output_uri, True)
         cy_duration = time.time() - cy_start_time
         print 'Cython runtime: %s' % cy_duration
