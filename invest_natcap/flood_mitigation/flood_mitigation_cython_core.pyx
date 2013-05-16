@@ -234,13 +234,12 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef double pixel_size = in_pixel_size
     cdef double diagonal_distance = pixel_size * math.sqrt(2)
 
-    def _flows_from(in_s_row, in_s_col, in_neighbor_id):
+#    @cython.cfunc
+    @cython.returns(cython.bint)
+    @cython.locals(s_row=cython.int, s_col=cython.int, neighbor_id=cython.int)
+    def _flows_from(s_row, s_col, neighbor_id):
         """Indicate whether the source pixel flows into the neighbor identified
         by neighbor_id.  This function returns a boolean."""
-
-        cdef int s_row = in_s_row
-        cdef int s_col = in_s_col
-        cdef int neighbor_id = in_neighbor_id
 
         cdef int neighbor_value = outflow_direction_matrix[s_row, s_col]
 
