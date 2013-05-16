@@ -307,8 +307,11 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
             return 0.0
         return flooding
 
-    cdef double channel_floodwater, channel_elevation, fid, n_distance
-    cdef int pixel_col_index, pixel_row_index, n_row, n_col, n_id
+    cdef double channel_floodwater, channel_elevation, fid, channel
+    cdef double dist_to_n, n_distance
+    cdef int pixel_col_index, pixel_row_index
+    cdef int n_row, n_col, n_id
+
     cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
     cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
 
