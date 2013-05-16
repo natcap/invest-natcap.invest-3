@@ -285,8 +285,8 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         # If there is a channel cell that has no flood inundation on it, we
         # should reasonably assume that there will not be any flood waters
         # distributed from that cell.
-        # NOTE: This behavior is not explicitly stated in the user's guide.
-        # TODO: Verify with Rich and/or Yonas that this behavior is correct
+        # NOTE: This behavior is not explicitly stated in the user's guide,
+        # but Rich says it makes sense.
         if channel_floodwater == 0:
             return 0.0
 
@@ -301,10 +301,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
         if flooding <= 0:
             return 0.0
-#        if flooding > channel_floodwater:
-#            LOGGER.debug(str('p_elevation=%s, cn=%s, c_floodwater=%s, fid=%s, '
-#                'c_elevation=%s'), pixel_elevation, curve_num,
-#                channel_floodwater, flooding, channel_elevation)
         return flooding
 
     cdef double channel_floodwater, channel_elevation, fid, n_distance
