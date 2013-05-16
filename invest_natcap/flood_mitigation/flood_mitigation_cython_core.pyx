@@ -4,8 +4,8 @@ import math
 import collections
 
 import gdal
-import numpy
 cimport numpy
+import numpy
 import cython
 
 from invest_natcap import raster_utils
@@ -187,13 +187,15 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] channels_matrix = channels[0]
     cdef int channels_nodata = channels[1]
 
-    cn_matrix = curve_nums[0]
+#    cdef numpy.ndarray[numpy.npy_float32, ndim=2] cn_matrix = curve_nums[0]
+    cdef numpy.ndarray cn_matrix = curve_nums[0]
     cdef int cn_nodata = curve_nums[1]
 
-    dem_matrix = dem[0]
+#    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_matrix = dem[0]
+    cdef numpy.ndarray dem_matrix = dem[0]
     cdef int dem_nodata = dem[1]
 
-    outflow_direction_matrix = outflow_direction[0]
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_matrix = outflow_direction[0]
     cdef int outflow_direction_nodata = outflow_direction[1]
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] output = numpy.copy(flood_height_matrix)
@@ -236,12 +238,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
 #    @cython.cfunc
     @cython.returns(cython.bint)
-    @cython.locals(s_row=cython.int, s_col=cython.int, neighbor_id=cython.int)
-    def _flows_from(s_row, s_col, neighbor_id):
+    @cython.locals(neighbor_id=cython.int, neighbor_value=cython.int)
+    def _flows_from(neighbor_id, neighbor_value):
         """Indicate whether the source pixel flows into the neighbor identified
         by neighbor_id.  This function returns a boolean."""
-
-        cdef int neighbor_value = outflow_direction_matrix[s_row, s_col]
 
         # If there is no outflow direction, then there is no flow to the
         # neighbor and we return False.
@@ -299,7 +299,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef double channel_floodwater, channel_elevation, fid, channel
     cdef double dist_to_n, n_distance
     cdef int pixel_col_index, pixel_row_index
-    cdef int n_row, n_col, n_id
+    cdef int n_row, n_col, n_id, n_dir
 
     cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
     cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
@@ -343,7 +343,8 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                             if channels_matrix[n_row, n_col] in [1, channels_nodata]:
                                 raise SkipNeighbor
 
-                            if _flows_from(n_row, n_col, n_id):
+                            n_dir = outflow_direction_matrix[n_row, n_col]
+                            if _flows_from(n_id, n_dir):
                                 fid = _fid(n_row, n_col, channel_floodwater,
                                     channel_elevation)
 
