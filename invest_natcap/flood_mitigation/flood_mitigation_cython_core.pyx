@@ -248,26 +248,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef double pixel_size = in_pixel_size
     cdef double diagonal_distance = pixel_size * math.sqrt(2)
 
-    # If I uncomment this decorator, the compiler for cython complains about an
-    # unused numpy-related import.  Leaving it commented out causes a slight
-    # slowdown (since this function is not pure c), but it means that the
-    # program works just fine.
-#    @cython.cfunc
-    @cython.returns(cython.bint)
-    @cython.locals(neighbor_id=cython.int, neighbor_value=cython.int)
-    def _flows_from(neighbor_id, neighbor_value):
-        """Indicate whether the source pixel flows into the neighbor identified
-        by neighbor_id.  This function returns a boolean."""
-
-        # If there is no outflow direction, then there is no flow to the
-        # neighbor and we return False.
-        if neighbor_value == outflow_direction_nodata:
-            return False
-
-        if neighbor_id in INFLOW_NEIGHBORS[neighbor_value]:
-            return False
-        return True
-
     # See the comment above for this cfunc decorator.
 #    @cython.cfunc
     @cython.returns(cython.double)
@@ -370,7 +350,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                 raise SkipNeighbor
 
                             n_dir = outflow_direction_matrix[n_row, n_col]
-                            if _flows_from(n_id, n_dir):
+                            if _flows_from(n_id, n_dir, outflow_direction_nodata) == 1:
                                 pixel_elevation = dem_matrix[n_row, n_col]
                                 curve_num = cn_matrix[n_row, n_col]
                                 fid = _fid(channel_floodwater,
@@ -406,3 +386,21 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
     LOGGER.debug('Finished visiting channel pixels')
     return output
+
+@cython.cfunc
+@cython.returns(cython.bint)
+@cython.locals(neighbor_id=cython.int, neighbor_value=cython.int,
+    outflow_direction_nodata=cython.int)
+def _flows_from(neighbor_id, neighbor_value, outflow_direction_nodata):
+    """Indicate whether the source pixel flows into the neighbor identified
+    by neighbor_id.  This function returns a boolean."""
+
+    # If there is no outflow direction, then there is no flow to the
+    # neighbor and we return False.
+    if neighbor_value == outflow_direction_nodata:
+        return 0
+
+    if neighbor_id in INFLOW_NEIGHBORS[neighbor_value]:
+        return 0
+    return 1
+
