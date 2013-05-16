@@ -376,7 +376,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
                             # If the neighbor is a channel cell or has no
                             # channel data, we also want to skip it.
-                            if channels_matrix[n_row, n_col] in [1, channels_nodata]:
+                            if channels_matrix[n_row, n_col] != 0:
                                 raise SkipNeighbor
 
                             n_dir = outflow_direction_matrix[n_row, n_col]
