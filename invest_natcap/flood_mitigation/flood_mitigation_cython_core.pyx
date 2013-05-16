@@ -190,7 +190,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] cn_matrix = curve_nums[0]
     cdef int cn_nodata = curve_nums[1]
 
-    cdef numpy.ndarray[numpy.npy_short, ndim=2] dem_matrix = dem[0]
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_matrix = dem[0]
     cdef int dem_nodata = dem[1]
 
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_matrix = outflow_direction[0]
