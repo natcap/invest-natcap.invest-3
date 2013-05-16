@@ -216,14 +216,15 @@ def execute(args):
 
     rasters = [args['landuse'], args['dem'], args['curve_numbers']]
     cell_size = raster_utils.get_cell_size_from_uri(args['dem'])
-    for raster, resized_uri, func in [
-        (args['landuse'], paths['landuse'], lambda x,y,z:x),
-        (args['dem'], paths['dem'], lambda x,y,z:y),
-        (args['curve_numbers'], paths['curve_numbers'], lambda x,y,z:z)]:
+    for raster, resized_uri, func, datatype in [
+        (args['landuse'], paths['landuse'], lambda x,y,z:x, gdal.GDT_Int32),
+        (args['dem'], paths['dem'], lambda x,y,z:y, gdal.GDT_Float32),
+        (args['curve_numbers'], paths['curve_numbers'], lambda x,y,z:z,
+            gdal.GDT_Float32)]:
 
         nodata = raster_utils.get_nodata_from_uri(raster)
         raster_utils.vectorize_datasets(rasters, func, resized_uri,
-            gdal.GDT_Float32, nodata, cell_size, 'intersection')
+            datatype, nodata, cell_size, 'intersection')
 
     #######################
     # Preprocessing
