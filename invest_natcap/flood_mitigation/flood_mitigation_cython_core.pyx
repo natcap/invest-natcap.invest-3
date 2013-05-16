@@ -187,12 +187,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] channels_matrix = channels[0]
     cdef int channels_nodata = channels[1]
 
-#    cdef numpy.ndarray[numpy.npy_float32, ndim=2] cn_matrix = curve_nums[0]
-    cdef numpy.ndarray cn_matrix = curve_nums[0]
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] cn_matrix = curve_nums[0]
     cdef int cn_nodata = curve_nums[1]
 
-#    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_matrix = dem[0]
-    cdef numpy.ndarray dem_matrix = dem[0]
+    cdef numpy.ndarray[numpy.npy_short, ndim=2] dem_matrix = dem[0]
     cdef int dem_nodata = dem[1]
 
     cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_matrix = outflow_direction[0]
@@ -254,9 +252,10 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
 #    @cython.cfunc
     @cython.returns(cython.double)
-    @cython.locals(i_row=cython.int, i_col=cython.int,
-        channel_floodwater=cython.double, channel_elevation=cython.double)
-    def _fid(i_row, i_col, channel_floodwater, channel_elevation):
+    @cython.locals(channel_floodwater=cython.double,
+        channel_elevation=cython.double, pixel_elevation=cython.double,
+        pixel_cn=cython.double)
+    def _fid(channel_floodwater, channel_elevation, pixel_elevation, pixel_cn):
         """Calculate the on-pixel flood inundation depth, as represented by
             equation 20 in the flood mitigation user's guide.
 
@@ -271,8 +270,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
             Returns a float."""
 
-        cdef double pixel_elevation = dem_matrix[i_row, i_col]
-        cdef double curve_num = cn_matrix[i_row, i_col]
         cdef double flooding
 
         # If there is a channel cell that has no flood inundation on it, we
@@ -285,12 +282,12 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
         if (channel_floodwater == flood_height_nodata or
             pixel_elevation == dem_nodata or
-            curve_num == cn_nodata or
+            pixel_cn == cn_nodata or
             channel_elevation == dem_nodata):
             return 0.0
 
         elevation_diff = pixel_elevation - channel_elevation
-        flooding = channel_floodwater - elevation_diff - curve_num
+        flooding = channel_floodwater - elevation_diff - pixel_cn
 
         if flooding <= 0:
             return 0.0
@@ -300,6 +297,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef double dist_to_n, n_distance
     cdef int pixel_col_index, pixel_row_index
     cdef int n_row, n_col, n_id, n_dir
+    cdef double pixel_elevation, curve_num
 
     cdef int *neighbor_row_offset = [0, -1, -1, -1, 0, 1, 1, 1]
     cdef int *neighbor_col_offset = [1, 1, 0, -1, -1, -1, 0, 1]
@@ -345,8 +343,11 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
 
                             n_dir = outflow_direction_matrix[n_row, n_col]
                             if _flows_from(n_id, n_dir):
-                                fid = _fid(n_row, n_col, channel_floodwater,
-                                    channel_elevation)
+                                pixel_elevation = dem_matrix[n_row, n_col]
+                                curve_num = cn_matrix[n_row, n_col]
+                                fid = _fid(channel_floodwater,
+                                    channel_elevation, pixel_elevation,
+                                    curve_num)
 
                                 if fid > 0:
                                     dist_to_n = travel_distance[n_row, n_col] + n_distance
