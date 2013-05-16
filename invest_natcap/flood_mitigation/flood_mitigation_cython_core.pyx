@@ -243,11 +243,15 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
         (7, (1, 1), diagonal_distance)
     ]
 
-    def _flows_from(s_row, s_col, neighbor_id):
+    def _flows_from(in_s_row, in_s_col, in_neighbor_id):
         """Indicate whether the source pixel flows into the neighbor identified
         by neighbor_id.  This function returns a boolean."""
 
-        neighbor_value = outflow_direction_matrix[s_row, s_col]
+        cdef int s_row = in_s_row
+        cdef int s_col = in_s_col
+        cdef int neighbor_id = in_neighbor_id
+
+        cdef int neighbor_value = outflow_direction_matrix[s_row, s_col]
 
         # If there is no outflow direction, then there is no flow to the
         # neighbor and we return False.
