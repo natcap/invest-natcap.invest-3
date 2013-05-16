@@ -221,10 +221,9 @@ def execute(args):
         (args['dem'], paths['dem'], lambda x,y,z:y),
         (args['curve_numbers'], paths['curve_numbers'], lambda x,y,z:z)]:
 
-        datatype = _get_datatype_uri(raster)
         nodata = raster_utils.get_nodata_from_uri(raster)
-        raster_utils.vectorize_datasets(rasters, func, resized_uri, datatype,
-            nodata, cell_size, 'intersection')
+        raster_utils.vectorize_datasets(rasters, func, resized_uri,
+            gdal.GDT_Float32, nodata, cell_size, 'intersection')
 
     #######################
     # Preprocessing
