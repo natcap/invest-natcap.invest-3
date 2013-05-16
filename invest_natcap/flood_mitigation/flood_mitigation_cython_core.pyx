@@ -359,7 +359,7 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
                                     channel_elevation)
 
                                 if fid > 0:
-                                    dist_to_n = travel_distance[pixel_index] + n_distance
+                                    dist_to_n = travel_distance[n_row, n_col] + n_distance
                                     if (visited[n_row, n_col] == 0 or
                                         (visited[n_row, n_col] == 1 and
                                         dist_to_n < travel_distance[n_row,
