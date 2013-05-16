@@ -4,11 +4,9 @@ import logging
 import math
 import os
 import shutil
-import collections
 import time
 
 from osgeo import gdal
-import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
@@ -209,11 +207,6 @@ def execute(args):
     except OSError:
         pass
 
-    def _get_datatype_uri(raster_uri):
-        dataset = gdal.Open(raster_uri)
-        band = dataset.GetRasterBand(1)
-        return band.DataType
-
     rasters = [args['landuse'], args['dem'], args['curve_numbers']]
     cell_size = raster_utils.get_cell_size_from_uri(args['dem'])
     for raster, resized_uri, func, datatype in [
@@ -282,7 +275,7 @@ def execute(args):
         flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
             args['time_interval'], ts_paths['discharge'],
             paths['outflow_weights'], paths['outflow_direction'],
-            paths['prev_discharge'], True)
+            paths['prev_discharge'])
 
         # Set the previous discharge path to the discharge_uri so we can use it
         # later on.
@@ -295,7 +288,7 @@ def execute(args):
 
         flood_inundation_depth(ts_paths['flood_height'], paths['dem'],
             cn_season_adjusted_uri, paths['channels'],
-            paths['outflow_direction'], ts_paths['inundation'], True)
+            paths['outflow_direction'], ts_paths['inundation'])
 
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
@@ -605,6 +598,13 @@ def _extract_matrix_and_nodata(uri):
     return(matrix, nodata)
 
 def _write_matrix(raster_uri, matrix):
+    """Write a matrix to a raster that already exists on disk.
+
+        raster_uri - a URI to a gdal dataset on disk.
+        matrix - a NumPy matrix to be written to the raster at raster_uri
+
+        Returns nothing."""
+
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     band.WriteArray(matrix)
@@ -615,8 +615,7 @@ def _write_matrix(raster_uri, matrix):
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri,
-    cython=False):
+    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -665,16 +664,6 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     runoff_tuple = _extract_matrix_and_nodata(runoff_uri)
     outflow_weights = _extract_matrix(outflow_weights_uri)
     outflow_direction_tuple = _extract_matrix_and_nodata(outflow_direction_uri)
-
-    # A mapping of which indices might flow into this pixel. If the neighbor
-    # pixel's value is 
-    outflow_direction_nodata = raster_utils.get_nodata_from_uri(
-        outflow_direction_uri)
-
-    class NeighborHasNoData(Exception):
-        """An exception for skipping a neighbor when that neighbor's
-        value is nodata."""
-        pass
 
     discharge_matrix = flood_mitigation_cython_core.flood_discharge(runoff_tuple,
         outflow_direction_tuple, outflow_weights, prev_discharge,
