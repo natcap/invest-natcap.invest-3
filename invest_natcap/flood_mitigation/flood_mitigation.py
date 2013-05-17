@@ -26,16 +26,6 @@ class InvalidSeason(Exception):
     pass
 
 
-class AlreadyVisited(Exception):
-    """An exception to indicate that we've already visited this pixel."""
-    pass
-
-
-class SkipNeighbor(Exception):
-    """An exception to indicate that we wish to skip this neighbor pixel"""
-    pass
-
-
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
     landscape in a flood situation.
