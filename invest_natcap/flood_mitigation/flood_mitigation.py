@@ -33,13 +33,16 @@ INFLOW_NEIGHBORS = {
     7: [2, 3],
 }
 
+
 class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
     pass
 
+
 class AlreadyVisited(Exception):
     """An exception to indicate that we've already visited this pixel."""
     pass
+
 
 class SkipNeighbor(Exception):
     """An exception to indicate that we wish to skip this neighbor pixel"""
@@ -52,16 +55,16 @@ def execute(args):
 
     args - a python dictionary.  All entries noted below are required unless
         explicity stated as optional.
-        'workspace' - a string URI to the user's workspace on disk.  Any temporary
-            files needed for processing will also be saved to this folder before
-            they are deleted.  If this folder exists on disk, any outputs will
-            be overwritten in the execution of this model.
+        'workspace' - a string URI to the user's workspace on disk.  Any
+            temporary files needed for processing will also be saved to this
+            folder before they are deleted.  If this folder exists on disk, any
+            outputs will be overwritten in the execution of this model.
         'dem' - a string URI to the user's Digital Elevation Model on disk.
             Must be a raster dataset that GDAL can open.
         'landuse' - a string URI to the user's Land Use/Land Cover raster on
             disk.  Must be a raster dataset that GDAL can open.
-        'num_intervals' - A python int representing the number of timesteps this
-            model should process.
+        'num_intervals' - A python int representing the number of timesteps
+            this model should process.
         'time_interval' - a python float representing the duration of the
             desired timestep, in hours.
         'precipitation' a string URI to a table of precipitation data.  Table
@@ -70,10 +73,10 @@ def execute(args):
                     'STATION' - (string) label for the water gauge station
                     'LAT' - (float) the latitude of the station
                     'LONG' - (float) the longitude of the station
-                    [1 ... n] - (int) the rainfall values for the specified time
-                        interval.  Note that there should be one column for each
-                        time interval.  The label of the column must be an int
-                        index for the interval (so 1, 2, 3, etc.).
+                    [1 ... n] - (int) the rainfall values for the specified
+                        time interval.  Note that there should be one column
+                        for each time interval.  The label of the column must
+                        be an int index for the interval (so 1, 2, 3, etc.).
             This table must be a CSV.
         'curve_numbers' - a string URI pointing to a raster of the user's curve
             numbers.  See the user's guide for documentation on constructing
@@ -128,8 +131,8 @@ def execute(args):
             A raster of the floodwater discharge on the landscape in this time
             interval.
         <workspace>/output/<time_step>/flood_height_<suffix>.tif
-            A raster of the height of flood waters on the landscape at this time
-            interval.
+            A raster of the height of flood waters on the landscape at this
+            time interval.
 
     This function returns None."""
 
@@ -142,7 +145,7 @@ def execute(args):
 
     def _add_suffix(file_name):
         """Add a suffix to the input file name and return the result."""
-        if suffix != None:
+        if suffix is not None:
             file_base, extension = os.path.splitext(file_name)
             return "%s_%s%s" % (file_base, suffix, extension)
         return file_name
@@ -154,14 +157,15 @@ def execute(args):
 
     def _output_uri(file_name=''):
         """Make an ouput URI."""
-        return os.path.join(args['workspace'], 'output', _add_suffix(file_name))
+        return os.path.join(args['workspace'], 'output',
+            _add_suffix(file_name))
 
     paths = {
         'precip_latlong': raster_utils.temporary_folder(),
-        'precip_points' : _intermediate_uri('precip_points'),
-        'mannings' : _intermediate_uri('mannings.tif'),
-        'slope' : _intermediate_uri('slope.tif'),
-        'flow_direction' : _intermediate_uri('flow_direction.tif'),
+        'precip_points': _intermediate_uri('precip_points'),
+        'mannings': _intermediate_uri('mannings.tif'),
+        'slope': _intermediate_uri('slope.tif'),
+        'flow_direction': _intermediate_uri('flow_direction.tif'),
         'flow_length': _intermediate_uri('flow_length.tif'),
         'cn_slope': _intermediate_uri('cn_slope.tif'),
         'swrc': _intermediate_uri('swrc.tif'),
@@ -200,8 +204,8 @@ def execute(args):
     raster_utils.create_directories([args['workspace'], _intermediate_uri(),
         _output_uri()])
 
-    # Remove any shapefile folders that exist, since we don't want any conflicts
-    # when creating new shapefiles.
+    # Remove any shapefile folders that exist, since we don't want any
+    # conflicts when creating new shapefiles.
     try:
         shutil.rmtree(paths['precip_points'])
     except OSError:
@@ -210,9 +214,9 @@ def execute(args):
     rasters = [args['landuse'], args['dem'], args['curve_numbers']]
     cell_size = raster_utils.get_cell_size_from_uri(args['dem'])
     for raster, resized_uri, func, datatype in [
-        (args['landuse'], paths['landuse'], lambda x,y,z:x, gdal.GDT_Int32),
-        (args['dem'], paths['dem'], lambda x,y,z:y, gdal.GDT_Float32),
-        (args['curve_numbers'], paths['curve_numbers'], lambda x,y,z:z,
+        (args['landuse'], paths['landuse'], lambda x, y, z: x, gdal.GDT_Int32),
+        (args['dem'], paths['dem'], lambda x, y, z: y, gdal.GDT_Float32),
+        (args['curve_numbers'], paths['curve_numbers'], lambda x, y, z: z,
             gdal.GDT_Float32)]:
 
         nodata = raster_utils.get_nodata_from_uri(raster)
@@ -237,9 +241,10 @@ def execute(args):
 
     #######################
     # Adjusting curve numbers
-    adjust_cn_for_slope(paths['curve_numbers'], paths['slope'], paths['cn_slope'])
+    adjust_cn_for_slope(paths['curve_numbers'], paths['slope']
+        paths['cn_slope'])
 
-    if args['cn_adjust'] == True:
+    if args['cn_adjust'] is True:
         season = args['cn_season']
         cn_season_adjusted_uri = _intermediate_uri('cn_season_%s.tif' % season)
         adjust_cn_for_season(paths['cn_slope'], season, cn_season_adjusted_uri)
@@ -267,7 +272,8 @@ def execute(args):
         if timestep == 1:
             # We need a previous flood water discharge raster to be created
             # before we actually start iterating through the timesteps.
-            discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
+            discharge_nodata = raster_utils.get_nodata_from_uri(
+                paths['flow_direction'])
             raster_utils.new_raster_from_base_uri(ts_paths['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata,
                 gdal.GDT_Float32, fill_value=0.0)
@@ -290,16 +296,17 @@ def execute(args):
             cn_season_adjusted_uri, paths['channels'],
             paths['outflow_direction'], ts_paths['inundation'])
 
+
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
         mannings numbers table passed in as input.
 
         landcover_uri - a URI to a GDAL dataset with land use/land cover codes
             as pixel values.
-        mannings_table_uri - a URI to a CSV table on disk.  This table must have
-            at least the following columns:
-                "LULC" - an integer landcover code matching a code in the inputs
-                    land use/land cover raster.
+        mannings_table_uri - a URI to a CSV table on disk.  This table
+            must have at least the following columns:
+                "LULC" - an integer landcover code matching a code in the
+                    inputs land use/land cover raster.
                 "ROUGHNESS" - a floating-point number indicating the roughness
                     of the pixel.  See the user's guide for help on creating
                     this number for your landcover classes.
@@ -316,6 +323,7 @@ def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
 
     raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
         mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
+
 
 def _get_cell_size_from_datasets(uri_list):
     """Get the minimum cell size of all the input datasets.
@@ -365,7 +373,7 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         if precip <= 0.2 * swrc:
             return 0.0
 
-        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+        return ((precip - (0.2 * swrc)) ** 2) / (precip + (0.8 * swrc))
 
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
         calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
@@ -408,6 +416,7 @@ def soil_water_retention_capacity(cn_uri, swrc_uri):
     raster_utils.vectorize_datasets([cn_uri], calculate_swrc, swrc_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
 
+
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
         corresponds with equation 3 in the user's guide.
@@ -419,6 +428,7 @@ def _dry_season_adjustment(curve_num):
 
     return ((4.2 * curve_num) / (10.0 - (0.058 * curve_num)))
 
+
 def _wet_season_adjustment(curve_num):
     """Perform wet season adjustment on the pixel level.  This corresponds with
         equation 4 in the user's guide.
@@ -429,6 +439,7 @@ def _wet_season_adjustment(curve_num):
         Returns a float."""
 
     return ((23 * curve_num) / (10.0 + (0.13 * curve_num)))
+
 
 def adjust_cn_for_season(cn_uri, season, adjusted_uri):
     """Adjust the user's Curve Numbers raster for the specified season's soil
@@ -443,21 +454,21 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
     Wet (AMC-3) |    > 28mm      |    > 53mm      |
 
 
-    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must be a
-        raster that GDAL can open.
+    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must
+        be a raster that GDAL can open.
     season - a string, either 'dry' or 'wet'.  An exception will be raised if
         any other value is submitted.
-    adjusted_uri - a string URI to which the adjusted Curve Numbers to be saved.
-        If the file at this URI exists, it will be overwritten with a GDAL
-        dataset.
+    adjusted_uri - a string URI to which the adjusted Curve Numbers to be
+        saved.  If the file at this URI exists, it will be overwritten with a
+        GDAL dataset.
 
     This function saves a GDAL dataset to the URI noted by the `adjusted_uri`
     parameter.
 
     Returns None."""
 
-    # Get the nodata value so we can account for that in our tweaked seasonality
-    # functions here.
+    # Get the nodata value so we can account for that in our tweaked
+    # seasonality functions here.
     cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
 
     def adjust_for_dry_season(curve_num):
@@ -466,7 +477,6 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
         if curve_num == cn_nodata:
             return cn_nodata
         return _dry_season_adjustment(curve_num)
-
 
     def adjust_for_wet_season(curve_num):
         """Custom function to account for nodata values when adjusting curve
@@ -491,6 +501,7 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
 
     raster_utils.vectorize_datasets([cn_uri], season_function, adjusted_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
+
 
 def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
     """Adjust the input curve numbers raster for slope.  This corresponds with
@@ -535,6 +546,7 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
         adjusted_uri, gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection')
 
+
 def convert_precip_to_points(precip_uri, points_uri):
     """Convert the CSV at `precip_uri` to a points shapefile.
 
@@ -550,7 +562,6 @@ def convert_precip_to_points(precip_uri, points_uri):
 
     Returns nothing."""
 
-
     # Extract the data from the precip CSV using the TableHandler class.
     table_object = fileio.TableHandler(precip_uri)
     table_dictionary = dict((i, d) for (i, d) in
@@ -559,6 +570,7 @@ def convert_precip_to_points(precip_uri, points_uri):
     raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
 
+
 def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
     output_uri):
     """Create a precipitation raster from a points shapefile for the specified
@@ -566,8 +578,8 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
 
         precip_points_uri - a URI to an OGR Datasource on disk.
         sample_raster_uri - a URI to a GDAL dataset on disk.
-        timestep - an int timestep.  Must be a field in the datasource passed in
-            as `precip_points_uri`.
+        timestep - an int timestep.  Must be a field in the datasource passed
+            in as `precip_points_uri`.
         output_uri - a URI to where the output raster will be saved.
 
         This function saves a GDAL raster dataset to `output_uri`.  This output
@@ -584,11 +596,13 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
     LOGGER.info('Finished making the precipitation raster')
 
+
 def _extract_matrix(raster_uri):
     """Extract the Numpy matrix from a GDAL dataset.  The returned matrix is a
     memory-mapped matrix."""
     memory_file = raster_utils.temporary_filename()
     return raster_utils.load_memory_mapped_array(raster_uri, memory_file)
+
 
 def _extract_matrix_and_nodata(uri):
     """Return a tuple of the numpy matrix and the nodata value for the input
@@ -596,6 +610,7 @@ def _extract_matrix_and_nodata(uri):
     matrix = _extract_matrix(uri)
     nodata = raster_utils.get_nodata_from_uri(uri)
     return(matrix, nodata)
+
 
 def _write_matrix(raster_uri, matrix):
     """Write a matrix to a raster that already exists on disk.
@@ -614,8 +629,10 @@ def _write_matrix(raster_uri, matrix):
     dataset = None
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
+
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri
+    prev_discharge_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -665,14 +682,16 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     outflow_weights = _extract_matrix(outflow_weights_uri)
     outflow_direction_tuple = _extract_matrix_and_nodata(outflow_direction_uri)
 
-    discharge_matrix = flood_mitigation_cython_core.flood_discharge(runoff_tuple,
-        outflow_direction_tuple, outflow_weights, prev_discharge,
+    discharge_matrix = flood_mitigation_cython_core.flood_discharge(
+        runoff_tuple, outflow_direction_tuple, outflow_weights, prev_discharge,
         discharge_nodata, pixel_area, time_interval)
 
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
-    LOGGER.debug('Elapsed time for flood water discharge:%s', time.time() - start_time)
+    LOGGER.debug('Elapsed time for flood water discharge:%s',
+        time.time() - start_time)
+
 
 def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     """Calculate the flood_height according to equation 19 in the user's guide.
@@ -714,14 +733,15 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
 
+
 def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     channels_uri, outflow_direction_uri, output_uri):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
         mitigation user's guide.
 
-        flood_height_uri - a URI to a GDAL datset representing flood height over
-            the landscape.
+        flood_height_uri - a URI to a GDAL datset representing flood height
+            over the landscape.
         dem_uri - a URI to a GDAL raster of the digital elevation model.
         cn_uri - a URI to a GDAL raster of the user's curve numbers.
         channels_uri - a URI to a GDAL dataset of the channel network.
@@ -742,12 +762,12 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
     LOGGER.info('Distributing flood waters')
-    fid_matrix = flood_mitigation_cython_core.calculate_fid(flood_height_tuple, dem_tuple,
-        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)
+    fid_matrix = flood_mitigation_cython_core.calculate_fid(flood_height_tuple,
+        dem_tuple, channel_tuple, cn_tuple, outflow_direction_tuple,
+        pixel_size)
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
     _write_matrix(output_uri, fid_matrix)
     LOGGER.debug('Finished calculating flood inundation depth')
-

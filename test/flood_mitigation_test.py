@@ -177,7 +177,7 @@ class FloodMitigationTest(unittest.TestCase):
                 'fw_discharge_cython.tif')
         flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
             self.args['time_interval'], cython_discharge_uri,
-            outflow_weights_uri, outflow_direction_uri, prev_discharge, True)
+            outflow_weights_uri, outflow_direction_uri, prev_discharge)
         elapsed_time = time.time() - orig_time
         print('cythonized runtime = %s' % elapsed_time)
 
@@ -268,7 +268,7 @@ class FloodMitigationTest(unittest.TestCase):
 
         cy_start_time = time.time()
         flood_mitigation.flood_inundation_depth(flood_height_resized_uri, dem_resized_uri,
-            cn_resized_uri, channels_uri, outflow_direction, cython_output_uri, True)
+            cn_resized_uri, channels_uri, outflow_direction, cython_output_uri)
         cy_duration = time.time() - cy_start_time
         print 'Cython runtime: %s' % cy_duration
         print 'Speedup: %s' % (py_duration / cy_duration)

@@ -248,8 +248,6 @@ def calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
     cdef double pixel_size = in_pixel_size
     cdef double diagonal_distance = pixel_size * math.sqrt(2)
 
-    # See the comment above for this cfunc decorator.
-#    @cython.cfunc
     @cython.returns(cython.double)
     @cython.locals(channel_floodwater=cython.double,
         channel_elevation=cython.double, pixel_elevation=cython.double,
