@@ -241,7 +241,7 @@ def execute(args):
 
     #######################
     # Adjusting curve numbers
-    adjust_cn_for_slope(paths['curve_numbers'], paths['slope']
+    adjust_cn_for_slope(paths['curve_numbers'], paths['slope'],
         paths['cn_slope'])
 
     if args['cn_adjust'] is True:
@@ -631,7 +631,7 @@ def _write_matrix(raster_uri, matrix):
 
 
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri
+    output_uri, outflow_weights_uri, outflow_direction_uri,
     prev_discharge_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
