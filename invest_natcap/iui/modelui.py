@@ -160,8 +160,9 @@ def main(uri, use_gui=True):
         if not os.path.exists(uri):
             raise Exception('Can\'t find the file %s.'%uri)
 
-    ui = ModelUI(uri, use_gui)
+    window = base_widgets.MainWindow(ModelUI, uri)
     if use_gui == True:
+        window.show()
         result = app.exec_()
     else:
         orig_args = json.loads(open(json_args).read())
