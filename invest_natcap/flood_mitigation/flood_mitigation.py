@@ -20,19 +20,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
 
 LOGGER = logging.getLogger('flood_mitigation')
 
-# This dictionary represents the outflow_matrix values that flow into the
-# current pixel.  It's used in several of the flood_mitigation functions.
-INFLOW_NEIGHBORS = {
-    0: [3, 4],
-    1: [4, 5],
-    2: [5, 6],
-    3: [6, 7],
-    4: [7, 0],
-    5: [0, 1],
-    6: [1, 2],
-    7: [2, 3],
-}
-
 
 class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
