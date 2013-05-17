@@ -463,3 +463,17 @@ def find_handler(uri):
 
     return handler
 
+
+def save_model_run(arguments, module, out_file):
+    """Save an arguments list and module to a new python file that can be
+    executed on its own.
+
+        arguments - a python dictionary of arguments.
+        module - the python module path in python package notation (e.g.
+            invest_natcap.pollination.pollination)
+        out_file - the file to which the output file should be written.  If the
+            file exists, it will be overwritten.
+
+    This function returns nothing."""
+
+    pass
