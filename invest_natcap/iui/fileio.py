@@ -5,6 +5,8 @@ import csv
 import os
 import re
 import sys
+import codecs
+import datetime
 
 import invest_natcap
 from dbfpy import dbf
@@ -476,4 +478,55 @@ def save_model_run(arguments, module, out_file):
 
     This function returns nothing."""
 
-    pass
+    # Open the file
+    model_script = codecs.open(out_file, 'w', encoding='utf-8')
+
+    def _write(line):
+        model_script.write(line + '\n')
+
+    def _empty_lines(num_lines):
+        for line in range(num_lines):
+            _write("")
+
+    def print_args(args, prefix='    ', printHeader=True):
+        if printHeader:
+            _write('args = {')
+
+        for key, value in sorted(args.iteritems(), key=lambda x: x[0]):
+            key = unicode(key)
+            if isinstance(value, dict):
+                _write('%s%s = {' % (prefix, key))
+                printArgs(value, str(prefix + '    '), False)
+                _write('%s}' % prefix)
+            else:
+                _write('%s%s: %s' % (prefix, key, value))
+
+        if printHeader:
+            _write('}')
+            _write('')
+
+    # Print some auto-generated docstring with some version metadata, etc.
+    current_time = datetime.datetime.now()
+    metadata = [
+        '""""',
+        'This is a saved model run from %s.' % module,
+        'Generated: %s' % current_time.strftime('%c'),
+        'InVEST version: %s' % invest_natcap.__version__,
+        '"""'
+    ]
+
+    for line in metadata:
+        _write(line)
+
+    _empty_lines(1)
+
+    # Enforce that we have at least a certain version of InVEST installed?
+
+    # Print the import statement
+    _write('import %s' % module)
+
+    # Print the arguements in sorted order.
+
+
+    # print the line to call the module.
+
