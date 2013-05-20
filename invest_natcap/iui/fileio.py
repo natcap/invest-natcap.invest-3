@@ -497,9 +497,9 @@ def save_model_run(arguments, module, out_file):
 
     def _format_string(string):
         if isinstance(string, str):
-            string = "'%s'" % string
+            string = "'%s'" % string.replace('\n', '\\n')
         elif isinstance(string, unicode):
-            string = "u'%s'" % string
+            string = "u'%s'" % string.replace('\n', '\\n')
         elif isinstance(string, QtCore.QString):
             string = "u'%s'" % string
         return string
