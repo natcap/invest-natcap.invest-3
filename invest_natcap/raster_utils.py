@@ -1395,6 +1395,14 @@ def calculate_value_not_in_array(array):
     except:
         return sorted_array[-1]+1
 
+
+def create_rat_uri(dataset_uri, attr_dict, column_name):
+    """URI wrapper for create_rat"""
+    dataset = gdal.Open(dataset_uri. gdal.GA_UPDATE)
+    create_rat(dataset, attr_dict, column_name)
+    dataset = None
+
+
 def create_rat(dataset, attr_dict, column_name):
     """Create a raster attribute table
 
