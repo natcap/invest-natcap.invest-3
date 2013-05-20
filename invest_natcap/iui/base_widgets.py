@@ -448,7 +448,8 @@ class DynamicPrimitive(DynamicElement):
                 #if value is a boolean can't do length, just ignore
                 pass
 
-            if value != '' and value != None and not isinstance(value, dict):
+            if (value != '' and value != None and not isinstance(value, dict) and
+                not isinstance(value, list)):
                 return self.cast_value()
             return value
 
