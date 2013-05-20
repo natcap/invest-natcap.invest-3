@@ -149,7 +149,7 @@ class ResourceManager(unittest.TestCase):
 class SaveModelRun(unittest.TestCase):
     def test_save_model_run(self):
         arguments = {
-            'a': 1,
+            u'a': 1,
             'b': 2,
             'c': 3,
             0: {'a': 4,
