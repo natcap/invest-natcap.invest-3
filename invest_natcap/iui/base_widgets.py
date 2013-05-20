@@ -2456,13 +2456,15 @@ class ExecRoot(Root):
 
     def save_to_python(self):
         """Save the current state of the UI to a python file."""
+        model = self.attributes['targetScript']
+        model_name = model.split('.')[-1]
+
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            'model_run.py', filter = QtCore.QString('Python file' +
+            '%s.py' % model_name, filter = QtCore.QString('Python file' +
             ' (*.py);;All files (*.* *)'))
         filename = unicode(filename)
         if filename != '':
             arguments = self.assembleOutputDict()
-            model = self.attributes['targetScript']
             invest_natcap.iui.fileio.save_model_run(arguments, model, filename)
 
     def find_element_ptr(self, element_id):
