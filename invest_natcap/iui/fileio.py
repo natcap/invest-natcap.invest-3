@@ -502,7 +502,21 @@ def save_model_run(arguments, module, out_file):
             print_args(value, str(prefix + '    '), False)
             _write('%s%s,' % (prefix, end_char))
 
-        for key, value in sorted(args.iteritems(), key=lambda x: x[0]):
+        if isinstance(args, list):
+            iterator = args
+            sort = lambda x: x
+        elif isinstance(args, dict):
+            iterator = args.iteritems()
+            sort = lambda x: x[0]
+
+        for attrs in sorted(iterator, key=sort):
+            if isinstance(args, dict):
+                key = attrs[0]
+                value = attrs[1]
+            elif isinstance(args, list):
+                key = attrs
+                value = key
+
             if isinstance(key, str):
                 key = "'%s'" % key
             elif isinstance(key, unicode):
@@ -516,7 +530,10 @@ def save_model_run(arguments, module, out_file):
                 if _is_string(value):
                     value = "u'%s'" % unicode(value)
 
-                _write('%s%s: %s,' % (prefix, key, value))
+                if isinstance(args, list):
+                    _write('%s%s,' % (prefix, key))
+                elif isinstance(args, dict):
+                    _write('%s%s: %s,' % (prefix, key, value))
 
         if printHeader:
             _write('}')

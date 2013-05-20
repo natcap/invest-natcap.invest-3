@@ -153,7 +153,8 @@ class SaveModelRun(unittest.TestCase):
             'b': 2,
             'c': 3,
             0: {'a': 4,
-                'b': 5}
+                'b': 5},
+            1: [1, 2, 3, 4]
         }
 
         module = 'invest_natcap.pollination.pollination'
