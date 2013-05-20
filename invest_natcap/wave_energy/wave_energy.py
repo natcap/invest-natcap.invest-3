@@ -260,7 +260,31 @@ def execute(args):
         # area of interest
         clip_shape(projected_wave_shape_path, aoi_shape_path,
                 clipped_wave_shape_path)
+       
+        aoi_proj_uri = os.path.join(
+                intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
+        extract_sr = raster_utils.get_spatial_ref_uri(analysis_area_extract_uri)
+        extract_wkt = extract_sr.ExportToWkt()
+        # Project AOI into lat/long WGS84
+        raster_utils.reproject_datasource_uri(
+                aoi_shape_path, extract_wkt, aoi_proj_uri)
+
+        aoi_clipped_to_extract_uri = os.path.join(
+                intermediate_dir,
+                'aoi_clipped_to_extract_uri%s.shp' % file_suffix)
         
+        clip_shape(
+                aoi_proj_uri, analysis_area_extract_uri,
+                aoi_clipped_to_extract_uri)
+       
+        aoi_clip_proj_uri = os.path.join(
+                intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
+        
+        raster_utils.reproject_datasource_uri(
+                aoi_clipped_to_extract_uri, output_wkt, aoi_clip_proj_uri)
+
+        aoi_shape_path = aoi_clip_proj_uri
+
         # Create a coordinate transformation from the given
         # WWIII point shapefile, to the area of interest's projection
         aoi_sr = raster_utils.get_spatial_ref_uri(aoi_shape_path)
@@ -389,7 +413,7 @@ def execute(args):
     
     raster_utils.vectorize_points_uri(
             clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
-
+    
     # Clip the wave energy and wave power rasters so that they are confined 
     # to the AOI
     raster_utils.clip_dataset_uri(
@@ -416,7 +440,6 @@ def execute(args):
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
             wp_units_long, starting_percentile_range, percentiles,
             aoi_shape_path)
-    
     
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -681,10 +704,11 @@ def execute(args):
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
-    create_percentile_rasters( npv_out_uri, npv_rc_path, ' (US$)',
+    
+    create_percentile_rasters(npv_out_uri, npv_rc_path, ' (US$)',
             ' thousands of US dollars (US$)', '1', percentiles,
             aoi_shape_path)
-
+    
     LOGGER.debug('End of wave_energy_core.valuation')
 
 def build_point_shapefile(
@@ -1213,7 +1237,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         returns - Nothing"""
     shape_to_clip = ogr.Open(shape_to_clip_uri)
     binding_shape = ogr.Open(binding_shape_uri)
-
+    
     shape_source = output_path
     # If the output_path is already a file, remove it
     if os.path.isfile(shape_source):
