@@ -513,7 +513,6 @@ def save_model_run(arguments, module, out_file):
 
         if printHeader:
             _write('}')
-            _write('')
 
     # Print some auto-generated docstring with some version metadata, etc.
     current_time = datetime.datetime.now()
@@ -537,8 +536,10 @@ def save_model_run(arguments, module, out_file):
     _empty_lines(2)
 
     # Print the arguements in sorted order.
-
     print_args(arguments)
+    _empty_lines(1)
 
     # print the line to call the module.
+    _write('%s.execute(args)' % module)
+
 
