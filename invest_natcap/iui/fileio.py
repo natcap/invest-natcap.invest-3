@@ -506,7 +506,9 @@ def save_model_run(arguments, module, out_file):
                 print_args(value, str(prefix + '    '), False)
                 _write('%s},' % prefix)
             else:
-                value = "u'%s'" % unicode(value)
+                if _is_string(value):
+                    value = "u'%s'" % unicode(value)
+
                 _write('%s%s: %s,' % (prefix, key, value))
 
         if printHeader:
