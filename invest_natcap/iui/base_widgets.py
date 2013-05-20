@@ -2456,17 +2456,34 @@ class ExecRoot(Root):
         self.initElements()
 
     def save_to_python(self):
-        """Save the current state of the UI to a python file."""
-        model = self.attributes['targetScript']
-        model_name = model.split('.')[-1]
+        """Save the current state of the UI to a python file after checking that
+        there are no validation errors."""
+        errors = self.errors_exist()
+        if len(errors) > 0:
+            self.error_dialog.set_messages(errors)
+            self.error_dialog.exec_()
+        else:
+            warnings = self.warnings_exist()
 
-        filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-            '%s.py' % model_name, filter = QtCore.QString('Python file' +
-            ' (*.py);;All files (*.* *)'))
-        filename = unicode(filename)
-        if filename != '':
-            arguments = self.assembleOutputDict()
-            invest_natcap.iui.fileio.save_model_run(arguments, model, filename)
+            if len(warnings) > 0:
+                self.warning_dialog.set_messages(warnings)
+                exit_code = self.warning_dialog.exec_()
+
+                # If the user pressed 'back' on the warning dialog, return to
+                # the UI.
+                if exit_code == 0:
+                    return
+
+            model = self.attributes['targetScript']
+            model_name = model.split('.')[-1]
+
+            filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
+                '%s.py' % model_name, filter = QtCore.QString('Python file' +
+                ' (*.py);;All files (*.* *)'))
+            filename = unicode(filename)
+            if filename != '':
+                arguments = self.assembleOutputDict()
+                invest_natcap.iui.fileio.save_model_run(arguments, model, filename)
 
     def find_element_ptr(self, element_id):
         """Return an element pointer if found.  None if not found."""
