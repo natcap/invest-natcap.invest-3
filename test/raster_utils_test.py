@@ -511,3 +511,33 @@ class TestRasterUtils(unittest.TestCase):
 
         invest_test_core.assertTwoShapesEqualURI(
                 self, expected_uri, out_dir)
+    
+    def test_experimental_reproject_dataset(self):
+        """A regression test using some data that Martin and Nic were having
+            trouble reprojecting"""
+       
+        #raise SkipTest
+
+        data_dir = './data/raster_utils_data'
+        barkclay_uri = os.path.join(data_dir, 'AOI_BarkClay.shp')
+        clipped_pop_uri = os.path.join(data_dir, 'clipped_pop.tif')
+
+        barkclay = ogr.Open(barkclay_uri)
+        barkclay_layer = barkclay.GetLayer()
+        out_wkt = barkclay_layer.GetSpatialRef().ExportToWkt()
+
+        out_dir = './data/test_out/raster_utils/exp_reproject_dataset'
+        
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        pixel_spacing = 731.58
+
+        out_uri = os.path.join(out_dir, 'reprojected_pop.tif')
+        regression_uri = os.path.join(data_dir, 'projected_pop.tif')
+
+        raster_utils._experimental_reproject_dataset_uri(
+                clipped_pop_uri, pixel_spacing, out_wkt, out_uri)
+
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, out_uri, regression_uri)

@@ -2,31 +2,25 @@ import sys
 
 sys.path.append("/usr/share/qgis/python/plugins")
 sys.path.append("/home/mlacayo/.qgis//python/plugins")
-###os.environ
 
-from PyQt4.QtGui import QApplication
-#from sextante.core.Sextante import Sextante
+import PyQt4
 import sextante
-
-##("grass:r.resample",
-
-class dummy:
-    def __init__(self):
-        self.legendInterface=None
+import qgis
+import qgis.utils
 
 def main():
     """ main function or something """
     # as per http://qgis.org/pyqgis-cookbook/intro.html#using-pyqgis-in-custom-application
-    from qgis.core import *
-    import qgis.utils
+    #from qgis.core import *
+    #import qgis.utils
 
-    app = QApplication(sys.argv)
+    app = PyQt4.QtGui.QApplication(sys.argv)
     # supply path to where is your qgis installed
-    QgsApplication.setPrefixPath("/usr", True)
+    qgis.core.QgsApplication.setPrefixPath("/usr/lib/qgis", True)
     # load providers
-    QgsApplication.initQgis()
+    qgis.core.QgsApplication.initQgis()
     # how???
-    # qgis.utils.iface = QgisInterface.instance()
+    #qgis.utils.iface = qgis.core.QgisInterface.instance()
     sextante.core.Sextante.Sextante.initialize()
     run_script(qgis.utils.iface)
 

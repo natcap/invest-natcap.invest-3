@@ -146,5 +146,19 @@ class ResourceManager(unittest.TestCase):
         default_icon_path = 'test_image.png'
         self.assertEqual(default_icon_path, icon_path)
 
+class SaveModelRun(unittest.TestCase):
+    def test_save_model_run(self):
+        arguments = {
+            u'a': 1,
+            'b': 2,
+            'c': 3,
+            0: {'a': 4,
+                'b': 5},
+            1: [1, 2, 3, 4]
+        }
 
+        module = 'invest_natcap.pollination.pollination'
+        out_file = os.path.join('data', 'iui', 'model_run.txt')
+
+        fileio.save_model_run(arguments, module, out_file)
 

@@ -4,14 +4,15 @@ import logging
 import math
 import os
 import shutil
+import time
 
 from osgeo import gdal
-import numpy
 
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
 import routing_cython_core
+import flood_mitigation_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
     %(levelname)-8s %(message)s', level=logging.DEBUG,
@@ -19,22 +20,11 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(funcName)-20s \
 
 LOGGER = logging.getLogger('flood_mitigation')
 
-# This dictionary represents the outflow_matrix values that flow into the
-# current pixel.  It's used in several of the flood_mitigation functions.
-INFLOW_NEIGHBORS = {
-    0: [3, 4],
-    1: [4, 5],
-    2: [5, 6],
-    3: [6, 7],
-    4: [7, 0],
-    5: [0, 1],
-    6: [1, 2],
-    7: [2, 3],
-}
 
 class InvalidSeason(Exception):
     """An exception to indicate that an invalid season was used."""
     pass
+
 
 def execute(args):
     """Perform time-domain calculations to estimate the flow of water across a
@@ -42,16 +32,16 @@ def execute(args):
 
     args - a python dictionary.  All entries noted below are required unless
         explicity stated as optional.
-        'workspace' - a string URI to the user's workspace on disk.  Any temporary
-            files needed for processing will also be saved to this folder before
-            they are deleted.  If this folder exists on disk, any outputs will
-            be overwritten in the execution of this model.
+        'workspace' - a string URI to the user's workspace on disk.  Any
+            temporary files needed for processing will also be saved to this
+            folder before they are deleted.  If this folder exists on disk, any
+            outputs will be overwritten in the execution of this model.
         'dem' - a string URI to the user's Digital Elevation Model on disk.
             Must be a raster dataset that GDAL can open.
         'landuse' - a string URI to the user's Land Use/Land Cover raster on
             disk.  Must be a raster dataset that GDAL can open.
-        'num_intervals' - A python int representing the number of timesteps this
-            model should process.
+        'num_intervals' - A python int representing the number of timesteps
+            this model should process.
         'time_interval' - a python float representing the duration of the
             desired timestep, in hours.
         'precipitation' a string URI to a table of precipitation data.  Table
@@ -60,10 +50,10 @@ def execute(args):
                     'STATION' - (string) label for the water gauge station
                     'LAT' - (float) the latitude of the station
                     'LONG' - (float) the longitude of the station
-                    [1 ... n] - (int) the rainfall values for the specified time
-                        interval.  Note that there should be one column for each
-                        time interval.  The label of the column must be an int
-                        index for the interval (so 1, 2, 3, etc.).
+                    [1 ... n] - (int) the rainfall values for the specified
+                        time interval.  Note that there should be one column
+                        for each time interval.  The label of the column must
+                        be an int index for the interval (so 1, 2, 3, etc.).
             This table must be a CSV.
         'curve_numbers' - a string URI pointing to a raster of the user's curve
             numbers.  See the user's guide for documentation on constructing
@@ -118,8 +108,8 @@ def execute(args):
             A raster of the floodwater discharge on the landscape in this time
             interval.
         <workspace>/output/<time_step>/flood_height_<suffix>.tif
-            A raster of the height of flood waters on the landscape at this time
-            interval.
+            A raster of the height of flood waters on the landscape at this
+            time interval.
 
     This function returns None."""
 
@@ -132,7 +122,7 @@ def execute(args):
 
     def _add_suffix(file_name):
         """Add a suffix to the input file name and return the result."""
-        if suffix != None:
+        if suffix is not None:
             file_base, extension = os.path.splitext(file_name)
             return "%s_%s%s" % (file_base, suffix, extension)
         return file_name
@@ -144,14 +134,15 @@ def execute(args):
 
     def _output_uri(file_name=''):
         """Make an ouput URI."""
-        return os.path.join(args['workspace'], 'output', _add_suffix(file_name))
+        return os.path.join(args['workspace'], 'output',
+            _add_suffix(file_name))
 
     paths = {
         'precip_latlong': raster_utils.temporary_folder(),
-        'precip_points' : _intermediate_uri('precip_points'),
-        'mannings' : _intermediate_uri('mannings.tif'),
-        'slope' : _intermediate_uri('slope.tif'),
-        'flow_direction' : _intermediate_uri('flow_direction.tif'),
+        'precip_points': _intermediate_uri('precip_points'),
+        'mannings': _intermediate_uri('mannings.tif'),
+        'slope': _intermediate_uri('slope.tif'),
+        'flow_direction': _intermediate_uri('flow_direction.tif'),
         'flow_length': _intermediate_uri('flow_length.tif'),
         'cn_slope': _intermediate_uri('cn_slope.tif'),
         'swrc': _intermediate_uri('swrc.tif'),
@@ -190,29 +181,24 @@ def execute(args):
     raster_utils.create_directories([args['workspace'], _intermediate_uri(),
         _output_uri()])
 
-    # Remove any shapefile folders that exist, since we don't want any conflicts
-    # when creating new shapefiles.
+    # Remove any shapefile folders that exist, since we don't want any
+    # conflicts when creating new shapefiles.
     try:
         shutil.rmtree(paths['precip_points'])
     except OSError:
         pass
 
-    def _get_datatype_uri(raster_uri):
-        dataset = gdal.Open(raster_uri)
-        band = dataset.GetRasterBand(1)
-        return band.DataType
-
     rasters = [args['landuse'], args['dem'], args['curve_numbers']]
     cell_size = raster_utils.get_cell_size_from_uri(args['dem'])
-    for raster, resized_uri, func in [
-        (args['landuse'], paths['landuse'], lambda x,y,z:x),
-        (args['dem'], paths['dem'], lambda x,y,z:y),
-        (args['curve_numbers'], paths['curve_numbers'], lambda x,y,z:z)]:
+    for raster, resized_uri, func, datatype in [
+        (args['landuse'], paths['landuse'], lambda x, y, z: x, gdal.GDT_Int32),
+        (args['dem'], paths['dem'], lambda x, y, z: y, gdal.GDT_Float32),
+        (args['curve_numbers'], paths['curve_numbers'], lambda x, y, z: z,
+            gdal.GDT_Float32)]:
 
-        datatype = _get_datatype_uri(raster)
         nodata = raster_utils.get_nodata_from_uri(raster)
-        raster_utils.vectorize_datasets(rasters, func, resized_uri, datatype,
-            nodata, cell_size, 'intersection')
+        raster_utils.vectorize_datasets(rasters, func, resized_uri,
+            datatype, nodata, cell_size, 'intersection')
 
     #######################
     # Preprocessing
@@ -232,9 +218,10 @@ def execute(args):
 
     #######################
     # Adjusting curve numbers
-    adjust_cn_for_slope(paths['curve_numbers'], paths['slope'], paths['cn_slope'])
+    adjust_cn_for_slope(paths['curve_numbers'], paths['slope'],
+        paths['cn_slope'])
 
-    if args['cn_adjust'] == True:
+    if args['cn_adjust'] is True:
         season = args['cn_season']
         cn_season_adjusted_uri = _intermediate_uri('cn_season_%s.tif' % season)
         adjust_cn_for_season(paths['cn_slope'], season, cn_season_adjusted_uri)
@@ -262,11 +249,11 @@ def execute(args):
         if timestep == 1:
             # We need a previous flood water discharge raster to be created
             # before we actually start iterating through the timesteps.
-            discharge_nodata = raster_utils.get_nodata_from_uri(paths['flow_direction'])
+            discharge_nodata = raster_utils.get_nodata_from_uri(
+                paths['flow_direction'])
             raster_utils.new_raster_from_base_uri(ts_paths['runoff'],
                 paths['prev_discharge'], 'GTiff', discharge_nodata,
                 gdal.GDT_Float32, fill_value=0.0)
-
 
         flood_water_discharge(ts_paths['runoff'], paths['flow_direction'],
             args['time_interval'], ts_paths['discharge'],
@@ -286,16 +273,17 @@ def execute(args):
             cn_season_adjusted_uri, paths['channels'],
             paths['outflow_direction'], ts_paths['inundation'])
 
+
 def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
     """Reclassify the input land use/land cover raster according to the
         mannings numbers table passed in as input.
 
         landcover_uri - a URI to a GDAL dataset with land use/land cover codes
             as pixel values.
-        mannings_table_uri - a URI to a CSV table on disk.  This table must have
-            at least the following columns:
-                "LULC" - an integer landcover code matching a code in the inputs
-                    land use/land cover raster.
+        mannings_table_uri - a URI to a CSV table on disk.  This table
+            must have at least the following columns:
+                "LULC" - an integer landcover code matching a code in the
+                    inputs land use/land cover raster.
                 "ROUGHNESS" - a floating-point number indicating the roughness
                     of the pixel.  See the user's guide for help on creating
                     this number for your landcover classes.
@@ -312,6 +300,7 @@ def mannings_raster(landcover_uri, mannings_table_uri, mannings_raster_uri):
 
     raster_utils.reclassify_dataset_uri(landcover_uri, mannings_mapping,
         mannings_raster_uri, gdal.GDT_Float32, lulc_nodata)
+
 
 def _get_cell_size_from_datasets(uri_list):
     """Get the minimum cell size of all the input datasets.
@@ -361,7 +350,7 @@ def storm_runoff(precip_uri, swrc_uri, output_uri):
         if precip <= 0.2 * swrc:
             return 0.0
 
-        return ((precip - (0.2 * swrc))**2)/(precip + (0.8 * swrc))
+        return ((precip - (0.2 * swrc)) ** 2) / (precip + (0.8 * swrc))
 
     raster_utils.vectorize_datasets([precip_uri, swrc_uri],
         calculate_runoff, output_uri, gdal.GDT_Float32, precip_nodata,
@@ -404,6 +393,7 @@ def soil_water_retention_capacity(cn_uri, swrc_uri):
     raster_utils.vectorize_datasets([cn_uri], calculate_swrc, swrc_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
 
+
 def _dry_season_adjustment(curve_num):
     """Perform dry season curve number adjustment on the pixel level.  This
         corresponds with equation 3 in the user's guide.
@@ -415,6 +405,7 @@ def _dry_season_adjustment(curve_num):
 
     return ((4.2 * curve_num) / (10.0 - (0.058 * curve_num)))
 
+
 def _wet_season_adjustment(curve_num):
     """Perform wet season adjustment on the pixel level.  This corresponds with
         equation 4 in the user's guide.
@@ -425,6 +416,7 @@ def _wet_season_adjustment(curve_num):
         Returns a float."""
 
     return ((23 * curve_num) / (10.0 + (0.13 * curve_num)))
+
 
 def adjust_cn_for_season(cn_uri, season, adjusted_uri):
     """Adjust the user's Curve Numbers raster for the specified season's soil
@@ -439,21 +431,21 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
     Wet (AMC-3) |    > 28mm      |    > 53mm      |
 
 
-    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must be a
-        raster that GDAL can open.
+    cn_uri - a string URI to the user's Curve Numbers raster on disk.  Must
+        be a raster that GDAL can open.
     season - a string, either 'dry' or 'wet'.  An exception will be raised if
         any other value is submitted.
-    adjusted_uri - a string URI to which the adjusted Curve Numbers to be saved.
-        If the file at this URI exists, it will be overwritten with a GDAL
-        dataset.
+    adjusted_uri - a string URI to which the adjusted Curve Numbers to be
+        saved.  If the file at this URI exists, it will be overwritten with a
+        GDAL dataset.
 
     This function saves a GDAL dataset to the URI noted by the `adjusted_uri`
     parameter.
 
     Returns None."""
 
-    # Get the nodata value so we can account for that in our tweaked seasonality
-    # functions here.
+    # Get the nodata value so we can account for that in our tweaked
+    # seasonality functions here.
     cn_nodata = raster_utils.get_nodata_from_uri(cn_uri)
 
     def adjust_for_dry_season(curve_num):
@@ -462,7 +454,6 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
         if curve_num == cn_nodata:
             return cn_nodata
         return _dry_season_adjustment(curve_num)
-
 
     def adjust_for_wet_season(curve_num):
         """Custom function to account for nodata values when adjusting curve
@@ -487,6 +478,7 @@ def adjust_cn_for_season(cn_uri, season, adjusted_uri):
 
     raster_utils.vectorize_datasets([cn_uri], season_function, adjusted_uri,
         gdal.GDT_Float32, cn_nodata, cn_pixel_size, 'intersection')
+
 
 def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
     """Adjust the input curve numbers raster for slope.  This corresponds with
@@ -531,6 +523,7 @@ def adjust_cn_for_slope(cn_avg_uri, slope_uri, adjusted_uri):
     raster_utils.vectorize_datasets([cn_avg_uri, slope_uri], adjust_for_slope,
         adjusted_uri, gdal.GDT_Float32, cn_nodata, pixel_size, 'intersection')
 
+
 def convert_precip_to_points(precip_uri, points_uri):
     """Convert the CSV at `precip_uri` to a points shapefile.
 
@@ -546,7 +539,6 @@ def convert_precip_to_points(precip_uri, points_uri):
 
     Returns nothing."""
 
-
     # Extract the data from the precip CSV using the TableHandler class.
     table_object = fileio.TableHandler(precip_uri)
     table_dictionary = dict((i, d) for (i, d) in
@@ -555,6 +547,7 @@ def convert_precip_to_points(precip_uri, points_uri):
     raster_utils.dictionary_to_point_shapefile(table_dictionary,
         'precip_points', points_uri)
 
+
 def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
     output_uri):
     """Create a precipitation raster from a points shapefile for the specified
@@ -562,8 +555,8 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
 
         precip_points_uri - a URI to an OGR Datasource on disk.
         sample_raster_uri - a URI to a GDAL dataset on disk.
-        timestep - an int timestep.  Must be a field in the datasource passed in
-            as `precip_points_uri`.
+        timestep - an int timestep.  Must be a field in the datasource passed
+            in as `precip_points_uri`.
         output_uri - a URI to where the output raster will be saved.
 
         This function saves a GDAL raster dataset to `output_uri`.  This output
@@ -580,13 +573,30 @@ def make_precip_raster(precip_points_uri, sample_raster_uri, timestep,
     raster_utils.vectorize_points_uri(precip_points_uri, timestep, output_uri)
     LOGGER.info('Finished making the precipitation raster')
 
+
 def _extract_matrix(raster_uri):
     """Extract the Numpy matrix from a GDAL dataset.  The returned matrix is a
     memory-mapped matrix."""
     memory_file = raster_utils.temporary_filename()
     return raster_utils.load_memory_mapped_array(raster_uri, memory_file)
 
+
+def _extract_matrix_and_nodata(uri):
+    """Return a tuple of the numpy matrix and the nodata value for the input
+    raster at URI."""
+    matrix = _extract_matrix(uri)
+    nodata = raster_utils.get_nodata_from_uri(uri)
+    return(matrix, nodata)
+
+
 def _write_matrix(raster_uri, matrix):
+    """Write a matrix to a raster that already exists on disk.
+
+        raster_uri - a URI to a gdal dataset on disk.
+        matrix - a NumPy matrix to be written to the raster at raster_uri
+
+        Returns nothing."""
+
     dataset = gdal.Open(raster_uri, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     band.WriteArray(matrix)
@@ -596,8 +606,10 @@ def _write_matrix(raster_uri, matrix):
     dataset = None
     raster_utils.calculate_raster_stats_uri(raster_uri)
 
+
 def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
-    output_uri, outflow_weights_uri, outflow_direction_uri, prev_discharge_uri):
+    output_uri, outflow_weights_uri, outflow_direction_uri,
+    prev_discharge_uri):
     """Calculate the flood water discharge in a single timestep.  This
     corresponds to equation 11 in the user's guide.
 
@@ -618,6 +630,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
 
         Returns nothing."""
 
+    start_time = time.time()
     LOGGER.info('Starting to calculate flood water discharge')
     LOGGER.debug('Discharge uri=%s', output_uri)
     LOGGER.debug('Previous discharge uri=%s', prev_discharge_uri)
@@ -641,118 +654,21 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
         'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
     # Get the numpy matrix of the new discharge raster.
-    discharge_matrix = _extract_matrix(output_uri)
     prev_discharge = _extract_matrix(prev_discharge_uri)
-    runoff_matrix = _extract_matrix(runoff_uri)
+    runoff_tuple = _extract_matrix_and_nodata(runoff_uri)
     outflow_weights = _extract_matrix(outflow_weights_uri)
-    outflow_direction = _extract_matrix(outflow_direction_uri)
+    outflow_direction_tuple = _extract_matrix_and_nodata(outflow_direction_uri)
 
-    LOGGER.debug('Output discharge matrix size=%s', discharge_matrix.shape)
-    LOGGER.debug('Previous discharge matrix size=%s', prev_discharge.shape)
-    LOGGER.debug('Runoff matrix size=%s', runoff_matrix.shape)
+    discharge_matrix = flood_mitigation_cython_core.flood_discharge(
+        runoff_tuple, outflow_direction_tuple, outflow_weights, prev_discharge,
+        discharge_nodata, pixel_area, time_interval)
 
-    runoff_nodata = raster_utils.get_nodata_from_uri(runoff_uri)
-    LOGGER.debug('Runoff nodata=%s', runoff_nodata)
-    # A mapping of which indices might flow into this pixel. If the neighbor
-    # pixel's value is 
-    outflow_direction_nodata = raster_utils.get_nodata_from_uri(
-        outflow_direction_uri)
-
-    # list of neighbor ids and their indices relative to the current pixel
-    # index offsets are row, column.
-    neighbor_indices = {
-        0: (0, 1),
-        1: (-1, 1),
-        2: (-1, 0),
-        3: (-1, -1),
-        4: (0, -1),
-        5: (1, -1),
-        6: (1, 0),
-        7: (1, 1)
-    }
-    neighbors = list(neighbor_indices.iteritems())
-
-    class NeighborHasNoData(Exception):
-        """An exception for skipping a neighbor when that neighbor's
-        value is nodata."""
-        pass
-
-    # Using a Numpy N-dimensional iterator to loop through the runoff matrix.
-    # numpy.nditer allows us to index into the matrix while always knowing the
-    # index that we are currently accessing.  This way we can easily access
-    # pixels immediately adjacent to this pixel by index (the index offsets for
-    # which are in the neighbors list, made from the neighbor_indices dict).
-    iterator = numpy.nditer([runoff_matrix], flags=['multi_index'])
-    LOGGER.info('Checking neighbors for flow contributions to storm runoff')
-    for runoff in iterator:
-        index = iterator.multi_index
-
-        if runoff == runoff_nodata:
-            discharge_sum = discharge_nodata
-        elif outflow_direction[index] == outflow_direction_nodata:
-            discharge_sum = discharge_nodata
-        else:
-            discharge_sum = 0.0  # re-initialize the discharge sum
-            for neighbor_id, index_offset in neighbors:
-                # Add the index offsets to the current index to get the
-                # neighbor's index.
-                neighbor_index = tuple(map(sum, zip(index, index_offset)))
-                try:
-                    if neighbor_index[0] < 0 or neighbor_index[1] < 0:
-                        # The neighbor index is beyond the bounds of the matrix
-                        # We need a special case check here because a negative
-                        # index will actually return a correct pixel value, just
-                        # from the other side of the matrix, which we don't
-                        # want.
-                        raise IndexError
-
-                    neighbor_value = outflow_direction[neighbor_index]
-                    possible_inflow_neighbors = INFLOW_NEIGHBORS[neighbor_value]
-
-                    if neighbor_id in possible_inflow_neighbors:
-                        # Only get the neighbor's runoff value if we know that
-                        # the neighbor flows into this pixel.
-                        neighbor_runoff = runoff_matrix[neighbor_index]
-                        if neighbor_runoff == runoff_nodata:
-                            raise NeighborHasNoData
-
-                        neighbor_prev_discharge = prev_discharge[neighbor_index]
-                        if neighbor_prev_discharge == discharge_nodata:
-                            raise NeighborHasNoData
-
-                        # determine fractional flow from this neighbor into this
-                        # pixel.
-                        first_neighbor_weight = outflow_weights[neighbor_index]
-
-                        if possible_inflow_neighbors[0] == neighbor_id:
-                            fractional_flow = 1.0 - first_neighbor_weight
-                        else:
-                            fractional_flow = first_neighbor_weight
-
-                        discharge = (((neighbor_runoff * pixel_area) +
-                            (neighbor_prev_discharge * time_interval)) *
-                            fractional_flow)
-
-                        discharge_sum += discharge
-
-                except (IndexError, KeyError, NeighborHasNoData):
-                    # IndexError happens when the neighbor does not exist.
-                    # In this case, we assume there is no inflow from this
-                    # neighbor.
-                    # KeyError happens when the neighbor has a nodata value.
-                    # When this happens, we assume there is no inflow from this
-                    # neighbor.
-                    # NeighborHasNoRunoffData happens when the neighbor's runoff
-                    # value is nodata.
-                    pass
-
-            discharge_sum = discharge_sum / time_interval
-
-        # Set the discharge matrix value to the calculated discharge value.
-        discharge_matrix[index] = discharge_sum
     LOGGER.info('Finished checking neighbors for flood water discharge.')
 
     _write_matrix(output_uri, discharge_matrix)
+    LOGGER.debug('Elapsed time for flood water discharge:%s',
+        time.time() - start_time)
+
 
 def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
     """Calculate the flood_height according to equation 19 in the user's guide.
@@ -794,14 +710,15 @@ def flood_height(discharge_uri, mannings_uri, slope_uri, output_uri):
         output_uri, gdal.GDT_Float32, discharge_nodata, min_pixel_size,
         'intersection')
 
+
 def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     channels_uri, outflow_direction_uri, output_uri):
     """This function estimates flood inundation depth from flood height,
         elevation, and curve numbers.  This is equation 20 from the flood
         mitigation user's guide.
 
-        flood_height_uri - a URI to a GDAL datset representing flood height over
-            the landscape.
+        flood_height_uri - a URI to a GDAL datset representing flood height
+            over the landscape.
         dem_uri - a URI to a GDAL raster of the digital elevation model.
         cn_uri - a URI to a GDAL raster of the user's curve numbers.
         channels_uri - a URI to a GDAL dataset of the channel network.
@@ -813,12 +730,6 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     """
 
     LOGGER.debug('Starting to calculate flood inundation depth')
-    def _extract_matrix_and_nodata(uri):
-        """Return a tuple of the numpy matrix and the nodata value for the input
-        raster at URI."""
-        matrix = _extract_matrix(uri)
-        nodata = raster_utils.get_nodata_from_uri(uri)
-        return(matrix, nodata)
 
     flood_height_tuple = _extract_matrix_and_nodata(flood_height_uri)
     channel_tuple = _extract_matrix_and_nodata(channels_uri)
@@ -828,194 +739,12 @@ def flood_inundation_depth(flood_height_uri, dem_uri, cn_uri,
     pixel_size = raster_utils.get_cell_size_from_uri(outflow_direction_uri)
 
     LOGGER.info('Distributing flood waters')
-    fid_matrix = _calculate_fid(flood_height_tuple, dem_tuple,
-        channel_tuple, cn_tuple, outflow_direction_tuple, pixel_size)[0]
+    fid_matrix = flood_mitigation_cython_core.calculate_fid(flood_height_tuple,
+        dem_tuple, channel_tuple, cn_tuple, outflow_direction_tuple,
+        pixel_size)
     LOGGER.info('Finished distributing flood waters')
 
     raster_utils.new_raster_from_base_uri(dem_uri, output_uri, 'GTiff', -1,
         gdal.GDT_Float32)
     _write_matrix(output_uri, fid_matrix)
     LOGGER.debug('Finished calculating flood inundation depth')
-
-def _calculate_fid(flood_height, dem, channels, curve_nums, outflow_direction,
-    pixel_size):
-    """Actually perform the matrix calculations for the flood inundation depth
-        function.  This is equation 20 from the flood mitigation user's guide.
-
-        flood_height - a numpy matrix of flood water heights.
-        dem - a numpy matrix of elevations.
-        channels - a numpy matrix of channels.
-        curve_nums - a numpy matrix of curve numbers.
-        outflow_direction - a numpy matrix indicating which pixels flow into one
-            another.  See routing_utils for details on this matrix.
-        pixel_size -a numpy indicating the mean of the height and width of a
-            pixel.
-
-        All matrices MUST have the same sizes.
-
-        Returns a numpy matrix of the calculated flood inundation height."""
-
-    flood_height_matrix, flood_height_nodata = flood_height
-    dem_matrix, dem_nodata = dem
-    channels_matrix, channels_nodata = channels
-    cn_matrix, cn_nodata = curve_nums
-    outflow_direction_matrix, outflow_direction_nodata = outflow_direction
-
-    output = numpy.copy(flood_height_matrix)
-    visited = numpy.zeros(flood_height_matrix.shape, dtype=numpy.int)
-    travel_distance = numpy.zeros(flood_height_matrix.shape, dtype=numpy.float)
-
-    for name, matrix, nodata in [
-        ('flood height', flood_height_matrix, flood_height_nodata),
-        ('dem', dem_matrix, dem_nodata),
-        ('channels', channels_matrix, channels_nodata),
-        ('curve numbers', cn_matrix, cn_nodata),
-        ('outflow direction',outflow_direction_matrix, outflow_direction_nodata),
-        ('output', output, -1),
-        ('visited', visited, None),
-        ('travel distance', travel_distance, None)]:
-        LOGGER.debug('Matrix %s, sise=%s, nodata=%s', name, matrix.shape,
-            nodata)
-
-    # to track our nearest channel cell, create a matrix that has two values for
-    # each of the elements in the 2-d matrix.  These two extra values represent
-    # the index of the closes channel cell.
-#    nearest_channel = numpy.zeros(flood_height_matrix.shape + (2,),
-#        dtype=numpy.int)
-
-    # We know the diagonal distance thanks to trigonometry.  We're assuming that
-    # we measure from the center of this pixel to the center of the neighboring
-    # pixel.
-    diagonal_distance = pixel_size * math.sqrt(2)
-    indices = [
-        (0, (0, 1), pixel_size),
-        (1, (-1, 1), diagonal_distance),
-        (2, (-1, 0), pixel_size),
-        (3, (-1, -1), diagonal_distance),
-        (4, (0, -1), pixel_size),
-        (5, (1, -1), diagonal_distance),
-        (6, (1, 0), pixel_size),
-        (7, (1, 1), diagonal_distance)
-    ]
-
-    def _flows_from(source_index, neighbor_id):
-        """Indicate whether the source pixel flows into the neighbor identified
-        by neighbor_id.  This function returns a boolean."""
-
-        neighbor_value = outflow_direction_matrix[source_index]
-
-        # If there is no outflow direction, then there is no flow to the
-        # neighbor and we return False.
-        if neighbor_value == outflow_direction_nodata:
-            return False
-
-        if neighbor_id in INFLOW_NEIGHBORS[neighbor_value]:
-            return False
-        return True
-
-    def _fid(index, channel_floodwater, channel_elevation):
-        """Calculate the on-pixel flood inundation depth, as represented by
-            equation 20 in the flood mitigation user's guide.
-
-            index - the tuple index of the pixel on which to calculate FID
-            channel_floodwater - the numeric depth of the closest channel cell's
-                floodwaters
-            channel_elevation - the numeric depth of the closest channel cell's
-                elevation
-
-            Note that for this equation to be accurate, the dem and the
-            floodwaters must be in the same units.
-
-            Returns a float."""
-        pixel_elevation = dem_matrix[index]
-        curve_num = cn_matrix[index]
-
-        if channel_floodwater == 0:
-            return 0.0
-
-        if (channel_floodwater == flood_height_nodata or
-            pixel_elevation == dem_nodata or
-            curve_num == cn_nodata or
-            channel_elevation == dem_nodata):
-            return 0.0
-
-        elevation_diff = pixel_elevation - channel_elevation
-        flooding = channel_floodwater - elevation_diff - curve_num
-
-        if flooding <= 0:
-            return 0.0
-#        if flooding > channel_floodwater:
-#            LOGGER.debug(str('p_elevation=%s, cn=%s, c_floodwater=%s, fid=%s, '
-#                'c_elevation=%s'), pixel_elevation, curve_num,
-#                channel_floodwater, flooding, channel_elevation)
-        return flooding
-
-    class AlreadyVisited(Exception):
-        """An exception to indicate that we've already visited this pixel."""
-        pass
-
-    class SkipNeighbor(Exception):
-        """An exception to indicate that we wish to skip this neighbor pixel"""
-        pass
-
-
-    iterator = numpy.nditer([channels_matrix, flood_height_matrix, dem_matrix],
-        flags=['multi_index'])
-    for channel, channel_floodwater, channel_elevation in iterator:
-        if channel == 1:
-            channel_index = iterator.multi_index
-            pixels_to_visit = [channel_index]
-
-            visited[channel_index] = 1
-#            nearest_channel[channel_index][0] = channel_index[0]
-#            nearest_channel[channel_index][1] = channel_index[1]
-
-            while True:
-                try:
-                    pixel_index = pixels_to_visit.pop(0)
-                    #print (pixel_index, pixels_to_visit)
-                except IndexError:
-                    # No more indexes to process.
-                    break
-
-                for n_id, neighbor_offset, n_distance in indices:
-                    n_index = tuple(map(sum, zip(pixel_index, neighbor_offset)))
-
-                    try:
-                        if n_index[0] < 0 or n_index[1] < 0:
-                            raise IndexError
-
-                        if channels_matrix[n_index] in [1, channels_nodata]:
-                            raise SkipNeighbor
-
-                        if _flows_from(n_index, n_id):
-                            fid = _fid(n_index, channel_floodwater,
-                                channel_elevation)
-
-                            if fid > 0:
-#                                if fid > channel_floodwater:
-#                                    raise Exception('fid=%s, floodwater=%s' %
-#                                        (fid, channel_floodwater))
-                                dist_to_n = travel_distance[pixel_index] + n_distance
-                                if visited[n_index] == 0 or (visited[n_index] == 1 and
-                                    dist_to_n < travel_distance[n_index]):
-                                    visited[n_index] = 1
-                                    travel_distance[n_index] = dist_to_n
-#                                    nearest_channel[n_index][0] = channel_index[0]
-#                                    nearest_channel[n_index][1] = channel_index[1]
-                                    output[n_index] = fid
-                                    pixels_to_visit.append(n_index)
-
-                    except SkipNeighbor:
-                        pass
-                        #LOGGER.debug('Skipping neighbor %s', n_index)
-                    except IndexError:
-                        pass
-                        #LOGGER.warn('index %s does not exist', n_index)
-                    except AlreadyVisited:
-                        pass
-                        #LOGGER.info('Already visited index %s, not distributing.',
-                        #    n_index)
-
-    #return (output, travel_distance, nearest_channel)
-    return (output, travel_distance)

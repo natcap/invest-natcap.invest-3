@@ -5,6 +5,8 @@ import csv
 import os
 import re
 import sys
+import codecs
+import datetime
 
 import invest_natcap
 from dbfpy import dbf
@@ -462,4 +464,106 @@ def find_handler(uri):
             if opened_file != None: break
 
     return handler
+
+
+def save_model_run(arguments, module, out_file):
+    """Save an arguments list and module to a new python file that can be
+    executed on its own.
+
+        arguments - a python dictionary of arguments.
+        module - the python module path in python package notation (e.g.
+            invest_natcap.pollination.pollination)
+        out_file - the file to which the output file should be written.  If the
+            file exists, it will be overwritten.
+
+    This function returns nothing."""
+
+    # Open the file
+    model_script = codecs.open(out_file, 'w', encoding='utf-8')
+
+    def _write(line):
+        model_script.write(line + '\n')
+
+    def _empty_lines(num_lines):
+        for line in range(num_lines):
+            _write("")
+
+    def _is_string(string):
+        if isinstance(string, str) or isinstance(string, unicode):
+            return True
+        return False
+
+    def print_args(args, prefix='    ', printHeader=True):
+        if printHeader:
+            _write('args = {')
+
+        def _print_iterable(start_char, end_char, key, value):
+            _write('%s%s: %s' % (prefix, key, start_char))
+            print_args(value, str(prefix + '    '), False)
+            _write('%s%s,' % (prefix, end_char))
+
+        if isinstance(args, list):
+            iterator = args
+            sort = lambda x: x
+        elif isinstance(args, dict):
+            iterator = args.iteritems()
+            sort = lambda x: x[0]
+
+        for attrs in sorted(iterator, key=sort):
+            if isinstance(args, dict):
+                key = attrs[0]
+                value = attrs[1]
+            elif isinstance(args, list):
+                key = attrs
+                value = key
+
+            if isinstance(key, str):
+                key = "'%s'" % key
+            elif isinstance(key, unicode):
+                key= "u'%s'" % key
+
+            if isinstance(value, dict):
+                _print_iterable('{', '}', key, value)
+            elif isinstance(value, list):
+                _print_iterable('[', ']', key, value)
+            else:
+                if _is_string(value):
+                    value = "u'%s'" % unicode(value)
+
+                if isinstance(args, list):
+                    _write('%s%s,' % (prefix, key))
+                elif isinstance(args, dict):
+                    _write('%s%s: %s,' % (prefix, key, value))
+
+        if printHeader:
+            _write('}')
+
+    # Print some auto-generated docstring with some version metadata, etc.
+    current_time = datetime.datetime.now()
+    metadata = [
+        '""""',
+        'This is a saved model run from %s.' % module,
+        'Generated: %s' % current_time.strftime('%c'),
+        'InVEST version: %s' % invest_natcap.__version__,
+        '"""'
+    ]
+
+    for line in metadata:
+        _write(line)
+
+    _empty_lines(1)
+
+    # Enforce that we have at least a certain version of InVEST installed?
+
+    # Print the import statement
+    _write('import %s' % module)
+    _empty_lines(2)
+
+    # Print the arguements in sorted order.
+    print_args(arguments)
+    _empty_lines(1)
+
+    # print the line to call the module.
+    _write('%s.execute(args)' % module)
+
 

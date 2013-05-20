@@ -1,5 +1,6 @@
 import unittest
 import os
+import time
 
 from osgeo import gdal
 from osgeo import ogr
@@ -9,6 +10,7 @@ from invest_natcap import raster_utils
 from invest_natcap.flood_mitigation import flood_mitigation
 import invest_test_core
 from invest_natcap.routing import routing_utils
+import routing_cython_core
 
 TEST_DATA = os.path.join('data', 'flood_mitigation')
 SAMP_INPUT = os.path.join(TEST_DATA, 'samp_input')
@@ -147,7 +149,8 @@ class FloodMitigationTest(unittest.TestCase):
 
     def test_flood_water_discharge(self):
         storm_runoff = os.path.join(REGRESSION_DATA, 'storm_runoff_step2.tif')
-        flood_water_discharge = os.path.join(self.workspace, 'fw_discharge.tif')
+        flood_water_discharge = os.path.join(self.workspace,
+                'fw_discharge_nditer.tif')
         outflow_weights_uri = os.path.join(self.workspace, 'outflow_weights.tif')
         outflow_direction_uri = os.path.join(self.workspace, 'outflow_dir.tif')
         flow_direction_uri = os.path.join(self.workspace, 'flow_direction.tif')
@@ -162,9 +165,24 @@ class FloodMitigationTest(unittest.TestCase):
         raster_utils.new_raster_from_base_uri(flow_direction_uri, prev_discharge,
             'GTiff', discharge_nodata, gdal.GDT_Float32, fill_value=0.0)
 
+        orig_time = time.time()
         flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
             self.args['time_interval'], flood_water_discharge,
             outflow_weights_uri, outflow_direction_uri, prev_discharge)
+        elapsed_time = time.time() - orig_time
+        print('old runtime = %s' % elapsed_time)
+
+        orig_time = time.time()
+        cython_discharge_uri = os.path.join(self.workspace,
+                'fw_discharge_cython.tif')
+        flood_mitigation.flood_water_discharge(resampled_runoff_uri, flow_direction_uri,
+            self.args['time_interval'], cython_discharge_uri,
+            outflow_weights_uri, outflow_direction_uri, prev_discharge)
+        elapsed_time = time.time() - orig_time
+        print('cythonized runtime = %s' % elapsed_time)
+
+        invest_test_core.assertTwoDatasetEqualURI(self, flood_water_discharge,
+            cython_discharge_uri)
 
     def test_flood_water_discharge_convolution(self):
         import numpy
@@ -198,6 +216,66 @@ class FloodMitigationTest(unittest.TestCase):
 
         convolved = ndimage.convolve(runoff, kernel, mode='constant', cval=0.0)
         print numpy.divide(convolved, 120)
+
+    def test_flood_inundation_depth_uri(self):
+        """A test for comparing the original to the cythonized FID function."""
+
+        flood_height_uri = os.path.join(REGRESSION_DATA, 'flood_height_2.tif')
+        flood_height_resized_uri = os.path.join(REGRESSION_DATA,
+            'flood_height_2_resized.tif')
+        dem_uri = self.dem
+        dem_resized_uri = os.path.join(self.workspace, 'dem_resized.tif')
+        cn_uri = self.curve_numbers_30m
+
+        channels_uri = os.path.join(self.workspace, 'channels.tif')
+        flow_direction = os.path.join(self.workspace, 'flow_dir.tif')
+        outflow_weights = os.path.join(self.workspace, 'outflow_weights.tif')
+        outflow_direction = os.path.join(self.workspace, 'outflow_direction.tif')
+        python_output_uri = os.path.join(self.workspace, 'fid_python.tif')
+        cython_output_uri = os.path.join(self.workspace, 'fid_cython.tif')
+
+        # resize the cn and flood height to the dem
+        cn_resized_uri = os.path.join(self.workspace, 'cn_resized.tif')
+        datatype = gdal.GDT_Float32
+        nodata = raster_utils.get_nodata_from_uri(cn_uri)
+        cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+        raster_utils.vectorize_datasets([cn_uri, flood_height_uri, dem_uri],
+                lambda x,y,z: x,
+            cn_resized_uri, datatype, nodata, cell_size, 'intersection')
+
+        nodata = raster_utils.get_nodata_from_uri(flood_height_uri)
+        raster_utils.vectorize_datasets([flood_height_uri, cn_uri,  dem_uri],
+                lambda x,y,z: x,
+            flood_height_resized_uri, datatype, nodata, cell_size, 'intersection')
+
+        nodata = raster_utils.get_nodata_from_uri(flood_height_uri)
+        raster_utils.vectorize_datasets([cn_uri, flood_height_uri, dem_uri],
+                lambda x,z,y: y,
+            dem_resized_uri, datatype, nodata, cell_size, 'intersection')
+
+        # Make the channels and the flow direction from the DEM.
+        routing_utils.calculate_stream(dem_resized_uri, self.args['flow_threshold'],
+            channels_uri)
+        routing_utils.flow_direction_inf(dem_resized_uri, flow_direction)
+        routing_cython_core.calculate_flow_graph(flow_direction,
+            outflow_weights, outflow_direction)
+
+        py_start_time = time.time()
+        flood_mitigation.flood_inundation_depth(flood_height_resized_uri, dem_resized_uri,
+            cn_resized_uri, channels_uri, outflow_direction, python_output_uri)
+        py_duration = time.time() - py_start_time
+        print 'Python runtime: %s' % py_duration
+
+        cy_start_time = time.time()
+        flood_mitigation.flood_inundation_depth(flood_height_resized_uri, dem_resized_uri,
+            cn_resized_uri, channels_uri, outflow_direction, cython_output_uri)
+        cy_duration = time.time() - cy_start_time
+        print 'Cython runtime: %s' % cy_duration
+        print 'Speedup: %s' % (py_duration / cy_duration)
+
+        invest_test_core.assertTwoDatasetEqualURI(self, python_output_uri,
+            cython_output_uri)
+
 
     def test_flood_inundation_depth(self):
         """Test for the flood inundation depth function."""

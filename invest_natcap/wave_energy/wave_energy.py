@@ -157,6 +157,14 @@ def execute(args):
              'ww3_uri': os.path.join(
                  wave_base_data_uri, 'North_Sea_10m.bin')
             },
+            'Australia': {
+             'point_shape': os.path.join(
+                wave_base_data_uri, 'Australia_4m.shp'),
+             'extract_shape': os.path.join(
+                 wave_base_data_uri, 'Australia_Extract.shp'),
+             'ww3_uri': os.path.join(
+                 wave_base_data_uri, 'Australia_4m.bin')
+            },
             'Global': {
              'point_shape': os.path.join(wave_base_data_uri, 'Global.shp'),
              'extract_shape': os.path.join(
