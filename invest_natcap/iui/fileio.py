@@ -500,8 +500,6 @@ def save_model_run(arguments, module, out_file):
             string = "'%s'" % string.replace('\n', '\\n')
         elif isinstance(string, unicode):
             string = "u'%s'" % string.replace('\n', '\\n')
-        elif isinstance(string, QtCore.QString):
-            string = "u'%s'" % string
         return string
 
     def _print_list(in_list, prefix):
