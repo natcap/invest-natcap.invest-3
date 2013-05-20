@@ -2402,7 +2402,7 @@ class MainWindow(QtGui.QMainWindow):
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
         self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
-        self.save_to_python = self.file_menu.addAction('&Save to python script...')
+        self.save_to_python = self.file_menu.addAction('Save to &python script...')
         self.exit_action = self.file_menu.addAction('Exit')
         self.menuBar().addMenu(self.file_menu)
 
