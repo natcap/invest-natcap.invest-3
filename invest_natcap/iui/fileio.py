@@ -496,10 +496,10 @@ def save_model_run(arguments, module, out_file):
             key = unicode(key)
             if isinstance(value, dict):
                 _write('%s%s = {' % (prefix, key))
-                printArgs(value, str(prefix + '    '), False)
-                _write('%s}' % prefix)
+                print_args(value, str(prefix + '    '), False)
+                _write('%s},' % prefix)
             else:
-                _write('%s%s: %s' % (prefix, key, value))
+                _write('%s%s: %s,' % (prefix, key, value))
 
         if printHeader:
             _write('}')
