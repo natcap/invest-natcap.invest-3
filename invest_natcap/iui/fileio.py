@@ -524,9 +524,11 @@ def save_model_run(arguments, module, out_file):
 
     # Print the import statement
     _write('import %s' % module)
+    _empty_lines(2)
 
     # Print the arguements in sorted order.
 
+    print_args(arguments)
 
     # print the line to call the module.
 
