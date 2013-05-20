@@ -504,7 +504,7 @@ def save_model_run(arguments, module, out_file):
                 key= "u'%s'" % key
 
             if isinstance(value, dict):
-                _write('%s%s = {' % (prefix, key))
+                _write('%s%s: {' % (prefix, key))
                 print_args(value, str(prefix + '    '), False)
                 _write('%s},' % prefix)
             else:
