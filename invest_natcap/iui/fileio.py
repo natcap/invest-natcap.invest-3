@@ -488,18 +488,25 @@ def save_model_run(arguments, module, out_file):
         for line in range(num_lines):
             _write("")
 
+    def _is_string(string):
+        if isinstance(string, str) or isinstance(string, unicode):
+            return True
+        return False
+
     def print_args(args, prefix='    ', printHeader=True):
         if printHeader:
             _write('args = {')
 
         for key, value in sorted(args.iteritems(), key=lambda x: x[0]):
-            if isinstance(key, str) or isinstance(key, unicode):
+            if _is_string(key):
                 key= "u'%s'" % unicode(key)
+
             if isinstance(value, dict):
                 _write('%s%s = {' % (prefix, key))
                 print_args(value, str(prefix + '    '), False)
                 _write('%s},' % prefix)
             else:
+                value = "u'%s'" % unicode(value)
                 _write('%s%s: %s,' % (prefix, key, value))
 
         if printHeader:
