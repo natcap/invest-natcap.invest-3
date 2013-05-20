@@ -497,6 +497,11 @@ def save_model_run(arguments, module, out_file):
         if printHeader:
             _write('args = {')
 
+        def _print_iterable(start_char, end_char, key, value):
+            _write('%s%s: %s' % (prefix, key, start_char))
+            print_args(value, str(prefix + '    '), False)
+            _write('%s%s,' % (prefix, end_char))
+
         for key, value in sorted(args.iteritems(), key=lambda x: x[0]):
             if isinstance(key, str):
                 key = "'%s'" % key
@@ -504,9 +509,9 @@ def save_model_run(arguments, module, out_file):
                 key= "u'%s'" % key
 
             if isinstance(value, dict):
-                _write('%s%s: {' % (prefix, key))
-                print_args(value, str(prefix + '    '), False)
-                _write('%s},' % prefix)
+                _print_iterable('{', '}', key, value)
+            elif isinstance(value, list):
+                _print_iterable('[', ']', key, value)
             else:
                 if _is_string(value):
                     value = "u'%s'" % unicode(value)
