@@ -506,13 +506,20 @@ def save_model_run(arguments, module, out_file):
         prefix = '    ' + prefix
         for item in sorted(in_list):
             if isinstance(item, list):
-                _write('%s[' % prefix)
-                _print_list(item, prefix)
-                _write('%s],' % prefix)
+                if len(item) == 0:
+                    _write('%s[],' % prefix)
+                else:
+                    _write('%s[' % prefix)
+                    _print_list(item, prefix)
+                    _write('%s],' % prefix)
+
             elif isinstance(item, dict):
-                _write('%s{' % prefix)
-                _print_dict(item, prefix)
-                _write('%s},' % prefix)
+                if len(item) == 0:
+                    _write('%s{},' % prefix)
+                else:
+                    _write('%s{' % prefix)
+                    _print_dict(item, prefix)
+                    _write('%s},' % prefix)
             else:
                 string = _format_string(item)
                 _write('%s%s,' % (prefix, string))
@@ -523,13 +530,19 @@ def save_model_run(arguments, module, out_file):
             key = _format_string(key)
 
             if isinstance(value, list):
-                _write('%s%s: [' % (prefix, key))
-                _print_list(value, prefix)
-                _write('%s],' % prefix)
+                if len(value) == 0:
+                    _write('%s%s: []' % (prefix, key))
+                else:
+                    _write('%s%s: [' % (prefix, key))
+                    _print_list(value, prefix)
+                    _write('%s],' % prefix)
             elif isinstance(value, dict):
-                _write('%s%s: {' % (prefix, key))
-                _print_dict(value, prefix)
-                _write('%s},' % prefix)
+                if len(value) == 0:
+                    _write('%s%s: {}' % (prefix, key))
+                else:
+                    _write('%s%s: {' % (prefix, key))
+                    _print_dict(value, prefix)
+                    _write('%s},' % prefix)
             else:
                 string = _format_string(value)
                 _write('%s%s: %s,' % (prefix, key, string))
