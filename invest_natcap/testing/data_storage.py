@@ -10,6 +10,14 @@ class FileNotFound(Exception):
     pass
 
 def collect_parameters(self, parameters, archive_uri):
+    """Collect an InVEST model's arguments into a dictionary and archive all the
+        input data.
+
+        parameters - a dictionary of arguments
+        archive_uri - a URI to the target archive.
+
+        Returns nothing."""
+
     temp_workspace = raster_utils.temporary_folder()
 
     new_args = {}
@@ -41,9 +49,13 @@ def collect_parameters(self, parameters, archive_uri):
 
 
 def extract_archive(self, workspace_dir, archive_uri):
-    # Extract the archive to the workspace_dir and return the arguments
-    # dictionary.
-    # workspace_dir must be empty.
+    """Extract the target archive to the target workspace folder.
+
+        workspace_dir - a uri to a folder on disk.  Must be an empty folder.
+        archive_uri - a uri to an archive to be unzipped on disk.  Archive must
+            be in .tar.gz format.
+
+        Returns a dictionary of the model's parameters for this run."""
 
     # extract the archive to the workspace
     archive = tarfile.open(archive_uri)
