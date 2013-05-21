@@ -1,3 +1,6 @@
+"""
+A module for InVEST test-related data storage.
+"""
 
 import os
 import json
@@ -6,12 +9,10 @@ import shutil
 
 from invest_natcap import raster_utils
 
-class FileNotFound(Exception):
-    pass
 
 def collect_parameters(parameters, archive_uri):
-    """Collect an InVEST model's arguments into a dictionary and archive all the
-        input data.
+    """Collect an InVEST model's arguments into a dictionary and archive all
+        the input data.
 
         parameters - a dictionary of arguments
         archive_uri - a URI to the target archive.
