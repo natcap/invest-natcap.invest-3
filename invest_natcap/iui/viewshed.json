@@ -1,0 +1,73 @@
+{
+    "id" : "window",
+    "label": "Viewshed",
+    "targetScript" : "invest_natcap.aesthetic_quality.viewshed_grass",
+    "modelName" : "viewshed_grass",
+    "localDocURI": "../documentation/aesthetic_quality.html",
+    "height": 600,
+    "width" : 700,
+    "elements": [
+            {
+            "id" : "workspace_list",
+            "type": "list",	        
+		    "elements": [
+                                {
+                                    "id" : "in_raster",
+                                    "args_id" : "in_raster",
+                                    "type": "file",
+                                    "label": "DEM",
+                                    "validateAs": {"type": "GDAL", "mustExist" : true},
+                                    "required": true
+                                },                        
+                                {
+                                    "id" : "in_observer_features",
+                                    "args_id" : "in_observer_features",
+                                    "type": "file",
+                                    "label": "Features",
+                                    "validateAs": {"type": "OGR", "mustExist" : true},
+                                    "required": true
+                                },                        
+                                {
+                                    "id" : "out_raster",
+                                    "args_id" : "out_raster",
+                                    "type": "file",
+                                    "label": "Viewshed",
+                                    "validateAs": {"type": "GDAL"},
+                                    "required": true
+                                },                        
+                                {
+                                    "id" : "z_factor",
+                                    "args_id" : "z_factor",
+                                    "type": "text",
+                                    "label": "Z factor",
+                                    "defaultValue": "1",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",                                    
+                                    "required": true
+                                },                        
+                                {
+                                    "id" : "earth",
+                                    "args_id" : "earth",
+                                    "type": "dropdown",
+                                    "label": "Earth",
+                                    "options":["flat", "curved"],
+                                    "returns": {"mapValues" : {"flat" : 0, "curved" : 1}},
+                                    "defaultValue": 0,                                    
+                                    "required": true
+                                },                        
+                                {
+                                    "id" : "refractivity_coefficient",
+                                    "args_id" : "workspace_dir",
+                                    "type": "text",
+                                    "label": "Refractivity",
+                                    "defaultValue": "0.13",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",                                    
+                                    "required": true                                    
+                                }
+
+
+	   ]
+		   }
+    ]
+}
