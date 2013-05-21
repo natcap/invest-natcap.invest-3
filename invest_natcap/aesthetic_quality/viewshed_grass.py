@@ -1,19 +1,23 @@
-import sys, os, numpy, argparse
+import sys, os
+from osgeo import ogr
 
-#sys.path.append("/usr/lib/grass64/etc")
 sys.path.append("/usr/lib/grass64/etc/python")
-#sys.path.append("/usr/lib/grass64/lib")
-#sys.path.append("/usr/lib/grass64/bin")
-#sys.path.append("/usr/lib/grass64/extralib")
-#sys.path.append("/usr/lib/grass64/msys/bin")
-
-#os.putenv("GISBASE","/usr/lib/grass64")
 
 import grass.script
 import grass.script.setup
 
+import logging
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('aesthetic_quality')
+
 class grasswrapper():
-    def __init__(self, dbBase="", location="/home/mlacayo/workspace/newLocation", mapset="PERMANENT"):
+    def __init__(self,
+                 dbBase="",
+                 location="/home/mlacayo/workspace/newLocation",
+                 mapset="PERMANENT"):
         '''
         Wrapper of "python.setup.init" defined in GRASS python.
         Initialize system variables to run scripts without starting GRASS explicitly.
@@ -31,26 +35,60 @@ class grasswrapper():
         grass.script.setup.init(self.gisbase, self.gisdb, self.loc, self.mapset)
 
 def execute(args):
-    pass
+    os.putenv('GIS_LOCK', 'default')
+    #preprocess data
 
-def viewshed(input, output, coordinate, obs_elev=1.75, tgt_elev=0.0, memory=4098, overwrite=True, quiet=True):
-    g.run_command('r.in.gdal',
-                  'o', #overide projection
-                  input=args["in_raster"],
-                  output='dem')
+    #calculate viewshed
+    viewshed(args["in_raster"],
+             args["in_observer_features"],
+             os.path.join(args["workspace_dir"],"viewshed.tif"))
 
-    ##g.run_command('r.viewshed',
-    ##              input='/home/mlacayo/Desktop/aq_sample/Input/claybark_dem.tif',
-    ##              output='/home/mlacayo/Desktop/viewshed.tif',
-    ##              coordinate=[295844, 5459791],
-    ##              obs_elev=1.75,
-    ##              tgt_elev=0.0,
-    ##              'c', #earth curvature
-    ##              memory=4098,
-    ##              overwrite=True,
-    ##              quiet=True)
+def viewshed(dataset_uri, feature_set_uri, dataset_out_uri):
+    LOGGER.debug("Registering raster with GRASS.")
+    grass.script.run_command('r.in.gdal',
+                             'o', #overide projection
+                             input=dataset_uri,
+                             output='dem')
 
-    ##g.run_command('r.out.tiff'
+    LOGGER.debug("g.list: %s",
+                 str(grass.script.parse_command("g.list", _type="vect")))
+
+    LOGGER.debug("Computing viewshed for each point.")
+    shapefile = ogr.Open(feature_set_uri)
+    layer = shapefile.GetLayer()
+    feature_count = layer.GetFeatureCount()    
+    for feature_id in xrange(feature_count):
+        feature = layer.GetFeature(feature_id)    
+        geom = feature.GetGeometryRef()
+        x, y, _ = geom.GetPoint()
+        coordinate = [x, y]
+
+        LOGGER.debug("Creating viewshed for feature %i.", feature_id)
+
+        grass.script.run_command('r.viewshed',
+                                 'c', #earth curvature
+                                 'b', #boolean viewshed
+                                 input='dem',
+                                 output='feature_%i' % feature_id,
+                                 coordinate=coordinate,
+##                                 obs_elev=1.75,
+##                                 tgt_elev=0.0,
+##                                 memory=4098,
+##                                 overwrite=True,
+                                 quiet=True)
+
+    shapefile = None
+
+    LOGGER.debug("Summing viewsheds.")
+    grass.script.run_command('r.mapcalc',
+                             'viewshed = ' + ' + '.join(
+                                 ['feature_%i' % i for i in xrange(
+                                     feature_count)]))
+
+    LOGGER.debug("Exporting viewshed.")
+    grass.script.run_command('r.out.tiff',
+                             input='viewshed',
+                             output=dataset_out_uri)
 
 if __name__ == "__main__":
          
