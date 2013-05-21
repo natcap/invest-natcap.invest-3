@@ -14,9 +14,17 @@ LOGGER = logging.getLogger('invest_natcap.testing')
 
 
 def save_workspace(new_workspace):
+    """Decorator to save a workspace to a new location."""
+
+    # item is the function being decorated
     def test_inner_func(item):
+
+        # this decorator indicates that this innermost function is wrapping up
+        # the function passed in as item.
         @functools.wraps(item)
         def test_and_remove_workspace(self, *args, **kwargs):
+            # This inner function actually executes the test function and then
+            # moves the workspace to the folder passed in by the user.
             item(self)
 
             # remove the contents of the old folder
