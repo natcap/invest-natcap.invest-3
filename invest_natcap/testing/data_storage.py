@@ -8,7 +8,7 @@ class FileNotFound(Exception):
     pass
 
 class DataManager(object):
-    def collect_parameters(self, parameters):
+    def collect_parameters(self, parameters, archive_uri):
         temp_workspace = raster_utils.temporary_folder()
 
         new_args = {}
@@ -34,3 +34,6 @@ class DataManager(object):
         parameter_file.writelines(json.dumps(new_args))
         parameter_file.close()
 
+        # archive the workspace.
+        shutil.make_archive(archive_uri, 'gztar', root_dir=temp_workspace,
+            base_dir=temp_workspace)
