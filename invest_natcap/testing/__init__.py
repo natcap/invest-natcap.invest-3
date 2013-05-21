@@ -169,3 +169,30 @@ class GISTest(unittest.TestCase):
 
         shape = None
         shape_regression = None
+
+    def assertCSVEqual(unitTest, aUri, bUri):
+        """Tests if csv files a and b are 'almost equal' to each other on a per
+            cell basis
+
+            unitTest - an instance of a unittest object
+            aUri - a URI to a csv file
+            bUri - a URI to a csv file
+
+            returns True if a and b are equal to each other"""
+
+        a = open(aUri)
+        b = open(bUri)
+
+        reader_a = csv.reader(a)
+        reader_b = csv.reader(b)
+        a_list = np.array([])
+        b_list = np.array([])
+
+        for row in reader_a:
+            np.append(a_list, row)
+
+        for row in reader_b:
+            np.append(b_list, row)
+
+        unitTest.assertEqual(a_list.shape, b_list.shape)
+        unitTest.assertTrue((a_list==b_list).all())
