@@ -9,7 +9,7 @@ from invest_natcap import raster_utils
 class FileNotFound(Exception):
     pass
 
-def collect_parameters(self, parameters, archive_uri):
+def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all the
         input data.
 
@@ -48,7 +48,7 @@ def collect_parameters(self, parameters, archive_uri):
         base_dir=temp_workspace)
 
 
-def extract_archive(self, workspace_dir, archive_uri):
+def extract_archive(workspace_dir, archive_uri):
     """Extract the target archive to the target workspace folder.
 
         workspace_dir - a uri to a folder on disk.  Must be an empty folder.
