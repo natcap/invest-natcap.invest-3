@@ -263,23 +263,30 @@ def execute(args):
        
         aoi_proj_uri = os.path.join(
                 intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
+
+        # Get the spacial reference of the Extract shape and export to WKT to
+        # use in reprojecting the AOI
         extract_sr = raster_utils.get_spatial_ref_uri(analysis_area_extract_uri)
         extract_wkt = extract_sr.ExportToWkt()
-        # Project AOI into lat/long WGS84
+        
+        # Project AOI to Extract shape
         raster_utils.reproject_datasource_uri(
                 aoi_shape_path, extract_wkt, aoi_proj_uri)
 
         aoi_clipped_to_extract_uri = os.path.join(
                 intermediate_dir,
                 'aoi_clipped_to_extract_uri%s.shp' % file_suffix)
-        
+
+        # Clip the AOI to the Extract shape to make sure the output results do
+        # not show extrapolated values outside the bounds of the points
         clip_shape(
                 aoi_proj_uri, analysis_area_extract_uri,
                 aoi_clipped_to_extract_uri)
        
         aoi_clip_proj_uri = os.path.join(
                 intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
-        
+
+        # Reproject the clipped AOI back
         raster_utils.reproject_datasource_uri(
                 aoi_clipped_to_extract_uri, output_wkt, aoi_clip_proj_uri)
 
