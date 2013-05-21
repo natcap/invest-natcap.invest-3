@@ -1398,7 +1398,7 @@ def calculate_value_not_in_array(array):
 
 def create_rat_uri(dataset_uri, attr_dict, column_name):
     """URI wrapper for create_rat"""
-    dataset = gdal.Open(dataset_uri, gdal.GA_UPDATE)
+    dataset = gdal.Open(dataset_uri, gdal.GA_Update)
     create_rat(dataset, attr_dict, column_name)
     dataset = None
 
