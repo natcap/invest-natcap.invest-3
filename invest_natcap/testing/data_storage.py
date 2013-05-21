@@ -1,5 +1,6 @@
 
 import os
+import json
 
 from invest_natcap import raster_utils
 
@@ -28,4 +29,8 @@ class DataManager(object):
                 new_args[key] = value
 
         # write parameters to a new json file in the temp workspace
+        param_file_uri = os.path.join(temp_workspace, 'parameters.json')
+        parameter_file = open(param_file_uri, mode='w+')
+        parameter_file.writelines(json.dumps(new_args))
+        parameter_file.close()
 
