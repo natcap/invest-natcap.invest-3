@@ -1,6 +1,7 @@
 
 import os
 import json
+import tarfile
 
 from invest_natcap import raster_utils
 
@@ -37,3 +38,18 @@ class DataManager(object):
         # archive the workspace.
         shutil.make_archive(archive_uri, 'gztar', root_dir=temp_workspace,
             base_dir=temp_workspace)
+
+    def extract_archive(self, workspace_dir, archive_uri):
+        # Extract the archive to the workspace_dir and return the arguments
+        # dictionary.
+        # workspace_dir must be empty.
+
+        # extract the archive to the workspace
+        archive = tarfile.open(archive_uri)
+        archive.extractall(workspace_dir)
+        archive.close()
+
+        # get the arguments dictionary
+        return json.load(open(os.path.join(workspace_dir, 'parameters.json')))
+
+
