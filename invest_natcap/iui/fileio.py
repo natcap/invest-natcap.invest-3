@@ -8,6 +8,8 @@ import sys
 import codecs
 import datetime
 
+from PyQt4 import QtCore
+
 import invest_natcap
 from dbfpy import dbf
 
@@ -493,47 +495,63 @@ def save_model_run(arguments, module, out_file):
             return True
         return False
 
+    def _format_string(string):
+        if isinstance(string, str):
+            string = "'%s'" % string.replace('\n', '\\n')
+        elif isinstance(string, unicode):
+            string = "u'%s'" % string.replace('\n', '\\n')
+        return string
+
+    def _print_list(in_list, prefix):
+        prefix = '    ' + prefix
+        for item in sorted(in_list):
+            if isinstance(item, list):
+                if len(item) == 0:
+                    _write('%s[],' % prefix)
+                else:
+                    _write('%s[' % prefix)
+                    _print_list(item, prefix)
+                    _write('%s],' % prefix)
+
+            elif isinstance(item, dict):
+                if len(item) == 0:
+                    _write('%s{},' % prefix)
+                else:
+                    _write('%s{' % prefix)
+                    _print_dict(item, prefix)
+                    _write('%s},' % prefix)
+            else:
+                string = _format_string(item)
+                _write('%s%s,' % (prefix, string))
+
+    def _print_dict(in_dict, prefix):
+        prefix = '    ' + prefix
+        for key, value in sorted(in_dict.iteritems(), key=lambda x: x[0]):
+            key = _format_string(key)
+
+            if isinstance(value, list):
+                if len(value) == 0:
+                    _write('%s%s: []' % (prefix, key))
+                else:
+                    _write('%s%s: [' % (prefix, key))
+                    _print_list(value, prefix)
+                    _write('%s],' % prefix)
+            elif isinstance(value, dict):
+                if len(value) == 0:
+                    _write('%s%s: {}' % (prefix, key))
+                else:
+                    _write('%s%s: {' % (prefix, key))
+                    _print_dict(value, prefix)
+                    _write('%s},' % prefix)
+            else:
+                string = _format_string(value)
+                _write('%s%s: %s,' % (prefix, key, string))
+
     def print_args(args, prefix='    ', printHeader=True):
         if printHeader:
             _write('args = {')
 
-        def _print_iterable(start_char, end_char, key, value):
-            _write('%s%s: %s' % (prefix, key, start_char))
-            print_args(value, str(prefix + '    '), False)
-            _write('%s%s,' % (prefix, end_char))
-
-        if isinstance(args, list):
-            iterator = args
-            sort = lambda x: x
-        elif isinstance(args, dict):
-            iterator = args.iteritems()
-            sort = lambda x: x[0]
-
-        for attrs in sorted(iterator, key=sort):
-            if isinstance(args, dict):
-                key = attrs[0]
-                value = attrs[1]
-            elif isinstance(args, list):
-                key = attrs
-                value = key
-
-            if isinstance(key, str):
-                key = "'%s'" % key
-            elif isinstance(key, unicode):
-                key= "u'%s'" % key
-
-            if isinstance(value, dict):
-                _print_iterable('{', '}', key, value)
-            elif isinstance(value, list):
-                _print_iterable('[', ']', key, value)
-            else:
-                if _is_string(value):
-                    value = "u'%s'" % unicode(value)
-
-                if isinstance(args, list):
-                    _write('%s%s,' % (prefix, key))
-                elif isinstance(args, dict):
-                    _write('%s%s: %s,' % (prefix, key, value))
+        _print_dict(args, prefix)
 
         if printHeader:
             _write('}')
