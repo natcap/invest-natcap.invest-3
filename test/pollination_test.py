@@ -250,7 +250,6 @@ class UnifiedPollinationTest(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(self, regression_file,
             test_file)
 
-    @testing.save_workspace('/home/jadoug06/test_shapefile_existssss')
     def test_farms_shapefile_already_exists(self):
         self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
         self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
