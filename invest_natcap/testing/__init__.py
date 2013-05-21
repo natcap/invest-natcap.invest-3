@@ -86,3 +86,86 @@ class GISTest(unittest.TestCase):
                         self.assertAlmostEqual(pixel_a, pixel_b,
                             msg='%s != %s ... Failed at row %s' %
                             (pixel_a, pixel_b, row_index))
+
+    def assertVectorsEqual(self, aUri, bUri):
+        """Tests if shapes a and b are equal to each other on a
+           layer, feature, and field basis
+
+           unitTest - an instance of a unittest object
+           aUri - a URI to a ogr shapefile
+           bUri - a URI to a ogr shapefile
+
+           returns True if a and b are equal to each other"""
+
+        for uri in [aUri, bUri]:
+            if not os.path.exists(uri):
+                raise IOError('File "%s" not found on disk' % uri)
+
+        shape = ogr.Open(aUri)
+        shape_regression = ogr.Open(bUri)
+
+        # Check that the shapefiles have the same number of layers
+        layer_count = shape.GetLayerCount()
+        layer_count_regression = shape_regression.GetLayerCount()
+        unitTest.assertEqual(layer_count, layer_count_regression,
+                         'The shapes DO NOT have the same number of layers')
+
+        for layer_num in range(layer_count):
+            # Get the current layer
+            layer = shape.GetLayer(layer_num)
+            layer_regression = shape_regression.GetLayer(layer_num)
+            # Check that each layer has the same number of features
+            feat_count = layer.GetFeatureCount()
+            feat_count_regression = layer_regression.GetFeatureCount()
+            unitTest.assertEqual(feat_count, feat_count_regression,
+                             'The layers DO NOT have the same number of features')
+
+            unitTest.assertEqual(layer.GetGeomType(), layer_regression.GetGeomType(),
+                'The layers do not have the same geometry type')
+
+
+            # Get the first features of the layers and loop through all the features
+            feat = layer.GetNextFeature()
+            feat_regression = layer_regression.GetNextFeature()
+            while feat is not None:
+                # Check that the field counts for the features are the same
+                layer_def = layer.GetLayerDefn()
+                layer_def_regression = layer_regression.GetLayerDefn()
+                field_count = layer_def.GetFieldCount()
+                field_count_regression = layer_def_regression.GetFieldCount()
+                unitTest.assertEqual(field_count, field_count_regression,
+                                 'The shapes DO NOT have the same number of fields')
+
+                for fld_index in range(field_count):
+                    # Check that the features have the same field values
+                    field = feat.GetField(fld_index)
+                    field_regression = feat_regression.GetField(fld_index)
+                    unitTest.assertEqual(field, field_regression,
+                                         'The field values DO NOT match')
+                    # Check that the features have the same field name
+                    field_ref = feat.GetFieldDefnRef(fld_index)
+                    field_ref_regression = \
+                        feat_regression.GetFieldDefnRef(fld_index)
+                    field_name = field_ref.GetNameRef()
+                    field_name_regression = field_ref_regression.GetNameRef()
+                    unitTest.assertEqual(field_name, field_name_regression,
+                                         'The fields DO NOT have the same name')
+                # Check that the features have the same geometry
+                geom = feat.GetGeometryRef()
+                geom_regression = feat_regression.GetGeometryRef()
+
+                unitTest.assertTrue(geom.Equals(geom_regression))
+
+                if layer.GetGeomType() != ogr.wkbPoint:
+                    # Check that the features have the same area,
+                    # but only if the shapefile's geometry is not a point, since
+                    # points don't have area to check.
+                    unitTest.assertEqual(geom.Area(), geom_regression.Area())
+
+                feat = None
+                feat_regression = None
+                feat = layer.GetNextFeature()
+                feat_regression = layer_regression.GetNextFeature()
+
+        shape = None
+        shape_regression = None
