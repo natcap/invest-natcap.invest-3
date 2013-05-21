@@ -4,11 +4,33 @@ functionality."""
 import unittest
 import os
 import logging
+import shutil
+import functools
 
 import numpy
 from osgeo import gdal
 
 LOGGER = logging.getLogger('invest_natcap.testing')
+
+
+def save_workspace(new_workspace):
+    def test_inner_func(item):
+        @functools.wraps(item)
+        def test_and_remove_workspace(self, *args, **kwargs):
+            item(self)
+
+            # remove the contents of the old folder
+            try:
+                shutil.rmtree(new_workspace)
+            except OSError:
+                pass
+
+            # copy the workspace to the target folder
+            old_workspace = self.workspace_dir
+            shutil.copytree(old_workspace, new_workspace)
+        return test_and_remove_workspace
+    return test_inner_func
+
 
 class GISTest(unittest.TestCase):
     """A test class for our GIS testing functions."""

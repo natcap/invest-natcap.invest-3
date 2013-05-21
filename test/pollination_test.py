@@ -9,6 +9,8 @@ import logging
 import invest_test_core
 import invest_natcap.pollination.pollination as pollination
 import invest_natcap.pollination.pollination_core as pollination_core
+import invest_natcap.testing as testing
+
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -248,6 +250,7 @@ class UnifiedPollinationTest(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(self, regression_file,
             test_file)
 
+    @testing.save_workspace('/home/jadoug06/test_shapefile_existssss')
     def test_farms_shapefile_already_exists(self):
         self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
         self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
