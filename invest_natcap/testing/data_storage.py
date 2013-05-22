@@ -15,12 +15,23 @@ DATA_ARCHIVES = os.path.join('data', 'regression_archives')
 INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 OUTPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'output')
 
+COMPLEX_FILES = {
+    'ArcInfo Binary Grid': ['dblbnd.adf', 'hdr.adf', 'log', 'metadata.xml',
+        'prj.adf', 'sta.adf', 'vat.adf', 'w001001.adf', 'w001001x.adf'],
+    'ESRI Shapefile': ['.dbf', '.shp', '.prj', '.shx'],
+}
+
 def archive_uri(name=None):
     if name is None:
         calling_function = inspect.stack()[1]
         name = calling_function.__name__
 
     return(os.path.join(INPUT_ARCHIVE, name))
+
+def is_multi_file(filename):
+    """Check if the filename given is a file with multiple parts to it, such as
+        an ESRI shapefile or an ArcInfo Binary Grid."""
+    pass
 
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
