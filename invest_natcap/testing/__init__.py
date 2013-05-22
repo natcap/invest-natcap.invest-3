@@ -91,7 +91,6 @@ class GISTest(unittest.TestCase):
         """Tests if shapes a and b are equal to each other on a
            layer, feature, and field basis
 
-           unitTest - an instance of a unittest object
            aUri - a URI to a ogr shapefile
            bUri - a URI to a ogr shapefile
 
@@ -107,7 +106,7 @@ class GISTest(unittest.TestCase):
         # Check that the shapefiles have the same number of layers
         layer_count = shape.GetLayerCount()
         layer_count_regression = shape_regression.GetLayerCount()
-        unitTest.assertEqual(layer_count, layer_count_regression,
+        self.assertEqual(layer_count, layer_count_regression,
                          'The shapes DO NOT have the same number of layers')
 
         for layer_num in range(layer_count):
@@ -117,10 +116,10 @@ class GISTest(unittest.TestCase):
             # Check that each layer has the same number of features
             feat_count = layer.GetFeatureCount()
             feat_count_regression = layer_regression.GetFeatureCount()
-            unitTest.assertEqual(feat_count, feat_count_regression,
+            self.assertEqual(feat_count, feat_count_regression,
                              'The layers DO NOT have the same number of features')
 
-            unitTest.assertEqual(layer.GetGeomType(), layer_regression.GetGeomType(),
+            self.assertEqual(layer.GetGeomType(), layer_regression.GetGeomType(),
                 'The layers do not have the same geometry type')
 
 
@@ -133,14 +132,14 @@ class GISTest(unittest.TestCase):
                 layer_def_regression = layer_regression.GetLayerDefn()
                 field_count = layer_def.GetFieldCount()
                 field_count_regression = layer_def_regression.GetFieldCount()
-                unitTest.assertEqual(field_count, field_count_regression,
+                self.assertEqual(field_count, field_count_regression,
                                  'The shapes DO NOT have the same number of fields')
 
                 for fld_index in range(field_count):
                     # Check that the features have the same field values
                     field = feat.GetField(fld_index)
                     field_regression = feat_regression.GetField(fld_index)
-                    unitTest.assertEqual(field, field_regression,
+                    self.assertEqual(field, field_regression,
                                          'The field values DO NOT match')
                     # Check that the features have the same field name
                     field_ref = feat.GetFieldDefnRef(fld_index)
@@ -148,19 +147,19 @@ class GISTest(unittest.TestCase):
                         feat_regression.GetFieldDefnRef(fld_index)
                     field_name = field_ref.GetNameRef()
                     field_name_regression = field_ref_regression.GetNameRef()
-                    unitTest.assertEqual(field_name, field_name_regression,
+                    self.assertEqual(field_name, field_name_regression,
                                          'The fields DO NOT have the same name')
                 # Check that the features have the same geometry
                 geom = feat.GetGeometryRef()
                 geom_regression = feat_regression.GetGeometryRef()
 
-                unitTest.assertTrue(geom.Equals(geom_regression))
+                self.assertTrue(geom.Equals(geom_regression))
 
                 if layer.GetGeomType() != ogr.wkbPoint:
                     # Check that the features have the same area,
                     # but only if the shapefile's geometry is not a point, since
                     # points don't have area to check.
-                    unitTest.assertEqual(geom.Area(), geom_regression.Area())
+                    self.assertEqual(geom.Area(), geom_regression.Area())
 
                 feat = None
                 feat_regression = None
@@ -170,11 +169,10 @@ class GISTest(unittest.TestCase):
         shape = None
         shape_regression = None
 
-    def assertCSVEqual(unitTest, aUri, bUri):
+    def assertCSVEqual(self, aUri, bUri):
         """Tests if csv files a and b are 'almost equal' to each other on a per
             cell basis
 
-            unitTest - an instance of a unittest object
             aUri - a URI to a csv file
             bUri - a URI to a csv file
 
@@ -194,5 +192,5 @@ class GISTest(unittest.TestCase):
         for row in reader_b:
             np.append(b_list, row)
 
-        unitTest.assertEqual(a_list.shape, b_list.shape)
-        unitTest.assertTrue((a_list==b_list).all())
+        self.assertEqual(a_list.shape, b_list.shape)
+        self.assertTrue((a_list==b_list).all())
