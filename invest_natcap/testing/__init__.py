@@ -10,6 +10,8 @@ import functools
 import numpy
 from osgeo import gdal
 
+import data_storage
+
 LOGGER = logging.getLogger('invest_natcap.testing')
 
 
@@ -39,6 +41,11 @@ def save_workspace(new_workspace):
         return test_and_remove_workspace
     return test_inner_func
 
+
+def regression():
+    """Decorator to unzip input data, run the regression test and compare the
+        outputs against the outputs on file."""
+    pass
 
 class GISTest(unittest.TestCase):
     """A test class for our GIS testing functions."""
