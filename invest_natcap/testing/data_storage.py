@@ -6,6 +6,7 @@ import os
 import json
 import tarfile
 import shutil
+import inspect
 
 from invest_natcap import raster_utils
 
@@ -13,6 +14,13 @@ from invest_natcap import raster_utils
 DATA_ARCHIVES = os.path.join('data', 'regression_archives')
 INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
 OUTPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'output')
+
+def archive_uri(name=None):
+    if name is None:
+        calling_function = inspect.stack()[1]
+        name = calling_function.__name__
+
+    return(os.path.join(INPUT_ARCHIVE, name))
 
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
@@ -73,11 +81,12 @@ def extract_archive(workspace_dir, archive_uri):
     workspace_args = {}
     for key, value in arguments_dict.iteritems():
         try:
-            if os.path.relpath(value, workspace_dir):
-                workspace_args[key] = os.path.join(workspace, value)
+            temp_file_path = os.path.join(workspace_dir, value)
+            if os.path.isfile(temp_file_path):
+                workspace_args[key] = temp_file_path
             else:
                 workspace_args[key] = value
-        except ValueError:
+        except TypeError:
             workspace_args[key] = value
 
     return workspace_args
