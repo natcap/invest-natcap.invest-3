@@ -10,6 +10,10 @@ import shutil
 from invest_natcap import raster_utils
 
 
+DATA_ARCHIVES = os.path.join('data', 'regression_archives')
+INPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'input')
+OUTPUT_ARCHIVES = os.path.join(DATA_ARCHIVES, 'output')
+
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
         the input data.
