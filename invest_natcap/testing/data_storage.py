@@ -68,4 +68,16 @@ def extract_archive(workspace_dir, archive_uri):
     archive.close()
 
     # get the arguments dictionary
-    return json.load(open(os.path.join(workspace_dir, 'parameters.json')))
+    arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))
+
+    workspace_args = {}
+    for key, value in arguments_dict.iteritems():
+        try:
+            if os.path.relpath(value, workspace_dir):
+                workspace_args[key] = os.path.join(workspace, value)
+            else:
+                workspace_args[key] = value
+        except ValueError:
+            workspace_args[key] = value
+
+    return workspace_args

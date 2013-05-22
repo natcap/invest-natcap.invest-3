@@ -194,3 +194,10 @@ class GISTest(unittest.TestCase):
 
         self.assertEqual(a_list.shape, b_list.shape)
         self.assertTrue((a_list==b_list).all())
+
+    def extract_input_archive(self):
+        """Extract this test's archive to a temporary workspace and ensure that
+        the arguments are relative to the temporary path.  Returns a dictionary
+        of the arguments."""
+
+        
