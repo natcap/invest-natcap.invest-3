@@ -72,21 +72,34 @@ def collect_parameters(parameters, archive_uri):
             return os.path.basename(raster_dir)
         else:
             parent_folder = os.path.dirname(filepath)
-            files_in_parent = glob.glob(os.path.join(parent_folder, '*.*'))
+            files_in_parent = map(os.path.basename,
+                glob.glob(os.path.join(parent_folder, '*.*')))
             raster_files = COMPLEX_FILES['ArcInfo Binary Grid']
-            if len(files_in_parent) > len(raster_files):
+            raster_files_present = map(lambda x: x in files_in_parent,
+                    raster_files)
+
+            print files_in_parent
+            print raster_files
+            print raster_files_present
+
+            if True in raster_files_present:
                 # create a new folder in the temp workspace
-                raster_dir = make_raster_dir(temp_workspace)
+                raster_dir = make_raster_dir(temp_workspace, parent_folder)
+                os.mkdir(raster_dir)
+                print raster_dir
 
                 # copy all the raster files over to the new folder
-                for raster_file in raster_files:
-                    orig_raster_uri = os.path.join(parent_folder, raster_file)
-                    new_raster_uri = os.path.join(raster_dir, raster_file)
-                    shutil.copyfile(orig_raster_uri, new_raster_uri)
+                for raster_file, is_present in zip(raster_files,
+                        raster_files_present):
+                    if is_present:
+                        orig_raster_uri = os.path.join(parent_folder, raster_file)
+                        new_raster_uri = os.path.join(raster_dir, raster_file)
+                        shutil.copyfile(orig_raster_uri, new_raster_uri)
 
                 # return the new folder
                 return raster_dir
             else:
+                LOGGER.debug('Folder only contains raster files')
                 # this folder only contains raster files.
                 return parent_folder
 
