@@ -48,3 +48,11 @@ class DataStorageTest(testing.GISTest):
             'simple_nested_dict.tar.gz')
 
         self.assertArchive(archive_uri, regression_archive_uri)
+
+    def test_archive_arc_raster_nice(self):
+        params = {
+            'raster': os.path.join('data', 'base_data', 'Freshwater', 'precip')
+        }
+
+        archive_uri = os.path.join(TEST_OUT, 'raster_nice')
+
