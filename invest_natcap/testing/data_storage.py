@@ -97,7 +97,7 @@ def collect_parameters(parameters, archive_uri):
                         shutil.copyfile(orig_raster_uri, new_raster_uri)
 
                 # return the new folder
-                return raster_dir
+                return os.path.basename(raster_dir)
             else:
                 LOGGER.debug('Folder only contains raster files')
                 # this folder only contains raster files.
