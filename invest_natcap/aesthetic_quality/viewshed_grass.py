@@ -36,12 +36,41 @@ class grasswrapper():
 
 def execute(args):
     os.putenv('GIS_LOCK', 'default')
+
+    project_setup(args["in_raster"])
+    
     #preprocess data
 
     #calculate viewshed
     viewshed(args["in_raster"],
              args["in_observer_features"],
              os.path.join(args["workspace_dir"],"viewshed.tif"))
+
+    project_cleanup()
+
+def project_setup(dataset_uri):
+    #this might not be necessary depending on how the InVEST installer is configured
+    LOGGER.debug("Creating location.")
+    grass.script.run_command('g.proj',
+                             'c',
+                             georef = dataset_uri,
+                             location = 'invest')
+
+    LOGGER.debug("Changing location.")
+    grass.script.run_command('g.mapset',
+                             mapset = 'PERMANENT',
+                             location = 'invest')
+    
+##    LOGGER.debug("Adding mapset.")
+##    grass.script.run_command('g.mapsets',
+##                             addmapset = 'invest')
+
+def project_cleanup():
+    LOGGER.debug("Removing raster mapsets.")
+    #this might delete source files
+    grass.script.run_command('g.mremove',
+                             'f',
+                             rast = '*')
 
 def viewshed(dataset_uri, feature_set_uri, dataset_out_uri):
     LOGGER.debug("Registering raster with GRASS.")
