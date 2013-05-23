@@ -275,3 +275,13 @@ class GISTest(unittest.TestCase):
                 bigger_list.remove(filepath)
 
             raise AssertionError('Problem!')
+        else:
+            # archives have the same number of files that we care about
+            for file_1, file_2 in zip(archive_1_files, archive_2_files):
+                file_1_uri = os.path.join(archive_1_folder, file_1)
+                file_1_md5 = get_hash(file_1_uri)
+
+                file_2_uri = os.path.join(archive_2_folder, file_2)
+                file_2_md5 = get_hash(file_2_uri)
+                self.assertEqual(file_1_md5, file_2_md5,
+                    'Files %s and %s differ' % (file_1_uri, file_2_uri))
