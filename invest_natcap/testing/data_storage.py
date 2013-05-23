@@ -86,11 +86,22 @@ def collect_parameters(parameters, archive_uri):
 
     def get_if_file(parameter):
         try:
-            if os.path.exists(parameter):
+            if os.path.isfile(parameter):
                 new_filename = os.path.basename(parameter)
                 shutil.copyfile(parameter, os.path.join(temp_workspace,
                     new_filename))
                 return new_filename
+            elif os.path.isdir(parameter):
+                # parameter is a folder, so we want to copy the folder and all
+                # its contents to temp_workspace.
+                new_foldername = tempfile.mkdtemp(prefix='data_',
+                    dir=temp_workspace)
+                shutil.copytree(parameter, new_foldername)
+            else:
+                # Parameter does not exist on disk.  Print an error to the
+                # logger and move on.
+                LOGGER.error('File %s does not exist on disk.  Skipping.',
+                    parameter)
         except TypeError:
             # When the value is not a string.
             pass
