@@ -9,6 +9,8 @@ import logging
 import invest_test_core
 import invest_natcap.pollination.pollination as pollination
 import invest_natcap.pollination.pollination_core as pollination_core
+import invest_natcap.testing as testing
+
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
