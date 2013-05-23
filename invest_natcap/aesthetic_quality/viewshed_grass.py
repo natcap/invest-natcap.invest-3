@@ -58,6 +58,7 @@ def project_setup(dataset_uri):
 
     LOGGER.debug("Changing location.")
     grass.script.run_command('g.mapset',
+                             mapset = 'PERMANENT',
                              location = 'invest')
     
 ##    LOGGER.debug("Adding mapset.")
