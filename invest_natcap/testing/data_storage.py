@@ -7,6 +7,7 @@ import json
 import tarfile
 import shutil
 import inspect
+import logging
 
 from invest_natcap import raster_utils
 
@@ -20,6 +21,9 @@ COMPLEX_FILES = {
         'prj.adf', 'sta.adf', 'vat.adf', 'w001001.adf', 'w001001x.adf'],
     'ESRI Shapefile': ['.dbf', '.shp', '.prj', '.shx'],
 }
+
+LOGGER = logging.getLogger('data_storage')
+
 
 def archive_uri(name=None):
     if name is None:
@@ -69,7 +73,7 @@ def collect_parameters(parameters, archive_uri):
 
     # archive the workspace.
     shutil.make_archive(archive_uri, 'gztar', root_dir=temp_workspace,
-        base_dir=temp_workspace)
+        logger=LOGGER)
 
 
 def extract_archive(workspace_dir, archive_uri):
