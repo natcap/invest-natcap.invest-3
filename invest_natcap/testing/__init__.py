@@ -245,18 +245,33 @@ class GISTest(unittest.TestCase):
         archive_2_folder = raster_utils.temporary_folder()
         data_storage.extract_archive(archive_2_folder, archive_2_uri)
 
-        archive_1_file_list = []
-        archive_2_file_list = []
-        for file_list, workspace in [
-                (archive_1_file_list, archive_1_folder),
-                (archive_2_file_list, archive_2_folder)]:
+        archive_1_files = []
+        archive_2_files = []
+        for files_list, workspace in [
+                (archive_1_files, archive_1_folder),
+                (archive_2_files, archive_2_folder)]:
             for root, dirs, files in os.walk(workspace):
+                root = root.replace(workspace, '')
                 for filename in files:
                     full_path = os.path.join(root, filename)
-                    file_list.append(full_path)
+                    files_list.append(full_path)
 
-        archive_1_file_list = sorted(archive_1_file_list)
-        archive_2_file_list = sorted(archive_2_file_list)
+        archive_1_files = sorted(archive_1_files)
+        archive_2_files = sorted(archive_2_files)
 
-        LOGGER.debug(archive_1_file_list)
-        LOGGER.debug(archive_2_file_list)
+        archive_1_size = len(archive_1_files)
+        archive_2_size = len(archive_2_files)
+        if archive_1_size != archive_2_size:
+            # find out which archive had more files.
+            if archive_1_size > archive_2_size:
+                bigger_list = archive_1_files
+                smaller_list = archive_2_files
+            else:
+                bigger_list = archive_2_files
+                smaller_list = archive_1_files
+
+            # eliminate all the smaller files from the bigger list
+            for filepath in smaller_list:
+                bigger_list.remove(filepath)
+
+            raise AssertionError('Problem!')
