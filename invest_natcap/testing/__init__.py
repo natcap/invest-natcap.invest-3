@@ -25,7 +25,6 @@ def get_hash(uri):
 
         Returns a string hash for the file."""
 
-    LOGGER.debug('Starting to hash %s', uri)
     block_size = 2**20
     file_handler = open(uri)
     md5 = hashlib.md5()
@@ -34,7 +33,6 @@ def get_hash(uri):
         if not data:
             break
         md5.update(data)
-    LOGGER.debug('Finished updating the hash')
     return md5.hexdigest()
 
 
