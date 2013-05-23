@@ -9,6 +9,8 @@ import shutil
 import inspect
 import logging
 import tempfile
+import string
+import random
 
 from osgeo import gdal
 from osgeo import ogr
@@ -41,9 +43,13 @@ def is_multi_file(filename):
         an ESRI shapefile or an ArcInfo Binary Grid."""
     pass
 
-def make_raster_dir(workspace):
-    raster_dir = tempfile.mkdtemp(prefix='raster_', dir=workspace)
-    shutil.rmtree(raster_dir)
+def make_raster_dir(workspace, seed_string):
+    random.seed(seed_string)
+    new_dirname = ''.join(random.choice(string.ascii_uppercase + string.digits)
+            for x in range(6))
+    new_dirname = 'raster_' + new_dirname
+    raster_dir = os.path.join(workspace, new_dirname)
+    LOGGER.debug('new raster dir: %s', raster_dir)
     return raster_dir
 
 def collect_parameters(parameters, archive_uri):
@@ -59,7 +65,7 @@ def collect_parameters(parameters, archive_uri):
 
     def get_multi_part_gdal(filepath):
         if os.path.isdir(filepath):
-            raster_dir = make_raster_dir(temp_workspace)
+            raster_dir = make_raster_dir(temp_workspace, os.path.basename(filepath))
 
             shutil.copytree(filepath, raster_dir)
             return os.path.basename(raster_dir)
