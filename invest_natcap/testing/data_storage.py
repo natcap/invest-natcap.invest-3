@@ -77,6 +77,19 @@ def collect_parameters(parameters, archive_uri):
 
 
 def extract_archive(workspace_dir, archive_uri):
+    """Extract a .tar.gzipped file to the given workspace.
+
+        workspace_dir - the folder to which the archive should be extracted
+        archive_uri - the uri to the target archive
+
+        Returns nothing."""
+
+    archive = tarfile.open(archive_uri)
+    archive.extractall(workspace_dir)
+    archive.close()
+
+
+def extract_parameters_archive(workspace_dir, archive_uri):
     """Extract the target archive to the target workspace folder.
 
         workspace_dir - a uri to a folder on disk.  Must be an empty folder.
@@ -86,9 +99,7 @@ def extract_archive(workspace_dir, archive_uri):
         Returns a dictionary of the model's parameters for this run."""
 
     # extract the archive to the workspace
-    archive = tarfile.open(archive_uri)
-    archive.extractall(workspace_dir)
-    archive.close()
+    extract_archive(workspace_dir, archive_uri)
 
     # get the arguments dictionary
     arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))

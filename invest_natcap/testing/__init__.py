@@ -232,3 +232,12 @@ class GISTest(unittest.TestCase):
 
         self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
 
+    def assertArchive(self, archive_1_uri, archive_2_uri):
+        """Unzip the two archives and compare its contents.  Archives must be
+            tar.gz."""
+
+        # uncompress the two archives
+        archive_1_folder = raster_utils.temporary_folder()
+        
+
+        matches, mismatches, errors
