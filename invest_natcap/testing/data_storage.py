@@ -78,15 +78,10 @@ def collect_parameters(parameters, archive_uri):
             raster_files_present = map(lambda x: x in files_in_parent,
                     raster_files)
 
-            print files_in_parent
-            print raster_files
-            print raster_files_present
-
             if True in raster_files_present:
                 # create a new folder in the temp workspace
                 raster_dir = make_raster_dir(temp_workspace, parent_folder)
                 os.mkdir(raster_dir)
-                print raster_dir
 
                 # copy all the raster files over to the new folder
                 for raster_file, is_present in zip(raster_files,
