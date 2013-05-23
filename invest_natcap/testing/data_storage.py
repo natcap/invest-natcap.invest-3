@@ -11,6 +11,7 @@ import logging
 import tempfile
 import string
 import random
+import glob
 
 from osgeo import gdal
 from osgeo import ogr
