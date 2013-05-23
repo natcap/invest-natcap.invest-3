@@ -55,4 +55,4 @@ class DataStorageTest(testing.GISTest):
         }
 
         archive_uri = os.path.join(TEST_OUT, 'raster_nice')
-
+        data_storage.collect_parameters(params, archive_uri)
