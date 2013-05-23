@@ -132,7 +132,11 @@ def collect_parameters(parameters, archive_uri):
     #   If a URI is found, copy that file to a new location in the temp
     #   workspace and update the URI reference.
     #   Duplicate URIs should also have the same replacement URI.
-    del parameters['workspace_dir']
+    try:
+        del parameters['workspace_dir']
+    except:
+        LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\.'
+            ' Be sure to check your archived data'))
     new_args = collect_dict(parameters)
 
     LOGGER.debug('new arguments: %s', new_args)
