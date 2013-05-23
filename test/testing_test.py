@@ -26,3 +26,25 @@ class DataStorageTest(testing.GISTest):
             'collect_parameters_simple.tar.gz')
 
         self.assertArchive(archive_uri, regression_archive_uri)
+
+    def test_collect_parameters_nested_dict(self):
+        params = {
+            'a': 1,
+            'b': 2,
+            'd': {
+                'one': 1,
+                'two': 2,
+                'three': os.path.join(POLLINATION_DATA, 'Guild.csv')
+            },
+            'c': os.path.join(POLLINATION_DATA, 'LU.csv'),
+        }
+
+        archive_uri = os.path.join(TEST_OUT, 'archive_nested_dict')
+
+        data_storage.collect_parameters(params, archive_uri)
+        archive_uri = archive_uri + '.tar.gz'
+
+        regression_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'simple_nested_dict.tar.gz')
+
+        self.assertArchive(archive_uri, regression_archive_uri)
