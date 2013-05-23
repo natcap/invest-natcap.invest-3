@@ -6,6 +6,7 @@ import os
 import logging
 import shutil
 import functools
+import hashlib
 
 import numpy
 from osgeo import gdal
@@ -13,6 +14,26 @@ from osgeo import gdal
 import data_storage
 
 LOGGER = logging.getLogger('invest_natcap.testing')
+
+def get_hash(uri):
+    """Get the MD5 hash for a single file.  The file is read in a
+        memory-efficient fashion.
+
+        uri - a string uri to the file to be tested.
+
+        Returns a string hash for the file."""
+
+    LOGGER.debug('Starting to hash %s', uri)
+    block_size = 2**20
+    file_handler = open(uri)
+    md5 = hashlib.md5()
+    while True:
+        data = file_handler.read(block_size)
+        if not data:
+            break
+        md5.update(data)
+    LOGGER.debug('Finished updating the hash')
+    return md5.hexdigest()
 
 
 def save_workspace(new_workspace):
@@ -201,4 +222,13 @@ class GISTest(unittest.TestCase):
 
         self.assertEqual(a_list.shape, b_list.shape)
         self.assertTrue((a_list==b_list).all())
+
+    def assertMD5(self, uri, regression_hash):
+        """Tests if the input file has the same hash as the regression hash
+            provided.
+
+            uri - a string URI to the file to be tested.
+            regression_hash - a string hash to be tested."""
+
+        self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
 
