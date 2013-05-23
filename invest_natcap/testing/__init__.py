@@ -251,7 +251,7 @@ class GISTest(unittest.TestCase):
                 (archive_1_files, archive_1_folder),
                 (archive_2_files, archive_2_folder)]:
             for root, dirs, files in os.walk(workspace):
-                root = root.replace(workspace, '')
+                root = root.replace(workspace + os.sep, '')
                 for filename in files:
                     full_path = os.path.join(root, filename)
                     files_list.append(full_path)
@@ -283,5 +283,6 @@ class GISTest(unittest.TestCase):
 
                 file_2_uri = os.path.join(archive_2_folder, file_2)
                 file_2_md5 = get_hash(file_2_uri)
+                LOGGER.debug('Checking %s, %s', file_1_uri, file_2_uri)
                 self.assertEqual(file_1_md5, file_2_md5,
                     'Files %s and %s differ' % (file_1_uri, file_2_uri))
