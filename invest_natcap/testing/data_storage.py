@@ -8,6 +8,10 @@ import tarfile
 import shutil
 import inspect
 import logging
+import tempfile
+
+from osgeo import gdal
+from osgeo import ogr
 
 from invest_natcap import raster_utils
 
@@ -83,10 +87,14 @@ def collect_parameters(parameters, archive_uri):
         elif ogr.Open(filepath) != None:
             # file is a shapefile
             return get_multi_part_ogr(filepath)
+        return None
 
     def get_if_file(parameter):
         try:
-            if os.path.isfile(parameter):
+            multi_part_folder = get_multi_part(parameter)
+            if multi_part_folder != None:
+                return multi_part_folder
+            elif os.path.isfile(parameter):
                 new_filename = os.path.basename(parameter)
                 shutil.copyfile(parameter, os.path.join(temp_workspace,
                     new_filename))
@@ -97,6 +105,7 @@ def collect_parameters(parameters, archive_uri):
                 new_foldername = tempfile.mkdtemp(prefix='data_',
                     dir=temp_workspace)
                 shutil.copytree(parameter, new_foldername)
+                return new_foldername
             else:
                 # Parameter does not exist on disk.  Print an error to the
                 # logger and move on.
