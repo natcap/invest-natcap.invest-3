@@ -281,6 +281,6 @@ class GISTest(unittest.TestCase):
 
                 file_2_uri = os.path.join(archive_2_folder, file_2)
                 file_2_md5 = get_hash(file_2_uri)
-                LOGGER.debug('Checking %s, %s', file_1_uri, file_2_uri)
+                LOGGER.debug('Checking %s, %s', file_1, file_2)
                 self.assertEqual(file_1_md5, file_2_md5,
                     'Files %s and %s differ' % (file_1_uri, file_2_uri))
