@@ -2398,6 +2398,7 @@ class MainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self)
         self.ui = root_class(uri, self)
         self.setCentralWidget(self.ui)
+        self.ui.setWindowSize()
 
         self.file_menu = QtGui.QMenu('&File')
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
