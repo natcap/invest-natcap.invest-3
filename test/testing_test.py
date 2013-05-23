@@ -73,3 +73,6 @@ class DataStorageTest(testing.GISTest):
         data_storage.collect_parameters(params, archive_uri)
 
         archive_uri += '.tar.gz'
+        regression_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'arc_raster_messy.tar.gz')
+        self.assertArchive(archive_uri, regression_archive_uri)
