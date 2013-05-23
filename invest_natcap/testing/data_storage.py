@@ -48,6 +48,42 @@ def collect_parameters(parameters, archive_uri):
 
     temp_workspace = raster_utils.temporary_folder()
 
+    def get_multi_part_gdal(filepath):
+        if os.path.isdir(filepath):
+            return filepath
+        else:
+            parent_folder = os.path.dirname(filepath)
+            files_in_parent = glob.glob(os.path.join(parent_folder, '*.*'))
+            raster_files = COMPLEX_FILES['ArcInfo Binary Grid']
+            if len(files_in_parent) > len(raster_files):
+                # create a new folder in the temp workspace
+                raster_dir = tempfile.mkdtemp(prefix='raster_', dir=temp_workspace)
+
+                # copy all the raster files over to the new folder
+                for raster_file in raster_files:
+                    orig_raster_uri = os.path.join(parent_folder, raster_file)
+                    new_raster_uri = os.path.join(raster_dir, raster_file)
+                    shutil.copyfile(orig_raster_uri, new_raster_uri)
+
+                # return the new folder
+                return raster_dir
+            else:
+                # this folder only contains raster files.
+                return parent_folder
+
+    def get_multi_part_ogr(filepath):
+        pass
+
+    def get_multi_part(filepath):
+        # If the user provides a mutli-part file, wrap it into a folder and grab
+        # that instead of the individual file.
+        if gdal.Open(filepath) != None:
+            # file is a raster
+            return get_multi_part_gdal(filepath)
+        elif ogr.Open(filepath) != None:
+            # file is a shapefile
+            return get_multi_part_ogr(filepath)
+
     def get_if_file(parameter):
         try:
             if os.path.exists(parameter):
