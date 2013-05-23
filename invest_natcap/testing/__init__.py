@@ -7,10 +7,12 @@ import logging
 import shutil
 import functools
 import hashlib
+import filecmp
 
 import numpy
 from osgeo import gdal
 
+from invest_natcap import raster_utils
 import data_storage
 
 LOGGER = logging.getLogger('invest_natcap.testing')
@@ -238,6 +240,23 @@ class GISTest(unittest.TestCase):
 
         # uncompress the two archives
         archive_1_folder = raster_utils.temporary_folder()
-        
+        data_storage.extract_archive(archive_1_folder, archive_1_uri)
 
-        matches, mismatches, errors
+        archive_2_folder = raster_utils.temporary_folder()
+        data_storage.extract_archive(archive_2_folder, archive_2_uri)
+
+        archive_1_file_list = []
+        archive_2_file_list = []
+        for file_list, workspace in [
+                (archive_1_file_list, archive_1_folder),
+                (archive_2_file_list, archive_2_folder)]:
+            for root, dirs, files in os.walk(workspace):
+                for filename in files:
+                    full_path = os.path.join(root, filename)
+                    file_list.append(full_path)
+
+        archive_1_file_list = sorted(archive_1_file_list)
+        archive_2_file_list = sorted(archive_2_file_list)
+
+        LOGGER.debug(archive_1_file_list)
+        LOGGER.debug(archive_2_file_list)
