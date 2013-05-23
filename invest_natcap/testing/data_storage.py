@@ -65,6 +65,7 @@ def collect_parameters(parameters, archive_uri):
             # When the value is not a string.
             new_args[key] = value
 
+    LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace
     param_file_uri = os.path.join(temp_workspace, 'parameters.json')
     parameter_file = open(param_file_uri, mode='w+')
@@ -104,15 +105,21 @@ def extract_parameters_archive(workspace_dir, archive_uri):
     # get the arguments dictionary
     arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))
 
+    def _get_if_uri(parameter):
+        """If the parameter is a file, returns the filepath relative to the
+        extracted workspace.  If the parameter is not a file, returns the
+        original parameter."""
+        try:
+            temp_file_path = os.path.join(workspace_dir, parameter)
+            if os.path.isfile(temp_file_path):
+                return temp_file_path
+        except TypeError:
+            # When the parameter is not a string
+            pass
+        return parameter
+
     workspace_args = {}
     for key, value in arguments_dict.iteritems():
-        try:
-            temp_file_path = os.path.join(workspace_dir, value)
-            if os.path.isfile(temp_file_path):
-                workspace_args[key] = temp_file_path
-            else:
-                workspace_args[key] = value
-        except TypeError:
-            workspace_args[key] = value
+        workspace_args[key] = _get_if_uri(value)
 
     return workspace_args
