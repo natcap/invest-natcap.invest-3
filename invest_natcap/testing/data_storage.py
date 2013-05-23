@@ -41,6 +41,11 @@ def is_multi_file(filename):
         an ESRI shapefile or an ArcInfo Binary Grid."""
     pass
 
+def make_raster_dir(workspace):
+    raster_dir = tempfile.mkdtemp(prefix='raster_', dir=workspace)
+    shutil.rmtree(raster_dir)
+    return raster_dir
+
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
         the input data.
@@ -54,14 +59,17 @@ def collect_parameters(parameters, archive_uri):
 
     def get_multi_part_gdal(filepath):
         if os.path.isdir(filepath):
-            return filepath
+            raster_dir = make_raster_dir(temp_workspace)
+
+            shutil.copytree(filepath, raster_dir)
+            return os.path.basename(raster_dir)
         else:
             parent_folder = os.path.dirname(filepath)
             files_in_parent = glob.glob(os.path.join(parent_folder, '*.*'))
             raster_files = COMPLEX_FILES['ArcInfo Binary Grid']
             if len(files_in_parent) > len(raster_files):
                 # create a new folder in the temp workspace
-                raster_dir = tempfile.mkdtemp(prefix='raster_', dir=temp_workspace)
+                raster_dir = make_raster_dir(temp_workspace)
 
                 # copy all the raster files over to the new folder
                 for raster_file in raster_files:
@@ -83,6 +91,7 @@ def collect_parameters(parameters, archive_uri):
         # that instead of the individual file.
         if gdal.Open(filepath) != None:
             # file is a raster
+            LOGGER.debug('%s is a raster', filepath)
             return get_multi_part_gdal(filepath)
         elif ogr.Open(filepath) != None:
             # file is a shapefile
