@@ -278,6 +278,18 @@ def extract_archive(workspace_dir, archive_uri):
 
 
 def format_dictionary(input_dict, types_lookup={}):
+    """Recurse through the input dictionary and return a formatted dictionary.
+
+        As each element is encountered, the correct function to use is looked up
+        in the types_lookup input.  If a type is not found, we assume that the
+        element should be returned verbatim.
+
+        input_dict - a dictionary to process
+        types_lookup - a dictionary mapping types to functions.  These functions
+            must take a single parameter of the type that is the key.  These
+            functions must return a formatted version of the input parameter.
+
+        Returns a formatted dictionary."""
 
     def format_dict(parameter):
         new_dict = {}
