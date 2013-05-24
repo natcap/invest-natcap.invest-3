@@ -91,3 +91,28 @@ class DataStorageTest(testing.GISTest):
             'vector_collected.tar.gz')
         self.assertArchive(archive_uri, regression_archive_uri)
 
+    def test_archive_pollination_input(self):
+        params = {
+            u'ag_classes': '67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92',
+            u'do_valuation': True,
+            u'farms_shapefile':
+            u'data/pollination/samp_input/farms.shp',
+            u'guilds_uri':
+            u'data/pollination/samp_input/Guild.csv',
+            u'half_saturation': 0.125,
+            u'landuse_attributes_uri': u'data/pollination/samp_input/LU.csv',
+            u'landuse_cur_uri': u'data/base_data/terrestrial/lulc_samp_cur/hdr.adf',
+            u'landuse_fut_uri': u'data/base_data/terrestrial/lulc_samp_fut/hdr.adf',
+            u'results_suffix': 'suff',
+            u'wild_pollination_proportion': 1.0,
+            u'workspace_dir': u'/home/jadoug06/workspace/Pollination_Mary',
+        }
+
+        archive_uri = os.path.join(TEST_OUT, 'pollination_input')
+        data_storage.collect_parameters(params, archive_uri)
+
+        archive_uri += '.tar.gz'
+        regression_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'pollination_input.tar.gz')
+        self.assertArchive(archive_uri, regression_archive_uri)
+
