@@ -139,3 +139,7 @@ class DataStorageTest(testing.GISTest):
         }
 
         self.assertEqual(parameters, regression_params)
+
+        for key in ['farms_shapefile', 'guilds_uri', 'landuse_attributes_uri',
+            'landuse_cur_uri', 'landuse_fut_uri']:
+            self.assertEqual(True, os.path.exists(parameters[key]))
