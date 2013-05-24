@@ -71,7 +71,7 @@ def regression():
         outputs against the outputs on file."""
     pass
 
-def build_regression_test(file_uri):
+def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
     file_handler = fileio.JSONHandler(file_uri)
 
     saved_data = file_handler.get_attributes()
@@ -87,7 +87,7 @@ def build_regression_test(file_uri):
     workspace = arguments['workspace_dir']
 
     # collect the parameters into a single folder
-    input_archive = '/home/jadoug06/test_input_archive'
+    input_archive = input_archive_uri
     data_storage.collect_parameters(arguments, input_archive)
     input_archive += '.tar.gz'
 
@@ -95,9 +95,10 @@ def build_regression_test(file_uri):
 
     model.execute(model_args)
 
-    archive_uri = '/home/jadoug06/test_output_archive'
+    archive_uri = output_archive_uri
     LOGGER.debug('Archiving the output workspace')
     shutil.make_archive(archive_uri, 'gztar', root_dir=workspace, logger=LOGGER)
+
 
 class GISTest(unittest.TestCase):
     """A test class for our GIS testing functions."""
