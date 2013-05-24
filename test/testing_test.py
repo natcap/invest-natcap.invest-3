@@ -116,3 +116,26 @@ class DataStorageTest(testing.GISTest):
             'pollination_input.tar.gz')
         self.assertArchive(archive_uri, regression_archive_uri)
 
+    def test_extract_archive(self):
+        workspace = os.path.join(TEST_OUT, 'extracted')
+        os.mkdir(workspace)
+        archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'pollination_input.tar.gz')
+        parameters = data_storage.extract_parameters_archive(workspace,
+            archive_uri)
+
+        self.maxDiff = None
+        regression_params = {
+            u'ag_classes': u'67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92',
+            u'do_valuation': True,
+            u'farms_shapefile': os.path.join(workspace, u'vector_LCN2UV'),
+            u'guilds_uri': os.path.join(workspace, u'Guild.csv'),
+            u'half_saturation': 0.125,
+            u'landuse_attributes_uri': os.path.join(workspace, u'LU.csv'),
+            u'landuse_cur_uri': os.path.join(workspace, u'raster_23KPVQ'),
+            u'landuse_fut_uri': os.path.join(workspace, u'raster_N243QT'),
+            u'results_suffix': u'suff',
+            u'wild_pollination_proportion': 1.0,
+        }
+
+        self.assertEqual(parameters, regression_params)
