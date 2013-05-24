@@ -98,6 +98,28 @@ def collect_parameters(parameters, archive_uri):
                 # this folder only contains raster files.
                 return parent_folder
 
+    def get_multi_part_gdal_better(filepath):
+        dataset = gdal.Open(filepath)
+        file_list = dataset.GetFileList()
+        LOGGER.debug('Files in raster: %s', file_list)
+
+        if os.path.isdir(filepath):
+            parent_folder = os.path.basename(filepath)
+        else:
+            parent_folder = os.path.dirname(filepath)
+
+        new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
+        os.mkdir(new_raster_dir)
+        for raster_file in file_list:
+            if os.path.isfile(raster_file):
+                file_basename = os.path.basename(raster_file)
+                new_raster_uri = os.path.join(new_raster_dir, file_basename)
+                shutil.copyfile(raster_file, new_raster_uri)
+
+        return os.path.basename(new_raster_dir)
+
+
+
     def get_multi_part_ogr(filepath):
         pass
 
@@ -107,7 +129,7 @@ def collect_parameters(parameters, archive_uri):
         if gdal.Open(filepath) != None:
             # file is a raster
             LOGGER.debug('%s is a raster', filepath)
-            return get_multi_part_gdal(filepath)
+            return get_multi_part_gdal_better(filepath)
         elif ogr.Open(filepath) != None:
             # file is a shapefile
             return get_multi_part_ogr(filepath)
