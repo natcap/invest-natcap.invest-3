@@ -182,24 +182,42 @@ def collect_parameters(parameters, archive_uri):
                 return get_multi_part_ogr(filepath)
         return None
 
+    # For tracking existing files so we don't copy things twice
+    files_found = {}
+
     def get_if_file(parameter):
+        try:
+            uri = files_found[os.path.abspath(parameter)]
+            LOGGER.debug('Found %s from a previous parameter', uri)
+        except KeyError:
+            # we haven't found this file before, so we still need to process it.
+            pass
+
+        # initialize the return_path
+        return_path = None
         try:
             multi_part_folder = get_multi_part(parameter)
             if multi_part_folder != None:
-                return multi_part_folder
+                LOGGER.debug('%s is a multi-part file', parameter)
+                return_path = multi_part_folder
+
             elif os.path.isfile(parameter):
+                LOGGER.debug('%s is a single file', parameter)
                 new_filename = os.path.basename(parameter)
                 shutil.copyfile(parameter, os.path.join(temp_workspace,
                     new_filename))
-                return new_filename
+                return_path = new_filename
+
             elif os.path.isdir(parameter):
+                LOGGER.debug('%s is a directory', parameter)
                 # parameter is a folder, so we want to copy the folder and all
                 # its contents to temp_workspace.
                 folder_name = os.path.basename(parameter)
                 new_foldername = make_random_dir(temp_workspace, folder_name,
                     'data_', False)
                 shutil.copytree(parameter, new_foldername)
-                return new_foldername
+                return_path = new_foldername
+
             else:
                 # Parameter does not exist on disk.  Print an error to the
                 # logger and move on.
@@ -208,6 +226,12 @@ def collect_parameters(parameters, archive_uri):
         except TypeError as e:
             # When the value is not a string.
             LOGGER.warn('%s', e)
+
+        LOGGER.debug('Return path: %s', return_path)
+        if return_path != None:
+            files_found[os.path.abspath(parameter)] = return_path
+            return return_path
+
         LOGGER.debug('Returning original parameter %s', parameter)
         return parameter
 
