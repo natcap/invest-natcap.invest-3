@@ -45,10 +45,12 @@ def is_multi_file(filename):
     pass
 
 def make_random_dir(workspace, seed_string, prefix, make_dir=True):
+    LOGGER.debug('Random dir seed: %s', seed_string)
     random.seed(seed_string)
     new_dirname = ''.join(random.choice(string.ascii_uppercase + string.digits)
             for x in range(6))
     new_dirname = prefix + new_dirname
+    LOGGER.debug('New dirname: %s', new_dirname)
     raster_dir = os.path.join(workspace, new_dirname)
 
     if make_dir:
@@ -136,11 +138,16 @@ def collect_parameters(parameters, archive_uri):
 
         new_vector_dir = make_vector_dir(temp_workspace, parent_folder)
         if driver.name == 'ESRI Shapefile':
+            LOGGER.debug('%s is an ESRI Shapefile', filepath)
             # get the layer name
             layer = shapefile.GetLayer()
 
             # get the layer files
-            layer_files = glob.glob(os.path.dirname(filepath), '%s.*' % layer.name)
+            parent_folder_path = os.path.dirname(filepath)
+            glob_pattern = os.path.join(parent_folder_path, '%s.*' %
+                layer.GetName())
+            layer_files = glob.glob(glob_pattern)
+            LOGGER.debug('Layer files: %s', layer_files)
 
             # copy the layer files to the new folder.
             for file_name in layer_files:
@@ -148,8 +155,10 @@ def collect_parameters(parameters, archive_uri):
                 new_filename = os.path.join(new_vector_dir, file_basename)
                 shutil.copyfile(file_name, new_filename)
         else:
-            raise UnsupportedFormat('%s is not a supported OGR Format', %
+            raise UnsupportedFormat('%s is not a supported OGR Format',
                 driver.name)
+
+        return os.path.basename(new_vector_dir)
 
     def get_multi_part(filepath):
         # If the user provides a mutli-part file, wrap it into a folder and grab
@@ -196,9 +205,10 @@ def collect_parameters(parameters, archive_uri):
                 # logger and move on.
                 LOGGER.error('File %s does not exist on disk.  Skipping.',
                     parameter)
-        except TypeError:
+        except TypeError as e:
             # When the value is not a string.
-            pass
+            LOGGER.warn('%s', e)
+        LOGGER.debug('Returning original parameter %s', parameter)
         return parameter
 
     def collect_list(parameter_list):
