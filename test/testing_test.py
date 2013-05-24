@@ -5,6 +5,7 @@ import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
 
 POLLINATION_DATA = os.path.join('data', 'pollination', 'samp_input')
+CARBON_DATA = os.path.join('data', 'carbon', 'input')
 REGRESSION_ARCHIVES = os.path.join('data', 'data_storage', 'regression')
 TEST_INPUT = os.path.join('data', 'data_storage', 'test_input')
 TEST_OUT = os.path.join('data', 'test_out')
@@ -76,3 +77,17 @@ class DataStorageTest(testing.GISTest):
         regression_archive_uri = os.path.join(REGRESSION_ARCHIVES,
             'arc_raster_messy.tar.gz')
         self.assertArchive(archive_uri, regression_archive_uri)
+
+    def test_archive_esri_shapefile(self):
+        params = {
+            'vector': os.path.join(CARBON_DATA, 'harv_samp_cur.shp')
+        }
+
+        archive_uri = os.path.join(TEST_OUT, 'vector_collected')
+        data_storage.collect_parameters(params, archive_uri)
+
+        archive_uri += '.tar.gz'
+        regression_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'vector_collected.tar.gz')
+        self.assertArchive(archive_uri, regression_archive_uri)
+
