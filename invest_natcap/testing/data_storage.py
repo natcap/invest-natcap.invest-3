@@ -236,28 +236,6 @@ def collect_parameters(parameters, archive_uri):
         LOGGER.debug('Returning original parameter %s', parameter)
         return parameter
 
-    def collect_list(parameter_list):
-        new_list = []
-        for parameter in parameter_list:
-            new_list.append(types[parameter.__class__](parameter))
-        return new_list
-
-    def collect_dict(parameter_dict):
-        new_dict = {}
-        for key, value in parameter_dict.iteritems():
-            new_dict[key] = types[value.__class__](value)
-        return new_dict
-
-    types = {
-        list: collect_list,
-        dict: collect_dict,
-        str: get_if_file,
-        unicode: get_if_file,
-        int: lambda x: x,
-        float: lambda x: x,
-        bool: lambda x: x,
-    }
-
     # Recurse through the parameters to locate any URIs
     #   If a URI is found, copy that file to a new location in the temp
     #   workspace and update the URI reference.
@@ -267,7 +245,12 @@ def collect_parameters(parameters, archive_uri):
     except:
         LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\.'
             ' Be sure to check your archived data'))
-    new_args = collect_dict(parameters)
+
+    types = {
+        str: get_if_file,
+        unicode: get_if_file,
+    }
+    new_args = format_dictionary(parameters, types)
 
     LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace
@@ -294,6 +277,36 @@ def extract_archive(workspace_dir, archive_uri):
     archive.close()
 
 
+def format_dictionary(input_dict, types_lookup={}):
+
+    def format_dict(parameter):
+        new_dict = {}
+        for key, value in parameter.iteritems():
+            try:
+                new_dict[key] = types[value.__class__](value)
+            except KeyError:
+                new_dict[key] = value
+        return new_dict
+
+    def format_list(parameter):
+        new_list = []
+        for item in parameter:
+            try:
+                new_list.append(types[item.__class__](item))
+            except KeyError:
+                new_list.append(value)
+        return new_list
+
+    types = {
+        dict: format_dict,
+        list: format_list,
+    }
+
+    types.update(types_lookup)
+
+    return format_dict(input_dict)
+
+
 def extract_parameters_archive(workspace_dir, archive_uri):
     """Extract the target archive to the target workspace folder.
 
@@ -308,18 +321,6 @@ def extract_parameters_archive(workspace_dir, archive_uri):
 
     # get the arguments dictionary
     arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))
-
-    def extract_dict(parameter):
-        new_dict = {}
-        for key, value in parameter.iteritems():
-            new_dict[key] = types[value.__class__](value)
-        return new_dict
-
-    def extract_list(parameter):
-        new_list = []
-        for item in parameter:
-            new_list.append(types[item.__class__](item))
-        return new_list
 
     def _get_if_uri(parameter):
         """If the parameter is a file, returns the filepath relative to the
@@ -339,15 +340,7 @@ def extract_parameters_archive(workspace_dir, archive_uri):
         return parameter
 
     types = {
-        dict: extract_dict,
-        list: extract_list,
         str: _get_if_uri,
         unicode: _get_if_uri,
-        int: lambda x: x,
-        float: lambda x: x,
-        bool: lambda x: x,
     }
-
-    workspace_args = extract_dict(arguments_dict)
-
-    return workspace_args
+    return format_dictionary(arguments_dict, types)
