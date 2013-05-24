@@ -290,11 +290,15 @@ def extract_parameters_archive(workspace_dir, archive_uri):
         original parameter."""
         try:
             temp_file_path = os.path.join(workspace_dir, parameter)
-            if os.path.isfile(temp_file_path):
+            if os.path.exists(temp_file_path):
                 return temp_file_path
         except TypeError:
             # When the parameter is not a string
             pass
+        except AttributeError:
+            # when the parameter is not a string
+            pass
+
         return parameter
 
     workspace_args = {}
