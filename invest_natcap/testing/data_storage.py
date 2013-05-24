@@ -189,6 +189,7 @@ def collect_parameters(parameters, archive_uri):
         try:
             uri = files_found[os.path.abspath(parameter)]
             LOGGER.debug('Found %s from a previous parameter', uri)
+            return uri
         except KeyError:
             # we haven't found this file before, so we still need to process it.
             pass
