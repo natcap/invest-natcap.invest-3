@@ -146,13 +146,23 @@ def collect_parameters(parameters, archive_uri):
     def get_multi_part(filepath):
         # If the user provides a mutli-part file, wrap it into a folder and grab
         # that instead of the individual file.
-        if gdal.Open(filepath) != None:
+
+        raster_obj = gdal.Open(filepath)
+        if raster_obj != None:
             # file is a raster
+            raster_obj = None
             LOGGER.debug('%s is a raster', filepath)
             return get_multi_part_gdal(filepath)
-        elif ogr.Open(filepath) != None:
-            # file is a shapefile
-            return get_multi_part_ogr(filepath)
+
+        vector_obj = ogr.Open(filepath)
+        if vector_obj != None:
+            # Need to check the driver name to be sure that this isn't a CSV.
+            driver = vector_obj.GetDriver()
+            if driver.name != 'CSV':
+                # file is a shapefile
+                vector_obj = None
+                layer = None
+                return get_multi_part_ogr(filepath)
         return None
 
     def get_if_file(parameter):
