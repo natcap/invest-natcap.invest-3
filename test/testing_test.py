@@ -143,3 +143,64 @@ class DataStorageTest(testing.GISTest):
         for key in ['farms_shapefile', 'guilds_uri', 'landuse_attributes_uri',
             'landuse_cur_uri', 'landuse_fut_uri']:
             self.assertEqual(True, os.path.exists(parameters[key]))
+
+    def test_extract_archive_nested_args(self):
+        input_parameters = {
+            'a': 1,
+            'b': 2,
+            'd': {
+                'one': 1,
+                'two': 2,
+                'three': os.path.join(POLLINATION_DATA, 'Guild.csv')
+            },
+            'c': os.path.join(CARBON_DATA, 'harv_samp_cur.shp'),
+            'raster_list': [
+                os.path.join('data', 'base_data', 'Freshwater', 'precip'),
+                {
+                    'lulc_samp_cur': os.path.join('data', 'base_data',
+                        'terrestrial', 'lulc_samp_cur'),
+                    'do_biophysical': True,
+                }
+            ],
+            'c_again': os.path.join(CARBON_DATA, 'harv_samp_cur.shp'),
+        }
+        archive_uri = os.path.join(TEST_OUT, 'nested_args')
+        data_storage.collect_parameters(input_parameters, archive_uri)
+        archive_uri += '.tar.gz'
+        self.maxDiff=None
+
+        workspace = raster_utils.temporary_folder()
+        regression_parameters = {
+            u'a': 1,
+            u'b': 2,
+            u'd': {
+                u'one': 1,
+                u'two': 2,
+                u'three': os.path.join(workspace, u'Guild.csv')
+            },
+            u'c': os.path.join(workspace, u'vector_1WEYE3'),
+            u'raster_list': [
+                os.path.join(workspace, u'raster_HD405B'),
+                {
+                    u'lulc_samp_cur': os.path.join(workspace, u'raster_7ZA2EY'),
+                    u'do_biophysical': True,
+                }
+            ],
+            u'c_again': os.path.join(workspace, u'vector_1WEYE3'),
+        }
+        parameters = data_storage.extract_parameters_archive(workspace, archive_uri)
+        self.assertEqual(parameters, regression_parameters)
+
+        files_to_check = [
+            regression_parameters['d']['three'],
+            regression_parameters['c'],
+            regression_parameters['raster_list'][0],
+            regression_parameters['raster_list'][1]['lulc_samp_cur'],
+            regression_parameters['c_again'],
+        ]
+
+        for file_uri in files_to_check:
+            self.assertEqual(True, os.path.exists(file_uri))
+
+
+
