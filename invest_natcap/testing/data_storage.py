@@ -44,25 +44,28 @@ def is_multi_file(filename):
         an ESRI shapefile or an ArcInfo Binary Grid."""
     pass
 
-def make_random_dir(workspace, seed_string, prefix):
+def make_random_dir(workspace, seed_string, prefix, make_dir=True):
     random.seed(seed_string)
     new_dirname = ''.join(random.choice(string.ascii_uppercase + string.digits)
             for x in range(6))
     new_dirname = prefix + new_dirname
     raster_dir = os.path.join(workspace, new_dirname)
-    os.mkdir(raster_dir)
+
+    if make_dir:
+        os.mkdir(raster_dir)
+
     return raster_dir
 
 
-def make_raster_dir(workspace, seed_string):
-    raster_dir = make_random_dir(workspace, seed_string, 'raster_')
+def make_raster_dir(workspace, seed_string, make_dir=True):
+    raster_dir = make_random_dir(workspace, seed_string, 'raster_', make_dir)
     LOGGER.debug('new raster dir: %s', raster_dir)
     return raster_dir
 
 
-def make_vector_dir(workspace, seed_string):
-    vector_dir = make_random_dir(workspace, seed_string, 'vector_')
-    LOGGER.debug('new vector dir: %s', raster_dir)
+def make_vector_dir(workspace, seed_string, make_dir=True):
+    vector_dir = make_random_dir(workspace, seed_string, 'vector_', make_dir)
+    LOGGER.debug('new vector dir: %s', vector_dir)
     return vector_dir
 
 def collect_parameters(parameters, archive_uri):
@@ -131,8 +134,8 @@ def collect_parameters(parameters, archive_uri):
         else:
             parent_folder = os.path.basename(os.path.dirname(filepath))
 
-        new_vector_dir = make_vector_dir(filepath, parent_folder)
-        if d.name == 'ESRI Shapefile':
+        new_vector_dir = make_vector_dir(temp_workspace, parent_folder)
+        if driver.name == 'ESRI Shapefile':
             # get the layer name
             # get the layer files
             # copy the layer files to the new folder.
