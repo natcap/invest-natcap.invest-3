@@ -65,19 +65,42 @@ def collect_parameters(parameters, archive_uri):
     temp_workspace = raster_utils.temporary_folder()
 
     def get_multi_part_gdal(filepath):
+        """Collect all GDAL files into a new folder inside of the temp_workspace
+        (a closure from the collect_parameters funciton).
+
+        This function uses gdal's internal knowledge of the files it contains to
+        determine which files are to be included.
+
+            filepath - a URI to a file that is in a GDAL raster.
+
+        Returns the name of the new folder within the temp_workspace that
+        contains all the files in this raster."""
+
+        # Get the file list from GDAL
+        # NOTE: with ESRI Rasters, other files are sometimes included in this
+        # list that are not actually part of the raster.  This is an acceptable
+        # cost of this function, since we are now able to handle ALL raster
+        # types supported by GDAL.
         dataset = gdal.Open(filepath)
         file_list = dataset.GetFileList()
         LOGGER.debug('Files in raster: %s', file_list)
         dataset = None
 
+        # If the filepath given is a folder itself, we want the new raster dir
+        # to be based on a seed of the folder's basname.  Otherwise, we need to
+        # get the basename from the filepath.
         if os.path.isdir(filepath):
             parent_folder = os.path.basename(filepath)
         else:
             parent_folder = os.path.dirname(filepath)
 
+        # The make_raster_dir function does not make the folder itself.
         new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
         os.mkdir(new_raster_dir)
+
         for raster_file in file_list:
+            # raster_file may be a folder ... we can't copy a folder with
+            # copyfile.
             if os.path.isfile(raster_file):
                 file_basename = os.path.basename(raster_file)
                 new_raster_uri = os.path.join(new_raster_dir, file_basename)
