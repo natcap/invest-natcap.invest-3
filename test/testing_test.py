@@ -180,7 +180,7 @@ class DataStorageTest(testing.GISTest):
             },
             u'c': os.path.join(workspace, u'vector_1WEYE3'),
             u'raster_list': [
-                os.path.join(workspace, u'raster_HD405B'),
+                os.path.join(workspace, u'raster_HD4O5B'),
                 {
                     u'lulc_samp_cur': os.path.join(workspace, u'raster_7ZA2EY'),
                     u'do_biophysical': True,
