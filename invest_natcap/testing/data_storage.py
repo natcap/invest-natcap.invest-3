@@ -230,6 +230,7 @@ def collect_parameters(parameters, archive_uri):
         unicode: get_if_file,
         int: lambda x: x,
         float: lambda x: x,
+        bool: lambda x: x,
     }
 
     # Recurse through the parameters to locate any URIs
