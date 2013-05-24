@@ -3,6 +3,7 @@ import os
 
 import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
+from invest_natcap import raster_utils
 
 POLLINATION_DATA = os.path.join('data', 'pollination', 'samp_input')
 CARBON_DATA = os.path.join('data', 'carbon', 'input')
@@ -117,8 +118,7 @@ class DataStorageTest(testing.GISTest):
         self.assertArchive(archive_uri, regression_archive_uri)
 
     def test_extract_archive(self):
-        workspace = os.path.join(TEST_OUT, 'extracted')
-        os.mkdir(workspace)
+        workspace = raster_utils.temporary_folder()
         archive_uri = os.path.join(REGRESSION_ARCHIVES,
             'pollination_input.tar.gz')
         parameters = data_storage.extract_parameters_archive(workspace,
