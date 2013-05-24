@@ -168,8 +168,9 @@ def collect_parameters(parameters, archive_uri):
             elif os.path.isdir(parameter):
                 # parameter is a folder, so we want to copy the folder and all
                 # its contents to temp_workspace.
-                new_foldername = tempfile.mkdtemp(prefix='data_',
-                    dir=temp_workspace)
+                folder_name = os.path.basename(parameter)
+                new_foldername = make_random_dir(temp_workspace, folder_name,
+                    'data_', False)
                 shutil.copytree(parameter, new_foldername)
                 return new_foldername
             else:
