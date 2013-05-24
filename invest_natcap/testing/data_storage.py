@@ -137,11 +137,19 @@ def collect_parameters(parameters, archive_uri):
         new_vector_dir = make_vector_dir(temp_workspace, parent_folder)
         if driver.name == 'ESRI Shapefile':
             # get the layer name
+            layer = shapefile.GetLayer()
+
             # get the layer files
+            layer_files = glob.glob(os.path.dirname(filepath), '%s.*' % layer.name)
+
             # copy the layer files to the new folder.
-            pass
-
-
+            for file_name in layer_files:
+                file_basename = os.path.basename(file_name)
+                new_filename = os.path.join(new_vector_dir, file_basename)
+                shutil.copyfile(file_name, new_filename)
+        else:
+            raise UnsupportedFormat('%s is not a supported OGR Format', %
+                driver.name)
 
     def get_multi_part(filepath):
         # If the user provides a mutli-part file, wrap it into a folder and grab
