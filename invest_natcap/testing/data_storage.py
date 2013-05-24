@@ -106,10 +106,7 @@ def collect_parameters(parameters, archive_uri):
         else:
             parent_folder = os.path.dirname(filepath)
 
-        # The make_raster_dir function does not make the folder itself.
         new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
-        os.mkdir(new_raster_dir)
-
         for raster_file in file_list:
             # raster_file may be a folder ... we can't copy a folder with
             # copyfile.
