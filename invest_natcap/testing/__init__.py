@@ -86,7 +86,14 @@ def build_regression_test(file_uri):
     arguments['workspace_dir'] = raster_utils.temporary_folder()
     workspace = arguments['workspace_dir']
 
-    model.execute(arguments)
+    # collect the parameters into a single folder
+    input_archive = '/home/jadoug06/test_input_archive'
+    data_storage.collect_parameters(arguments, input_archive)
+    input_archive += '.tar.gz'
+
+    model_args = data_storage.extract_parameters_archive(workspace, input_archive)
+
+    model.execute(model_args)
 
     archive_uri = '/home/jadoug06/test_output_archive'
     LOGGER.debug('Archiving the output workspace')
