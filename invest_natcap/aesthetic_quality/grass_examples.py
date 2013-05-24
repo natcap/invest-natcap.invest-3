@@ -31,10 +31,7 @@ class grasswrapper():
                                 self.mapset)
 
 
-if __name__ == '__main__':
-    #get raster path from first parameter
-    dataset_uri = sys.argv[1]
-
+def raster_test(dataset_uri):
     #get user's home directory
     home = os.path.expanduser("~")
 
@@ -76,3 +73,4 @@ if __name__ == '__main__':
     #remove the location from disk
     print 'Removing location %s' % location_uri
     os.system("rm -rf %s" % location_uri)
+
