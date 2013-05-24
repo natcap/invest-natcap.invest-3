@@ -309,6 +309,18 @@ def extract_parameters_archive(workspace_dir, archive_uri):
     # get the arguments dictionary
     arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))
 
+    def extract_dict(parameter):
+        new_dict = {}
+        for key, value in parameter.iteritems():
+            new_dict[key] = types[value.__class__](value)
+        return new_dict
+
+    def extract_list(parameter):
+        new_list = []
+        for item in parameter:
+            new_list.append(types[item.__class__](item))
+        return new_list
+
     def _get_if_uri(parameter):
         """If the parameter is a file, returns the filepath relative to the
         extracted workspace.  If the parameter is not a file, returns the
@@ -326,8 +338,16 @@ def extract_parameters_archive(workspace_dir, archive_uri):
 
         return parameter
 
-    workspace_args = {}
-    for key, value in arguments_dict.iteritems():
-        workspace_args[key] = _get_if_uri(value)
+    types = {
+        dict: extract_dict,
+        list: extract_list,
+        str: _get_if_uri,
+        unicode: _get_if_uri,
+        int: lambda x: x,
+        float: lambda x: x,
+        bool: lambda x: x,
+    }
+
+    workspace_args = extract_dict(arguments_dict)
 
     return workspace_args
