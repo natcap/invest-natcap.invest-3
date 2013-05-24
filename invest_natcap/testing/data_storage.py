@@ -79,6 +79,7 @@ def collect_parameters(parameters, archive_uri):
 
         Returns nothing."""
 
+    parameters = parameters.copy()
     temp_workspace = raster_utils.temporary_folder()
 
     def get_multi_part_gdal(filepath):
@@ -340,7 +341,7 @@ def extract_parameters_archive(workspace_dir, archive_uri):
         original parameter."""
         try:
             temp_file_path = os.path.join(workspace_dir, parameter)
-            if os.path.exists(temp_file_path):
+            if os.path.exists(temp_file_path) and not len(parameter) == 0:
                 return temp_file_path
         except TypeError:
             # When the parameter is not a string
@@ -355,4 +356,7 @@ def extract_parameters_archive(workspace_dir, archive_uri):
         str: _get_if_uri,
         unicode: _get_if_uri,
     }
-    return format_dictionary(arguments_dict, types)
+    formatted_args = format_dictionary(arguments_dict, types)
+    formatted_args['workspace_dir'] = workspace_dir
+
+    return formatted_args
