@@ -65,43 +65,10 @@ def collect_parameters(parameters, archive_uri):
     temp_workspace = raster_utils.temporary_folder()
 
     def get_multi_part_gdal(filepath):
-        if os.path.isdir(filepath):
-            raster_dir = make_raster_dir(temp_workspace, os.path.basename(filepath))
-
-            shutil.copytree(filepath, raster_dir)
-            return os.path.basename(raster_dir)
-        else:
-            parent_folder = os.path.dirname(filepath)
-            files_in_parent = map(os.path.basename,
-                glob.glob(os.path.join(parent_folder, '*.*')))
-            raster_files = COMPLEX_FILES['ArcInfo Binary Grid']
-            raster_files_present = map(lambda x: x in files_in_parent,
-                    raster_files)
-
-            if True in raster_files_present:
-                # create a new folder in the temp workspace
-                raster_dir = make_raster_dir(temp_workspace, parent_folder)
-                os.mkdir(raster_dir)
-
-                # copy all the raster files over to the new folder
-                for raster_file, is_present in zip(raster_files,
-                        raster_files_present):
-                    if is_present:
-                        orig_raster_uri = os.path.join(parent_folder, raster_file)
-                        new_raster_uri = os.path.join(raster_dir, raster_file)
-                        shutil.copyfile(orig_raster_uri, new_raster_uri)
-
-                # return the new folder
-                return os.path.basename(raster_dir)
-            else:
-                LOGGER.debug('Folder only contains raster files')
-                # this folder only contains raster files.
-                return parent_folder
-
-    def get_multi_part_gdal_better(filepath):
         dataset = gdal.Open(filepath)
         file_list = dataset.GetFileList()
         LOGGER.debug('Files in raster: %s', file_list)
+        dataset = None
 
         if os.path.isdir(filepath):
             parent_folder = os.path.basename(filepath)
@@ -129,7 +96,7 @@ def collect_parameters(parameters, archive_uri):
         if gdal.Open(filepath) != None:
             # file is a raster
             LOGGER.debug('%s is a raster', filepath)
-            return get_multi_part_gdal_better(filepath)
+            return get_multi_part_gdal(filepath)
         elif ogr.Open(filepath) != None:
             # file is a shapefile
             return get_multi_part_ogr(filepath)
