@@ -6,11 +6,34 @@ import os
 import logging
 import shutil
 import functools
+import hashlib
+import filecmp
 
 import numpy
 from osgeo import gdal
 
+from invest_natcap import raster_utils
+import data_storage
+
 LOGGER = logging.getLogger('invest_natcap.testing')
+
+def get_hash(uri):
+    """Get the MD5 hash for a single file.  The file is read in a
+        memory-efficient fashion.
+
+        uri - a string uri to the file to be tested.
+
+        Returns a string hash for the file."""
+
+    block_size = 2**20
+    file_handler = open(uri)
+    md5 = hashlib.md5()
+    while True:
+        data = file_handler.read(block_size)
+        if not data:
+            break
+        md5.update(data)
+    return md5.hexdigest()
 
 
 def save_workspace(new_workspace):
@@ -39,6 +62,11 @@ def save_workspace(new_workspace):
         return test_and_remove_workspace
     return test_inner_func
 
+
+def regression():
+    """Decorator to unzip input data, run the regression test and compare the
+        outputs against the outputs on file."""
+    pass
 
 class GISTest(unittest.TestCase):
     """A test class for our GIS testing functions."""
@@ -195,3 +223,64 @@ class GISTest(unittest.TestCase):
         self.assertEqual(a_list.shape, b_list.shape)
         self.assertTrue((a_list==b_list).all())
 
+    def assertMD5(self, uri, regression_hash):
+        """Tests if the input file has the same hash as the regression hash
+            provided.
+
+            uri - a string URI to the file to be tested.
+            regression_hash - a string hash to be tested."""
+
+        self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
+
+    def assertArchive(self, archive_1_uri, archive_2_uri):
+        """Unzip the two archives and compare its contents.  Archives must be
+            tar.gz."""
+
+        # uncompress the two archives
+        archive_1_folder = raster_utils.temporary_folder()
+        data_storage.extract_archive(archive_1_folder, archive_1_uri)
+
+        archive_2_folder = raster_utils.temporary_folder()
+        data_storage.extract_archive(archive_2_folder, archive_2_uri)
+
+        archive_1_files = []
+        archive_2_files = []
+        for files_list, workspace in [
+                (archive_1_files, archive_1_folder),
+                (archive_2_files, archive_2_folder)]:
+            for root, dirs, files in os.walk(workspace):
+                root = root.replace(workspace + os.sep, '')
+                for filename in files:
+                    full_path = os.path.join(root, filename)
+                    files_list.append(full_path)
+
+        archive_1_files = sorted(archive_1_files)
+        archive_2_files = sorted(archive_2_files)
+
+        archive_1_size = len(archive_1_files)
+        archive_2_size = len(archive_2_files)
+        if archive_1_size != archive_2_size:
+            # find out which archive had more files.
+            if archive_1_size > archive_2_size:
+                bigger_list = archive_1_files
+                smaller_list = archive_2_files
+            else:
+                bigger_list = archive_2_files
+                smaller_list = archive_1_files
+
+            # eliminate all the smaller files from the bigger list
+            for filepath in smaller_list:
+                bigger_list.remove(filepath)
+
+            raise AssertionError('Problem!')
+        else:
+            # archives have the same number of files that we care about
+            for file_1, file_2 in zip(archive_1_files, archive_2_files):
+                file_1_uri = os.path.join(archive_1_folder, file_1)
+                file_1_md5 = get_hash(file_1_uri)
+
+                file_2_uri = os.path.join(archive_2_folder, file_2)
+                file_2_md5 = get_hash(file_2_uri)
+                LOGGER.debug('Checking %s, %s', file_1, file_2)
+                self.assertEqual(file_1_md5, file_2_md5,
+                    'Files %s and %s differ' % (file_1_uri, file_2_uri))
