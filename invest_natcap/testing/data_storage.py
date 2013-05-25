@@ -44,14 +44,31 @@ def is_multi_file(filename):
         an ESRI shapefile or an ArcInfo Binary Grid."""
     pass
 
-def make_raster_dir(workspace, seed_string):
+def make_random_dir(workspace, seed_string, prefix, make_dir=True):
+    LOGGER.debug('Random dir seed: %s', seed_string)
     random.seed(seed_string)
     new_dirname = ''.join(random.choice(string.ascii_uppercase + string.digits)
             for x in range(6))
-    new_dirname = 'raster_' + new_dirname
+    new_dirname = prefix + new_dirname
+    LOGGER.debug('New dirname: %s', new_dirname)
     raster_dir = os.path.join(workspace, new_dirname)
+
+    if make_dir:
+        os.mkdir(raster_dir)
+
+    return raster_dir
+
+
+def make_raster_dir(workspace, seed_string, make_dir=True):
+    raster_dir = make_random_dir(workspace, seed_string, 'raster_', make_dir)
     LOGGER.debug('new raster dir: %s', raster_dir)
     return raster_dir
+
+
+def make_vector_dir(workspace, seed_string, make_dir=True):
+    vector_dir = make_random_dir(workspace, seed_string, 'vector_', make_dir)
+    LOGGER.debug('new vector dir: %s', vector_dir)
+    return vector_dir
 
 def collect_parameters(parameters, archive_uri):
     """Collect an InVEST model's arguments into a dictionary and archive all
@@ -62,104 +79,163 @@ def collect_parameters(parameters, archive_uri):
 
         Returns nothing."""
 
+    parameters = parameters.copy()
     temp_workspace = raster_utils.temporary_folder()
 
     def get_multi_part_gdal(filepath):
-        if os.path.isdir(filepath):
-            raster_dir = make_raster_dir(temp_workspace, os.path.basename(filepath))
+        """Collect all GDAL files into a new folder inside of the temp_workspace
+        (a closure from the collect_parameters funciton).
 
-            shutil.copytree(filepath, raster_dir)
-            return os.path.basename(raster_dir)
+        This function uses gdal's internal knowledge of the files it contains to
+        determine which files are to be included.
+
+            filepath - a URI to a file that is in a GDAL raster.
+
+        Returns the name of the new folder within the temp_workspace that
+        contains all the files in this raster."""
+
+        # Get the file list from GDAL
+        # NOTE: with ESRI Rasters, other files are sometimes included in this
+        # list that are not actually part of the raster.  This is an acceptable
+        # cost of this function, since we are now able to handle ALL raster
+        # types supported by GDAL.
+        dataset = gdal.Open(filepath)
+        file_list = dataset.GetFileList()
+        LOGGER.debug('Files in raster: %s', file_list)
+        dataset = None
+
+        # If the filepath given is a folder itself, we want the new raster dir
+        # to be based on a seed of the folder's basname.  Otherwise, we need to
+        # get the basename from the filepath.
+        if os.path.isdir(filepath):
+            parent_folder = os.path.basename(filepath)
         else:
             parent_folder = os.path.dirname(filepath)
-            files_in_parent = map(os.path.basename,
-                glob.glob(os.path.join(parent_folder, '*.*')))
-            raster_files = COMPLEX_FILES['ArcInfo Binary Grid']
-            raster_files_present = map(lambda x: x in files_in_parent,
-                    raster_files)
 
-            if True in raster_files_present:
-                # create a new folder in the temp workspace
-                raster_dir = make_raster_dir(temp_workspace, parent_folder)
-                os.mkdir(raster_dir)
+        new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
+        for raster_file in file_list:
+            # raster_file may be a folder ... we can't copy a folder with
+            # copyfile.
+            if os.path.isfile(raster_file):
+                file_basename = os.path.basename(raster_file)
+                new_raster_uri = os.path.join(new_raster_dir, file_basename)
+                shutil.copyfile(raster_file, new_raster_uri)
 
-                # copy all the raster files over to the new folder
-                for raster_file, is_present in zip(raster_files,
-                        raster_files_present):
-                    if is_present:
-                        orig_raster_uri = os.path.join(parent_folder, raster_file)
-                        new_raster_uri = os.path.join(raster_dir, raster_file)
-                        shutil.copyfile(orig_raster_uri, new_raster_uri)
+        return os.path.basename(new_raster_dir)
 
-                # return the new folder
-                return os.path.basename(raster_dir)
-            else:
-                LOGGER.debug('Folder only contains raster files')
-                # this folder only contains raster files.
-                return parent_folder
+
+
+    class UnsupportedFormat(Exception):
+        pass
 
     def get_multi_part_ogr(filepath):
-        pass
+        shapefile = ogr.Open(filepath)
+        driver = shapefile.GetDriver()
+
+        if os.path.isdir(filepath):
+            parent_folder = os.path.basename(filepath)
+        else:
+            parent_folder = os.path.basename(os.path.dirname(filepath))
+
+        new_vector_dir = make_vector_dir(temp_workspace, parent_folder)
+        if driver.name == 'ESRI Shapefile':
+            LOGGER.debug('%s is an ESRI Shapefile', filepath)
+            # get the layer name
+            layer = shapefile.GetLayer()
+
+            # get the layer files
+            parent_folder_path = os.path.dirname(filepath)
+            glob_pattern = os.path.join(parent_folder_path, '%s.*' %
+                layer.GetName())
+            layer_files = glob.glob(glob_pattern)
+            LOGGER.debug('Layer files: %s', layer_files)
+
+            # copy the layer files to the new folder.
+            for file_name in layer_files:
+                file_basename = os.path.basename(file_name)
+                new_filename = os.path.join(new_vector_dir, file_basename)
+                shutil.copyfile(file_name, new_filename)
+        else:
+            raise UnsupportedFormat('%s is not a supported OGR Format',
+                driver.name)
+
+        return os.path.basename(new_vector_dir)
 
     def get_multi_part(filepath):
         # If the user provides a mutli-part file, wrap it into a folder and grab
         # that instead of the individual file.
-        if gdal.Open(filepath) != None:
+
+        raster_obj = gdal.Open(filepath)
+        if raster_obj != None:
             # file is a raster
+            raster_obj = None
             LOGGER.debug('%s is a raster', filepath)
             return get_multi_part_gdal(filepath)
-        elif ogr.Open(filepath) != None:
-            # file is a shapefile
-            return get_multi_part_ogr(filepath)
+
+        vector_obj = ogr.Open(filepath)
+        if vector_obj != None:
+            # Need to check the driver name to be sure that this isn't a CSV.
+            driver = vector_obj.GetDriver()
+            if driver.name != 'CSV':
+                # file is a shapefile
+                vector_obj = None
+                layer = None
+                return get_multi_part_ogr(filepath)
         return None
+
+    # For tracking existing files so we don't copy things twice
+    files_found = {}
 
     def get_if_file(parameter):
         try:
+            uri = files_found[os.path.abspath(parameter)]
+            LOGGER.debug('Found %s from a previous parameter', uri)
+            return uri
+        except KeyError:
+            # we haven't found this file before, so we still need to process it.
+            pass
+
+        # initialize the return_path
+        return_path = None
+        try:
             multi_part_folder = get_multi_part(parameter)
             if multi_part_folder != None:
-                return multi_part_folder
+                LOGGER.debug('%s is a multi-part file', parameter)
+                return_path = multi_part_folder
+
             elif os.path.isfile(parameter):
+                LOGGER.debug('%s is a single file', parameter)
                 new_filename = os.path.basename(parameter)
                 shutil.copyfile(parameter, os.path.join(temp_workspace,
                     new_filename))
-                return new_filename
+                return_path = new_filename
+
             elif os.path.isdir(parameter):
+                LOGGER.debug('%s is a directory', parameter)
                 # parameter is a folder, so we want to copy the folder and all
                 # its contents to temp_workspace.
-                new_foldername = tempfile.mkdtemp(prefix='data_',
-                    dir=temp_workspace)
+                folder_name = os.path.basename(parameter)
+                new_foldername = make_random_dir(temp_workspace, folder_name,
+                    'data_', False)
                 shutil.copytree(parameter, new_foldername)
-                return new_foldername
+                return_path = new_foldername
+
             else:
                 # Parameter does not exist on disk.  Print an error to the
                 # logger and move on.
                 LOGGER.error('File %s does not exist on disk.  Skipping.',
                     parameter)
-        except TypeError:
+        except TypeError as e:
             # When the value is not a string.
-            pass
+            LOGGER.warn('%s', e)
+
+        LOGGER.debug('Return path: %s', return_path)
+        if return_path != None:
+            files_found[os.path.abspath(parameter)] = return_path
+            return return_path
+
+        LOGGER.debug('Returning original parameter %s', parameter)
         return parameter
-
-    def collect_list(parameter_list):
-        new_list = []
-        for parameter in parameter_list:
-            new_list.append(types[parameter.__class__](parameter))
-        return new_list
-
-    def collect_dict(parameter_dict):
-        new_dict = {}
-        for key, value in parameter_dict.iteritems():
-            new_dict[key] = types[value.__class__](value)
-        return new_dict
-
-    types = {
-        list: collect_list,
-        dict: collect_dict,
-        str: get_if_file,
-        unicode: get_if_file,
-        int: lambda x: x,
-        float: lambda x: x,
-    }
 
     # Recurse through the parameters to locate any URIs
     #   If a URI is found, copy that file to a new location in the temp
@@ -170,7 +246,12 @@ def collect_parameters(parameters, archive_uri):
     except:
         LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\.'
             ' Be sure to check your archived data'))
-    new_args = collect_dict(parameters)
+
+    types = {
+        str: get_if_file,
+        unicode: get_if_file,
+    }
+    new_args = format_dictionary(parameters, types)
 
     LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace
@@ -197,6 +278,48 @@ def extract_archive(workspace_dir, archive_uri):
     archive.close()
 
 
+def format_dictionary(input_dict, types_lookup={}):
+    """Recurse through the input dictionary and return a formatted dictionary.
+
+        As each element is encountered, the correct function to use is looked up
+        in the types_lookup input.  If a type is not found, we assume that the
+        element should be returned verbatim.
+
+        input_dict - a dictionary to process
+        types_lookup - a dictionary mapping types to functions.  These functions
+            must take a single parameter of the type that is the key.  These
+            functions must return a formatted version of the input parameter.
+
+        Returns a formatted dictionary."""
+
+    def format_dict(parameter):
+        new_dict = {}
+        for key, value in parameter.iteritems():
+            try:
+                new_dict[key] = types[value.__class__](value)
+            except KeyError:
+                new_dict[key] = value
+        return new_dict
+
+    def format_list(parameter):
+        new_list = []
+        for item in parameter:
+            try:
+                new_list.append(types[item.__class__](item))
+            except KeyError:
+                new_list.append(value)
+        return new_list
+
+    types = {
+        dict: format_dict,
+        list: format_list,
+    }
+
+    types.update(types_lookup)
+
+    return format_dict(input_dict)
+
+
 def extract_parameters_archive(workspace_dir, archive_uri):
     """Extract the target archive to the target workspace folder.
 
@@ -218,15 +341,22 @@ def extract_parameters_archive(workspace_dir, archive_uri):
         original parameter."""
         try:
             temp_file_path = os.path.join(workspace_dir, parameter)
-            if os.path.isfile(temp_file_path):
+            if os.path.exists(temp_file_path) and not len(parameter) == 0:
                 return temp_file_path
         except TypeError:
             # When the parameter is not a string
             pass
+        except AttributeError:
+            # when the parameter is not a string
+            pass
+
         return parameter
 
-    workspace_args = {}
-    for key, value in arguments_dict.iteritems():
-        workspace_args[key] = _get_if_uri(value)
+    types = {
+        str: _get_if_uri,
+        unicode: _get_if_uri,
+    }
+    formatted_args = format_dictionary(arguments_dict, types)
+    formatted_args['workspace_dir'] = workspace_dir
 
-    return workspace_args
+    return formatted_args
