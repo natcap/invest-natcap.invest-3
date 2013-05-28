@@ -8,10 +8,13 @@ import shutil
 import functools
 import hashlib
 import filecmp
+import time
 
 import numpy
 from osgeo import gdal
 
+from invest_natcap.iui import executor
+from invest_natcap.iui import fileio
 from invest_natcap import raster_utils
 import data_storage
 
@@ -67,6 +70,35 @@ def regression():
     """Decorator to unzip input data, run the regression test and compare the
         outputs against the outputs on file."""
     pass
+
+def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
+    file_handler = fileio.JSONHandler(file_uri)
+
+    saved_data = file_handler.get_attributes()
+
+    arguments = saved_data['arguments']
+    model_id = saved_data['model']
+
+    model_list = model_id.split('.')
+    model = executor.locate_module(model_list)
+
+    # guarantee that we're running this in a new workspace
+    arguments['workspace_dir'] = raster_utils.temporary_folder()
+    workspace = arguments['workspace_dir']
+
+    # collect the parameters into a single folder
+    input_archive = input_archive_uri
+    data_storage.collect_parameters(arguments, input_archive)
+    input_archive += '.tar.gz'
+
+    model_args = data_storage.extract_parameters_archive(workspace, input_archive)
+
+    model.execute(model_args)
+
+    archive_uri = output_archive_uri
+    LOGGER.debug('Archiving the output workspace')
+    shutil.make_archive(archive_uri, 'gztar', root_dir=workspace, logger=LOGGER)
+
 
 class GISTest(unittest.TestCase):
     """A test class for our GIS testing functions."""

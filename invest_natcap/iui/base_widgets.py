@@ -19,6 +19,8 @@ CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 ENCODING = sys.getfilesystemencoding()
+print('IUI_DIR: %s' % IUI_DIR)
+
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -2405,6 +2407,7 @@ class MainWindow(QtGui.QMainWindow):
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
         self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
         self.save_to_python = self.file_menu.addAction('Save to &python script...')
+        self.save_to_json = self.file_menu.addAction('Save to &JSON ...')
         self.exit_action = self.file_menu.addAction('Exit')
         self.menuBar().addMenu(self.file_menu)
 
@@ -2413,6 +2416,7 @@ class MainWindow(QtGui.QMainWindow):
         self.load_file_action.triggered.connect(self.ui.load_parameters_from_file)
         self.remove_lastrun.triggered.connect(self.ui.remove_lastrun)
         self.save_to_python.triggered.connect(self.ui.save_to_python)
+        self.save_to_json.triggered.connect(self.ui.save_to_json)
 
 class ExecRoot(Root):
     def __init__(self, uri, layout=None, object_registrar=None, main_window=None):
@@ -2455,6 +2459,36 @@ class ExecRoot(Root):
         self.error_dialog = ErrorDialog()
         self.warning_dialog = WarningDialog()
         self.initElements()
+
+    def save_to_json(self):
+        """Save the current state of the UI to a python file after checking that
+        there are no validation errors."""
+        errors = self.errors_exist()
+        if len(errors) > 0:
+            self.error_dialog.set_messages(errors)
+            self.error_dialog.exec_()
+        else:
+            warnings = self.warnings_exist()
+
+            if len(warnings) > 0:
+                self.warning_dialog.set_messages(warnings)
+                exit_code = self.warning_dialog.exec_()
+
+                # If the user pressed 'back' on the warning dialog, return to
+                # the UI.
+                if exit_code == 0:
+                    return
+
+            model = self.attributes['targetScript']
+            model_name = model.split('.')[-1]
+
+            filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
+                '%s.json' % model_name, filter = QtCore.QString('JSON file' +
+                ' (*.json);;All files (*.* *)'))
+            filename = unicode(filename)
+            if filename != '':
+                arguments = self.assembleOutputDict()
+                invest_natcap.iui.fileio.save_model_run_json(arguments, model, filename)
 
     def save_to_python(self):
         """Save the current state of the UI to a python file after checking that
@@ -2587,7 +2621,7 @@ class ExecRoot(Root):
         if 'width' in self.attributes:
             width = self.attributes['width']
         else:
-            width = 400
+            width = 700
 
         if 'height' in self.attributes:
             height = self.attributes['height']
@@ -2608,6 +2642,7 @@ class ExecRoot(Root):
         if height > screen_height:
             height = screen_height - 50
 
+        self.LOGGER.debug('Width=%s, height=%s', width, height)
         self.main_window.resize(width, height)
         center_window(self.main_window)
 
