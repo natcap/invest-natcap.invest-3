@@ -4,6 +4,23 @@ import os
 
 json_file = sys.argv[1]
 
+
+def set_input_archive_name():
+    input_archive_name = raw_input('Path to the input archive: ')
+
+    if os.path.exists(input_folder_name):
+        confirm_overwrite = raw_input('%s exists.  Overwrite? (y/n)' %
+            input_archive_name)
+
+        while confirm_overwrite not in ['y', 'n']:
+            confirm_overwrite = raw_input('Confirm overwrite? (y/n)')
+
+        if confirm_overwrite == 'y':
+            overwrite = True
+        else:
+            overwrite = False
+
+
 TEST_DIR = 'test'
 MANAGED_DATA = os.path.join(TEST_DIR, 'data', 'managed_data')
 MANAGED_INPUT = os.path.join(MANAGED_DATA, 'input')
