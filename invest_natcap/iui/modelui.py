@@ -31,15 +31,14 @@ class ModelUIRegistrar(base_widgets.ElementRegistrar):
         self.update_map(changes)
 
 class ModelUI(base_widgets.ExecRoot):
-    def __init__(self, uri, use_gui):
+    def __init__(self, uri, main_window):
         """Constructor for the DynamicUI class, a subclass of DynamicGroup.
             DynamicUI loads all setting from a JSON object at the provided URI
             and recursively creates all elements.
-            
+
             uri - the string URI to the JSON configuration file.
-            use_gui - a boolean.  Determines whether the UI will be presented
-                to the user for interaction.  Necessary for testing.
-            
+            main_window - an instance of base_widgets.MainWindow
+
             returns an instance of DynamicUI."""
 
         #the top buttonbox needs to be initialized before super() is called, 
@@ -58,31 +57,16 @@ class ModelUI(base_widgets.ExecRoot):
 
         base_widgets.ExecRoot.__init__(self, uri, layout, registrar)
 
-
         self.layout().setSizeConstraint(QtGui.QLayout.SetMinimumSize)
-        self.use_gui = use_gui
 
-        self.initUI()
-
-    def initUI(self):
-        """Initialize the User Interface elements specific to this class.
-            Most elements are created with the call to super() in the __init__
-            function, element creation is handled in 
-            DynamicGroup.createElements().
-            
-            returns nothing"""
-
-        #set the window's title
         try:
-            self.setWindowTitle(self.attributes['label'])
+            title = self.attributes['label']
         except KeyError:
-            self.setWindowTitle('InVEST')
+            title = 'InVEST'
+        window_title = "%s" % (title)
+        main_window.setWindowTitle(window_title)
 
         self.addLinks()
-
-        #reveal the assembled UI to the user, but only if not testing.
-        if self.use_gui:
-            self.show()
 
     def addLinks(self):
         links = []
