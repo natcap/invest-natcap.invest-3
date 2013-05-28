@@ -4,21 +4,38 @@ import os
 
 json_file = sys.argv[1]
 
+INPUT_ARCHIVE = ''
+OUTPUT_ARCHIVE = ''
 
-def set_input_archive_name():
-    input_archive_name = raw_input('Path to the input archive: ')
+def _set_archive_name(keyword):
+    input_archive_name = raw_input('Path to the %s archive: ' % keyword)
 
-    if os.path.exists(input_folder_name):
+    if os.path.exists(input_archive_name):
         confirm_overwrite = raw_input('%s exists.  Overwrite? (y/n)' %
             input_archive_name)
 
         while confirm_overwrite not in ['y', 'n']:
             confirm_overwrite = raw_input('Confirm overwrite? (y/n)')
 
-        if confirm_overwrite == 'y':
-            overwrite = True
-        else:
-            overwrite = False
+        if input_archive_name == 'n'
+            return ''
+    else:
+        if not os.path.exists(os.path.dirname(input_archive_name)):
+            confirm_create_folder = raw_input(('%s does not exist.  '
+                'Create path? (y/n) ')
+            while confirm_create_folder not in ['y', 'n']:
+                confirm_create_folder = raw_input('Create path? (y/n)')
+
+            if confirm_create_folder == 'y':
+                os.mkdirs(os.path.dirname(input_archive_name))
+    return input_archive_name
+
+
+def set_input_archive_name():
+    INPUT_ARCHIVE = _set_archive_name('input')
+
+def set_output_archive_name():
+    OUTPUT_ARCHIVE = _set_archive_name('output')
 
 
 TEST_DIR = 'test'
