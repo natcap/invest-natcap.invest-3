@@ -112,34 +112,31 @@ def water_yield(args):
     
     #Collection of output and temporary path names
     #Paths for the etk and root_depth rasters from the biophysical table
-    tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk' + suffix_tif
-    tmp_root_path = intermediate_dir + os.sep + 'tmp_root' + suffix_tif
+    tmp_etk_path = os.path.join(intermediate_dir, 'tmp_etk.tif')
+    tmp_root_path = os.path.join(intermediate_dir, 'tmp_root.tif')
     
     #Paths for clipping the fractp/wyield raster to watershed polygons
-    fractp_clipped_path = \
-        pixel_dir + os.sep + 'fractp' + suffix_tif
-    wyield_clipped_path = \
-        pixel_dir + os.sep + 'wyield' + suffix_tif
+    fractp_clipped_path = os.path.join(pixel_dir, 'fractp.tif')
+    wyield_clipped_path = os.path.join(pixel_dir, 'wyield.tif')
     
     #Paths for the fractp mean and water yield mean, area, and volume rasters
-    fractp_mean_path = output_dir + os.sep + 'fractp_mn' + suffix_tif
-    wyield_mean_path = service_dir + os.sep + 'wyield_mn' + suffix_tif
-    wyield_volume_path = \
-        service_dir + os.sep + 'wyield_vol' + suffix_tif
-    wyield_ha_path = service_dir + os.sep + 'wyield_ha' + suffix_tif
+    fractp_mean_path = os.path.join(output_dir, 'fractp_mn.tif')
+    wyield_mean_path = os.path.join(service_dir, 'wyield_mn.tif') 
+    wyield_volume_path = os.path.join(service_dir, 'wyield_vol.tif') 
+    wyield_ha_path = os.path.join(service_dir, 'wyield_ha.tif') 
     
     #Paths for the actual evapotranspiration rasters
-    aet_path = pixel_dir + os.sep + 'aet' + suffix_tif
-    aet_mean_path = output_dir + os.sep + 'aet_mn' + suffix_tif
+    aet_path = os.path.join(pixel_dir, 'aet.tif') 
+    aet_mean_path = os.path.join(output_dir, 'aet_mn.tif') 
     
     #Paths for the watershed and subwatershed tables
-    shed_table_path = \
-        output_dir + os.sep + 'water_yield_watershed' + suffix_csv
-    sub_table_path = \
-        output_dir + os.sep + 'water_yield_subwatershed' + suffix_csv
+    shed_table_path = os.path.join(output_dir, 'water_yield_watershed.csv') 
+    sub_table_path = os.path.join(output_dir, 'water_yield_subwatershed.csv') 
     
     #The nodata value that will be used for created output rasters
-    out_nodata = -1.0
+    #out_nodata = -1.0
+    out_nodata = float(np.finfo(np.float32).min) + 1.0
+    
     #Break the bio_dict into two separate dictionaries based on
     #etk and root_depth fields to use for reclassifying 
     etk_dict = {}
@@ -151,17 +148,24 @@ def water_yield(args):
     #Create etk raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_etk raster")
     tmp_etk_raster_uri = raster_utils.temporary_filename()
-    raster_utils.reclassify_dataset(
-        lulc_raster, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32, out_nodata)
-    tmp_etk_raster = gdal.Open(tmp_etk_raster_uri)
+    
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32,
+            out_nodata)
+    #raster_utils.reclassify_dataset(
+    #    lulc_raster, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32, out_nodata)
+    #tmp_etk_raster = gdal.Open(tmp_etk_raster_uri)
 
     #Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
     tmp_root_raster_uri = raster_utils.temporary_filename()
-    raster_utils.reclassify_dataset(
-        lulc_raster, root_dict, tmp_root_raster_uri, gdal.GDT_Float32, out_nodata)
-    tmp_root_raster = gdal.Open(tmp_root_raster_uri)
-
+    
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
+            out_nodata)
+    #raster_utils.reclassify_dataset(
+    #    lulc_raster, root_dict, tmp_root_raster_uri, gdal.GDT_Float32, out_nodata)
+    #tmp_root_raster = gdal.Open(tmp_root_raster_uri)
 
     #Get out_nodata values so that we can avoid any issues when running operations
     etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
