@@ -55,7 +55,7 @@ class ModelUI(base_widgets.ExecRoot):
         registrar = ModelUIRegistrar(self)
         self.okpressed = False
 
-        base_widgets.ExecRoot.__init__(self, uri, layout, registrar)
+        base_widgets.ExecRoot.__init__(self, uri, layout, registrar, main_window)
 
         self.layout().setSizeConstraint(QtGui.QLayout.SetMinimumSize)
 
