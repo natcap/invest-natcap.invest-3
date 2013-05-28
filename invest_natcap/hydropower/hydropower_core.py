@@ -45,7 +45,7 @@ def water_yield(args):
         args['sub_watersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
-        args['biophysical_dictionary'] - a python dictionary representing the 
+        args['biophysical_table_uri'] - a python dictionary representing the 
             land use/land cover classes, containing data on the biophysical 
             coefficients root_depth (mm) and etk. The dictionary is structured as
             follows, where the key is lulc_code and value is another 
@@ -65,31 +65,50 @@ def water_yield(args):
     LOGGER.info('Starting Water Yield Core Calculations')
 
     #Construct folder paths
-    workspace_dir = args['workspace_dir']
-    output_dir = workspace_dir + os.sep + 'Output'
-    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
-    service_dir = workspace_dir + os.sep + 'Service'
-    pixel_dir = output_dir + os.sep + 'Pixel'
+    workspace = args['workspace_dir']
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
+    service_dir = os.path.join(workspace, 'service')
+    pixel_dir = os.path.join(output_dir, 'pixel')
+    raster_utils.create_directories(
+            [intermediate_dir, output_dir, service_dir, pixel_dir])
+    
+    #output_dir = workspace_dir + os.sep + 'Output'
+    #intermediate_dir = workspace_dir + os.sep + 'Intermediate'
+    #service_dir = workspace_dir + os.sep + 'Service'
+    #pixel_dir = output_dir + os.sep + 'Pixel'
+
+
 
     #Get inputs from the args dictionary
-    suffix = args['results_suffix']
-    bio_dict = args['biophysical_dictionary']
-    lulc_raster = args['lulc']
-    eto_raster = args['eto']
-    precip_raster = args['precipitation']
-    soil_depth_raster = args['soil_depth']
-    pawc_raster = args['pawc']
-    sub_sheds = args['sub_watersheds']
-    sheds = args['watersheds']
+    suffix = args['suffix']
+    bio_table_uri = args['biophysical_table_uri']
+    lulc_uri = args['lulc_uri']
+    eto_uri = args['eto_uri']
+    precip_uri = args['precipitation_uri']
+    soil_depth_uri = args['soil_depth_uri']
+    pawc_uri = args['pawc_uri']
+    sub_sheds_uri = args['sub_watersheds_uri']
+    sheds_uri = args['watersheds_uri']
     seasonality_constant = float(args['seasonality_constant'])
-
-    #Suffix handling    
-    if len(suffix) > 0:
-        suffix_tif = '_' + suffix + '.tif'
-        suffix_csv = '_' + suffix + '.csv'
-    else:
-        suffix_tif = '.tif'
-        suffix_csv = '.csv'
+    
+    #Open/read in the csv files into a dictionary and add to arguments
+    biophysical_table_map = {}
+    biophysical_table_file = open(args['biophysical_table_uri'])
+    reader = csv.DictReader(biophysical_table_file)
+    for row in reader:
+        biophysical_table_map[int(row['lucode'])] = \
+            {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+    
+    bio_dict = biophysical_table_map 
+    
+    # Append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
     
     #Collection of output and temporary path names
     #Paths for the etk and root_depth rasters from the biophysical table

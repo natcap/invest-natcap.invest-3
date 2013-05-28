@@ -63,45 +63,45 @@ def execute(args):
     
     LOGGER.info('Starting Water Yield File Handling')
     
-    workspace_dir = args['workspace_dir']
     water_yield_args = {}
+    workspace_dir = args['workspace_dir']
     water_yield_args['workspace_dir'] = workspace_dir
     
-    #Create the output directories
-    for folder_name in ['Output', 'Service', 'Intermediate']:
-        folder_path = workspace_dir + os.sep + folder_name
-        if not os.path.isdir(folder_path):
-            os.makedirs(folder_path)
-            
-    pixel_dir = workspace_dir + os.sep + 'Output/Pixel'
-    
-    if not os.path.isdir(pixel_dir):
-        os.makedirs(pixel_dir)
+#   #Create the output directories
+#   for folder_name in ['Output', 'Service', 'Intermediate']:
+#       folder_path = workspace_dir + os.sep + folder_name
+#       if not os.path.isdir(folder_path):
+#           os.makedirs(folder_path)
+#           
+#   pixel_dir = workspace_dir + os.sep + 'Output/Pixel'
+#   
+#   if not os.path.isdir(pixel_dir):
+#       os.makedirs(pixel_dir)
     
     #Open all of the gdal files and add to the arguments
-    water_yield_args['precipitation'] = gdal.Open(args['precipitation_uri'])
-    water_yield_args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
-    water_yield_args['lulc'] = gdal.Open(args['lulc_uri'])
-    water_yield_args['pawc'] = gdal.Open(args['pawc_uri'])
-    water_yield_args['eto'] = gdal.Open(args['eto_uri'])
+    water_yield_args['precipitation_uri'] = args['precipitation_uri']
+    water_yield_args['soil_depth_uri'] = args['soil_depth_uri']
+    water_yield_args['lulc_uri'] = args['lulc_uri']
+    water_yield_args['pawc_uri'] = args['pawc_uri']
+    water_yield_args['eto_uri'] = args['eto_uri']
     
     #Open all the shapefiles and add to the arguments
-    water_yield_args['watersheds'] = ogr.Open(args['watersheds_uri'])
-    water_yield_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
+    water_yield_args['watersheds_uri'] = args['watersheds_uri']
+    water_yield_args['sub_watersheds_uri'] = args['sub_watersheds_uri']
     
-    #Open/read in the csv files into a dictionary and add to arguments
-    biophysical_table_map = {}
-    biophysical_table_file = open(args['biophysical_table_uri'])
-    reader = csv.DictReader(biophysical_table_file)
-    for row in reader:
-        biophysical_table_map[int(row['lucode'])] = \
-            {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+#   #Open/read in the csv files into a dictionary and add to arguments
+#   biophysical_table_map = {}
+#   biophysical_table_file = open(args['biophysical_table_uri'])
+#   reader = csv.DictReader(biophysical_table_file)
+#   for row in reader:
+#       biophysical_table_map[int(row['lucode'])] = \
+#           {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
     
-    water_yield_args['biophysical_dictionary'] = biophysical_table_map
+    water_yield_args['biophysical_table_uri'] = args['biophysical_table_uri'] 
 
     #Add seasonality_constant and suffix to the arguments
-    water_yield_args['seasonality_constant'] = float(args['seasonality_constant'])
-    water_yield_args['results_suffix'] = args['results_suffix']
+    water_yield_args['seasonality_constant'] = args['seasonality_constant']
+    water_yield_args['suffix'] = args['results_suffix']
     
     #Call water_yield in hydropower_core.py
     hydropower_core.water_yield(water_yield_args)
