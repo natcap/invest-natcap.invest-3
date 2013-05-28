@@ -19,6 +19,8 @@ CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 ENCODING = sys.getfilesystemencoding()
+print('IUI_DIR: %s' % IUI_DIR)
+
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
