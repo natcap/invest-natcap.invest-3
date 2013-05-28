@@ -168,12 +168,12 @@ def water_yield(args):
     #tmp_root_raster = gdal.Open(tmp_root_raster_uri)
 
     #Get out_nodata values so that we can avoid any issues when running operations
-    etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
-    root_nodata = tmp_root_raster.GetRasterBand(1).GetNoDataValue()
-    precip_nodata = precip_raster.GetRasterBand(1).GetNoDataValue()
-    eto_nodata = eto_raster.GetRasterBand(1).GetNoDataValue()
-    soil_depth_nodata = soil_depth_raster.GetRasterBand(1).GetNoDataValue()
-    pawc_nodata = pawc_raster.GetRasterBand(1).GetNoDataValue()
+    etk_nodata = raster_utils.get_nodata_from_uri(tmp_etk_raster_uri)
+    root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    eto_nodata = raster_utils.get_nodata_from_uri(eto_uri)
+    soil_depth_nodata = raster_utils.get_nodata_from_uri(soil_depth_uri)
+    pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
     
     #Dictionary of out_nodata values corresponding to values for fractp_op that 
     #will help avoid any out_nodata calculation issues
@@ -183,7 +183,6 @@ def water_yield(args):
                           'eto':eto_nodata,
                           'soil':soil_depth_nodata,
                           'pawc':pawc_nodata}
-    
     
     def fractp_op(etk, eto, precip, root, soil, pawc):
         """A wrapper function to call hydropower's cython core. Acts as a
@@ -197,12 +196,21 @@ def water_yield(args):
     fractp_vec = np.vectorize(fractp_op)
     
     #Create the fractp raster
-    raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
-                   soil_depth_raster, pawc_raster]
-    fractp_raster = \
-        raster_utils.vectorize_rasters(raster_list, fractp_vec, aoi=sheds, 
-                                       raster_out_uri=fractp_clipped_path, 
-                                       nodata=out_nodata)
+    #raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
+    #               soil_depth_raster, pawc_raster]
+    #fractp_raster = \
+    #    raster_utils.vectorize_rasters(raster_list, fractp_vec, aoi=sheds, 
+    #                                   raster_out_uri=fractp_clipped_path, 
+    #                                   nodata=out_nodata)
+    pixel_size = raster_utils.get_cell_size_from_uri(tmp_etk_raster_uri)
+
+    raster_list = [
+            tmp_etk_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
+            soil_depth_uri, pawc_uri]
+    
+    raster_utils.vectorize_datasets(
+            raster_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
+            out_nodata, pixel_size, intersection)
     
     LOGGER.debug('Performing wyield operation')
     
