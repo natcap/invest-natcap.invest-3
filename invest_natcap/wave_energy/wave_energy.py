@@ -196,7 +196,7 @@ def execute(args):
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
     
     # Set nodata value and datatype for new rasters
-    nodata = float(np.finfo(np.float32).min) - 1.0
+    nodata = float(np.finfo(np.float32).min) + 1.0
     datatype = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
