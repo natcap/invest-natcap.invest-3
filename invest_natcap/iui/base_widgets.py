@@ -2619,7 +2619,7 @@ class ExecRoot(Root):
         if 'width' in self.attributes:
             width = self.attributes['width']
         else:
-            width = 400
+            width = 700
 
         if 'height' in self.attributes:
             height = self.attributes['height']
@@ -2640,6 +2640,7 @@ class ExecRoot(Root):
         if height > screen_height:
             height = screen_height - 50
 
+        self.LOGGER.debug('Width=%s, height=%s', width, height)
         self.main_window.resize(width, height)
         center_window(self.main_window)
 
