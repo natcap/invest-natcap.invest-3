@@ -1,6 +1,7 @@
 import invest_natcap.testing
 import sys
 import os
+import shutil
 
 json_file = sys.argv[1]
 
@@ -17,17 +18,18 @@ def _set_archive_name(keyword):
         while confirm_overwrite not in ['y', 'n']:
             confirm_overwrite = raw_input('Confirm overwrite? (y/n)')
 
-        if input_archive_name == 'n'
+        if input_archive_name == 'n':
             return ''
     else:
-        if not os.path.exists(os.path.dirname(input_archive_name)):
+        dirname = os.path.dirname(input_archive_name)
+        if not os.path.exists(dirname):
             confirm_create_folder = raw_input(('%s does not exist.  '
-                'Create path? (y/n) ')
+                'Create path? (y/n) ') % dirname)
             while confirm_create_folder not in ['y', 'n']:
                 confirm_create_folder = raw_input('Create path? (y/n)')
 
             if confirm_create_folder == 'y':
-                os.mkdirs(os.path.dirname(input_archive_name))
+                os.makedirs(dirname)
     return input_archive_name
 
 
