@@ -40,11 +40,10 @@
 		            		    "East Coast of North America and Puerto Rico",
                                 "North Sea 4 meter resolution",
                                 "North Sea 10 meter resolution",
-                                "Australia",
 					            "Global"],
 		            "defaultValue": 0,
 		            "required": true,
-                    "helpText": "Select from a list of pre-processed wave energy data. Currently coarse global data is provided as well as finer data for the East and West coast of North America."
+                    "helpText": "A list of analysis areas the model can currently be run on. All the wave energy data needed for these areas are pre-packaged in the WaveData folder."
 		        },
                 {
                     "id" : "aoi",
@@ -60,7 +59,7 @@
                     			               "datum" : "WGS_1984"}]
                     			   },
                     "returns": {"ifEmpty": "pass"},
-                    "helpText": "An OGR polygon datasource that defines an area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
+                    "helpText": "An OGR polygon shapefile that defines an area of interest. This input is required for computing valuation and is recommended for biophysical runs as well. The AOI should be projected in linear units of meters."
                 },
         		{
                     "id" : "machine_perf_table",

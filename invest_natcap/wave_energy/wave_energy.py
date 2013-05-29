@@ -157,15 +157,7 @@ def execute(args):
              'ww3_uri': os.path.join(
                  wave_base_data_uri, 'North_Sea_10m.bin')
             },
-            'Australia': {
-             'point_shape': os.path.join(
-                wave_base_data_uri, 'Australia_4m.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_uri, 'Australia_Extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'Australia_4m.bin')
-            },
-            'Global': {
+           'Global': {
              'point_shape': os.path.join(wave_base_data_uri, 'Global.shp'),
              'extract_shape': os.path.join(
                  wave_base_data_uri, 'Global_extract.shp'),
@@ -204,7 +196,7 @@ def execute(args):
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
     
     # Set nodata value and datatype for new rasters
-    nodata = float(np.finfo(np.float32).min) - 1.0
+    nodata = float(np.finfo(np.float32).min) + 1.0
     datatype = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
