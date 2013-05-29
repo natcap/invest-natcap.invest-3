@@ -347,17 +347,25 @@ def water_yield(args):
     
     LOGGER.debug('Performing aet operation')
     
-    aet_raster = \
-        raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
-                                       raster_out_uri = aet_path, 
-                                       nodata=out_nodata)
+#   aet_raster = \
+#       raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
+#                                      raster_out_uri = aet_path, 
+#                                      nodata=out_nodata)
+    
+    raster_utils.vectorize_datasets(
+            [fractp_clipped_path, precip_uri], aet_op, aet_path,
+            gdal.GDT_Float32, out_nodata, pixel_size, intersection)
     
     #Create the mean actual evapotranspiration raster
-    aet_mn_dict = \
-        raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
-                            aggregate_uri = aet_mean_path, 
-                            intermediate_directory = intermediate_dir)
+#   aet_mn_dict = \
+#       raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
+#                           aggregate_uri = aet_mean_path, 
+#                           intermediate_directory = intermediate_dir)
     
+    aet_mn_dict = raster_utils.aggregate_raster_values_uri(
+            aet_path, sub_sheds_uri, 'subws_id', 'mean')
+    
+    add_dict_to_shape(sub_sheds_out_uri, aet_mn_dict, 'aet_mn', 'subws_id')
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
