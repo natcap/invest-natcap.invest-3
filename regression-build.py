@@ -2,11 +2,20 @@ import invest_natcap.testing
 import sys
 import os
 import shutil
+import readline
+
+from invest_natcap.testing import autocomplete
 
 #CONFIG_DATA = {
 #    'Input archive': '',
 #    'Output archive': '',
 #}
+
+def config_completer():
+    autocompleter = autocomplete.Completer()
+    readline.set_completer_delims(' \t\n;')
+    readline.parse_and_bind('tab: complete')
+    readline.set_completer(autocompleter.complete)
 
 def _set_archive_name(keyword):
     input_archive_name = raw_input('Path to the %s : ' % keyword)
@@ -52,7 +61,7 @@ def set_arguments_path():
     CONFIG_DATA['Arguments (in JSON)']['path'] = json_file
 
 try:
-    init_json = sys.argv[1]
+    init_json = os.path.abspath(sys.argv[1])
 except IndexError:
     init_json = ''
 
