@@ -738,7 +738,6 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
        """
 
     #Define the initial bounding box
-    LOGGER.info("vectorizing points")
     gt = raster.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
     bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
@@ -794,10 +793,8 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
-    LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), 'nearest', nodata)
-    LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
