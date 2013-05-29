@@ -3,15 +3,13 @@ import sys
 import os
 import shutil
 
-json_file = sys.argv[1]
-
 #CONFIG_DATA = {
 #    'Input archive': '',
 #    'Output archive': '',
 #}
 
 def _set_archive_name(keyword):
-    input_archive_name = raw_input('Path to the %s archive: ' % keyword)
+    input_archive_name = raw_input('Path to the %s : ' % keyword)
 
     if os.path.exists(input_archive_name):
         confirm_overwrite = raw_input('%s exists.  Overwrite? (y/n)' %
@@ -36,12 +34,33 @@ def _set_archive_name(keyword):
 
 
 def set_input_archive_name():
-    CONFIG_DATA['Input archive']['path'] = _set_archive_name('input')
+    CONFIG_DATA['Input archive']['path'] = _set_archive_name('input archive')
 
 def set_output_archive_name():
-    CONFIG_DATA['Output archive']['path'] = _set_archive_name('output')
+    CONFIG_DATA['Output archive']['path'] = _set_archive_name('output archive')
+
+def set_test_file_name():
+    CONFIG_DATA['Test file']['path'] = _set_archive_name('test file')
+
+def set_arguments_path():
+    try:
+        json_file = sys.argv[1]
+    except IndexError:
+        # When the user did not provide an arguments file
+        json_file = _set_archive_name('arguments file')
+
+    CONFIG_DATA['Arguments (in JSON)']['path'] = json_file
+
+try:
+    init_json = sys.argv[1]
+except IndexError:
+    init_json = ''
 
 CONFIG_DATA = {
+    'Arguments (in JSON)': {
+        'path': init_json,
+        'function': set_arguments_path,
+    },
     'Input archive': {
         'path': '',
         'function': set_input_archive_name,
@@ -49,6 +68,10 @@ CONFIG_DATA = {
     'Output archive': {
         'path': '',
         'function': set_output_archive_name
+    },
+    'Test file': {
+        'path': '',
+        'function': set_test_file_name,
     },
 }
 
@@ -61,7 +84,7 @@ def configure_settings():
         else:
             path = data['path']
 
-        print '[%s] %-15s: %s' % (item_no, label, path)
+        print '[%s] %-20s: %s' % (item_no, label, path)
 
     input_selection = raw_input('Select an item to configure: ')
 
