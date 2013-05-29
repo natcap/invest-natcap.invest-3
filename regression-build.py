@@ -114,7 +114,7 @@ def configure_settings():
 
     input_selection = raw_input('Select an item to configure: ')
 
-    while int(input_selection) not in range(len(settings)):
+    while input_selection not in map(lambda x: str(x), range(len(settings))):
         input_selection = raw_input('Input must be an option above: ')
 
     input_selection = int(input_selection)
@@ -131,10 +131,15 @@ def main():
             print ''
             configure_settings()
     except ConfiguredCorrectly:
-        invest_natcap.build_regression_archives(
-            CONFIG_DATA['Arguments (in JSON)'],
-            CONFIG_DATA['Input archive'],
-            CONFIG_DATA['Output archive'])
+        invest_natcap.testing.build_regression_archives(
+            CONFIG_DATA['Arguments (in JSON)']['path'],
+            CONFIG_DATA['Input archive']['path'],
+            CONFIG_DATA['Output archive']['path'])
+        print ''
+        print 'Input archive saved to %s' % CONFIG_DATA['Input archive']['path']
+        print 'Output archive saved to %s' % CONFIG_DATA['Output archive']['path']
+    except KeyboardInterrupt:
+        print "\nQuit"
 
 if __name__ == '__main__':
     main()
