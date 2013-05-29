@@ -11,6 +11,9 @@ from invest_natcap.testing import autocomplete
 #    'Output archive': '',
 #}
 
+class ConfiguredCorrectly(Exception):
+    pass
+
 def config_completer():
     autocompleter = autocomplete.Completer()
     readline.set_completer_delims(' \t\n;')
@@ -60,6 +63,14 @@ def set_arguments_path():
 
     CONFIG_DATA['Arguments (in JSON)']['path'] = json_file
 
+def finish_operation():
+    completed_configs = map(lambda x: x != '',
+        [data['path'] for data in CONFIG_DATA.values()])
+
+    if False in completed_configs:
+        print 'All data must be provided before finishing.'
+    raise ConfiguredCorrectly()
+
 try:
     init_json = os.path.abspath(sys.argv[1])
 except IndexError:
@@ -82,6 +93,10 @@ CONFIG_DATA = {
         'path': '',
         'function': set_test_file_name,
     },
+    'Finish': {
+        'path': None,
+        'function': finish_operation,
+    },
 }
 
 def configure_settings():
@@ -90,6 +105,8 @@ def configure_settings():
     for item_no, (label, data) in enumerate(settings):
         if data['path'] == '':
             path = '(not set)'
+        elif data['path'] == None:
+            path = ''
         else:
             path = data['path']
 
@@ -108,10 +125,16 @@ def configure_settings():
 
 def main():
     finished = False
-    while not finished:
-        print ''
-        print ''
-        configure_settings()
+    try:
+        while not finished:
+            print ''
+            print ''
+            configure_settings()
+    except ConfiguredCorrectly:
+        invest_natcap.build_regression_archives(
+            CONFIG_DATA['Arguments (in JSON)'],
+            CONFIG_DATA['Input archive'],
+            CONFIG_DATA['Output archive'])
 
 if __name__ == '__main__':
     main()
