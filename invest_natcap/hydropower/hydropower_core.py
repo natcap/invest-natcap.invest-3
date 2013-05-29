@@ -228,25 +228,36 @@ def water_yield(args):
             return (1.0 - fractp) * precip
     
     #Create the water yield raster 
-    wyield_raster = \
-        raster_utils.vectorize_rasters([fractp_raster, precip_raster], 
-                                       wyield_op,   
-                                       raster_out_uri = wyield_clipped_path, 
-                                       nodata=out_nodata)
+    #wyield_raster = \
+    #    raster_utils.vectorize_rasters([fractp_raster, precip_raster], 
+    #                                   wyield_op,   
+    #                                   raster_out_uri = wyield_clipped_path, 
+    #                                   nodata=out_nodata)
+    
+    raster_utils.vectorize_datasets(
+            [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
+            gdal.GDT_Float32, out_nodata, pixel_size, intersection)
     
     #Create mean rasters for fractp and water yield
-    fract_mn_dict = \
-        raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 
-                            'subws_id', 'mean', 
-                            aggregate_uri = fractp_mean_path, 
-                            intermediate_directory = intermediate_dir)
-    wyield_mn_dict = \
-        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 
-                            'subws_id', 'mean', 
-                            aggregate_uri = wyield_mean_path, 
-                            intermediate_directory = intermediate_dir)
+    #fract_mn_dict = raster_utils.aggregate_raster_values(
+    #        fractp_raster, sub_sheds, 'subws_id', 'mean',
+    #        aggregate_uri = fractp_mean_path,
+    #        intermediate_directory = intermediate_dir)
+    
+    fract_mn_dict = raster_utils.aggregate_raster_values_uri(
+            fractp_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
+    
+    wyield_raster = gdal.Open(wyield_clipped_path)
+    wyield_mn_dict = raster_utils.aggregate_raster_values(
+            wyield_raster, sub_sheds, 'subws_id', 'mean', 
+            aggregate_uri = wyield_mean_path, 
+            intermediate_directory = intermediate_dir)
+    wyield_raster = None 
+    
+    #wyield_mn_dict = raster_utils.aggregate_raster_values_uri(
+    #        wyield_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
 
-    wyield_mean = gdal.Open(wyield_mean_path)
+    #wyield_mean = gdal.Open(wyield_mean_path)
 
     #Create area raster so that the volume can be computed.
     area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
