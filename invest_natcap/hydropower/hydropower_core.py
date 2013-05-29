@@ -244,81 +244,89 @@ def water_yield(args):
     #        aggregate_uri = fractp_mean_path,
     #        intermediate_directory = intermediate_dir)
     
+    sub_sheds_out_uri = os.path.join(output_dir, 'sub_sheds.shp')
+    sheds_out_uri = os.path.join(output_dir, 'sheds.shp')
+    raster_utils.copy_datasource_uri(sub_sheds_uri, sub_sheds_out_uri)
+    raster_utils.copy_datasource_uri(sheds_uri, sheds_out_uri)
+    
     fract_mn_dict = raster_utils.aggregate_raster_values_uri(
             fractp_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
+   
+    add_dict_to_shape(sub_sheds_out_uri, fract_mn_dict, 'fractp_mn', 'subws_id')
+
+    #wyield_mn_dict = raster_utils.aggregate_raster_values(
+    #        wyield_raster, sub_sheds, 'subws_id', 'mean', 
+    #        aggregate_uri = wyield_mean_path, 
+    #        intermediate_directory = intermediate_dir)
     
-    wyield_raster = gdal.Open(wyield_clipped_path)
-    wyield_mn_dict = raster_utils.aggregate_raster_values(
-            wyield_raster, sub_sheds, 'subws_id', 'mean', 
-            aggregate_uri = wyield_mean_path, 
-            intermediate_directory = intermediate_dir)
-    wyield_raster = None 
-    
-    #wyield_mn_dict = raster_utils.aggregate_raster_values_uri(
-    #        wyield_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
+    wyield_mn_dict = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
+
+    add_dict_to_shape(
+            sub_sheds_out_uri, wyield_mn_dict, 'wyield_mn', 'subws_id')
 
     #wyield_mean = gdal.Open(wyield_mean_path)
 
     #Create area raster so that the volume can be computed.
-    area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
+#   area_dict = get_area_of_polygons(sub_sheds_uri, 'subws_id')
 
-    subwatershed_mask_uri = raster_utils.temporary_filename()
-    subwatershed_mask = raster_utils.new_raster_from_base(
-        wyield_mean, subwatershed_mask_uri, 'GTiff', out_nodata,
-        gdal.GDT_Int32)
+#   subwatershed_mask_uri = raster_utils.temporary_filename()
+#   subwatershed_mask = raster_utils.new_raster_from_base(
+#       wyield_mean, subwatershed_mask_uri, 'GTiff', out_nodata,
+#       gdal.GDT_Int32)
 
-    gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
-                        options = ['ATTRIBUTE=subws_id'])
+#   gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
+#                       options = ['ATTRIBUTE=subws_id'])
 
-    wyield_area_uri = raster_utils.temporary_filename()
-    raster_utils.reclassify_dataset(
-        subwatershed_mask, area_dict, wyield_area_uri, gdal.GDT_Float32, out_nodata)
-    wyield_area = gdal.Open(wyield_area_uri)
+#   wyield_area_uri = raster_utils.temporary_filename()
+#   raster_utils.reclassify_dataset(
+#       subwatershed_mask, area_dict, wyield_area_uri, gdal.GDT_Float32, out_nodata)
+#   wyield_area = gdal.Open(wyield_area_uri)
 
-    subwatershed_mask = None
-    LOGGER.debug('Performing volume operation')
-    
-    def volume_op(wyield_mn, wyield_area):
-        """Function to compute the water yield volume raster
-        
-            wyield_mn - numpy array with the water yield mean raster values (mm)
-            wyield_area - numpy array with the water yield area raster 
-                          values (square meters)
-            
-            returns - water yield volume value (cubic meters)"""
-        #Divide by 1000 because wyield is in mm, so convert to meters
-        if wyield_mn != out_nodata and wyield_area != out_nodata:
-            return (wyield_mn * wyield_area / 1000.0)
-        else:
-            return out_nodata
-        
-    wyield_vol_raster = \
-        raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
-                                       raster_out_uri = wyield_volume_path, 
-                                       nodata=out_nodata)
+#   subwatershed_mask = None
+#   LOGGER.debug('Performing volume operation')
+#   
+#   def volume_op(wyield_mn, wyield_area):
+#       """Function to compute the water yield volume raster
+#       
+#           wyield_mn - numpy array with the water yield mean raster values (mm)
+#           wyield_area - numpy array with the water yield area raster 
+#                         values (square meters)
+#           
+#           returns - water yield volume value (cubic meters)"""
+#       #Divide by 1000 because wyield is in mm, so convert to meters
+#       if wyield_mn != out_nodata and wyield_area != out_nodata:
+#           return (wyield_mn * wyield_area / 1000.0)
+#       else:
+#           return out_nodata
+#       
+#   wyield_vol_raster = \
+#       raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
+#                                      raster_out_uri = wyield_volume_path, 
+#                                      nodata=out_nodata)
 
-    def ha_vol(wyield_vol, wyield_area):
-        """Function to compute water yield volume in units of ha
-        
-            wyield_vol - numpy array with the water yield volume raster values
-                         (cubic meters)
-            wyield_area - numpy array with the water yield area raster values
-                          (squared meters)
-                          
-            returns - water yield volume in ha value"""
-        #Converting area from square meters to hectares 1 meter = .0001 hectare
-        if wyield_vol != out_nodata and wyield_area != out_nodata:
-            return wyield_vol / (0.0001 * wyield_area)
-        else:
-            return out_nodata
-    
-    LOGGER.debug('Performing volume (ha) operation')
-        
-    #Make ha volume raster
-    wyield_ha_raster = \
-        raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
-                                       raster_out_uri = wyield_ha_path, 
-                                       nodata=out_nodata)
+#   def ha_vol(wyield_vol, wyield_area):
+#       """Function to compute water yield volume in units of ha
+#       
+#           wyield_vol - numpy array with the water yield volume raster values
+#                        (cubic meters)
+#           wyield_area - numpy array with the water yield area raster values
+#                         (squared meters)
+#                         
+#           returns - water yield volume in ha value"""
+#       #Converting area from square meters to hectares 1 meter = .0001 hectare
+#       if wyield_vol != out_nodata and wyield_area != out_nodata:
+#           return wyield_vol / (0.0001 * wyield_area)
+#       else:
+#           return out_nodata
+#   
+#   LOGGER.debug('Performing volume (ha) operation')
+#       
+#   #Make ha volume raster
+#   wyield_ha_raster = \
+#       raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
+#                                      raster_out_uri = wyield_ha_path, 
+#                                      nodata=out_nodata)
     
     def aet_op(fractp, precip):
         """Function to compute the actual evapotranspiration values
@@ -415,7 +423,62 @@ def water_yield(args):
     LOGGER.debug('Performing CSV table writing')
     write_csv_table(ws_dict, field_list, shed_table_path)
     write_csv_table(sws_dict, sub_field_list, sub_table_path)
-    
+
+def compute_volume(shape_uri, vol_name, ha_name):
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+
+    for new_field in [vol_name, ha_name]:
+        field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        layer.CreateField(field_defn)
+
+    num_features = layer.GetFeatureCount()
+    for feat_id in num_features:
+        feat = layer.GetFeauture(feat_id)
+        wyield_mn_id = feat.GetFieldIndex('wyield_mn')
+        wyield_mn = feat.GetField(wyield_mn_id)
+        
+        geom = feat.GetGeometryRef()
+        feat_area = geom.GetArea()
+        
+        vol = wyield_mn * feat_area / 1000.0
+        vol_index = feat.GetFieldIndex(vol_name)
+        feat.SetField(vol_index, vol)
+        
+        vol_ha = vol / (0.0001 * feat_area)
+        ha_index = feat.GetFieldIndex(ha_name)
+        feat.SetField(ha_index, vol_ha)
+        
+        layer.SetFeature(feat)
+        
+def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
+    """Add a new field to a shapefile with values from a dictionary whose keys
+        match a unique field in the shapefile
+
+        shape_uri - 
+        field_dict - 
+        field_name - 
+        shed_name - 
+
+        returns - nothing"""
+
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
+
+    num_features = layer.GetFeatureCount()
+    for feat_id in num_features:
+        feat = layer.GetFeauture(feat_id)
+        ws_id = feat.GetFieldIndex(shed_name)
+        ws_val = feat.GetField(ws_id)
+        field_val = float(field_dict[ws_val])
+        field_index = feat.GetFieldIndex(field_name)
+
+        feat.SetField(field_index, field_val)
+
+        layer.SetFeature(feat)
+
 def sheds_map_subsheds(shape, sub_shape):
     """Stores which sub watersheds belong to which watershed
        
@@ -459,11 +522,11 @@ def sheds_map_subsheds(shape, sub_shape):
         
     return collection
 
-def get_area_of_polygons(shapefile, field_name):
+def get_area_of_polygons(shapefile_uri, field_name):
     """Creates and returns a dictionary of the relationship between each
        polygons area and its field_name (commonly some ID value)
     
-       shapefile - an OGR polygon shapefile
+       shapefile_uri - an OGR polygon shapefile
        field_name - a string of an unique field in shapefile 
                     (commonly an id field)
        
@@ -472,6 +535,7 @@ def get_area_of_polygons(shapefile, field_name):
                  the polygon
     """
     LOGGER.debug('Starting get_area_of_polygons')
+    shapefile = ogr.Open(shapefile_uri, 1)
     area_dict = {}
     layer = shapefile.GetLayer(0)
     layer.ResetReading()
