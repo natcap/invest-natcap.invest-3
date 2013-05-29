@@ -39,7 +39,7 @@ def _set_archive_name(keyword):
 
             if confirm_create_folder == 'y':
                 os.makedirs(dirname)
-    return input_archive_name
+    return os.path.abspath(input_archive_name)
 
 
 def set_input_archive_name():
@@ -109,6 +109,8 @@ def configure_settings():
 def main():
     finished = False
     while not finished:
+        print ''
+        print ''
         configure_settings()
 
 if __name__ == '__main__':
