@@ -56,7 +56,12 @@ def configure_settings():
     settings = list(sorted(CONFIG_DATA.iteritems(), key=lambda x: x[0]))
 
     for item_no, (label, data) in enumerate(settings):
-        print '[%s] %s: %s' % (item_no, label, data['path'])
+        if data['path'] == '':
+            path = '(not set)'
+        else:
+            path = data['path']
+
+        print '[%s] %-15s: %s' % (item_no, label, path)
 
     input_selection = raw_input('Select an item to configure: ')
 
