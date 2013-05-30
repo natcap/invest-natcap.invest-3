@@ -317,3 +317,18 @@ class GISTestTester(testing.GISTest):
         md5_sum = 'bad md5sum!'
 
         self.assertRaises(AssertionError, self.assertMD5, test_file, md5_sum)
+
+    def test_archive_assertion(self):
+        """Check that two archives are equal"""
+        archive_file = os.path.join(REGRESSION_ARCHIVES,
+            'arc_raster_nice.tar.gz')
+        self.assertArchives(archive_file, archive_file)
+
+    def test_archive_assertion_fails(self):
+        """Check that assertion fails when two archives are different"""
+        archive_file = os.path.join(REGRESSION_ARCHIVES,
+            'arc_raster_nice.tar.gz')
+        different_archive = os.path.join(REGRESSION_ARCHIVES,
+            'arc_raster_messy.tar.gz')
+        self.assertRaises(AssertionError, self.assertArchives, archive_file,
+            different_archive)
