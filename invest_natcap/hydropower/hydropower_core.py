@@ -210,7 +210,7 @@ def water_yield(args):
     
     raster_utils.vectorize_datasets(
             raster_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
-            out_nodata, pixel_size, intersection)
+            out_nodata, pixel_size, 'intersection')
     
     LOGGER.debug('Performing wyield operation')
     
@@ -236,7 +236,7 @@ def water_yield(args):
     
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
-            gdal.GDT_Float32, out_nodata, pixel_size, intersection)
+            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection')
     
     #Create mean rasters for fractp and water yield
     #fract_mn_dict = raster_utils.aggregate_raster_values(
@@ -354,7 +354,7 @@ def water_yield(args):
     
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], aet_op, aet_path,
-            gdal.GDT_Float32, out_nodata, pixel_size, intersection)
+            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection')
     
     #Create the mean actual evapotranspiration raster
 #   aet_mn_dict = \
@@ -364,75 +364,242 @@ def water_yield(args):
     
     aet_mn_dict = raster_utils.aggregate_raster_values_uri(
             aet_path, sub_sheds_uri, 'subws_id', 'mean')
-    
-    add_dict_to_shape(sub_sheds_out_uri, aet_mn_dict, 'aet_mn', 'subws_id')
+    LOGGER.debug('aet mn dict : %s', aet_mn_dict) 
+    add_dict_to_shape(sub_sheds_out_uri, aet_mn_dict, 'AET_mn', 'subws_id')
     
     #Create the water yield subwatershed table
-    wsr = sheds_map_subsheds(sheds, sub_sheds)
+    wsr = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
     LOGGER.debug('wsr : %s', wsr)
     ws_dict = {}
     sws_dict = {}
     #Build the foundation for the watershed and subwatershed dictionaries
     for key, val in wsr.iteritems():
-        sws_dict[key] = {'ws_id':val, 'subws_id':key}
+        sws_dict[key] = val
         if not val in ws_dict:
             ws_dict[val] = {'ws_id':val}
     
     LOGGER.debug('ws_dict : %s', ws_dict)
     LOGGER.debug('sws_dict : %s', sws_dict)
+    add_dict_to_shape(sub_sheds_out_uri, sws_dict, 'ws_id', 'subws_id')
     
-    sub_value_dict = {}
-    tuple_name_datasets_sub = \
-        [('precip_mn', precip_raster),('PET_mn', eto_raster)]
-   
-    for key_name, rast in tuple_name_datasets_sub:
-        sub_value_dict[key_name] = \
-            raster_utils.aggregate_raster_values(rast, sub_sheds, 'subws_id',\
-                                                 'mean')
-    sub_value_dict['AET_mn'] = aet_mn_dict
-    sub_value_dict['wyield_mn'] = wyield_mn_dict
-    sub_value_dict['wyield_sum'] = \
-        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id',
-                                             'sum')
+    
+#   sub_value_dict = {}
+#   tuple_name_datasets_sub = \
+#       [('precip_mn', precip_uri),('PET_mn', eto_uri)]
+#  
+#   for key_name, rast_uri in tuple_name_datasets_sub:
+#       sub_value_dict[key_name] = raster_utils.aggregate_raster_values_uri(
+#           rast_uri, sub_sheds_uri, 'subws_id', 'mean')
+    
+    precip_mn_dict = raster_utils.aggregate_raster_values_uri(
+            precip_uri, sub_sheds_uri, 'subws_id', 'mean')
+    
+    add_dict_to_shape(sub_sheds_out_uri, precip_mn_dict, 'precip_mn', 'subws_id')
+    
+    eto_mn_dict = raster_utils.aggregate_raster_values_uri(
+            eto_uri, sub_sheds_uri, 'subws_id', 'mean')
+    
+    add_dict_to_shape(sub_sheds_out_uri, eto_mn_dict, 'PET_mn', 'subws_id')
+
+#    sub_value_dict['AET_mn'] = aet_mn_dict
+#    sub_value_dict['wyield_mn'] = wyield_mn_dict
+#    sub_value_dict['wyield_sum'] = raster_utils.aggregate_raster_values_uri(
+#            wyield_raster, sub_sheds_uri, 'subws_id', 'sum')
+    wyield_sum_dict = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sub_sheds_uri, 'subws_id', 'sum')
+
+    add_dict_to_shape(
+            sub_sheds_out_uri, wyield_sum_dict, 'wyield_sum', 'subws_id')
+    
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
-    LOGGER.debug('sub_value_dict : %s', sub_value_dict)
-    #Create the water yield watershed table
-    value_dict = {}
-    tuple_name_datasets = \
-        [('precip_mn', precip_raster),('PET_mn', eto_raster),\
-         ('AET_mn', aet_raster),('wyield_mn', wyield_raster)]
    
-    for key_name, rast in tuple_name_datasets:
-        value_dict[key_name] = \
-            raster_utils.aggregate_raster_values(rast, sheds, 'ws_id', 'mean')
+    sub_value_dict = extract_datasource_table_by_key(
+            sub_sheds_out_uri, 'subws_id', sub_field_list)
     
-    value_dict['wyield_sum'] = \
-        raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
-                                             'sum')
+    LOGGER.debug('sub_value_dict : %s', sub_value_dict)
     
-    field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
-                  'wyield_sum']
+    write_new_table(sub_table_path, sub_field_list, sub_value_dict)
+    
+    #Create the water yield watershed table
+#   value_dict = {}
+#   tuple_name_datasets = \
+#       [('precip_mn', precip_raster),('PET_mn', eto_raster),\
+#        ('AET_mn', aet_raster),('wyield_mn', wyield_raster)]
+#  
+#   for key_name, rast in tuple_name_datasets:
+#       value_dict[key_name] = \
+#           raster_utils.aggregate_raster_values(rast, sheds, 'ws_id', 'mean')
+    
+    value_dict = {}
+    tuple_name_datasets = [
+            ('precip_mn', precip_uri),('PET_mn', eto_uri),
+            ('AET_mn', aet_path),('wyield_mn', wyield_clipped_path)]
+   
+    for key_name, rast_uri in tuple_name_datasets:
+        key_dict = raster_utils.aggregate_raster_values_uri(
+                rast_uri, sheds_uri, 'ws_id', 'mean')
+    
+        add_dict_to_shape(sheds_out_uri, key_dict, key_name, 'ws_id')
+
+    wyield_sum_dict = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sheds_uri, 'ws_id', 'sum')
+        
+    add_dict_to_shape(sheds_out_uri, wyield_sum_dict, 'wyield_sum', 'ws_id')
+
+#   value_dict['wyield_sum'] = \
+#       raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
+#                                            'sum')
+    
+    field_list = [
+            'ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 'wyield_sum']
+    
+    value_dict = extract_datasource_table_by_key(
+            sheds_out_uri, 'ws_id', field_list)
+    
+    LOGGER.debug('value_dict : %s', value_dict)
+    
+    write_new_table(shed_table_path, field_list, value_dict)
     
     #Fill in the watershed and subwatershed dictionaries with proper values and
     #format to be able to be written out to a CSV file
-    for key, val in ws_dict.iteritems():
-        for index, item in value_dict.iteritems():
-            val[index] = item[key]
-    
-    for key, val in sws_dict.iteritems():
-        for index, item in sub_value_dict.iteritems():
+#   for key, val in ws_dict.iteritems():
+#       for index, item in value_dict.iteritems():
+#           val[index] = item[key]
+#   
+#   for key, val in sws_dict.iteritems():
+#       for index, item in sub_value_dict.iteritems():
+#           try:
+#               val[index] = item[int(key)]
+#           except KeyError:
+#               LOGGER.error("Warning subwatershed %s was not in the calculated"
+#                            " region.  Is it a very small polygon?" % key)
+#   
+#   LOGGER.debug('Performing CSV table writing')
+#   write_csv_table(ws_dict, field_list, shed_table_path)
+#   write_csv_table(sws_dict, sub_field_list, sub_table_path)
+
+#def generate_csv_tables(shape_uri, field_list, shed_field, out_uri):
+#   """
+#   """
+#   csv_file = open(out_uri, 'wb')
+
+#   
+#   csv_writer = csv.DictWriter(csv_file, field_list)
+#   # Write the columns as the first row in the table
+#   csv_writer.writerow(dict((fn,fn) for fn in field_list))
+
+#   row_dict = {}
+
+#   num_features = layer.GetFeatureCount()
+#   for feat_id in num_features:
+#       feat = layer.GetFeature(feat_id)
+#       shed_index = feat.GetFieldIndex(shed_field)
+#       shed_id = feat.GetField(shed_index)
+#       row_dict[shed_id] = {}
+#       for field in field_list:
+#           field_index = feat.GetFieldIndex(field)
+#           field_val = feat.GetField(field_index)
+#           row_dict[shed_id][field] = field_val
+
+#   # Sort the keys so that the rows are written in order
+#   #row_keys = data.keys().sort()V
+#   
+#   for index in keys:
+#       csv_writer.writerow(data[index])
+
+#   csv_file.close()
+
+def extract_datasource_table_by_key(
+        datasource_uri, key_field, wanted_list):
+    """Create a dictionary lookup table of the features in the attribute table
+        of the datasource referenced by datasource_uri.
+
+        datasource_uri - a uri to an OGR datasource
+        key_field - a field in datasource_uri that refers to a key (unique) value
+            for each row; for example, a polygon id.
+        wanted_list - a list of field names to add to the dictionary. This is
+            helpful if there are fields that are not wanted to be returned
+
+        returns a dictionary of the form {key_field_0: 
+            {field_0: value0, field_1: value1}...}"""
+
+    def smart_cast(value):
+        """Attempts to cast value to a float, int, or leave it as string"""
+        if type(value) != str: 
+            return value
+
+        cast_functions = [int, float]
+        for fn in cast_functions:
             try:
-                val[index] = item[int(key)]
-            except KeyError:
-                LOGGER.error("Warning subwatershed %s was not in the calculated"
-                             " region.  Is it a very small polygon?" % key)
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    #Pull apart the datasource
+    datasource = ogr.Open(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    #Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    #Loop through each feature and build up the dictionary representing the
+    #attribute table
+    attribute_dictionary = {}
+    for feature_index in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_index)
+        feature_fields = {}
+        for field_name in field_names:
+            if field_name in wanted_list:
+                feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    return attribute_dictionary
     
-    LOGGER.debug('Performing CSV table writing')
-    write_csv_table(ws_dict, field_list, shed_table_path)
-    write_csv_table(sws_dict, sub_field_list, sub_table_path)
+def write_new_table(filename, fields, data):
+    """Create a new csv table from a dictionary
+
+        filename - a URI path for the new table to be written to disk
+        
+        fields - a python list of the column names. The order of the fields in
+            the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+        
+        data - a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to a
+            dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+        returns - nothing
+    """
+    csv_file = open(filename, 'wb')
+
+    # Sort the keys so that the rows are written in order
+    row_keys = data.keys()
+    row_keys.sort()    
+    LOGGER.debug('Keys : %s', row_keys)
+    #sorted_keys = row_keys.sort()
+    #LOGGER.debug('Table Row Keys : %s', sorted_keys)
+
+    csv_writer = csv.DictWriter(csv_file, fields)
+    # Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn,fn) for fn in fields))
+
+    for index in row_keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
 
 def compute_volume(shape_uri, vol_name, ha_name):
+    """
+    """
     shape = ogr.Open(shape_uri, 1)
     layer = shape.GetLayer()
 
@@ -441,7 +608,7 @@ def compute_volume(shape_uri, vol_name, ha_name):
         layer.CreateField(field_defn)
 
     num_features = layer.GetFeatureCount()
-    for feat_id in num_features:
+    for feat_id in xrange(num_features):
         feat = layer.GetFeauture(feat_id)
         wyield_mn_id = feat.GetFieldIndex('wyield_mn')
         wyield_mn = feat.GetField(wyield_mn_id)
@@ -476,8 +643,8 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
     layer.CreateField(field_defn)
 
     num_features = layer.GetFeatureCount()
-    for feat_id in num_features:
-        feat = layer.GetFeauture(feat_id)
+    for feat_id in xrange(num_features):
+        feat = layer.GetFeature(feat_id)
         ws_id = feat.GetFieldIndex(shed_name)
         ws_val = feat.GetField(ws_id)
         field_val = float(field_dict[ws_val])
@@ -487,7 +654,7 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
 
         layer.SetFeature(feat)
 
-def sheds_map_subsheds(shape, sub_shape):
+def sheds_map_subsheds(shape_uri, sub_shape_uri):
     """Stores which sub watersheds belong to which watershed
        
        shape - an OGR shapefile of the watersheds
@@ -498,6 +665,8 @@ def sheds_map_subsheds(shape, sub_shape):
     """
     
     LOGGER.debug('Starting sheds_map_subsheds')
+    shape = ogr.Open(shape_uri)
+    sub_shape = ogr.Open(sub_shape_uri)
     layer = shape.GetLayer(0)
     sub_layer = sub_shape.GetLayer(0)
     collection = {}
