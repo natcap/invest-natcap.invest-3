@@ -245,5 +245,6 @@ class GISTestTester(testing.GISTest):
         """Verify when rasters have different values"""
         lulc_cur_raster = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
         lulc_fut_raster = os.path.join(POLLINATION_DATA, 'landuse_fut_200m.tif')
-        self.assertRastersEqual(lulc_cur_raster, lulc_fut_raster)
+        self.assertRaises(AssertionError, self.assertRastersEqual,
+            lulc_cur_raster, lulc_fut_raster)
 
