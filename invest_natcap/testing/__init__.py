@@ -117,6 +117,8 @@ def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
 
     # collect the parameters into a single folder
     input_archive = input_archive_uri
+    if input_archive[-7:] == '.tar.gz':
+        input_archive = input_archive[:-7]
     data_storage.collect_parameters(arguments, input_archive)
     input_archive += '.tar.gz'
 
@@ -125,6 +127,8 @@ def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
     model.execute(model_args)
 
     archive_uri = output_archive_uri
+    if archive_uri[-7:] == '.tar.gz':
+        archive_uri = archive_uri[:-7]
     LOGGER.debug('Archiving the output workspace')
     shutil.make_archive(archive_uri, 'gztar', root_dir=workspace, logger=LOGGER)
 
