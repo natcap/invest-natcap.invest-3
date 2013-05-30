@@ -165,7 +165,7 @@ class GISTest(unittest.TestCase):
             band_b = b_dataset.GetRasterBand(band_number)
 
             a_array = band_a.ReadAsArray(0, 0, band_a.XSize, band_a.YSize)
-            b_array = band_a.ReadAsArray(0, 0, band_b.XSize, band_b.YSize)
+            b_array = band_b.ReadAsArray(0, 0, band_b.XSize, band_b.YSize)
 
             try:
                 numpy.testing.assert_array_almost_equal(a_array, b_array)
