@@ -287,3 +287,13 @@ class GISTestTester(testing.GISTest):
         different_file = os.path.join(CARBON_DATA, 'harv_samp_cur.shp')
         self.assertRaises(AssertionError, self.assertVectorsEqual, base_file,
             different_file)
+
+    def test_csv_assertion_fileio(self):
+        bad_file_1 = 'aaa'
+        bad_file_2 = 'bbbbb'
+        good_file = os.path.join(POLLINATION_DATA, 'Guild.csv')
+
+        self.assertRaises(IOError, self.assertCSVEqual, bad_file_1, bad_file_2)
+        self.assertRaises(IOError, self.assertCSVEqual, bad_file_1, good_file)
+        self.assertRaises(IOError, self.assertCSVEqual, good_file, bad_file_2)
+        self.assertCSVEqual(good_file, good_file)
