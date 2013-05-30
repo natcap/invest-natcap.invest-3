@@ -17,3 +17,12 @@ def write_import(file_uri):
 def write_test_class(file_uri, classname):
     test_file = TestWriter(file_uri)
     test_file.write('class %s(invest_natcap.testing.GISTest):')
+
+def write_archive_test(test_name, module, input_archive, output_archive):
+    test_file = TestWriter(file_uri)
+    test_file.write('    @invest_natcap.testing.regression(')
+    test_file.write('        input_archive="%s",' % input_archive)
+    test_file.write('        workspace_archive="%s")' % output_archive)
+    test_file.write('    def %s(self):' % test_name)
+    test_file.write('        %s.execute(self.args)')
+    test_file.write('')
