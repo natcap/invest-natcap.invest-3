@@ -49,10 +49,16 @@ def _set_archive_name(keyword):
 
 
 def set_input_archive_name():
-    CONFIG_DATA['Input archive']['path'] = _set_archive_name('input archive')
+    input_archive_name = _set_archive_name('input archive')
+    if input_archive_name[-7:] != '.tar.gz':
+        input_archive_name += '.tar.gz'
+    CONFIG_DATA['Input archive']['path'] = input_archive_name
 
 def set_output_archive_name():
-    CONFIG_DATA['Output archive']['path'] = _set_archive_name('output archive')
+    output_archive_name = _set_archive_name('output archive')
+    if archive_archive_name[-7:] != '.tar.gz':
+        archive_archive_name += '.tar.gz'
+    CONFIG_DATA['Output archive']['path'] = output_archive_name
 
 def set_test_file_name():
     CONFIG_DATA['Test file']['path'] = _set_archive_name('test file')
@@ -169,7 +175,6 @@ def main():
     CONFIG_DATA['Test file']['path'] = args.test_file
     CONFIG_DATA['Test class']['path'] = args.test_class
     CONFIG_DATA['Test function']['path'] = args.test_func
-
 
     try:
         finished = False
