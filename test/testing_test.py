@@ -209,7 +209,7 @@ class DataStorageTest(testing.GISTest):
 
 
 class GISTestTester(testing.GISTest):
-    def test_raster_assertion(self):
+    def test_raster_assertion_fileio(self):
         """Verify correct behavior for assertRastersEqual"""
 
         # check that IOError is raised if a file is not found.
