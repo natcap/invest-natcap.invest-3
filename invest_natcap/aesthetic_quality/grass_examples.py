@@ -4,6 +4,8 @@ GRASS Python script examples.
 import sys
 import os
 
+import shutil
+
 import random, string
 
 def random_string(length):
@@ -92,4 +94,4 @@ if __name__ == '__main__':
 
     #remove the location from disk
     print 'Removing location %s' % location_uri
-    os.system("rm -rf %s" % location_uri)
+    shutil.rmtree(location_uri)
