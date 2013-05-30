@@ -29,7 +29,7 @@ class TestWriter(object):
         self.write('        input_archive="%s",' % input_archive)
         self.write('        workspace_archive="%s")' % output_archive)
         self.write('    def %s(self):' % test_name)
-        self.write('        %s.execute(self.args)')
+        self.write('        %s.execute(self.args)' % module)
         self.write('')
 
     def class_exists(self, test_class_name):
