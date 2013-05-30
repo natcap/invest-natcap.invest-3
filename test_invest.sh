@@ -64,6 +64,7 @@ then
         reclassify_test.py
         routing_test.py
         sediment_test.py
+        testing_test.py
         timber_core_test.py
         timber_test.py
         water_scarcity_test.py
