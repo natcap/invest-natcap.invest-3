@@ -66,10 +66,35 @@ def save_workspace(new_workspace):
     return test_inner_func
 
 
-def regression():
+def regression(input_archive, workspace_archive):
     """Decorator to unzip input data, run the regression test and compare the
-        outputs against the outputs on file."""
-    pass
+        outputs against the outputs on file.
+
+        input_archive - the path to a .tar.gz archive with the input data.
+        workspace_archive - the path to a .tar.gz archive with the workspace to
+            assert.
+         """
+
+        # item is the function being decorated
+        def test_inner_function(item):
+
+            @functools.wraps(item)
+            def test_and_assert_workspace(self, *args, **kwargs):
+                workspace = raster_utils.temporary_folder()
+                self.args = extract_parameters_archive(workspace, input_archive)
+
+                # Actually run the test.  Assumes that self.args is used as the
+                # input arguments.
+                item(self)
+
+                # Extract the archived workspace to a new temporary folder and
+                # compare the two workspaces.
+                archived_workspace = raster_utils.temporary_folder()
+                data_storage.extract_archive(archived_workspace, workspace_archive)
+                self.assertWorkspace(workspace, archived_workspace)
+            return test_and_assert_workspace
+        return test_inner_function
+
 
 def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
     file_handler = fileio.JSONHandler(file_uri)
@@ -264,16 +289,22 @@ class GISTest(unittest.TestCase):
 
         self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
 
-    def assertArchive(self, archive_1_uri, archive_2_uri):
+    def assertArchives(self, archive_1_uri, archive_2_uri):
         """Unzip the two archives and compare its contents.  Archives must be
             tar.gz."""
 
-        # uncompress the two archives
         archive_1_folder = raster_utils.temporary_folder()
         data_storage.extract_archive(archive_1_folder, archive_1_uri)
 
         archive_2_folder = raster_utils.temporary_folder()
         data_storage.extract_archive(archive_2_folder, archive_2_uri)
+
+        self.assertWorkspace(archive_1_folder, archive_2_folder)
+
+    def assertWorkspace(self, archive_1_folder, archive_2_folder):
+        """Check the contents of two folders against each other."""
+
+        # uncompress the two archives
 
         archive_1_files = []
         archive_2_files = []
