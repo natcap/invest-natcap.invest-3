@@ -9,9 +9,13 @@ import functools
 import hashlib
 import filecmp
 import time
+import csv
 
 import numpy
+np = numpy
 from osgeo import gdal
+from osgeo import ogr
+
 
 from invest_natcap.iui import executor
 from invest_natcap.iui import fileio
@@ -75,25 +79,25 @@ def regression(input_archive, workspace_archive):
             assert.
          """
 
-        # item is the function being decorated
-        def test_inner_function(item):
+    # item is the function being decorated
+    def test_inner_function(item):
 
-            @functools.wraps(item)
-            def test_and_assert_workspace(self, *args, **kwargs):
-                workspace = raster_utils.temporary_folder()
-                self.args = extract_parameters_archive(workspace, input_archive)
+        @functools.wraps(item)
+        def test_and_assert_workspace(self, *args, **kwargs):
+            workspace = raster_utils.temporary_folder()
+            self.args = extract_parameters_archive(workspace, input_archive)
 
-                # Actually run the test.  Assumes that self.args is used as the
-                # input arguments.
-                item(self)
+            # Actually run the test.  Assumes that self.args is used as the
+            # input arguments.
+            item(self)
 
-                # Extract the archived workspace to a new temporary folder and
-                # compare the two workspaces.
-                archived_workspace = raster_utils.temporary_folder()
-                data_storage.extract_archive(archived_workspace, workspace_archive)
-                self.assertWorkspace(workspace, archived_workspace)
-            return test_and_assert_workspace
-        return test_inner_function
+            # Extract the archived workspace to a new temporary folder and
+            # compare the two workspaces.
+            archived_workspace = raster_utils.temporary_folder()
+            data_storage.extract_archive(archived_workspace, workspace_archive)
+            self.assertWorkspace(workspace, archived_workspace)
+        return test_and_assert_workspace
+    return test_inner_function
 
 
 def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
