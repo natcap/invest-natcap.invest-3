@@ -56,10 +56,10 @@ def set_test_file_name():
     CONFIG_DATA['Test file']['path'] = _set_archive_name('test file')
 
 def set_test_class_name():
-    CONFIG_DATA['Test class']['path'] = _set_archive_name('test class')
+    CONFIG_DATA['Test class']['path'] = raw_input('Test class name: ')
 
 def set_test_func_name():
-    CONFIG_DATA['Test function']['path'] = _set_archive_name('test function')
+    CONFIG_DATA['Test function']['path'] = raw_input('Test function name: ')
 
 def set_arguments_path():
     try:
@@ -108,10 +108,6 @@ CONFIG_DATA = {
         'path': '',
         'function': set_test_func_name,
     },
-    'Finish': {
-        'path': None,
-        'function': finish_operation,
-    },
 }
 
 def configure_settings():
@@ -120,12 +116,18 @@ def configure_settings():
     for item_no, (label, data) in enumerate(settings):
         if data['path'] == '':
             path = '(not set)'
-        elif data['path'] == None:
-            path = ''
         else:
             path = data['path']
 
         print '[%s] %-20s: %s' % (item_no, label, path)
+
+    paths_complete = reduce(lambda x, y: x and y,
+        map(lambda x: True if len(x) > 0 else False,
+        list(data[1]['path'] for data in settings)))
+    print paths_complete
+
+    if paths_complete:
+        print '[%s] %-20s' % (len(settings), 'Finish')
 
     # If all options are configured, offer option to finish.
 
@@ -144,21 +146,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--arguments', dest='arguments',
         help='JSON file with input arguments and model data', type=unicode,
-        metavar='')
+        metavar='', default='')
     parser.add_argument('-i', '--input-archive', dest='input_archive',
         help='Path to where the archived input data will be saved', type=unicode,
-        metavar='')
+        metavar='', default='')
     parser.add_argument('-o', '--output-archive', dest='output_archive',
         help='Path to where the archived output data will be saved',
-        type=unicode, metavar='')
+        type=unicode, metavar='', default='')
     parser.add_argument('-t', '--test-file', dest='test_file',
-        help='The test file to modify', type=unicode, metavar='')
+        help='The test file to modify', type=unicode, metavar='', default='')
     parser.add_argument('-c', '--test-class', dest='test_class',
         help=('The test class to write or append to.  A new class will be '
-            'written if this name does not already exist.'), type=unicode, metavar='')
+            'written if this name does not already exist.'), type=unicode, metavar='', default='')
     parser.add_argument('-f', '--test-func', dest='test_func',
         help=('The test function to write inside the designated test class.'),
-        type=unicode, metavar='')
+        type=unicode, metavar='', default='')
 
     args = parser.parse_args()
 
