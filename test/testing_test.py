@@ -1,5 +1,6 @@
 import unittest
 import os
+import shutil
 
 import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
@@ -222,5 +223,13 @@ class GISTestTester(testing.GISTest):
             raster_on_disk, 'file_not_on_disk')
         self.assertRastersEqual(raster_on_disk, raster_on_disk)
 
+    def test_raster_assertion_files_equal(self):
+        """Verify when rasters are, in fact, equal."""
+        temp_folder = raster_utils.temporary_folder()
+        new_raster = os.path.join(temp_folder, 'new_file.tif')
+
+        source_file = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        shutil.copyfile(source_file, new_raster)
+        self.assertRastersEqual(source_file, new_raster)
 
 
