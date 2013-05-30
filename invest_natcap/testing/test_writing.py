@@ -1,5 +1,7 @@
 import codecs
 
+from invest_natcap import raster_utils
+
 class TestWriter(object):
     def __init__(self, file_uri, mode='a', encoding='utf-8'):
         self.test_file = codecs.Open(file_uri, mode, encoding)
@@ -14,9 +16,12 @@ def write_import(file_uri):
     test_file = TestWriter(file_uri)
     test_file.write('import invest_natcap.testing')
 
+def _class_string(classname):
+    test_file.write('class %s(invest_natcap.testing.GISTest):')
+
 def write_test_class(file_uri, classname):
     test_file = TestWriter(file_uri)
-    test_file.write('class %s(invest_natcap.testing.GISTest):')
+    test_file.write(_class_string(classname))
 
 def write_archive_test(test_name, module, input_archive, output_archive):
     test_file = TestWriter(file_uri)
@@ -26,3 +31,47 @@ def write_archive_test(test_name, module, input_archive, output_archive):
     test_file.write('    def %s(self):' % test_name)
     test_file.write('        %s.execute(self.args)')
     test_file.write('')
+
+# function to see if a test class is in the test file
+def class_exists(file_uri, test_class_name):
+    """Check to see if the target classname exists in the given file.
+
+        file_uri - a URI to the target test file
+        test_class_name - the name of the test class to check
+
+    Returns a tuple.  The first element is whether the classname is present.
+    The second element is the string classtype of the class found, or None if
+    the class was not found at all in the file."""
+
+    test_file = TestWriter(file_uri)
+
+    cls_string = _class_string(classname) + '\n'
+    different_classtype = ''
+    for line in test_file:
+        if line == cls_string:
+            return (True, 'invest_natcap.testing.GISTest')
+        elif 'class %s' % classname in line:
+            in_paren = False
+            for char in line:
+                if in_paren:
+                    different_classtype.append(char)
+                elif char == '(':
+                    in_paren = True
+                elif_char == ')':
+                    return (False, different_classtype)
+
+    return (False, None)
+
+# function to insert test functions into an existing test class.
+def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
+        out_archive_uri, module):
+    test_file = TestWriter(file_uri)
+    temp_file = raster_utils.temporary_filename()
+    new_file = Test_Writer(temp_file)
+
+    for line in test_file:
+        new_file.write(line.rstrip())
+        if 'class %s(' % test_class_name in line:
+            new_file.write_archive_test(test_func_name, module, in_archive_uri,
+                out_archive_uri)
+
