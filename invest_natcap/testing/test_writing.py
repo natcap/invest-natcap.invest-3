@@ -104,11 +104,11 @@ class TestWriter(object):
 # function to insert test functions into an existing test class.
 def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         out_archive_uri, module):
-    test_file = TestWriter(file_uri)
+    test_file = TestWriter(file_uri, 'r')
     temp_file = raster_utils.temporary_filename()
-    new_file = TestWriter(temp_file)
+    new_file = TestWriter(temp_file, 'w')
 
-    for line in test_file:
+    for line in test_file.test_file:
         new_file.write(line.rstrip())
         if 'class %s(' % test_class_name in line:
             new_file.write_archive_regression_test(test_func_name, module,
