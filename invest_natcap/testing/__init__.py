@@ -85,7 +85,7 @@ def regression(input_archive, workspace_archive):
         @functools.wraps(item)
         def test_and_assert_workspace(self, *args, **kwargs):
             workspace = raster_utils.temporary_folder()
-            self.args = extract_parameters_archive(workspace, input_archive)
+            self.args = data_storage.extract_parameters_archive(workspace, input_archive)
 
             # Actually run the test.  Assumes that self.args is used as the
             # input arguments.
