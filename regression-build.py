@@ -185,6 +185,18 @@ def main():
         print ''
         print 'Input archive saved to %s' % CONFIG_DATA['Input archive']['path']
         print 'Output archive saved to %s' % CONFIG_DATA['Output archive']['path']
+
+        param_handler = fileio.JSONHandler(CONFIG_DATA['Arguments (in JSON)']['path'])
+        module = file_handler.get_attributes()['model']
+
+        test_writing.add_test_to_class(
+            CONFIG_DATA['Test file']['path'],
+            CONFIG_DATA['Test class']['path'],
+            CONFIG_DATA['Test function']['path'],
+            CONFIG_DATA['Input archive']['path'],
+            CONFIG_DATA['Output archive']['path'],
+            module)
+
     except KeyboardInterrupt:
         print "\nQuit"
 
