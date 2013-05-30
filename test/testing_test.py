@@ -208,5 +208,19 @@ class DataStorageTest(testing.GISTest):
             self.assertEqual(True, os.path.exists(file_uri))
 
 
+class GISTestTester(testing.GISTest):
+    def test_raster_assertion(self):
+        """Verify correct behavior for assertRastersEqual"""
+
+        # check that IOError is raised if a file is not found.
+        raster_on_disk = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        self.assertRaises(IOError, self.assertRastersEqual, 'file_not_on_disk',
+            'other_file_not_on_disk')
+        self.assertRaises(IOError, self.assertRastersEqual, 'file_not_on_disk',
+            raster_on_disk)
+        self.assertRaises(IOError, self.assertRastersEqual,
+            raster_on_disk, 'file_not_on_disk')
+        self.assertRastersEqual(raster_on_disk, raster_on_disk)
+
 
 
