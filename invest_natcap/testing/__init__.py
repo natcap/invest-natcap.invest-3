@@ -272,17 +272,10 @@ class GISTest(unittest.TestCase):
 
         reader_a = csv.reader(a)
         reader_b = csv.reader(b)
-        a_list = np.array([])
-        b_list = np.array([])
 
-        for row in reader_a:
-            np.append(a_list, row)
-
-        for row in reader_b:
-            np.append(b_list, row)
-
-        self.assertEqual(a_list.shape, b_list.shape)
-        self.assertTrue((a_list==b_list).all())
+        for index, (a_row, b_row) in enumerate(zip(reader_a, reader_b)):
+            self.assertEqual(a_row, b_row,
+                'Rows differ at row %s: a=%s b=%s' % (index, a_row, b_row))
 
     def assertMD5(self, uri, regression_hash):
         """Tests if the input file has the same hash as the regression hash
