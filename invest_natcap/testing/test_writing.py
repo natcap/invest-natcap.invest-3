@@ -1,27 +1,29 @@
 import codecs
+import os
+import shutil
 
 from invest_natcap import raster_utils
 
 class TestWriter(object):
     def __init__(self, file_uri, mode='a', encoding='utf-8'):
-        self.test_file = codecs.Open(file_uri, mode, encoding)
+        self.test_file = codecs.open(file_uri, mode, encoding)
 
     def __del__(self):
         self.test_file.close()
 
-    def _class_string(classname):
+    def _class_string(self, classname):
         return 'class %s(invest_natcap.testing.GISTest):' % classname
 
     def write(self, line):
         self.test_file.write(line + '\n')
 
-    def write_import():
+    def write_import(self, ):
         self.write('import invest_natcap.testing')
 
-    def write_test_class(classname):
-        self.write(_class_string(classname))
+    def write_test_class(self, classname):
+        self.write(self._class_string(classname))
 
-    def write_archive_regression_test(test_name, module, input_archive,
+    def write_archive_regression_test(self, test_name, module, input_archive,
             output_archive):
         self.write('    @invest_natcap.testing.regression(')
         self.write('        input_archive="%s",' % input_archive)
@@ -30,20 +32,20 @@ class TestWriter(object):
         self.write('        %s.execute(self.args)')
         self.write('')
 
-    def class_exists(test_class_name):
-        cls_string = _class_string(test_class_name) + '\n'
+    def class_exists(self, test_class_name):
+        cls_string = self._class_string(test_class_name) + '\n'
         different_classtype = ''
-        for line in test_file:
+        for line in self.test_file:
             if line == cls_string:
                 return (True, 'invest_natcap.testing.GISTest')
-            elif 'class %s' % classname in line:
+            elif 'class %s' % test_class_name in line:
                 in_paren = False
                 for char in line:
                     if in_paren:
-                        different_classtype.append(char)
+                        different_classtype += char
                     elif char == '(':
                         in_paren = True
-                    elif_char == ')':
+                    elif char == ')':
                         return (False, different_classtype)
         return (False, None)
 
@@ -104,13 +106,13 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         out_archive_uri, module):
     test_file = TestWriter(file_uri)
     temp_file = raster_utils.temporary_filename()
-    new_file = Test_Writer(temp_file)
+    new_file = TestWriter(temp_file)
 
     for line in test_file:
         new_file.write(line.rstrip())
         if 'class %s(' % test_class_name in line:
-            new_file.write_archive_test(test_func_name, module, in_archive_uri,
-                out_archive_uri)
+            new_file.write_archive_regression_test(test_func_name, module,
+                in_archive_uri, out_archive_uri)
 
     test_file = None
     new_file = None
