@@ -2406,10 +2406,13 @@ class MainWindow(QtGui.QMainWindow):
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
         self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
-        self.save_to_python = self.file_menu.addAction('Save to &python script...')
-        self.save_to_json = self.file_menu.addAction('Save to &JSON ...')
         self.exit_action = self.file_menu.addAction('Exit')
         self.menuBar().addMenu(self.file_menu)
+
+        self.dev_menu = QtGui.QMenu('&Development')
+        self.save_to_python = self.dev_menu.addAction('Save to &python script...')
+        self.save_to_json = self.dev_menu.addAction('Save to archivable &JSON...')
+        self.menuBar().addMenu(self.dev_menu)
 
         self.exit_action.triggered.connect(self.ui.closeWindow)
         self.save_file_action.triggered.connect(self.ui.save_parameters_to_file)
@@ -2483,7 +2486,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s.json' % model_name, filter = QtCore.QString('JSON file' +
+                '%s_archive.json' % model_name, filter = QtCore.QString('JSON file' +
                 ' (*.json);;All files (*.* *)'))
             filename = unicode(filename)
             if filename != '':

@@ -104,24 +104,31 @@ def collect_parameters(parameters, archive_uri):
         LOGGER.debug('Files in raster: %s', file_list)
         dataset = None
 
-        # If the filepath given is a folder itself, we want the new raster dir
-        # to be based on a seed of the folder's basname.  Otherwise, we need to
-        # get the basename from the filepath.
-        if os.path.isdir(filepath):
-            parent_folder = os.path.basename(filepath)
+        if len(file_list) == 1:
+            # If there is only one file in the raster, just return the file name
+            raster_file = file_list[0]
+            new_file_location = os.path.join(temp_workspace, os.path.basename(raster_file))
+            shutil.copyfile(raster_file, new_file_location)
+            return os.path.basename(file_list[0])
         else:
-            parent_folder = os.path.dirname(filepath)
+            # If the filepath given is a folder itself, we want the new raster dir
+            # to be based on a seed of the folder's basname.  Otherwise, we need to
+            # get the basename from the filepath.
+            if os.path.isdir(filepath):
+                parent_folder = os.path.basename(filepath)
+            else:
+                parent_folder = os.path.dirname(filepath)
 
-        new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
-        for raster_file in file_list:
-            # raster_file may be a folder ... we can't copy a folder with
-            # copyfile.
-            if os.path.isfile(raster_file):
-                file_basename = os.path.basename(raster_file)
-                new_raster_uri = os.path.join(new_raster_dir, file_basename)
-                shutil.copyfile(raster_file, new_raster_uri)
+            new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
+            for raster_file in file_list:
+                # raster_file may be a folder ... we can't copy a folder with
+                # copyfile.
+                if os.path.isfile(raster_file):
+                    file_basename = os.path.basename(raster_file)
+                    new_raster_uri = os.path.join(new_raster_dir, file_basename)
+                    shutil.copyfile(raster_file, new_raster_uri)
 
-        return os.path.basename(new_raster_dir)
+            return os.path.basename(new_raster_dir)
 
 
 
@@ -320,27 +327,35 @@ def format_dictionary(input_dict, types_lookup={}):
     return format_dict(input_dict)
 
 
-def extract_parameters_archive(workspace_dir, archive_uri):
+def extract_parameters_archive(workspace_dir, archive_uri, input_folder=None):
     """Extract the target archive to the target workspace folder.
 
         workspace_dir - a uri to a folder on disk.  Must be an empty folder.
         archive_uri - a uri to an archive to be unzipped on disk.  Archive must
             be in .tar.gz format.
+        input_folder=None - either a URI to a folder on disk or None.  If None,
+            temporary folder will be created and then erased using the atexit
+            register.
 
         Returns a dictionary of the model's parameters for this run."""
 
+    # create a new temporary folder just for the input parameters, if the user
+    # has not provided one already.
+    if input_folder == None:
+        input_folder = raster_utils.temporary_folder()
+
     # extract the archive to the workspace
-    extract_archive(workspace_dir, archive_uri)
+    extract_archive(input_folder, archive_uri)
 
     # get the arguments dictionary
-    arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))
+    arguments_dict = json.load(open(os.path.join(input_folder, 'parameters.json')))
 
     def _get_if_uri(parameter):
         """If the parameter is a file, returns the filepath relative to the
         extracted workspace.  If the parameter is not a file, returns the
         original parameter."""
         try:
-            temp_file_path = os.path.join(workspace_dir, parameter)
+            temp_file_path = os.path.join(input_folder, parameter)
             if os.path.exists(temp_file_path) and not len(parameter) == 0:
                 return temp_file_path
         except TypeError:
