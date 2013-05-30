@@ -235,7 +235,9 @@ def water_yield(args):
                 rast_uri, sub_sheds_uri, 'subws_id', 'mean')
     
         add_dict_to_shape(sub_sheds_out_uri, key_dict, key_name, 'subws_id')
-    
+   
+    compute_water_yield_volume(sub_sheds_out_uri)
+
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
     LOGGER.debug('wsr : %s', wsr)
@@ -350,30 +352,41 @@ def write_new_table(filename, fields, data):
     # Sort the keys so that the rows are written in order
     row_keys = data.keys()
     row_keys.sort()    
-    LOGGER.debug('Keys : %s', row_keys)
-    #sorted_keys = row_keys.sort()
-    #LOGGER.debug('Table Row Keys : %s', sorted_keys)
 
     csv_writer = csv.DictWriter(csv_file, fields)
     # Write the columns as the first row in the table
     csv_writer.writerow(dict((fn, fn) for fn in fields))
 
+    # Write the rows from the dictionary
     for index in row_keys:
         csv_writer.writerow(data[index])
 
     csv_file.close()
 
-def compute_volume(shape_uri, vol_name, ha_name):
-    """
-    """
+def compute_water_yield_volume(shape_uri):
+    """Calculate the water yield volume per sub-watershed and the water yield
+        volume per hectare per sub-watershed. Add results to shape_uri, units
+        are cubic meters
+
+        shape_uri - a URI path to an ogr datasource for the sub-watershed
+            shapefile. This shapefiles features should have a 'wyield_mn'
+            attribute, which calculations are derived from
+
+        returns - Nothing"""
     shape = ogr.Open(shape_uri, 1)
     layer = shape.GetLayer()
+    
+    # The field names for the new attributes
+    vol_name = 'wyield_vol'
+    ha_name = 'wyield_ha'
 
+    # Add the new fields to the shapefile
     for new_field in [vol_name, ha_name]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
         layer.CreateField(field_defn)
 
     num_features = layer.GetFeatureCount()
+    # Iterate over the number of features (polygons) and compute volume
     for feat_id in xrange(num_features):
         feat = layer.GetFeauture(feat_id)
         wyield_mn_id = feat.GetFieldIndex('wyield_mn')
@@ -382,40 +395,63 @@ def compute_volume(shape_uri, vol_name, ha_name):
         geom = feat.GetGeometryRef()
         feat_area = geom.GetArea()
         
+        # Calculate water yield volume
         vol = wyield_mn * feat_area / 1000.0
+        # Get the volume field index and add value
         vol_index = feat.GetFieldIndex(vol_name)
         feat.SetField(vol_index, vol)
-        
+
+        # Calculate water yield volume per hectare
         vol_ha = vol / (0.0001 * feat_area)
+        # Get the hectare field index and add value
         ha_index = feat.GetFieldIndex(ha_name)
         feat.SetField(ha_index, vol_ha)
         
         layer.SetFeature(feat)
         
 def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
-    """Add a new field to a shapefile with values from a dictionary whose keys
-        match a unique field in the shapefile
+    """Add a new field to a shapefile with values from a dictionary.
+        The dictionaries keys should match to the values of a unique fields
+        values in the shapefile
 
-        shape_uri - 
-        field_dict - 
-        field_name - 
-        shed_name - 
+        shape_uri - a URI path to a ogr datasource on disk with a unique field
+            'shed_name'. The field 'shed_name' should have values that
+            correspond to the keys of 'field_dict'
+
+        field_dict - a python dictionary with keys mapping to values. These
+            values will be what is filled in for the new field 
+    
+        field_name - a string for the name of the new field to add
+        
+        shed_name - a string for the field name in 'shape_uri' that represents
+            the unique features
 
         returns - nothing"""
 
     shape = ogr.Open(shape_uri, 1)
     layer = shape.GetLayer()
+    
+    # Create the new field
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
     layer.CreateField(field_defn)
 
+    # Get the number of features (polygons) and iterate through each
     num_features = layer.GetFeatureCount()
     for feat_id in xrange(num_features):
         feat = layer.GetFeature(feat_id)
+        
+        # Get the index for the unique field
         ws_id = feat.GetFieldIndex(shed_name)
+        
+        # Get the unique value that will index into the dictionary as a key
         ws_val = feat.GetField(ws_id)
+        
+        # Using the unique value from the field of the feature, index into the
+        # dictionary to get the corresponding value
         field_val = float(field_dict[ws_val])
-        field_index = feat.GetFieldIndex(field_name)
 
+        # Get the new fields index and set the new value for the field
+        field_index = feat.GetFieldIndex(field_name)
         feat.SetField(field_index, field_val)
 
         layer.SetFeature(feat)
