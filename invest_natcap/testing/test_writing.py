@@ -24,7 +24,9 @@ class TestWriter(object):
         self.write(self._class_string(classname))
 
     def write_archive_regression_test(self, test_name, module, input_archive,
-            output_archive):
+            output_archive, start_dir):
+        input_archive = os.path.relpath(input_archive, start_dir)
+        output_archive = os.path.relpath(output_archive, start_dir)
         self.write('    @invest_natcap.testing.regression(')
         self.write('        input_archive="%s",' % input_archive)
         self.write('        workspace_archive="%s")' % output_archive)
@@ -121,13 +123,13 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         new_file.write_import()
         new_file.write_test_class(test_class_name)
         new_file.write_archive_regression_test(test_func_name, module,
-            in_archive_uri, out_archive_uri)
+            in_archive_uri, out_archive_uri, os.path.dirname(file_uri))
     else:
         for line in test_file.test_file:
             new_file.write(line.rstrip())
             if 'class %s(' % test_class_name in line:
                 new_file.write_archive_regression_test(test_func_name, module,
-                    in_archive_uri, out_archive_uri)
+                    in_archive_uri, out_archive_uri, os.path.dirname(file_uri))
 
     test_file = None
     new_file = None
