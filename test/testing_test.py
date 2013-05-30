@@ -55,6 +55,19 @@ class DataStorageTest(testing.GISTest):
 
         self.assertArchives(archive_uri, regression_archive_uri)
 
+    def test_archive_geotiff(self):
+        params = {
+            'raster': os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        }
+        archive_uri = os.path.join(TEST_OUT, 'raster_geotiff')
+        data_storage.collect_parameters(params, archive_uri)
+        archive_uri += '.tar.gz'
+
+        regression_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'raster_geotiff.tar.gz')
+        self.assertArchives(archive_uri, regression_archive_uri)
+
+
     def test_archive_arc_raster_nice(self):
         params = {
             'raster': os.path.join('data', 'base_data', 'Freshwater', 'precip')
