@@ -11,6 +11,7 @@ CARBON_DATA = os.path.join('data', 'carbon', 'input')
 REGRESSION_ARCHIVES = os.path.join('data', 'data_storage', 'regression')
 TEST_INPUT = os.path.join('data', 'data_storage', 'test_input')
 TEST_OUT = os.path.join('data', 'test_out')
+BASE_DATA = os.path.join('data', 'base_data')
 
 
 class DataStorageTest(testing.GISTest):
@@ -232,4 +233,17 @@ class GISTestTester(testing.GISTest):
         shutil.copyfile(source_file, new_raster)
         self.assertRastersEqual(source_file, new_raster)
 
+    def test_raster_assertion_different_dims(self):
+        """Verify when rasters are different"""
+        source_raster = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        different_raster = os.path.join(BASE_DATA, 'terrestrial',
+            'lulc_samp_cur')
+        self.assertRaises(AssertionError, self.assertRastersEqual,
+            source_raster, different_raster)
+
+    def test_raster_assertion_different_values(self):
+        """Verify when rasters have different values"""
+        lulc_cur_raster = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        lulc_fut_raster = os.path.join(POLLINATION_DATA, 'landuse_fut_200m.tif')
+        self.assertRastersEqual(lulc_cur_raster, lulc_fut_raster)
 
