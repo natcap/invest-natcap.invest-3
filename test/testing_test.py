@@ -1,6 +1,7 @@
 import unittest
 import os
 import shutil
+import glob
 
 import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
@@ -248,3 +249,25 @@ class GISTestTester(testing.GISTest):
         self.assertRaises(AssertionError, self.assertRastersEqual,
             lulc_cur_raster, lulc_fut_raster)
 
+    def test_vector_assertion_fileio(self):
+        """Verify correct behavior for assertVectorsEqual"""
+        vector_on_disk = os.path.join(POLLINATION_DATA, 'farms.dbf')
+        self.assertRaises(IOError, self.assertRastersEqual, 'file_not_on_disk',
+            'other_file_not_on_disk')
+        self.assertRaises(IOError, self.assertRastersEqual, 'file_not_on_disk',
+            vector_on_disk)
+        self.assertRaises(IOError, self.assertRastersEqual,
+            vector_on_disk, 'file_not_on_disk')
+        self.assertVectorsEqual(vector_on_disk, vector_on_disk)
+
+    def test_vector_assertion_files_equal(self):
+        """Verify when vectors are equal."""
+        temp_folder = raster_utils.temporary_folder()
+        for vector_file in glob.glob(os.path.join(POLLINATION_DATA, 'farms.*')):
+            base_name = os.path.basename(vector_file)
+            new_file = os.path.join(temp_folder, base_name)
+            shutil.copyfile(vector_file, new_file)
+
+        sample_shape = os.path.join(POLLINATION_DATA, 'farms.shp')
+        copied_shape = os.path.join(temp_folder, 'farms.shp')
+        self.assertVectorsEqual(sample_shape, copied_shape)
