@@ -320,27 +320,35 @@ def format_dictionary(input_dict, types_lookup={}):
     return format_dict(input_dict)
 
 
-def extract_parameters_archive(workspace_dir, archive_uri):
+def extract_parameters_archive(workspace_dir, archive_uri, input_folder=None):
     """Extract the target archive to the target workspace folder.
 
         workspace_dir - a uri to a folder on disk.  Must be an empty folder.
         archive_uri - a uri to an archive to be unzipped on disk.  Archive must
             be in .tar.gz format.
+        input_folder=None - either a URI to a folder on disk or None.  If None,
+            temporary folder will be created and then erased using the atexit
+            register.
 
         Returns a dictionary of the model's parameters for this run."""
 
+    # create a new temporary folder just for the input parameters, if the user
+    # has not provided one already.
+    if input_folder == None:
+        input_folder = raster_utils.temporary_folder()
+
     # extract the archive to the workspace
-    extract_archive(workspace_dir, archive_uri)
+    extract_archive(input_folder, archive_uri)
 
     # get the arguments dictionary
-    arguments_dict = json.load(open(os.path.join(workspace_dir, 'parameters.json')))
+    arguments_dict = json.load(open(os.path.join(input_folder, 'parameters.json')))
 
     def _get_if_uri(parameter):
         """If the parameter is a file, returns the filepath relative to the
         extracted workspace.  If the parameter is not a file, returns the
         original parameter."""
         try:
-            temp_file_path = os.path.join(workspace_dir, parameter)
+            temp_file_path = os.path.join(input_folder, parameter)
             if os.path.exists(temp_file_path) and not len(parameter) == 0:
                 return temp_file_path
         except TypeError:
