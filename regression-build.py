@@ -166,6 +166,9 @@ def main():
     parser.add_argument('-f', '--test-func', dest='test_func',
         help=('The test function to write inside the designated test class.'),
         type=unicode, metavar='', default='')
+    parser.add_argument('-n', '--no-confirm', dest='no_confirm', action='store_true',
+        help=('Provide this flag if you do not wish to confirm before running.'),
+        default=False)
 
     args = parser.parse_args()
 
@@ -177,6 +180,9 @@ def main():
     CONFIG_DATA['Test function']['path'] = args.test_func
 
     try:
+        if args.no_confirm:
+            raise ConfiguredCorrectly()
+
         finished = False
         while not finished:
             print ''
