@@ -180,9 +180,9 @@ def main():
             configure_settings()
     except ConfiguredCorrectly:
         invest_natcap.testing.build_regression_archives(
-            CONFIG_DATA['Arguments (in JSON)']['path'],
-            CONFIG_DATA['Input archive']['path'],
-            CONFIG_DATA['Output archive']['path'])
+            os.path.abspath(CONFIG_DATA['Arguments (in JSON)']['path']),
+            os.path.abspath(CONFIG_DATA['Input archive']['path']),
+            os.path.abspath(CONFIG_DATA['Output archive']['path']))
         print ''
         print 'Input archive saved to %s' % CONFIG_DATA['Input archive']['path']
         print 'Output archive saved to %s' % CONFIG_DATA['Output archive']['path']
@@ -191,11 +191,11 @@ def main():
         module = param_handler.get_attributes()['model']
 
         test_writing.add_test_to_class(
-            CONFIG_DATA['Test file']['path'],
+            os.path.abspath(CONFIG_DATA['Test file']['path']),
             CONFIG_DATA['Test class']['path'],
             CONFIG_DATA['Test function']['path'],
-            CONFIG_DATA['Input archive']['path'],
-            CONFIG_DATA['Output archive']['path'],
+            os.path.abspath(CONFIG_DATA['Input archive']['path']),
+            os.path.abspath(CONFIG_DATA['Output archive']['path']),
             module)
 
     except KeyboardInterrupt:
