@@ -55,6 +55,12 @@ def set_output_archive_name():
 def set_test_file_name():
     CONFIG_DATA['Test file']['path'] = _set_archive_name('test file')
 
+def set_test_class_name():
+    CONFIG_DATA['Test class']['path'] = _set_archive_name('test class')
+
+def set_test_func_name():
+    CONFIG_DATA['Test function']['path'] = _set_archive_name('test function')
+
 def set_arguments_path():
     try:
         json_file = sys.argv[1]
@@ -93,6 +99,14 @@ CONFIG_DATA = {
     'Test file': {
         'path': '',
         'function': set_test_file_name,
+    },
+    'Test class': {
+        'path': '',
+        'function': set_test_class_name,
+    },
+    'Test function': {
+        'path': '',
+        'function': set_test_func_name,
     },
     'Finish': {
         'path': None,
@@ -139,6 +153,12 @@ def main():
         type=unicode, metavar='')
     parser.add_argument('-t', '--test-file', dest='test_file',
         help='The test file to modify', type=unicode, metavar='')
+    parser.add_argument('-c', '--test-class', dest='test_class',
+        help=('The test class to write or append to.  A new class will be '
+            'written if this name does not already exist.'), type=unicode, metavar='')
+    parser.add_argument('-f', '--test-func', dest='test_func',
+        help=('The test function to write inside the designated test class.'),
+        type=unicode, metavar='')
 
     args = parser.parse_args()
 
@@ -146,6 +166,8 @@ def main():
     CONFIG_DATA['Input archive']['path'] = args.input_archive
     CONFIG_DATA['Output archive']['path'] = args.output_archive
     CONFIG_DATA['Test file']['path'] = args.test_file
+    CONFIG_DATA['Test class']['path'] = args.test_class
+    CONFIG_DATA['Test function']['path'] = args.test_func
 
 
     try:
