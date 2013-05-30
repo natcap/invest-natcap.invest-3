@@ -310,3 +310,10 @@ class GISTestTester(testing.GISTest):
         test_file = os.path.join(CARBON_DATA, 'harv_samp_cur.shp')
         md5_sum = testing.get_hash(test_file)
         self.assertMD5(test_file, md5_sum)
+
+    def test_md5_different(self):
+        """Check that the MD5 is equal."""
+        test_file = os.path.join(CARBON_DATA, 'harv_samp_cur.shp')
+        md5_sum = 'bad md5sum!'
+
+        self.assertRaises(AssertionError, self.assertMD5, test_file, md5_sum)
