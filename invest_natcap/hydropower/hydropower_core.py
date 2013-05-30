@@ -74,8 +74,6 @@ def water_yield(args):
             [intermediate_dir, output_dir, service_dir, pixel_dir])
     
     #Get inputs from the args dictionary
-    suffix = args['suffix']
-    bio_table_uri = args['biophysical_table_uri']
     lulc_uri = args['lulc_uri']
     eto_uri = args['eto_uri']
     precip_uri = args['precipitation_uri']
@@ -104,18 +102,11 @@ def water_yield(args):
         file_suffix = ''
     
     #Paths for clipping the fractp/wyield raster to watershed polygons
-    fractp_clipped_path = os.path.join(pixel_dir, 'fractp.tif')
-    wyield_clipped_path = os.path.join(pixel_dir, 'wyield.tif')
-    
-    #Paths for the fractp mean and water yield mean, area, and volume rasters
-    fractp_mean_path = os.path.join(output_dir, 'fractp_mn.tif')
-    wyield_mean_path = os.path.join(service_dir, 'wyield_mn.tif') 
-    wyield_volume_path = os.path.join(service_dir, 'wyield_vol.tif') 
-    wyield_ha_path = os.path.join(service_dir, 'wyield_ha.tif') 
+    fractp_clipped_path = os.path.join(pixel_dir, 'fractp%s.tif' % file_suffix)
+    wyield_clipped_path = os.path.join(pixel_dir, 'wyield%s.tif' % file_suffix)
     
     #Paths for the actual evapotranspiration rasters
-    aet_path = os.path.join(pixel_dir, 'aet.tif') 
-    aet_mean_path = os.path.join(output_dir, 'aet_mn.tif') 
+    aet_path = os.path.join(pixel_dir, 'aet%s.tif' % file_suffix) 
     
     #Paths for the watershed and subwatershed tables
     shed_table_path = os.path.join(output_dir, 'water_yield_watershed.csv') 
@@ -148,7 +139,8 @@ def water_yield(args):
             lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
             out_nodata)
 
-    #Get out_nodata values so that we can avoid any issues when running operations
+    #Get out_nodata values so that we can avoid any issues when running
+    #operations
     etk_nodata = raster_utils.get_nodata_from_uri(tmp_etk_raster_uri)
     root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
@@ -311,19 +303,6 @@ def extract_datasource_table_by_key(
         returns a dictionary of the form {key_field_0: 
             {field_0: value0, field_1: value1}...}"""
 
-    def smart_cast(value):
-        """Attempts to cast value to a float, int, or leave it as string"""
-        if type(value) != str: 
-            return value
-
-        cast_functions = [int, float]
-        for fn in cast_functions:
-            try:
-                return fn(value)
-            except ValueError:
-                pass
-        return value
-
     #Pull apart the datasource
     datasource = ogr.Open(datasource_uri)
     layer = datasource.GetLayer()
@@ -377,7 +356,7 @@ def write_new_table(filename, fields, data):
 
     csv_writer = csv.DictWriter(csv_file, fields)
     # Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn,fn) for fn in fields))
+    csv_writer.writerow(dict((fn, fn) for fn in fields))
 
     for index in row_keys:
         csv_writer.writerow(data[index])
