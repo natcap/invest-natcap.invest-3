@@ -1,9 +1,10 @@
-import invest_natcap.testing
 import sys
 import os
 import shutil
 import readline
+import argparse
 
+import invest_natcap.testing
 from invest_natcap.testing import autocomplete
 
 #CONFIG_DATA = {
@@ -124,6 +125,24 @@ def configure_settings():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--arguments', dest='arguments',
+        help='JSON file with input arguments and model data')
+    parser.add_argument('--input-archive', dest='input_archive',
+        help='Path to where the input archive will be saved')
+    parser.add_argument('--output-archive', dest='output_archive',
+        help='Path to where the output archive will be saved')
+    parser.add_argument('--test-file', dest='test_file',
+        help='The test file to modify')
+
+    args = parser.parse_args()
+
+    CONFIG_DATA['Arguments (in JSON)']['path'] = args.arguments
+    CONFIG_DATA['Input archive']['path'] = args.input_archive
+    CONFIG_DATA['Output archive']['path'] = args.output_archive
+    CONFIG_DATA['Test file']['path'] = args.test_file
+
+
     finished = False
     try:
         while not finished:
