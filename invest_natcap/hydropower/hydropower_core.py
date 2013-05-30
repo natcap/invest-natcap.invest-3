@@ -45,7 +45,7 @@ def water_yield(args):
         args['sub_watersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
-        args['biophysical_dictionary'] - a python dictionary representing the 
+        args['biophysical_table_uri'] - a python dictionary representing the 
             land use/land cover classes, containing data on the biophysical 
             coefficients root_depth (mm) and etk. The dictionary is structured as
             follows, where the key is lulc_code and value is another 
@@ -65,62 +65,78 @@ def water_yield(args):
     LOGGER.info('Starting Water Yield Core Calculations')
 
     #Construct folder paths
-    workspace_dir = args['workspace_dir']
-    output_dir = workspace_dir + os.sep + 'Output'
-    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
-    service_dir = workspace_dir + os.sep + 'Service'
-    pixel_dir = output_dir + os.sep + 'Pixel'
+    workspace = args['workspace_dir']
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
+    service_dir = os.path.join(workspace, 'service')
+    pixel_dir = os.path.join(output_dir, 'pixel')
+    raster_utils.create_directories(
+            [intermediate_dir, output_dir, service_dir, pixel_dir])
+    
+    #output_dir = workspace_dir + os.sep + 'Output'
+    #intermediate_dir = workspace_dir + os.sep + 'Intermediate'
+    #service_dir = workspace_dir + os.sep + 'Service'
+    #pixel_dir = output_dir + os.sep + 'Pixel'
+
+
 
     #Get inputs from the args dictionary
-    suffix = args['results_suffix']
-    bio_dict = args['biophysical_dictionary']
-    lulc_raster = args['lulc']
-    eto_raster = args['eto']
-    precip_raster = args['precipitation']
-    soil_depth_raster = args['soil_depth']
-    pawc_raster = args['pawc']
-    sub_sheds = args['sub_watersheds']
-    sheds = args['watersheds']
+    suffix = args['suffix']
+    bio_table_uri = args['biophysical_table_uri']
+    lulc_uri = args['lulc_uri']
+    eto_uri = args['eto_uri']
+    precip_uri = args['precipitation_uri']
+    soil_depth_uri = args['soil_depth_uri']
+    pawc_uri = args['pawc_uri']
+    sub_sheds_uri = args['sub_watersheds_uri']
+    sheds_uri = args['watersheds_uri']
     seasonality_constant = float(args['seasonality_constant'])
-
-    #Suffix handling    
-    if len(suffix) > 0:
-        suffix_tif = '_' + suffix + '.tif'
-        suffix_csv = '_' + suffix + '.csv'
-    else:
-        suffix_tif = '.tif'
-        suffix_csv = '.csv'
+    
+    #Open/read in the csv files into a dictionary and add to arguments
+    biophysical_table_map = {}
+    biophysical_table_file = open(args['biophysical_table_uri'])
+    reader = csv.DictReader(biophysical_table_file)
+    for row in reader:
+        biophysical_table_map[int(row['lucode'])] = \
+            {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+    
+    bio_dict = biophysical_table_map 
+    
+    # Append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
     
     #Collection of output and temporary path names
     #Paths for the etk and root_depth rasters from the biophysical table
-    tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk' + suffix_tif
-    tmp_root_path = intermediate_dir + os.sep + 'tmp_root' + suffix_tif
+    tmp_etk_path = os.path.join(intermediate_dir, 'tmp_etk.tif')
+    tmp_root_path = os.path.join(intermediate_dir, 'tmp_root.tif')
     
     #Paths for clipping the fractp/wyield raster to watershed polygons
-    fractp_clipped_path = \
-        pixel_dir + os.sep + 'fractp' + suffix_tif
-    wyield_clipped_path = \
-        pixel_dir + os.sep + 'wyield' + suffix_tif
+    fractp_clipped_path = os.path.join(pixel_dir, 'fractp.tif')
+    wyield_clipped_path = os.path.join(pixel_dir, 'wyield.tif')
     
     #Paths for the fractp mean and water yield mean, area, and volume rasters
-    fractp_mean_path = output_dir + os.sep + 'fractp_mn' + suffix_tif
-    wyield_mean_path = service_dir + os.sep + 'wyield_mn' + suffix_tif
-    wyield_volume_path = \
-        service_dir + os.sep + 'wyield_vol' + suffix_tif
-    wyield_ha_path = service_dir + os.sep + 'wyield_ha' + suffix_tif
+    fractp_mean_path = os.path.join(output_dir, 'fractp_mn.tif')
+    wyield_mean_path = os.path.join(service_dir, 'wyield_mn.tif') 
+    wyield_volume_path = os.path.join(service_dir, 'wyield_vol.tif') 
+    wyield_ha_path = os.path.join(service_dir, 'wyield_ha.tif') 
     
     #Paths for the actual evapotranspiration rasters
-    aet_path = pixel_dir + os.sep + 'aet' + suffix_tif
-    aet_mean_path = output_dir + os.sep + 'aet_mn' + suffix_tif
+    aet_path = os.path.join(pixel_dir, 'aet.tif') 
+    aet_mean_path = os.path.join(output_dir, 'aet_mn.tif') 
     
     #Paths for the watershed and subwatershed tables
-    shed_table_path = \
-        output_dir + os.sep + 'water_yield_watershed' + suffix_csv
-    sub_table_path = \
-        output_dir + os.sep + 'water_yield_subwatershed' + suffix_csv
+    shed_table_path = os.path.join(output_dir, 'water_yield_watershed.csv') 
+    sub_table_path = os.path.join(output_dir, 'water_yield_subwatershed.csv') 
     
     #The nodata value that will be used for created output rasters
-    out_nodata = -1.0
+    #out_nodata = -1.0
+    out_nodata = float(np.finfo(np.float32).min) + 1.0
+    
     #Break the bio_dict into two separate dictionaries based on
     #etk and root_depth fields to use for reclassifying 
     etk_dict = {}
@@ -132,25 +148,32 @@ def water_yield(args):
     #Create etk raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_etk raster")
     tmp_etk_raster_uri = raster_utils.temporary_filename()
-    raster_utils.reclassify_dataset(
-        lulc_raster, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32, out_nodata)
-    tmp_etk_raster = gdal.Open(tmp_etk_raster_uri)
+    
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32,
+            out_nodata)
+    #raster_utils.reclassify_dataset(
+    #    lulc_raster, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32, out_nodata)
+    #tmp_etk_raster = gdal.Open(tmp_etk_raster_uri)
 
     #Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
     tmp_root_raster_uri = raster_utils.temporary_filename()
-    raster_utils.reclassify_dataset(
-        lulc_raster, root_dict, tmp_root_raster_uri, gdal.GDT_Float32, out_nodata)
-    tmp_root_raster = gdal.Open(tmp_root_raster_uri)
-
+    
+    raster_utils.reclassify_dataset_uri(
+            lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
+            out_nodata)
+    #raster_utils.reclassify_dataset(
+    #    lulc_raster, root_dict, tmp_root_raster_uri, gdal.GDT_Float32, out_nodata)
+    #tmp_root_raster = gdal.Open(tmp_root_raster_uri)
 
     #Get out_nodata values so that we can avoid any issues when running operations
-    etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
-    root_nodata = tmp_root_raster.GetRasterBand(1).GetNoDataValue()
-    precip_nodata = precip_raster.GetRasterBand(1).GetNoDataValue()
-    eto_nodata = eto_raster.GetRasterBand(1).GetNoDataValue()
-    soil_depth_nodata = soil_depth_raster.GetRasterBand(1).GetNoDataValue()
-    pawc_nodata = pawc_raster.GetRasterBand(1).GetNoDataValue()
+    etk_nodata = raster_utils.get_nodata_from_uri(tmp_etk_raster_uri)
+    root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    eto_nodata = raster_utils.get_nodata_from_uri(eto_uri)
+    soil_depth_nodata = raster_utils.get_nodata_from_uri(soil_depth_uri)
+    pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
     
     #Dictionary of out_nodata values corresponding to values for fractp_op that 
     #will help avoid any out_nodata calculation issues
@@ -160,7 +183,6 @@ def water_yield(args):
                           'eto':eto_nodata,
                           'soil':soil_depth_nodata,
                           'pawc':pawc_nodata}
-    
     
     def fractp_op(etk, eto, precip, root, soil, pawc):
         """A wrapper function to call hydropower's cython core. Acts as a
@@ -174,12 +196,21 @@ def water_yield(args):
     fractp_vec = np.vectorize(fractp_op)
     
     #Create the fractp raster
-    raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
-                   soil_depth_raster, pawc_raster]
-    fractp_raster = \
-        raster_utils.vectorize_rasters(raster_list, fractp_vec, aoi=sheds, 
-                                       raster_out_uri=fractp_clipped_path, 
-                                       nodata=out_nodata)
+    #raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
+    #               soil_depth_raster, pawc_raster]
+    #fractp_raster = \
+    #    raster_utils.vectorize_rasters(raster_list, fractp_vec, aoi=sheds, 
+    #                                   raster_out_uri=fractp_clipped_path, 
+    #                                   nodata=out_nodata)
+    pixel_size = raster_utils.get_cell_size_from_uri(tmp_etk_raster_uri)
+
+    raster_list = [
+            tmp_etk_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
+            soil_depth_uri, pawc_uri]
+    
+    raster_utils.vectorize_datasets(
+            raster_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
+            out_nodata, pixel_size, 'intersection')
     
     LOGGER.debug('Performing wyield operation')
     
@@ -197,86 +228,105 @@ def water_yield(args):
             return (1.0 - fractp) * precip
     
     #Create the water yield raster 
-    wyield_raster = \
-        raster_utils.vectorize_rasters([fractp_raster, precip_raster], 
-                                       wyield_op,   
-                                       raster_out_uri = wyield_clipped_path, 
-                                       nodata=out_nodata)
+    #wyield_raster = \
+    #    raster_utils.vectorize_rasters([fractp_raster, precip_raster], 
+    #                                   wyield_op,   
+    #                                   raster_out_uri = wyield_clipped_path, 
+    #                                   nodata=out_nodata)
+    
+    raster_utils.vectorize_datasets(
+            [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
+            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection')
     
     #Create mean rasters for fractp and water yield
-    fract_mn_dict = \
-        raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 
-                            'subws_id', 'mean', 
-                            aggregate_uri = fractp_mean_path, 
-                            intermediate_directory = intermediate_dir)
-    wyield_mn_dict = \
-        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 
-                            'subws_id', 'mean', 
-                            aggregate_uri = wyield_mean_path, 
-                            intermediate_directory = intermediate_dir)
+    #fract_mn_dict = raster_utils.aggregate_raster_values(
+    #        fractp_raster, sub_sheds, 'subws_id', 'mean',
+    #        aggregate_uri = fractp_mean_path,
+    #        intermediate_directory = intermediate_dir)
+    
+    sub_sheds_out_uri = os.path.join(output_dir, 'sub_sheds.shp')
+    sheds_out_uri = os.path.join(output_dir, 'sheds.shp')
+    raster_utils.copy_datasource_uri(sub_sheds_uri, sub_sheds_out_uri)
+    raster_utils.copy_datasource_uri(sheds_uri, sheds_out_uri)
+    
+    fract_mn_dict = raster_utils.aggregate_raster_values_uri(
+            fractp_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
+   
+    add_dict_to_shape(sub_sheds_out_uri, fract_mn_dict, 'fractp_mn', 'subws_id')
 
-    wyield_mean = gdal.Open(wyield_mean_path)
+    #wyield_mn_dict = raster_utils.aggregate_raster_values(
+    #        wyield_raster, sub_sheds, 'subws_id', 'mean', 
+    #        aggregate_uri = wyield_mean_path, 
+    #        intermediate_directory = intermediate_dir)
+    
+    wyield_mn_dict = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sub_sheds_uri, 'subws_id', 'mean')
+
+    add_dict_to_shape(
+            sub_sheds_out_uri, wyield_mn_dict, 'wyield_mn', 'subws_id')
+
+    #wyield_mean = gdal.Open(wyield_mean_path)
 
     #Create area raster so that the volume can be computed.
-    area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
+#   area_dict = get_area_of_polygons(sub_sheds_uri, 'subws_id')
 
-    subwatershed_mask_uri = raster_utils.temporary_filename()
-    subwatershed_mask = raster_utils.new_raster_from_base(
-        wyield_mean, subwatershed_mask_uri, 'GTiff', out_nodata,
-        gdal.GDT_Int32)
+#   subwatershed_mask_uri = raster_utils.temporary_filename()
+#   subwatershed_mask = raster_utils.new_raster_from_base(
+#       wyield_mean, subwatershed_mask_uri, 'GTiff', out_nodata,
+#       gdal.GDT_Int32)
 
-    gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
-                        options = ['ATTRIBUTE=subws_id'])
+#   gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
+#                       options = ['ATTRIBUTE=subws_id'])
 
-    wyield_area_uri = raster_utils.temporary_filename()
-    raster_utils.reclassify_dataset(
-        subwatershed_mask, area_dict, wyield_area_uri, gdal.GDT_Float32, out_nodata)
-    wyield_area = gdal.Open(wyield_area_uri)
+#   wyield_area_uri = raster_utils.temporary_filename()
+#   raster_utils.reclassify_dataset(
+#       subwatershed_mask, area_dict, wyield_area_uri, gdal.GDT_Float32, out_nodata)
+#   wyield_area = gdal.Open(wyield_area_uri)
 
-    subwatershed_mask = None
-    LOGGER.debug('Performing volume operation')
-    
-    def volume_op(wyield_mn, wyield_area):
-        """Function to compute the water yield volume raster
-        
-            wyield_mn - numpy array with the water yield mean raster values (mm)
-            wyield_area - numpy array with the water yield area raster 
-                          values (square meters)
-            
-            returns - water yield volume value (cubic meters)"""
-        #Divide by 1000 because wyield is in mm, so convert to meters
-        if wyield_mn != out_nodata and wyield_area != out_nodata:
-            return (wyield_mn * wyield_area / 1000.0)
-        else:
-            return out_nodata
-        
-    wyield_vol_raster = \
-        raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
-                                       raster_out_uri = wyield_volume_path, 
-                                       nodata=out_nodata)
+#   subwatershed_mask = None
+#   LOGGER.debug('Performing volume operation')
+#   
+#   def volume_op(wyield_mn, wyield_area):
+#       """Function to compute the water yield volume raster
+#       
+#           wyield_mn - numpy array with the water yield mean raster values (mm)
+#           wyield_area - numpy array with the water yield area raster 
+#                         values (square meters)
+#           
+#           returns - water yield volume value (cubic meters)"""
+#       #Divide by 1000 because wyield is in mm, so convert to meters
+#       if wyield_mn != out_nodata and wyield_area != out_nodata:
+#           return (wyield_mn * wyield_area / 1000.0)
+#       else:
+#           return out_nodata
+#       
+#   wyield_vol_raster = \
+#       raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
+#                                      raster_out_uri = wyield_volume_path, 
+#                                      nodata=out_nodata)
 
-    def ha_vol(wyield_vol, wyield_area):
-        """Function to compute water yield volume in units of ha
-        
-            wyield_vol - numpy array with the water yield volume raster values
-                         (cubic meters)
-            wyield_area - numpy array with the water yield area raster values
-                          (squared meters)
-                          
-            returns - water yield volume in ha value"""
-        #Converting area from square meters to hectares 1 meter = .0001 hectare
-        if wyield_vol != out_nodata and wyield_area != out_nodata:
-            return wyield_vol / (0.0001 * wyield_area)
-        else:
-            return out_nodata
-    
-    LOGGER.debug('Performing volume (ha) operation')
-        
-    #Make ha volume raster
-    wyield_ha_raster = \
-        raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
-                                       raster_out_uri = wyield_ha_path, 
-                                       nodata=out_nodata)
+#   def ha_vol(wyield_vol, wyield_area):
+#       """Function to compute water yield volume in units of ha
+#       
+#           wyield_vol - numpy array with the water yield volume raster values
+#                        (cubic meters)
+#           wyield_area - numpy array with the water yield area raster values
+#                         (squared meters)
+#                         
+#           returns - water yield volume in ha value"""
+#       #Converting area from square meters to hectares 1 meter = .0001 hectare
+#       if wyield_vol != out_nodata and wyield_area != out_nodata:
+#           return wyield_vol / (0.0001 * wyield_area)
+#       else:
+#           return out_nodata
+#   
+#   LOGGER.debug('Performing volume (ha) operation')
+#       
+#   #Make ha volume raster
+#   wyield_ha_raster = \
+#       raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
+#                                      raster_out_uri = wyield_ha_path, 
+#                                      nodata=out_nodata)
     
     def aet_op(fractp, precip):
         """Function to compute the actual evapotranspiration values
@@ -297,84 +347,314 @@ def water_yield(args):
     
     LOGGER.debug('Performing aet operation')
     
-    aet_raster = \
-        raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
-                                       raster_out_uri = aet_path, 
-                                       nodata=out_nodata)
+#   aet_raster = \
+#       raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
+#                                      raster_out_uri = aet_path, 
+#                                      nodata=out_nodata)
+    
+    raster_utils.vectorize_datasets(
+            [fractp_clipped_path, precip_uri], aet_op, aet_path,
+            gdal.GDT_Float32, out_nodata, pixel_size, 'intersection')
     
     #Create the mean actual evapotranspiration raster
-    aet_mn_dict = \
-        raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
-                            aggregate_uri = aet_mean_path, 
-                            intermediate_directory = intermediate_dir)
+#   aet_mn_dict = \
+#       raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
+#                           aggregate_uri = aet_mean_path, 
+#                           intermediate_directory = intermediate_dir)
     
+    aet_mn_dict = raster_utils.aggregate_raster_values_uri(
+            aet_path, sub_sheds_uri, 'subws_id', 'mean')
+    LOGGER.debug('aet mn dict : %s', aet_mn_dict) 
+    add_dict_to_shape(sub_sheds_out_uri, aet_mn_dict, 'AET_mn', 'subws_id')
     
     #Create the water yield subwatershed table
-    wsr = sheds_map_subsheds(sheds, sub_sheds)
+    wsr = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
     LOGGER.debug('wsr : %s', wsr)
     ws_dict = {}
     sws_dict = {}
     #Build the foundation for the watershed and subwatershed dictionaries
     for key, val in wsr.iteritems():
-        sws_dict[key] = {'ws_id':val, 'subws_id':key}
+        sws_dict[key] = val
         if not val in ws_dict:
             ws_dict[val] = {'ws_id':val}
     
     LOGGER.debug('ws_dict : %s', ws_dict)
     LOGGER.debug('sws_dict : %s', sws_dict)
+    add_dict_to_shape(sub_sheds_out_uri, sws_dict, 'ws_id', 'subws_id')
     
-    sub_value_dict = {}
-    tuple_name_datasets_sub = \
-        [('precip_mn', precip_raster),('PET_mn', eto_raster)]
-   
-    for key_name, rast in tuple_name_datasets_sub:
-        sub_value_dict[key_name] = \
-            raster_utils.aggregate_raster_values(rast, sub_sheds, 'subws_id',\
-                                                 'mean')
-    sub_value_dict['AET_mn'] = aet_mn_dict
-    sub_value_dict['wyield_mn'] = wyield_mn_dict
-    sub_value_dict['wyield_sum'] = \
-        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id',
-                                             'sum')
+    
+#   sub_value_dict = {}
+#   tuple_name_datasets_sub = \
+#       [('precip_mn', precip_uri),('PET_mn', eto_uri)]
+#  
+#   for key_name, rast_uri in tuple_name_datasets_sub:
+#       sub_value_dict[key_name] = raster_utils.aggregate_raster_values_uri(
+#           rast_uri, sub_sheds_uri, 'subws_id', 'mean')
+    
+    precip_mn_dict = raster_utils.aggregate_raster_values_uri(
+            precip_uri, sub_sheds_uri, 'subws_id', 'mean')
+    
+    add_dict_to_shape(sub_sheds_out_uri, precip_mn_dict, 'precip_mn', 'subws_id')
+    
+    eto_mn_dict = raster_utils.aggregate_raster_values_uri(
+            eto_uri, sub_sheds_uri, 'subws_id', 'mean')
+    
+    add_dict_to_shape(sub_sheds_out_uri, eto_mn_dict, 'PET_mn', 'subws_id')
+
+#    sub_value_dict['AET_mn'] = aet_mn_dict
+#    sub_value_dict['wyield_mn'] = wyield_mn_dict
+#    sub_value_dict['wyield_sum'] = raster_utils.aggregate_raster_values_uri(
+#            wyield_raster, sub_sheds_uri, 'subws_id', 'sum')
+    wyield_sum_dict = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sub_sheds_uri, 'subws_id', 'sum')
+
+    add_dict_to_shape(
+            sub_sheds_out_uri, wyield_sum_dict, 'wyield_sum', 'subws_id')
+    
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
-    LOGGER.debug('sub_value_dict : %s', sub_value_dict)
-    #Create the water yield watershed table
-    value_dict = {}
-    tuple_name_datasets = \
-        [('precip_mn', precip_raster),('PET_mn', eto_raster),\
-         ('AET_mn', aet_raster),('wyield_mn', wyield_raster)]
    
-    for key_name, rast in tuple_name_datasets:
-        value_dict[key_name] = \
-            raster_utils.aggregate_raster_values(rast, sheds, 'ws_id', 'mean')
+    sub_value_dict = extract_datasource_table_by_key(
+            sub_sheds_out_uri, 'subws_id', sub_field_list)
     
-    value_dict['wyield_sum'] = \
-        raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
-                                             'sum')
+    LOGGER.debug('sub_value_dict : %s', sub_value_dict)
     
-    field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
-                  'wyield_sum']
+    write_new_table(sub_table_path, sub_field_list, sub_value_dict)
+    
+    #Create the water yield watershed table
+#   value_dict = {}
+#   tuple_name_datasets = \
+#       [('precip_mn', precip_raster),('PET_mn', eto_raster),\
+#        ('AET_mn', aet_raster),('wyield_mn', wyield_raster)]
+#  
+#   for key_name, rast in tuple_name_datasets:
+#       value_dict[key_name] = \
+#           raster_utils.aggregate_raster_values(rast, sheds, 'ws_id', 'mean')
+    
+    value_dict = {}
+    tuple_name_datasets = [
+            ('precip_mn', precip_uri),('PET_mn', eto_uri),
+            ('AET_mn', aet_path),('wyield_mn', wyield_clipped_path)]
+   
+    for key_name, rast_uri in tuple_name_datasets:
+        key_dict = raster_utils.aggregate_raster_values_uri(
+                rast_uri, sheds_uri, 'ws_id', 'mean')
+    
+        add_dict_to_shape(sheds_out_uri, key_dict, key_name, 'ws_id')
+
+    wyield_sum_dict = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sheds_uri, 'ws_id', 'sum')
+        
+    add_dict_to_shape(sheds_out_uri, wyield_sum_dict, 'wyield_sum', 'ws_id')
+
+#   value_dict['wyield_sum'] = \
+#       raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
+#                                            'sum')
+    
+    field_list = [
+            'ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 'wyield_sum']
+    
+    value_dict = extract_datasource_table_by_key(
+            sheds_out_uri, 'ws_id', field_list)
+    
+    LOGGER.debug('value_dict : %s', value_dict)
+    
+    write_new_table(shed_table_path, field_list, value_dict)
     
     #Fill in the watershed and subwatershed dictionaries with proper values and
     #format to be able to be written out to a CSV file
-    for key, val in ws_dict.iteritems():
-        for index, item in value_dict.iteritems():
-            val[index] = item[key]
-    
-    for key, val in sws_dict.iteritems():
-        for index, item in sub_value_dict.iteritems():
+#   for key, val in ws_dict.iteritems():
+#       for index, item in value_dict.iteritems():
+#           val[index] = item[key]
+#   
+#   for key, val in sws_dict.iteritems():
+#       for index, item in sub_value_dict.iteritems():
+#           try:
+#               val[index] = item[int(key)]
+#           except KeyError:
+#               LOGGER.error("Warning subwatershed %s was not in the calculated"
+#                            " region.  Is it a very small polygon?" % key)
+#   
+#   LOGGER.debug('Performing CSV table writing')
+#   write_csv_table(ws_dict, field_list, shed_table_path)
+#   write_csv_table(sws_dict, sub_field_list, sub_table_path)
+
+#def generate_csv_tables(shape_uri, field_list, shed_field, out_uri):
+#   """
+#   """
+#   csv_file = open(out_uri, 'wb')
+
+#   
+#   csv_writer = csv.DictWriter(csv_file, field_list)
+#   # Write the columns as the first row in the table
+#   csv_writer.writerow(dict((fn,fn) for fn in field_list))
+
+#   row_dict = {}
+
+#   num_features = layer.GetFeatureCount()
+#   for feat_id in num_features:
+#       feat = layer.GetFeature(feat_id)
+#       shed_index = feat.GetFieldIndex(shed_field)
+#       shed_id = feat.GetField(shed_index)
+#       row_dict[shed_id] = {}
+#       for field in field_list:
+#           field_index = feat.GetFieldIndex(field)
+#           field_val = feat.GetField(field_index)
+#           row_dict[shed_id][field] = field_val
+
+#   # Sort the keys so that the rows are written in order
+#   #row_keys = data.keys().sort()V
+#   
+#   for index in keys:
+#       csv_writer.writerow(data[index])
+
+#   csv_file.close()
+
+def extract_datasource_table_by_key(
+        datasource_uri, key_field, wanted_list):
+    """Create a dictionary lookup table of the features in the attribute table
+        of the datasource referenced by datasource_uri.
+
+        datasource_uri - a uri to an OGR datasource
+        key_field - a field in datasource_uri that refers to a key (unique) value
+            for each row; for example, a polygon id.
+        wanted_list - a list of field names to add to the dictionary. This is
+            helpful if there are fields that are not wanted to be returned
+
+        returns a dictionary of the form {key_field_0: 
+            {field_0: value0, field_1: value1}...}"""
+
+    def smart_cast(value):
+        """Attempts to cast value to a float, int, or leave it as string"""
+        if type(value) != str: 
+            return value
+
+        cast_functions = [int, float]
+        for fn in cast_functions:
             try:
-                val[index] = item[int(key)]
-            except KeyError:
-                LOGGER.error("Warning subwatershed %s was not in the calculated"
-                             " region.  Is it a very small polygon?" % key)
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    #Pull apart the datasource
+    datasource = ogr.Open(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    #Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    #Loop through each feature and build up the dictionary representing the
+    #attribute table
+    attribute_dictionary = {}
+    for feature_index in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_index)
+        feature_fields = {}
+        for field_name in field_names:
+            if field_name in wanted_list:
+                feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    return attribute_dictionary
     
-    LOGGER.debug('Performing CSV table writing')
-    write_csv_table(ws_dict, field_list, shed_table_path)
-    write_csv_table(sws_dict, sub_field_list, sub_table_path)
-    
-def sheds_map_subsheds(shape, sub_shape):
+def write_new_table(filename, fields, data):
+    """Create a new csv table from a dictionary
+
+        filename - a URI path for the new table to be written to disk
+        
+        fields - a python list of the column names. The order of the fields in
+            the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+        
+        data - a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to a
+            dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+        returns - nothing
+    """
+    csv_file = open(filename, 'wb')
+
+    # Sort the keys so that the rows are written in order
+    row_keys = data.keys()
+    row_keys.sort()    
+    LOGGER.debug('Keys : %s', row_keys)
+    #sorted_keys = row_keys.sort()
+    #LOGGER.debug('Table Row Keys : %s', sorted_keys)
+
+    csv_writer = csv.DictWriter(csv_file, fields)
+    # Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn,fn) for fn in fields))
+
+    for index in row_keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
+
+def compute_volume(shape_uri, vol_name, ha_name):
+    """
+    """
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+
+    for new_field in [vol_name, ha_name]:
+        field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        layer.CreateField(field_defn)
+
+    num_features = layer.GetFeatureCount()
+    for feat_id in xrange(num_features):
+        feat = layer.GetFeauture(feat_id)
+        wyield_mn_id = feat.GetFieldIndex('wyield_mn')
+        wyield_mn = feat.GetField(wyield_mn_id)
+        
+        geom = feat.GetGeometryRef()
+        feat_area = geom.GetArea()
+        
+        vol = wyield_mn * feat_area / 1000.0
+        vol_index = feat.GetFieldIndex(vol_name)
+        feat.SetField(vol_index, vol)
+        
+        vol_ha = vol / (0.0001 * feat_area)
+        ha_index = feat.GetFieldIndex(ha_name)
+        feat.SetField(ha_index, vol_ha)
+        
+        layer.SetFeature(feat)
+        
+def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
+    """Add a new field to a shapefile with values from a dictionary whose keys
+        match a unique field in the shapefile
+
+        shape_uri - 
+        field_dict - 
+        field_name - 
+        shed_name - 
+
+        returns - nothing"""
+
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
+
+    num_features = layer.GetFeatureCount()
+    for feat_id in xrange(num_features):
+        feat = layer.GetFeature(feat_id)
+        ws_id = feat.GetFieldIndex(shed_name)
+        ws_val = feat.GetField(ws_id)
+        field_val = float(field_dict[ws_val])
+        field_index = feat.GetFieldIndex(field_name)
+
+        feat.SetField(field_index, field_val)
+
+        layer.SetFeature(feat)
+
+def sheds_map_subsheds(shape_uri, sub_shape_uri):
     """Stores which sub watersheds belong to which watershed
        
        shape - an OGR shapefile of the watersheds
@@ -385,6 +665,8 @@ def sheds_map_subsheds(shape, sub_shape):
     """
     
     LOGGER.debug('Starting sheds_map_subsheds')
+    shape = ogr.Open(shape_uri)
+    sub_shape = ogr.Open(sub_shape_uri)
     layer = shape.GetLayer(0)
     sub_layer = sub_shape.GetLayer(0)
     collection = {}
@@ -417,11 +699,11 @@ def sheds_map_subsheds(shape, sub_shape):
         
     return collection
 
-def get_area_of_polygons(shapefile, field_name):
+def get_area_of_polygons(shapefile_uri, field_name):
     """Creates and returns a dictionary of the relationship between each
        polygons area and its field_name (commonly some ID value)
     
-       shapefile - an OGR polygon shapefile
+       shapefile_uri - an OGR polygon shapefile
        field_name - a string of an unique field in shapefile 
                     (commonly an id field)
        
@@ -430,6 +712,7 @@ def get_area_of_polygons(shapefile, field_name):
                  the polygon
     """
     LOGGER.debug('Starting get_area_of_polygons')
+    shapefile = ogr.Open(shapefile_uri, 1)
     area_dict = {}
     layer = shapefile.GetLayer(0)
     layer.ResetReading()
