@@ -70,14 +70,6 @@ def set_arguments_path():
 
     CONFIG_DATA['Arguments (in JSON)']['path'] = json_file
 
-def finish_operation():
-    completed_configs = map(lambda x: x != '',
-        [data['path'] for data in CONFIG_DATA.values()])
-
-    if False in completed_configs:
-        print 'All data must be provided before finishing.'
-    raise ConfiguredCorrectly()
-
 try:
     init_json = os.path.abspath(sys.argv[1])
 except IndexError:
@@ -124,7 +116,6 @@ def configure_settings():
     paths_complete = reduce(lambda x, y: x and y,
         map(lambda x: True if len(x) > 0 else False,
         list(data[1]['path'] for data in settings)))
-    print paths_complete
 
     if paths_complete:
         print '[%s] %-20s' % (len(settings), 'Finish')
@@ -133,11 +124,15 @@ def configure_settings():
 
     input_selection = raw_input('Select an item to configure: ')
 
-    while input_selection not in map(lambda x: str(x), range(len(settings))):
+    while input_selection not in map(lambda x: str(x), range(len(settings))) or
+        (input_selection != len(settings) and paths_complete):
         input_selection = raw_input('Input must be an option above: ')
 
     input_selection = int(input_selection)
-    settings[input_selection][1]['function']()
+    if input_selection in range(len(settings)):
+        settings[input_selection][1]['function']()
+    else:
+        raise ConfiguredCorrectly()
 
 
 
