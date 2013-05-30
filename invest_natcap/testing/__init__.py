@@ -321,18 +321,8 @@ class GISTest(unittest.TestCase):
         archive_2_size = len(archive_2_files)
         if archive_1_size != archive_2_size:
             # find out which archive had more files.
-            if archive_1_size > archive_2_size:
-                bigger_list = archive_1_files
-                smaller_list = archive_2_files
-            else:
-                bigger_list = archive_2_files
-                smaller_list = archive_1_files
-
-            # eliminate all the smaller files from the bigger list
-            for filepath in smaller_list:
-                bigger_list.remove(filepath)
-
-            raise AssertionError('Problem!')
+            raise AssertionError('Different files in archives A:%s and B:%s' %
+                (archive_1_size, archive_2_size))
         else:
             # archives have the same number of files that we care about
             for file_1, file_2 in zip(archive_1_files, archive_2_files):
