@@ -2486,7 +2486,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s.json' % model_name, filter = QtCore.QString('JSON file' +
+                '%s_archive.json' % model_name, filter = QtCore.QString('JSON file' +
                 ' (*.json);;All files (*.* *)'))
             filename = unicode(filename)
             if filename != '':
