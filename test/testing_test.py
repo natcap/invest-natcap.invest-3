@@ -332,3 +332,13 @@ class GISTestTester(testing.GISTest):
             'arc_raster_messy.tar.gz')
         self.assertRaises(AssertionError, self.assertArchives, archive_file,
             different_archive)
+
+    def test_workspaces_passes(self):
+        """Check that asserting equal workspaces passes"""
+        workspace_uri = os.path.join(REGRESSION_ARCHIVES, '..')
+        self.assertWorkspace(workspace_uri, workspace_uri)
+
+    def test_workspaces_differ(self):
+        """Check that asserting equal workspaces fails."""
+        self.assertRaises(AssertionError, self.assertWorkspace,
+            POLLINATION_DATA, REGRESSION_ARCHIVES)
