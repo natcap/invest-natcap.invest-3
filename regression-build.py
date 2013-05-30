@@ -5,7 +5,9 @@ import readline
 import argparse
 
 import invest_natcap.testing
+from invest_natcap.testing import test_writing
 from invest_natcap.testing import autocomplete
+from invest_natcap.iui import fileio
 
 #CONFIG_DATA = {
 #    'Input archive': '',
@@ -117,15 +119,17 @@ def configure_settings():
         map(lambda x: True if len(x) > 0 else False,
         list(data[1]['path'] for data in settings)))
 
+    num_settings = len(settings)
     if paths_complete:
         print '[%s] %-20s' % (len(settings), 'Finish')
+        num_settings += 1
+    allowed_settings = range(num_settings)
 
     # If all options are configured, offer option to finish.
 
     input_selection = raw_input('Select an item to configure: ')
 
-    while input_selection not in map(lambda x: str(x), range(len(settings))) or
-        (input_selection != len(settings) and paths_complete):
+    while (input_selection not in map(lambda x: str(x), allowed_settings)):
         input_selection = raw_input('Input must be an option above: ')
 
     input_selection = int(input_selection)
@@ -184,7 +188,7 @@ def main():
         print 'Output archive saved to %s' % CONFIG_DATA['Output archive']['path']
 
         param_handler = fileio.JSONHandler(CONFIG_DATA['Arguments (in JSON)']['path'])
-        module = file_handler.get_attributes()['model']
+        module = param_handler.get_attributes()['model']
 
         test_writing.add_test_to_class(
             CONFIG_DATA['Test file']['path'],
