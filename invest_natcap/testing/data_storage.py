@@ -104,24 +104,31 @@ def collect_parameters(parameters, archive_uri):
         LOGGER.debug('Files in raster: %s', file_list)
         dataset = None
 
-        # If the filepath given is a folder itself, we want the new raster dir
-        # to be based on a seed of the folder's basname.  Otherwise, we need to
-        # get the basename from the filepath.
-        if os.path.isdir(filepath):
-            parent_folder = os.path.basename(filepath)
+        if len(file_list) == 1:
+            # If there is only one file in the raster, just return the file name
+            raster_file = file_list[0]
+            new_file_location = os.path.join(temp_workspace, os.path.basename(raster_file))
+            shutil.copyfile(raster_file, new_file_location)
+            return os.path.basename(file_list[0])
         else:
-            parent_folder = os.path.dirname(filepath)
+            # If the filepath given is a folder itself, we want the new raster dir
+            # to be based on a seed of the folder's basname.  Otherwise, we need to
+            # get the basename from the filepath.
+            if os.path.isdir(filepath):
+                parent_folder = os.path.basename(filepath)
+            else:
+                parent_folder = os.path.dirname(filepath)
 
-        new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
-        for raster_file in file_list:
-            # raster_file may be a folder ... we can't copy a folder with
-            # copyfile.
-            if os.path.isfile(raster_file):
-                file_basename = os.path.basename(raster_file)
-                new_raster_uri = os.path.join(new_raster_dir, file_basename)
-                shutil.copyfile(raster_file, new_raster_uri)
+            new_raster_dir = make_raster_dir(temp_workspace, parent_folder)
+            for raster_file in file_list:
+                # raster_file may be a folder ... we can't copy a folder with
+                # copyfile.
+                if os.path.isfile(raster_file):
+                    file_basename = os.path.basename(raster_file)
+                    new_raster_uri = os.path.join(new_raster_dir, file_basename)
+                    shutil.copyfile(raster_file, new_raster_uri)
 
-        return os.path.basename(new_raster_dir)
+            return os.path.basename(new_raster_dir)
 
 
 
