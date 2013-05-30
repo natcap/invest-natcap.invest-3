@@ -43,7 +43,7 @@ def _set_archive_name(keyword):
 
             if confirm_create_folder == 'y':
                 os.makedirs(dirname)
-    return os.path.abspath(input_archive_name)
+    return os.path.relpath(input_archive_name)
 
 
 def set_input_archive_name():
@@ -113,6 +113,8 @@ def configure_settings():
 
         print '[%s] %-20s: %s' % (item_no, label, path)
 
+    # If all options are configured, offer option to finish.
+
     input_selection = raw_input('Select an item to configure: ')
 
     while input_selection not in map(lambda x: str(x), range(len(settings))):
@@ -126,14 +128,17 @@ def configure_settings():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--arguments', dest='arguments',
-        help='JSON file with input arguments and model data')
-    parser.add_argument('--input-archive', dest='input_archive',
-        help='Path to where the input archive will be saved')
-    parser.add_argument('--output-archive', dest='output_archive',
-        help='Path to where the output archive will be saved')
-    parser.add_argument('--test-file', dest='test_file',
-        help='The test file to modify')
+    parser.add_argument('-a', '--arguments', dest='arguments',
+        help='JSON file with input arguments and model data', type=unicode,
+        metavar='')
+    parser.add_argument('-i', '--input-archive', dest='input_archive',
+        help='Path to where the archived input data will be saved', type=unicode,
+        metavar='')
+    parser.add_argument('-o', '--output-archive', dest='output_archive',
+        help='Path to where the archived output data will be saved',
+        type=unicode, metavar='')
+    parser.add_argument('-t', '--test-file', dest='test_file',
+        help='The test file to modify', type=unicode, metavar='')
 
     args = parser.parse_args()
 
@@ -143,11 +148,12 @@ def main():
     CONFIG_DATA['Test file']['path'] = args.test_file
 
 
-    finished = False
     try:
+        finished = False
         while not finished:
             print ''
             print ''
+            print 'CWD: %s' % os.getcwd()
             configure_settings()
     except ConfiguredCorrectly:
         invest_natcap.testing.build_regression_archives(

@@ -48,8 +48,7 @@ class Completer(object):
         line = readline.get_line_buffer().split()
         # show all commands
         if not line:
-            options = os.listdir(os.path.join(os.getcwd(), text))
-            return [c + ' ' for c in options][state]
+            return [c + ' ' for c in COMMANDS][state]
         # account for last argument ending in a space
         if RE_SPACE.match(buffer):
             line.append('')
