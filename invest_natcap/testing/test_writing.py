@@ -17,7 +17,7 @@ class TestWriter(object):
     def write(self, line):
         self.test_file.write(line + '\n')
 
-    def write_import(self, ):
+    def write_import(self):
         self.write('import invest_natcap.testing')
 
     def write_test_class(self, classname):
@@ -37,6 +37,7 @@ class TestWriter(object):
         different_classtype = ''
         for line in self.test_file:
             if line == cls_string:
+                self.test_file.seek(0)
                 return (True, 'invest_natcap.testing.GISTest')
             elif 'class %s' % test_class_name in line:
                 in_paren = False
@@ -46,7 +47,9 @@ class TestWriter(object):
                     elif char == '(':
                         in_paren = True
                     elif char == ')':
+                        self.test_file.seek(0)
                         return (False, different_classtype)
+        self.test_file.seek(0)
         return (False, None)
 
 
@@ -107,19 +110,32 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
 
     test_file = TestWriter(file_uri, 'r')
     temp_file_uri = raster_utils.temporary_filename()
-    new_file = TestWriter(temp_file_uri, 'w')
+    new_file = TestWriter(temp_file_uri, 'w+')
 
-    for line in test_file.test_file:
-        new_file.write(line.rstrip())
-        if 'class %s(' % test_class_name in line:
-            new_file.write_archive_regression_test(test_func_name, module,
-                in_archive_uri, out_archive_uri)
+    cls_exists = test_file.class_exists(test_class_name)
+    if cls_exists[0] == False:
+        for line in test_file.test_file:
+            new_file.write(line.rstrip())
+
+        new_file.write('\n')
+        new_file.write_import()
+        new_file.write_test_class(test_class_name)
+        new_file.write_archive_regression_test(test_func_name, module,
+            in_archive_uri, out_archive_uri)
+    else:
+        for line in test_file.test_file:
+            new_file.write(line.rstrip())
+            if 'class %s(' % test_class_name in line:
+                new_file.write_archive_regression_test(test_func_name, module,
+                    in_archive_uri, out_archive_uri)
 
     test_file = None
     new_file = None
 
     # delete the old file
     os.remove(file_uri)
+    print 'removed %s' % file_uri
 
     # copy the new file over the old one.
     shutil.copyfile(temp_file_uri, file_uri)
+    print 'copying %s to %s' % (temp_file_uri, file_uri)
