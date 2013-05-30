@@ -271,3 +271,19 @@ class GISTestTester(testing.GISTest):
         sample_shape = os.path.join(POLLINATION_DATA, 'farms.shp')
         copied_shape = os.path.join(temp_folder, 'farms.shp')
         self.assertVectorsEqual(sample_shape, copied_shape)
+
+    def test_vectors_different_attributes(self):
+        """Verify when two vectors have different attributes"""
+        base_file = os.path.join(POLLINATION_DATA, 'farms.shp')
+        different_file = os.path.join(POLLINATION_DATA, '..',
+            'biophysical_output', 'farms_abundance_cur', 'farms.shp')
+
+        self.assertRaises(AssertionError, self.assertVectorsEqual, base_file,
+            different_file)
+
+    def test_vectors_very_different(self):
+        """Verify when two vectors are very, very different."""
+        base_file = os.path.join(POLLINATION_DATA, 'farms.shp')
+        different_file = os.path.join(CARBON_DATA, 'harv_samp_cur.shp')
+        self.assertRaises(AssertionError, self.assertVectorsEqual, base_file,
+            different_file)
