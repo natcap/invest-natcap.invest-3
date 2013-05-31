@@ -389,17 +389,7 @@ class Executor(threading.Thread):
                 model_name = os.path.splitext(os.path.basename(module))[0]
                 LOGGER.debug('Loading %s from %s', model_name, model)
             else:
-                new_path = []
-                for path in sys.path:
-                    if os.path.basename(path) == 'Lib':
-                        pass
-                    elif os.path.basename(path) == 'DLLs':
-                        pass
-                    else:
-                        new_path.append(path)
-                sys.path = new_path
-
-                LOGGER.debug('PATH: %s', new_path)
+                LOGGER.debug('PATH: %s', sys.path)
                 module_list = module.split('.')
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list
