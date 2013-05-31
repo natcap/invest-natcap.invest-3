@@ -194,14 +194,14 @@ def main():
             configure_settings()
     except ConfiguredCorrectly:
         test_file = os.path.abspath(CONFIG_DATA['Test file']['path'])
-        test_class = CONFIG_DATA['Test class']['path'],
-        test_func = CONFIG_DATA['Test function']['path'],
+        test_class = CONFIG_DATA['Test class']['path']
+        test_func = CONFIG_DATA['Test function']['path']
         test_writer = invest_natcap.testing.test_writing.TestWriter(test_file)
 
         if test_writer.class_has_test(test_class, test_func):
-            print ("ERROR: Test %s.%s exists.  Aborting." % (test_class,
+            print ("ERROR: %s.%s() exists.  Aborting." % (test_class,
                     test_func))
-            sys.exit(1)
+            sys.exit(0)
 
         invest_natcap.testing.build_regression_archives(
             os.path.abspath(CONFIG_DATA['Arguments (in JSON)']['path']),
