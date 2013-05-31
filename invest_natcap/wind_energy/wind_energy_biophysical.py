@@ -219,7 +219,7 @@ def execute(args):
         LOGGER.info('Clip and project bathymetry to AOI')
         clip_and_proj_bath = clip_and_reproject_maps(
                 bathymetry, aoi, bathymetry_clip_uri, bathymetry_proj_uri,
-                aoi_reprojected_bath_uri)
+                aoi_reprojected_bath_uri, args['bathymetry_uri'])
 
         biophysical_args['bathymetry'] = clip_and_proj_bath
         biophysical_args['wind_data_points'] = wind_pts_prj
@@ -248,7 +248,7 @@ def execute(args):
             LOGGER.info('Clip and project land poly to AOI')
             projected_land = clip_and_reproject_maps(
                     land_polygon, aoi, land_poly_clip_uri, land_poly_proj_uri,
-                    aoi_reprojected_land_uri)
+                    aoi_reprojected_land_uri, args['land_polygon_uri'])
 
             biophysical_args['land_polygon'] = projected_land
     
@@ -409,7 +409,8 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     return output_datasource
 
 def clip_and_reproject_maps(
-        data_obj, aoi, clipped_uri, projected_uri, aoi_reprojected_uri):
+        data_obj, aoi, clipped_uri, projected_uri, aoi_reprojected_uri,
+        data_obj_uri=None):
     """Clip and project a Dataset/DataSource to an area of interest
 
         data_obj - a gdal Dataset or ogr Datasource
@@ -463,8 +464,16 @@ def clip_and_reproject_maps(
     else:
         LOGGER.info('Clipping dataset')
         # Clip the data obj to the AOI
-        data_obj_clipped = raster_utils.clip_dataset(
-                data_obj, aoi_prj_to_obj, clipped_uri)
+        data_obj_clipped = None
+        if data_obj_uri is None:
+            data_obj_clipped = raster_utils.clip_dataset(
+                    data_obj, aoi_prj_to_obj, clipped_uri)
+        else:
+            aoi_prj_to_obj = None
+            data_obj = None
+            raster_utils.clip_dataset_uri(
+                    data_obj_uri, aoi_reprojected_uri, clipped_uri, False)
+            data_obj_clipped = gdal.Open(clipped_uri, 1)
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
