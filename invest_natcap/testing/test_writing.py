@@ -63,6 +63,13 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
     new_file = TestWriter(temp_file_uri, 'w+')
 
     cls_exists = test_file.class_exists(test_class_name)
+    test_exists = test_file.class_has_test(test_class_name, test_func_name)
+
+    if test_exists:
+        print 'WARNING: %s.%s exists.  Not writing a new test.' %
+            (test_class_name, test_func_name)
+        return
+
     if cls_exists[0] == False:
         for line in test_file.test_file:
             new_file.write(line.rstrip())
