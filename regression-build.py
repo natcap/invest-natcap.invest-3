@@ -17,6 +17,9 @@ from invest_natcap.iui import fileio
 class ConfiguredCorrectly(Exception):
     pass
 
+class TestExists(Exception):
+    pass
+
 def config_completer():
     autocompleter = autocomplete.Completer()
     readline.set_completer_delims(' \t\n;')
@@ -190,6 +193,14 @@ def main():
             print 'CWD: %s' % os.getcwd()
             configure_settings()
     except ConfiguredCorrectly:
+        test_file = os.path.abspath(CONFIG_DATA['Test file']['path'])
+        test_class = CONFIG_DATA['Test class']['path'],
+        test_func = CONFIG_DATA['Test function']['path'],
+        test_writer = invest_natcap.testing.test_writing(test_file)
+
+        if test_writer.class_has_test(test_class_name, test_func_name):
+            raise TestExists("Test %s.%s exists.  Skipping.")
+
         invest_natcap.testing.build_regression_archives(
             os.path.abspath(CONFIG_DATA['Arguments (in JSON)']['path']),
             os.path.abspath(CONFIG_DATA['Input archive']['path']),
