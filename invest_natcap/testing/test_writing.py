@@ -39,11 +39,20 @@ class TestWriter(object):
 
     def has_class(self, test_class_name):
         module = imp.load_source('model', self.file_uri)
-
-        if hasattr(module, test_class_name):
+        try:
             return (True, getattr(module, test_class_name).__bases__)
-        else:
+        except AttributeError:
             return (False, None)
+
+    def class_has_test(self, test_class_name, test_func_name):
+        module = imp.load_source('model', self.file_uri)
+        try:
+            cls_instance = getattr(module, test_class_name)
+            function = getattr(cls_instance, test_func_name)
+            return True
+        except AttributeError:
+            return False
+
 
 
 def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
