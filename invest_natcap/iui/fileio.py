@@ -531,14 +531,14 @@ def save_model_run(arguments, module, out_file):
 
             if isinstance(value, list):
                 if len(value) == 0:
-                    _write('%s%s: []' % (prefix, key))
+                    _write('%s%s: [],' % (prefix, key))
                 else:
                     _write('%s%s: [' % (prefix, key))
                     _print_list(value, prefix)
                     _write('%s],' % prefix)
             elif isinstance(value, dict):
                 if len(value) == 0:
-                    _write('%s%s: {}' % (prefix, key))
+                    _write('%s%s: {},' % (prefix, key))
                 else:
                     _write('%s%s: {' % (prefix, key))
                     _print_dict(value, prefix)
