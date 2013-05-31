@@ -268,6 +268,8 @@ def collect_parameters(parameters, archive_uri):
     parameter_file.close()
 
     # archive the workspace.
+    if archive_uri[-7:] == '.tar.gz':
+        archive_uri = archive_uri[:-7]
     shutil.make_archive(archive_uri, 'gztar', root_dir=temp_workspace,
         logger=LOGGER)
 
