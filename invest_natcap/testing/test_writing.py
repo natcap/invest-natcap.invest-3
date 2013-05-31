@@ -66,8 +66,8 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
     test_exists = test_file.class_has_test(test_class_name, test_func_name)
 
     if test_exists:
-        print 'WARNING: %s.%s exists.  Not writing a new test.' %
-            (test_class_name, test_func_name)
+        print ('WARNING: %s.%s exists.  Not writing a new test.' %
+            (test_class_name, test_func_name))
         return
 
     if cls_exists[0] == False:
