@@ -1,11 +1,14 @@
 import codecs
 import os
 import shutil
+import imp
 
+import invest_natcap.testing
 from invest_natcap import raster_utils
 
 class TestWriter(object):
     def __init__(self, file_uri, mode='a', encoding='utf-8'):
+        self.file_uri = file_uri
         self.test_file = codecs.open(file_uri, mode, encoding)
 
     def __del__(self):
@@ -34,25 +37,14 @@ class TestWriter(object):
         self.write('        %s.execute(self.args)' % module)
         self.write('')
 
-    def class_exists(self, test_class_name):
-        cls_string = self._class_string(test_class_name) + '\n'
-        different_classtype = ''
-        for line in self.test_file:
-            if line == cls_string:
-                self.test_file.seek(0)
-                return (True, 'invest_natcap.testing.GISTest')
-            elif 'class %s' % test_class_name in line:
-                in_paren = False
-                for char in line:
-                    if in_paren:
-                        different_classtype += char
-                    elif char == '(':
-                        in_paren = True
-                    elif char == ')':
-                        self.test_file.seek(0)
-                        return (False, different_classtype)
-        self.test_file.seek(0)
-        return (False, None)
+    def has_class(self, test_class_name):
+        module = imp.load_source('model', self.file_uri)
+
+        if hasattr(module, test_class_name):
+            return (True, getattr(module, test_class_name).__bases__)
+        else:
+            return (False, None)
+
 
 def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         out_archive_uri, module):
