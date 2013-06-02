@@ -1,11 +1,14 @@
 import codecs
 import os
 import shutil
+import imp
 
+import invest_natcap.testing
 from invest_natcap import raster_utils
 
 class TestWriter(object):
     def __init__(self, file_uri, mode='a', encoding='utf-8'):
+        self.file_uri = file_uri
         self.test_file = codecs.open(file_uri, mode, encoding)
 
     def __del__(self):
@@ -34,79 +37,24 @@ class TestWriter(object):
         self.write('        %s.execute(self.args)' % module)
         self.write('')
 
-    def class_exists(self, test_class_name):
-        cls_string = self._class_string(test_class_name) + '\n'
-        different_classtype = ''
-        for line in self.test_file:
-            if line == cls_string:
-                self.test_file.seek(0)
-                return (True, 'invest_natcap.testing.GISTest')
-            elif 'class %s' % test_class_name in line:
-                in_paren = False
-                for char in line:
-                    if in_paren:
-                        different_classtype += char
-                    elif char == '(':
-                        in_paren = True
-                    elif char == ')':
-                        self.test_file.seek(0)
-                        return (False, different_classtype)
-        self.test_file.seek(0)
-        return (False, None)
+    def has_class(self, test_class_name):
+        module = imp.load_source('model', self.file_uri)
+        try:
+            return (True, getattr(module, test_class_name).__bases__)
+        except AttributeError:
+            return (False, None)
+
+    def class_has_test(self, test_class_name, test_func_name):
+        module = imp.load_source('model', self.file_uri)
+        try:
+            cls_instance = getattr(module, test_class_name)
+            function = getattr(cls_instance, test_func_name)
+            return True
+        except AttributeError:
+            return False
 
 
 
-#def write_import(file_uri):
-#    test_file = TestWriter(file_uri)
-#    test_file.write('import invest_natcap.testing')
-
-#def _class_string(classname):
-#    test_file.write('class %s(invest_natcap.testing.GISTest):')
-
-#def write_test_class(file_uri, classname):
-#    test_file = TestWriter(file_uri)
-#    test_file.write(_class_string(classname))
-
-#def write_archive_test(test_name, module, input_archive, output_archive):
-#    test_file = TestWriter(file_uri)
-#    test_file.write('    @invest_natcap.testing.regression(')
-#    test_file.write('        input_archive="%s",' % input_archive)
-#    test_file.write('        workspace_archive="%s")' % output_archive)
-#    test_file.write('    def %s(self):' % test_name)
-#    test_file.write('        %s.execute(self.args)')
-#    test_file.write('')
-#
-## function to see if a test class is in the test file
-#def class_exists(file_uri, test_class_name):
-#    """Check to see if the target classname exists in the given file.
-#
-#        file_uri - a URI to the target test file
-#        test_class_name - the name of the test class to check
-#
-#    Returns a tuple.  The first element is whether the classname is present.
-#    The second element is the string classtype of the class found, or None if
-#    the class was not found at all in the file."""
-#
-#    test_file = TestWriter(file_uri)
-#
-#    cls_string = _class_string(classname) + '\n'
-#    different_classtype = ''
-#    for line in test_file:
-#        if line == cls_string:
-#            return (True, 'invest_natcap.testing.GISTest')
-#        elif 'class %s' % classname in line:
-#            in_paren = False
-#            for char in line:
-#                if in_paren:
-#                    different_classtype.append(char)
-#                elif char == '(':
-#                    in_paren = True
-#                elif_char == ')':
-#                    return (False, different_classtype)
-#
-#    return (False, None)
-
-# function to insert test functions into an existing test class.
 def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         out_archive_uri, module):
 
@@ -115,6 +63,13 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
     new_file = TestWriter(temp_file_uri, 'w+')
 
     cls_exists = test_file.class_exists(test_class_name)
+    test_exists = test_file.class_has_test(test_class_name, test_func_name)
+
+    if test_exists:
+        print ('WARNING: %s.%s exists.  Not writing a new test.' %
+            (test_class_name, test_func_name))
+        return
+
     if cls_exists[0] == False:
         for line in test_file.test_file:
             new_file.write(line.rstrip())

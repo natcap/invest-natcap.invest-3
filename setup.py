@@ -178,6 +178,11 @@ if platform.system() == 'Windows':
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
     data_files.append(('installer', glob.glob('installer/*')))
+
+    # If we're building InVEST on 64-bit Windows, we need to also include the
+    # 64-bit GEOS DLL.  See issue 2027.
+    if platform.architecture()[0] == '64bit':
+        data_files.append(('shapely', ['x64_build/geos_c.dll']))
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages

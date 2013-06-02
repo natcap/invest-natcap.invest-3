@@ -6,7 +6,6 @@ import os
 import shutil
 import logging
 
-import invest_test_core
 import invest_natcap.pollination.pollination as pollination
 import invest_natcap.pollination.pollination_core as pollination_core
 import invest_natcap.testing as testing
@@ -22,7 +21,7 @@ LOGGER = logging.getLogger('pollination_test')
 WORKSPACE_DIR = 'data/pollination/test_workspace'
 GUILDS_URI = TEST_DATA_DIR + '/Guild.csv'
 
-class UnifiedPollinationTest(unittest.TestCase):
+class UnifiedPollinationTest(testing.GISTest):
     def setUp(self):
         self.workspace_dir = WORKSPACE_DIR
         self.guilds_uri = GUILDS_URI
@@ -69,7 +68,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             for raster in raster_list:
                 test_file = raster % self.workspace_dir
                 reg_file = raster % reg_uri_base
-                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                self.assertRastersEqual(test_file,
                     reg_file)
 
     def test_regression_biophysical_future(self):
@@ -105,7 +104,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             for raster in raster_list:
                 test_file = raster % self.workspace_dir
                 reg_file = raster % reg_uri_base
-                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                self.assertRastersEqual(test_file,
                     reg_file)
 
     def test_regression_biophysical_ag_classes(self):
@@ -131,7 +130,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             for raster in raster_list:
                 test_file = raster % self.workspace_dir
                 reg_file = raster % reg_uri_base
-                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                self.assertRastersEqual(test_file,
                     reg_file)
 
     def test_regression_valuation(self):
@@ -166,7 +165,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             for raster in raster_list:
                 test_file = raster % self.workspace_dir
                 reg_file = raster % reg_uri_base
-                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                self.assertRastersEqual(test_file,
                     reg_file)
 
     def test_regression_missing_species_weight_ag_classes(self):
@@ -203,7 +202,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             for raster in raster_list:
                 test_file = raster % self.workspace_dir
                 reg_file = raster % reg_uri_base
-                invest_test_core.assertTwoDatasetEqualURI(self, test_file,
+                self.assertRastersEqual(test_file,
                     reg_file)
 
 
@@ -235,7 +234,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             reg_file = os.path.join(REGRESSION_FOLDER_BASE,
                 'biophysical_output', 'with_ag_classes', 'intermediate',
                 'frm_Apis_cur.tif')
-            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+            self.assertRastersEqual(test_file, reg_file)
 
     def test_farms_shapefile(self):
         self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
@@ -247,7 +246,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             'farms_abundance_cur', 'farms.shp')
         test_file = os.path.join(self.workspace_dir, 'output',
             'farms_abundance_cur', 'farms.shp')
-        invest_test_core.assertTwoShapesEqualURI(self, regression_file,
+        self.assertVectorsEqual(regression_file,
             test_file)
 
     def test_farms_shapefile_already_exists(self):
@@ -261,7 +260,7 @@ class UnifiedPollinationTest(unittest.TestCase):
             'farms_abundance_cur', 'farms.shp')
         test_file = os.path.join(self.workspace_dir, 'output',
             'farms_abundance_cur', 'farms.shp')
-        invest_test_core.assertTwoShapesEqualURI(self, regression_file,
+        self.assertVectorsEqual(regression_file,
             test_file)
 
 class PollinationSmokeTest(unittest.TestCase):
