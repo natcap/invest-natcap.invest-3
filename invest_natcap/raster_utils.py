@@ -799,7 +799,7 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
                             aggregate_uri = None, intermediate_directory = '',
-                            ignore_nodata = True):
+                            ignore_nodata=True):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
