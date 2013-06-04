@@ -437,7 +437,7 @@ class FolderChecker(URIChecker):
 
         for uri in files:
             if not os.path.exists(os.path.join(self.uri, uri)):
-                return 'File "%s" must exist in "%s"' % (uri, self.uri)
+                return '"%s" must exist in "%s"' % (uri, self.uri)
 
 
 class FileChecker(URIChecker):
