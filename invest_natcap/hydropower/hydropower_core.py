@@ -608,23 +608,54 @@ def water_scarcity(args):
     wyield_mean = args['water_yield_mn']
         
     # Path for the calibrated water yield volume per sub-watershed
-    wyield_calib_path = output_dir + os.sep + 'cyield_vol' + suffix_tif
+    wyield_calib_path = os.path.join(output_dir, 'cyield_vol') 
     # Path for mean and total water consumptive volume
-    consump_vol_path = output_dir + os.sep + 'consum_vol' + suffix_tif
-    consump_mean_path = output_dir + os.sep + 'consum_mn' + suffix_tif
-    clipped_consump_path = \
-        intermediate_dir + os.sep + 'clipped_consump' + suffix_tif
+    consump_vol_path = os.path.join(output_dir, 'consum_vol') 
+    consump_mean_path = os.path.join(output_dir, 'consum_mn') 
+    clipped_consump_path = os.path.join(intermediate_dir, 'clipped_consump') 
     # Paths for realized and mean realized water supply volume
-    rsupply_vol_path = output_dir + os.sep + 'rsup_vol' + suffix_tif
-    rsupply_mean_path = output_dir + os.sep + 'rsup_mn' + suffix_tif
+    rsupply_vol_path = os.path.join(output_dir, 'rsup_vol') 
+    rsupply_mean_path = os.path.join(output_dir, 'rsup_mn') 
     # Paths for watershed and sub watershed scarcity tables
-    ws_out_table_name = \
-        output_dir + os.sep + 'water_scarcity_watershed' + suffix_csv 
-    sws_out_table_name = \
-        output_dir + os.sep + 'water_scarcity_subwatershed' + suffix_csv
+    ws_out_table_name = os.path.join(output_dir, 'water_scarcity_watershed') 
+    sws_out_table_name = os.path.join(output_dir, 'water_scarcity_subwatershed') 
+    
+    #Open/read in the csv files into a dictionary and add to arguments
+    watershed_yield_table_map = {}
+    watershed_yield_table_file = open(args['watershed_yield_table_uri'])
+    reader = csv.DictReader(watershed_yield_table_file)
+    for row in reader:
+        watershed_yield_table_map[int(row['ws_id'])] = row
+    
+    watershed_yield_table_file.close()
+    
+    subwatershed_yield_table_map = {}
+    subwatershed_yield_table_file = open(args['subwatershed_yield_table_uri'])
+    reader = csv.DictReader(subwatershed_yield_table_file)
+    for row in reader:
+        subwatershed_yield_table_map[int(row['subws_id'])] = row
+    
+    subwatershed_yield_table_file.close()
+    
+    demand_table_map = {}
+    demand_table_file = open(args['demand_table_uri'])
+    reader = csv.DictReader(demand_table_file)
+    for row in reader:
+        demand_table_map[int(row['lucode'])] = int(row['demand'])
+    
+    LOGGER.debug('Demand_Dict : %s', demand_table_map)
+    demand_table_file.close()
+    
+    hydro_cal_table_map = {}
+    hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
+    reader = csv.DictReader(hydro_cal_table_file)
+    for row in reader:
+        hydro_cal_table_map[int(row['ws_id'])] = float(row['calib'])
+        
+    hydro_cal_table_file.close()
     
     # The nodata value to use for the output rasters
-    out_nodata = -1.0
+    out_nodata = float(np.finfo(np.float32).min) + 1.0
     
     # Create watershed mask raster
     ws_mask_uri = raster_utils.temporary_filename()
