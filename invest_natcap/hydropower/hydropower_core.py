@@ -551,13 +551,6 @@ def water_scarcity(args):
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['water_yield_vol'] - a GDAL raster dataset, generated from
-            the water_yield model, describing the total water yield per
-            sub-watershed. The approximate absolute annual water yield across
-            the landscape (cubic meters) (required) 
-        args['water_yield_mn'] - a GDAL raster dataset, generated from
-            the water_yield model, describing the mean water yield per
-            sub-watershed (mm) (required)
         args['lulc'] - a GDAL raster dataset of land use/land cover whose
             LULC indexes correspond to indexs in the biophysical table input.
             Used for determining soil retention and other biophysical 
