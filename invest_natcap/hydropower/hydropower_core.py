@@ -333,218 +333,15 @@ def water_yield(args):
     
     # Write watershed CSV table
     write_new_table(shed_table_path, field_list, value_dict)
+   
+   
+    water_scarcity_checked = args.pop('water_scarcity_container', False)
+    if not water_scarcity_checked:
+        LOGGER.debug('Water Scarcity Not Selected')
+        # The rest of the function is water scarcity and valuation, so we can
+        # quit now
+        return
 
-def extract_datasource_table_by_key(
-        datasource_uri, key_field, wanted_list):
-    """Create a dictionary lookup table of the features in the attribute table
-        of the datasource referenced by datasource_uri.
-
-        datasource_uri - a uri to an OGR datasource
-        key_field - a field in datasource_uri that refers to a key (unique) value
-            for each row; for example, a polygon id.
-        wanted_list - a list of field names to add to the dictionary. This is
-            helpful if there are fields that are not wanted to be returned
-
-        returns a dictionary of the form {key_field_0: 
-            {field_0: value0, field_1: value1}...}"""
-
-    # Pull apart the datasource
-    datasource = ogr.Open(datasource_uri)
-    layer = datasource.GetLayer()
-    layer_def = layer.GetLayerDefn()
-
-    # Build up a list of field names for the datasource table
-    field_names = []
-    for field_id in xrange(layer_def.GetFieldCount()):
-        field_def = layer_def.GetFieldDefn(field_id)
-        field_names.append(field_def.GetName())
-
-    # Loop through each feature and build up the dictionary representing the
-    # attribute table
-    attribute_dictionary = {}
-    for feature_index in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_index)
-        feature_fields = {}
-        for field_name in field_names:
-            if field_name in wanted_list:
-                feature_fields[field_name] = feature.GetField(field_name)
-        key_value = feature.GetField(key_field)
-        attribute_dictionary[key_value] = feature_fields
-
-    return attribute_dictionary
-    
-def write_new_table(filename, fields, data):
-    """Create a new csv table from a dictionary
-
-        filename - a URI path for the new table to be written to disk
-        
-        fields - a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
-            ['id', 'precip', 'total']
-        
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
-
-        returns - nothing
-    """
-    csv_file = open(filename, 'wb')
-
-    #  Sort the keys so that the rows are written in order
-    row_keys = data.keys()
-    row_keys.sort()    
-
-    csv_writer = csv.DictWriter(csv_file, fields)
-    #  Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn, fn) for fn in fields))
-
-    # Write the rows from the dictionary
-    for index in row_keys:
-        csv_writer.writerow(data[index])
-
-    csv_file.close()
-
-def compute_water_yield_volume(shape_uri):
-    """Calculate the water yield volume per sub-watershed and the water yield
-        volume per hectare per sub-watershed. Add results to shape_uri, units
-        are cubic meters
-
-        shape_uri - a URI path to an ogr datasource for the sub-watershed
-            shapefile. This shapefiles features should have a 'wyield_mn'
-            attribute, which calculations are derived from
-
-        returns - Nothing"""
-    shape = ogr.Open(shape_uri, 1)
-    layer = shape.GetLayer()
-    
-    # The field names for the new attributes
-    vol_name = 'wyield_vol'
-    ha_name = 'wyield_ha'
-
-    # Add the new fields to the shapefile
-    for new_field in [vol_name, ha_name]:
-        field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
-        layer.CreateField(field_defn)
-
-    num_features = layer.GetFeatureCount()
-    # Iterate over the number of features (polygons) and compute volume
-    for feat_id in xrange(num_features):
-        feat = layer.GetFeature(feat_id)
-        wyield_mn_id = feat.GetFieldIndex('wyield_mn')
-        wyield_mn = feat.GetField(wyield_mn_id)
-        
-        geom = feat.GetGeometryRef()
-        feat_area = geom.GetArea()
-        
-        # Calculate water yield volume
-        vol = wyield_mn * feat_area / 1000.0
-        # Get the volume field index and add value
-        vol_index = feat.GetFieldIndex(vol_name)
-        feat.SetField(vol_index, vol)
-
-        # Calculate water yield volume per hectare
-        vol_ha = vol / (0.0001 * feat_area)
-        # Get the hectare field index and add value
-        ha_index = feat.GetFieldIndex(ha_name)
-        feat.SetField(ha_index, vol_ha)
-        
-        layer.SetFeature(feat)
-        
-def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
-    """Add a new field to a shapefile with values from a dictionary.
-        The dictionaries keys should match to the values of a unique fields
-        values in the shapefile
-
-        shape_uri - a URI path to a ogr datasource on disk with a unique field
-            'shed_name'. The field 'shed_name' should have values that
-            correspond to the keys of 'field_dict'
-
-        field_dict - a python dictionary with keys mapping to values. These
-            values will be what is filled in for the new field 
-    
-        field_name - a string for the name of the new field to add
-        
-        shed_name - a string for the field name in 'shape_uri' that represents
-            the unique features
-
-        returns - nothing"""
-
-    shape = ogr.Open(shape_uri, 1)
-    layer = shape.GetLayer()
-    
-    # Create the new field
-    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
-    layer.CreateField(field_defn)
-
-    # Get the number of features (polygons) and iterate through each
-    num_features = layer.GetFeatureCount()
-    for feat_id in xrange(num_features):
-        feat = layer.GetFeature(feat_id)
-        
-        # Get the index for the unique field
-        ws_id = feat.GetFieldIndex(shed_name)
-        
-        # Get the unique value that will index into the dictionary as a key
-        ws_val = feat.GetField(ws_id)
-        
-        # Using the unique value from the field of the feature, index into the
-        # dictionary to get the corresponding value
-        field_val = float(field_dict[ws_val])
-
-        # Get the new fields index and set the new value for the field
-        field_index = feat.GetFieldIndex(field_name)
-        feat.SetField(field_index, field_val)
-
-        layer.SetFeature(feat)
-
-def sheds_map_subsheds(shape_uri, sub_shape_uri):
-    """Stores which sub watersheds belong to which watershed
-       
-       shape - an OGR shapefile of the watersheds
-       sub_shape - an OGR shapefile of the sub watersheds
-       
-       returns - a dictionary where the keys are the sub watersheds id's
-                 and whose value is the watersheds id it belongs to
-    """
-    
-    LOGGER.debug('Starting sheds_map_subsheds')
-    shape = ogr.Open(shape_uri)
-    sub_shape = ogr.Open(sub_shape_uri)
-    layer = shape.GetLayer(0)
-    sub_layer = sub_shape.GetLayer(0)
-    collection = {}
-    # For all the polygons in the watershed check to see if any of the polygons
-    # in the sub watershed belong to that watershed by checking the area of the
-    # watershed against the area of the Union of the watershed and sub watershed
-    # polygon.  The areas will be the same if the sub watershed is part of the
-    # watershed and will be different if it is not
-    for feat in layer:
-        index = feat.GetFieldIndex('ws_id')
-        ws_id = feat.GetFieldAsInteger(index)
-        geom = feat.GetGeometryRef()
-        sub_layer.ResetReading()
-        for sub_feat in sub_layer:
-            sub_index = sub_feat.GetFieldIndex('subws_id')
-            sub_id = sub_feat.GetFieldAsInteger(sub_index)
-            sub_geom = sub_feat.GetGeometryRef()
-            u_geom = sub_geom.Union(geom)
-            # We can't be sure that the areas will be identical because of
-            # floating point issues and complete accuracy so we make sure the
-            # difference in areas is within reason
-            # It also could be the case that the polygons were intended to 
-            # overlap but do not overlap exactly
-            if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
-                collection[sub_id] = ws_id
-            
-            sub_feat.Destroy()
-            
-        feat.Destroy()
-        
-    return collection
-
-def water_scarcity(args):
     """Executes the water scarcity model
         
         args - a python dictionary with at the following possible entries:
@@ -579,22 +376,6 @@ def water_scarcity(args):
         returns nothing"""
 
     LOGGER.info('Starting Water Scarcity Core Calculations')
-    
-    # Construct folder paths
-    workspace = args['workspace_dir']
-    intermediate_dir = os.path.join(workspace, 'intermediate')
-    output_dir = os.path.join(workspace, 'output')
-    service_dir = os.path.join(workspace, 'service')
-    raster_utils.create_directories(
-            [intermediate_dir, output_dir, service_dir])
-    
-    # Append a _ to the suffix if it's not empty and doens't already have one
-    try:
-        file_suffix = args['suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
     
     # Get arguments
     demand_dict = args['demand_table']
@@ -855,6 +636,217 @@ def water_scarcity(args):
     LOGGER.info('Creating CSV Files')
     write_csv_table(water_shed_table, field_list_ws, ws_out_table_name)
     write_csv_table(sub_shed_table, field_list_sws, sws_out_table_name)
+
+def extract_datasource_table_by_key(
+        datasource_uri, key_field, wanted_list):
+    """Create a dictionary lookup table of the features in the attribute table
+        of the datasource referenced by datasource_uri.
+
+        datasource_uri - a uri to an OGR datasource
+        key_field - a field in datasource_uri that refers to a key (unique) value
+            for each row; for example, a polygon id.
+        wanted_list - a list of field names to add to the dictionary. This is
+            helpful if there are fields that are not wanted to be returned
+
+        returns a dictionary of the form {key_field_0: 
+            {field_0: value0, field_1: value1}...}"""
+
+    # Pull apart the datasource
+    datasource = ogr.Open(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    # Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    # Loop through each feature and build up the dictionary representing the
+    # attribute table
+    attribute_dictionary = {}
+    for feature_index in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_index)
+        feature_fields = {}
+        for field_name in field_names:
+            if field_name in wanted_list:
+                feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    return attribute_dictionary
+    
+def write_new_table(filename, fields, data):
+    """Create a new csv table from a dictionary
+
+        filename - a URI path for the new table to be written to disk
+        
+        fields - a python list of the column names. The order of the fields in
+            the list will be the order in how they are written. ex:
+            ['id', 'precip', 'total']
+        
+        data - a python dictionary representing the table. The dictionary
+            should be constructed with unique numerical keys that point to a
+            dictionary which represents a row in the table:
+            data = {0 : {'id':1, 'precip':43, 'total': 65},
+                    1 : {'id':2, 'precip':65, 'total': 94}}
+
+        returns - nothing
+    """
+    csv_file = open(filename, 'wb')
+
+    #  Sort the keys so that the rows are written in order
+    row_keys = data.keys()
+    row_keys.sort()    
+
+    csv_writer = csv.DictWriter(csv_file, fields)
+    #  Write the columns as the first row in the table
+    csv_writer.writerow(dict((fn, fn) for fn in fields))
+
+    # Write the rows from the dictionary
+    for index in row_keys:
+        csv_writer.writerow(data[index])
+
+    csv_file.close()
+
+def compute_water_yield_volume(shape_uri):
+    """Calculate the water yield volume per sub-watershed and the water yield
+        volume per hectare per sub-watershed. Add results to shape_uri, units
+        are cubic meters
+
+        shape_uri - a URI path to an ogr datasource for the sub-watershed
+            shapefile. This shapefiles features should have a 'wyield_mn'
+            attribute, which calculations are derived from
+
+        returns - Nothing"""
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+    
+    # The field names for the new attributes
+    vol_name = 'wyield_vol'
+    ha_name = 'wyield_ha'
+
+    # Add the new fields to the shapefile
+    for new_field in [vol_name, ha_name]:
+        field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
+        layer.CreateField(field_defn)
+
+    num_features = layer.GetFeatureCount()
+    # Iterate over the number of features (polygons) and compute volume
+    for feat_id in xrange(num_features):
+        feat = layer.GetFeature(feat_id)
+        wyield_mn_id = feat.GetFieldIndex('wyield_mn')
+        wyield_mn = feat.GetField(wyield_mn_id)
+        
+        geom = feat.GetGeometryRef()
+        feat_area = geom.GetArea()
+        
+        # Calculate water yield volume
+        vol = wyield_mn * feat_area / 1000.0
+        # Get the volume field index and add value
+        vol_index = feat.GetFieldIndex(vol_name)
+        feat.SetField(vol_index, vol)
+
+        # Calculate water yield volume per hectare
+        vol_ha = vol / (0.0001 * feat_area)
+        # Get the hectare field index and add value
+        ha_index = feat.GetFieldIndex(ha_name)
+        feat.SetField(ha_index, vol_ha)
+        
+        layer.SetFeature(feat)
+        
+def add_dict_to_shape(shape_uri, field_dict, field_name, shed_name):
+    """Add a new field to a shapefile with values from a dictionary.
+        The dictionaries keys should match to the values of a unique fields
+        values in the shapefile
+
+        shape_uri - a URI path to a ogr datasource on disk with a unique field
+            'shed_name'. The field 'shed_name' should have values that
+            correspond to the keys of 'field_dict'
+
+        field_dict - a python dictionary with keys mapping to values. These
+            values will be what is filled in for the new field 
+    
+        field_name - a string for the name of the new field to add
+        
+        shed_name - a string for the field name in 'shape_uri' that represents
+            the unique features
+
+        returns - nothing"""
+
+    shape = ogr.Open(shape_uri, 1)
+    layer = shape.GetLayer()
+    
+    # Create the new field
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
+
+    # Get the number of features (polygons) and iterate through each
+    num_features = layer.GetFeatureCount()
+    for feat_id in xrange(num_features):
+        feat = layer.GetFeature(feat_id)
+        
+        # Get the index for the unique field
+        ws_id = feat.GetFieldIndex(shed_name)
+        
+        # Get the unique value that will index into the dictionary as a key
+        ws_val = feat.GetField(ws_id)
+        
+        # Using the unique value from the field of the feature, index into the
+        # dictionary to get the corresponding value
+        field_val = float(field_dict[ws_val])
+
+        # Get the new fields index and set the new value for the field
+        field_index = feat.GetFieldIndex(field_name)
+        feat.SetField(field_index, field_val)
+
+        layer.SetFeature(feat)
+
+def sheds_map_subsheds(shape_uri, sub_shape_uri):
+    """Stores which sub watersheds belong to which watershed
+       
+       shape - an OGR shapefile of the watersheds
+       sub_shape - an OGR shapefile of the sub watersheds
+       
+       returns - a dictionary where the keys are the sub watersheds id's
+                 and whose value is the watersheds id it belongs to
+    """
+    
+    LOGGER.debug('Starting sheds_map_subsheds')
+    shape = ogr.Open(shape_uri)
+    sub_shape = ogr.Open(sub_shape_uri)
+    layer = shape.GetLayer(0)
+    sub_layer = sub_shape.GetLayer(0)
+    collection = {}
+    # For all the polygons in the watershed check to see if any of the polygons
+    # in the sub watershed belong to that watershed by checking the area of the
+    # watershed against the area of the Union of the watershed and sub watershed
+    # polygon.  The areas will be the same if the sub watershed is part of the
+    # watershed and will be different if it is not
+    for feat in layer:
+        index = feat.GetFieldIndex('ws_id')
+        ws_id = feat.GetFieldAsInteger(index)
+        geom = feat.GetGeometryRef()
+        sub_layer.ResetReading()
+        for sub_feat in sub_layer:
+            sub_index = sub_feat.GetFieldIndex('subws_id')
+            sub_id = sub_feat.GetFieldAsInteger(sub_index)
+            sub_geom = sub_feat.GetGeometryRef()
+            u_geom = sub_geom.Union(geom)
+            # We can't be sure that the areas will be identical because of
+            # floating point issues and complete accuracy so we make sure the
+            # difference in areas is within reason
+            # It also could be the case that the polygons were intended to 
+            # overlap but do not overlap exactly
+            if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
+                collection[sub_id] = ws_id
+            
+            sub_feat.Destroy()
+            
+        feat.Destroy()
+        
+    return collection
+
     
 def write_csv_table(shed_table, field_list, file_path):
     """Creates a CSV table and writes it to disk
