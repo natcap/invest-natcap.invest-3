@@ -581,10 +581,20 @@ def water_scarcity(args):
     LOGGER.info('Starting Water Scarcity Core Calculations')
     
     # Construct folder paths
-    workspace_dir = args['workspace_dir']
-    output_dir = workspace_dir + os.sep + 'Output'
-    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
-    service_dir = workspace_dir + os.sep + 'Service'
+    workspace = args['workspace_dir']
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
+    service_dir = os.path.join(workspace, 'service')
+    raster_utils.create_directories(
+            [intermediate_dir, output_dir, service_dir])
+    
+    # Append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
     
     # Get arguments
     demand_dict = args['demand_table']
@@ -596,15 +606,6 @@ def water_scarcity(args):
     water_shed_table = args['watershed_yield_table']
     sub_shed_table = args['subwatershed_yield_table']
     wyield_mean = args['water_yield_mn']
-        
-    # Suffix handling
-    suffix = args['results_suffix']
-    if len(suffix) > 0:
-        suffix_tif = '_' + suffix + '.tif'
-        suffix_csv = '_' + suffix + '.csv'
-    else:
-        suffix_tif = '.tif'
-        suffix_csv = '.csv'
         
     # Path for the calibrated water yield volume per sub-watershed
     wyield_calib_path = output_dir + os.sep + 'cyield_vol' + suffix_tif
