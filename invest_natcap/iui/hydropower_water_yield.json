@@ -1,0 +1,264 @@
+{
+    "id" : "window",
+    "label": "Hydropower / Water Yield",
+    "targetScript" : "invest_natcap.hydropower.hydropower_water_yield",
+    "modelName" : "hydropower_water_yield",
+    "localDocURI": "../documentation/reservoirhydropowerproduction.html",
+    "height": 500,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "../Hydropower",
+                    "required": true
+                },          
+				{        
+                    "id" : "precipitation",
+                    "args_id" : "precipitation_uri",
+                    "type": "file",
+                    "label": "Precipitation",
+                    "defaultValue": "../Base_Data/Freshwater/precip",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "potential_evapotranspiration",
+                    "args_id" : "eto_uri",
+                    "type": "file",
+                    "label": "Potential Evapotranspiration",
+                    "defaultValue": "../Base_Data/Freshwater/eto",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "soil_depth",
+                    "args_id" : "soil_depth_uri",
+                    "type": "file",
+                    "label": "Soil Depth",
+                    "defaultValue": "../Base_Data/Freshwater/soil_depth",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "plant_available_water_fraction",
+                    "args_id" : "pawc_uri",
+                    "type": "file",
+                    "label": "Plant Available Water Fraction",
+                    "defaultValue": "../Base_Data/Freshwater/pawc",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {        
+                    "id" : "land_use",
+                    "args_id" : "lulc_uri",
+                    "type": "file",
+                    "label": "Land Use",
+                    "defaultValue": "../Base_Data/Freshwater/landuse_90",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },    
+                {
+                    "id" : "watersheds",
+                    "args_id": "watersheds_uri",
+                    "type": "file",
+                    "label": "Watersheds",
+                    "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR", 
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons",
+					       "projection": {"exists": true}
+                                             }],
+                                   "fieldsExist": ["ws_id"]
+                                   }
+                 },
+                 {
+                    "id" : "sub_watersheds",
+                    "args_id": "sub_watersheds_uri",
+                    "type": "file",
+                    "label": "Sub-Watersheds",
+                    "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR", 
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons",
+					       "projection": {"exists": true}
+                                             }],
+                                   "fieldsExist": ["subws_id"]
+                                   }
+                 },
+		         {
+                    "id" : "biophysical_table",
+                    "args_id": "biophysical_table_uri",
+                    "type": "file",
+                    "label": "Biophysical Table",
+                    "defaultValue": "../Hydropower/input/biophysical_table.csv",
+                    "required": true,
+                    "validateAs": { "type": "CSV",
+                                    "fieldsExist": ["lucode", "etk", "root_depth"],
+                                    "restrictions": [{"field": "lucode",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                  }},
+                                                     {"field": "etk",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                     }},
+                                                     {"field": "root_depth",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                     }}]}
+                 },
+                 {        
+                    "id" : "seasonality_constant",
+                    "args_id" : "seasonality_constant",
+                    "type": "text",
+                    "label": "Seasonality Constant",
+                    "defaultValue": "5",
+                    "required": true,
+                    "validText": "^[0-9]+\\.?[0-9]+$"
+                 },
+                 {        
+                    "id" : "results_suffix",
+                    "args_id" : "results_suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "required": false
+                }     
+                
+            ]
+        },
+        {
+            "id" : "water_scarcity_container",
+            "args_id" : "water_scarcity_container",
+            "type" : "container",
+            "label" : "Water Scarcity",
+            "collapsible" : true,
+            "defaultValue" : false,
+            "elements" : [
+                {
+                    "id" : "water_scarcity_list",
+                    "type" : "list",
+                    "elements" : [
+                     {
+                        "id" : "demand_table",
+                        "args_id": "demand_table_uri",
+                        "type": "file",
+                        "label": "Water Demand Table",
+                        "defaultValue": "../Hydropower/input/water_demand_table.csv",
+                        "required": true,
+                        "validateAs": { "type": "CSV",
+                                        "fieldsExist": ["lucode", "demand"],
+                                        "restrictions": [{"field": "lucode",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                      }},
+                                                        {"field": "demand",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }}]}
+                     },   
+                     {
+                        "id" : "hydropower_calibration_table",
+                        "args_id": "hydro_calibration_table_uri",
+                        "type": "file",
+                        "label": "Hydropower Calibration Table",
+                        "defaultValue": "../Hydropower/input/hydropower_calibration_table.csv",
+                        "required": true,
+                        "validateAs": { "type": "CSV",
+                                        "fieldsExist": ["ws_id", "calib"],
+                                        "restrictions": [{"field": "ws_id",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                      }},
+                                                        {"field": "calib",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[0-9]*\\.?[0-9]+$"}
+                                                                      }}]}
+                     }
+                    ]
+                }
+            ]
+        },
+        {
+            "id" : "valuation_container",
+            "args_id" : "valuation_container",
+            "type" : "container",
+            "label" : "Valuation",
+            "collapsible" : true,
+            "defaultValue" : false,
+            "enabledBy": "water_scarcity_container", 
+            "elements" : [
+                {
+                    "id" : "valuation_list",
+                    "type" : "list",
+                    "elements" : [
+                    {        
+                        "id" : "calibrated_water_yield_vol",
+                        "args_id" : "cyield_uri",
+                        "type": "file",
+                        "label": "Calibrated Water Yield (volume)",
+                        "defaultValue": "../Hydropower/Output/cyield_vol.tif",
+                        "required": true,
+                        "validateAs": {"type": "GDAL"}
+                    },
+                    {
+                        "id" : "hydropower_valuation_table",
+                        "args_id": "valuation_table_uri",
+                        "type": "file",
+                        "label": "Hydropower Valuation Table",
+                        "defaultValue": "../Hydropower/input/hydropower_valuation_table.csv",
+                        "required": true,
+                        "validateAs": { "type": "CSV",
+                                        "fieldsExist": ["ws_id", "time_span", "discount", "efficiency", "fraction", "cost", "height", "kw_price"],
+                                        "restrictions": [{"field": "ws_id",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                      }},
+                                                        {"field": "time_span",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                      }},                                                    
+                                                        {"field": "discount",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }},                                                    
+                                                        {"field": "efficiency",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }},                                                    
+                                                        {"field": "fraction",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }},                                                    
+                                                        {"field": "cost",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }},                                                    
+                                                        {"field": "height",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }},
+                                                        
+                                                        {"field": "kw_price",
+                                                        "validateAs":{"type": "number",
+                                                                      "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$"}
+                                                                      }}]}
+                     }
+                    ]
+                }
+            ]
+        }
+
+    ]
+}
