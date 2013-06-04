@@ -62,7 +62,7 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
     temp_file_uri = raster_utils.temporary_filename()
     new_file = TestWriter(temp_file_uri, 'w+')
 
-    cls_exists = test_file.class_exists(test_class_name)
+    cls_exists = test_file.has_class(test_class_name)
     test_exists = test_file.class_has_test(test_class_name, test_func_name)
 
     if test_exists:
