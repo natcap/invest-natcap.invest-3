@@ -120,7 +120,7 @@ def execute(args):
     threshold_table = raster_utils.get_lookup_from_csv(
         args['water_purification_threshold_table_uri'], 'ws_id')
     valuation_lookup = None
-    if 'water_purification_valuation_table_uri' in args:
+    if args['valuation_enabled']:
         valuation_lookup = raster_utils.get_lookup_from_csv(
             args['water_purification_valuation_table_uri'], 'ws_id')
     _validate_inputs(nutrients_to_process, lucode_to_parameters,
