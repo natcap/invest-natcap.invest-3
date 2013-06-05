@@ -171,7 +171,8 @@ if platform.system() == 'Windows':
               'invest_natcap/iui/nutrient.json',
               'invest_natcap/iui/wind_energy.json',
               'invest_natcap/iui/coastal_vulnerability.json',
-              'geos_c.dll']))
+              'geos_c.dll',
+              'msvcr90.dll']))
     data_files.append(('invest_natcap/recreation',
           ['invest_natcap/recreation/recreation_client_config.json']))
     data_files.extend(matplotlib.get_py2exe_datafiles())
