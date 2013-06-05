@@ -37,7 +37,7 @@ def archive_uri(name=None):
         calling_function = inspect.stack()[1]
         name = calling_function.__name__
 
-    return(os.path.join(INPUT_ARCHIVE, name))
+    return(os.path.join(INPUT_ARCHIVES, name))
 
 def is_multi_file(filename):
     """Check if the filename given is a file with multiple parts to it, such as
@@ -316,7 +316,7 @@ def format_dictionary(input_dict, types_lookup={}):
             try:
                 new_list.append(types[item.__class__](item))
             except KeyError:
-                new_list.append(value)
+                new_list.append(item)
         return new_list
 
     types = {
