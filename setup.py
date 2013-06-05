@@ -113,7 +113,8 @@ if platform.system() == 'Windows':
             'dist_dir': DIST_DIR,
             'packages': packages,
             'skip_archive': True,
-            'dll_excludes': ['POWERPROF.dll']
+            'dll_excludes': ['POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll',
+                'msvcp90.dll', 'msvcr90.dll']
             }
          }
 
