@@ -198,6 +198,8 @@ def execute(args):
         LOGGER.info('Creating species-specific raster URIs')
         biophysical_args['species'] = {}
         for species in species_list:
+            # Casting to UTF-8 so that LOGGER won't crash if species is UTF-8
+            species = unicode(species, "utf-8")
             LOGGER.info('Creating rasters for %s', species)
             biophysical_args['species'][species] = {}
             for group, prefix, folder in species_rasters:
