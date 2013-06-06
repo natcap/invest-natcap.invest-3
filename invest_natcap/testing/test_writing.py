@@ -7,7 +7,7 @@ import invest_natcap.testing
 from invest_natcap import raster_utils
 
 class TestWriter(object):
-    def __init__(self, file_uri, mode='w+', encoding='utf-8'):
+    def __init__(self, file_uri, mode='a', encoding='utf-8'):
         self.file_uri = file_uri
         self.test_file = codecs.open(file_uri, mode, encoding)
 
