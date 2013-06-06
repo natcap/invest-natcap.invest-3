@@ -48,10 +48,10 @@ class DynamicElement(QtGui.QWidget):
 
         # Save a local logger instance with the logger name reflecting the class
         # we're in.
-        self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s.%s' %
-            (self.__class__.__name__, attributes['id'][0:10]))
+        #self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s.%s' %
+        #    (self.__class__.__name__, attributes['id'][0:10]))
 
-        self.LOGGER.debug('Initializing element %s', attributes['id'])
+        #self.LOGGER.debug('Initializing element %s', attributes['id'])
         #save a copy of the user-defined attributes for this element.  Based
         # on the specification of the JSON config file, the attributes array 
         #may contain the attributes for other, to-be-created, elements.
@@ -126,9 +126,9 @@ class DynamicElement(QtGui.QWidget):
         return False
 
     def setState(self, state, includeSelf=True, recursive=True):
-        self.LOGGER.debug('Setting state in %s', self.attributes['id'])
-        self.LOGGER.debug('state=%s, includeSelf=%s, recursive=%s',
-            state, includeSelf, recursive)
+        #self.LOGGER.debug('Setting state in %s', self.attributes['id'])
+        #self.LOGGER.debug('state=%s, includeSelf=%s, recursive=%s',
+        #    state, includeSelf, recursive)
         if includeSelf:
             self.setEnabled(state)
             for element in self.elements:
@@ -963,10 +963,10 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
         #set the title of the container
         self.setTitle(attributes['label'])
-        self.LOGGER.debug('Title=%s', attributes['label'])
+        #self.LOGGER.debug('Title=%s', attributes['label'])
 
         if 'collapsible' in self.attributes:
-            self.LOGGER.debug('Collapsible=%s', self.attributes['collapsible'])
+            #self.LOGGER.debug('Collapsible=%s', self.attributes['collapsible'])
             #this attribute of QtGui.QGroupBox determines whether the container
             #will sport a hide/reveal checkbox.
             self.setCheckable(self.attributes['collapsible'])
@@ -974,7 +974,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
             if self.attributes['collapsible'] == True:
                 for element in self.elements:
-                    self.LOGGER.debug('Hiding element %s', element)
+                    #self.LOGGER.debug('Hiding element %s', element)
                     element.setVisible(False)
 
                 self.toggled.connect(self.toggleHiding)
@@ -992,7 +992,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
         if 'enabled' in self.attributes:
-            self.LOGGER.debug('Setting enabled=%s', self.attributes['enabled'])
+            #self.LOGGER.debug('Setting enabled=%s', self.attributes['enabled'])
             self.setEnabled(self.attributes['enabled'])
 
     def toggleHiding(self, state):
@@ -1001,16 +1001,16 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
             returns nothing."""
 
-        self.LOGGER.debug('Toggling hiding of contained elements.')
+        #self.LOGGER.debug('Toggling hiding of contained elements.')
         for element in self.elements:
-            self.LOGGER.debug('Setting %s to state=%s', element, state)
+            #self.LOGGER.debug('Setting %s to state=%s', element, state)
             element.setVisible(state)
             element.setEnabled(state)
 
-        self.LOGGER.debug('Setting minimum size from local sizeHint')
+        #self.LOGGER.debug('Setting minimum size from local sizeHint')
         self.setMinimumSize(self.sizeHint())
 
-        self.LOGGER.debug('Calling down to DynamicGroup.setState')
+        #self.LOGGER.debug('Calling down to DynamicGroup.setState')
         DynamicGroup.setState(self, state, includeSelf=False, recursive=True)
 
     def resetValue(self):
@@ -1047,8 +1047,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         #   - checkable (collapsible), and
         #   - checked,
         # then, we want to set the checkbox to be unchecked.
-        self.LOGGER.debug('State=%s.  Checkable=%s. Checked=%s', state,
-            self.isCheckable(), self.isChecked())
+        #self.LOGGER.debug('State=%s.  Checkable=%s. Checked=%s', state,
+        #    self.isCheckable(), self.isChecked())
         if state == False and self.isCheckable() and self.isChecked():
             self.setChecked(False)
 
@@ -2019,11 +2019,11 @@ class TabbedGroup(QtGui.QTabWidget, DynamicGroup):
             if self.isTabEnabled(tab_num):
                 self.setCurrentIndex(tab_num)
                 num_enabled += 1
-        self.LOGGER.debug('%s tabs enabled', num_enabled)
+        #self.LOGGER.debug('%s tabs enabled', num_enabled)
 
         if num_enabled == 0 and self.count() > 0:
             self.setCurrentIndex(0)
-            self.LOGGER.debug('Active tab=%s (leftmost)', 0)
+            #self.LOGGER.debug('Active tab=%s (leftmost)', 0)
 
 
 class Tab(DynamicGroup):
@@ -2033,8 +2033,8 @@ class Tab(DynamicGroup):
         self.index = None
 
         if 'condenseElements' in self.attributes:
-            self.LOGGER.debug('Condense elements=%s',
-                self.attributes['condenseElements'])
+            #self.LOGGER.debug('Condense elements=%s',
+            #    self.attributes['condenseElements'])
             if self.attributes['condenseElements'] == True:
                 layout.insertStretch(-1)
 
@@ -2645,7 +2645,7 @@ class ExecRoot(Root):
         if height > screen_height:
             height = screen_height - 50
 
-        self.LOGGER.debug('Width=%s, height=%s', width, height)
+        #self.LOGGER.debug('Width=%s, height=%s', width, height)
         self.main_window.resize(width, height)
         center_window(self.main_window)
 
