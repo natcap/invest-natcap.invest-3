@@ -421,6 +421,9 @@ def clip_and_reproject_maps(
             projected output step on data_obj 
         aoi_reprojected_uri - a string of the desired uri path for the
             reprojected output step on the aoi 
+        data_obj_uri - a URI path to the data_obj. This is for a patch so that
+            we can use vectorize_datasets instead of vectorize_rasters on a few
+            calls without doing a full refactor (optional) Default is None
 
         returns - a Dataset or DataSource clipped and projected to an area
             of interest"""
@@ -465,6 +468,10 @@ def clip_and_reproject_maps(
         LOGGER.info('Clipping dataset')
         # Clip the data obj to the AOI
         data_obj_clipped = None
+        # PATCH : Rob was having issues in vectorize_rasters with really large
+        # DEM. This is a patch to use vectorize_datasets without fully
+        # refactoring. If the optional argument is sent through then we run
+        # vectorize_datasets
         if data_obj_uri is None:
             data_obj_clipped = raster_utils.clip_dataset(
                     data_obj, aoi_prj_to_obj, clipped_uri)
