@@ -67,7 +67,7 @@
                     "dataType": "string",
                     "helpText": "Each of these represents an option for decay equations for the buffered stressors. If stressor buffering is desired, these equtions will determine the rate at which stressor data is reduced."
                 },
-		        {
+	        {
                     "id" : "max_rating",
                     "args_id" : "max_rating",
                     "type": "text",
