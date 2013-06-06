@@ -496,7 +496,8 @@ class DynamicPrimitive(DynamicElement):
             # If the root element has not yet been set, we should just return since
             # validation will fail anyways.
             if self.root == None:
-                print "No root defined.  Skipping validation for %s" % self.attributes['id']
+                LOGGER.warn("No root defined.  Skipping validation for %s",
+                    self.attributes['id'])
                 return
 
             if self.isEnabled() and self.validator != None and\
@@ -1125,7 +1126,8 @@ class MultiElement(Container):
                 default_list = attributes['defaultValue']
 
             for default_value in default_list:
-                print(attributes['id'], default_value)
+                LOGGER.debug('Setting default value of %s to "%s"',
+                    attributes['id'], default_value)
                 self.add_element(default_value)
 
     def add_element_callback(self, event=None):
@@ -1181,7 +1183,8 @@ class MultiElement(Container):
             new_element.setValue(default_value)
             add_element = True
 
-        print(self.attributes['id'], default_value, add_element)
+        self.LOGGER.debug('Adding element id:"%s default:%s, add_element=%s"',
+            self.attributes['id'], default_value, add_element)
         if add_element:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
@@ -2579,8 +2582,8 @@ class ExecRoot(Root):
                 element.set_element_state(value)
             except Exception as e:
                 print traceback.print_exc()
-                print 'Error \'%s\' when setting lastrun value %s to %s' %\
-                    (e, value, str(id))
+                self.LOGGER.warn(('Error \'%s\' when setting lastrun value '
+                    '%s to %s'), e, value, str(id))
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 
