@@ -134,7 +134,7 @@
 	},
 	{
 	    "id" : "valuation_container",
-	    "args_id" : "valuation_container",
+	    "args_id" : "valuation_enabled",
 	    "type" : "container",
 	    "label" : "Valuation",
 	    "collapsible" : true,
