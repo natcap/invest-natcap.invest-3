@@ -325,8 +325,12 @@ class GISTest(unittest.TestCase):
         archive_2_size = len(archive_2_files)
         if archive_1_size != archive_2_size:
             # find out which archive had more files.
-            raise AssertionError('Different files in archives A:%s and B:%s' %
-                (archive_1_size, archive_2_size))
+            missing_from_archive_1 = list(set(archive_2_files) -
+                set(archive_1_files))
+            missing_from_archive_2 = list(set(archive_1_files) -
+                set(archive_2_files))
+            raise AssertionError('Elements missing from A:%s, from B:%s' %
+                (missing_from_archive_1, missing_from_archive_2))
         else:
             # archives have the same number of files that we care about
             for file_1, file_2 in zip(archive_1_files, archive_2_files):
