@@ -738,7 +738,6 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
        """
 
     #Define the initial bounding box
-    LOGGER.info("vectorizing points")
     gt = raster.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
     bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
@@ -794,15 +793,13 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
-    LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), 'nearest', nodata)
-    LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
                             aggregate_uri = None, intermediate_directory = '',
-                            ignore_nodata = True):
+                            ignore_nodata=True):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -957,7 +954,7 @@ def aggregate_raster_values_uri(
     out_pixel_size = get_cell_size_from_uri(raster_uri)
     clipped_raster_uri = temporary_filename()
     vectorize_datasets(
-        [raster_uri], float, clipped_raster_uri, gdal.GDT_Float32,
+        [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
         raster_nodata, out_pixel_size, "intersection", 
         dataset_to_align_index=0, aoi_uri=shapefile_uri)
     clipped_raster = gdal.Open(clipped_raster_uri)
@@ -979,8 +976,14 @@ def aggregate_raster_values_uri(
     mask_band = mask_dataset.GetRasterBand(1)
 
     #This will store the sum/count with index of shapefile attribute
-    aggregate_dict_values = {}
-    aggregate_dict_counts = {}
+    shapefile_table = extract_datasource_table_by_key(
+        shapefile_uri, shapefile_field)
+
+    #Initialize these dictionaries to have the shapefile fields in the original
+    #datasource even if we don't pick up a value later
+    aggregate_dict_values = dict(
+        [(shapefile_id, 0.0) for shapefile_id in shapefile_table.iterkeys()])
+    aggregate_dict_counts = aggregate_dict_values.copy()
 
     #Loop over each row in out_band
     clipped_band = clipped_raster.GetRasterBand(1)
@@ -1005,13 +1008,9 @@ def aggregate_raster_values_uri(
                 attribute_sum = \
                     numpy.sum(masked_values[masked_values != raster_nodata])
 
-            try:
-                aggregate_dict_values[attribute_id] += attribute_sum
-                aggregate_dict_counts[attribute_id] += masked_values.size
-            except KeyError:
-                aggregate_dict_values[attribute_id] = attribute_sum
-                aggregate_dict_counts[attribute_id] = masked_values.size
-            
+            aggregate_dict_values[attribute_id] += attribute_sum
+            aggregate_dict_counts[attribute_id] += masked_values.size
+
     result_dict = {}
     for attribute_id in aggregate_dict_values:
         if threshold_amount_lookup != None:

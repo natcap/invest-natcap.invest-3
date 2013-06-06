@@ -389,6 +389,7 @@ class Executor(threading.Thread):
                 model_name = os.path.splitext(os.path.basename(module))[0]
                 LOGGER.debug('Loading %s from %s', model_name, model)
             else:
+                LOGGER.debug('PATH: %s', sys.path)
                 module_list = module.split('.')
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list

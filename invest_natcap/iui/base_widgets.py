@@ -50,6 +50,7 @@ class DynamicElement(QtGui.QWidget):
         # we're in.
         self.LOGGER = invest_natcap.iui.get_ui_logger('bw.%s.%s' %
             (self.__class__.__name__, attributes['id'][0:10]))
+        self.LOGGER.setLevel(logging.ERROR)
 
         self.LOGGER.debug('Initializing element %s', attributes['id'])
         #save a copy of the user-defined attributes for this element.  Based
@@ -495,7 +496,8 @@ class DynamicPrimitive(DynamicElement):
             # If the root element has not yet been set, we should just return since
             # validation will fail anyways.
             if self.root == None:
-                print "No root defined.  Skipping validation for %s" % self.attributes['id']
+                self.LOGGER.warn("No root defined.  Skipping validation for %s",
+                    self.attributes['id'])
                 return
 
             if self.isEnabled() and self.validator != None and\
@@ -1124,7 +1126,8 @@ class MultiElement(Container):
                 default_list = attributes['defaultValue']
 
             for default_value in default_list:
-                print(attributes['id'], default_value)
+                LOGGER.debug('Setting default value of %s to "%s"',
+                    attributes['id'], default_value)
                 self.add_element(default_value)
 
     def add_element_callback(self, event=None):
@@ -1180,7 +1183,8 @@ class MultiElement(Container):
             new_element.setValue(default_value)
             add_element = True
 
-        print(self.attributes['id'], default_value, add_element)
+        self.LOGGER.debug('Adding element id:"%s default:%s, add_element=%s"',
+            self.attributes['id'], default_value, add_element)
         if add_element:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
@@ -2406,10 +2410,13 @@ class MainWindow(QtGui.QMainWindow):
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
         self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
-        self.save_to_python = self.file_menu.addAction('Save to &python script...')
-        self.save_to_json = self.file_menu.addAction('Save to &JSON ...')
         self.exit_action = self.file_menu.addAction('Exit')
         self.menuBar().addMenu(self.file_menu)
+
+        self.dev_menu = QtGui.QMenu('&Development')
+        self.save_to_python = self.dev_menu.addAction('Save to &python script...')
+        self.save_to_json = self.dev_menu.addAction('Save to archivable &JSON...')
+        self.menuBar().addMenu(self.dev_menu)
 
         self.exit_action.triggered.connect(self.ui.closeWindow)
         self.save_file_action.triggered.connect(self.ui.save_parameters_to_file)
@@ -2483,7 +2490,7 @@ class ExecRoot(Root):
             model_name = model.split('.')[-1]
 
             filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
-                '%s.json' % model_name, filter = QtCore.QString('JSON file' +
+                '%s_archive.json' % model_name, filter = QtCore.QString('JSON file' +
                 ' (*.json);;All files (*.* *)'))
             filename = unicode(filename)
             if filename != '':
@@ -2575,8 +2582,8 @@ class ExecRoot(Root):
                 element.set_element_state(value)
             except Exception as e:
                 print traceback.print_exc()
-                print 'Error \'%s\' when setting lastrun value %s to %s' %\
-                    (e, value, str(id))
+                self.LOGGER.warn(('Error \'%s\' when setting lastrun value '
+                    '%s to %s'), e, value, str(id))
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 

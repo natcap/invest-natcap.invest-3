@@ -9,9 +9,13 @@ import functools
 import hashlib
 import filecmp
 import time
+import csv
 
 import numpy
+np = numpy
 from osgeo import gdal
+from osgeo import ogr
+
 
 from invest_natcap.iui import executor
 from invest_natcap.iui import fileio
@@ -66,10 +70,35 @@ def save_workspace(new_workspace):
     return test_inner_func
 
 
-def regression():
+def regression(input_archive, workspace_archive):
     """Decorator to unzip input data, run the regression test and compare the
-        outputs against the outputs on file."""
-    pass
+        outputs against the outputs on file.
+
+        input_archive - the path to a .tar.gz archive with the input data.
+        workspace_archive - the path to a .tar.gz archive with the workspace to
+            assert.
+         """
+
+    # item is the function being decorated
+    def test_inner_function(item):
+
+        @functools.wraps(item)
+        def test_and_assert_workspace(self, *args, **kwargs):
+            workspace = raster_utils.temporary_folder()
+            self.args = data_storage.extract_parameters_archive(workspace, input_archive)
+
+            # Actually run the test.  Assumes that self.args is used as the
+            # input arguments.
+            item(self)
+
+            # Extract the archived workspace to a new temporary folder and
+            # compare the two workspaces.
+            archived_workspace = raster_utils.temporary_folder()
+            data_storage.extract_archive(archived_workspace, workspace_archive)
+            self.assertWorkspace(workspace, archived_workspace)
+        return test_and_assert_workspace
+    return test_inner_function
+
 
 def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
     file_handler = fileio.JSONHandler(file_uri)
@@ -88,6 +117,8 @@ def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
 
     # collect the parameters into a single folder
     input_archive = input_archive_uri
+    if input_archive[-7:] == '.tar.gz':
+        input_archive = input_archive[:-7]
     data_storage.collect_parameters(arguments, input_archive)
     input_archive += '.tar.gz'
 
@@ -96,6 +127,8 @@ def build_regression_archives(file_uri, input_archive_uri, output_archive_uri):
     model.execute(model_args)
 
     archive_uri = output_archive_uri
+    if archive_uri[-7:] == '.tar.gz':
+        archive_uri = archive_uri[:-7]
     LOGGER.debug('Archiving the output workspace')
     shutil.make_archive(archive_uri, 'gztar', root_dir=workspace, logger=LOGGER)
 
@@ -136,7 +169,7 @@ class GISTest(unittest.TestCase):
             band_b = b_dataset.GetRasterBand(band_number)
 
             a_array = band_a.ReadAsArray(0, 0, band_a.XSize, band_a.YSize)
-            b_array = band_a.ReadAsArray(0, 0, band_b.XSize, band_b.YSize)
+            b_array = band_b.ReadAsArray(0, 0, band_b.XSize, band_b.YSize)
 
             try:
                 numpy.testing.assert_array_almost_equal(a_array, b_array)
@@ -243,17 +276,10 @@ class GISTest(unittest.TestCase):
 
         reader_a = csv.reader(a)
         reader_b = csv.reader(b)
-        a_list = np.array([])
-        b_list = np.array([])
 
-        for row in reader_a:
-            np.append(a_list, row)
-
-        for row in reader_b:
-            np.append(b_list, row)
-
-        self.assertEqual(a_list.shape, b_list.shape)
-        self.assertTrue((a_list==b_list).all())
+        for index, (a_row, b_row) in enumerate(zip(reader_a, reader_b)):
+            self.assertEqual(a_row, b_row,
+                'Rows differ at row %s: a=%s b=%s' % (index, a_row, b_row))
 
     def assertMD5(self, uri, regression_hash):
         """Tests if the input file has the same hash as the regression hash
@@ -264,16 +290,22 @@ class GISTest(unittest.TestCase):
 
         self.assertEqual(get_hash(uri), regression_hash, "MD5 Hashes differ.")
 
-    def assertArchive(self, archive_1_uri, archive_2_uri):
+    def assertArchives(self, archive_1_uri, archive_2_uri):
         """Unzip the two archives and compare its contents.  Archives must be
             tar.gz."""
 
-        # uncompress the two archives
         archive_1_folder = raster_utils.temporary_folder()
         data_storage.extract_archive(archive_1_folder, archive_1_uri)
 
         archive_2_folder = raster_utils.temporary_folder()
         data_storage.extract_archive(archive_2_folder, archive_2_uri)
+
+        self.assertWorkspace(archive_1_folder, archive_2_folder)
+
+    def assertWorkspace(self, archive_1_folder, archive_2_folder):
+        """Check the contents of two folders against each other."""
+
+        # uncompress the two archives
 
         archive_1_files = []
         archive_2_files = []
@@ -293,18 +325,8 @@ class GISTest(unittest.TestCase):
         archive_2_size = len(archive_2_files)
         if archive_1_size != archive_2_size:
             # find out which archive had more files.
-            if archive_1_size > archive_2_size:
-                bigger_list = archive_1_files
-                smaller_list = archive_2_files
-            else:
-                bigger_list = archive_2_files
-                smaller_list = archive_1_files
-
-            # eliminate all the smaller files from the bigger list
-            for filepath in smaller_list:
-                bigger_list.remove(filepath)
-
-            raise AssertionError('Problem!')
+            raise AssertionError('Different files in archives A:%s and B:%s' %
+                (archive_1_size, archive_2_size))
         else:
             # archives have the same number of files that we care about
             for file_1, file_2 in zip(archive_1_files, archive_2_files):
