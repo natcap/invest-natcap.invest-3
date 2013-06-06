@@ -325,6 +325,10 @@ class GISTest(unittest.TestCase):
         archive_2_size = len(archive_2_files)
         if archive_1_size != archive_2_size:
             # find out which archive had more files.
+            archive_1_files = map(lambda x: x.replace(archive_1_folder, ''),
+                archive_1_files)
+            archive_2_files = map(lambda x: x.replace(archive_2_folder, ''),
+                archive_2_files)
             missing_from_archive_1 = list(set(archive_2_files) -
                 set(archive_1_files))
             missing_from_archive_2 = list(set(archive_1_files) -
