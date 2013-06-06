@@ -268,14 +268,6 @@ def execute(args):
         # Add aggregated values to sub-watershed shapefile under new field
         # 'key_name'
         add_dict_to_shape(wyield_sub_sheds_uri, key_dict, key_name, 'subws_id')
-  
-    # Aggregate the water yield by summing pixels over sub-watersheds
-    wyield_sum_dict = raster_utils.aggregate_raster_values_uri(
-            wyield_clipped_path, sub_sheds_uri, 'subws_id', 'sum')
-    
-    # Add aggregated water yield sums to sub-watershed shapefile
-    add_dict_to_shape(
-            wyield_sub_sheds_uri, wyield_sum_dict, 'wyield_sum', 'subws_id')
     
     # Compute the water yield volume and water yield volume per hectare. The
     # values per sub-watershed will be added as fields in the sub-watersheds
@@ -302,7 +294,7 @@ def execute(args):
     # List of wanted fields to output in the sub-watershed CSV table
     field_list_sws = [
             'ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
-            'wyield_mn', 'wyield_sum', 'wyield_vol']
+            'wyield_mn', 'wyield_vol']
     
     # Get a dictionary from the sub-watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
@@ -328,20 +320,12 @@ def execute(args):
         # Add aggregated values to watershed shapefile under new field
         # 'key_name'
         add_dict_to_shape(wyield_sheds_uri, key_dict, key_name, 'ws_id')
-
-    # Aggregate the water yield by summing pixels over the watersheds
-    wyield_sum_dict = raster_utils.aggregate_raster_values_uri(
-            wyield_clipped_path, sheds_uri, 'ws_id', 'sum')
-        
-    # Add aggregated water yield sums to watershed shapefile
-    add_dict_to_shape(wyield_sheds_uri, wyield_sum_dict, 'wyield_sum', 'ws_id')
     
     compute_water_yield_volume(wyield_sheds_uri)
     
     # List of wanted fields to output in the watershed CSV table
     field_list_ws = [
-            'ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 'wyield_sum',
-            'wyield_vol']
+            'ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 'wyield_vol']
     
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
