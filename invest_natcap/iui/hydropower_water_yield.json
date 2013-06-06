@@ -203,15 +203,6 @@
                     "id" : "valuation_list",
                     "type" : "list",
                     "elements" : [
-                    {        
-                        "id" : "calibrated_water_yield_vol",
-                        "args_id" : "cyield_uri",
-                        "type": "file",
-                        "label": "Calibrated Water Yield (volume)",
-                        "defaultValue": "../Hydropower/Output/cyield_vol.tif",
-                        "required": true,
-                        "validateAs": {"type": "GDAL"}
-                    },
                     {
                         "id" : "hydropower_valuation_table",
                         "args_id": "valuation_table_uri",
