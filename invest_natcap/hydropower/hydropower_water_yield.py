@@ -129,7 +129,8 @@ def execute(args):
     
     # Paths for the watershed and subwatershed tables
     wyield_ws_table_uri = os.path.join(output_dir, 'water_yield_watershed.csv') 
-    wyield_sws_table_uri = os.path.join(output_dir, 'water_yield_subwatershed.csv') 
+    wyield_sws_table_uri = os.path.join(
+            output_dir, 'water_yield_subwatershed.csv') 
     
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
@@ -167,8 +168,8 @@ def execute(args):
     soil_depth_nodata = raster_utils.get_nodata_from_uri(soil_depth_uri)
     pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
     
-    # Dictionary of out_nodata values corresponding to values for fractp_op that 
-    # will help avoid any out_nodata calculation issues
+    # Dictionary of out_nodata values corresponding to values for fractp_op
+    # that will help avoid any out_nodata calculation issues
     fractp_nodata_dict = {'etk':etk_nodata, 
                           'root':root_nodata,
                           'precip':precip_nodata,
@@ -397,7 +398,8 @@ def execute(args):
    
     # Calculate the calibrated water yield for sheds and sub-sheds
     LOGGER.debug('Calculating CYIELD')
-    calculate_cyield_vol(wyield_sub_sheds_uri, calib_dict, scarcity_sub_sheds_uri)
+    calculate_cyield_vol(
+            wyield_sub_sheds_uri, calib_dict, scarcity_sub_sheds_uri)
     calculate_cyield_vol(wyield_sheds_uri, calib_dict, scarcity_sheds_uri)
     
     # Create demand raster from table values to use in future calculations
@@ -417,7 +419,8 @@ def execute(args):
     
     # Add aggregated consumption to sheds and sub-sheds shapefiles
     add_dict_to_shape(
-            scarcity_sub_sheds_uri, consump_vol_dict_sws, 'consum_vol', 'subws_id')
+            scarcity_sub_sheds_uri, consump_vol_dict_sws, 'consum_vol',
+            'subws_id')
     add_dict_to_shape(
             scarcity_sheds_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
     
@@ -434,7 +437,8 @@ def execute(args):
     
     # Add aggregated consumption means to sheds and sub-sheds shapefiles
     add_dict_to_shape(
-            scarcity_sub_sheds_uri, consump_mn_dict_sws, 'consum_mn', 'subws_id')
+            scarcity_sub_sheds_uri, consump_mn_dict_sws, 'consum_mn',
+            'subws_id')
     add_dict_to_shape(
             scarcity_sheds_uri, consump_mn_dict_ws, 'consum_mn', 'ws_id')
     
@@ -511,7 +515,7 @@ def execute(args):
     LOGGER.info('Starting Valuation Calculation')
     
     # Paths for the watershed and subwatershed tables
-    valuation_table_ws_uri= os.path.join(
+    valuation_table_ws_uri = os.path.join(
             service_dir, 'hydropower_value_watershed.csv')
     valuation_table_sws_uri = os.path.join(
             service_dir, 'hydropower_value_subwatershed.csv') 
@@ -532,7 +536,8 @@ def execute(args):
     valuation_table_file.close()
     
     # Making a copy of watershed and sub-watershed to add valuation results to
-    valuation_sub_sheds_uri = os.path.join(output_dir, 'valuation_sub_sheds.shp')
+    valuation_sub_sheds_uri = os.path.join(
+            output_dir, 'valuation_sub_sheds.shp')
     valuation_sheds_uri = os.path.join(output_dir, 'valuation_sheds.shp')
     raster_utils.copy_datasource_uri(sub_sheds_uri, valuation_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, valuation_sheds_uri)
@@ -579,7 +584,8 @@ def execute(args):
     field_list_ws = field_list_ws + val_field_list_ws[1:]
    
     # Generate the final CSV files
-    write_new_table(valuation_table_sws_uri, field_list_sws, hydropower_dict_sws)
+    write_new_table(
+            valuation_table_sws_uri, field_list_sws, hydropower_dict_sws)
     write_new_table(valuation_table_ws_uri, field_list_ws, hydropower_dict_ws)
 
 def compute_subshed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
@@ -826,7 +832,6 @@ def calculate_cyield_vol(
     scarcity_layer = scarcity_ds.GetLayer()
     
     # The field names for the new attributes
-    vol_name = 'wyield_vol'
     cyield_name = 'cyield_vol'
 
     # Add the new fields to the shapefile
