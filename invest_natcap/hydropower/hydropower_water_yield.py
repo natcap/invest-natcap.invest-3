@@ -822,7 +822,7 @@ def calculate_cyield_vol(
     wyield_ds = ogr.Open(wyield_shed_uri)
     wyield_layer = wyield_ds.GetLayer()
    
-   scarcity_ds = ogr.Open(scarcity_shed_uri, 1)
+    scarcity_ds = ogr.Open(scarcity_shed_uri, 1)
     scarcity_layer = scarcity_ds.GetLayer()
     
     # The field names for the new attributes
@@ -1064,3 +1064,4 @@ def sheds_map_subsheds(shape_uri, sub_shape_uri):
         feat.Destroy()
         
     return collection
+
