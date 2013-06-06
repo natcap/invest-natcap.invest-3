@@ -495,7 +495,8 @@ class DynamicPrimitive(DynamicElement):
             # If the root element has not yet been set, we should just return since
             # validation will fail anyways.
             if self.root == None:
-                print "No root defined.  Skipping validation for %s" % self.attributes['id']
+                #self.LOGGER.debug('No root defined.  Skipping valudation for %s',
+                #    self.attributes['id'])
                 return
 
             if self.isEnabled() and self.validator != None and\
