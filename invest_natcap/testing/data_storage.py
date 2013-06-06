@@ -142,7 +142,11 @@ def collect_parameters(parameters, archive_uri):
         if os.path.isdir(filepath):
             parent_folder = os.path.basename(filepath)
         else:
-            parent_folder = os.path.basename(os.path.dirname(filepath))
+            folder_name = os.path.basename(os.path.dirname(filepath))
+            file_name = os.path.basename(filepath)
+            parent_folder = os.path.join(folder_name, file_name)
+
+        LOGGER.debug('Temp folder seed: %s', parent_folder)
 
         new_vector_dir = make_vector_dir(temp_workspace, parent_folder)
         if driver.name == 'ESRI Shapefile':
