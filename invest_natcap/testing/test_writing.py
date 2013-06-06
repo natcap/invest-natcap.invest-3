@@ -65,14 +65,39 @@ class TestWriter(object):
             return (False, None)
 
     def class_has_test(self, test_class_name, test_func_name):
-        module = imp.load_source('model', self.file_uri)
         try:
-            cls_instance = getattr(module, test_class_name)
-            function = getattr(cls_instance, test_func_name)
-            return True
-        except AttributeError:
+            module = imp.load_source('model', self.file_uri)
+            try:
+                cls_instance = getattr(module, test_class_name)
+                function = getattr(cls_instance, test_func_name)
+                return True
+            except AttributeError:
+                return False
+        except ImportError:
+            # Occurs when there's a problem importing, like with
+            # invest_test_core.  In this case, we loop line by line through the
+            # file and check whether theres is the target function in the class
+            # given.
+            in_test_class = False
+            for line in self.test_file:
+                if 'class %s(' in line:
+                    in_test_class = True
+                elif in_test_class:
+                    if 'def %s(self):' in line:
+                        self.test_file.seek(0)
+                        return True
+                    elif line[0:6] == 'class ':
+                        # we've ended the active class, have not found the
+                        # target test.
+                        self.test_file.seek(0)
+                        return False
+                    else:
+                        # We're still in the target class but have not found the
+                        # test yet.  Keep going.
+                        pass
+            # If we reach the end of the file, we haven't found the class or the
+            # target function in the class, return False.
             return False
-
 
 
 def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
