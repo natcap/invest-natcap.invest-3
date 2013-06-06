@@ -321,6 +321,18 @@ class PollinationSmokeTest(unittest.TestCase):
 import invest_natcap.testing
 class PollinationRegression(invest_natcap.testing.GISTest):
     @invest_natcap.testing.regression(
+        input_archive="data/pollination/input_pollination_noag_cur_val.tar.gz",
+        workspace_archive="data/pollination/output_pollination_noag_cur_val.tar.gz")
+    def test_pollination_noag_cur_val(self):
+        invest_natcap.pollination.pollination.execute(self.args)
+
+    @invest_natcap.testing.regression(
+        input_archive="data/pollination/input_pollination_noag_cur_noval.tar.gz",
+        workspace_archive="data/pollination/output_pollination_noag_cur_noval.tar.gz")
+    def test_pollination_noag_cur_noval(self):
+        invest_natcap.pollination.pollination.execute(self.args)
+
+    @invest_natcap.testing.regression(
         input_archive="data/pollination/input_noag_cur_only.tar.gz",
         workspace_archive="data/pollination/output_noag_cur_only.tar.gz")
     def test_noag_cur_only(self):
