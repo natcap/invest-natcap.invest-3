@@ -38,10 +38,30 @@ class TestWriter(object):
         self.write('')
 
     def has_class(self, test_class_name):
-        module = imp.load_source('model', self.file_uri)
         try:
-            return (True, getattr(module, test_class_name).__bases__)
-        except AttributeError:
+            module = imp.load_source('model', self.file_uri)
+            try:
+                return (True, getattr(module, test_class_name).__bases__)
+            except AttributeError:
+                return (False, None)
+        except ImportError:
+            # Occurs when there's a problem importing, like with
+            # invest_test_core.  In this case, we loop line by line through the
+            # file and check whether the class exists and, if so, get the class
+            # base(s).
+            for line in self.test_file:
+                if 'class %s(' % test_class_name in line:
+                    cls_base = ''
+                    started_base_cls = False
+                    for char in line:
+                        if char == '(' and not started_base_cls:
+                            started_base_cls == True
+                        elif char == ')':
+                            self.test_file.seek(0)
+                            return(True, [cls_base])
+                        else:
+                            cls_base += char
+            self.test_file.seek(0)
             return (False, None)
 
     def class_has_test(self, test_class_name, test_func_name):
