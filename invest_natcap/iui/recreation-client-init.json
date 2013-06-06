@@ -40,6 +40,13 @@
                                     "required": true
                                 },
                                 {
+                                    "id" : "grid",
+                                    "args_id" : "grid",
+                                    "type" : "checkbox",
+                                    "label" : "Grid AOI",
+                                    "defaultValue" : true
+                                },
+                                {
                                     "id": "grid_type",
                                     "args_id" : "grid_type",
                                     "type": "dropdown",
@@ -47,7 +54,8 @@
                                     "options":["rectangular", "hexagonal"],
                                     "returns": {"mapValues" : {"rectangular" : 0, "hexagonal" : 1}},
                                     "defaultValue": 0,
-                                    "required": true
+                                    "required": true,
+                                    "enabledBy" : "grid"
                                 },
                                 {
                                     "id" : "cell_size",
@@ -57,7 +65,8 @@
                                     "defaultValue": "1",
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
-                                    "required": true
+                                    "required": true,
+                                    "enabledBy" : "grid"
                                 },
                                 {
                                     "id" : "comments",

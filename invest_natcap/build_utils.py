@@ -10,6 +10,7 @@ from distutils.sysconfig import get_python_lib
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 LOGGER = logging.getLogger('build_utils')
+LOGGER.setLevel(logging.ERROR)
 
 def invest_version(uri=None, force_new=False, attribute='version_str',
         exec_dir=None):
