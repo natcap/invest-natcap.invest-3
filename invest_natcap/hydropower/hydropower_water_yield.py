@@ -16,7 +16,7 @@ import hydropower_cython_core
 LOGGER = logging.getLogger('hydropower_core')
 
 def execute(args):
-    """Executes the water_yield model
+    """Executes the hydropower/water_yield model
         
         args - a python dictionary with at least the following possible entries:
     
@@ -65,6 +65,19 @@ def execute(args):
         
         args['results_suffix'] - a string that will be concatenated onto the
            end of file names (optional)
+        
+        args['demand_table_uri'] - a uri to an input CSV table of LULC classes,
+            showing consumptive water use for each landuse / land-cover type
+            (cubic meters per year) (required for water scarcity)
+        
+        args['hydro_calibration_table_uri'] - a  uri to an input CSV table of 
+            hydropower stations with associated calibration values (required)
+        
+        args['valuation_table_uri'] - a uri to an input CSV table of 
+            hydropower stations with the following fields (required for
+            valuation):
+            ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
+            'cost', 'height', 'kw_price')
            
         returns - nothing"""
         
@@ -346,15 +359,6 @@ def execute(args):
         # quit now
         return
 
-    """Executes the water scarcity model
-        
-        args['demand_table'] - a dictionary of LULC classes,
-            showing consumptive water use for each landuse / land-cover type
-            (required)
-        args['hydro_calibration_table'] - a dictionary of 
-            hydropower stations with associated calibration values (required)
-        
-        returns nothing"""
 
     LOGGER.info('Starting Water Scarcity Core Calculations')
     
@@ -487,20 +491,6 @@ def execute(args):
         LOGGER.debug('Valuation Not Selected')
         # The rest of the function is valuation, so we can quit now
         return
-    """
-    args['valuation_table'] - a dictionary containing values of the 
-        hydropower stations with the keys being watershed id and
-        the values be a dictionary representing valuation information 
-        corresponding to that id with the following structure (required):
-        
-            valuation_table[1] = {'ws_id':1, 'time_span':100, 'discount':5,
-                                  'efficiency':0.75, 'fraction':0.6, 'cost':0,
-                                  'height':25, 'kw_price':0.07}
-        
-    args['results_suffix'] - a string that will be concatenated onto the
-       end of file names (optional) 
-       
-    returns - nothing"""
         
     # water yield functionality goes here
     LOGGER.info('Starting Valuation Calculation')
