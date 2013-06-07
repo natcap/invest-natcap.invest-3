@@ -380,3 +380,18 @@ class GISTestTester(testing.GISTest):
         uri_1 = os.path.join('data', 'file_not_exists.txt')
         uri_2 = os.path.join(REGRESSION_ARCHIVES, 'arc_raster_nice.tar.gz')
         self.assertRaises(AssertionError, self.assertFiles, uri_1, uri_2)
+
+    def test_assert_files_json_same(self):
+        json_path = os.path.join('data', 'testing_regression',
+            'sample_json.json')
+        self.assertFiles(json_path, json_path)
+
+    def test_assert_files_json_different(self):
+        """Check that asserting different json objects fails"""
+        json_path = os.path.join('data', 'testing_regression',
+            'sample_json.json')
+        json_path_new = os.path.join('data', 'testing_regression',
+            'sample_json_2.json')
+        self.assertRaises(AssertionError, self.assertFiles, json_path,
+            json_path_new)
+
