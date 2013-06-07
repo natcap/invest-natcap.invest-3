@@ -7,163 +7,235 @@
     "height": 600,
     "width" : 700,
     "elements": [
-            {
+        {
             "id" : "workspace_list",
             "type": "list",	        
-		    "elements": [
-			{		    
-                            "id":"alpha_only",
-                            "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
-			    "type": "label"
-			},
+            "elements": [
+                {		    
+                    "id":"alpha_only",
+                    "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
+                    "type": "label"
+                },
+                {
+                    "id" : "mode",
+                    "args_id" : "mode",
+                    "type": "hiddenElement",
+                    "returns": "initial",
+                    "required": true
+                },                        
+                {
+                    "id" : "workspace_dir",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "required": true
+                },                        
+                {
+                    "id" : "aoi_file_name",
+                    "args_id" : "aoi_file_name",
+                    "type": "file",
+                    "label": "Area of Interest",
+                    "defaultValue": "",
+                    "validateAs": {"type": "OGR"},
+                    "required": true
+                },
+                {
+                    "id" : "grid",
+                    "args_id" : "grid",
+                    "type" : "checkbox",
+                    "label" : "Grid AOI",
+                    "defaultValue" : true
+                },
+                {
+                    "id": "grid_type",
+                    "args_id" : "grid_type",
+                    "type": "dropdown",
+                    "label": "Grid type",
+                    "options":["rectangular", "hexagonal"],
+                    "returns": {"mapValues" : {"rectangular" : 0, "hexagonal" : 1}},
+                    "defaultValue": 0,
+                    "required": true,
+                    "enabledBy" : "grid"
+                },
+                {
+                    "id" : "cell_size",
+                    "args_id" : "cell_size",
+                    "type": "text",
+                    "label": "Cell size",
+                    "defaultValue": "1",
+                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                    "dataType": "float",
+                    "required": true,
+                    "enabledBy" : "grid"
+                },
+                {
+                    "id" : "comments",
+                    "args_id" : "comments",
+                    "type": "text",
+                    "label": "Comments",
+                    "required": false
+                },
+                {
+                    "id" : "data_dir",
+                    "args_id" : "data_dir",
+                    "type": "folder",
+                    "label": "Data Directory",
+                    "required": false
+                },
+                {
+                    "id" : "download",
+                    "args_id" : "download",
+                    "type": "checkbox",
+                    "label": "Download Data",
+                    "defaultValue": true,
+                    "required": false
+                }]},
+                {
+                    "id" : "global_data",
+                    "type" : "container",
+                    "collapsible" : true,
+                    "args_id" : "global_data",
+                    "label" : "Use global datasets.",
+                    "elements" : [
+                        {
+                            "id" : "landscan",
+                            "args_id" : "landscan",
+                            "type": "checkbox",
+                            "label": "2010 Population",
+                            "defaultValue": false,
+                            "required": false
+                        },		        		        		        
+                        {
+                            "id" : "osm_point",
+                            "args_id" : "osm_point",
+                            "type": "checkbox",
+                            "label": "OSM Points",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "osm_line",
+                            "args_id" : "osm_line",
+                            "type": "checkbox",
+                            "label": "OSM Lines",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "osm_poly",
+                            "args_id" : "osm_poly",
+                            "type": "checkbox",
+                            "label": "OSM Polygons",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "protected",
+                            "args_id" : "protected",
+                            "type": "checkbox",
+                            "label": "Protected Areas",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "lulc",
+                            "args_id" : "lulc",
+                            "type": "container",
+                            "collapsible" : true,
+                            "label": "LULC",
+                            "elements" : [
                                 {
-                                    "id" : "mode",
-                                    "args_id" : "mode",
-                                    "type": "hiddenElement",
-                                    "returns": "initial",
-                                    "required": true
-                                },                        
-                                {
-                                    "id" : "workspace_dir",
-                                    "args_id" : "workspace_dir",
-                                    "type": "folder",
-                                    "label": "Workspace",
-                                    "required": true
-                                },                        
-                                {
-                                    "id" : "aoi_file_name",
-                                    "args_id" : "aoi_file_name",
-                                    "type": "file",
-                                    "label": "Area of Interest",
-                                    "defaultValue": "",
-                                    "validateAs": {"type": "OGR"},
-                                    "required": true
+                                    "id": "lulc_1",
+                                    "args_id": "lulc_1",
+                                    "type": "checkbox",
+                                    "label": "Agriculture",
+                                    "defaultValue" : true,
+                                    "required" : false
                                 },
                                 {
-                                    "id" : "grid",
-                                    "args_id" : "grid",
-                                    "type" : "checkbox",
-                                    "label" : "Grid AOI",
-                                    "defaultValue" : true
+                                    "id": "lulc_2",
+                                    "args_id": "lulc_2",
+                                    "type": "checkbox",
+                                    "label": "Bare",
+                                    "defaultValue" : true,
+                                    "required" : false
                                 },
                                 {
-                                    "id": "grid_type",
-                                    "args_id" : "grid_type",
-                                    "type": "dropdown",
-                                    "label": "Grid type",
-                                    "options":["rectangular", "hexagonal"],
-                                    "returns": {"mapValues" : {"rectangular" : 0, "hexagonal" : 1}},
-                                    "defaultValue": 0,
-                                    "required": true,
-                                    "enabledBy" : "grid"
+                                    "id": "lulc_3",
+                                    "args_id": "lulc_3",
+                                    "type": "checkbox",
+                                    "label": "Forest",
+                                    "defaultValue" : true,
+                                    "required" : false
                                 },
                                 {
-                                    "id" : "cell_size",
-                                    "args_id" : "cell_size",
-                                    "type": "text",
-                                    "label": "Cell size",
-                                    "defaultValue": "1",
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                    "dataType": "float",
-                                    "required": true,
-                                    "enabledBy" : "grid"
+                                    "id": "lulc_4",
+                                    "args_id": "lulc_4",
+                                    "type": "checkbox",
+                                    "label": "Grassland",
+                                    "defaultValue" : true,
+                                    "required" : false
                                 },
                                 {
-                                    "id" : "comments",
-                                    "args_id" : "comments",
-                                    "type": "text",
-                                    "label": "Comments",
-                                    "required": false
+                                    "id": "lulc_5",
+                                    "args_id": "lulc_5",
+                                    "type": "checkbox",
+                                    "label": "Shrubland",
+                                    "defaultValue" : true,
+                                    "required" : false
                                 },
                                 {
-                                    "id" : "data_dir",
-                                    "args_id" : "data_dir",
-                                    "type": "folder",
-                                    "label": "Data Directory",
-                                    "required": false
+                                    "id": "lulc_6",
+                                    "args_id": "lulc_6",
+                                    "type": "checkbox",
+                                    "label": "Snow and Ice",
+                                    "defaultValue" : true,
+                                    "required" : false
                                 },
-				{
-				    "id" : "download",
-				    "args_id" : "download",
-				    "type": "checkbox",
-				    "label": "Download Data",
-				    "defaultValue": true,
-				    "required": false
-				},                                
-				{
-				    "id" : "landscan",
-				    "args_id" : "landscan",
-				    "type": "checkbox",
-				    "label": "2010 Population",
-				    "defaultValue": false,
-				    "required": false
-				},		        		        		        
-				{
-				    "id" : "osm_point",
-				    "args_id" : "osm_point",
-				    "type": "checkbox",
-				    "label": "OSM Points",
-				    "defaultValue": false,
-				    "required": false
-				},
-				{
-				    "id" : "osm_line",
-				    "args_id" : "osm_line",
-				    "type": "checkbox",
-				    "label": "OSM Lines",
-				    "defaultValue": false,
-				    "required": false
-				},
-				{
-				    "id" : "osm_poly",
-				    "args_id" : "osm_poly",
-				    "type": "checkbox",
-				    "label": "OSM Polygons",
-				    "defaultValue": false,
-				    "required": false
-				},
-				{
-				    "id" : "protected",
-				    "args_id" : "protected",
-				    "type": "checkbox",
-				    "label": "Protected Areas",
-				    "defaultValue": false,
-				    "required": false
-				},
-				{
-				    "id" : "lulc",
-				    "args_id" : "lulc",
-				    "type": "checkbox",
-				    "label": "LULC",
-				    "defaultValue": false,
-				    "required": false
-				},				
-				{
-				    "id" : "mangroves",
-				    "args_id" : "mangroves",
-				    "type": "checkbox",
-				    "label": "Mangroves",
-				    "defaultValue": false,
-				    "required": false
-				},
-				{
-				    "id" : "reefs",
-				    "args_id" : "reefs",
-				    "type": "checkbox",
-				    "label": "Coral Reefs",
-				    "defaultValue": false,
-				    "required": false
-				},
-				{
-				    "id" : "grass",
-				    "args_id" : "grass",
-				    "type": "checkbox",
-				    "label": "Seagrasses",
-				    "defaultValue": false,
-				    "required": false
-				}				
-		   ]
-		   }
-    ]
+                                {
+                                    "id": "lulc_7",
+                                    "args_id": "lulc_7",
+                                    "type": "checkbox",
+                                    "label": "Urban",
+                                    "defaultValue" : true,
+                                    "required" : false
+                                },
+                                {
+                                    "id": "lulc_8",
+                                    "args_id": "lulc_8",
+                                    "type": "checkbox",
+                                    "label": "Water",
+                                    "defaultValue" : true,
+                                    "required" : false
+                                }
+                            ]
+
+                        },				
+                        {
+                            "id" : "mangroves",
+                            "args_id" : "mangroves",
+                            "type": "checkbox",
+                            "label": "Mangroves",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "reefs",
+                            "args_id" : "reefs",
+                            "type": "checkbox",
+                            "label": "Coral Reefs",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "grass",
+                            "args_id" : "grass",
+                            "type": "checkbox",
+                            "label": "Seagrasses",
+                            "defaultValue": false,
+                            "required": false
+                        }
+                    ]
+                }
+           ]
 }
-                

@@ -1126,7 +1126,7 @@ class MultiElement(Container):
                 default_list = attributes['defaultValue']
 
             for default_value in default_list:
-                LOGGER.debug('Setting default value of %s to "%s"',
+                self.LOGGER.debug('Setting default value of %s to "%s"',
                     attributes['id'], default_value)
                 self.add_element(default_value)
 
