@@ -346,3 +346,15 @@ class GISTest(unittest.TestCase):
                 LOGGER.debug('Checking %s, %s', file_1, file_2)
                 self.assertEqual(file_1_md5, file_2_md5,
                     'Files %s and %s differ' % (file_1_uri, file_2_uri))
+
+    def assertJSON(self, json_1_uri, json_2_uri):
+        """Assert two JSON objects against each other.
+
+            json_1_uri - a uri to a JSON object in a file.
+            json_2_uri - a uri to a JSON object in a file."""
+
+        dict_1 = json.loads(open(json_1_uri).read())
+        dict_2 = json.loads(open(json_2_uri).read())
+
+        self.maxDiff = None
+        self.assertEqual(dict_1, dict_2)
