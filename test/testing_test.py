@@ -395,3 +395,16 @@ class GISTestTester(testing.GISTest):
         self.assertRaises(AssertionError, self.assertFiles, json_path,
             json_path_new)
 
+    def test_assert_files_gdal_same(self):
+        source_file = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        self.assertFiles(source_file, source_file)
+
+    def test_assert_files_gdal_different(self):
+        source_raster = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        different_raster = os.path.join(BASE_DATA, 'terrestrial',
+            'lulc_samp_cur')
+        self.assertRaises(AssertionError, self.assertFiles,
+            source_raster, different_raster)
+
+
+
