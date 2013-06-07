@@ -584,6 +584,10 @@ def save_model_run(arguments, module, out_file):
     # print the line to call the module.
     _write('%s.execute(args)' % module)
 
+    model_script.flush()
+    model_script.close()
+
+
 def save_model_run_json(arguments, module, out_file):
     json_handler = JSONHandler(out_file)
 
