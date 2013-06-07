@@ -14,7 +14,8 @@
                 {		    
                     "id":"alpha_only",
                     "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
-                    "type": "label"
+                    "type": "label",
+                    "helpText": "Alpha tools are considered unstable."
                 },
                 {
                     "id" : "mode",
@@ -28,7 +29,8 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "required": true
+                    "required": true,
+                    "helpText": "Select a folder to be used as your workspace."                    
                 },                        
                 {
                     "id" : "aoi_file_name",
@@ -37,14 +39,16 @@
                     "label": "Area of Interest",
                     "defaultValue": "",
                     "validateAs": {"type": "OGR"},
-                    "required": true
+                    "required": true,
+                    "helpText": "Select an area of interest where the model will run the analysis."
                 },
                 {
                     "id" : "grid",
                     "args_id" : "grid",
                     "type" : "checkbox",
                     "label" : "Grid AOI",
-                    "defaultValue" : true
+                    "defaultValue" : true,
+                    "helpText": "Select if you want the area of interest to be gridded. If unselected the AOI must contain multiple shapes."
                 },
                 {
                     "id": "grid_type",
@@ -55,7 +59,9 @@
                     "returns": {"mapValues" : {"rectangular" : 0, "hexagonal" : 1}},
                     "defaultValue": 0,
                     "required": true,
-                    "enabledBy" : "grid"
+                    "enabledBy" : "grid",
+                    "helpText": "Select whether the grid should contain rectangular or hexagonal units."
+                    
                 },
                 {
                     "id" : "cell_size",
@@ -66,21 +72,24 @@
                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                     "dataType": "float",
                     "required": true,
-                    "enabledBy" : "grid"
+                    "enabledBy" : "grid",
+                    "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
                 },
                 {
                     "id" : "comments",
                     "args_id" : "comments",
                     "type": "text",
                     "label": "Comments",
-                    "required": false
+                    "required": false,
+                    "helpText": "Any commments for yourself that you would like to have as part of the model run."
                 },
                 {
                     "id" : "data_dir",
                     "args_id" : "data_dir",
                     "type": "folder",
                     "label": "Data Directory",
-                    "required": false
+                    "required": false,
+                    "helpText": "A directory that contains any data you would like included in the model run."
                 },
                 {
                     "id" : "download",
@@ -88,7 +97,8 @@
                     "type": "checkbox",
                     "label": "Download Data",
                     "defaultValue": true,
-                    "required": false
+                    "required": false,
+                    "helpText": "Includes the processed unrestricted data (including from the data directory) in the results, which could be useful for scenarios."
                 }]},
                 {
                     "id" : "global_data",
