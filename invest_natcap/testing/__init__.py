@@ -361,6 +361,10 @@ class GISTest(unittest.TestCase):
         on the input URI extensions (which are assumed to be the same). If we do
         not recognize the filetypes, check the file's MD5sum."""
 
+        for uri in [file_1_uri, file_2_uri]:
+            self.assertEqual(os.path.exists(uri), True,
+                'File %s does not exist' % uri)
+
         # assert the extensions are the same
         file_1_ext = os.path.splitext(file_1_uri)[1]
         file_2_ext = os.path.splitext(file_2_uri)[1]
