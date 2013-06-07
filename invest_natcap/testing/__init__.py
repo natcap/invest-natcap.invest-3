@@ -340,13 +340,9 @@ class GISTest(unittest.TestCase):
             # archives have the same number of files that we care about
             for file_1, file_2 in zip(archive_1_files, archive_2_files):
                 file_1_uri = os.path.join(archive_1_folder, file_1)
-                file_1_md5 = get_hash(file_1_uri)
-
                 file_2_uri = os.path.join(archive_2_folder, file_2)
-                file_2_md5 = get_hash(file_2_uri)
                 LOGGER.debug('Checking %s, %s', file_1, file_2)
-                self.assertEqual(file_1_md5, file_2_md5,
-                    'Files %s and %s differ' % (file_1_uri, file_2_uri))
+                self.assertFiles(file_1_uri, file_2_uri)
 
     def assertJSON(self, json_1_uri, json_2_uri):
         """Assert two JSON objects against each other.
@@ -359,3 +355,31 @@ class GISTest(unittest.TestCase):
 
         self.maxDiff = None
         self.assertEqual(dict_1, dict_2)
+
+    def assertFiles(self, file_1_uri, file_2_uri):
+        """Assert two files are equal.  We try to determine the filetype based
+        on the input URI extensions (which are assumed to be the same). If we do
+        not recognize the filetypes, check the file's MD5sum."""
+
+        # assert the extensions are the same
+        file_1_ext = os.path.splitext(file_1_uri)[1]
+        file_2_ext = os.path.splitext(file_2_uri)[1]
+        self.assertEqual(file_1_ext, file_2_ext, 'Extensions differ: %s, %s' %
+            (file_1_ext, file_2_ext))
+
+        assert_funcs = {
+            '.json': self.assertJSON,
+            '.tif': self.assertRastersEqual,
+            '.shp': self.assertVectorsEqual,
+        }
+
+        try:
+            assert_funcs[file_1_ext](file_1_uri, file_2_uri)
+        except KeyError:
+            # When we're given an extension we don't have a function for, assert
+            # the MD5s.
+            file_1_md5 = get_hash(file_1_uri)
+            file_2_md5 = get_hash(file_2_uri)
+            self.assertEqual(file_1_md5, file_2_md5,
+                'Files %s and %s differ (MD5sum)' % (file_1_uri, file_2_uri))
+
