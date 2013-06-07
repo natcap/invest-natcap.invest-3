@@ -406,5 +406,14 @@ class GISTestTester(testing.GISTest):
         self.assertRaises(AssertionError, self.assertFiles,
             source_raster, different_raster)
 
+    def test_assert_files_ogr_same(self):
+        sample_shape = os.path.join(POLLINATION_DATA, 'farms.shp')
+        self.assertFiles(sample_shape, sample_shape)
 
+    def test_assert_files_ogr_different(self):
+        base_file = os.path.join(POLLINATION_DATA, 'farms.shp')
+        different_file = os.path.join(POLLINATION_DATA, '..',
+            'biophysical_output', 'farms_abundance_cur', 'farms.shp')
+        self.assertRaises(AssertionError, self.assertFiles, base_file,
+            different_file)
 
