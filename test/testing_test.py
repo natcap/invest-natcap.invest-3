@@ -197,7 +197,7 @@ class DataStorageTest(testing.GISTest):
                 u'two': 2,
                 u'three': os.path.join(input_folder, u'Guild.csv')
             },
-            u'c': os.path.join(input_folder, u'vector_1WEYE3'),
+            u'c': os.path.join(input_folder, u'vector_86FJO8'),
             u'raster_list': [
                 os.path.join(input_folder, u'raster_HD4O5B'),
                 {
@@ -205,7 +205,7 @@ class DataStorageTest(testing.GISTest):
                     u'do_biophysical': True,
                 }
             ],
-            u'c_again': os.path.join(input_folder, u'vector_1WEYE3'),
+            u'c_again': os.path.join(input_folder, u'vector_86FJO8'),
             u'workspace_dir': workspace,
         }
         parameters = data_storage.extract_parameters_archive(workspace,

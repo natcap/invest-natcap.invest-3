@@ -378,6 +378,6 @@ def extract_parameters_archive(workspace_dir, archive_uri, input_folder=None):
         unicode: _get_if_uri,
     }
     formatted_args = format_dictionary(arguments_dict, types)
-    formatted_args['workspace_dir'] = workspace_dir
+    formatted_args[u'workspace_dir'] = workspace_dir
 
     return formatted_args
