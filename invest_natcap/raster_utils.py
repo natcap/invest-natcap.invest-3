@@ -1708,10 +1708,12 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         
         #Create the new layer for output_datasource using same name and geometry
         #type from original_datasource, but different projection
+        print('original_layer_dfn', original_layer_dfn.GetName(), original_layer_dfn.GetGeomType())
+        print('output_sr', output_sr)
         output_layer = output_datasource.CreateLayer(
                 original_layer_dfn.GetName(), output_sr, 
                 original_layer_dfn.GetGeomType())
-        
+        print('output layer', output_layer)
         #Get the number of fields in original_layer
         original_field_count = original_layer_dfn.GetFieldCount()
         
