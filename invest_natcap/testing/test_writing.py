@@ -54,7 +54,6 @@ class TestWriter(object):
             return False
 
 
-
 def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         out_archive_uri, module):
 

@@ -47,165 +47,6 @@ class UnifiedPollinationTest(testing.GISTest):
             # Thrown when self.workspace_dir was not created.
             pass
 
-    def test_regression_biophysical(self):
-        pollination.execute(self.args)
-
-        bio_rasters = ([
-            '%s/intermediate/frm_Apis_cur.tif',
-            '%s/intermediate/hf_Apis_cur.tif',
-            '%s/intermediate/hn_Apis_cur.tif',
-            '%s/intermediate/sup_Apis_cur.tif',
-            '%s/intermediate/frm_Bombus_cur.tif',
-            '%s/intermediate/hf_Bombus_cur.tif',
-            '%s/intermediate/hn_Bombus_cur.tif',
-            '%s/intermediate/sup_Bombus_cur.tif',
-            '%s/output/frm_avg_cur.tif',
-            '%s/output/sup_tot_cur.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'no_ag_classes'))
-
-        for raster_list, reg_uri_base in [bio_rasters]:
-            for raster in raster_list:
-                test_file = raster % self.workspace_dir
-                reg_file = raster % reg_uri_base
-                self.assertRastersEqual(test_file,
-                    reg_file)
-
-    def test_regression_biophysical_future(self):
-        self.args['landuse_fut_uri'] = os.path.join(TEST_DATA_DIR,
-            'landuse_cur_200m.tif')
-        pollination.execute(self.args)
-
-        bio_rasters = ([
-            '%s/intermediate/frm_Apis_cur.tif',
-            '%s/intermediate/hf_Apis_cur.tif',
-            '%s/intermediate/hn_Apis_cur.tif',
-            '%s/intermediate/sup_Apis_cur.tif',
-            '%s/intermediate/frm_Bombus_cur.tif',
-            '%s/intermediate/hf_Bombus_cur.tif',
-            '%s/intermediate/hn_Bombus_cur.tif',
-            '%s/intermediate/sup_Bombus_cur.tif',
-            '%s/output/frm_avg_cur.tif',
-            '%s/output/sup_tot_cur.tif',
-            '%s/intermediate/frm_Apis_fut.tif',
-            '%s/intermediate/hf_Apis_fut.tif',
-            '%s/intermediate/hn_Apis_fut.tif',
-            '%s/intermediate/sup_Apis_fut.tif',
-            '%s/intermediate/frm_Bombus_fut.tif',
-            '%s/intermediate/hf_Bombus_fut.tif',
-            '%s/intermediate/hn_Bombus_fut.tif',
-            '%s/intermediate/sup_Bombus_fut.tif',
-            '%s/output/frm_avg_fut.tif',
-            '%s/output/sup_tot_fut.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'no_ag_classes'))
-
-        for raster_list, reg_uri_base in [bio_rasters]:
-            for raster in raster_list:
-                test_file = raster % self.workspace_dir
-                reg_file = raster % reg_uri_base
-                self.assertRastersEqual(test_file,
-                    reg_file)
-
-    def test_regression_biophysical_ag_classes(self):
-        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
-            ' 83 84 85 88 90 91 92')
-        pollination.execute(self.args)
-
-        bio_rasters = ([
-            '%s/intermediate/frm_Apis_cur.tif',
-            '%s/intermediate/hf_Apis_cur.tif',
-            '%s/intermediate/hn_Apis_cur.tif',
-            '%s/intermediate/sup_Apis_cur.tif',
-            '%s/intermediate/frm_Bombus_cur.tif',
-            '%s/intermediate/hf_Bombus_cur.tif',
-            '%s/intermediate/hn_Bombus_cur.tif',
-            '%s/intermediate/sup_Bombus_cur.tif',
-            '%s/output/frm_avg_cur.tif',
-            '%s/output/sup_tot_cur.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'with_ag_classes'))
-
-        for raster_list, reg_uri_base in [bio_rasters]:
-            for raster in raster_list:
-                test_file = raster % self.workspace_dir
-                reg_file = raster % reg_uri_base
-                self.assertRastersEqual(test_file,
-                    reg_file)
-
-    def test_regression_valuation(self):
-        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
-            ' 83 84 85 88 90 91 92')
-        self.args['do_valuation'] = True
-        pollination.execute(self.args)
-
-        bio_rasters = ([
-            '%s/intermediate/frm_Apis_cur.tif',
-            '%s/intermediate/hf_Apis_cur.tif',
-            '%s/intermediate/hn_Apis_cur.tif',
-            '%s/intermediate/sup_Apis_cur.tif',
-            '%s/intermediate/frm_Bombus_cur.tif',
-            '%s/intermediate/hf_Bombus_cur.tif',
-            '%s/intermediate/hn_Bombus_cur.tif',
-            '%s/intermediate/sup_Bombus_cur.tif',
-            '%s/output/frm_avg_cur.tif',
-            '%s/output/sup_tot_cur.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'with_ag_classes'))
-
-        val_rasters = ([
-            '%s/intermediate/frm_val_Apis_cur.tif',
-            '%s/intermediate/frm_val_Bombus_cur.tif',
-            '%s/intermediate/frm_val_sum_cur.tif',
-            '%s/output/sup_val_sum_cur.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'valuation_output',
-            'with_ag_classes'))
-
-        for raster_list, reg_uri_base in [bio_rasters, val_rasters]:
-            for raster in raster_list:
-                test_file = raster % self.workspace_dir
-                reg_file = raster % reg_uri_base
-                self.assertRastersEqual(test_file,
-                    reg_file)
-
-    def test_regression_missing_species_weight_ag_classes(self):
-        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
-            ' 83 84 85 88 90 91 92')
-        self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
-            'Guild_no_species_weight.csv')
-        self.args['do_valuation'] = True
-        pollination.execute(self.args)
-
-        bio_rasters = ([
-            '%s/intermediate/frm_Apis_cur.tif',
-            '%s/intermediate/hf_Apis_cur.tif',
-            '%s/intermediate/hn_Apis_cur.tif',
-            '%s/intermediate/sup_Apis_cur.tif',
-            '%s/intermediate/frm_Bombus_cur.tif',
-            '%s/intermediate/hf_Bombus_cur.tif',
-            '%s/intermediate/hn_Bombus_cur.tif',
-            '%s/intermediate/sup_Bombus_cur.tif',
-            '%s/output/frm_avg_cur.tif',
-            '%s/output/sup_tot_cur.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'with_ag_classes'))
-
-        val_rasters = ([
-            '%s/intermediate/frm_val_Apis_cur.tif',
-            '%s/intermediate/frm_val_Bombus_cur.tif',
-            '%s/intermediate/frm_val_sum_cur.tif',
-            '%s/output/sup_val_sum_cur.tif'
-        ], os.path.join(REGRESSION_FOLDER_BASE, 'valuation_output',
-            'with_ag_classes'))
-
-        for raster_list, reg_uri_base in [bio_rasters, val_rasters]:
-            for raster in raster_list:
-                test_file = raster % self.workspace_dir
-                reg_file = raster % reg_uri_base
-                self.assertRastersEqual(test_file,
-                    reg_file)
-
-
     def test_one_species(self):
         # This test exists for the sake of issue 1536.
         # When Running a user's data, I encountered what appeared to be a bug in
@@ -235,19 +76,6 @@ class UnifiedPollinationTest(testing.GISTest):
                 'biophysical_output', 'with_ag_classes', 'intermediate',
                 'frm_Apis_cur.tif')
             self.assertRastersEqual(test_file, reg_file)
-
-    def test_farms_shapefile(self):
-        self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
-        self.args['guilds_uri'] = os.path.join(TEST_DATA_DIR,
-            'Guild_with_crops.csv')
-        pollination.execute(self.args)
-
-        regression_file = os.path.join(REGRESSION_FOLDER_BASE, 'biophysical_output',
-            'farms_abundance_cur', 'farms.shp')
-        test_file = os.path.join(self.workspace_dir, 'output',
-            'farms_abundance_cur', 'farms.shp')
-        self.assertVectorsEqual(regression_file,
-            test_file)
 
     def test_farms_shapefile_already_exists(self):
         self.args['farms_shapefile'] = os.path.join(TEST_DATA_DIR, 'farms.shp')
@@ -320,6 +148,24 @@ class PollinationSmokeTest(unittest.TestCase):
 
 import invest_natcap.testing
 class PollinationRegression(invest_natcap.testing.GISTest):
+    @invest_natcap.testing.regression(
+        input_archive="data/pollination/input_pollination_ag_cur_noval_no_spp_weight.tar.gz",
+        workspace_archive="data/pollination/output_pollination_ag_cur_noval_no_spp_weight.tar.gz")
+    def test_pollination_ag_cur_noval_no_spp_weight(self):
+        invest_natcap.pollination.pollination.execute(self.args)
+
+    @invest_natcap.testing.regression(
+        input_archive="data/pollination/input_pollination_noag_cur_val.tar.gz",
+        workspace_archive="data/pollination/output_pollination_noag_cur_val.tar.gz")
+    def test_pollination_noag_cur_val(self):
+        invest_natcap.pollination.pollination.execute(self.args)
+
+    @invest_natcap.testing.regression(
+        input_archive="data/pollination/input_pollination_noag_cur_noval.tar.gz",
+        workspace_archive="data/pollination/output_pollination_noag_cur_noval.tar.gz")
+    def test_pollination_noag_cur_noval(self):
+        invest_natcap.pollination.pollination.execute(self.args)
+
     @invest_natcap.testing.regression(
         input_archive="data/pollination/input_noag_cur_only.tar.gz",
         workspace_archive="data/pollination/output_noag_cur_only.tar.gz")

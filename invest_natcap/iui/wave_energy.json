@@ -40,6 +40,7 @@
 		            		    "East Coast of North America and Puerto Rico",
                                 "North Sea 4 meter resolution",
                                 "North Sea 10 meter resolution",
+                                "Australia",
 					            "Global"],
 		            "defaultValue": 0,
 		            "required": true,
