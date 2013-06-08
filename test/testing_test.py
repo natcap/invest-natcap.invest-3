@@ -145,7 +145,7 @@ class DataStorageTest(testing.GISTest):
         regression_params = {
             u'ag_classes': u'67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92',
             u'do_valuation': True,
-            u'farms_shapefile': os.path.join(input_folder, u'vector_LCN2UV'),
+            u'farms_shapefile': os.path.join(input_folder, u'vector_BEKKTE'),
             u'guilds_uri': os.path.join(input_folder, u'Guild.csv'),
             u'half_saturation': 0.125,
             u'landuse_attributes_uri': os.path.join(input_folder, u'LU.csv'),
@@ -197,7 +197,7 @@ class DataStorageTest(testing.GISTest):
                 u'two': 2,
                 u'three': os.path.join(input_folder, u'Guild.csv')
             },
-            u'c': os.path.join(input_folder, u'vector_1WEYE3'),
+            u'c': os.path.join(input_folder, u'vector_86FJO8'),
             u'raster_list': [
                 os.path.join(input_folder, u'raster_HD4O5B'),
                 {
@@ -205,7 +205,7 @@ class DataStorageTest(testing.GISTest):
                     u'do_biophysical': True,
                 }
             ],
-            u'c_again': os.path.join(input_folder, u'vector_1WEYE3'),
+            u'c_again': os.path.join(input_folder, u'vector_86FJO8'),
             u'workspace_dir': workspace,
         }
         parameters = data_storage.extract_parameters_archive(workspace,
@@ -355,3 +355,65 @@ class GISTestTester(testing.GISTest):
         """Check that asserting equal workspaces fails."""
         self.assertRaises(AssertionError, self.assertWorkspace,
             POLLINATION_DATA, REGRESSION_ARCHIVES)
+
+    def test_json_same(self):
+        """Check that asserting equal json objects passes."""
+        json_path = os.path.join('data', 'testing_regression',
+            'sample_json.json')
+        self.assertJSON(json_path, json_path)
+
+    def test_json_different(self):
+        """Check that asserting different json objects fails"""
+        json_path = os.path.join('data', 'testing_regression',
+            'sample_json.json')
+        json_path_new = os.path.join('data', 'testing_regression',
+            'sample_json_2.json')
+        self.assertRaises(AssertionError, self.assertJSON, json_path,
+            json_path_new)
+
+    def test_assert_files_ext_diff(self):
+        uri_1 = os.path.join('data', 'testing_regression', 'sample_json.json')
+        uri_2 = os.path.join(REGRESSION_ARCHIVES, 'arc_raster_nice.tar.gz')
+        self.assertRaises(AssertionError, self.assertFiles, uri_1, uri_2)
+
+    def test_assert_files_dne(self):
+        uri_1 = os.path.join('data', 'file_not_exists.txt')
+        uri_2 = os.path.join(REGRESSION_ARCHIVES, 'arc_raster_nice.tar.gz')
+        self.assertRaises(AssertionError, self.assertFiles, uri_1, uri_2)
+
+    def test_assert_files_json_same(self):
+        json_path = os.path.join('data', 'testing_regression',
+            'sample_json.json')
+        self.assertFiles(json_path, json_path)
+
+    def test_assert_files_json_different(self):
+        """Check that asserting different json objects fails"""
+        json_path = os.path.join('data', 'testing_regression',
+            'sample_json.json')
+        json_path_new = os.path.join('data', 'testing_regression',
+            'sample_json_2.json')
+        self.assertRaises(AssertionError, self.assertFiles, json_path,
+            json_path_new)
+
+    def test_assert_files_gdal_same(self):
+        source_file = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        self.assertFiles(source_file, source_file)
+
+    def test_assert_files_gdal_different(self):
+        source_raster = os.path.join(POLLINATION_DATA, 'landuse_cur_200m.tif')
+        different_raster = os.path.join(BASE_DATA, 'terrestrial',
+            'lulc_samp_cur')
+        self.assertRaises(AssertionError, self.assertFiles,
+            source_raster, different_raster)
+
+    def test_assert_files_ogr_same(self):
+        sample_shape = os.path.join(POLLINATION_DATA, 'farms.shp')
+        self.assertFiles(sample_shape, sample_shape)
+
+    def test_assert_files_ogr_different(self):
+        base_file = os.path.join(POLLINATION_DATA, 'farms.shp')
+        different_file = os.path.join(POLLINATION_DATA, '..',
+            'biophysical_output', 'farms_abundance_cur', 'farms.shp')
+        self.assertRaises(AssertionError, self.assertFiles, base_file,
+            different_file)
+
