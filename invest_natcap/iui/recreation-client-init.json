@@ -14,7 +14,8 @@
                 {		    
                     "id":"alpha_only",
                     "label": "This tool is in an ALPHA testing stage and should not be used for decision making.",
-                    "type": "label"
+                    "type": "label",
+                    "helpText": "Alpha tools are considered unstable."
                 },
                 {
                     "id" : "mode",
@@ -28,7 +29,8 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "required": true
+                    "required": true,
+                    "helpText": "Select a folder to be used as your workspace."                    
                 },                        
                 {
                     "id" : "aoi_file_name",
@@ -37,14 +39,16 @@
                     "label": "Area of Interest",
                     "defaultValue": "",
                     "validateAs": {"type": "OGR"},
-                    "required": true
+                    "required": true,
+                    "helpText": "Select an area of interest where the model will run the analysis."
                 },
                 {
                     "id" : "grid",
                     "args_id" : "grid",
                     "type" : "checkbox",
                     "label" : "Grid AOI",
-                    "defaultValue" : true
+                    "defaultValue" : true,
+                    "helpText": "Select if you want the area of interest to be gridded. If unselected the AOI must contain multiple shapes."
                 },
                 {
                     "id": "grid_type",
@@ -55,7 +59,9 @@
                     "returns": {"mapValues" : {"rectangular" : 0, "hexagonal" : 1}},
                     "defaultValue": 0,
                     "required": true,
-                    "enabledBy" : "grid"
+                    "enabledBy" : "grid",
+                    "helpText": "Select whether the grid should contain rectangular or hexagonal units."
+                    
                 },
                 {
                     "id" : "cell_size",
@@ -66,21 +72,24 @@
                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                     "dataType": "float",
                     "required": true,
-                    "enabledBy" : "grid"
+                    "enabledBy" : "grid",
+                    "helpText": "The size of the grid units measured in the projection units of the AOI. For example, UTM projections use meters."
                 },
                 {
                     "id" : "comments",
                     "args_id" : "comments",
                     "type": "text",
                     "label": "Comments",
-                    "required": false
+                    "required": false,
+                    "helpText": "Any commments for yourself that you would like to have as part of the model run."
                 },
                 {
                     "id" : "data_dir",
                     "args_id" : "data_dir",
                     "type": "folder",
                     "label": "Data Directory",
-                    "required": false
+                    "required": false,
+                    "helpText": "A directory that contains any data you would like included in the model run."
                 },
                 {
                     "id" : "download",
@@ -88,44 +97,28 @@
                     "type": "checkbox",
                     "label": "Download Data",
                     "defaultValue": true,
-                    "required": false
-                }]},
+                    "required": false,
+                    "helpText": "Includes the processed unrestricted data (including from the data directory) in the results, which could be useful for scenarios."
+                }
+            ]
+        },
+        {
+            "id" : "global_data",
+            "type" : "container",
+            "collapsible" : true,
+            "args_id" : "global_data",
+            "label" : "Use global datasets.",
+            "helpText": "For more information see <a href=\"../documentation/recreation.html#table-99\">Standard Predictors</a>",
+            "elements" : [
                 {
-                    "id" : "global_data",
-                    "type" : "container",
-                    "collapsible" : true,
-                    "args_id" : "global_data",
-                    "label" : "Use global datasets.",
-                    "elements" : [
+                    "id" : "global_data_list",
+                    "type": "list",
+                    "elements": [
                         {
                             "id" : "landscan",
                             "args_id" : "landscan",
                             "type": "checkbox",
-                            "label": "2010 Population",
-                            "defaultValue": false,
-                            "required": false
-                        },		        		        		        
-                        {
-                            "id" : "osm_point",
-                            "args_id" : "osm_point",
-                            "type": "checkbox",
-                            "label": "OSM Points",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "osm_line",
-                            "args_id" : "osm_line",
-                            "type": "checkbox",
-                            "label": "OSM Lines",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "osm_poly",
-                            "args_id" : "osm_poly",
-                            "type": "checkbox",
-                            "label": "OSM Polygons",
+                            "label": "Population",
                             "defaultValue": false,
                             "required": false
                         },
@@ -136,13 +129,76 @@
                             "label": "Protected Areas",
                             "defaultValue": false,
                             "required": false
-                        },
+                        }                        
+                    ]
+                },
+                {
+                    "id" : "osm",
+                    "args_id" : "osm",
+                    "type" : "container",
+                    "collapsible" : true,
+                    "label" : "Open Street Maps",
+                    "elements" : [
                         {
-                            "id" : "lulc",
-                            "args_id" : "lulc",
-                            "type": "container",
-                            "collapsible" : true,
-                            "label": "LULC",
+                            "id": "osm_list",
+                            "args_id": "osm_list",
+                            "type": "list",
+                            "elements" : [
+                                {
+                                    "id" : "osm_1",
+                                    "args_id" : "osm_1",
+                                    "type": "checkbox",
+                                    "label": "Cultural",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_2",
+                                    "args_id" : "osm_2",
+                                    "type": "checkbox",
+                                    "label": "Industrial",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_3",
+                                    "args_id" : "osm_3",
+                                    "type": "checkbox",
+                                    "label": "Natural",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_4",
+                                    "args_id" : "osm_4",
+                                    "type": "checkbox",
+                                    "label": "Superstructure",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_0",
+                                    "args_id" : "osm_0",
+                                    "type": "checkbox",
+                                    "label": "Miscellaneous",
+                                    "defaultValue": true,
+                                    "required": false
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id" : "lulc",
+                    "args_id" : "lulc",
+                    "type": "container",
+                    "collapsible" : true,
+                    "label": "Land Use and Land Coverage",
+                    "elements" : [
+                        {
+                            "id": "lulc_list",
+                            "args_id": "lulc_list",
+                            "type": "list",
                             "elements" : [
                                 {
                                     "id": "lulc_1",
@@ -209,33 +265,50 @@
                                     "required" : false
                                 }
                             ]
-
-                        },				
+                        }
+                    ]
+                },       
+                {
+                    "id" : "ouoc",
+                    "args_id" : "ouoc",
+                    "type": "container",
+                    "collapsible" : true,
+                    "label": "Ocean Use and Ocean Coverage",
+                    "elements" : [
                         {
-                            "id" : "mangroves",
-                            "args_id" : "mangroves",
-                            "type": "checkbox",
-                            "label": "Mangroves",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "reefs",
-                            "args_id" : "reefs",
-                            "type": "checkbox",
-                            "label": "Coral Reefs",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "grass",
-                            "args_id" : "grass",
-                            "type": "checkbox",
-                            "label": "Seagrasses",
-                            "defaultValue": false,
-                            "required": false
+                            "id": "ouoc_list",
+                            "args_id": "ouoc_list",
+                            "type": "list",
+                            "elements" : [
+                                {
+                                    "id" : "mangroves",
+                                    "args_id" : "mangroves",
+                                    "type": "checkbox",
+                                    "label": "Mangroves",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "reefs",
+                                    "args_id" : "reefs",
+                                    "type": "checkbox",
+                                    "label": "Coral Reefs",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "grass",
+                                    "args_id" : "grass",
+                                    "type": "checkbox",
+                                    "label": "Seagrasses",
+                                    "defaultValue": true,
+                                    "required": false
+                                }
+                            ]
                         }
                     ]
                 }
-           ]
+            ]
+        }
+    ]
 }
