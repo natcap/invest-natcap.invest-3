@@ -86,7 +86,7 @@ def calculate_transport(
         outflow_weights_uri, outflow_weights_data_file)
     cdef float source_nodata = raster_utils.get_nodata_from_uri(source_uri)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] source_array = raster_utils.load_memory_mapped_array(
-        source_uri, source_data_file)
+        source_uri, source_data_file, numpy.dtype('float32'))
     cdef float absorption_nodata = raster_utils.get_nodata_from_uri(absorption_rate_uri)
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] absorption_rate_array = raster_utils.load_memory_mapped_array(
         absorption_rate_uri, absorption_rate_data_file)
