@@ -99,43 +99,26 @@
                     "defaultValue": true,
                     "required": false,
                     "helpText": "Includes the processed unrestricted data (including from the data directory) in the results, which could be useful for scenarios."
-                }]},
+                }
+            ]
+        },
+        {
+            "id" : "global_data",
+            "type" : "container",
+            "collapsible" : true,
+            "args_id" : "global_data",
+            "label" : "Use global datasets.",
+            "helpText": "For more information see <a href=\"../documentation/recreation.html#table-99\">Standard Predictors</a>",
+            "elements" : [
                 {
-                    "id" : "global_data",
-                    "type" : "container",
-                    "collapsible" : true,
-                    "args_id" : "global_data",
-                    "label" : "Use global datasets.",
-                    "elements" : [
+                    "id" : "global_data_list",
+                    "type": "list",
+                    "elements": [
                         {
                             "id" : "landscan",
                             "args_id" : "landscan",
                             "type": "checkbox",
-                            "label": "2010 Population",
-                            "defaultValue": false,
-                            "required": false
-                        },		        		        		        
-                        {
-                            "id" : "osm_point",
-                            "args_id" : "osm_point",
-                            "type": "checkbox",
-                            "label": "OSM Points",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "osm_line",
-                            "args_id" : "osm_line",
-                            "type": "checkbox",
-                            "label": "OSM Lines",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "osm_poly",
-                            "args_id" : "osm_poly",
-                            "type": "checkbox",
-                            "label": "OSM Polygons",
+                            "label": "Population",
                             "defaultValue": false,
                             "required": false
                         },
@@ -146,13 +129,76 @@
                             "label": "Protected Areas",
                             "defaultValue": false,
                             "required": false
-                        },
+                        }                        
+                    ]
+                },
+                {
+                    "id" : "osm",
+                    "args_id" : "osm",
+                    "type" : "container",
+                    "collapsible" : true,
+                    "label" : "Open Street Maps",
+                    "elements" : [
                         {
-                            "id" : "lulc",
-                            "args_id" : "lulc",
-                            "type": "container",
-                            "collapsible" : true,
-                            "label": "LULC",
+                            "id": "osm_list",
+                            "args_id": "osm_list",
+                            "type": "list",
+                            "elements" : [
+                                {
+                                    "id" : "osm_1",
+                                    "args_id" : "osm_1",
+                                    "type": "checkbox",
+                                    "label": "Cultural",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_2",
+                                    "args_id" : "osm_2",
+                                    "type": "checkbox",
+                                    "label": "Industrial",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_3",
+                                    "args_id" : "osm_3",
+                                    "type": "checkbox",
+                                    "label": "Natural",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_4",
+                                    "args_id" : "osm_4",
+                                    "type": "checkbox",
+                                    "label": "Superstructure",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "osm_0",
+                                    "args_id" : "osm_0",
+                                    "type": "checkbox",
+                                    "label": "Miscellaneous",
+                                    "defaultValue": true,
+                                    "required": false
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id" : "lulc",
+                    "args_id" : "lulc",
+                    "type": "container",
+                    "collapsible" : true,
+                    "label": "Land Use and Land Coverage",
+                    "elements" : [
+                        {
+                            "id": "lulc_list",
+                            "args_id": "lulc_list",
+                            "type": "list",
                             "elements" : [
                                 {
                                     "id": "lulc_1",
@@ -219,33 +265,50 @@
                                     "required" : false
                                 }
                             ]
-
-                        },				
+                        }
+                    ]
+                },       
+                {
+                    "id" : "ouoc",
+                    "args_id" : "ouoc",
+                    "type": "container",
+                    "collapsible" : true,
+                    "label": "Ocean Use and Ocean Coverage",
+                    "elements" : [
                         {
-                            "id" : "mangroves",
-                            "args_id" : "mangroves",
-                            "type": "checkbox",
-                            "label": "Mangroves",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "reefs",
-                            "args_id" : "reefs",
-                            "type": "checkbox",
-                            "label": "Coral Reefs",
-                            "defaultValue": false,
-                            "required": false
-                        },
-                        {
-                            "id" : "grass",
-                            "args_id" : "grass",
-                            "type": "checkbox",
-                            "label": "Seagrasses",
-                            "defaultValue": false,
-                            "required": false
+                            "id": "ouoc_list",
+                            "args_id": "ouoc_list",
+                            "type": "list",
+                            "elements" : [
+                                {
+                                    "id" : "mangroves",
+                                    "args_id" : "mangroves",
+                                    "type": "checkbox",
+                                    "label": "Mangroves",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "reefs",
+                                    "args_id" : "reefs",
+                                    "type": "checkbox",
+                                    "label": "Coral Reefs",
+                                    "defaultValue": true,
+                                    "required": false
+                                },
+                                {
+                                    "id" : "grass",
+                                    "args_id" : "grass",
+                                    "type": "checkbox",
+                                    "label": "Seagrasses",
+                                    "defaultValue": true,
+                                    "required": false
+                                }
+                            ]
                         }
                     ]
                 }
-           ]
+            ]
+        }
+    ]
 }
