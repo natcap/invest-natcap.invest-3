@@ -30,7 +30,8 @@ def execute_30(**args):
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['suffix'] - a string to append to any output file name (optional)        args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
+        args['suffix'] - a string to append to any output file name (optional)
+        args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
             lulc rasters. (required) 
@@ -257,6 +258,9 @@ def calculate_hwp_storage_cur(
             fill_value=nodata)
         gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy,
                             options=['ATTRIBUTE=' + attribute_name])
+        raster.FlushCache()
+        raster = None
+
 
 def calculate_hwp_storage_fut(
     hwp_shapes, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
@@ -283,16 +287,15 @@ def calculate_hwp_storage_fut(
 
     ############### Start
     pixel_area = raster_utils.get_cell_size_from_uri(base_dataset_uri) ** 2 / 10000.0 #convert to Ha
-    base_dataset = gdal.Open(base_dataset_uri)
     nodata = -5.0
 
     c_hwp_cur_uri = raster_utils.temporary_filename()
     bio_hwp_cur_uri = raster_utils.temporary_filename()
     vol_hwp_cur_uri = raster_utils.temporary_filename()
 
-    c_hwp = raster_utils.new_raster_from_base(base_dataset, c_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
-    bio_hwp = raster_utils.new_raster_from_base(base_dataset, bio_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
-    vol_hwp = raster_utils.new_raster_from_base(base_dataset, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+    raster_utils.new_raster_from_base_uri(base_dataset_uri, c_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+    raster_utils.new_raster_from_base_uri(base_dataset_uri, bio_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+    raster_utils.new_raster_from_base_uri(base_dataset_uri, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
 
     #Create a temporary shapefile to hold values of per feature carbon pools
     #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
@@ -358,9 +361,11 @@ def calculate_hwp_storage_fut(
         #burn all the attribute values to a raster
         for attributeName, raster_uri in zip(calculatedAttributeNames,
                                           [c_hwp_cur_uri, bio_hwp_cur_uri, vol_hwp_cur_uri]):
-            nodata = -1.e10
-            raster = raster_utils.new_raster_from_base(base_dataset, raster_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+            nodata = -1.0
+            raster_utils.new_raster_from_base_uri(base_dataset_uri, raster_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
+            raster = gdal.Open(raster_uri, gdal.GA_Update)
             gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy, options=['ATTRIBUTE=' + attributeName])
+            raster.FlushCache()
             raster = None
 
     #handle the future term 
@@ -425,16 +430,18 @@ def calculate_hwp_storage_fut(
             calculatedAttributeNames, [(c_hwp_uri, c_hwp_cur_uri), (bio_hwp_uri, bio_hwp_cur_uri), (vol_hwp_uri, vol_hwp_cur_uri)]):
 
             temp_filename = raster_utils.temporary_filename()
-            temp_raster = raster_utils.new_raster_from_base(
-                base_dataset, temp_filename, 'GTiff',
+            raster_utils.new_raster_from_base_uri(
+                base_dataset_uri, temp_filename, 'GTiff',
                 nodata, gdal.GDT_Float32, fill_value=nodata)
+            temp_raster = gdal.Open(temp_filename, gdal.GA_Update)
             gdal.RasterizeLayer(temp_raster, [1], hwp_shape_layer_copy,
                                 options=['ATTRIBUTE=' + attributeName])
+            temp_raster.FlushCache()
             temp_raster = None
             cur_raster = None
 
             #add temp_raster and raster cur raster into the output raster
-            nodata = -1.0e10
+            nodata = -1.0
             base_nodata = raster_utils.get_nodata_from_uri(raster_uri)
             cur_nodata = raster_utils.get_nodata_from_uri(cur_raster_uri)
             def add_op(base, current):
