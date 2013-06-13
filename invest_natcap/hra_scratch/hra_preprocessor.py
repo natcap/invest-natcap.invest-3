@@ -121,6 +121,21 @@ def execute(args):
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
     
+
+    #Now that we know the stressor names, let's create the simple CSV file to
+    #track the stressor buffers for each stressor.
+    s_buff_uri = os.path.join(output_dir, 'stressor_buffers.csv')
+        
+    with open(s_buff_uri, 'wb') as s_file:
+        s_writer = csv.writer(s_file)
+    
+        s_writer.writerow(['STRESSOR NAME', 'STRESSOR BUFFER (meters)'])
+        s_writer.writerow([])
+        
+        for s_name in stress_list:
+
+            stress_writer.writerow([s_name, '<enter a buffer region in meters>'])
+
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['exposure_crits'])
@@ -343,9 +358,17 @@ def parse_hra_tables(folder_uri):
 
     with open(json_uri, 'rb') as infile:
         parse_dictionary = json.load(infile)
-    
-    #Now we can compile and add the other dictionaries
-    dir_names = listdir(folder_uri)
-    
-    all_csvs = [f for f in l if f.endswith('_ratings.csv')]
+  
+    #This is the file name in which we will store all buffer information. This
+    #file will be explicitly created when preprocessor is run.
+    s_buff_uri = os.path.join(folder_uri, 'stressor_buffers.csv')
+
+    #Now we can compile the information from habitat csv's into other dictionaries
+    file_names = listdir(folder_uri)
+    habitat_names = fnmatch.filter(file_names, '*_ratings.csv')
+
+    #Initialize the three dictionaries that we will use to store criteria info
+    habitat_dict = {}
+    h_s_e_dict = {}
+    h_s_c_dict = {}
 
