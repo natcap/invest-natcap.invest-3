@@ -365,10 +365,20 @@ def parse_hra_tables(folder_uri):
 
     #Now we can compile the information from habitat csv's into other dictionaries
     file_names = listdir(folder_uri)
-    habitat_names = fnmatch.filter(file_names, '*_ratings.csv')
+    csv_uris = fnmatch.filter(file_names, '*_ratings.csv')
 
     #Initialize the three dictionaries that we will use to store criteria info
     habitat_dict = {}
     h_s_e_dict = {}
     h_s_c_dict = {}
 
+    for habitat_uri in csv_uris:
+        
+        habitat_name = re.search('_ratings\.csv', 
+                                os.path.basename(habitat_uri)).group(1)
+        
+        #Since each habitat CSV has both habitat individual ratings and habitat
+        #overlap ratings, need to subdivide them within the return dictionary
+        habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
+        habitat_dict[habitat_name] = habitat_parse_dictionary['habitats']
+    
