@@ -85,12 +85,9 @@ def execute(args):
 
     # Construct folder paths
     workspace = args['workspace_dir']
-    intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
-    service_dir = os.path.join(workspace, 'service')
     pixel_dir = os.path.join(output_dir, 'pixel')
-    raster_utils.create_directories(
-            [intermediate_dir, output_dir, service_dir, pixel_dir])
+    raster_utils.create_directories([output_dir, pixel_dir])
     
     # Get inputs from the args dictionary
     lulc_uri = args['lulc_uri']
@@ -497,6 +494,8 @@ def execute(args):
         return
         
     LOGGER.info('Starting Valuation Calculation')
+    service_dir = os.path.join(workspace, 'service')
+    raster_utils.create_directories([service_dir])
     
     # Paths for the watershed and subwatershed tables
     valuation_table_ws_uri = os.path.join(
@@ -521,8 +520,8 @@ def execute(args):
     
     # Making a copy of watershed and sub-watershed to add valuation results to
     valuation_sub_sheds_uri = os.path.join(
-            output_dir, 'valuation_sub_sheds%s.shp' % file_suffix)
-    valuation_sheds_uri = os.path.join(output_dir, 'valuation_sheds%s.shp' % file_suffix)
+            service_dir, 'valuation_sub_sheds%s.shp' % file_suffix)
+    valuation_sheds_uri = os.path.join(service_dir, 'valuation_sheds%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sub_sheds_uri, valuation_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, valuation_sheds_uri)
    
