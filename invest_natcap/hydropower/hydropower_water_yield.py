@@ -114,7 +114,7 @@ def execute(args):
     
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
-        file_suffix = args['suffix']
+        file_suffix = args['results_suffix']
         if file_suffix != "" and not file_suffix.startswith('_'):
             file_suffix = '_' + file_suffix
     except KeyError:
@@ -128,9 +128,9 @@ def execute(args):
     aet_path = os.path.join(pixel_dir, 'aet%s.tif' % file_suffix) 
     
     # Paths for the watershed and subwatershed tables
-    wyield_ws_table_uri = os.path.join(output_dir, 'water_yield_watershed.csv') 
+    wyield_ws_table_uri = os.path.join(output_dir, 'water_yield_watershed%s.csv' % file_suffix) 
     wyield_sws_table_uri = os.path.join(
-            output_dir, 'water_yield_subwatershed.csv') 
+            output_dir, 'water_yield_subwatershed%s.csv' % file_suffix) 
     
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
@@ -226,8 +226,8 @@ def execute(args):
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
-    wyield_sub_sheds_uri = os.path.join(output_dir, 'wyield_sub_sheds.shp')
-    wyield_sheds_uri = os.path.join(output_dir, 'wyield_sheds.shp')
+    wyield_sub_sheds_uri = os.path.join(output_dir, 'wyield_sub_sheds%s.shp' % file_suffix)
+    wyield_sheds_uri = os.path.join(output_dir, 'wyield_sheds%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sub_sheds_uri, wyield_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, wyield_sheds_uri)
 
@@ -349,9 +349,9 @@ def execute(args):
     
     # Paths for watershed and sub watershed scarcity tables
     scarcity_table_ws_uri = os.path.join(
-            output_dir, 'water_scarcity_watershed.csv') 
+            output_dir, 'water_scarcity_watershed%s.csv' % file_suffix) 
     scarcity_table_sws_uri = os.path.join(
-            output_dir, 'water_scarcity_subwatershed.csv') 
+            output_dir, 'water_scarcity_subwatershed%s.csv' % file_suffix) 
     
     # Open/read in the demand csv file into a dictionary
     demand_dict = {}
@@ -375,8 +375,8 @@ def execute(args):
     
     # Making a copy of watershed and sub-watershed to add water scarcity results
     # to
-    scarcity_sub_sheds_uri = os.path.join(output_dir, 'scarcity_sub_sheds.shp')
-    scarcity_sheds_uri = os.path.join(output_dir, 'scarcity_sheds.shp')
+    scarcity_sub_sheds_uri = os.path.join(output_dir, 'scarcity_sub_sheds%s.shp' % file_suffix)
+    scarcity_sheds_uri = os.path.join(output_dir, 'scarcity_sheds%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sub_sheds_uri, scarcity_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, scarcity_sheds_uri)
    
@@ -500,9 +500,9 @@ def execute(args):
     
     # Paths for the watershed and subwatershed tables
     valuation_table_ws_uri = os.path.join(
-            service_dir, 'hydropower_value_watershed.csv')
+            service_dir, 'hydropower_value_watershed%s.csv' % file_suffix)
     valuation_table_sws_uri = os.path.join(
-            service_dir, 'hydropower_value_subwatershed.csv') 
+            service_dir, 'hydropower_value_subwatershed%s.csv' % file_suffix) 
     
     # Open/read in valuation parameters from CSV file
     valuation_params = {}
@@ -521,8 +521,8 @@ def execute(args):
     
     # Making a copy of watershed and sub-watershed to add valuation results to
     valuation_sub_sheds_uri = os.path.join(
-            output_dir, 'valuation_sub_sheds.shp')
-    valuation_sheds_uri = os.path.join(output_dir, 'valuation_sheds.shp')
+            output_dir, 'valuation_sub_sheds%s.shp' % file_suffix)
+    valuation_sheds_uri = os.path.join(output_dir, 'valuation_sheds%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sub_sheds_uri, valuation_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, valuation_sheds_uri)
    
