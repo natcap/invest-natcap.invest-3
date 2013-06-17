@@ -360,8 +360,12 @@ def parse_hra_tables(folder_uri):
         parse_dictionary = json.load(infile)
   
     #This is the file name in which we will store all buffer information. This
-    #file will be explicitly created when preprocessor is run.
+    #file will be explicitly created when preprocessor is run. Want to parse and
+    #pull into it's own dictionary do that it can be placed in mega-dictionary.
+
     s_buff_uri = os.path.join(folder_uri, 'stressor_buffers.csv')
+    
+    stress_dict = parse_stress_buffer(s_buff_uri)
 
     #Now we can compile the information from habitat csv's into other dictionaries
     file_names = listdir(folder_uri)
@@ -381,4 +385,20 @@ def parse_hra_tables(folder_uri):
         #overlap ratings, need to subdivide them within the return dictionary
         habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
         habitat_dict[habitat_name] = habitat_parse_dictionary['habitats']
-    
+
+def parse_stress_buff(uri):
+    '''This will take the stressor buffer CSV and parse it into a dictionary
+    where the stressor name maps to a float of the about by which it should be buffered.
+
+    Input:
+        uri- The location of the CSV file from which we should pull the buffer
+            amounts.
+
+    Returns:
+        A dictionary containing stressor names mapped to their corresponding buffer
+            amounts. The float may be 0, but may not be a string. The form will 
+            be the following:
+
+            {'Stress 1': 2000, 'Stress 2': 1500, 'Stress 3': 0, ...}
+    '''
+
