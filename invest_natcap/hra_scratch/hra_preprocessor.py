@@ -364,7 +364,6 @@ def parse_hra_tables(folder_uri):
     #pull into it's own dictionary do that it can be placed in mega-dictionary.
 
     s_buff_uri = os.path.join(folder_uri, 'stressor_buffers.csv')
-    
     stress_dict = parse_stress_buffer(s_buff_uri)
 
     #Now we can compile the information from habitat csv's into other dictionaries
@@ -401,4 +400,34 @@ def parse_stress_buff(uri):
 
             {'Stress 1': 2000, 'Stress 2': 1500, 'Stress 3': 0, ...}
     '''
+
+    buff_dict = {}
+
+    with open(uri, 'rU') as buff_file:
+
+        csv_reader = csv.reader(buff_file):
+
+        #Drain the first two lines, since just headers and blank
+        for _ in range(2): 
+            csv_reader.next()
+
+        #We know that the rest of the table will just be stressor names and their
+        #mappings, so we are clear to just drain the table.
+        for row in csv_reader:
+            
+            s_name = row[0]
+            
+            try:
+                #Make sure that what they're passing in as a buffer is a number,
+                #not the leftover help string.
+                buff_dict[key] = float(row[1])
+
+            except ValueError:
+                raise UnexpectedString("Entries in CSV table may not be \
+                    strings, and may not be left blank. Check your Stressor Buffer \
+                    CSV for any leftover strings or spaces within the buffer amount. \
+                    Entries must be a number, and may not be left blank.")
+
+    
+    return buff_dict
 
