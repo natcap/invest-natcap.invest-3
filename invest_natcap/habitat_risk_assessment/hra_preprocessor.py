@@ -687,7 +687,10 @@ def parse_habitat_overlap(uri):
             if line[1] == 'SHAPE':
                 try:
                     habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(float, line[2:4])))
+                        dict(zip(he
+                        
+            '''
+            aders[1:3], map(float, line[2:4])))
                 except ValueError:
                     raise UnexpectedString("Entries in CSV table may not be \
                         strings, and may not be left blank. Check your %s CSV \
