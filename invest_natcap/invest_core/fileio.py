@@ -6,6 +6,13 @@ import platform
 import ctypes
 
 
+class ColumnMissingFromTable(KeyError):
+    """A custom exception for when a key is missing from a table.
+    More descriptive than just throwing a KeyError.  This class inherits the
+    KeyError exception, so any existing exception handling should still work
+    properly."""
+    pass
+
 def get_free_space(folder='/', unit='auto'):
     """Get the free space on the drive/folder marked by folder.  Returns a float
         of unit unit.
@@ -399,7 +406,11 @@ class TableHandler(object):
                 del input_dict[key_field]
             return input_dict
 
-        return dict((row[key_field], check_key(row)) for row in self.table)
+        try:
+            return dict((row[key_field], check_key(row)) for row in self.table)
+        except KeyError as e:
+            raise ColumnMissingFromTable('Column %s missing from %s', key_field,
+                self.driver.uri)
 
     def get_table_row(self, key_field, key_value):
         """Return the first full row where the value of key_field is equivalent
