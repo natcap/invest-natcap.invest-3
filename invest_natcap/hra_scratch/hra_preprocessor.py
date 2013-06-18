@@ -405,7 +405,7 @@ def parse_stress_buff(uri):
 
     with open(uri, 'rU') as buff_file:
 
-        csv_reader = csv.reader(buff_file):
+        csv_reader = csv.reader(buff_file)
 
         #Drain the first two lines, since just headers and blank
         for _ in range(2): 
@@ -429,5 +429,3 @@ def parse_stress_buff(uri):
                     Entries must be a number, and may not be left blank.")
 
     
-    return buff_dict
-
