@@ -379,11 +379,50 @@ def parse_hra_tables(folder_uri):
         
         habitat_name = re.search('_ratings\.csv', 
                                 os.path.basename(habitat_uri)).group(1)
+        #Instead of having to know what came from where, let's just have it update
+        #the global dictionaries while the function is running. 
+        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e, h_s_c)
+
+def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
+    '''This function will take in a location, and update the dictionaries being 
+    passed with the new Hab/Stress subdictionary info that we're getting from 
+    the CSV at URI.
+
+    Input:
+        uri- The location of the CSV that we want to get ratings info from. This
+            will contain information for a given habitat's individual criteria
+            ratings, as well as criteria ratings for the overlap of every
+            stressor.
+        habs- A dictionary which contains all resilience specific criteria info.
+            The key for these will be the habitat name. It will map to a
+            subdictionary containing criteria information. The whole dictionary will
+            look like the following:
+            
+            {Habitat A: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            }
+            
+        h_s_e- A dictionary containing all information applicable to exposure
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+        h_s_c- A dictionary containing all information applicable to sensitivity
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+    '''
+
+
+
         
-        #Since each habitat CSV has both habitat individual ratings and habitat
-        #overlap ratings, need to subdivide them within the return dictionary
-        habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
-        habitat_dict[habitat_name] = habitat_parse_dictionary['habitats']
+    
+
 
 def parse_stress_buff(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
