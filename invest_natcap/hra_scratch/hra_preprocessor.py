@@ -360,8 +360,11 @@ def parse_hra_tables(folder_uri):
         parse_dictionary = json.load(infile)
   
     #This is the file name in which we will store all buffer information. This
-    #file will be explicitly created when preprocessor is run.
+    #file will be explicitly created when preprocessor is run. Want to parse and
+    #pull into it's own dictionary do that it can be placed in mega-dictionary.
+
     s_buff_uri = os.path.join(folder_uri, 'stressor_buffers.csv')
+    stress_dict = parse_stress_buffer(s_buff_uri)
 
     #Now we can compile the information from habitat csv's into other dictionaries
     file_names = listdir(folder_uri)
@@ -376,9 +379,95 @@ def parse_hra_tables(folder_uri):
         
         habitat_name = re.search('_ratings\.csv', 
                                 os.path.basename(habitat_uri)).group(1)
+        #Instead of having to know what came from where, let's just have it update
+        #the global dictionaries while the function is running. 
+        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e, h_s_c)
+
+def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
+    '''This function will take in a location, and update the dictionaries being 
+    passed with the new Hab/Stress subdictionary info that we're getting from 
+    the CSV at URI.
+
+    Input:
+        uri- The location of the CSV that we want to get ratings info from. This
+            will contain information for a given habitat's individual criteria
+            ratings, as well as criteria ratings for the overlap of every
+            stressor.
+        habs- A dictionary which contains all resilience specific criteria info.
+            The key for these will be the habitat name. It will map to a
+            subdictionary containing criteria information. The whole dictionary will
+            look like the following:
+            
+            {Habitat A: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            }
+            
+        h_s_e- A dictionary containing all information applicable to exposure
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+        h_s_c- A dictionary containing all information applicable to sensitivity
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+    '''
+
+    with open(uri, 'rU') as hab_file:
         
-        #Since each habitat CSV has both habitat individual ratings and habitat
-        #overlap ratings, need to subdivide them within the return dictionary
-        habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
-        habitat_dict[habitat_name] = habitat_parse_dictionary['habitats']
+        csv_reader = csv.reader(hab_file)
+         
+
+        
+    
+
+
+def parse_stress_buff(uri):
+    '''This will take the stressor buffer CSV and parse it into a dictionary
+    where the stressor name maps to a float of the about by which it should be buffered.
+
+    Input:
+        uri- The location of the CSV file from which we should pull the buffer
+            amounts.
+
+    Returns:
+        A dictionary containing stressor names mapped to their corresponding buffer
+            amounts. The float may be 0, but may not be a string. The form will 
+            be the following:
+
+            {'Stress 1': 2000, 'Stress 2': 1500, 'Stress 3': 0, ...}
+    '''
+
+    buff_dict = {}
+
+    with open(uri, 'rU') as buff_file:
+
+        csv_reader = csv.reader(buff_file)
+
+        #Drain the first two lines, since just headers and blank
+        for _ in range(2): 
+            csv_reader.next()
+
+        #We know that the rest of the table will just be stressor names and their
+        #mappings, so we are clear to just drain the table.
+        for row in csv_reader:
+            
+            s_name = row[0]
+            
+            try:
+                #Make sure that what they're passing in as a buffer is a number,
+                #not the leftover help string.
+                buff_dict[key] = float(row[1])
+
+            except ValueError:
+                raise UnexpectedString("Entries in CSV table may not be \
+                    strings, and may not be left blank. Check your Stressor Buffer \
+                    CSV for any leftover strings or spaces within the buffer amount. \
+                    Entries must be a number, and may not be left blank.")
+
     
