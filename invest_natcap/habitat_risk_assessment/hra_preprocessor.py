@@ -27,7 +27,7 @@ class NotEnoughCriteria(Exception):
 class ImproperCriteriaSpread(Exception):
     '''An exception for hra_preprocessor which can be passed if there are not
     one or more criteria in each of the 3 criteria categories: resilience,
-C   exposure, and sensitivity.'''
+    exposure, and sensitivity.'''
     pass
 
 class ZeroDQWeightValue(Exception):
