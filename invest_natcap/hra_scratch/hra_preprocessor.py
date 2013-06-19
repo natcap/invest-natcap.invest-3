@@ -421,10 +421,48 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
     with open(uri, 'rU') as hab_file:
         
         csv_reader = csv.reader(hab_file)
-         
+        hab_name = csv_reader.next()[1]
 
+        #Drain the next two lines
+        for _ in range(2): 
+            csv_reader.next()
         
-    
+        #Get the headers
+        headers = csv_reader.next()[1:]
+        line = csv_reader.next()
+        
+        #Drain the habitat-specific dictionary
+        while line[0] != '':
+            
+            key = line[0]
+
+            #If we are dealing with a shapefile criteria, we only want  to
+            #add the DQ and the W, and we will add a rasterized version of
+            #the shapefile later.
+            if line[1] == 'SHAPE':
+                try:
+                    habs['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:3], map(float, line[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            #Should catch any leftovers from the autopopulation of the helptext        
+            else:
+                try:
+                    habs['Crit_Ratings'][key] = \
+                        dict(zip(headers, map(float,line[1:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            
+            line = csv_reader.next()
+         
+        #Now we will pick up all the E/C habitat-stressor information fore this
+        #specific habitat.
 
 
 def parse_stress_buff(uri):
