@@ -491,7 +491,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
                     
                     #Just abstract all of the erroring out, so that we know if
                     #we're below here, it should all work perfectly. LOL
-                    errorCheck(line)
+                    errorCheck(line, hab_name, stress_name)
 
                     #Exposure criteria.
                     if line[4] == 'E':
