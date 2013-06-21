@@ -260,6 +260,7 @@ def execute(args):
     for key_name, rast_uri in sws_tuple_names_uris:
         # Aggregrate mean over the sub-watersheds for each uri listed in
         # 'sws_tuple_names_uri'
+        LOGGER.debug('AGGREGATE OVER %s', key_name)
         key_dict = raster_utils.aggregate_raster_values_uri(
                 rast_uri, sub_sheds_uri, 'subws_id', 'mean')
         # Add aggregated values to sub-watershed shapefile under new field
@@ -273,14 +274,7 @@ def execute(args):
     
     # Create a dictionary that maps watersheds to sub-watersheds given the
     # watershed and sub-watershed shapefiles
-    sheds_map_sub_sheds = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
-    LOGGER.debug('sheds_map_sub_sheds : %s', sheds_map_sub_sheds)
-    
-    # Create a dictionary that maps sub-watersheds to watersheds
-    sub_sheds_map_sheds_dict = {}
-    for key, val in sheds_map_sub_sheds.iteritems():
-        sub_sheds_map_sheds_dict[key] = val
-    
+    sub_sheds_map_sheds_dict = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
     LOGGER.debug('sub_sheds_map_sheds_dict : %s', sub_sheds_map_sheds_dict)
    
     # Add the corresponding watershed ids to the sub-watershed shapefile as a
