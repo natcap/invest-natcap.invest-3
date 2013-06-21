@@ -30,7 +30,7 @@ class ImproperCriteriaSpread(Exception):
 
 class ZeroDQWeightValue(Exception):
     '''An exception specifically for the parsing of the preprocessor tables in
-    which the model shoudl break loudly if a user tries to enter a zero value
+    which the model should break loudly if a user tries to enter a zero value
     for either a data quality or a weight. However, we should confirm that it
     will only break if the rating is not also zero. If they're removing the
     criteria entirely from that H-S overlap, it should be allowed.'''
@@ -573,15 +573,15 @@ def errorCheck(line, hab_name, stress_name):
                 Rating- Can either be the explicit string 'SHAPE', which would
                     be placed automatically by HRA_Preprocessor, or a float.
                     ERROR: if string that isn't 'SHAPE'.
-                Weight- Must be a float (or an int).
-                    ERROR: if string, or anything not castable to float.
-                DataQuality- Most be a float (or an int).
-                    ERROR: if string, or anything not castable to float.
+                Weight- Must be a float (or an int), but cannot be 0.
+                    ERROR: if string, or anything not castable to float, or 0.
+                DataQuality- Most be a float (or an int), but cannot be 0.
+                    ERROR: if string, or anything not castable to float, or 0.
                 Exp/Cons- Most be the string 'E' or 'C'.
                     ERROR: if string that isn't one of the acceptable ones,
                     or ANYTHING else.
 
-    Returns nothing, should StopIteration if there's an issue.
+    Returns nothing, should raise exception if there's an issue.
     '''
     #Rating
     if line[1] != 'SHAPE':
@@ -589,9 +589,31 @@ def errorCheck(line, hab_name, stress_name):
             float(line[1])
         except ValueError:
             raise UnexpectedString("Entries in CSV table may not be strings, \
-                and may not be left blank. Check your %s CSV for any leftover \
-                strings or spaces within Rating, Data Quality or Weight \
-                columns." % hab_name)
+                and may not be left blank. Check your %s CSV in %s section for \
+                any leftover strings or spaces within Rating, Data Quality or \
+                Weight columns." % (hab_name, stress_name))
+    
+    #Weight and DQ
+
+    #They may not be 0.
+    if line[2] == 0 or line[3] == 0:
+        raise ZeroDQWeightValue("Individual criteria data qualities and weights \
+            may not be 0. Check your %s CSV table in the %s section to \
+            correct this." % (hab_name, stress_name))
+
+    #Assuming neither is 0, they also must be floats.
+    try:
+        float(line[2])
+        float(line[3])
+    except ValueError:
+        raise UnexpectedString("Entries in CSV table may not be strings, \
+            and may not be left blank. Check your %s CSV in %s section for \
+            any leftover strings or spaces within Rating, Data Quality or \
+            Weight columns." % (hab_name, stress_name))
+
+    #Exposure vs Consequence
+    if line[4] != 'E' or line[4] != 'C':
+
 
 def parse_stress_buff(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
