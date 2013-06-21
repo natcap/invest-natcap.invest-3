@@ -43,6 +43,13 @@ class UnexpectedString(Exception):
     our exception with a more accurate message. '''
     pass
 
+class ImproperECSelection(Exception):
+    '''An exception for hra_preprocessor that should catch selections for
+    exposure vs consequence scoring that are not either E or C. The user must
+    decide in this column which the criteria applies to, and my only designate
+    this with an 'E' or 'C'. '''
+    pass
+
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
