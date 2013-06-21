@@ -620,7 +620,9 @@ def errorCheck(line, hab_name, stress_name):
 
     #Exposure vs Consequence
     if line[4] != 'E' or line[4] != 'C':
-
+        raise ImproperECSelection("Entries in the E/C column of a CSV table may \
+            only be \"E\" or \"C\". Please select one of those options for the \
+            criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
 
 def parse_stress_buff(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
