@@ -11,6 +11,38 @@ import shutil
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class MissingHabitatsOrSpecies(Exception):
+    '''An exception to pass if the hra_preprocessor args dictionary being
+    passed is missing a habitats directory or a species directory.'''
+    pass
+
+class NotEnoughCriteria(Exception):
+    '''An exception for hra_preprocessor which can be passed if the number of
+    criteria in the resilience, exposure, and sensitivity categories all sums
+    to less than 4.'''
+    pass
+
+class ImproperCriteriaSpread(Exception):
+    '''An exception for hra_preprocessor which can be passed if there are not
+    one or more criteria in each of the 3 criteria categories: resilience,
+    exposure, and sensitivity.'''
+    pass
+
+class ZeroDQWeightValue(Exception):
+    '''An exception specifically for the parsing of the preprocessor tables in
+    which the model shoudl break loudly if a user tries to enter a zero value
+    for either a data quality or a weight. However, we should confirm that it
+    will only break if the rating is not also zero. If they're removing the
+    criteria entirely from that H-S overlap, it should be allowed.'''
+    pass
+
+class UnexpectedString(Exception):
+    '''An exception for hra_preprocessor that should catch any strings that are
+    left over in the CSVs. Since everything from the CSV's are being cast to
+    floats, this will be a hook off of python's ValueError, which will re-raise 
+    our exception with a more accurate message. '''
+    pass
+
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
@@ -551,9 +583,15 @@ def errorCheck(line, hab_name, stress_name):
 
     Returns nothing, should StopIteration if there's an issue.
     '''
-
-
-
+    #Rating
+    if line[1] != 'SHAPE':
+        try:
+            float(line[1])
+        except ValueError:
+            raise UnexpectedString("Entries in CSV table may not be strings, \
+                and may not be left blank. Check your %s CSV for any leftover \
+                strings or spaces within Rating, Data Quality or Weight \
+                columns." % hab_name)
 
 def parse_stress_buff(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
