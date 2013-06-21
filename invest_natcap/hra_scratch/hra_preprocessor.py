@@ -522,6 +522,38 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             except StopIteration:
                 break
 
+def errorCheck(line, hab_name, stress_name):
+    '''Throwing together a simple error checking function for all of the inputs
+    coming from the CSV file. Want to do checks for strings vs floats, as well
+    as some explicit string checking for 'E'/'C'.
+
+    Input:
+        line- An array containing a line of H-S overlap data. The format of a
+            line would look like the following:
+
+            ['CritName', 'Rating', 'Weight', 'DataQuality', 'Exp/Cons']
+
+            The following restrictions should be placed on the data:
+            
+                CritName- This will be propogated by default by
+                    HRA_Preprocessor. Since it's coming in as a string, we 
+                    shouldn't need to check anything.
+                Rating- Can either be the explicit string 'SHAPE', which would
+                    be placed automatically by HRA_Preprocessor, or a float.
+                    ERROR: if string that isn't 'SHAPE'.
+                Weight- Must be a float (or an int).
+                    ERROR: if string, or anything not castable to float.
+                DataQuality- Most be a float (or an int).
+                    ERROR: if string, or anything not castable to float.
+                Exp/Cons- Most be the string 'E' or 'C'.
+                    ERROR: if string that isn't one of the acceptable ones,
+                    or ANYTHING else.
+
+    Returns nothing, should StopIteration if there's an issue.
+    '''
+
+
+
 
 def parse_stress_buff(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
