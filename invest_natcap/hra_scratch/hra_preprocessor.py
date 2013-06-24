@@ -420,6 +420,13 @@ def parse_hra_tables(folder_uri):
         #the global dictionaries while the function is running. 
         parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
 
+    
+    #Add everything to the parse dictionary
+    parse_dictionary[buffer_dict] = stress_dict
+    parse_dictionary[habitats] = habitat_dict
+    parse_dictionary[h_s_e] = h_s_e_dict
+    parse_dictionary[h_s_c] = h_s_c_dict
+
 def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
     passed with the new Hab/Stress subdictionary info that we're getting from 
