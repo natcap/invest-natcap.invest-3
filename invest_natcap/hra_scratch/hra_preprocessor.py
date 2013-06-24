@@ -11,6 +11,45 @@ import shutil
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class MissingHabitatsOrSpecies(Exception):
+    '''An exception to pass if the hra_preprocessor args dictionary being
+    passed is missing a habitats directory or a species directory.'''
+    pass
+
+class NotEnoughCriteria(Exception):
+    '''An exception for hra_preprocessor which can be passed if the number of
+    criteria in the resilience, exposure, and sensitivity categories all sums
+    to less than 4.'''
+    pass
+
+class ImproperCriteriaSpread(Exception):
+    '''An exception for hra_preprocessor which can be passed if there are not
+    one or more criteria in each of the 3 criteria categories: resilience,
+    exposure, and sensitivity.'''
+    pass
+
+class ZeroDQWeightValue(Exception):
+    '''An exception specifically for the parsing of the preprocessor tables in
+    which the model should break loudly if a user tries to enter a zero value
+    for either a data quality or a weight. However, we should confirm that it
+    will only break if the rating is not also zero. If they're removing the
+    criteria entirely from that H-S overlap, it should be allowed.'''
+    pass
+
+class UnexpectedString(Exception):
+    '''An exception for hra_preprocessor that should catch any strings that are
+    left over in the CSVs. Since everything from the CSV's are being cast to
+    floats, this will be a hook off of python's ValueError, which will re-raise 
+    our exception with a more accurate message. '''
+    pass
+
+class ImproperECSelection(Exception):
+    '''An exception for hra_preprocessor that should catch selections for
+    exposure vs consequence scoring that are not either E or C. The user must
+    decide in this column which the criteria applies to, and my only designate
+    this with an 'E' or 'C'. '''
+    pass
+
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
@@ -421,11 +460,169 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
     with open(uri, 'rU') as hab_file:
         
         csv_reader = csv.reader(hab_file)
-         
+        hab_name = csv_reader.next()[1]
 
+        #Drain the next two lines
+        for _ in range(2): 
+            csv_reader.next()
         
-    
+        #Get the headers
+        headers = csv_reader.next()[1:]
+        line = csv_reader.next()
+        
+        #Drain the habitat-specific dictionary
+        while line[0] != '':
+            
+            key = line[0]
 
+            #If we are dealing with a shapefile criteria, we only want  to
+            #add the DQ and the W, and we will add a rasterized version of
+            #the shapefile later.
+            if line[1] == 'SHAPE':
+                try:
+                    habs['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:3], map(float, line[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            #Should catch any leftovers from the autopopulation of the helptext        
+            else:
+                try:
+                    habs['Crit_Ratings'][key] = \
+                        dict(zip(headers, map(float,line[1:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            
+            line = csv_reader.next()
+         
+        #We will have just loaded in a null line from under the hab-specific
+        #criteria, now drainthe next two, since they're just headers for users.
+        #Drain the next two lines
+        for _ in range(2): 
+            csv_reader.next()
+
+        #Now we will pick up all the E/C habitat-stressor information fore this
+        #specific habitat.
+        #Drain the overlap dictionaries
+        #This is the overlap header
+        while True:
+            try:
+                line = csv_reader.next()
+                stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
+                headers = csv_reader.next()[1:]
+                
+                #Drain the overlap table
+                line = csv_reader.next()
+       
+                #Create empty entries for this overlap in both the _e and _c
+                #dictionaries.
+                h_s_e[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
+                        'Crit_Rasters': {}}
+                h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
+                        'Crit_Rasters': {}}
+                
+                if line != '':
+                    
+                    #Just abstract all of the erroring out, so that we know if
+                    #we're below here, it should all work perfectly. LOL
+                    errorCheck(line, hab_name, stress_name)
+
+                    #Exposure criteria.
+                    if line[4] == 'E':
+
+                        #If criteria rasters are desired for that criteria.
+                        if line[1] == 'SHAPE':
+                            
+                            h_s_e[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
+                                dict(zip(headers[1:3], map(float,line[2:4])))
+                        #Have already error checked, so this must be a float.
+                        else:
+                            h_s_e[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
+                                dict(zip(headers, map(float,line[1:4])))
+                            
+                    #We have already checked, so this must be a 'C'    
+                    else:      
+                        
+                        #If criteria rasters are desired for that criteria.
+                        if line[1] == 'SHAPE':
+                            
+                            h_s_c[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
+                                dict(zip(headers[1:3], map(float,line[2:4])))
+                        #Have already error checked, so this must be a float.
+                        else:
+                            h_s_c[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
+                                dict(zip(headers, map(float,line[1:4])))
+
+            except StopIteration:
+                break
+
+def errorCheck(line, hab_name, stress_name):
+    '''Throwing together a simple error checking function for all of the inputs
+    coming from the CSV file. Want to do checks for strings vs floats, as well
+    as some explicit string checking for 'E'/'C'.
+
+    Input:
+        line- An array containing a line of H-S overlap data. The format of a
+            line would look like the following:
+
+            ['CritName', 'Rating', 'Weight', 'DataQuality', 'Exp/Cons']
+
+            The following restrictions should be placed on the data:
+            
+                CritName- This will be propogated by default by
+                    HRA_Preprocessor. Since it's coming in as a string, we 
+                    shouldn't need to check anything.
+                Rating- Can either be the explicit string 'SHAPE', which would
+                    be placed automatically by HRA_Preprocessor, or a float.
+                    ERROR: if string that isn't 'SHAPE'.
+                Weight- Must be a float (or an int), but cannot be 0.
+                    ERROR: if string, or anything not castable to float, or 0.
+                DataQuality- Most be a float (or an int), but cannot be 0.
+                    ERROR: if string, or anything not castable to float, or 0.
+                Exp/Cons- Most be the string 'E' or 'C'.
+                    ERROR: if string that isn't one of the acceptable ones,
+                    or ANYTHING else.
+
+    Returns nothing, should raise exception if there's an issue.
+    '''
+    #Rating
+    if line[1] != 'SHAPE':
+        try:
+            float(line[1])
+        except ValueError:
+            raise UnexpectedString("Entries in CSV table may not be strings, \
+                and may not be left blank. Check your %s CSV in %s section for \
+                any leftover strings or spaces within Rating, Data Quality or \
+                Weight columns." % (hab_name, stress_name))
+    
+    #Weight and DQ
+
+    #They may not be 0.
+    if line[2] == 0 or line[3] == 0:
+        raise ZeroDQWeightValue("Individual criteria data qualities and weights \
+            may not be 0. Check your %s CSV table in the %s section to \
+            correct this." % (hab_name, stress_name))
+
+    #Assuming neither is 0, they also must be floats.
+    try:
+        float(line[2])
+        float(line[3])
+    except ValueError:
+        raise UnexpectedString("Entries in CSV table may not be strings, \
+            and may not be left blank. Check your %s CSV in %s section for \
+            any leftover strings or spaces within Rating, Data Quality or \
+            Weight columns." % (hab_name, stress_name))
+
+    #Exposure vs Consequence
+    if line[4] != 'E' or line[4] != 'C':
+        raise ImproperECSelection("Entries in the E/C column of a CSV table may \
+            only be \"E\" or \"C\". Please select one of those options for the \
+            criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
 
 def parse_stress_buff(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
