@@ -496,8 +496,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     return out_dataset
 
 def new_raster_from_base_uri(base_uri, *args, **kwargs):
-    """A wrapper for the function new_raster_from_base that opens up the
-        base_uri before passing it to new_raster_from_base.
+    """A wrapper for the function new_raster_from_base that opens up
+        the base_uri before passing it to new_raster_from_base.
 
         base_uri - a URI to a GDAL dataset on disk.
 
