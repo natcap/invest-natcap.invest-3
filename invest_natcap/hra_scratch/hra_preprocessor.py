@@ -127,7 +127,7 @@ def execute(args):
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if os.path.exists(output_dir):
-       shutil.rmtree(output_dir)
+        shutil.rmtree(output_dir)
  
     os.makedirs(output_dir)
    
