@@ -503,7 +503,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
         All other arguments to new_raster_from_base are passed in.
 
-        Returns a GDAL dataset.
+        Returns nothing.
         """
     base_raster = gdal.Open(base_uri)
     new_raster_from_base(base_raster, *args, **kwargs)
