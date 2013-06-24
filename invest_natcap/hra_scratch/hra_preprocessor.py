@@ -173,7 +173,7 @@ def execute(args):
         
         for s_name in stress_list:
 
-            stress_writer.writerow([s_name, '<enter a buffer region in meters>'])
+            s_writer.writerow([s_name, '<enter a buffer region in meters>'])
 
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
@@ -667,4 +667,4 @@ def parse_stress_buffer(uri):
                     CSV for any leftover strings or spaces within the buffer amount. \
                     Entries must be a number, and may not be left blank.")
 
-    
+    return buff_dict
