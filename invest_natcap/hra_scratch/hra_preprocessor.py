@@ -118,7 +118,6 @@ def execute(args):
         len(args['resilience_crits']) + len(args['sensitivity_crits'])
    
     if total_crits < 4:
-        
         raise NotEnoughCriteria("This model requires you to use at least 4 \
                 criteria in order to display an accurate picture of habitat \
                 risk.")
@@ -334,6 +333,37 @@ def listdir(path):
 
     return uris
 
+def make_crit_shape_dict(crit_uri):
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+
+    Returns:
+        A dictionary containing shapefile URI's, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        structure will be as follows:
+        
+        {'h':
+            {'HabA':
+                {'CriteriaName: "Shapefile Datasource URI"...}, ...
+            },
+         'h_s_c':
+            {('HabA', 'Stress1'):
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            },
+         'h_s_e'
+            {('HabA', 'Stress1'):
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            }
+        }
+    '''
+
 def parse_hra_tables(folder_uri):
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
@@ -426,6 +456,8 @@ def parse_hra_tables(folder_uri):
     parse_dictionary[habitats] = habitat_dict
     parse_dictionary[h_s_e] = h_s_e_dict
     parse_dictionary[h_s_c] = h_s_c_dict
+
+    return parse_dictionary
 
 def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
