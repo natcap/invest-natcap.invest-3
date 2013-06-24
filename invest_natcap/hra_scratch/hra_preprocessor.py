@@ -160,7 +160,7 @@ def execute(args):
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
     
-
+    
     #Now that we know the stressor names, let's create the simple CSV file to
     #track the stressor buffers for each stressor.
     s_buff_uri = os.path.join(output_dir, 'stressor_buffers.csv')
@@ -416,11 +416,9 @@ def parse_hra_tables(folder_uri):
 
     for habitat_uri in csv_uris:
         
-        habitat_name = re.search('_ratings\.csv', 
-                                os.path.basename(habitat_uri)).group(1)
         #Instead of having to know what came from where, let's just have it update
         #the global dictionaries while the function is running. 
-        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e, h_s_c)
+        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
 
 def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
@@ -659,7 +657,7 @@ def parse_stress_buffer(uri):
             try:
                 #Make sure that what they're passing in as a buffer is a number,
                 #not the leftover help string.
-                buff_dict[key] = float(row[1])
+                buff_dict[s_name] = float(row[1])
 
             except ValueError:
                 raise UnexpectedString("Entries in CSV table may not be \
