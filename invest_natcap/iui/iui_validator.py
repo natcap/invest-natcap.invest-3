@@ -60,6 +60,7 @@ class Validator(registrar.Registrar):
                    'folder': FolderChecker,
                    'DBF': DBFChecker,
                    'CSV': CSVChecker,
+                   'table': FlexibleTableChecker,
                    'string': PrimitiveChecker}
         self.update_map(updates)
         self.type_checker = self.init_type_checker(str(validator_type))
@@ -997,3 +998,24 @@ class CSVChecker(TableChecker):
     #element.value() function.  All check functions should perform the required
     #checks and return an error string.
     #if no error is found, the check function should return None.
+
+class FlexibleTableChecker(TableChecker):
+    """This class validates a file that can either be DBF or CSV format."""
+    def open(self, valid_dict):
+        """Attempt to open the file"""
+        # As a first approximation, we use the file suffix to determine whether the
+        # file is DBF format or CSV format.
+        if self.uri.endswith('dbf'):
+            self.specific_table_checker = DBFChecker()
+        if self.uri.endswith('csv'):
+            self.specific_table_checker = CSVChecker()
+
+        # TODO: handle other suffixes
+        self.specific_table_checker.uri = self.uri
+        self.specific_table_checker.open(valid_dict)
+
+    def _build_table(self):
+        return self.specific_table_checker._build_table()
+
+    def _get_fieldnames(self):
+        return self.specific_table_checker._get_fieldnames()

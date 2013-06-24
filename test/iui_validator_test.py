@@ -51,6 +51,17 @@ class CheckerTester(unittest.TestCase):
         self.assertNotEqual(error, '', msg='No error message produced')
         self.assertNotEqual(error, None, msg='No error message produced')
 
+    def assertErrorWithMessage(self, substr):
+        """Assert that an error with the given substring is produced.
+
+        This is useful so we can make sure that the error that occurs is the
+        one that we expect.
+
+        returns nothing"""
+        error = self.check()
+        self.assertIn(substr, error)
+        
+
 class FileCheckerTester(CheckerTester):
     """Test the class iui_validator.FileChecker"""
     def setUp(self):
@@ -464,6 +475,43 @@ class CSVCheckerTester(CheckerTester):
             # Try default numeric validation on the bad guilds file.
             self.validate_as['restrictions'][0]['validateAs'] = {'type': 'number'}
             self.assertNoError()
+
+class FlexibleTableCheckerTester(CheckerTester):
+    """Test the class iui_validator.FlexibleTableChecker"""
+    def setUp(self):
+        self.validate_as = { 'type': 'CSV',
+                             'value': TEST_DATA + 
+                               '/wave_energy_data/samp_input/Machine_PelamisParamCSV.csv',
+                             'fieldsExist': []}
+        self.checker = iui_validator.FlexibleTableChecker()
+
+    def setDbfData(self):
+        self.validate_as['type'] = 'DBF'
+        self.validate_as['value'] = TEST_DATA + '/carbon/input/harv_samp_cur.dbf'
+
+    def test_csv_fields_exist(self):
+        """Assert that FlexibleTableChecker can verify fields exist in a CSV file"""
+        self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
+        self.assertNoError()
+        
+        self.validate_as['fieldsExist'] = [
+            {'field': {'pattern': "VALUE", "flag": "ignoreCase"},
+             'required': {'min': 1, 'max': 2}}
+            ]
+        self.assertNoError()
+
+    def test_dbf_fields_exist(self):
+        """Assert that FlexibleTableChecker can verify fields exist in a DBF file"""
+        self.setDbfData()
+        self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
+                                           'Start_date']
+        self.assertNoError()
+
+    def test_nonexistent_fields_dbf(self):
+        """Assert that FlexibleTableChecker fails if a bad fieldname is provided in a DBF."""
+        self.setDbfData()
+        self.validate_as['fieldsExist'].append('nonexistent_field')
+        self.assertErrorWithMessage('"nonexistent_field" not found')
 
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
