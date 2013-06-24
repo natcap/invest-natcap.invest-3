@@ -624,7 +624,7 @@ def errorCheck(line, hab_name, stress_name):
             only be \"E\" or \"C\". Please select one of those options for the \
             criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
 
-def parse_stress_buff(uri):
+def parse_stress_buffer(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
     where the stressor name maps to a float of the about by which it should be buffered.
 
