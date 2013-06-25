@@ -663,7 +663,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
                     
                     #Just abstract all of the erroring out, so that we know if
                     #we're below here, it should all work perfectly. LOL
-                    errorCheck(line, hab_name, stress_name)
+                    error_check(line, hab_name, stress_name)
 
                     #Exposure criteria.
                     if line[4] == 'E':
@@ -694,7 +694,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             except StopIteration:
                 break
 
-def errorCheck(line, hab_name, stress_name):
+def error_check(line, hab_name, stress_name):
     '''Throwing together a simple error checking function for all of the inputs
     coming from the CSV file. Want to do checks for strings vs floats, as well
     as some explicit string checking for 'E'/'C'.
