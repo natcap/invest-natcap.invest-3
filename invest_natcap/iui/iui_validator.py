@@ -1012,7 +1012,7 @@ class FlexibleTableChecker(TableChecker):
         """Attempt to open the file"""
         # As a first approximation, we attempt to use the file suffix.
         # If the suffix is .dbf, we just treat it as a DBF file.
-        if self.uri.endswith('.dbf'):
+        if self.uri.lower().endswith('.dbf'):
             self.specific_table_checker = DBFChecker()
         else:
             # We try to treat the file as a CSV.
