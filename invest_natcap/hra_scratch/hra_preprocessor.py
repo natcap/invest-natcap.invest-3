@@ -363,6 +363,103 @@ def make_crit_shape_dict(crit_uri):
             }
         }
     '''
+    c_shape_dict = {'h_s_e':{}, 'h': {}, 'h_s_c':{}}
+    
+    res_dir = os.path.join(crit_uri, 'Resilience')
+    exps_dir = os.path.join(crit_uri, 'Exposure')
+    sens_dir = os.path.join(crit_uri, 'Sensitivity')
+ 
+    for folder in [res_dir, exps_dir, sens_dir]:
+        if not os.path.isdir(folder):
+    
+            raise IOError("Using spatically explicit critiera requires you to \
+                    have subfolders named \"Resilience\", \"Exposure\", and \
+                    \"Sensitivity\". Check that all these folders exist, and \
+                    that your criteria are placed properly.")
+    
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resilience subfolder
+    #of raster_criteria.
+    res_names = listdir(os.path.join(crit_uri, 'Resilience'))
+    res_shps = fnmatch.filter(res_names, '*.shp')   
+    
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in res_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ').lower()
+
+        if hab_name not in c_shape_dict['h']:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = path
+    
+    #Next, get all of our pair-centric, exposure applicable criteria. 
+    exps_names = listdir(os.path.join(crit_uri, 'Exposure'))
+    expss_shps = fnmatch.filter(sens_names, '*.shp')   
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exps_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h_s_e']:
+            c_shape_dict['h_s_e'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h_s_e'][(hab_name, stress_name)][crit_name] = path
+    
+    #Finally, want to get all of our pair-centric, but consequence 
+    #applicable criteria. 
+    sens_names = listdir(os.path.join(crit_uri, 'Sensitivity'))
+    sens_shps = fnmatch.filter(sens_names, '*.shp')   
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h_s_c']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h_s_c'][(hab_name, stress_name)][crit_name] = path
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict
 
 def parse_hra_tables(folder_uri):
     '''This takes in the directory containing the criteria rating csv's, 
