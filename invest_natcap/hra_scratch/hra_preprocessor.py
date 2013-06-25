@@ -1,6 +1,5 @@
 """Entry point for the Habitat Risk Assessment module"""
 
-import re
 import csv
 import os
 import logging
@@ -405,7 +404,7 @@ def make_crit_shape_dict(crit_uri):
     
     #Next, get all of our pair-centric, exposure applicable criteria. 
     exps_names = listdir(os.path.join(crit_uri, 'Exposure'))
-    expss_shps = fnmatch.filter(sens_names, '*.shp')   
+    exps_shps = fnmatch.filter(exps_names, '*.shp')   
    
     #Now we have a list of all pair specific shapefile criteria. 
     #Now we need to parse them out.
@@ -549,10 +548,10 @@ def parse_hra_tables(folder_uri):
 
     
     #Add everything to the parse dictionary
-    parse_dictionary[buffer_dict] = stress_dict
-    parse_dictionary[habitats] = habitat_dict
-    parse_dictionary[h_s_e] = h_s_e_dict
-    parse_dictionary[h_s_c] = h_s_c_dict
+    parse_dictionary['buffer_dict'] = stress_dict
+    parse_dictionary['habitats'] = habitat_dict
+    parse_dictionary['h_s_e'] = h_s_e_dict
+    parse_dictionary['h_s_c'] = h_s_c_dict
 
     return parse_dictionary
 
