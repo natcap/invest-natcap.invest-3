@@ -479,21 +479,24 @@ class CSVCheckerTester(CheckerTester):
 class FlexibleTableCheckerTester(CheckerTester):
     """Test the class iui_validator.FlexibleTableChecker"""
     def setUp(self):
-        self.validate_as = { 'fieldsExist': []}
+        self.validate_as = {'type': 'table',
+                            'fieldsExist': []}
         self.checker = iui_validator.FlexibleTableChecker()
 
     def setCSVData(self, include_suffix=True):
-        self.validate_as['type'] = 'CSV'
         uri = TEST_DATA + '/wave_energy_data/samp_input/Machine_PelamisParam'
         if include_suffix:
             uri += 'CSV.csv'
         self.validate_as['value'] = uri
 
     def setDBFData(self, include_suffix=True):
-        self.validate_as['type'] = 'DBF'
         uri = TEST_DATA + '/carbon/input/harv_samp_cur';
         if include_suffix:
             uri += '.dbf'
+        self.validate_as['value'] = uri
+
+    def setNonTableData(self):
+        uri = TEST_DATA + '/carbon/input/harv_samp_cur.shp';
         self.validate_as['value'] = uri
 
     def test_csv_fields_exist(self):
@@ -542,6 +545,10 @@ class FlexibleTableCheckerTester(CheckerTester):
         self.setDBFData()
         self.validate_as['fieldsExist'].append('nonexistent_field')
         self.assertErrorWithMessage('"nonexistent_field" not found')
+
+    def test_nontable_file(self):
+        self.setNonTableData()
+        self.assertError()
 
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""

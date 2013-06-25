@@ -1021,6 +1021,7 @@ class FlexibleTableChecker(TableChecker):
                 reader = csv.reader(tablefile)
                 try:
                     for row in reader:
+                        # Just read all the rows. We don't need to do anything with them.
                         pass
                     # We've read the file correctly, so seems like it's a CSV file.
                     self.specific_table_checker = CSVChecker()
@@ -1030,7 +1031,15 @@ class FlexibleTableChecker(TableChecker):
                     self.specific_table_checker = DBFChecker()
 
         self.specific_table_checker.uri = self.uri
-        return self.specific_table_checker.open(valid_dict)
+
+        # We might be trying to read a non-DBF file as a DBF, so if we get
+        # an exception we just return an error.
+        try:
+            return self.specific_table_checker.open(valid_dict)
+        except IOError as e:
+            return str("IOError: %s" % str(e))
+        except (csv.Error, ValueError) as e:
+            return str(e)            
 
     def _build_table(self):
         return self.specific_table_checker._build_table()
