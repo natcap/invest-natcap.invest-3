@@ -479,18 +479,26 @@ class CSVCheckerTester(CheckerTester):
 class FlexibleTableCheckerTester(CheckerTester):
     """Test the class iui_validator.FlexibleTableChecker"""
     def setUp(self):
-        self.validate_as = { 'type': 'CSV',
-                             'value': TEST_DATA + 
-                               '/wave_energy_data/samp_input/Machine_PelamisParamCSV.csv',
-                             'fieldsExist': []}
+        self.validate_as = { 'fieldsExist': []}
         self.checker = iui_validator.FlexibleTableChecker()
 
-    def setDbfData(self):
+    def setCSVData(self, include_suffix=True):
+        self.validate_as['type'] = 'CSV'
+        uri = TEST_DATA + '/wave_energy_data/samp_input/Machine_PelamisParam'
+        if include_suffix:
+            uri += 'CSV.csv'
+        self.validate_as['value'] = uri
+
+    def setDBFData(self, include_suffix=True):
         self.validate_as['type'] = 'DBF'
-        self.validate_as['value'] = TEST_DATA + '/carbon/input/harv_samp_cur.dbf'
+        uri = TEST_DATA + '/carbon/input/harv_samp_cur';
+        if include_suffix:
+            uri += '.dbf'
+        self.validate_as['value'] = uri
 
     def test_csv_fields_exist(self):
         """Assert that FlexibleTableChecker can verify fields exist in a CSV file"""
+        self.setCSVData()
         self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
         self.assertNoError()
         
@@ -500,16 +508,38 @@ class FlexibleTableCheckerTester(CheckerTester):
             ]
         self.assertNoError()
 
+    def test_csv_no_suffix(self):
+        """Assert that FlexibleTableChecker works for DBF files without a .csv suffix"""
+        self.setCSVData(False)
+        self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
+        self.assertNoError()
+        
+        self.validate_as['fieldsExist'] = [
+            {'field': {'pattern': "VALUE", "flag": "ignoreCase"},
+             'required': {'min': 1, 'max': 2}}
+            ]
+        self.assertNoError()
+        
+
     def test_dbf_fields_exist(self):
         """Assert that FlexibleTableChecker can verify fields exist in a DBF file"""
-        self.setDbfData()
+        self.setDBFData()
         self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
                                            'Start_date']
         self.assertNoError()
 
+
+    def test_dbf_no_suffix(self):
+        """Assert that FlexibleTableChecker works for DBF files without a .dbf suffix"""
+        self.setDBFData(False)
+        self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
+                                           'Start_date']
+        self.assertNoError()
+
+
     def test_nonexistent_fields_dbf(self):
         """Assert that FlexibleTableChecker fails if a bad fieldname is provided in a DBF."""
-        self.setDbfData()
+        self.setDBFData()
         self.validate_as['fieldsExist'].append('nonexistent_field')
         self.assertErrorWithMessage('"nonexistent_field" not found')
 

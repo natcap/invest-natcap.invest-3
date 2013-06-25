@@ -1000,19 +1000,37 @@ class CSVChecker(TableChecker):
     #if no error is found, the check function should return None.
 
 class FlexibleTableChecker(TableChecker):
-    """This class validates a file that can either be DBF or CSV format."""
+    """This class validates a file that can either be DBF or CSV format.
+
+    It's essentially a wrapper that first determines which file format we're
+    dealing with, and then delegates the rest of the work to the appropriate
+    class for that specific file format.
+    """
     def open(self, valid_dict):
         """Attempt to open the file"""
         # As a first approximation, we use the file suffix to determine whether the
         # file is DBF format or CSV format.
         if self.uri.endswith('dbf'):
             self.specific_table_checker = DBFChecker()
-        if self.uri.endswith('csv'):
+        elif self.uri.endswith('csv'):
             self.specific_table_checker = CSVChecker()
+        else:
+            # We can't use the file suffix to determine the type of file.
+            # Try to parse it as a CSV file and see if it works.
+            with open(self.uri) as tablefile:
+                reader = csv.reader(tablefile)
+                try:
+                    for row in reader:
+                        pass
+                    # We've read the file correctly, so seems like it's a CSV file.
+                    self.specific_table_checker = CSVChecker()
+                except csv.Error:
+                    # We got an error, so it's probably not a CSV file.
+                    # We treat it as a DBF file.
+                    self.specific_table_checker = DBFChecker()
 
-        # TODO: handle other suffixes
         self.specific_table_checker.uri = self.uri
-        self.specific_table_checker.open(valid_dict)
+        return self.specific_table_checker.open(valid_dict)
 
     def _build_table(self):
         return self.specific_table_checker._build_table()
