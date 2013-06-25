@@ -1,6 +1,5 @@
 """Entry point for the Habitat Risk Assessment module"""
 
-import re
 import csv
 import os
 import logging
@@ -118,7 +117,6 @@ def execute(args):
         len(args['resilience_crits']) + len(args['sensitivity_crits'])
    
     if total_crits < 4:
-        
         raise NotEnoughCriteria("This model requires you to use at least 4 \
                 criteria in order to display an accurate picture of habitat \
                 risk.")
@@ -127,7 +125,7 @@ def execute(args):
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if os.path.exists(output_dir):
-       shutil.rmtree(output_dir)
+        shutil.rmtree(output_dir)
  
     os.makedirs(output_dir)
    
@@ -160,7 +158,7 @@ def execute(args):
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
     
-
+    
     #Now that we know the stressor names, let's create the simple CSV file to
     #track the stressor buffers for each stressor.
     s_buff_uri = os.path.join(output_dir, 'stressor_buffers.csv')
@@ -173,7 +171,7 @@ def execute(args):
         
         for s_name in stress_list:
 
-            stress_writer.writerow([s_name, '<enter a buffer region in meters>'])
+            s_writer.writerow([s_name, '<enter a buffer region in meters>'])
 
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
@@ -334,6 +332,134 @@ def listdir(path):
 
     return uris
 
+def make_crit_shape_dict(crit_uri):
+    '''This will take in the location of the file structure, and will return
+    a dictionary containing all the shapefiles that we find. Hypothetically, we
+    should be able to parse easily through the files, since it should be
+    EXACTLY of the specs that we laid out.
+    
+    Input:
+        crit_uri- Location of the file structure containing all of the shapefile
+            criteria.
+
+
+    Returns:
+        A dictionary containing shapefile URI's, indexed by their criteria name,
+        in addition to which dictionaries and h-s pairs they apply to. The
+        structure will be as follows:
+        
+        {'h':
+            {'HabA':
+                {'CriteriaName: "Shapefile Datasource URI"...}, ...
+            },
+         'h_s_c':
+            {('HabA', 'Stress1'):
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            },
+         'h_s_e'
+            {('HabA', 'Stress1'):
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            }
+        }
+    '''
+    c_shape_dict = {'h_s_e':{}, 'h': {}, 'h_s_c':{}}
+    
+    res_dir = os.path.join(crit_uri, 'Resilience')
+    exps_dir = os.path.join(crit_uri, 'Exposure')
+    sens_dir = os.path.join(crit_uri, 'Sensitivity')
+ 
+    for folder in [res_dir, exps_dir, sens_dir]:
+        if not os.path.isdir(folder):
+    
+            raise IOError("Using spatically explicit critiera requires you to \
+                    have subfolders named \"Resilience\", \"Exposure\", and \
+                    \"Sensitivity\". Check that all these folders exist, and \
+                    that your criteria are placed properly.")
+    
+    #First, want to get the things that are either habitat specific or 
+    #species specific. These should all be in the 'Resilience subfolder
+    #of raster_criteria.
+    res_names = listdir(os.path.join(crit_uri, 'Resilience'))
+    res_shps = fnmatch.filter(res_names, '*.shp')   
+    
+    #Now we have a list of all habitat specific shapefile criteria. Now we need
+    #to parse them out.
+    for path in res_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the second part to all be one piece
+        parts = filename.split('_', 1)
+        hab_name = parts[0]
+        crit_name = parts[1].replace('_', ' ').lower()
+
+        if hab_name not in c_shape_dict['h']:
+            c_shape_dict['h'][hab_name] = {}
+        
+        c_shape_dict['h'][hab_name][crit_name] = path
+    
+    #Next, get all of our pair-centric, exposure applicable criteria. 
+    exps_names = listdir(os.path.join(crit_uri, 'Exposure'))
+    exps_shps = fnmatch.filter(exps_names, '*.shp')   
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in exps_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h_s_e']:
+            c_shape_dict['h_s_e'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h_s_e'][(hab_name, stress_name)][crit_name] = path
+    
+    #Finally, want to get all of our pair-centric, but consequence 
+    #applicable criteria. 
+    sens_names = listdir(os.path.join(crit_uri, 'Sensitivity'))
+    sens_shps = fnmatch.filter(sens_names, '*.shp')   
+   
+    #Now we have a list of all pair specific shapefile criteria. 
+    #Now we need to parse them out.
+    for path in sens_shps:
+
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        filename =  os.path.splitext(os.path.split(path)[1])[0]
+
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
+
+        if (hab_name, stress_name) not in c_shape_dict['h_s_c']:
+            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+        
+        c_shape_dict['h_s_c'][(hab_name, stress_name)][crit_name] = path
+
+    #Et, voila! C'est parfait.
+    return c_shape_dict
+
 def parse_hra_tables(folder_uri):
     '''This takes in the directory containing the criteria rating csv's, 
     and returns a coherent set of dictionaries that can be used to do EVERYTHING
@@ -416,11 +542,18 @@ def parse_hra_tables(folder_uri):
 
     for habitat_uri in csv_uris:
         
-        habitat_name = re.search('_ratings\.csv', 
-                                os.path.basename(habitat_uri)).group(1)
         #Instead of having to know what came from where, let's just have it update
         #the global dictionaries while the function is running. 
-        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e, h_s_c)
+        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
+
+    
+    #Add everything to the parse dictionary
+    parse_dictionary['buffer_dict'] = stress_dict
+    parse_dictionary['habitats'] = habitat_dict
+    parse_dictionary['h_s_e'] = h_s_e_dict
+    parse_dictionary['h_s_c'] = h_s_c_dict
+
+    return parse_dictionary
 
 def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
@@ -530,7 +663,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
                     
                     #Just abstract all of the erroring out, so that we know if
                     #we're below here, it should all work perfectly. LOL
-                    errorCheck(line, hab_name, stress_name)
+                    error_check(line, hab_name, stress_name)
 
                     #Exposure criteria.
                     if line[4] == 'E':
@@ -561,7 +694,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             except StopIteration:
                 break
 
-def errorCheck(line, hab_name, stress_name):
+def error_check(line, hab_name, stress_name):
     '''Throwing together a simple error checking function for all of the inputs
     coming from the CSV file. Want to do checks for strings vs floats, as well
     as some explicit string checking for 'E'/'C'.
@@ -624,7 +757,7 @@ def errorCheck(line, hab_name, stress_name):
             only be \"E\" or \"C\". Please select one of those options for the \
             criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
 
-def parse_stress_buff(uri):
+def parse_stress_buffer(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
     where the stressor name maps to a float of the about by which it should be buffered.
 
@@ -659,7 +792,7 @@ def parse_stress_buff(uri):
             try:
                 #Make sure that what they're passing in as a buffer is a number,
                 #not the leftover help string.
-                buff_dict[key] = float(row[1])
+                buff_dict[s_name] = float(row[1])
 
             except ValueError:
                 raise UnexpectedString("Entries in CSV table may not be \
@@ -667,4 +800,4 @@ def parse_stress_buff(uri):
                     CSV for any leftover strings or spaces within the buffer amount. \
                     Entries must be a number, and may not be left blank.")
 
-    
+    return buff_dict
