@@ -24,8 +24,8 @@
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../Carbon",
-                  "required": true,
-		  "helpText": "A directory that will contain the intermediate and output files for this run."
+                    "required": true,
+                    "helpText": "A directory that will contain the intermediate and output files for this run."
                 },
                 {
                     "id" : "results_suffix",
@@ -59,7 +59,7 @@
                             "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                             "required": true,
                             "validateAs": {"type": "GDAL"},
-			    "helpText": "Location of the landcover map for the current scenario."
+                            "helpText": "Location of the landcover map for the current scenario."
                         },
                         {
                             "id" : "cur_lulc_year",
@@ -73,7 +73,7 @@
                             "enabledBy": "calc_sequestration",
                             "defaultValue": "2000",
                             "requiredIf": ["cur_harvest_map", "fut_harvest_map"],
-			    "helpText": "The calendar year of the current scenario."
+                            "helpText": "The calendar year of the current scenario."
                         }
                     ]
                 }
@@ -99,7 +99,7 @@
                             "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "requiredIf": ["calc_sequestration"],
                             "validateAs": {"type": "GDAL"},
-			    "helpText": "Location of the landcover map for the current scenario."
+                            "helpText": "Location of the landcover map for the current scenario."
                         },
                         {
                             "id" : "fut_lulc_year",
@@ -113,7 +113,7 @@
                             "defaultValue": "2030",
                             "enabledBy": "calc_sequestration",
                             "requiredIf": ["fut_harvest_map"],
-			    "helpText": "The calendar year of the future scenario."
+                            "helpText": "The calendar year of the future scenario."
                         }
                     ]
                 }
@@ -133,7 +133,7 @@
                     "disabledBy": "uncertainty_carbon_pool_container",
                     "validateAs": {"type": "table",
                                    "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
-		    "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
+                    "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
                 },
                 {
                     "id" : "cur_harvest_map",
@@ -146,8 +146,8 @@
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
                                    "fieldsExist": ["Cut_cur", "Start_date", "Freq_cur", "Decay_cur", "C_den_cur", "BCEF_cur"]},
-		    "returns": {"ifEmpty": "pass"},
-		    "helpText": "A shapefile to indicate harvested wood products for the current scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
+                    "returns": {"ifEmpty": "pass"},
+                    "helpText": "A shapefile to indicate harvested wood products for the current scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
                 },
                 {
                     "id" : "fut_harvest_map",
@@ -160,36 +160,36 @@
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
                                    "fieldsExist": ["Cut_fut", "Freq_fut", "Decay_fut", "C_den_fut", "BCEF_fut"]},
-		  "returns": {"ifEmpty": "pass"},
-		  "helpText": "A shapefile to indicate harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
+                  "returns": {"ifEmpty": "pass"},
+                  "helpText": "A shapefile to indicate harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
                 }
             ]
         },
-	{
-	    "id": "uncertainty_carbon_pool_container",
-	    "type": "container",
-	    "collapsible": true,
-	    "args_id": "use_uncertainty",
-	    "label": "Data for uncertainty analysis (enable to trigger uncertainty analysis)",
-	    "elements": [
-	        {
-		    "id": "uncertainty_list",
-		    "type": "list",
-		    "elements": [
-		    {
-		        "id" : "carbon_pools_uncertainty",
- 			"type": "file",
-         		"label": "Carbon pools",
+        {
+            "id": "uncertainty_carbon_pool_container",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "use_uncertainty",
+            "label": "Data for uncertainty analysis (enable to trigger uncertainty analysis)",
+            "elements": [
+                {
+                    "id": "uncertainty_list",
+                    "type": "list",
+                    "elements": [
+                    {
+                        "id" : "carbon_pools_uncertainty",
+                        "type": "file",
+                        "label": "Carbon pools",
                         "defaultValue": "../Carbon/Input/carbon_pools_samp.dbf",
                         "args_id": "carbon_pools_uncertainty_uri",
                         "required": true,
                         "validateAs": {"type": "table",
-			               "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
-	                "helpText": "A table that maps the land cover ids to probability distributions for carbon pools.  The table must contain columns with '_min', '_mode', and '_max' suffixes to each of the four carbon pools as described in the user's guide. The values in LULC must at least include the LULC ids in the land cover maps."
-		      }
-		      ]
-		}
-	    ]
-	}
+                                       "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
+                        "helpText": "A table that maps the land cover ids to probability distributions for carbon pools.  The table must contain columns with '_min', '_mode', and '_max' suffixes to each of the four carbon pools as described in the user's guide. The values in LULC must at least include the LULC ids in the land cover maps."
+                      }
+                      ]
+                }
+            ]
+        }
     ]
 }
