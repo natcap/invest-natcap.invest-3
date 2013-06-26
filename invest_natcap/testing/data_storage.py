@@ -273,7 +273,7 @@ def collect_parameters(parameters, archive_uri):
     try:
         del parameters['workspace_dir']
     except:
-        LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\.'
+        LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\'.'
             ' Be sure to check your archived data'))
 
     types = {
