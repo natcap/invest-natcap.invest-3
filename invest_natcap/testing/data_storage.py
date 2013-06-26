@@ -280,7 +280,7 @@ def collect_parameters(parameters, archive_uri):
         try:
             del parameters[key]
             if restore_key:
-                ignored_key.append((key, parameters[key])
+                ignored_keys.append((key, parameters[key]))
         except:
             LOGGER.warn(('Parameters missing the workspace key \'%s\'.'
                 ' Be sure to check your archived data'), key)
