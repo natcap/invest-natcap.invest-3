@@ -180,11 +180,15 @@
                         "id" : "carbon_pools_uncertainty",
                         "type": "file",
                         "label": "Carbon pools",
-                        "defaultValue": "../Carbon/Input/carbon_pools_samp.dbf",
+                        "defaultValue": "../Carbon/Input/carbon_pools_samp_uncertain.dbf",
                         "args_id": "carbon_pools_uncertainty_uri",
                         "required": true,
                         "validateAs": {"type": "table",
-                                       "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
+                                       "fieldsExist": ["LULC", 
+                                                       "C_ab_min", "C_ab_mode", "C_ab_max",
+                                                       "C_be_min", "C_be_mode", "C_be_max", 
+                                                       "C_so_min", "C_so_mode", "C_so_max", 
+                                                       "C_de_min", "C_de_mode", "C_de_max"]},
                         "helpText": "A table that maps the land cover ids to probability distributions for carbon pools.  The table must contain columns with '_min', '_mode', and '_max' suffixes to each of the four carbon pools as described in the user's guide. The values in LULC must at least include the LULC ids in the land cover maps."
                       }
                       ]
