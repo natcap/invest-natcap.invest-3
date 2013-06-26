@@ -553,7 +553,6 @@ class TableChecker(FileChecker, ValidationAssembler):
             if required_field.__class__ in [unicode, str]:
                 matching_fields = map(lambda x: x.lower(), matching_fields)
                 if required_field.lower() not in matching_fields:
-                    print matching_fields
                     return str('Required field: "%s" not found in %s' %
                         (required_field, fieldnames))
             else:
