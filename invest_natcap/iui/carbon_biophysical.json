@@ -130,6 +130,7 @@
                     "defaultValue": "../Carbon/Input/carbon_pools_samp.dbf",
                     "args_id": "carbon_pools_uri",
                     "required": true,
+                    "disabledBy": "uncertainty_carbon_pool_container",
                     "validateAs": {"type": "table",
                                    "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
 		    "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
@@ -163,6 +164,32 @@
 		  "helpText": "A shapefile to indicate harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
                 }
             ]
-        }
+        },
+	{
+	    "id": "uncertainty_carbon_pool_container",
+	    "type": "container",
+	    "collapsible": true,
+	    "args_id": "use_uncertainty",
+	    "label": "Data for uncertainty analysis (enable to trigger uncertainty analysis)",
+	    "elements": [
+	        {
+		    "id": "uncertainty_list",
+		    "type": "list",
+		    "elements": [
+		    {
+		        "id" : "carbon_pools_uncertainty",
+ 			"type": "file",
+         		"label": "Carbon pools",
+                        "defaultValue": "../Carbon/Input/carbon_pools_samp.dbf",
+                        "args_id": "carbon_pools_uncertainty_uri",
+                        "required": true,
+                        "validateAs": {"type": "table",
+			               "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
+	                "helpText": "A table that maps the land cover ids to probability distributions for carbon pools.  The table must contain columns with '_min', '_mode', and '_max' suffixes to each of the four carbon pools as described in the user's guide. The values in LULC must at least include the LULC ids in the land cover maps."
+		      }
+		      ]
+		}
+	    ]
+	}
     ]
 }
