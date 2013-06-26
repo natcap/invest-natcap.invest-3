@@ -5,14 +5,28 @@ import glob
 
 import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
+from invest_natcap.testing import test_writing
 from invest_natcap import raster_utils
 
 POLLINATION_DATA = os.path.join('data', 'pollination', 'samp_input')
 CARBON_DATA = os.path.join('data', 'carbon', 'input')
 REGRESSION_ARCHIVES = os.path.join('data', 'data_storage', 'regression')
+WRITING_ARCHIVES = os.path.join('data', 'test_writing')
 TEST_INPUT = os.path.join('data', 'data_storage', 'test_input')
 TEST_OUT = os.path.join('data', 'test_out')
 BASE_DATA = os.path.join('data', 'base_data')
+
+
+class TestWritingTest(testing.GISTest):
+    def test_file_has_class_pass(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'simple_test.py.txt')
+        cls_exists = test_writing.file_has_class(test_file, 'ExampleClass')
+        self.assertEqual(cls_exists, True)
+
+    def test_file_has_class_fail(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'simple_test.py.txt')
+        cls_exists = test_writing.file_has_class(test_file, 'BadClass')
+        self.assertEqual(cls_exists, False)
 
 
 class DataStorageTest(testing.GISTest):

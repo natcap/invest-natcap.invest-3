@@ -95,3 +95,17 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
     # copy the new file over the old one.
     shutil.copyfile(temp_file_uri, file_uri)
     print 'copying %s to %s' % (temp_file_uri, file_uri)
+
+
+def file_has_class(test_file_uri, test_class_name):
+    test_file = codecs.open(test_file_uri, mode='r', encoding='utf-8')
+    module = imp.load_source('model', test_file_uri)
+    try:
+        cls_attr = getattr(module, test_class_name)
+        return True
+    except AttributeError:
+        return False
+
+def add_test_to_class_new(file_uri, test_class_name, test_func_name,
+        in_archive_uri, out_archive_uri, module):
+    pass
