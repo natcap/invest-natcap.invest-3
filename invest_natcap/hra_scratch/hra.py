@@ -140,3 +140,109 @@ def execute(args):
     Returns nothing.
     '''
 
+    hra_args = {}
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+    hra_args['workspace_dir'] = args['workspace_dir']
+
+    hra_args['risk_eq'] = args['risk_eq']
+    
+    #Depending on the risk calculation equatioa, this should return the highest
+    #possible value of risk for any given habitat-stressor pairing. The highest
+    #risk for a habitat would just be this risk value * the number of stressor
+    #pairs that apply to it.
+    max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
+    hra_args['max_risk'] = max_r
+    
+    #Create intermediate and output folders. Delete old ones, if they exist.
+    for folder in (inter_dir, output_dir):
+        if (os.path.exists(folder)):
+            shutil.rmtree(folder) 
+
+        os.makedirs(folder)
+   
+    #If using aoi zones are desired, pass the AOI layer directly to core to be
+    #dealt with there.
+    if 'aoi_tables' in args:
+
+        #Need to check that this shapefile contains the correct attribute name.
+        #Later, this is where the uppercase/lowercase dictionary can be
+        #implimented.
+        shape = ogr.Open(args['aoi_tables'])
+        layer = shape.GetLayer()
+    
+        lower_attrib = None
+        for feature in layer:
+            
+            if lower_attrib == None:
+                lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                            feature.items().keys()))
+            
+            if 'name' not in lower_attrib:
+                raise ImproperAOIAttributeName("Risk table layer attributes must \
+                    contain the attribute \"Name\" in order to be properly used \
+                    within the HRA model run.")
+
+        #By this point, we know that the AOI layer contains the 'name' attribute,
+        #in some form. Pass that on to the core so that the name can be easily
+        #pulled from the layers.
+        hra_args['aoi_key'] = lower_attrib['name']        
+        hra_args['aoi_tables'] = args['aoi_tables']
+
+    #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
+    #to use the pre-process module to unpack them and put them into the
+    #hra_args dict. Then can modify that within the rest of the code.
+    #We will also return a dictionary conatining directory locations for all
+    #of the necessary shapefiles. This will be used instead of having users
+    #re-enter the locations within args.
+    unpack_over_dict(args['csv_uri'], hra_args)
+
+def unpack_over_dict(csv_uri, args):
+    '''This throws the dictionary coming from the pre-processor into the
+    equivalent dictionaries in args so that they can be processed before being
+    passed into the core module.
+    
+    Input:
+        csv_uri- Reference to the folder location of the CSV tables containing
+            all habitat and stressor rating information.
+        args- The dictionary into which the individual ratings dictionaries
+            should be placed.
+    Output:
+        A modified args dictionary containing dictionary versions of the CSV
+        tables located in csv_uri. The dictionaries should be of the forms as
+        follows.
+           
+        h_s_c- A multi-level structure which will hold all criteria ratings, 
+            both numerical and raster that apply to habitat and stressor 
+            overlaps. The structure, whose keys are tuples of 
+            (Habitat, Stressor) names and map to an inner dictionary will have
+            2 outer keys containing numeric-only criteria, and raster-based
+            criteria. At this time, we should only have two entries in a
+            criteria raster entry, since we have yet to add the rasterized
+            versions of the criteria.
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        habitats- Similar to the h-s dictionary, a multi-level
+            dictionary containing all habitat-specific criteria ratings and
+            weights and data quality for the rasters.         
+        h_s_e- Similar to the h-s dictionary, a multi-level dictionary 
+            containing habitat stressor-specific criteria ratings and
+            weights and data quality for the rasters.
+    Returns nothing.
+    '''
+    dicts = hra_preprocessor.parse_hra_tables(csv_uri)
+
+    for dict_name in dicts:
+        args[dict_name] = dicts[dict_name]
+
