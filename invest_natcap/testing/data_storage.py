@@ -161,10 +161,14 @@ def collect_parameters(parameters, archive_uri):
             parent_folder_path = os.path.dirname(filepath)
             glob_pattern = os.path.join(parent_folder_path, '%s.*' %
                 layer.GetName())
-            layer_files = glob.glob(glob_pattern)
+            layer_files = sorted(glob.glob(glob_pattern))
             LOGGER.debug('Layer files: %s', layer_files)
 
             if len(layer_files) == 1 and layer_files[0].endswith('.dbf'):
+                shutil.rmtree(new_vector_dir)
+                raise NotAVector()
+            elif len(layer_files) == 2 and (layer_files[0].endswith('dbf') and
+                layer_files[1].endswith('.dbf.xml')):
                 shutil.rmtree(new_vector_dir)
                 raise NotAVector()
 
