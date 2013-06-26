@@ -270,17 +270,30 @@ def collect_parameters(parameters, archive_uri):
     #   If a URI is found, copy that file to a new location in the temp
     #   workspace and update the URI reference.
     #   Duplicate URIs should also have the same replacement URI.
-    try:
-        del parameters['workspace_dir']
-    except:
-        LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\'.'
-            ' Be sure to check your archived data'))
+    # 
+    # If a workspace or suffix is provided, ignore that key.
+    ignored_keys = []
+    for key, restore_key in [
+        ('workspace_dir', False),
+        ('suffix', True),
+        ('results_suffix', True)]:
+        try:
+            del parameters[key]
+            if restore_key:
+                ignored_key.append((key, parameters[key])
+        except:
+            LOGGER.warn(('Parameters missing the workspace key \'%s\'.'
+                ' Be sure to check your archived data'), key)
 
     types = {
         str: get_if_file,
         unicode: get_if_file,
     }
     new_args = format_dictionary(parameters, types)
+
+    for (key, value) in ignored_keys:
+        LOGGER.debug('Restoring %s: %s', key, value)
+        new_args[key] = value
 
     LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace
