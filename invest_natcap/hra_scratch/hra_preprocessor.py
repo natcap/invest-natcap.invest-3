@@ -61,14 +61,14 @@ def execute(args):
         args['species_dir']- Directory which holds all species shapefiles, but
             may or may not exist if there is a habitats layer directory.
         args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
-        args['exposure_e_crits']- list containing string names of exposure
+        args['exposure_crits']- list containing string names of exposure
             criteria (hab-stress) which should be applied to the exposure score.
-        args['exposure_c_crits']- list containing string names of exposure
-            criteria (hab-stress) which should be applied to the consequence score.
         args['sensitivity-crits']- List containing string names of sensitivity
-            (habitat-stressor overlap specific) criteria.
+            (habitat-stressor overlap specific) criteria which should be applied 
+            to the consequence score.
         args['resilience_crits']- List containing string names of resilience
-            (habitat or species-specific) criteria.
+            (habitat or species-specific) criteria which should be applied to the
+            consequence score.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             May not exist if the user does not desire criteria shapefiles. This
             needs to be in a VERY specific format, which shall be described in

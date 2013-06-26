@@ -544,6 +544,8 @@ class TableChecker(FileChecker, ValidationAssembler):
         List order is not validated.  Returns the error string if an error is
         found.  Returns None if no error found."""
 
+        fieldnames = self._get_fieldnames()
+
         for required_field in field_list:
             matching_fields = self.get_matching_fields(required_field)
 
@@ -552,7 +554,7 @@ class TableChecker(FileChecker, ValidationAssembler):
                 matching_fields = map(lambda x: x.lower(), matching_fields)
                 if required_field.lower() not in matching_fields:
                     return str('Required field: "%s" not found in %s' %
-                        (required_field, matching_fields))
+                        (required_field, fieldnames))
             else:
                 # We know it should be a dictionary, so there might be
                 # minimum/maximum existence rules.
