@@ -270,6 +270,18 @@ class DataStorageTest(testing.GISTest):
         for file_uri in files_to_check:
             self.assertEqual(True, os.path.exists(file_uri))
 
+    def test_archive_dbf(self):
+        input_parameters = {
+            'dbf_file': os.path.join(CARBON_DATA, 'carbon_pools_samp.dbf'),
+        }
+        archive_uri = os.path.join(TEST_OUT, 'dbf_archive')
+        data_storage.collect_parameters(input_parameters, archive_uri)
+
+        archive_uri += '.tar.gz'
+        reg_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'dbf_archive.tar.gz')
+        self.assertArchives(archive_uri, reg_archive_uri)
+
 
 class GISTestTester(testing.GISTest):
     def test_raster_assertion_fileio(self):

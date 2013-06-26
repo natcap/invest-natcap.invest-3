@@ -135,6 +135,9 @@ def collect_parameters(parameters, archive_uri):
     class UnsupportedFormat(Exception):
         pass
 
+    class NotAVector(Exception):
+        pass
+
     def get_multi_part_ogr(filepath):
         shapefile = ogr.Open(filepath)
         driver = shapefile.GetDriver()
@@ -160,6 +163,10 @@ def collect_parameters(parameters, archive_uri):
                 layer.GetName())
             layer_files = glob.glob(glob_pattern)
             LOGGER.debug('Layer files: %s', layer_files)
+
+            if len(layer_files) == 1 and layer_files[0].endswith('.dbf'):
+                shutil.rmtree(new_vector_dir)
+                raise NotAVector()
 
             # copy the layer files to the new folder.
             for file_name in layer_files:
@@ -191,7 +198,14 @@ def collect_parameters(parameters, archive_uri):
                 # file is a shapefile
                 vector_obj = None
                 layer = None
-                return get_multi_part_ogr(filepath)
+                try:
+                    return get_multi_part_ogr(filepath)
+                except NotAVector:
+                    # For some reason, the file actually turned out to not be a
+                    # vector, so we just want to return from this function.
+                    LOGGER.debug('Thought %s was a shapefile, but I was wrong.',
+                        filepath)
+                    pass
         return None
 
     # For tracking existing files so we don't copy things twice
