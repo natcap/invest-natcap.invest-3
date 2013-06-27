@@ -66,7 +66,11 @@ def execute_30(**args):
 
     #1) load carbon pools into dictionary indexed by LULC
     LOGGER.debug("building carbon pools")
-    pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
+    use_uncertainty = args.get('use_uncertainty', False)
+    if use_uncertainty:
+        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uncertain_uri'], 'LULC')
+    else:
+        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
     out_file_names = {}
@@ -78,9 +82,15 @@ def execute_30(**args):
                 10000.0)
 
             for lulc_id, lookup_dict in pools.iteritems():
-                pools[lulc_id]['total_%s' % lulc_uri] = sum(
-                    [pools[lulc_id][pool_type] for pool_type in
-                     ['c_above', 'c_below', 'c_soil', 'c_dead']]) * cell_area_ha
+                if use_uncertainty:
+                    # Use the mode estimate of the triangle distribution 
+                    # to compute the carbon output.
+                    pool_estimate_types = ['c_ab_mode', 'c_be_mode', 'c_so_mode', 'c_de_mode']
+                else:
+                    # We just have a point estimate, so use that.
+                    pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
+                pools[lulc_id]['total_%s' % lulc_uri] = cell_area_ha * sum(
+                    [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0
