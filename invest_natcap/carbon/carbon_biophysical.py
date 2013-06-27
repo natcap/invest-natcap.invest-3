@@ -34,7 +34,12 @@ def execute_30(**args):
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
-            lulc rasters. (required) 
+            lulc rasters. (required if 'use_uncertainty' is false)
+        args['carbon_pools_uncertain_uri'] - as above, but has probability distribution
+            data for each lulc type rather than point estimates.
+            (required if 'use_uncertainty' is true)
+        args['use_uncertainty'] - a boolean that indicates whether we should do
+            uncertainty analysis.
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
