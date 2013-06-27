@@ -90,7 +90,7 @@ def execute_30(**args):
                 if use_uncertainty:
                     # Use the mode estimate of the triangle distribution 
                     # to compute the carbon output.
-                    pool_estimate_types = ['c_ab_mode', 'c_be_mode', 'c_so_mode', 'c_de_mode']
+                    pool_estimate_types = ['c_above_mean', 'c_be_mode', 'c_so_mode', 'c_de_mode']
                 else:
                     # We just have a point estimate, so use that.
                     pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
