@@ -79,7 +79,13 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
         new_file.write_archive_regression_test(test_func_name, module,
             in_archive_uri, out_archive_uri, os.path.dirname(file_uri))
     else:
+        import_written = False
         for line in test_file.test_file:
+            if (not(line.startswith('import') or line.startswith('from')) and not
+                import_written):
+                new_file.write('import invest_natcap.testing')
+                import_written = True
+
             new_file.write(line.rstrip())
             if 'class %s(' % test_class_name in line:
                 new_file.write_archive_regression_test(test_func_name, module,
@@ -95,3 +101,17 @@ def add_test_to_class(file_uri, test_class_name, test_func_name, in_archive_uri,
     # copy the new file over the old one.
     shutil.copyfile(temp_file_uri, file_uri)
     print 'copying %s to %s' % (temp_file_uri, file_uri)
+
+
+def file_has_class(test_file_uri, test_class_name):
+    test_file = codecs.open(test_file_uri, mode='r', encoding='utf-8')
+    module = imp.load_source('model', test_file_uri)
+    try:
+        cls_attr = getattr(module, test_class_name)
+        return True
+    except AttributeError:
+        return False
+
+def add_test_to_class_new(file_uri, test_class_name, test_func_name,
+        in_archive_uri, out_archive_uri, module):
+    pass
