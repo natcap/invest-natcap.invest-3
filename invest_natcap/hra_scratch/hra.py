@@ -216,6 +216,29 @@ def execute(args):
         add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
                     hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'])
 
+    #Habitats
+    hab_list = []
+    for ele in ('habitats_dir', 'species_dir'):
+        if ele in hra_args:
+            hab_names = listdir(hra_args[ele])
+            hab_list += fnmatch.filter(hab_names, '*.shp')
+
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris
+
 def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     '''This will take in the dictionary of criteria shapefiles, rasterize them,
     and add the URI of that raster to the proper subdictionary within h/s/h-s.
