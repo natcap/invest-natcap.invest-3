@@ -39,7 +39,7 @@ def execute_30(**args):
             data for each lulc type rather than point estimates.
             (required if 'use_uncertainty' is true)
         args['use_uncertainty'] - a boolean that indicates whether we should do
-            uncertainty analysis.
+            uncertainty analysis. Defaults to False if not present.
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
@@ -87,13 +87,12 @@ def execute_30(**args):
                 10000.0)
 
             for lulc_id, lookup_dict in pools.iteritems():
+                pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
                 if use_uncertainty:
-                    # Use the mode estimate of the triangle distribution 
-                    # to compute the carbon output.
-                    pool_estimate_types = ['c_above_mean', 'c_be_mode', 'c_so_mode', 'c_de_mode']
-                else:
-                    # We just have a point estimate, so use that.
-                    pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
+                    # Use the mean estimate of the distribution to compute the carbon output.
+                    for i in range(len(pool_estimate_types)):
+                        pool_estimate_types[i] += '_mean'
+                    
                 pools[lulc_id]['total_%s' % lulc_uri] = cell_area_ha * sum(
                     [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
 

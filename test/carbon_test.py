@@ -62,8 +62,7 @@ do sequestration and harvested wood products on lulc maps."""
                 './data/carbon_regression_data/tot_C_cur.tif')
 
         help_test_carbon_biophysical_sequestration_hwp(False) # test without uncertainty
-        #TODO: uncomment
-        #help_test_carbon_biophysical_sequestration_hwp(True)  # test with uncertainty
+        help_test_carbon_biophysical_sequestration_hwp(True)  # test with uncertainty
 
     def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \
