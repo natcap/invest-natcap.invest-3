@@ -378,6 +378,58 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                     model run require corresponding Data Quality and Weight \
                     information. Please run HRA Preprocessor again to include all\
                     relavant criteria data.")
+    #H-S-E
+    for pair in crit_dict['h_s_e']:
+        
+        for c_name, c_path in crit_dict['h_s_c'][pair].iteritems():
+
+            #The path coming in from the criteria should be of the form
+            #dir/h_s_critname.shp.
+            filename =  os.path.splitext(os.path.split(c_path)[1])[0]
+            shape = ogr.Open(c_path)
+            layer = shape.GetLayer()
+
+            #Since all features will contain the same set of attributes,
+            #and if it passes this loop, will definitely contain a 'rating', we
+            #can just use the last feature queried to figure out how 'rating' 
+            #was used.
+            lower_attrib = None
+
+            for feature in layer:
+                
+                if lower_attrib == None:
+                    lower_attrib = dict(zip(map(lambda x: x.lower(), feature.items().keys()), 
+                                feature.items().keys()))
+
+                if 'rating' not in lower_attrib:
+                    raise ImproperCriteriaAttributeName("Criteria layer must \
+                        contain the attribute \"Rating\" in order to be properly used \
+                        within the HRA model run.")
+                
+            out_uri = os.path.join(dir, filename + '.tif')
+
+            r_dataset = \
+                raster_utils.create_raster_from_vector_extents(grid_size, 
+                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+
+
+            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+            band.Fill(nodata)
+
+
+            #lower_attrib['rating'] should give us what rating is called within
+            #this set of features.
+            gdal.RasterizeLayer(r_dataset, [1], layer, 
+                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+             
+            if c_name in h_s_e[pair]['Crit_Rasters']:
+                h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
+            else:
+                raise DQWeightNotFound("All spatial criteria desired within the \
+                    model run require corresponding Data Quality and Weight \
+                    information. Please run HRA Preprocessor again to include all\
+                    relavant criteria data.")
+
 def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
     equivalent dictionaries in args so that they can be processed before being
