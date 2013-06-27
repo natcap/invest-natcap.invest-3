@@ -223,6 +223,10 @@ def execute(args):
             hab_names = listdir(hra_args[ele])
             hab_list += fnmatch.filter(hab_names, '*.shp')
 
+    #H_S_C Overlap
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
+                    hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
