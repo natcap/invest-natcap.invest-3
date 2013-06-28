@@ -1,0 +1,45 @@
+{
+    "id" : "window",
+    "label": "Blue Carbon Biophysical",
+    "targetScript" : "invest_natcap.blue_carbon.blue_carbon_biophysical",
+    "modelName" : "blue_carbon_biophysical",
+    "localDocURI": "../documentation/blue_carbon_biophysical.html",
+    "height": 600,
+    "width" : 700,
+    "elements": [
+            {
+            "id" : "workspace_list",
+            "type": "list",	        
+		    "elements": [
+                                {
+                                    "id": "workspace_dir",
+                                    "args_id": "workspace_dir",
+                                    "type": "folder",
+                                    "label": "Workspace",
+                                    "required": true
+                                },
+                                {
+                                    "id": "lulc_uri",
+                                    "args_id": "lulc_uri",
+                                    "type": "file",
+                                    "label": "LULC",
+                                    "required": true
+                                },
+                                {
+                                    "id": "carbon_pools_uri",
+                                    "args_id": "carbon_pools_uri",
+                                    "type": "file",
+                                    "label": "Carbon pools",
+                                    "required": true
+                                },
+                                {
+                                    "id": "transition_matrix_uri",
+                                    "args_id": "transition_matrix_uri",
+                                    "type": "file",
+                                    "label": "Transition matrix",
+                                    "required": true
+                                }
+		    ]
+	   }
+    ]
+}
