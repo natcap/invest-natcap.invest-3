@@ -15,6 +15,7 @@ LOGGER = logging.getLogger('nutrient')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+
 def execute(args):
     """File opening layer for the InVEST nutrient retention model.
 
@@ -48,8 +49,9 @@ def execute(args):
         returns nothing.
     """
     def _validate_inputs(
-        nutrients_to_process, lucode_to_parameters, threshold_lookup, 
+        nutrients_to_process, lucode_to_parameters, threshold_lookup,
         valuation_lookup):
+        
         """Validation helper method to check that table headers are included
             that are necessary depending on the nutrient type requested by
             the user"""
@@ -74,7 +76,7 @@ def execute(args):
             (threshold_row, ['thresh_'],
              args['water_purification_threshold_table_uri']))
 
-        if valuation_lookup != None:
+        if valuation_lookup is not None:
             valuation_row = valuation_lookup.values()[0]
             row_header_table_list.append(
                 (valuation_row, ['cost_', 'time_span_', 'discount_'],
@@ -109,7 +111,7 @@ def execute(args):
             LOGGER.debug('Making folder %s', folder)
             os.makedirs(folder)
 
-    #Build up a list of nutrients to process based on what's checked on 
+    #Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
@@ -211,7 +213,8 @@ def execute(args):
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the 'log' of the upstream_water_yield raster
-    runoff_index_uri = os.path.join(intermediate_dir, 'runoff_index%s.tif' % file_suffix)
+    runoff_index_uri = os.path.join(
+        intermediate_dir, 'runoff_index%s.tif' % file_suffix)
     nodata_upstream = raster_utils.get_nodata_from_uri(upstream_water_yield_uri)
     def nodata_log(value):
         """Calculates the log value whiel handling nodata values correctly"""
@@ -227,7 +230,7 @@ def execute(args):
 
     field_summaries = {
         'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            runoff_index_uri, args['watersheds_uri'], 'ws_id', 
+            runoff_index_uri, args['watersheds_uri'], 'ws_id',
             'mean')
         }
 
@@ -272,7 +275,7 @@ def execute(args):
         alv_uri[nutrient] = os.path.join(
             intermediate_dir, 'alv_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
-            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri, 
+            [load_uri[nutrient], runoff_index_uri, mean_runoff_index_uri,
              stream_uri],  alv_calculation, alv_uri[nutrient], gdal.GDT_Float32,
             nodata_load, out_pixel_size, "intersection")
 
@@ -316,7 +319,7 @@ def execute(args):
         field_summaries['%s_ret_sm' % nutrient] = threshold_retention_tot
 
         #Do valuation if necessary
-        if valuation_lookup != None:
+        if valuation_lookup is not None:
             field_summaries['value_%s' % nutrient] = {}
             for ws_id, value in \
                     field_summaries['%s_ret_sm' % nutrient].iteritems():
