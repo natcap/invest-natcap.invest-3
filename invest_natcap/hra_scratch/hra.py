@@ -356,6 +356,8 @@ def make_stress_rasters(dir, stress_list, grid_size)
                                                 options=['ALL_TOUCHED=TRUE'])
         stress_dict[name] = out_uri
 
+    return stress_dict
+
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
     them to a raster.
