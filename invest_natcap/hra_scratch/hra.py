@@ -328,6 +328,33 @@ def make_stress_rasters(dir, stress_list, grid_size)
     
     '''
     
+    stress_dict = {}
+
+    for shape in stress_list:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself
+        name = os.path.splitext(os.path.split(shape)[1])[0]
+
+        out_uri = os.path.join(dir, name + '.tif')
+        
+        datasource = ogr.Open(shape)
+        layer = datasource.GetLayer()
+        
+        #Making the nodata value 0 so that it's easier to combine the 
+        #layers later.
+        r_dataset = \
+            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                    gdal.GDT_Float32, 0., out_uri, datasource)
+
+        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        band.Fill(nodata)
+
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+                                                options=['ALL_TOUCHED=TRUE'])
+        stress_dict[name] = out_uri
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
