@@ -262,7 +262,7 @@ def execute(args):
         # 'sws_tuple_names_uri'
         LOGGER.debug('AGGREGATE OVER %s', key_name)
         key_dict = raster_utils.aggregate_raster_values_uri(
-                rast_uri, sub_sheds_uri, 'subws_id', 'mean')
+            rast_uri, sub_sheds_uri, 'subws_id').pixel_mean
         # Add aggregated values to sub-watershed shapefile under new field
         # 'key_name'
         add_dict_to_shape(wyield_sub_sheds_uri, key_dict, key_name, 'subws_id')
@@ -307,7 +307,7 @@ def execute(args):
         # Aggregrate mean over the watersheds for each uri listed in
         # 'ws_tuple_names_uri'
         key_dict = raster_utils.aggregate_raster_values_uri(
-                rast_uri, sheds_uri, 'ws_id', 'mean')
+            rast_uri, sheds_uri, 'ws_id').pixel_mean
         # Add aggregated values to watershed shapefile under new field
         # 'key_name'
         add_dict_to_shape(wyield_sheds_uri, key_dict, key_name, 'ws_id')
@@ -386,11 +386,16 @@ def execute(args):
     
     # Aggregate the consumption volume over sheds and sub-sheds using the
     # reclassfied demand raster
-    LOGGER.info('Aggregating Consumption Volume')
-    consump_vol_dict_sws = raster_utils.aggregate_raster_values_uri(
-            tmp_demand_uri, sub_sheds_uri, 'subws_id', 'sum') 
-    consump_vol_dict_ws = raster_utils.aggregate_raster_values_uri(
-            tmp_demand_uri, sheds_uri, 'ws_id', 'sum') 
+    LOGGER.info('Aggregating Consumption Volume and Mean')
+    consump_sws = raster_utils.aggregate_raster_values_uri(
+        tmp_demand_uri, sub_sheds_uri, 'subws_id')
+    consump_vol_dict_sws = consump_sws.total
+    consump_mn_dict_sws = consump_sws.pixel_mean
+
+    consump_ws = raster_utils.aggregate_raster_values_uri(
+        tmp_demand_uri, sheds_uri, 'ws_id')
+    consump_vol_dict_ws = consump_ws.total
+    consump_mn_dict_ws = consump_ws.pixel_mean
     
     # Add aggregated consumption to sheds and sub-sheds shapefiles
     add_dict_to_shape(
@@ -400,15 +405,7 @@ def execute(args):
             scarcity_sheds_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
     
     LOGGER.debug('Demand_Sum_Dict : %s', consump_vol_dict_sws)
-    
-    LOGGER.debug('Aggregating Consumption Mean')
-    # Aggregate the consumption mean volume over sheds and sub-sheds using the
-    # reclassified demand raster
-    consump_mn_dict_sws = raster_utils.aggregate_raster_values_uri(
-            tmp_demand_uri, sub_sheds_uri, 'subws_id', 'mean',
-            ignore_nodata=False)    
-    consump_mn_dict_ws = raster_utils.aggregate_raster_values_uri(
-            tmp_demand_uri, sheds_uri, 'ws_id', 'mean',ignore_nodata=False)
+
     
     # Add aggregated consumption means to sheds and sub-sheds shapefiles
     add_dict_to_shape(

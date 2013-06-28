@@ -34,7 +34,12 @@ def execute_30(**args):
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
-            lulc rasters. (required) 
+            lulc rasters. (required if 'use_uncertainty' is false)
+        args['carbon_pools_uncertain_uri'] - as above, but has probability distribution
+            data for each lulc type rather than point estimates.
+            (required if 'use_uncertainty' is true)
+        args['use_uncertainty'] - a boolean that indicates whether we should do
+            uncertainty analysis. Defaults to False if not present.
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
@@ -66,7 +71,11 @@ def execute_30(**args):
 
     #1) load carbon pools into dictionary indexed by LULC
     LOGGER.debug("building carbon pools")
-    pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
+    use_uncertainty = args.get('use_uncertainty', False)
+    if use_uncertainty:
+        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uncertain_uri'], 'LULC')
+    else:
+        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
     out_file_names = {}
@@ -78,9 +87,14 @@ def execute_30(**args):
                 10000.0)
 
             for lulc_id, lookup_dict in pools.iteritems():
-                pools[lulc_id]['total_%s' % lulc_uri] = sum(
-                    [pools[lulc_id][pool_type] for pool_type in
-                     ['c_above', 'c_below', 'c_soil', 'c_dead']]) * cell_area_ha
+                pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
+                if use_uncertainty:
+                    # Use the mean estimate of the distribution to compute the carbon output.
+                    for i in range(len(pool_estimate_types)):
+                        pool_estimate_types[i] += '_mean'
+                    
+                pools[lulc_id]['total_%s' % lulc_uri] = cell_area_ha * sum(
+                    [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0

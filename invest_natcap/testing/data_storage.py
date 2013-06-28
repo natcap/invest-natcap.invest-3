@@ -135,6 +135,9 @@ def collect_parameters(parameters, archive_uri):
     class UnsupportedFormat(Exception):
         pass
 
+    class NotAVector(Exception):
+        pass
+
     def get_multi_part_ogr(filepath):
         shapefile = ogr.Open(filepath)
         driver = shapefile.GetDriver()
@@ -158,8 +161,16 @@ def collect_parameters(parameters, archive_uri):
             parent_folder_path = os.path.dirname(filepath)
             glob_pattern = os.path.join(parent_folder_path, '%s.*' %
                 layer.GetName())
-            layer_files = glob.glob(glob_pattern)
+            layer_files = sorted(glob.glob(glob_pattern))
             LOGGER.debug('Layer files: %s', layer_files)
+
+            if len(layer_files) == 1 and layer_files[0].endswith('.dbf'):
+                shutil.rmtree(new_vector_dir)
+                raise NotAVector()
+            elif len(layer_files) == 2 and (layer_files[0].endswith('dbf') and
+                layer_files[1].endswith('.dbf.xml')):
+                shutil.rmtree(new_vector_dir)
+                raise NotAVector()
 
             # copy the layer files to the new folder.
             for file_name in layer_files:
@@ -191,7 +202,14 @@ def collect_parameters(parameters, archive_uri):
                 # file is a shapefile
                 vector_obj = None
                 layer = None
-                return get_multi_part_ogr(filepath)
+                try:
+                    return get_multi_part_ogr(filepath)
+                except NotAVector:
+                    # For some reason, the file actually turned out to not be a
+                    # vector, so we just want to return from this function.
+                    LOGGER.debug('Thought %s was a shapefile, but I was wrong.',
+                        filepath)
+                    pass
         return None
 
     # For tracking existing files so we don't copy things twice
@@ -252,17 +270,30 @@ def collect_parameters(parameters, archive_uri):
     #   If a URI is found, copy that file to a new location in the temp
     #   workspace and update the URI reference.
     #   Duplicate URIs should also have the same replacement URI.
-    try:
-        del parameters['workspace_dir']
-    except:
-        LOGGER.warn(('Parameters missing the workspace key \'workspace_dir\.'
-            ' Be sure to check your archived data'))
+    # 
+    # If a workspace or suffix is provided, ignore that key.
+    ignored_keys = []
+    for key, restore_key in [
+        ('workspace_dir', False),
+        ('suffix', True),
+        ('results_suffix', True)]:
+        try:
+            del parameters[key]
+            if restore_key:
+                ignored_keys.append((key, parameters[key]))
+        except:
+            LOGGER.warn(('Parameters missing the workspace key \'%s\'.'
+                ' Be sure to check your archived data'), key)
 
     types = {
         str: get_if_file,
         unicode: get_if_file,
     }
     new_args = format_dictionary(parameters, types)
+
+    for (key, value) in ignored_keys:
+        LOGGER.debug('Restoring %s: %s', key, value)
+        new_args[key] = value
 
     LOGGER.debug('new arguments: %s', new_args)
     # write parameters to a new json file in the temp workspace

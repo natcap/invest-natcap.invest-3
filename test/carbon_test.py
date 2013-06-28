@@ -15,42 +15,54 @@ class TestCarbonBiophysical(unittest.TestCase):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
-        args = {}
-        args['workspace_dir'] = './data/test_out/carbon_output'
-        args['lulc_cur_uri'] = "./data/base_data/terrestrial/lulc_samp_cur"
-        args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.dbf'
-        carbon_biophysical.execute(args)
+        def help_test_carbon_biophysical_sequestration_hwp(use_uncertainty):
+            """Helper function that does the real work of the test, and allows us
+            to easily test both with and without uncertainty."""
+            args = {}
+            args['workspace_dir'] = './data/test_out/carbon_output'
+            args['lulc_cur_uri'] = "./data/base_data/terrestrial/lulc_samp_cur"
+            if use_uncertainty:
+                # Use the file with probability distributions for carbon pools.
+                args['carbon_pools_uncertain_uri'] = (
+                    './data/carbon/input/carbon_pools_samp_uncertain.csv')
+                args['use_uncertainty'] = True
+            else:
+                # Use the file with point estimates for the carbon pools.
+                args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.csv'
+            carbon_biophysical.execute(args)
 
         
 
-        args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
-        args['lulc_cur_year'] = 2000
-        args['lulc_fut_year'] = 2030
-        args['hwp_cur_shape_uri'] = "./data/carbon/input/harv_samp_cur.shp"
-        args['hwp_fut_shape_uri'] = "./data/carbon/input/harv_samp_fut.shp"
+            args['lulc_fut_uri'] = "./data/base_data/terrestrial/lulc_samp_fut"
+            args['lulc_cur_year'] = 2000
+            args['lulc_fut_year'] = 2030
+            args['hwp_cur_shape_uri'] = "./data/carbon/input/harv_samp_cur.shp"
+            args['hwp_fut_shape_uri'] = "./data/carbon/input/harv_samp_fut.shp"
 
-        carbon_biophysical.execute(args)
+            carbon_biophysical.execute(args)
 
-        #assert that './data/test_data/tot_C_cur.tif' equals
-        #./data/carbon_output/Output/tot_C_cur.tif
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + "/output/tot_C_cur.tif",
-            './data/carbon_regression_data/tot_C_cur.tif')
+          #assert that './data/test_data/tot_C_cur.tif' equals
+          #./data/carbon_output/Output/tot_C_cur.tif
+            invest_test_core.assertTwoDatasetEqualURI(self,
+                args['workspace_dir'] + "/output/tot_C_cur.tif",
+                './data/carbon_regression_data/tot_C_cur.tif')
 
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + "/output/tot_C_fut.tif",
-            './data/carbon_regression_data/tot_C_fut.tif')
+            invest_test_core.assertTwoDatasetEqualURI(self,
+                args['workspace_dir'] + "/output/tot_C_fut.tif",
+                './data/carbon_regression_data/tot_C_fut.tif')
 
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + "/output/sequest.tif",
-            './data/carbon_regression_data/sequest.tif')
+            invest_test_core.assertTwoDatasetEqualURI(self,
+                args['workspace_dir'] + "/output/sequest.tif",
+                './data/carbon_regression_data/sequest.tif')
 
-        args['suffix'] = '_foo_bar'
-        carbon_biophysical.execute(args)
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + "/output/tot_C_cur_foo_bar.tif",
-            './data/carbon_regression_data/tot_C_cur.tif')
+            args['suffix'] = '_foo_bar'
+            carbon_biophysical.execute(args)
+            invest_test_core.assertTwoDatasetEqualURI(self,
+                args['workspace_dir'] + "/output/tot_C_cur_foo_bar.tif",
+                './data/carbon_regression_data/tot_C_cur.tif')
 
+        help_test_carbon_biophysical_sequestration_hwp(False) # test without uncertainty
+        help_test_carbon_biophysical_sequestration_hwp(True)  # test with uncertainty
 
     def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \

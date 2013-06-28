@@ -5,15 +5,62 @@ import glob
 
 import invest_natcap.testing as testing
 from invest_natcap.testing import data_storage
+from invest_natcap.testing import test_writing
 from invest_natcap import raster_utils
 
 POLLINATION_DATA = os.path.join('data', 'pollination', 'samp_input')
 CARBON_DATA = os.path.join('data', 'carbon', 'input')
 REGRESSION_ARCHIVES = os.path.join('data', 'data_storage', 'regression')
+WRITING_ARCHIVES = os.path.join('data', 'test_writing')
 TEST_INPUT = os.path.join('data', 'data_storage', 'test_input')
 TEST_OUT = os.path.join('data', 'test_out')
 BASE_DATA = os.path.join('data', 'base_data')
 
+
+class TestWritingTest(testing.GISTest):
+    def test_file_has_class_pass(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'simple_test.py.txt')
+        cls_exists = test_writing.file_has_class(test_file, 'ExampleClass')
+        self.assertEqual(cls_exists, True)
+
+    def test_file_has_class_fail(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'simple_test.py.txt')
+        cls_exists = test_writing.file_has_class(test_file, 'BadClass')
+        self.assertEqual(cls_exists, False)
+
+    def test_add_test_to_class(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'simple_test.py.txt')
+        new_file = os.path.join(TEST_OUT, 'simple_test_new.py.txt')
+        shutil.copyfile(test_file, new_file)
+
+        test_class_name = 'ExampleClass'
+        test_func_name = 'test_new_func'
+        in_archive_uri = 'input_archive.tar.gz'
+        out_archive_uri = 'output_archive.tar.gz'
+        module = 'invest_natcap.sample_model.script'
+        test_writing.add_test_to_class(new_file, test_class_name,
+            test_func_name, in_archive_uri, out_archive_uri, module)
+
+        regression_file = os.path.join(WRITING_ARCHIVES,
+            'completed_regression_test.py.txt')
+        self.assertFiles(new_file, regression_file)
+
+    def test_add_test_to_new_class(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'simple_test.py.txt')
+        new_file = os.path.join(TEST_OUT, 'simple_test_new.py.txt')
+        shutil.copyfile(test_file, new_file)
+
+        test_class_name = 'ExampleNewClass'
+        test_func_name = 'test_new_func'
+        in_archive_uri = 'input_archive.tar.gz'
+        out_archive_uri = 'output_archive.tar.gz'
+        module = 'invest_natcap.sample_model.script'
+        test_writing.add_test_to_class(new_file, test_class_name,
+            test_func_name, in_archive_uri, out_archive_uri, module)
+
+        regression_file = os.path.join(WRITING_ARCHIVES,
+            'regression_new_class.py.txt')
+        self.assertFiles(new_file, regression_file)
 
 class DataStorageTest(testing.GISTest):
     def test_collect_parameters_simple(self):
@@ -222,6 +269,18 @@ class DataStorageTest(testing.GISTest):
 
         for file_uri in files_to_check:
             self.assertEqual(True, os.path.exists(file_uri))
+
+    def test_archive_dbf(self):
+        input_parameters = {
+            'dbf_file': os.path.join(CARBON_DATA, 'carbon_pools_samp.dbf'),
+        }
+        archive_uri = os.path.join(TEST_OUT, 'dbf_archive')
+        data_storage.collect_parameters(input_parameters, archive_uri)
+
+        archive_uri += '.tar.gz'
+        reg_archive_uri = os.path.join(REGRESSION_ARCHIVES,
+            'dbf_archive.tar.gz')
+        self.assertArchives(archive_uri, reg_archive_uri)
 
 
 class GISTestTester(testing.GISTest):
