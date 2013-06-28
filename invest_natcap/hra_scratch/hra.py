@@ -232,10 +232,10 @@ def execute(args):
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
     #the same keys.
-    make_add_overlap_rasters(overlap_dir, hab_list, stress_list, hra_args['h_s_c'],
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], stress_list, hra_args['h_s_c'],
                     hra_args['h_s_e'], args['grid_size'])
 
-def make_add_overlap_rasters(dir, habitats, stressors, h_s_c, h_s_e, grid_size):
+def make_add_overlap_rasters(dir, hab_dict, stressors, h_s_c, h_s_e, grid_size):
     '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
     and stressor raster, and return the overlap of the two. Should add that as 
     the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
@@ -243,8 +243,22 @@ def make_add_overlap_rasters(dir, habitats, stressors, h_s_c, h_s_e, grid_size):
     Input:
         dir- Directory into which all completed h-s overlap files shoudl be
             placed.
-        habitats- A list of URIs of all desired habitats and species within this
-            model run of HRA.
+        hab_dict- The habitats criteria dictionary, which will contain a
+            dict[Habitat]['DS']. The structure will be as follows:
+            
+            {Habitat A: 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  "A Dataset URI"
+                    }
+            }
+
         stressors- A list of URIs of all desired stressors for this HRA model
             run.
         h_s_c- A multi-level structure which holds numerical criteria
