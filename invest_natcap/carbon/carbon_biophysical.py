@@ -88,11 +88,22 @@ def execute_30(**args):
 
             for lulc_id, lookup_dict in pools.iteritems():
                 pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
+
                 if use_uncertainty:
                     # Use the mean estimate of the distribution to compute the carbon output.
+                    pool_estimate_sds = list(pool_estimate_types) # Make a copy for std deviations
                     for i in range(len(pool_estimate_types)):
-                        pool_estimate_types[i] += '_mean'
+                        pool_estimate_types[i] += '_mean' # Data for the mean
+                        pool_estimate_sds[i] += '_sd'  # Data for the standard deviation
+
+                    # Compute the total variance per pixel for each lulc type.
+                    # We have a normal distribution for each pool; we assume each is independent,
+                    # so the variance of the sum is equal to the sum of the variances.
+                    # Note that we scale by the area squared.
+                    pools[lulc_id]['variance_%s' % lulc_uri] = (cell_area_ha ** 2) * sum(
+                        [pools[lulc_id][pool_type_sd] ** 2 for pool_type_sd in pool_estimate_sds])
                     
+                # Compute the total carbon per pixel for each lulc type
                 pools[lulc_id]['total_%s' % lulc_uri] = cell_area_ha * sum(
                     [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
 
@@ -107,10 +118,26 @@ def execute_30(**args):
             out_file_names['tot_C_%s' % scenario_type] = dataset_out_uri
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
+            # Create a raster that models total carbon storage per pixel.
             raster_utils.vectorize_datasets(
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
                 "intersection", dataset_to_align_index=0)
+
+            if use_uncertainty:
+                def map_carbon_pool_variance(lulc):
+                    if lulc == nodata:
+                        return nodata_out
+                    return pools[lulc]['variance_%s' % lulc_uri]
+                variance_out_uri = os.path.join(
+                    intermediate_dir, 'variance_C_%s%s.tif' % (scenario_type, file_suffix))
+                out_file_names['variance_C_%s' % scenario_type] = dataset_out_uri
+                
+                # Create a raster that models variance in carbon storage per pixel.
+                raster_utils.vectorize_datasets(
+                    [args[lulc_uri]], map_carbon_pool_variance, variance_out_uri,
+                    gdal.GDT_Float32, nodata_out, pixel_size_out,
+                    "intersection", dataset_to_align_index=0)
 
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
