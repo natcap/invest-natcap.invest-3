@@ -402,11 +402,8 @@ def execute(args):
     add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
     
     LOGGER.debug("Count overlapping pixels per area.")
-    values = raster_utils.aggregate_raster_values_uri(viewshed_reclass_uri,
-                                                      overlap_uri,
-                                                      id_name,
-                                                      "sum",
-                                                      ignore_nodata = True)
+    values = raster_utils.aggregate_raster_values_uri(
+        viewshed_reclass_uri, overlap_uri, id_name, ignore_nodata=True).total
 
     def calculate_percent(feature):
         if feature.GetFieldAsInteger(id_name) in values:
