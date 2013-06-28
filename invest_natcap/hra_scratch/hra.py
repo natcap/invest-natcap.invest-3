@@ -229,13 +229,18 @@ def execute(args):
     stress_names = listdir(hra_args['stressors_dir'])
     stress_list = fnmatch.filter(stress_names, '*.shp')
 
+    #Want a super simple dictionary of the stressor rasters we will use for overlap.
+    #The local var stress_dir is the location that should be used for rasterized
+    #stressor shapefiles. args['stressors_dir'] is the location of the original
+    #stressor shapefiles. 
+    stress_dict = make_stress_rasters(stress_dir, hra_args['stressors_dir'], args['grid_size'])
+
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
     #the same keys.
-    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], stress_list, hra_args['h_s_c'],
-                    hra_args['h_s_e'], args['grid_size'])
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], stress_dict, hra_args['h_s_c'],                    hra_args['h_s_e'], args['grid_size'])
 
-def make_add_overlap_rasters(dir, hab_dict, stressors, h_s_c, h_s_e, grid_size):
+def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
     '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
     and stressor raster, and return the overlap of the two. Should add that as 
     the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
@@ -243,7 +248,7 @@ def make_add_overlap_rasters(dir, hab_dict, stressors, h_s_c, h_s_e, grid_size):
     Input:
         dir- Directory into which all completed h-s overlap files shoudl be
             placed.
-        hab_dict- The habitats criteria dictionary, which will contain a
+        habitats- The habitats criteria dictionary, which will contain a
             dict[Habitat]['DS']. The structure will be as follows:
             
             {Habitat A: 
@@ -259,8 +264,8 @@ def make_add_overlap_rasters(dir, hab_dict, stressors, h_s_c, h_s_e, grid_size):
                     }
             }
 
-        stressors- A list of URIs of all desired stressors for this HRA model
-            run.
+        stressors- A dictionary containing all stressor DS's. The key will be the name
+            of the stressor, and it will map to the URI of the stressor DS.
         h_s_c- A multi-level structure which holds numerical criteria
             ratings, as well as weights and data qualities for criteria rasters.
             h-s will hold criteria that apply to habitat and stressor overlaps, 
@@ -293,6 +298,36 @@ def make_add_overlap_rasters(dir, hab_dict, stressors, h_s_c, h_s_e, grid_size):
     
     Returns nothing.
 '''
+
+    for pair in h_s_c:
+
+        h, s = pair
+        h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
+ 
+        files = [habitats[h]['DS'], stressors[s]['DS']]
+
+def make_stress_rasters(dir, stress_list, grid_size)
+    '''Creating a simple dictionary that will map stressor name to a rasterized
+    version of that stressor shapefile. The key will be a string containing 
+    stressor name, and the value will be the URI of the rasterized shapefile.
+
+    Input:
+        dir- The directory into which completed shapefiles should be placed.
+        stress_list- A list containing stressor shapefile URIs for all stressors
+            desired within the given model run.
+        grid_size- The pixel size desired for the rasters produced based on the
+            shapefiles.
+
+    Output:
+        A rasterized version of each stressor shapefile provided, which will be
+            stored in 'dir'.
+
+    Returns:
+        stress_dict- A simple dictionary which maps a string key of the stressor
+            name to the URI for the output raster.
+    
+    '''
+    
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
