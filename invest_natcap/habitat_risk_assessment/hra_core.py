@@ -142,7 +142,7 @@ def execute(args):
     os.removedirs(unecessary_folder)
     #Want to remove that AOI copy that we used for ID number->name translation.
     unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
-    os.remove(unecessary_file)
+    os.remove(unnecessary_file)
 
 def rewrite_avgs_dict(avgs_dict, aoi_names):
     '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
@@ -473,8 +473,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         #We explicitly placed the 'BURN_ID' feature on each layer. Since we know
         #currently there is a 0 value for all means, can just update each entry
         #if there is a real mean found.
-        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(r_raster_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean'))
+        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                r_raster_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
 
         #GETTING MEANS OF THE E RASTERS HERE
 
@@ -482,15 +482,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         #rejigger now.
         e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
 
-        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(e_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean'))
+        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
 
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
 
-        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID',
-                        'mean'))
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
