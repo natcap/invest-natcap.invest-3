@@ -11,7 +11,7 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
 
-LOGGER = logging.getLogger('nutrient_biophysical')
+LOGGER = logging.getLogger('nutrient')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
