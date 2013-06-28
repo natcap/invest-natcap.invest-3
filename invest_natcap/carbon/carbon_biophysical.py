@@ -40,6 +40,9 @@ def execute_30(**args):
             (required if 'use_uncertainty' is true)
         args['use_uncertainty'] - a boolean that indicates whether we should do
             uncertainty analysis. Defaults to False if not present.
+        args['confidence_threshold'] - a number between 0 and 100 that indicates
+            the minimum threshold for which we should highlight regions in the output
+            raster. (required if 'use_uncertainty' is True)
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 

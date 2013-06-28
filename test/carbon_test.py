@@ -26,6 +26,7 @@ do sequestration and harvested wood products on lulc maps."""
                 args['carbon_pools_uncertain_uri'] = (
                     './data/carbon/input/carbon_pools_samp_uncertain.csv')
                 args['use_uncertainty'] = True
+                args['confidence_threshold'] = 90
             else:
                 # Use the file with point estimates for the carbon pools.
                 args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.csv'
