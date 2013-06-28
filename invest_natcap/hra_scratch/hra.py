@@ -264,7 +264,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
                     }
             }
 
-        stressors- A dictionary containing all stressor DS's. The key will be the name
+        stress_dict- A dictionary containing all stressor DS's. The key will be the name
             of the stressor, and it will map to the URI of the stressor DS.
         h_s_c- A multi-level structure which holds numerical criteria
             ratings, as well as weights and data qualities for criteria rasters.
@@ -304,7 +304,26 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         h, s = pair
         h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
  
-        files = [habitats[h]['DS'], stressors[s]['DS']]
+        files = [habitats[h]['DS'], stress_dict[s]]
+        
+        def add_h_s_pixels(h_pix, s_pix):
+            '''Since the stressor is buffered, we actually want to make sure to
+            preserve that value. If there is an overlap, return s value.'''
+
+            if h_pix != h_nodata:
+                return s_pix
+            else:
+                return 0.
+        
+        out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
+
+        raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
+                        gdal.GDT_Float32, 0, grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+        
+        h_s_c[pair]['DS'] = out_uri
+        h_s_e[pair]['DS'] = out_uri
 
 def make_stress_rasters(dir, stress_list, grid_size)
     '''Creating a simple dictionary that will map stressor name to a rasterized
