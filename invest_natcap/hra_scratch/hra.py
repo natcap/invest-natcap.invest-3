@@ -223,9 +223,60 @@ def execute(args):
             hab_names = listdir(hra_args[ele])
             hab_list += fnmatch.filter(hab_names, '*.shp')
 
-    #H_S_C Overlap
-    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
-                    hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+    #Get all stressor URI's
+    stress_names = listdir(hra_args['stressors_dir'])
+    stress_list = fnmatch.filter(stress_names, '*.shp')
+
+    #H_S_C and H_S_E
+    #Just add the DS's at the same time to the two dictionaries, since it should be
+    #the same keys.
+    make_add_overlap_rasters(overlap_dir, hab_list, stress_list, hra_args['h_s_c'],
+                    hra_args['h_s_e'], args['grid_size'])
+
+def make_add_overlap_rasters(dir, habitats, stressors, h_s_c, h_s_e, grid_size):
+    '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
+    and stressor raster, and return the overlap of the two. Should add that as 
+    the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
+
+    Input:
+        dir- Directory into which all completed h-s overlap files shoudl be
+            placed.
+        habitats- A list of URIs of all desired habitats and species within this
+            model run of HRA.
+        stressors- A list of URIs of all desired stressors for this HRA model
+            run.
+        h_s_c- A multi-level structure which holds numerical criteria
+            ratings, as well as weights and data qualities for criteria rasters.
+            h-s will hold criteria that apply to habitat and stressor overlaps, 
+            and be applied to the consequence score. The structure's outermost 
+            keys are tuples of (Habitat, Stressor) names. The overall structure 
+            will be as pictured:
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        h_s_e- Similar to the h_s dictionary, a multi-level
+            dictionary containing habitat-stressor-specific criteria ratings and
+            raster information which should be applied to the exposure score. 
+            The outermost keys are tuples of (Habitat, Stressor) names.
+        grid_size- The desired pixel size for the rasters that will be created
+            for each habitat and stressor.
+
+    Output:
+        An edited versions of h_s_e and h_s_c, each of which contains an overlap
+        DS at dict[(Hab, Stress)]['DS']. That key will map to the URI for the
+        corresponding raster DS.
+    
+    Returns nothing.
+'''
 
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
