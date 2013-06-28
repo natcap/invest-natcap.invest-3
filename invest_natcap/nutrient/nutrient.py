@@ -230,8 +230,7 @@ def execute(args):
 
     field_summaries = {
         'mn_run_ind': raster_utils.aggregate_raster_values_uri(
-            runoff_index_uri, args['watersheds_uri'], 'ws_id',
-            'mean')
+            runoff_index_uri, args['watersheds_uri'], 'ws_id').pixel_mean
         }
 
     watershed_output_datasource_uri = os.path.join(
@@ -298,9 +297,9 @@ def execute(args):
         #Summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s" % nutrient)
         alv_tot = raster_utils.aggregate_raster_values_uri(
-            alv_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum')
+            alv_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         export_tot = raster_utils.aggregate_raster_values_uri(
-            export_uri[nutrient], args['watersheds_uri'], 'ws_id', 'sum')
+            export_uri[nutrient], args['watersheds_uri'], 'ws_id').total
         
         #Retention is alv-export
         retention_tot = {}
