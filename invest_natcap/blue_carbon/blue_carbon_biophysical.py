@@ -70,7 +70,7 @@ def execute(args):
             c[2]=c[2]*depth
             return sum(c)
 
-    LOGGER.debug("Caclculating carbon per habitat per cell.")
+    LOGGER.debug("Calculating carbon per habitat per cell.")
     raster_utils.vectorize_datasets([lulc1_uri, depth_per_cell_uri],
                                     carbon_per_area_uri_op,
                                     carbon_per_area_uri,
@@ -102,7 +102,7 @@ def execute(args):
         else:
             return value1 * value2
 
-    LOGGER.debug("Creatung carbon storage raster.")
+    LOGGER.debug("Creating carbon storage raster.")
     raster_utils.vectorize_datasets([carbon_per_area_uri, habitat_area_uri],
                                     carbon_per_cell_op,
                                     carbon_storage_uri,
@@ -117,12 +117,13 @@ def execute(args):
     LOGGER.debug("Parsing transition matrix.")
     transition_file = open(transition_matrix_uri)
     #skip header
-    header = map(int,transition_file.readline().strip().split(",")[3:])
+    header = transition_file.readline().strip().split(",")
     #parse table
     transition_dict={}
     for line in transition_file:
-        transition = zip([0,0] + header, line.strip().split(","))
-        k = transition.pop(0)[1]
+        transition = zip(header, line.strip().split(","))
+        k = int(transition.pop(0)[1])
+        #discard name
         transition.pop(0)
         transition_dict[k] = dict(transition)
     transition_file.close()
