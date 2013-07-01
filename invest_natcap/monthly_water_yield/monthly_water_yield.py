@@ -156,6 +156,7 @@ def execute(args):
     baseflow_uri = os.path.join(intermediate_dir, 'baseflow.tif')
     interflow_uri = os.path.join(intermediate_dir, 'interflow.tif')
     watershed_table_uri = os.path.join(intermediate_dir, 'wshed_table.csv')
+    streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
@@ -227,6 +228,10 @@ def execute(args):
                 float_nodata)
 
         # Calculate Streamflow
+        clean_uri([streamflow_uri])
+        calculate_streamflow(
+                dflow_uri, interflow_uri, baseflow_uri, streamflow_uri,
+                float_nodata)
 
         # Calculate Soil Moisture for current time step, to be used as previous time
         # step in the next iteration
@@ -277,10 +282,10 @@ def clean_uri(in_uri_list):
         if os.path.isfile(uri):
             os.remove(uri)
 
-def calculate_intermediate_streamflow(
-        dflow_uri, interflow_uri, baseflow_uri, inter_streamflow_uri,
+def calculate_streamflow(
+        dflow_uri, interflow_uri, baseflow_uri, streamflow_uri,
         out_nodata):
-    """This function calculates the baseflow
+    """This function calculates the streamflow 
 
         dflow_uri - a URI to a gdal dataset of the direct flow
 
@@ -288,7 +293,7 @@ def calculate_intermediate_streamflow(
 
         baseflow_uri - a URI to a gdal datasaet for the baseflow
 
-        inter_streamflow_uri - a URI path for the streamflow output to be
+        streamflow_uri - a URI path for the streamflow output to be
             written to disk
 
         out_nodata - a float for the output nodata value
@@ -310,7 +315,7 @@ def calculate_intermediate_streamflow(
 
             returns - the baseflow value
         """
-        for pix in [alpha_pix, soil_pix]:
+        for pix in [dflow_pix, interflow_pix, baseflow_pix]:
             if pix in no_data_list:
                 return out_nodata
 
@@ -320,7 +325,7 @@ def calculate_intermediate_streamflow(
 
     raster_utils.vectorize_datasets(
             [dflow_uri, interflow_uri, baseflow_uri], streamflow_op,
-            inter_streamflow_uri, gdal.GDT_Float32, out_nodata,
+            streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
 def calculate_in_absorption_rate(
