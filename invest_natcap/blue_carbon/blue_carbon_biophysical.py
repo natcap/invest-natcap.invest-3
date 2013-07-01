@@ -86,7 +86,7 @@ def execute(args):
         else:
             return cell_size
 
-    LOGGER.debug("Creating habitat area reaster.")
+    LOGGER.debug("Creating habitat area raster.")
     raster_utils.vectorize_datasets([lulc1_uri],
                                     area_per_cell_op,
                                     habitat_area_uri,
