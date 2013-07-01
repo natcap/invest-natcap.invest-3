@@ -114,4 +114,9 @@ def file_has_class(test_file_uri, test_class_name):
 
 def add_test_to_class_new(file_uri, test_class_name, test_func_name,
         in_archive_uri, out_archive_uri, module):
-    pass
+    test_file = codecs.open(file_uri, 'r')
+
+    temp_file_uri = raster_utils.temporary_filename()
+    new_file = codecs.open(temp_file_uri, 'w+')
+
+    cls_exists = file_has_class(file_uri, test_class_name)
