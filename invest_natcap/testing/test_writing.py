@@ -8,6 +8,13 @@ from invest_natcap import raster_utils
 
 
 def file_has_class(test_file_uri, test_class_name):
+    """Check that a python test file contains a class.
+
+        test_file_uri - a URI to a python file containing test classes.
+        test_class_name - a string, the class name we're looking for.
+
+        Returns True if the class is found, False otherwise."""
+
     test_file = codecs.open(test_file_uri, mode='r', encoding='utf-8')
     try:
         module = imp.load_source('model', test_file_uri)
@@ -28,6 +35,14 @@ def file_has_class(test_file_uri, test_class_name):
         return False
 
 def class_has_test(test_file_uri, test_class_name, test_func_name):
+    """Check that a python test file contains the given class and function.
+
+        test_file_uri - a URI to a python file containing test classes.
+        test_class_name - a string, the class name we're looking for.
+        test_func_name - a string, the test function name we're looking for.
+            This function should be located within the target test class.
+
+        Returns True if the function is found within the class, False otherwise."""
     test_file = codecs.open(test_file_uri, mode='r', encoding='utf-8')
     try:
         module = imp.load_source('model', test_file_uri)
@@ -59,6 +74,26 @@ def class_has_test(test_file_uri, test_class_name, test_func_name):
 
 def add_test_to_class(file_uri, test_class_name, test_func_name,
         in_archive_uri, out_archive_uri, module):
+    """Add a test function to an existing test file.  The test added is a
+    regression test using the invest_natcap.testing.regression archive
+    decorator.
+
+        file_uri - URI to the test file to modify.
+        test_class_name - string. The test class name to modify.  If the test class
+            already exists, the test function will be added to the test class.
+            If not, the new class will be created.
+        test_func_name - string.  The name of the test function to write.  If a
+            test function by this name already exists in the target class, the
+            function will not be written.
+        in_archive_uri - URI to the input archive.
+        out_archive_uri - URI to the output archive.
+        module - string module, whose execute function will be run in the test
+            (e.g. 'invest_natcap.pollination.pollination')
+
+    WARNING: The input test file is overwritten with the new test file.
+
+    Returns nothing."""
+
     test_file = codecs.open(file_uri, 'r', encoding='utf-8')
 
     temp_file_uri = raster_utils.temporary_filename()
