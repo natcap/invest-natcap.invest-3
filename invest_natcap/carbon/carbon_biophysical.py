@@ -10,6 +10,7 @@ import shutil
 from osgeo import gdal
 from osgeo import ogr
 import numpy
+from scipy.stats import norm
 
 from invest_natcap import raster_utils
 
@@ -208,6 +209,32 @@ def execute_30(**args):
         raster_utils.vectorize_datasets(
             [out_file_names['tot_C_cur'], out_file_names['tot_C_fut']], sub_op, out_file_names['sequest'], gdal.GDT_Float32, nodata_out,
             pixel_size_out, "intersection", dataset_to_align_index=0)
+
+        if use_uncertainty:
+            # TODO: check this math!
+            confidence_threshold = args['confidence_threshold']
+            def confidence_op(c_cur, c_fut, var_cur, var_fut):
+                # TODO: why do we get negative values sometimes?
+                for val in [c_cur, c_fut, var_cur, var_fut]:
+                    if val == nodata_out or val < 0:
+                        return nodata_out
+                confidence = 100 * norm.cdf(
+                    0, 
+                    c_cur - c_fut, # mean for the difference distribution
+                    math.sqrt(var_cur + var_fut)) # std deviation for the diff distribution
+                if confidence > confidence_threshold:
+                    # We're pretty confident carbon storage will increase.
+                    return 1
+                if confidence < 100 - confidence_threshold:
+                    # We're pretty confidence carbon storage will decrease.
+                    return -1
+                return 0
+
+            out_file_names['conf'] = os.path.join(output_dir, 'conf%s.tif' % file_suffix)
+            raster_utils.vectorize_datasets(
+                [out_file_names[name] for name in ['tot_C_cur', 'tot_C_fut', 'variance_C_cur', 'variance_C_fut']],
+                confidence_op, out_file_names['conf'], gdal.GDT_Float32, nodata_out,
+                pixel_size_out, "intersection", dataset_to_align_index=0)
 
     _calculate_summary(out_file_names)
 
