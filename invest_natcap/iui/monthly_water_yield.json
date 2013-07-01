@@ -20,10 +20,19 @@
                     "required": true
                 },          
 		        {
-                    "id" : "time_step_data",
-                    "args_id": "time_step_data_uri",
+                    "id" : "precip_data",
+                    "args_id": "precip_data_uri",
                     "type": "file",
-                    "label": "Monthly Time Step Data",
+                    "label": "Monthly Time Step Data For Precipitation",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "CSV"}
+                },
+		        {
+                    "id" : "pet_data",
+                    "args_id": "pet_data_uri",
+                    "type": "file",
+                    "label": "Monthly Time Step Data For PET",
                     "defaultValue": "",
                     "required": true,
                     "validateAs": {"type": "CSV"}
@@ -47,10 +56,10 @@
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
-                    "id" : "pet",
-                    "args_id" : "pet_uri",
+                    "id" : "soil_texture",
+                    "args_id" : "soil_texture_uri",
                     "type": "file",
-                    "label": "Potential Evapotranspiration (PET)",
+                    "label": "Soil Texture (%)",
                     "defaultValue": "",
                     "required": true,
                     "validateAs": {"type": "GDAL"}

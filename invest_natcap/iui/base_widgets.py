@@ -67,7 +67,9 @@ class DynamicElement(QtGui.QWidget):
         #These attributes are set in self.updateLinks()
         self.root = None #a pointer to the root of this UI
         self.enabledBy = None #a pointer to an element, if an ID is specified.
+        self.disabledBy = None
         self.enables = [] #a list of pointers
+        self.disables = [] #a list of pointers
         self.requiredIf = [] #a list of pointers
         self.triggers = {}  # a dictionary of trigger strings -> pointers
 
@@ -102,6 +104,13 @@ class DynamicElement(QtGui.QWidget):
             idString = self.attributes['enabledBy']
             self.enabledBy = self.root.find_element_ptr(idString)
             self.enabledBy.enables.append(self)
+
+        # disabledBy is similar to enabledBy; it's a single string ID
+        if 'disabledBy' in self.attributes:
+            idString = self.attributes['disabledBy']
+            self.disabledBy = self.root.find_element_ptr(idString)
+            self.disabledBy.disables.append(self)
+
 
         #requiredIf is a list
         if 'requiredIf' in self.attributes:
@@ -144,6 +153,9 @@ class DynamicElement(QtGui.QWidget):
 
             for element in self.enables:
                 element.setState(state)
+
+            for element in self.disables:
+                element.setState(not state)
 
     def getLabel(self):
         raise DeprecationWarning
@@ -2426,7 +2438,8 @@ class MainWindow(QtGui.QMainWindow):
         self.save_to_json.triggered.connect(self.ui.save_to_json)
 
 class ExecRoot(Root):
-    def __init__(self, uri, layout=None, object_registrar=None, main_window=None):
+    def __init__(self, uri, layout=None, object_registrar=None,
+            main_window=None, version=None):
         if main_window == None:
             self.main_window = self
         else:
@@ -2456,7 +2469,8 @@ class ExecRoot(Root):
         except KeyError:
             use_lastrun = True
         self.lastRun = {}
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'],
+            version)
         if use_lastrun:
             self.lastRun = self.last_run_handler.get_attributes()
 

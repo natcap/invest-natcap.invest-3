@@ -12,6 +12,7 @@ import functools
 import csv
 import math
 import errno
+import collections
 
 from osgeo import gdal
 from osgeo import osr
@@ -496,14 +497,14 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     return out_dataset
 
 def new_raster_from_base_uri(base_uri, *args, **kwargs):
-    """A wrapper for the function new_raster_from_base that opens up the
-        base_uri before passing it to new_raster_from_base.
+    """A wrapper for the function new_raster_from_base that opens up
+        the base_uri before passing it to new_raster_from_base.
 
         base_uri - a URI to a GDAL dataset on disk.
 
         All other arguments to new_raster_from_base are passed in.
 
-        Returns a GDAL dataset.
+        Returns nothing.
         """
     base_raster = gdal.Open(base_uri)
     new_raster_from_base(base_raster, *args, **kwargs)
@@ -926,7 +927,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
 
 def aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, shapefile_field, operation, ignore_nodata=True, 
+    raster_uri, shapefile_uri, shapefile_field, ignore_nodata=True, 
     threshold_amount_lookup=None):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
@@ -935,7 +936,6 @@ def aggregate_raster_values_uri(
         shapefile - a uri to a OGR datasource that probably overlaps raster 
         shapefile_field - a string indicating which key in shapefile to associate
            the output dictionary values with whose values are associated with ints
-        operation - a string of one of ['mean', 'sum']
         ignore_nodata - (optional) if operation == 'mean' then it does not account
             for nodata pixels when determing the average, otherwise all pixels in
             the AOI are used for calculation of the mean.
@@ -943,10 +943,13 @@ def aggregate_raster_values_uri(
             to threshold amounts to subtract from the aggregate value.  The result
             will be clamped to zero.
 
-        returns a dictionary whose keys are the values in shapefile_field and values
-            are the aggregated values over raster.  If no values are aggregated
-            contains 0."""
-    
+        returns a named tuple of the form 
+           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels')
+           Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
+           shapefile_field value to either the total, pixel mean or hecatare mean of
+           the values under that feature.  'n_pixels' contains the total number of
+           valid pixels used in that calculation.
+        """
 
     #Generate a temporary mask filename
     raster_nodata = get_nodata_from_uri(raster_uri)
@@ -1011,7 +1014,15 @@ def aggregate_raster_values_uri(
             aggregate_dict_values[attribute_id] += attribute_sum
             aggregate_dict_counts[attribute_id] += masked_values.size
 
-    result_dict = {}
+    #Initalize the dictionary to have an n_pixels field that contains the
+    #counts of all the pixels used in the calculation.
+    AggregatedValues = collections.namedtuple('AggregatedValues', 'total pixel_mean hectare_mean n_pixels')
+    result_tuple = AggregatedValues(
+        total={},
+        pixel_mean={},
+        hectare_mean={},
+        n_pixels=aggregate_dict_counts.copy())
+
     for attribute_id in aggregate_dict_values:
         if threshold_amount_lookup != None:
             adjusted_amount = max(
@@ -1019,20 +1030,26 @@ def aggregate_raster_values_uri(
                 threshold_amount_lookup[attribute_id], 0.0)
         else:
             adjusted_amount = aggregate_dict_values[attribute_id]
-        if operation == 'sum':
-            result_dict[attribute_id] = adjusted_amount
-        elif operation == 'mean':
-            if aggregate_dict_counts[attribute_id] != 0.0:
-                result_dict[attribute_id] = (
-                    adjusted_amount / aggregate_dict_counts[attribute_id])
-            else:
-                result_dict[attribute_id] = 0.0
+
+        result_tuple.total[attribute_id] = adjusted_amount
+
+        if aggregate_dict_counts[attribute_id] != 0.0:
+            n_pixels = aggregate_dict_counts[attribute_id]
+            result_tuple.pixel_mean[attribute_id] = (
+                adjusted_amount / n_pixels)
+
+            #To get the total area multiply n pixels by their area then
+            #divide by 10000 to get Ha.  Notice that's in the denominator
+            #so the * 10000 goes on the top
+            result_tuple.hectare_mean[attribute_id] = (
+                adjusted_amount / (n_pixels * out_pixel_size ) * 10000)
         else:
-            LOGGER.warn("%s operation not defined" % operation)
-    
+            result_tuple.pixel_mean[attribute_id] = 0.0
+            result_tuple.hectare_mean[attribute_id] = 0.0
+
     mask_band = None
     mask_dataset = None
-    return result_dict
+    return result_tuple
 
 
 def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,

@@ -1,0 +1,8 @@
+import unittest
+
+class ExampleClass(unittest.TestCase):
+    def test_function_1(self):
+        pass
+
+    def test_function_2(self):
+        pass

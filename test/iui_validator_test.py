@@ -51,6 +51,17 @@ class CheckerTester(unittest.TestCase):
         self.assertNotEqual(error, '', msg='No error message produced')
         self.assertNotEqual(error, None, msg='No error message produced')
 
+    def assertErrorWithMessage(self, substr):
+        """Assert that an error with the given substring is produced.
+
+        This is useful so we can make sure that the error that occurs is the
+        one that we expect.
+
+        returns nothing"""
+        error = self.check()
+        self.assertIn(substr, error)
+        
+
 class FileCheckerTester(CheckerTester):
     """Test the class iui_validator.FileChecker"""
     def setUp(self):
@@ -464,6 +475,123 @@ class CSVCheckerTester(CheckerTester):
             # Try default numeric validation on the bad guilds file.
             self.validate_as['restrictions'][0]['validateAs'] = {'type': 'number'}
             self.assertNoError()
+
+class FlexibleTableCheckerTester(CheckerTester):
+    """Test the class iui_validator.FlexibleTableChecker"""
+    def setUp(self):
+        self.validate_as = {'type': 'table',
+                            'fieldsExist': []}
+        self.checker = iui_validator.FlexibleTableChecker()
+
+    def setCSVData(self, include_suffix=True):
+        # CSV file. There are two copies of the file, one with a '.csv' suffix and one without.
+        uri = TEST_DATA + '/wave_energy_data/samp_input/Machine_PelamisParam'
+        if include_suffix:
+            uri += 'CSV.csv'
+        self.validate_as['value'] = uri
+
+    def setDBFData(self, include_suffix=True):
+        # DBF file. There are two copies of the file, one with the '.dbf' suffix and one without.
+        uri = TEST_DATA + '/carbon/input/harv_samp_cur';
+        if include_suffix:
+            uri += '.dbf'
+        self.validate_as['value'] = uri
+
+    def setNonTableData(self):
+        # A file which is not a valid table format.
+        uri = TEST_DATA + '/carbon/input/harv_samp_cur.shp';
+        self.validate_as['value'] = uri
+
+    def setBadCSV(self):
+        # A file which isn't actually CSV-format, but has the .csv suffix.
+        uri = os.path.join(TEST_DATA, 'iui', 'validation', 'shp_as_csv.csv')
+        self.validate_as['value'] = uri
+
+    def test_csv_fields_exist(self):
+        """Assert that FlexibleTableChecker can verify fields exist in a CSV file"""
+        self.setCSVData()
+        self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
+        self.assertNoError()
+        
+        self.validate_as['fieldsExist'] = [
+            {'field': {'pattern': "VALUE", "flag": "ignoreCase"},
+             'required': {'min': 1, 'max': 2}}
+            ]
+        self.assertNoError()
+
+    def test_csv_nonexistent_fields(self):
+        self.setCSVData(False)
+        self.validate_as['fieldsExist'] = ['nonexistent_field']
+        self.assertErrorWithMessage('Required field')
+
+    def test_csv_no_suffix(self):
+        """Assert that FlexibleTableChecker works for CSV files without a .csv suffix"""
+        self.setCSVData(False)
+        self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
+        self.assertNoError()
+        
+        self.validate_as['fieldsExist'] = [
+            {'field': {'pattern': "VALUE", "flag": "ignoreCase"},
+             'required': {'min': 1, 'max': 2}}
+            ]
+        self.assertNoError()
+
+    def test_csv_regexp_fieldname_restrictions(self):
+        """Assert that FlexibleTableChecker can do field selection based on regexps in a CSV."""
+        self.setCSVData(False)
+        regexp_name = {'pattern': '[a-z]+', 'flag': 'ignoreCase'}
+        regexp_float = {'pattern': '[0-9]*\\.?[0-9]+'}
+        num_restriction = {'field': 'VALUE',
+                           'validateAs': {'type': 'number',
+                                          'allowedValues': regexp_float}}
+        const_restriction = {'field': 'VALUE',
+                             'validateAs': {'type': 'number',
+                                            'greaterThan': 0}}
+        str_restriction = {'field': 'NAME',
+                           'validateAs': {'type': 'string',
+                                          'allowedValues': regexp_name}}
+
+        self.validate_as['restrictions'] = [num_restriction,
+                                            const_restriction,
+                                            str_restriction]
+        self.assertNoError()
+
+    def test_bad_csv(self):
+        """Assert that FlexibleTableChecker returns an error for a bad CSV file.
+
+        This file is not a CSV, but its .csv suffix should cause FlexibleTableChecker to treat
+        it as one, so it should fail.
+        """
+        self.setBadCSV()
+        self.validate_as['fieldsExist'] = ['blah']
+        self.assertError()                                                             
+
+    def test_dbf_fields_exist(self):
+        """Assert that FlexibleTableChecker can verify fields exist in a DBF file"""
+        self.setDBFData()
+        self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
+                                           'Start_date']
+        self.assertNoError()
+
+
+    def test_dbf_no_suffix(self):
+        """Assert that FlexibleTableChecker works for DBF files without a .dbf suffix"""
+        self.setDBFData(False)
+        self.validate_as['fieldsExist'] = ['BCEF_cur', 'C_den_cur',
+                                           'Start_date']
+        self.assertNoError()
+
+
+    def test_dbf_nonexistent_fields(self):
+        """Assert that FlexibleTableChecker fails if a bad fieldname is provided in a DBF."""
+        self.setDBFData()
+        self.validate_as['fieldsExist'].append('nonexistent_field')
+        self.assertErrorWithMessage('"nonexistent_field" not found')
+
+    def test_nontable_file(self):
+        """Assert that FlexibleTableChecker return an error when passed a non-table file."""
+        self.setNonTableData()
+        self.assertError()
 
 class PrimitiveCheckerTester(CheckerTester):
     """Test the class iui_validator.PrimitiveChecker."""
