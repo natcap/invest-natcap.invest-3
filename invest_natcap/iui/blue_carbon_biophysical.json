@@ -31,6 +31,15 @@
                                     "type": "file",
                                     "label": "LULC Time 2",
                                     "required": true
+                                },
+                                {
+                                    "id" : "years",
+                                    "args_id" : "yesrs",
+                                    "type": "text",
+                                    "label": "Years",
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": true
                                 },                                
                                 {
                                     "id": "carbon_pools_uri",

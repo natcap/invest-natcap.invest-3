@@ -17,6 +17,7 @@ def execute(args):
     workspace_dir = args["workspace_dir"]
     lulc1_uri = args["lulc1_uri"]
     lulc2_uri = args["lulc2_uri"]
+    years = args["years"]
     carbon_uri = args["carbon_pools_uri"]
     transition_matrix_uri = args["transition_matrix_uri"]
 
@@ -25,7 +26,7 @@ def execute(args):
     carbon_per_area_uri = os.path.join(workspace_dir, "cpa.tif")
     habitat_area_uri = os.path.join(workspace_dir, "ha.tif")
     carbon_storage_uri = os.path.join(workspace_dir, "cs.tif")
-    transition_uri = os.path.join(workspace_dir, "t.tif")
+    transition_uri = os.path.join(workspace_dir, "r.tif")
 
     #construct op from carbon storage table
     LOGGER.debug("Parsing carbon storage table.")
@@ -150,5 +151,7 @@ def execute(args):
                                     nodata,
                                     cell_size,
                                     "union")
+
+    #
 
     #create carbon storage raster for t2
