@@ -222,10 +222,206 @@ def execute(args):
         if ele in hra_args:
             hab_names = listdir(hra_args[ele])
             hab_list += fnmatch.filter(hab_names, '*.shp')
+    
+    add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
 
-    #H_S_C Overlap
-    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
-                    hra_args['stressors'], hra_args['h-s'], args['grid_size']) 
+    #Get all stressor URI's
+    stress_names = listdir(hra_args['stressors_dir'])
+    stress_list = fnmatch.filter(stress_names, '*.shp')
+
+    #Want a super simple dictionary of the stressor rasters we will use for overlap.
+    #The local var stress_dir is the location that should be used for rasterized
+    #stressor shapefiles. args['stressors_dir'] is the location of the original
+    #stressor shapefiles. 
+    stress_dict = make_stress_rasters(stress_dir, hra_args['stressors_dir'], args['grid_size'])
+
+    #H_S_C and H_S_E
+    #Just add the DS's at the same time to the two dictionaries, since it should be
+    #the same keys.
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], stress_dict, hra_args['h_s_c'],                    hra_args['h_s_e'], args['grid_size'])
+
+def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
+    '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
+    and stressor raster, and return the overlap of the two. Should add that as 
+    the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
+
+    Input:
+        dir- Directory into which all completed h-s overlap files shoudl be
+            placed.
+        habitats- The habitats criteria dictionary, which will contain a
+            dict[Habitat]['DS']. The structure will be as follows:
+            
+            {Habitat A: 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'DS': "CritName Raster URI", 'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    'DS':  "A Dataset URI"
+                    }
+            }
+
+        stress_dict- A dictionary containing all stressor DS's. The key will be the name
+            of the stressor, and it will map to the URI of the stressor DS.
+        h_s_c- A multi-level structure which holds numerical criteria
+            ratings, as well as weights and data qualities for criteria rasters.
+            h-s will hold criteria that apply to habitat and stressor overlaps, 
+            and be applied to the consequence score. The structure's outermost 
+            keys are tuples of (Habitat, Stressor) names. The overall structure 
+            will be as pictured:
+
+            {(Habitat A, Stressor 1): 
+                    {'Crit_Ratings': 
+                        {'CritName': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'Crit_Rasters': 
+                        {'CritName':
+                            {'Weight': 1.0, 'DQ': 1.0}
+                        },
+                    }
+            }
+        h_s_e- Similar to the h_s dictionary, a multi-level
+            dictionary containing habitat-stressor-specific criteria ratings and
+            raster information which should be applied to the exposure score. 
+            The outermost keys are tuples of (Habitat, Stressor) names.
+        grid_size- The desired pixel size for the rasters that will be created
+            for each habitat and stressor.
+
+    Output:
+        An edited versions of h_s_e and h_s_c, each of which contains an overlap
+        DS at dict[(Hab, Stress)]['DS']. That key will map to the URI for the
+        corresponding raster DS.
+    
+    Returns nothing.
+'''
+
+    for pair in h_s_c:
+
+        h, s = pair
+        h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
+ 
+        files = [habitats[h]['DS'], stress_dict[s]]
+        
+        def add_h_s_pixels(h_pix, s_pix):
+            '''Since the stressor is buffered, we actually want to make sure to
+            preserve that value. If there is an overlap, return s value.'''
+
+            if h_pix != h_nodata:
+                return s_pix
+            else:
+                return 0.
+        
+        out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
+
+        raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
+                        gdal.GDT_Float32, 0, grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+        
+        h_s_c[pair]['DS'] = out_uri
+        h_s_e[pair]['DS'] = out_uri
+
+def make_stress_rasters(dir, stress_list, grid_size)
+    '''Creating a simple dictionary that will map stressor name to a rasterized
+    version of that stressor shapefile. The key will be a string containing 
+    stressor name, and the value will be the URI of the rasterized shapefile.
+
+    Input:
+        dir- The directory into which completed shapefiles should be placed.
+        stress_list- A list containing stressor shapefile URIs for all stressors
+            desired within the given model run.
+        grid_size- The pixel size desired for the rasters produced based on the
+            shapefiles.
+
+    Output:
+        A rasterized version of each stressor shapefile provided, which will be
+            stored in 'dir'.
+
+    Returns:
+        stress_dict- A simple dictionary which maps a string key of the stressor
+            name to the URI for the output raster.
+    
+    '''
+    
+    stress_dict = {}
+
+    for shape in stress_list:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself
+        name = os.path.splitext(os.path.split(shape)[1])[0]
+
+        out_uri = os.path.join(dir, name + '.tif')
+        
+        datasource = ogr.Open(shape)
+        layer = datasource.GetLayer()
+        
+        #Making the nodata value 0 so that it's easier to combine the 
+        #layers later.
+        r_dataset = \
+            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                    gdal.GDT_Float32, 0., out_uri, datasource)
+
+        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        band.Fill(nodata)
+
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+                                                options=['ALL_TOUCHED=TRUE'])
+        stress_dict[name] = out_uri
+
+    return stress_dict
+
+def add_hab_rasters(dir, habitats, hab_list, grid_size):
+    '''Want to get all shapefiles within any directories in hab_list, and burn
+    them to a raster.
+    
+    Input:
+        dir- Directory into which all completed habitat rasters should be 
+            placed.
+        habitats- A multi-level dictionary containing all habitat and 
+            species-specific criteria ratings and rasters.
+        hab_list- File URI's for all shapefile in habitats dir, species dir, or
+            both.
+        grid_size- Int representing the desired pixel dimensions of
+            both intermediate and ouput rasters. 
+
+    Output:
+        A modified version of habitats, into which we have placed the URI to the
+            rasterized version of the habitat shapefile. It will be placed at
+            habitats[habitatName]['DS'].
+   '''
+
+    for shape in hab_list:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself
+        name = os.path.splitext(os.path.split(shape)[1])[0]
+
+        out_uri = os.path.join(dir, name + '.tif')
+        
+        datasource = ogr.Open(shape)
+        layer = datasource.GetLayer()
+        
+        #Making the nodata value 0 so that it's easier to combine the 
+        #layers later.
+        r_dataset = \
+            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                    gdal.GDT_Float32, 0., out_uri, datasource)
+
+        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        band.Fill(nodata)
+
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+                                                options=['ALL_TOUCHED=TRUE'])
+        habitats[name]['DS'] = out_uri
 
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
