@@ -67,13 +67,16 @@ class JSONHandler(object):
 
 
 class LastRunHandler(JSONHandler):
-    def __init__(self, modelname):
-        # If we aren't on a release, use a 'dev' release version for naming the
-        # lastrun json file.
-        if not invest_natcap.is_release():
-            invest_version = 'dev'
+    def __init__(self, modelname, version=None):
+        if version is not None:
+            invest_version = version
         else:
-            invest_version = invest_natcap.__version__
+            # If we aren't on a release, use a 'dev' release version for naming the
+            # lastrun json file.
+            if not invest_natcap.is_release():
+                invest_version = 'dev'
+            else:
+                invest_version = invest_natcap.__version__
 
         uri = '%s_lastrun_%s.json' % (modelname, invest_version)
         print('lastrun URI:', uri)
