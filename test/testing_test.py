@@ -62,6 +62,23 @@ class TestWritingTest(testing.GISTest):
             'regression_new_class.py.txt')
         self.assertFiles(new_file, regression_file)
 
+    def test_add_test_to_class_importerror(self):
+        test_file = os.path.join(WRITING_ARCHIVES, 'test_importerror.py.txt')
+        new_file = os.path.join(TEST_OUT, 'test_importerror_new.py.txt')
+        shutil.copyfile(test_file, new_file)
+
+        test_class_name = 'ExampleClass'
+        test_func_name = 'test_new_func'
+        in_archive_uri = 'input_archive.tar.gz'
+        out_archive_uri = 'output_archive.tar.gz'
+        module = 'invest_natcap.sample_model.script'
+        test_writing.add_test_to_class(new_file, test_class_name,
+            test_func_name, in_archive_uri, out_archive_uri, module)
+
+        regression_file = os.path.join(WRITING_ARCHIVES,
+            'test_importerror_complete.py.txt')
+        self.assertFiles(new_file, regression_file)
+
 class DataStorageTest(testing.GISTest):
     def test_collect_parameters_simple(self):
         params = {
