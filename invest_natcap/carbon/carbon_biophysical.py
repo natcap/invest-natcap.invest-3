@@ -233,6 +233,7 @@ def execute_30(**args):
                 # and calculate the probability that the difference is less than 0.
                 # The mean of the difference distribution is the difference of the means.
                 # The variance of the difference distribution is the sum of the variances.
+                #
                 # We use this custom phi function because for some reason it's an order of 
                 # magnitude faster than the norm.cdf() function in the scipy library.
                 def phi(x):

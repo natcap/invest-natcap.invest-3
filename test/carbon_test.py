@@ -56,6 +56,11 @@ do sequestration and harvested wood products on lulc maps."""
                 args['workspace_dir'] + "/output/sequest.tif",
                 './data/carbon_regression_data/sequest.tif')
 
+            if use_uncertainty:
+                invest_test_core.assertTwoDatasetEqualURI(self,
+                    args['workspace_dir'] + "/output/conf.tif",
+                    './data/carbon_regression_data/conf.tif')
+
             args['suffix'] = '_foo_bar'
             carbon_biophysical.execute(args)
             invest_test_core.assertTwoDatasetEqualURI(self,
