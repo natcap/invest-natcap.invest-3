@@ -9,21 +9,51 @@ from invest_natcap import raster_utils
 
 def file_has_class(test_file_uri, test_class_name):
     test_file = codecs.open(test_file_uri, mode='r', encoding='utf-8')
-    module = imp.load_source('model', test_file_uri)
     try:
+        module = imp.load_source('model', test_file_uri)
         cls_attr = getattr(module, test_class_name)
         return True
     except AttributeError:
+        # Everything imported properly, but we didn't find the test class and
+        # test function we wanted.
+        return False
+    except ImportError:
+        # We couldn't import everything necessary (such as with
+        # invest_test_core), so we need to loop line by line to check and see if
+        # the class has the test required.
+        for line in test_file:
+            if line.startswith('class %s(' % test_class_name):
+                test_file.close()
+                return True
         return False
 
 def class_has_test(test_file_uri, test_class_name, test_func_name):
     test_file = codecs.open(test_file_uri, mode='r', encoding='utf-8')
-    module = imp.load_source('model', test_file_uri)
     try:
+        module = imp.load_source('model', test_file_uri)
         cls_attr = getattr(module, test_class_name)
         func_attr = getattr(cls_attr, test_func_name)
         return True
     except AttributeError:
+        # Everything imported properly, but we didn't find the test class and
+        # test function we wanted.
+        return False
+    except ImportError:
+        # We couldn't import everything necessary (such as with
+        # invest_test_core), so we need to loop line by line to check and see if
+        # the class has the test required.
+        in_class = False
+        for line in test_file:
+            if line.startswith('class %s(' % test_class_name):
+                in_class = True
+            elif in_class:
+                if line.startswith('class '):
+                    # We went through the whole class and didn't find the
+                    # function.
+                    return False
+                elif line.lstrip().startswith('def %s(self):' % test_func_name):
+                    # We found the function within this class!
+                    return True
         return False
 
 
