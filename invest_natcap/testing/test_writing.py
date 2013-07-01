@@ -125,10 +125,10 @@ def class_has_test(test_file_uri, test_class_name, test_func_name):
 
 def add_test_to_class_new(file_uri, test_class_name, test_func_name,
         in_archive_uri, out_archive_uri, module):
-    test_file = codecs.open(file_uri, 'r')
+    test_file = codecs.open(file_uri, 'r', encoding='utf-8')
 
     temp_file_uri = raster_utils.temporary_filename()
-    new_file = codecs.open(temp_file_uri, 'w+')
+    new_file = codecs.open(temp_file_uri, 'w+', encoding='utf-8')
 
     cls_exists = file_has_class(file_uri, test_class_name)
     test_exists = class_has_test(file_uri, test_class_name, test_func_name)
@@ -156,7 +156,7 @@ def add_test_to_class_new(file_uri, test_class_name, test_func_name,
 
     if cls_exists == False:
         for line in test_file:
-            new_file.write(line.rstrip())
+            new_file.write(line.rstrip() + '\n')
 
         new_file.write('\n')
         new_file.write(_import())
