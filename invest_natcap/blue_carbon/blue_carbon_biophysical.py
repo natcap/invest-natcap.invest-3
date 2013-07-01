@@ -116,17 +116,23 @@ def execute(args):
     #construct op from transition matrix
     LOGGER.debug("Parsing transition matrix.")
     transition_file = open(transition_matrix_uri)
-    #skip header
-    header = transition_file.readline().strip().split(",")
-    #parse table
+
+    #read header, discard LULC code and name header
+    header = [int(lulc_code) for lulc_code in
+              transition_file.readline().strip().split(",")[3:]]
+    
     transition_dict={}
     for line in transition_file:
-        transition = zip(header, line.strip().split(","))
-        k = int(transition.pop(0)[1])
-        #discard name
-        transition.pop(0)
-        transition_dict[k] = dict(transition)
+        row = line.strip().split(",")
+        #save transition from LULC code
+        k = int(row[0])
+        #build transition to rates array, discarding transition from LULC code and name
+        transition_rates = [float(value) for value in row[3:]]
+
+        transition_dict[k] = dict(zip(header, transition_rates))
     transition_file.close()
+
+    print transition_dict
 
     def transition_op(value1, value2):
         if (value1 == nodata) or (value2 == nodata):
