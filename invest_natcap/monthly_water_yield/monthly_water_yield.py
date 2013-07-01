@@ -123,13 +123,13 @@ def execute(args):
             imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
 
     # Construct a dictionary from the precipitation time step data
-    precip_data_dict = construct_time_step_data(precip_data_uri, 'DATE')
+    precip_data_dict = construct_time_step_data(precip_data_uri, 'date')
     LOGGER.debug('Constructed PRECIP DATA : %s', precip_data_dict)
     
     # Construct a dictionary from the time step data
-    pet_data_dict = construct_pet_data(pet_data_uri, 'DATE')
+    pet_data_dict = construct_time_step_data(pet_data_uri, 'date')
     LOGGER.debug('Constructed PET DATA : %s', pet_data_dict)
-    pet_raster_dict = build_monthly_pets(pet_data_dict, dem_uri)
+    pet_raster_dict = build_monthly_pets(pet_data_dict, dem_uri, float_nodata)
     LOGGER.debug(pet_raster_dict)
     
     # A list of the fields from the time step table we are interested in and
@@ -183,7 +183,7 @@ def execute(args):
 
         # Use vectorize points to construct rasters based on points and fields
         raster_utils.new_raster_from_base_uri(
-                dem_uri, preicp_uri, 'GTIFF', float_nodata,
+                dem_uri, precip_uri, 'GTIFF', float_nodata,
                 gdal.GDT_Float32, fill_value=float_nodata)
         
         raster_utils.vectorize_points_uri(
@@ -903,7 +903,7 @@ def construct_time_step_data(data_uri, key_field):
     data_file.close()
     return data_dict
     
-def build_monthly_pets(pet_data_dict, dem_uri):
+def build_monthly_pets(pet_data_dict, dem_uri, out_nodata):
     """Creates a raster based on point values for PET for every month of the
         year. The resulting twelve rasters will have their URI's mapped to in a
         dictionary where the key will be the month
@@ -921,17 +921,19 @@ def build_monthly_pets(pet_data_dict, dem_uri):
     raster_dict = {}
     
     for key, value in pet_data_dict.iteritems():
-        tmp_points_uri = raster_utils.temporary_filename()
-        tmp_shape_uri = raster_utils.temporary_filename()
+        tmp_points_uri = raster_utils.temporary_folder()
+        tmp_shape_uri = raster_utils.temporary_folder()
         tmp_raster_uri = raster_utils.temporary_filename()
         
+        if os.path.isdir(tmp_points_uri):
+            LOGGER.debug('Temp File is Directory')
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
-                value_dict, 'pet', tmp_points_uri)
+                value, 'pet', tmp_points_uri)
    
         # Project point shapefile
         raster_utils.reproject_datasource_uri(
-                tmp_point_uri, out_wkt, tmp_shape_uri) 
+                tmp_points_uri, out_wkt, tmp_shape_uri) 
 
         # Use vectorize points to construct rasters based on points and fields
         raster_utils.new_raster_from_base_uri(
@@ -941,6 +943,6 @@ def build_monthly_pets(pet_data_dict, dem_uri):
         raster_utils.vectorize_points_uri(
                 tmp_shape_uri, 'pet', tmp_raster_uri)
        
-        raster_dict[key] = raster_file
+        raster_dict[key] = tmp_raster_uri
 
     return raster_dict
