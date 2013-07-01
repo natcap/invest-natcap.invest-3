@@ -30,14 +30,18 @@ def execute(args):
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
         
-        args[time_step_data] - a uri to a CSV file
+        args[precip_data_uri] - a uri to a CSV file that has time step data for
+            precipitation
+       
+        args[pet_data_uri] - a uri to a CSV file that has time step data for
+            PET
         
         args[soil_max_uri] - a uri to a gdal raster for soil max
         
         args[pawc_uri] - a uri to a gdal raster for plant available water
             content
         
-        args[pet_uri] - a uri to a gdal raster for potential evapotranspiration 
+        args[soil_texture_uri] - a uri to a gdal raster for soil texture
 
         args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
         
@@ -52,18 +56,19 @@ def execute(args):
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
     raster_utils.create_directories([intermediate_dir, output_dir])
-
     # Get input URIS
-    time_step_data_uri = args['time_step_data_uri']
+    precip_data_uri = args['precip_data_uri']
+    pet_data_uri = args['pet_data_uri']
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
     pawc_uri = args['pawc_uri']
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
-    pet_uri = args['pet_uri']
+    watershed_uri = args['watersheds_uri']
    
     # Set out_nodata value
-    float_nodata = float(np.finfo(np.float32).min) + 1.0
+    #float_nodata = float(np.finfo(np.float32).min) + 1.0
+    float_nodata = -35432.0
    
     imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
     crop_uri = os.path.join(intermediate_dir, 'crop.tif')
@@ -117,26 +122,28 @@ def execute(args):
     calculate_in_absorption_rate(
             imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
 
+    # Construct a dictionary from the precipitation time step data
+    precip_data_dict = construct_time_step_data(precip_data_uri, 'date')
+    LOGGER.debug('Constructed PRECIP DATA : %s', precip_data_dict)
+    
     # Construct a dictionary from the time step data
-    data_dict = construct_time_step_data(time_step_data_uri)
-    LOGGER.debug('Constructed DATA : %s', data_dict)
+    pet_data_dict = construct_time_step_data(pet_data_uri, 'date')
+    LOGGER.debug('Constructed PET DATA : %s', pet_data_dict)
+    pet_raster_dict = build_monthly_pets(pet_data_dict, dem_uri, float_nodata)
+    LOGGER.debug(pet_raster_dict)
     
     # A list of the fields from the time step table we are interested in and
     # need.
-    data_fields = ['p', 'pet']
-
+    data_field = 'p'
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
-    list_of_months = data_dict.keys()
+    list_of_months = precip_data_dict.keys()
     # Sort the list of months chronologically. 
     list_of_months = sorted(
             list_of_months, 
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
     precip_uri = os.path.join(intermediate_dir, 'precip.tif')
-    #pet_uri = os.path.join(intermediate_dir, 'pet.tif')
-    #raster_uri_list = [precip_uri, pet_uri]
-    raster_uri_list = [precip_uri]
    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
@@ -152,7 +159,7 @@ def execute(args):
 
     for cur_month in list_of_months:
         # Get the dictionary for the current time step month
-        cur_step_dict = data_dict[cur_month]
+        cur_step_dict = precip_data_dict[cur_month]
         # Since the time step signature has a 'slash' we need to replace it with
         # an underscore so that we don't run into issues with file naming
         cur_field_name = re.sub('\/', '_', cur_month)
@@ -160,7 +167,12 @@ def execute(args):
         cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
         projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
         clean_uri([cur_point_uri, projected_point_uri]) 
-        
+       
+        LOGGER.debug('CURRENT MONTH: %s', cur_month)
+        pet_month_key = cur_month[:2]
+        LOGGER.debug('PET MONTH KEY: %s', pet_month_key)
+        pet_uri = pet_raster_dict[pet_month_key]
+    
         # Make point shapefiles based on the current time step
         raster_utils.dictionary_to_point_shapefile(
                 cur_step_dict, cur_field_name, cur_point_uri)
@@ -170,21 +182,18 @@ def execute(args):
                 cur_point_uri, dem_wkt, projected_point_uri) 
 
         # Use vectorize points to construct rasters based on points and fields
-        for field, out_uri in zip(data_fields, raster_uri_list):
-            clean_uri([out_uri]) 
-            
-            raster_utils.new_raster_from_base_uri(
-                    dem_uri, out_uri, 'GTIFF', float_nodata,
-                    gdal.GDT_Float32, fill_value=float_nodata)
-            
-            raster_utils.vectorize_points_uri(
-                    projected_point_uri, field, out_uri)
+        raster_utils.new_raster_from_base_uri(
+                dem_uri, precip_uri, 'GTIFF', float_nodata,
+                gdal.GDT_Float32, fill_value=float_nodata)
+        
+        raster_utils.vectorize_points_uri(
+                projected_point_uri, 'p', precip_uri)
 
         # Calculate Direct Flow (Runoff)
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
                 dem_uri, precip_uri, absorption_uri, dflow_uri,
-                total_precip_uri, in_source_uri, float_nodata)
+                total_precip_uri, in_source_uri, float_nodata, watershed_uri)
         
         # Calculate water amount (W)
         clean_uri([water_uri])
@@ -509,10 +518,17 @@ def calculate_intermediate_interflow(
         for pix in [alpha_pix, soil_pix, water_pix, evap_pix]:
             if pix in no_data_list:
                 return out_nodata
-        
-        return alpha_pix * soil_pix**beta * (
-                water_pix - evap_pix * (1 - math.exp(
-                    -1 * (water_pix / evap_pix))))
+       
+        try:
+            res = alpha_pix * soil_pix**beta * (
+                water_pix - evap_pix * (1.0 - math.exp(
+                    -1.0 * (water_pix / evap_pix))))
+        except OverflowError:
+            LOGGER.debug(water_pix)
+            LOGGER.debug(evap_pix)
+            res = 1.0
+
+        return res
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
 
@@ -645,7 +661,7 @@ def calculate_evaporation(
 
 def calculate_direct_flow(
         dem_uri, precip_uri, in_absorption_uri, dt_out_uri, tp_out_uri,
-        in_source_uri, out_nodata):
+        in_source_uri, out_nodata, watershed_uri):
     """This function calculates the direct flow over the catchment
     
         dem_uri - a URI to a gdal dataset of an elevation map
@@ -695,7 +711,7 @@ def calculate_direct_flow(
     temp_uri = raster_utils.temporary_filename()
 
     routing_utils.route_flux(
-            dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri)
+            dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri, watershed_uri)
 
 
     # CALCULATE TOTAL PRECIP
@@ -830,24 +846,26 @@ def construct_lulc_lookup_dict(lulc_data_uri, field):
 
     return lulc_dict
 
-def construct_time_step_data(data_uri):
-    """Parse the CSV data file and construct a dictionary using the time step
-        dates as keys. Each unique date will then have a dictionary of the
-        points.
+def construct_time_step_data(data_uri, key_field):
+    """Parse the CSV data file and construct a dictionary using the provided
+        'key_field' as the keys. Each unique value under 'key_field' will 
+        have a dictionary of the points and corresponding value.
 
-        data_uri - a URI path to a CSV file
+        data_uri - a URI path to a CSV file that has the following headers:
+            [key_field, LATI, LONG, value_field], where value_field has
+            particular data for the specific point
 
-        returns - a dictionary with the following structure:
+        returns - a dictionary with the following structure as an example:
             {
-                '01/1988':{
-                    0:{'date':'01/1988','lati':'44.5','long':'-123.3','p':'10'},
-                    1:{'date':'01/1988','lati':'44.5','long':'-123.5','p':'5'},
-                    2:{'date':'01/1988','lati':'44.3','long':'-123.3','p':'0'}
+                '01':{
+                    0:{'date':'01','lati':'44.5','long':'-123.3','pet':'10'},
+                    1:{'date':'01','lati':'44.5','long':'-123.5','pet':'5'},
+                    2:{'date':'01','lati':'44.3','long':'-123.3','pet':'0'}
                     },
-                '02/1988':{
-                    0:{'date':'02/1988','lati':'44.5','long':'-123.3','p':'10'},
-                    1:{'date':'02/1988','lati':'44.5','long':'-123.4','p':'6'},
-                    2:{'date':'02/1988','lati':'44.6','long':'-123.5','p':'7'}
+                '02':{
+                    0:{'date':'02','lati':'44.5','long':'-123.3','pet':'10'},
+                    1:{'date':'02','lati':'44.5','long':'-123.4','pet':'6'},
+                    2:{'date':'02','lati':'44.6','long':'-123.5','pet':'7'}
                     }...
             }
     """
@@ -871,16 +889,60 @@ def construct_time_step_data(data_uri):
         # added as an outer unique key, it is created in the except block.
         try:
             # Try to assign unique point to monthly time step
-            data_dict[row['date']][unique_id] = row
+            data_dict[row[key_field]][unique_id] = row
             unique_id+=1
         except KeyError:
             # If this is a new monthly time step then set the unique_id to 0
             unique_id = 0
             # Initialize the new monthly time step
-            data_dict[row['date']] = {}
+            data_dict[row[key_field]] = {}
             # Add the first point for the monthly time step
-            data_dict[row['date']][unique_id] = row
+            data_dict[row[key_field]][unique_id] = row
             unique_id+=1
 
     data_file.close()
     return data_dict
+    
+def build_monthly_pets(pet_data_dict, dem_uri, out_nodata):
+    """Creates a raster based on point values for PET for every month of the
+        year. The resulting twelve rasters will have their URI's mapped to in a
+        dictionary where the key will be the month
+
+        pet_data_dict - a python dictionary
+
+        dem_uri - a URI to a gdal dataset to build rasters from and to project
+        to
+
+        returns - a dictionary mapping month keys to gdal URIs
+    """
+    
+    out_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
+    
+    raster_dict = {}
+    
+    for key, value in pet_data_dict.iteritems():
+        tmp_points_uri = raster_utils.temporary_folder()
+        tmp_shape_uri = raster_utils.temporary_folder()
+        tmp_raster_uri = raster_utils.temporary_filename()
+        
+        if os.path.isdir(tmp_points_uri):
+            LOGGER.debug('Temp File is Directory')
+        # Make point shapefiles based on the current time step
+        raster_utils.dictionary_to_point_shapefile(
+                value, 'pet', tmp_points_uri)
+   
+        # Project point shapefile
+        raster_utils.reproject_datasource_uri(
+                tmp_points_uri, out_wkt, tmp_shape_uri) 
+
+        # Use vectorize points to construct rasters based on points and fields
+        raster_utils.new_raster_from_base_uri(
+                dem_uri, tmp_raster_uri, 'GTIFF', out_nodata,
+                gdal.GDT_Float32, fill_value=out_nodata)
+        
+        raster_utils.vectorize_points_uri(
+                tmp_shape_uri, 'pet', tmp_raster_uri)
+       
+        raster_dict[key] = tmp_raster_uri
+
+    return raster_dict
