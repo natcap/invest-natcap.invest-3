@@ -7,6 +7,11 @@ import logging
 import copy
 import os
 
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('blue_carbon')
+
 def execute(args):
     #inputs
     workspace_dir = args["workspace_dir"]
@@ -23,6 +28,7 @@ def execute(args):
     transition_uri = os.path.join(workspace_dir, "t.tif")
 
     #construct op from carbon storage table
+    LOGGER.debug("Parsing carbon storage table.")
     carbon_file = open(carbon_uri)
     #skip header
     carbon_file.readline()
@@ -45,6 +51,7 @@ def execute(args):
         else:
             return 1
 
+    LOGGER.debug("Creating sediment depth raster.")
     raster_utils.vectorize_datasets([lulc1_uri],
                                     depth_per_cell_op,
                                     depth_per_cell_uri,
@@ -63,6 +70,7 @@ def execute(args):
             c[2]=c[2]*depth
             return sum(c)
 
+    LOGGER.debug("Caclculating carbon per habitat per cell.")
     raster_utils.vectorize_datasets([lulc1_uri, depth_per_cell_uri],
                                     carbon_per_area_uri_op,
                                     carbon_per_area_uri,
@@ -78,6 +86,7 @@ def execute(args):
         else:
             return cell_size
 
+    LOGGER.debug("Creating habitat area reaster.")
     raster_utils.vectorize_datasets([lulc1_uri],
                                     area_per_cell_op,
                                     habitat_area_uri,
@@ -93,6 +102,7 @@ def execute(args):
         else:
             return value1 * value2
 
+    LOGGER.debug("Creatung carbon storage raster.")
     raster_utils.vectorize_datasets([carbon_per_area_uri, habitat_area_uri],
                                     carbon_per_cell_op,
                                     carbon_storage_uri,
@@ -104,6 +114,7 @@ def execute(args):
     #create accumulation raster for t1 to t2
 
     #construct op from transition matrix
+    LOGGER.debug("Parsing transition matrix.")
     transition_file = open(transition_matrix_uri)
     #skip header
     header = map(int,transition_file.readline().strip().split(",")[3:])
