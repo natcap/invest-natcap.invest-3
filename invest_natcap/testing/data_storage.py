@@ -272,16 +272,18 @@ def collect_parameters(parameters, archive_uri):
     #   Duplicate URIs should also have the same replacement URI.
     # 
     # If a workspace or suffix is provided, ignore that key.
+    LOGGER.debug('Keys: %s', parameters.keys())
     ignored_keys = []
     for key, restore_key in [
         ('workspace_dir', False),
         ('suffix', True),
         ('results_suffix', True)]:
         try:
-            del parameters[key]
             if restore_key:
                 ignored_keys.append((key, parameters[key]))
-        except:
+                LOGGER.debug('tracking key %s', key)
+            del parameters[key]
+        except KeyError:
             LOGGER.warn(('Parameters missing the workspace key \'%s\'.'
                 ' Be sure to check your archived data'), key)
 
