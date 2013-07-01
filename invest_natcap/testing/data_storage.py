@@ -164,11 +164,11 @@ def collect_parameters(parameters, archive_uri):
             layer_files = sorted(glob.glob(glob_pattern))
             LOGGER.debug('Layer files: %s', layer_files)
 
-            if len(layer_files) == 1 and layer_files[0].endswith('.dbf'):
-                shutil.rmtree(new_vector_dir)
-                raise NotAVector()
-            elif len(layer_files) == 2 and (layer_files[0].endswith('dbf') and
-                layer_files[1].endswith('.dbf.xml')):
+            layer_extensions = map(lambda x: os.path.splitext(x)[1], layer_files)
+            LOGGER.debug('Layer extensions: %s', layer_extensions)
+
+            # It's not a shapefile if there's no file with a .shp extension.
+            if '.shp' not in layer_extensions:
                 shutil.rmtree(new_vector_dir)
                 raise NotAVector()
 
@@ -272,16 +272,18 @@ def collect_parameters(parameters, archive_uri):
     #   Duplicate URIs should also have the same replacement URI.
     # 
     # If a workspace or suffix is provided, ignore that key.
+    LOGGER.debug('Keys: %s', parameters.keys())
     ignored_keys = []
     for key, restore_key in [
         ('workspace_dir', False),
         ('suffix', True),
         ('results_suffix', True)]:
         try:
-            del parameters[key]
             if restore_key:
                 ignored_keys.append((key, parameters[key]))
-        except:
+                LOGGER.debug('tracking key %s', key)
+            del parameters[key]
+        except KeyError:
             LOGGER.warn(('Parameters missing the workspace key \'%s\'.'
                 ' Be sure to check your archived data'), key)
 
