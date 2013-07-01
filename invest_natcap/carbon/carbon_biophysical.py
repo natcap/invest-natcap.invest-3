@@ -233,10 +233,13 @@ def execute_30(**args):
                 # and calculate the probability that the difference is less than 0.
                 # The mean of the difference distribution is the difference of the means.
                 # The variance of the difference distribution is the sum of the variances.
-                confidence = 100 * norm.cdf(
-                    0, 
-                    c_cur - c_fut, # mean for the difference distribution
-                    math.sqrt(var_cur + var_fut)) # std deviation for the diff distribution
+                # We use this custom phi function because for some reason it's an order of 
+                # magnitude faster than the norm.cdf() function in the scipy library.
+                def phi(x):
+                    '''Cumulative distribution function for the standard normal distribution.
+                    Copied from http://docs.python.org/3.2/library/math.html'''
+                    return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+                confidence = 100 * phi((c_fut - c_cur) / math.sqrt(var_cur + var_fut))
                 if confidence > confidence_threshold:
                     # We're confident carbon storage will increase.
                     return 1
