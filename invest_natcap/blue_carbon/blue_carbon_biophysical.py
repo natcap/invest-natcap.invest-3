@@ -27,6 +27,7 @@ def execute(args):
     habitat_area_uri = os.path.join(workspace_dir, "ha.tif")
     carbon_storage_uri = os.path.join(workspace_dir, "cs.tif")
     transition_uri = os.path.join(workspace_dir, "r.tif")
+    sequestration_uri = os.path.join(workspace_dir, "s.tif")
 
     #construct op from carbon storage table
     LOGGER.debug("Parsing carbon storage table.")
@@ -97,11 +98,11 @@ def execute(args):
                                     "union")
 
     #calculate carbon per habitat
-    def carbon_per_cell_op(value1, value2):
-        if (value1 == nodata) or (value2 == nodata):
+    def carbon_per_cell_op(carbon, habitat):
+        if (carbon == nodata) or (habitat == nodata):
             return nodata
         else:
-            return value1 * value2
+            return carbon * habitat
 
     LOGGER.debug("Creating carbon storage raster.")
     raster_utils.vectorize_datasets([carbon_per_area_uri, habitat_area_uri],
@@ -127,20 +128,18 @@ def execute(args):
         row = line.strip().split(",")
         #save transition from LULC code
         k = int(row[0])
-        #build transition to rates array, discarding transition from LULC code and name
-        transition_rates = [float(value) for value in row[3:]]
+        #build transition to coefficient array, discarding transition from LULC code and name
+        transition_coefficients = [float(coefficient) for coefficient in row[3:]]
 
-        transition_dict[k] = dict(zip(header, transition_rates))
+        transition_dict[k] = dict(zip(header, transition_coefficients))
     transition_file.close()
 
-    print transition_dict
-
-    def transition_op(value1, value2):
-        if (value1 == nodata) or (value2 == nodata):
+    def transition_op(lulc1, lulc2):
+        if (lulc1 == nodata) or (lulc2 == nodata):
             return nodata
         else:
             try:
-                return transition_dict[int(value1)][int(value2)]
+                return transition_dict[int(lulc1)][int(lulc2)]
             except KeyError:
                 return 1
 
@@ -152,6 +151,6 @@ def execute(args):
                                     cell_size,
                                     "union")
 
-    #
+    #construct op for componding sequestration
 
     #create carbon storage raster for t2
