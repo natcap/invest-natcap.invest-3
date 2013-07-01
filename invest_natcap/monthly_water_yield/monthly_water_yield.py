@@ -713,6 +713,8 @@ def calculate_direct_flow(
     routing_utils.route_flux(
             dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri, watershed_uri)
 
+    dflow_nodata = raster_utils.get_nodata_from_uri(dt_out_uri)
+    no_data_list.append(dflow_nodata)
 
     # CALCULATE TOTAL PRECIP
     def total_precip_op(direct_pix, in_absorption_pix):
