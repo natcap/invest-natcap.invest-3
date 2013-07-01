@@ -48,8 +48,6 @@ then
         fileio_test.py
 #        finfish_aquaculture_test.py
         finfish_aquaculture_core_test.py
-        hydropower_core_test.py
-        hydropower_valuation_test.py
         invest_core_fileio_test.py
         invest_core_test.py
         invest_init_test.py
@@ -67,8 +65,6 @@ then
         testing_test.py
         timber_core_test.py
         timber_test.py
-        water_scarcity_test.py
-        water_yield_test.py
         wave_energy_test.py
         wind_energy_biophysical_test.py
         wind_energy_core_test.py
