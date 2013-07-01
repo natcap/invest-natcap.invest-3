@@ -2438,7 +2438,8 @@ class MainWindow(QtGui.QMainWindow):
         self.save_to_json.triggered.connect(self.ui.save_to_json)
 
 class ExecRoot(Root):
-    def __init__(self, uri, layout=None, object_registrar=None, main_window=None):
+    def __init__(self, uri, layout=None, object_registrar=None,
+            main_window=None, version=None):
         if main_window == None:
             self.main_window = self
         else:
@@ -2468,7 +2469,8 @@ class ExecRoot(Root):
         except KeyError:
             use_lastrun = True
         self.lastRun = {}
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'],
+            version)
         if use_lastrun:
             self.lastRun = self.last_run_handler.get_attributes()
 

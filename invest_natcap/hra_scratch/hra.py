@@ -325,6 +325,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         h_s_c[pair]['DS'] = out_uri
         h_s_e[pair]['DS'] = out_uri
 
+
 def make_stress_rasters(dir, stress_list, grid_size)
     '''Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing 
