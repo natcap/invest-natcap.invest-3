@@ -34,9 +34,10 @@
                                 },
                                 {
                                     "id" : "years",
-                                    "args_id" : "yesrs",
+                                    "args_id" : "years",
                                     "type": "text",
                                     "label": "Years",
+                                    "validateAs": {"type": "number"},
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": true

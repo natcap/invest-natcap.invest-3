@@ -143,6 +143,7 @@ def execute(args):
             except KeyError:
                 return 1
 
+    LOGGER.debug("Creating transition coefficents raster.")
     raster_utils.vectorize_datasets([lulc1_uri, lulc2_uri],
                                     transition_op,
                                     transition_uri,
@@ -151,6 +152,19 @@ def execute(args):
                                     cell_size,
                                     "union")
 
-    #construct op for componding sequestration
+    #construct op for compounding sequestration
+    def sequestration_op (carbon, coefficient):
+        if (carbon == nodata) or (coefficient == nodata):
+            return nodata
+        else:
+            return carbon * (coefficient ** years)
 
     #create carbon storage raster for t2
+    LOGGER.debug("Creating carbon storage at time 2 raster.")
+    raster_utils.vectorize_datasets([carbon_storage_uri, transition_uri],
+                                    sequestration_op,
+                                    sequestration_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
