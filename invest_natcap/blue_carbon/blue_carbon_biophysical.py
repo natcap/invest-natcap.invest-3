@@ -4,6 +4,7 @@ from invest_natcap import raster_utils
 
 import logging
 
+import copy
 import os
 
 def execute(args):
@@ -15,6 +16,7 @@ def execute(args):
     transition_matrix_uri = args["transition_matrix_uri"]
 
     #intermediate
+    depth_per_cell_uri = os.path.join(workspace_dir, "d.tif")
     carbon_per_area_uri = os.path.join(workspace_dir, "cpa.tif")
     habitat_area_uri = os.path.join(workspace_dir, "ha.tif")
     carbon_storage_uri = os.path.join(workspace_dir, "cs.tif")
@@ -36,14 +38,32 @@ def execute(args):
     nodata = raster_utils.get_nodata_from_uri(lulc1_uri)
     cell_size = raster_utils.get_cell_size_from_uri(lulc1_uri)
 
-    #calculate carbon per habitat per cell
-    def carbon_per_area_uri_op(value):
+    #calculate depth
+    def depth_per_cell_op(value):
         if value == nodata:
             return nodata
         else:
-            return sum(carbon_dict[value])
+            return 1
 
     raster_utils.vectorize_datasets([lulc1_uri],
+                                    depth_per_cell_op,
+                                    depth_per_cell_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+        
+
+    #calculate carbon per habitat per cell
+    def carbon_per_area_uri_op(habitat, depth):
+        if habitat == nodata:
+            return nodata
+        else:
+            c=copy.copy(carbon_dict[habitat])
+            c[2]=c[2]*depth
+            return sum(c)
+
+    raster_utils.vectorize_datasets([lulc1_uri, depth_per_cell_uri],
                                     carbon_per_area_uri_op,
                                     carbon_per_area_uri,
                                     gdal.GDT_Float32,
