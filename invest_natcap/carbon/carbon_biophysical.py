@@ -229,18 +229,25 @@ def execute_30(**args):
                     return 0
 
                 # Given two distributions (one for current storage, one for future storage),
-                # We use the difference distribution (current storage - future storage),
+                # we use the difference distribution (current storage - future storage),
                 # and calculate the probability that the difference is less than 0.
-                # The mean of the difference distribution is the difference of the means.
-                # The variance of the difference distribution is the sum of the variances.
-                #
-                # We use this custom phi function because for some reason it's an order of 
-                # magnitude faster than the norm.cdf() function in the scipy library.
-                def phi(x):
-                    '''Cumulative distribution function for the standard normal distribution.
-                    Copied from http://docs.python.org/3.2/library/math.html'''
-                    return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
-                confidence = 100 * phi((c_fut - c_cur) / math.sqrt(var_cur + var_fut))
+                # This is equal to the probability that the future storage is greater than
+                # the current storage.
+                # We calculate the standard score by beginning with 0, subtracting the mean
+                # of the difference distribution, and dividing by the standard deviation
+                # of the difference distribution.
+                # The mean of the difference distribution is the difference of the means of cur and fut.
+                # The variance of the difference distribution is the sum of the variances of cur and fut.
+                standard_score = (c_fut - c_cur) / math.sqrt(var_cur + var_fut)
+
+                # Calculate the cumulative distribution function for the standard normal distribution.
+                # This gives us the probability that future carbon storage is greater than
+                # current carbon storage.
+                # Copied from http://docs.python.org/3.2/library/math.html
+                probability = (1.0 + math.erf(standard_score / math.sqrt(2.0))) / 2.0
+
+                # Multiply by 100 so we have probability in the same units as the confidence_threshold.
+                confidence = 100 * probability
                 if confidence > confidence_threshold:
                     # We're confident carbon storage will increase.
                     return 1
