@@ -211,23 +211,39 @@ def execute_30(**args):
             pixel_size_out, "intersection", dataset_to_align_index=0)
 
         if use_uncertainty:
-            # TODO: check this math!
             confidence_threshold = args['confidence_threshold']
+
+            # Returns 1 if we're confident storage will increase,
+            #         -1 if we're confident storage will decrease,
+            #         0 if we're not confident either way.
             def confidence_op(c_cur, c_fut, var_cur, var_fut):
-                # TODO: why do we get negative values sometimes?
                 for val in [c_cur, c_fut, var_cur, var_fut]:
                     if val == nodata_out or val < 0:
                         return nodata_out
+                if var_cur == 0 and var_fut == 0:
+                    # There's no variance, so we can just compare the mean estimates.
+                    if c_fut > c_cur:
+                        return 1
+                    if c_fut < c_cur:
+                        return -1
+                    return 0
+
+                # Given two distributions (one for current storage, one for future storage),
+                # We use the difference distribution (current storage - future storage),
+                # and calculate the probability that the difference is less than 0.
+                # The mean of the difference distribution is the difference of the means.
+                # The variance of the difference distribution is the sum of the variances.
                 confidence = 100 * norm.cdf(
                     0, 
                     c_cur - c_fut, # mean for the difference distribution
                     math.sqrt(var_cur + var_fut)) # std deviation for the diff distribution
                 if confidence > confidence_threshold:
-                    # We're pretty confident carbon storage will increase.
+                    # We're confident carbon storage will increase.
                     return 1
                 if confidence < 100 - confidence_threshold:
-                    # We're pretty confidence carbon storage will decrease.
+                    # We're confident carbon storage will decrease.
                     return -1
+                # We're not confident about whether storage will increase or decrease.
                 return 0
 
             out_file_names['conf'] = os.path.join(output_dir, 'conf%s.tif' % file_suffix)
