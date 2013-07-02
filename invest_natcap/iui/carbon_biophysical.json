@@ -185,11 +185,23 @@
                         "required": true,
                         "validateAs": {"type": "table",
                                        "fieldsExist": ["LULC", 
-                                                       "C_ab_min", "C_ab_mode", "C_ab_max",
-                                                       "C_be_min", "C_be_mode", "C_be_max", 
-                                                       "C_so_min", "C_so_mode", "C_so_max", 
-                                                       "C_de_min", "C_de_mode", "C_de_max"]},
+                                                       "C_above_mean", "C_above_sd",
+                                                       "C_below_mean", "C_below_sd",
+                                                       "C_soil_mean", "C_soil_sd",
+                                                       "C_dead_mean", "C_dead_sd"]},
                         "helpText": "A table that maps the land cover ids to probability distributions for carbon pools.  The table must contain columns with '_min', '_mode', and '_max' suffixes to each of the four carbon pools as described in the user's guide. The values in LULC must at least include the LULC ids in the land cover maps."
+                      },
+                      {
+                          "id": "confidence_threshold",
+                          "type": "text",
+                          "width": 50,
+                          "validText": "[0-9][0-9]",
+                          "defaultValue": "90",
+                          "dataType": "int",
+                          "args_id": "confidence_threshold",
+                          "label": "Confidence threshold",
+                          "requiredIf": ["carbon_pools_uncertain"],
+                          "helpText": "The percent confidence that should be used as a minimum threshold for highlighting areas of confidence in the output data."
                       }
                       ]
                 }
