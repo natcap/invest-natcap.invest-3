@@ -7,7 +7,6 @@ class ExampleClass(unittest.TestCase):
     def test_function_2(self):
         pass
 
-
 import invest_natcap.testing
 class ExampleNewClass(invest_natcap.testing.GISTest):
     @invest_natcap.testing.regression(

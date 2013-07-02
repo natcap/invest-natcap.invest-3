@@ -26,6 +26,7 @@ do sequestration and harvested wood products on lulc maps."""
                 args['carbon_pools_uncertain_uri'] = (
                     './data/carbon/input/carbon_pools_samp_uncertain.csv')
                 args['use_uncertainty'] = True
+                args['confidence_threshold'] = 90
             else:
                 # Use the file with point estimates for the carbon pools.
                 args['carbon_pools_uri'] = './data/carbon/input/carbon_pools_samp.csv'
@@ -54,6 +55,11 @@ do sequestration and harvested wood products on lulc maps."""
             invest_test_core.assertTwoDatasetEqualURI(self,
                 args['workspace_dir'] + "/output/sequest.tif",
                 './data/carbon_regression_data/sequest.tif')
+
+            if use_uncertainty:
+                invest_test_core.assertTwoDatasetEqualURI(self,
+                    args['workspace_dir'] + "/output/conf.tif",
+                    './data/carbon_regression_data/conf.tif')
 
             args['suffix'] = '_foo_bar'
             carbon_biophysical.execute(args)

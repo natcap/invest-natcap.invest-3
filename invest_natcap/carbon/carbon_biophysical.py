@@ -10,6 +10,7 @@ import shutil
 from osgeo import gdal
 from osgeo import ogr
 import numpy
+from scipy.stats import norm
 
 from invest_natcap import raster_utils
 
@@ -40,6 +41,9 @@ def execute_30(**args):
             (required if 'use_uncertainty' is true)
         args['use_uncertainty'] - a boolean that indicates whether we should do
             uncertainty analysis. Defaults to False if not present.
+        args['confidence_threshold'] - a number between 0 and 100 that indicates
+            the minimum threshold for which we should highlight regions in the output
+            raster. (required if 'use_uncertainty' is True)
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
@@ -88,11 +92,22 @@ def execute_30(**args):
 
             for lulc_id, lookup_dict in pools.iteritems():
                 pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
+
                 if use_uncertainty:
                     # Use the mean estimate of the distribution to compute the carbon output.
+                    pool_estimate_sds = list(pool_estimate_types) # Make a copy for std deviations
                     for i in range(len(pool_estimate_types)):
-                        pool_estimate_types[i] += '_mean'
+                        pool_estimate_types[i] += '_mean' # Data for the mean
+                        pool_estimate_sds[i] += '_sd'  # Data for the standard deviation
+
+                    # Compute the total variance per pixel for each lulc type.
+                    # We have a normal distribution for each pool; we assume each is independent,
+                    # so the variance of the sum is equal to the sum of the variances.
+                    # Note that we scale by the area squared.
+                    pools[lulc_id]['variance_%s' % lulc_uri] = (cell_area_ha ** 2) * sum(
+                        [pools[lulc_id][pool_type_sd] ** 2 for pool_type_sd in pool_estimate_sds])
                     
+                # Compute the total carbon per pixel for each lulc type
                 pools[lulc_id]['total_%s' % lulc_uri] = cell_area_ha * sum(
                     [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
 
@@ -107,10 +122,26 @@ def execute_30(**args):
             out_file_names['tot_C_%s' % scenario_type] = dataset_out_uri
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
+            # Create a raster that models total carbon storage per pixel.
             raster_utils.vectorize_datasets(
                 [args[lulc_uri]], map_carbon_pool, dataset_out_uri,
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
                 "intersection", dataset_to_align_index=0)
+
+            if use_uncertainty:
+                def map_carbon_pool_variance(lulc):
+                    if lulc == nodata:
+                        return nodata_out
+                    return pools[lulc]['variance_%s' % lulc_uri]
+                variance_out_uri = os.path.join(
+                    intermediate_dir, 'variance_C_%s%s.tif' % (scenario_type, file_suffix))
+                out_file_names['variance_C_%s' % scenario_type] = dataset_out_uri
+                
+                # Create a raster that models variance in carbon storage per pixel.
+                raster_utils.vectorize_datasets(
+                    [args[lulc_uri]], map_carbon_pool_variance, variance_out_uri,
+                    gdal.GDT_Float32, nodata_out, pixel_size_out,
+                    "intersection", dataset_to_align_index=0)
 
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
@@ -178,6 +209,59 @@ def execute_30(**args):
         raster_utils.vectorize_datasets(
             [out_file_names['tot_C_cur'], out_file_names['tot_C_fut']], sub_op, out_file_names['sequest'], gdal.GDT_Float32, nodata_out,
             pixel_size_out, "intersection", dataset_to_align_index=0)
+
+        if use_uncertainty:
+            confidence_threshold = args['confidence_threshold']
+
+            # Returns 1 if we're confident storage will increase,
+            #         -1 if we're confident storage will decrease,
+            #         0 if we're not confident either way.
+            def confidence_op(c_cur, c_fut, var_cur, var_fut):
+                for val in [c_cur, c_fut, var_cur, var_fut]:
+                    if val == nodata_out or val < 0:
+                        return nodata_out
+                if var_cur == 0 and var_fut == 0:
+                    # There's no variance, so we can just compare the mean estimates.
+                    if c_fut > c_cur:
+                        return 1
+                    if c_fut < c_cur:
+                        return -1
+                    return 0
+
+                # Given two distributions (one for current storage, one for future storage),
+                # we use the difference distribution (current storage - future storage),
+                # and calculate the probability that the difference is less than 0.
+                # This is equal to the probability that the future storage is greater than
+                # the current storage.
+                # We calculate the standard score by beginning with 0, subtracting the mean
+                # of the difference distribution, and dividing by the standard deviation
+                # of the difference distribution.
+                # The mean of the difference distribution is the difference of the means of cur and fut.
+                # The variance of the difference distribution is the sum of the variances of cur and fut.
+                standard_score = (c_fut - c_cur) / math.sqrt(var_cur + var_fut)
+
+                # Calculate the cumulative distribution function for the standard normal distribution.
+                # This gives us the probability that future carbon storage is greater than
+                # current carbon storage.
+                # Copied from http://docs.python.org/3.2/library/math.html
+                probability = (1.0 + math.erf(standard_score / math.sqrt(2.0))) / 2.0
+
+                # Multiply by 100 so we have probability in the same units as the confidence_threshold.
+                confidence = 100 * probability
+                if confidence > confidence_threshold:
+                    # We're confident carbon storage will increase.
+                    return 1
+                if confidence < 100 - confidence_threshold:
+                    # We're confident carbon storage will decrease.
+                    return -1
+                # We're not confident about whether storage will increase or decrease.
+                return 0
+
+            out_file_names['conf'] = os.path.join(output_dir, 'conf%s.tif' % file_suffix)
+            raster_utils.vectorize_datasets(
+                [out_file_names[name] for name in ['tot_C_cur', 'tot_C_fut', 'variance_C_cur', 'variance_C_fut']],
+                confidence_op, out_file_names['conf'], gdal.GDT_Float32, nodata_out,
+                pixel_size_out, "intersection", dataset_to_align_index=0)
 
     _calculate_summary(out_file_names)
 
