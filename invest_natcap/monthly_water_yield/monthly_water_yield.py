@@ -245,6 +245,15 @@ def execute(args):
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
                 soil_storage_uri, float_nodata)
 
+        # Use Aggregate Raster function to get the max values under the
+        # watersheds. For now this is what our outputs will be
+        max_streamflow = raster_utils.aggregate_raster_values_uri(
+                streamflow_uri, watershed_uri, 'ws_id').pixel_max
+        
+        max_storage = raster_utils.aggregate_raster_values_uri(
+                soil_storage_uri, watershed_uri, 'ws_id').pixel_max
+
+        LOGGER.debug('Max Storage Dict: %s', max_storage)
         # Add values to output table
 
         # Move on to next month
