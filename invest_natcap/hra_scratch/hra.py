@@ -238,7 +238,16 @@ def execute(args):
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
     #the same keys.
-    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], stress_dict, hra_args['h_s_c'],                    hra_args['h_s_e'], args['grid_size'])
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
+            stress_dict, hra_args['h_s_c'],hra_args['h_s_e'], args['grid_size'])
+    
+    #No reason to hold the directory paths in memory since all info is now
+    #within dictionaries. Can remove them here before passing to core.
+    for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
+        if name in hra_args:
+            del hra_args[name]
+
+    hra_core.execute(hra_args)
 
 def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
     '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
