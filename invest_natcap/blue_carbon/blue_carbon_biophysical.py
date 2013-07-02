@@ -22,32 +22,37 @@ def execute(args):
     transition_matrix_uri = args["transition_matrix_uri"]
 
     #intermediate
-    depth_per_cell_uri = os.path.join(workspace_dir, "d.tif")
-    carbon_per_area_uri = os.path.join(workspace_dir, "cpa.tif")
-    habitat_area_uri = os.path.join(workspace_dir, "ha.tif")
-    carbon_storage_uri = os.path.join(workspace_dir, "cs.tif")
-    transition_uri = os.path.join(workspace_dir, "r.tif")
-    sequestration_uri = os.path.join(workspace_dir, "s.tif")
+    depth_uri = os.path.join(workspace_dir, "depth.tif")
 
-    #construct op from carbon storage table
-    LOGGER.debug("Parsing carbon storage table.")
-    carbon_file = open(carbon_uri)
-    #skip header
-    carbon_file.readline()
-    #parse table
-    carbon_dict={}
-    for line in carbon_file:
-        lulc_code, name, above, below, soil, litter = line.strip().split(",")
-        carbon_dict[int(lulc_code)] = [float(above), float(below),
-                                  float(soil), float(litter)]
-    carbon_file.close()
+    carbon1_above_uri = os.path.join(workspace_dir, "carbon1_above.tif")
+    carbon1_below_uri = os.path.join(workspace_dir, "carbon1_below.tif")
+    carbon1_soil_uri = os.path.join(workspace_dir, "carbon1_soil.tif")
+    carbon1_litter_uri = os.path.join(workspace_dir, "carbon1_litter.tif")
+    carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
 
-    #create carbon storage raster for t1
+    transition_uri = os.path.join(workspace_dir, "transition.tif")
+
+    carbon2_above_uri = os.path.join(workspace_dir, "carbon2_above.tif")
+    carbon2_below_uri = os.path.join(workspace_dir, "carbon2_below.tif")
+    carbon2_soil_uri = os.path.join(workspace_dir, "carbon2_soil.tif")
+    carbon2_litter_uri = os.path.join(workspace_dir, "carbon2_litter.tif")
+    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")
+    
+    sequestration_uri = os.path.join(workspace_dir, "sequest.tif")
+
+    #accessors
     nodata = raster_utils.get_nodata_from_uri(lulc1_uri)
     cell_size = raster_utils.get_cell_size_from_uri(lulc1_uri)
+    cell_area = raster_utils.get_cell_area_from_uri(lulc1_uri)
+
+    assert nodata == raster_utils.get_nodata_from_uri(lulc2_uri)
+    assert cell_size == raster_utils.get_cell_size_from_uri(lulc2_uri)
+    assert cell_area == raster_utils.get_cell_area_from_uri(lulc2_uri)
+
+    ###create carbon storage raster for t1
 
     #calculate depth
-    def depth_per_cell_op(value):
+    def depth_op(value):
         if value == nodata:
             return nodata
         else:
@@ -55,63 +60,125 @@ def execute(args):
 
     LOGGER.debug("Creating sediment depth raster.")
     raster_utils.vectorize_datasets([lulc1_uri],
-                                    depth_per_cell_op,
-                                    depth_per_cell_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
-        
-
-    #calculate carbon per habitat per cell
-    def carbon_per_area_uri_op(habitat, depth):
-        if habitat == nodata:
-            return nodata
-        else:
-            c=copy.copy(carbon_dict[habitat])
-            c[2]=c[2]*depth
-            return sum(c)
-
-    LOGGER.debug("Calculating carbon per habitat per cell.")
-    raster_utils.vectorize_datasets([lulc1_uri, depth_per_cell_uri],
-                                    carbon_per_area_uri_op,
-                                    carbon_per_area_uri,
+                                    depth_op,
+                                    depth_uri,
                                     gdal.GDT_Float32,
                                     nodata,
                                     cell_size,
                                     "union")
 
-    #calculate habitat area per cell
-    def area_per_cell_op(value):
-        if value == nodata:
+    #construct dictionary from carbon storage table
+    #converts hectares to square meters
+    LOGGER.debug("Parsing carbon storage table.")
+    carbon_file = open(carbon_uri)
+    #skip header
+    carbon_file.readline()
+    #parse table
+    carbon_dict={}
+    above_index = 0
+    below_index = 1
+    soil_index = 2
+    litter_index = 3
+    for line in carbon_file:
+        lulc_code, name, above, below, soil, litter = line.strip().split(",")
+        carbon_dict[int(lulc_code)] = [float(above) * cell_area * 1e4,
+                                       float(below) * cell_area * 1e4,
+                                       float(soil) * cell_area * 1e4,
+                                       float(litter) * cell_area * 1e4]
+    carbon_file.close()
+    
+
+    assert nodata not in carbon_dict
+
+    #construct ops
+    #above pool op
+    def carbon_above_op(lulc_id):
+        if lulc_id == nodata:
             return nodata
         else:
-            return cell_size
+            return carbon_dict[lulc_id][above_index]
 
-    LOGGER.debug("Creating habitat area raster.")
+    #below pool op
+    def carbon_below_op(lulc_id):
+        if lulc_id == nodata:
+            return nodata
+        else:
+            return carbon_dict[lulc_id][below_index]
+
+    #soil pool op
+    def carbon_soil_op(lulc_id, depth):
+        if lulc_id == nodata or depth == nodata:
+            return nodata
+        else:
+            return carbon_dict[lulc_id][soil_index]*depth
+
+    #litter pool op
+    def carbon_litter_op(lulc_id):
+        if lulc_id == nodata:
+            return nodata
+        else:
+            return carbon_dict[lulc_id][litter_index]
+
+    def carbon_total_op(above, below, soil, litter):
+        pixel_stack = [above, below, soil, litter]
+        if nodata in pixel_stack:
+            return  nodata
+        else:
+            return sum(pixel_stack)
+    
+    #calculate rasters
+    #calculate above ground carbon pool
+    LOGGER.debug("Calculating the above ground carbon pool.")
     raster_utils.vectorize_datasets([lulc1_uri],
-                                    area_per_cell_op,
-                                    habitat_area_uri,
+                                    carbon_above_op,
+                                    carbon1_above_uri,
                                     gdal.GDT_Float32,
                                     nodata,
                                     cell_size,
                                     "union")
 
-    #calculate carbon per habitat
-    def carbon_per_cell_op(carbon, habitat):
-        if (carbon == nodata) or (habitat == nodata):
-            return nodata
-        else:
-            return carbon * habitat
-
-    LOGGER.debug("Creating carbon storage raster.")
-    raster_utils.vectorize_datasets([carbon_per_area_uri, habitat_area_uri],
-                                    carbon_per_cell_op,
-                                    carbon_storage_uri,
+    #calculate below ground carbon pool
+    LOGGER.debug("Calculating the below ground carbon pool.")
+    raster_utils.vectorize_datasets([lulc1_uri],
+                                    carbon_below_op,
+                                    carbon1_below_uri,
                                     gdal.GDT_Float32,
                                     nodata,
                                     cell_size,
                                     "union")
+
+    #calculate soil carbon pool
+    LOGGER.debug("Calculating the soil carbon pool.")
+    raster_utils.vectorize_datasets([lulc1_uri, depth_uri],
+                                    carbon_soil_op,
+                                    carbon1_soil_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate litter carbon pool
+    LOGGER.debug("Calculating the litter carbon pool.")
+    raster_utils.vectorize_datasets([lulc1_uri],
+                                    carbon_litter_op,
+                                    carbon1_litter_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate total carbon pool
+    LOGGER.debug("Calculating the total carbon pool.")
+    raster_utils.vectorize_datasets([carbon1_above_uri, carbon1_below_uri,
+                                     carbon1_soil_uri, carbon1_litter_uri],
+                                    carbon_total_op,
+                                    carbon1_total_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+
 
     #create accumulation raster for t1 to t2
 
