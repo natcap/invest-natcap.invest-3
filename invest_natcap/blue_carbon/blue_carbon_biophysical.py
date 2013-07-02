@@ -38,7 +38,7 @@ def execute(args):
     carbon2_litter_uri = os.path.join(workspace_dir, "carbon2_litter.tif")
     carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")
     
-    sequestration_uri = os.path.join(workspace_dir, "sequest.tif")
+    sequestration_uri = os.path.join(workspace_dir, "sequestration.tif")
 
     #accessors
     nodata = raster_utils.get_nodata_from_uri(lulc1_uri)
@@ -128,7 +128,7 @@ def execute(args):
     
     #calculate rasters
     #calculate above ground carbon pool
-    LOGGER.debug("Calculating the above ground carbon pool.")
+    LOGGER.debug("Calculating the above ground carbon pool for time 1.")
     raster_utils.vectorize_datasets([lulc1_uri],
                                     carbon_above_op,
                                     carbon1_above_uri,
@@ -138,7 +138,7 @@ def execute(args):
                                     "union")
 
     #calculate below ground carbon pool
-    LOGGER.debug("Calculating the below ground carbon pool.")
+    LOGGER.debug("Calculating the below ground carbon pool for time 1.")
     raster_utils.vectorize_datasets([lulc1_uri],
                                     carbon_below_op,
                                     carbon1_below_uri,
@@ -148,7 +148,7 @@ def execute(args):
                                     "union")
 
     #calculate soil carbon pool
-    LOGGER.debug("Calculating the soil carbon pool.")
+    LOGGER.debug("Calculating the soil carbon pool for time 1.")
     raster_utils.vectorize_datasets([lulc1_uri, depth_uri],
                                     carbon_soil_op,
                                     carbon1_soil_uri,
@@ -158,7 +158,7 @@ def execute(args):
                                     "union")
 
     #calculate litter carbon pool
-    LOGGER.debug("Calculating the litter carbon pool.")
+    LOGGER.debug("Calculating the litter carbon pool for time 1.")
     raster_utils.vectorize_datasets([lulc1_uri],
                                     carbon_litter_op,
                                     carbon1_litter_uri,
@@ -168,7 +168,7 @@ def execute(args):
                                     "union")
 
     #calculate total carbon pool
-    LOGGER.debug("Calculating the total carbon pool.")
+    LOGGER.debug("Calculating the total carbon pool for time 1.")
     raster_utils.vectorize_datasets([carbon1_above_uri, carbon1_below_uri,
                                      carbon1_soil_uri, carbon1_litter_uri],
                                     carbon_total_op,
@@ -177,8 +177,6 @@ def execute(args):
                                     nodata,
                                     cell_size,
                                     "union")
-
-
 
     #create accumulation raster for t1 to t2
 
@@ -219,16 +217,75 @@ def execute(args):
                                     cell_size,
                                     "union")
 
-    #construct op for compounding sequestration
-    def sequestration_op (carbon, coefficient):
+    #soil at time 2 op
+    def soil_transition_op (carbon, coefficient):
         if (carbon == nodata) or (coefficient == nodata):
             return nodata
         else:
             return carbon * (coefficient ** years)
 
-    #create carbon storage raster for t2
-    LOGGER.debug("Creating carbon storage at time 2 raster.")
-    raster_utils.vectorize_datasets([carbon_storage_uri, transition_uri],
+    #sequestration op
+    def sequestration_op(carbon1, carbon2):
+        if carbon1 == nodata or carbon2 == nodata:
+            return nodata
+        else:
+            return carbon1-carbon2
+
+    #calculate rasters
+    #calculate above ground carbon pool
+    LOGGER.debug("Calculating the above ground carbon pool for time 2.")
+    raster_utils.vectorize_datasets([lulc2_uri],
+                                    carbon_above_op,
+                                    carbon2_above_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate below ground carbon pool
+    LOGGER.debug("Calculating the below ground carbon pool for time 2.")
+    raster_utils.vectorize_datasets([lulc2_uri],
+                                    carbon_below_op,
+                                    carbon2_below_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate soil carbon pool
+    LOGGER.debug("Calculating the soil carbon pool for time 2 based on the transition rate from time 1.")
+    raster_utils.vectorize_datasets([lulc1_uri, transition_uri],
+                                    soil_transition_op,
+                                    carbon2_soil_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate litter carbon pool
+    LOGGER.debug("Calculating the litter carbon pool for time 2.")
+    raster_utils.vectorize_datasets([lulc2_uri],
+                                    carbon_litter_op,
+                                    carbon2_litter_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate total carbon pool
+    LOGGER.debug("Calculating the total carbon pool for time 2.")
+    raster_utils.vectorize_datasets([carbon2_above_uri, carbon2_below_uri,
+                                     carbon2_soil_uri, carbon2_litter_uri],
+                                    carbon_total_op,
+                                    carbon2_total_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+
+    #calculate net carbon pool
+    LOGGER.debug("Calculating the net carbon pool from time 1 to time 2.")
+    raster_utils.vectorize_datasets([carbon1_total_uri, carbon2_total_uri],
                                     sequestration_op,
                                     sequestration_uri,
                                     gdal.GDT_Float32,
