@@ -18,6 +18,27 @@ LOGGER = logging.getLogger('HRA')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class ImproperCriteriaAttributeName(Exception):
+    '''An excepion to pass in hra non core if the criteria provided by the user
+    for use in spatially explicit rating do not contain the proper attribute 
+    name. The attribute should be named 'RATING', and must exist for every shape 
+    in every layer provided.'''
+    pass
+
+class ImproperAOIAttributeName(Exception):
+    '''An exception to pass in hra non core if the AOIzone files do not
+    contain the proper attribute name for individual indentification. The
+    attribute should be named 'name', and must exist for every shape in the
+    AOI layer.'''
+    pass
+
+class DQWeightNotFound(Exception):
+    '''An exception to be passed if there is a shapefile within the spatial
+    criteria directory, but no corresponing data quality and weight to support
+    it. This would likely indicate that the user is try to run HRA without
+    having added the criteria name into hra_preprocessor properly.'''
+    pass
+
 def execute(args):
     '''This function will prepare files passed from the UI to be sent on to the
     hra_core module.
@@ -335,7 +356,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         h_s_e[pair]['DS'] = out_uri
 
 
-def make_stress_rasters(dir, stress_list, grid_size)
+def make_stress_rasters(dir, stress_list, grid_size):
     '''Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing 
     stressor name, and the value will be the URI of the rasterized shapefile.
