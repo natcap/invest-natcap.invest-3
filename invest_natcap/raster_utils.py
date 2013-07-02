@@ -992,7 +992,7 @@ def aggregate_raster_values_uri(
     clipped_band = clipped_raster.GetRasterBand(1)
     pixel_min_dict = dict(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
-    pixel_max_dict = pixel_min.copy()
+    pixel_max_dict = pixel_min_dict.copy()
     for row_index in range(clipped_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
         clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
