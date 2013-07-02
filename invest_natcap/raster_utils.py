@@ -990,6 +990,8 @@ def aggregate_raster_values_uri(
 
     #Loop over each row in out_band
     clipped_band = clipped_raster.GetRasterBand(1)
+    pixel_min = None
+    pixel_max = None
     for row_index in range(clipped_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
         clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
@@ -1006,12 +1008,15 @@ def aggregate_raster_values_uri(
                 masked_values[masked_values != raster_nodata])
 
             #Find the min and max which might not yet be calculated
-            try:
-                pixel_min = min(pixel_min, numpy.min(masked_values_nodata_removed))
-                pixel_max = max(pixel_max, numpy.max(masked_values_nodata_removed))
-            except NameError:
-                pixel_min = numpy.min(masked_values_nodata_removed)
-                pixel_max = numpy.max(masked_values_nodata_removed)
+            if masked_values_nodata_removed.size > 0:
+                if pixel_min is None:
+                    pixel_min = numpy.min(masked_values_nodata_removed)
+                    pixel_max = numpy.max(masked_values_nodata_removed)
+                else:
+                    pixel_min = min(
+                        pixel_min, numpy.min(masked_values_nodata_removed))
+                    pixel_max = max(
+                        pixel_max, numpy.max(masked_values_nodata_removed))
                 
             if ignore_nodata:
                 #Only consider values which are not nodata values
