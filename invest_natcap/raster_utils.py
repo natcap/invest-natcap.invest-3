@@ -944,11 +944,11 @@ def aggregate_raster_values_uri(
             will be clamped to zero.
 
         returns a named tuple of the form 
-           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels min max')
+           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
            Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
-           shapefile_field value to either the total, pixel mean or hecatare mean of
-           the values under that feature.  'n_pixels' contains the total number of
-           valid pixels used in that calculation.
+           shapefile_field value to either the total, pixel mean, hecatare mean, pixel max,
+           and pixel min of the values under that feature.  'n_pixels' contains the
+           total number of valid pixels used in that calculation.
         """
 
     #Generate a temporary mask filename
@@ -990,8 +990,9 @@ def aggregate_raster_values_uri(
 
     #Loop over each row in out_band
     clipped_band = clipped_raster.GetRasterBand(1)
-    pixel_min = None
-    pixel_max = None
+    pixel_min_dict = dict(
+        [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
+    pixel_max_dict = pixel_min_dict.copy()
     for row_index in range(clipped_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
         clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
@@ -1009,14 +1010,18 @@ def aggregate_raster_values_uri(
 
             #Find the min and max which might not yet be calculated
             if masked_values_nodata_removed.size > 0:
-                if pixel_min is None:
-                    pixel_min = numpy.min(masked_values_nodata_removed)
-                    pixel_max = numpy.max(masked_values_nodata_removed)
+                if pixel_min_dict[attribute_id] is None:
+                    pixel_min_dict[attribute_id] = numpy.min(
+                        masked_values_nodata_removed)
+                    pixel_max_dict[attribute_id] = numpy.max(
+                        masked_values_nodata_removed)
                 else:
-                    pixel_min = min(
-                        pixel_min, numpy.min(masked_values_nodata_removed))
-                    pixel_max = max(
-                        pixel_max, numpy.max(masked_values_nodata_removed))
+                    pixel_min_dict[attribute_id] = min(
+                        pixel_min_dict[attribute_id],
+                        numpy.min(masked_values_nodata_removed))
+                    pixel_max_dict[attribute_id] = max(
+                        pixel_max_dict[attribute_id],
+                        numpy.max(masked_values_nodata_removed))
                 
             if ignore_nodata:
                 #Only consider values which are not nodata values
@@ -1038,8 +1043,8 @@ def aggregate_raster_values_uri(
         pixel_mean={},
         hectare_mean={},
         n_pixels=aggregate_dict_counts.copy(),
-        pixel_min=pixel_min,
-        pixel_max=pixel_max)
+        pixel_min=pixel_min_dict.copy(),
+        pixel_max=pixel_max_dict.copy())
 
     for attribute_id in aggregate_dict_values:
         if threshold_amount_lookup != None:
