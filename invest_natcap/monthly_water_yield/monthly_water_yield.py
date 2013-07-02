@@ -5,6 +5,7 @@ import logging
 import csv
 import datetime
 import re
+import shutil
 
 from osgeo import osr
 from osgeo import gdal
@@ -95,10 +96,12 @@ def execute(args):
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
 
     # Create initial S_t-1 for now
-    soil_storage_uri = os.path.join(intermediate_dir, 'init_soil.tif')
+    soil_storage_uri = os.path.join(intermediate_dir, 'soil_storage.tif')
     _ = raster_utils.new_raster_from_base_uri(
             dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
             gdal.GDT_Float32, fill_value=0.0)
+    
+    prev_soil_uri = os.path.join(intermediate_dir, 'soil_storage_prev.tif')
 
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope.tif')
@@ -131,6 +134,24 @@ def execute(args):
     LOGGER.debug('Constructed PET DATA : %s', pet_data_dict)
     pet_raster_dict = build_monthly_pets(pet_data_dict, dem_uri, float_nodata)
     LOGGER.debug(pet_raster_dict)
+
+    # Get a dictionary from the water / sub-watershed by the id so that we can
+    # have a handle on the id values for each shed / sub-shed
+    shed_dict = raster_utils.extract_datasource_table_by_key(
+            watershed_uri, 'ws_id')
+
+    # Create individual CSV URIs for each shed / sub-shed based on the water /
+    # sub-watershed ID's. Store these URIs in a dictionary mapping to their
+    # respective shed / sub-shed ID's
+    csv_out_dict = {}
+    for key in shed_dict.iterkeys():
+        csv_uri = os.path.join(intermediate_dir, 'output_shed_'+str(key)+'.csv')
+        if os.path.isfile(csv_uri):
+            os.remove(csv_uri)
+        csv_out_dict[key] = csv_uri
+
+    # Define the column header for the output CSV files
+    column_header = ['Date', 'Streamflow', 'Soil Storage']
     
     # A list of the fields from the time step table we are interested in and
     # need.
@@ -235,10 +256,73 @@ def execute(args):
 
         # Calculate Soil Moisture for current time step, to be used as previous time
         # step in the next iteration
+        clean_uri([prev_soil_uri])
+        shutil.copy(soil_storage_uri, prev_soil_uri)
+        clean_uri([soil_storage_uri])
+        calculate_soil_stoarge(
+                prev_soil_uri, water_uri, evap_uri, streamflow_uri,
+                soil_storage_uri, float_nodata)
 
-        # Add values to output table
+        # Use Aggregate Raster function to get the max values under the
+        # watersheds. For now this is what our outputs will be
+        max_streamflow = raster_utils.aggregate_raster_values_uri(
+                streamflow_uri, watershed_uri, 'ws_id').pixel_max
+        
+        max_storage = raster_utils.aggregate_raster_values_uri(
+                soil_storage_uri, watershed_uri, 'ws_id').pixel_max
+
+        # For each shed / sub-shed add the corresponding output values to their
+        # respective CSV file
+        for key, value in max_streamflow.iteritems():
+            # Dictionary to aggregate the output information
+            line_dict = {}
+            line_dict[key] = {}
+            # Get corresponding CSV URI
+            csv_uri = csv_out_dict[key]
+            # Get Output values
+            streamflow = value
+            storage = max_storage[key]
+            # Build the dictionary representing the next monthly line to write
+            line_dict[key]['Date'] = cur_month
+            line_dict[key]['Soil Storage'] = storage
+            line_dict[key]['Streamflow'] = streamflow
+            # Write new line to file
+            add_monthly_line(csv_uri, column_header, line_dict)
 
         # Move on to next month
+
+def add_monthly_line(csv_uri, column_header, single_dict):
+    """Write a new row to a CSV file if it already exists or creates a new one
+        with that row.
+
+        csv_uri - a URI to a CSV file location to write to
+
+        column_header - a Python list of strings representing the column headers
+            for the CSV file
+
+        data_dict - a Dictionary with two levels, where the top level has one
+            key that points to a dictionary where the fields and values live.
+            The fields in the inner dictionary should match with the fields
+            given in 'column_header'
+            example : {0: {'Date':'01/1988', 'Sum':56, 'Mean':32}}
+
+        returns - Nothing"""
+    
+    # If the file does note exist then write a new file, else append a new row
+    # to the file
+    if not os.path.isfile(csv_uri):
+        write_new_table(csv_uri, column_header, single_dict)
+    else:
+        # Open the CSV file in append mode 'a'. This will allow us to just tack
+        # on a new row
+        csv_file = open(csv_uri, 'a')
+        csv_writer = csv.DictWriter(csv_file, column_header)
+        # Even though there is only one key it seems efficient to let the loop
+        # do the work in getting that key
+        for key, value in single_dict.iteritems():
+            csv_writer.writerow(value)
+        
+        csv_file.close()
 
 def write_new_table(filename, fields, data):
     """Create a new csv table from a dictionary
@@ -260,13 +344,14 @@ def write_new_table(filename, fields, data):
     csv_file = open(filename, 'wb')
 
     # Sort the keys so that the rows are written in order
-    row_keys = data.keys().sort()
-    
+    row_keys = data.keys()
+    row_keys.sort() 
+
     csv_writer = csv.DictWriter(csv_file, fields)
     # Write the columns as the first row in the table
     csv_writer.writerow(dict((fn,fn) for fn in fields))
 
-    for index in keys:
+    for index in row_keys:
         csv_writer.writerow(data[index])
 
     csv_file.close()
@@ -281,6 +366,55 @@ def clean_uri(in_uri_list):
     for uri in in_uri_list:
         if os.path.isfile(uri):
             os.remove(uri)
+
+def calculate_soil_stoarge(
+        prev_soil_uri, water_uri, evap_uri, streamflow_uri, soil_storage_uri,
+        out_nodata):
+    """This function calculates the soil storage 
+
+        prev_soil_uri - a URI to a gdal dataset of the previous months soil
+            storage
+
+        water_uri - a URI to a gdal datasaet for the water
+
+        evap_uri - a URI to a gdal datasaet for the evaporation
+
+        streamflow_uri - a URI to a gdal dataset for the streamflow
+        
+        soil_storage_uri - a URI to a gdal dataset for the current months soil
+            storage
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+    
+    no_data_list = []
+    for raster_uri in [prev_soil_uri, water_uri, evap_uri, streamflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def soil_storage_op(prev_soil_pix, water_pix, evap_pix, streamflow_pix):
+        """A vectorize operation for calculating the intermediate 
+            streamflow
+
+            prev_soil_pix - a float value for the previous soil storage
+            water_pix - a float value for the water
+            evap_pix - a float value for the evap
+            streamflow_pix - a float value for the streamflow
+            returns - the current soil storage
+        """
+        for pix in [prev_soil_pix, water_pix, evap_pix, streamflow_pix]:
+            if pix in no_data_list:
+                return out_nodata
+
+        return prev_soil_pix + water_pix - evap_pix - streamflow_pix
+
+    cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
+
+    raster_utils.vectorize_datasets(
+            [prev_soil_uri, water_uri, evap_uri, streamflow_uri],
+            soil_storage_op, soil_storage_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
 
 def calculate_streamflow(
         dflow_uri, interflow_uri, baseflow_uri, streamflow_uri,
