@@ -944,11 +944,11 @@ def aggregate_raster_values_uri(
             will be clamped to zero.
 
         returns a named tuple of the form 
-           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels min max')
+           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
            Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
-           shapefile_field value to either the total, pixel mean or hecatare mean of
-           the values under that feature.  'n_pixels' contains the total number of
-           valid pixels used in that calculation.
+           shapefile_field value to either the total, pixel mean, hecatare mean, pixel max,
+           and pixel min of the values under that feature.  'n_pixels' contains the
+           total number of valid pixels used in that calculation.
         """
 
     #Generate a temporary mask filename
