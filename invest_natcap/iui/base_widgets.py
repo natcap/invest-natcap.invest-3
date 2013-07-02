@@ -2263,7 +2263,7 @@ class Root(DynamicElement):
         warnings = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
-                if element.has_warning():
+                if element.has_warning() and element.isEnabled():
                     error_msg = element.error_button.error_text
                     warnings.append(element.attributes['label'])
         return warnings
