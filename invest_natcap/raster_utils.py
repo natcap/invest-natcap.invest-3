@@ -1007,10 +1007,10 @@ def aggregate_raster_values_uri(
 
             #Find the min and max which might not yet be calculated
             try:
-                pixel_min = min(pixel_min, masked_values_nodata_removed)
+                pixel_min = numpy.min(pixel_min, masked_values_nodata_removed)
                 pixel_max = numpy.max(pixel_max, masked_values_nodata_removed)
             except NameError:
-                pixel_min = min(masked_values_nodata_removed)
+                pixel_min = numpy.min(masked_values_nodata_removed)
                 pixel_max = numpy.max(masked_values_nodata_removed)
                 
             if ignore_nodata:
