@@ -944,7 +944,7 @@ def aggregate_raster_values_uri(
             will be clamped to zero.
 
         returns a named tuple of the form 
-           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels')
+           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels min max')
            Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
            shapefile_field value to either the total, pixel mean or hecatare mean of
            the values under that feature.  'n_pixels' contains the total number of
@@ -1001,27 +1001,40 @@ def aggregate_raster_values_uri(
 
             #Only consider values which lie in the polygon for attribute_id
             masked_values = clipped_array[mask_array == attribute_id]
+            #Remove the nodata values for later processing
+            masked_values_nodata_removed = (
+                masked_values[masked_values != raster_nodata])
+
+            #Find the min and max which might not yet be calculated
+            try:
+                pixel_min = min(pixel_min, masked_values_nodata_removed)
+                pixel_max = numpy.max(pixel_max, masked_values_nodata_removed)
+            except NameError:
+                pixel_min = min(masked_values_nodata_removed)
+                pixel_max = numpy.max(masked_values_nodata_removed)
+                
             if ignore_nodata:
                 #Only consider values which are not nodata values
-                masked_values = masked_values[masked_values != raster_nodata]
-                attribute_sum = numpy.sum(masked_values)
+                aggregate_dict_counts[attribute_id] += (
+                    masked_values_nodata_removed.size)
             else:
-                #We leave masked_values alone, but only sum the non-nodata 
-                #values
-                attribute_sum = \
-                    numpy.sum(masked_values[masked_values != raster_nodata])
+                aggregate_dict_counts[attribute_id] += masked_values.size
 
-            aggregate_dict_values[attribute_id] += attribute_sum
-            aggregate_dict_counts[attribute_id] += masked_values.size
+            aggregate_dict_values[attribute_id] += numpy.sum(
+                masked_values_nodata_removed)
 
     #Initalize the dictionary to have an n_pixels field that contains the
     #counts of all the pixels used in the calculation.
-    AggregatedValues = collections.namedtuple('AggregatedValues', 'total pixel_mean hectare_mean n_pixels')
+    AggregatedValues = collections.namedtuple(
+        'AggregatedValues',
+        'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
     result_tuple = AggregatedValues(
         total={},
         pixel_mean={},
         hectare_mean={},
-        n_pixels=aggregate_dict_counts.copy())
+        n_pixels=aggregate_dict_counts.copy(),
+        pixel_min=pixel_min,
+        pixel_max=pixel_max)
 
     for attribute_id in aggregate_dict_values:
         if threshold_amount_lookup != None:
