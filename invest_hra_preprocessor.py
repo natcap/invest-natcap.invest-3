@@ -1,3 +1,3 @@
 import invest_natcap.iui.modelui
 
-invest_natcap.iui.modelui.main('hra_preprocessor.json')
+invest_natcap.iui.modelui.main('hra_scratch_preprocessor.json')
