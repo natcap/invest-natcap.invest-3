@@ -252,9 +252,8 @@ def execute(args):
 
     #Want a super simple dictionary of the stressor rasters we will use for overlap.
     #The local var stress_dir is the location that should be used for rasterized
-    #stressor shapefiles. args['stressors_dir'] is the location of the original
-    #stressor shapefiles. 
-    stress_dict = make_stress_rasters(stress_dir, hra_args['stressors_dir'], args['grid_size'])
+    #stressor shapefiles.
+    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'])
 
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
