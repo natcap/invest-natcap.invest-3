@@ -62,6 +62,7 @@ def execute(args):
     pet_data_uri = args['pet_data_uri']
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
+    soil_text_uri = args['soil_texture_uri']
     pawc_uri = args['pawc_uri']
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
@@ -83,9 +84,6 @@ def execute(args):
                 lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
-    # I have yet to determine how the sandy coefficient will be provided as an
-    # input, so I am just hard coding in a value for now
-    sandy_sa = 0.25
     beta = 2.0
 
     # Get DEM WKT
@@ -118,7 +116,7 @@ def execute(args):
                    'alpha_three':{'a_three':1.44, 'b_three':0.68}}
 
     calculate_alphas(
-        slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata,
+        slope_uri, soil_text_uri, smax_uri, alpha_table, float_nodata,
         alpha_uri_list)
 
     absorption_uri = os.path.join(intermediate_dir, 'absorption.tif')
@@ -874,14 +872,13 @@ def calculate_direct_flow(
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_alphas(
-        slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
+        slope_uri, soil_text_uri, smax_uri, alpha_table, out_nodata, output_uri_list):
     """Calculates and creates gdal datasets for three alpha values used in
         various equations throughout the monthly water yield model
 
         slope_uri - a uri to a gdal dataset for the slope
         
-        sandy_sa - could be a uri to a dataset, but right now just passing in a
-            constant value. Need to learn more from Yonas
+        soil_text_uri - a uri to a gdal dataset for the soil texture 
         
         smax_uri - a uri to a gdal dataset for the maximum soil water content
         
@@ -904,22 +901,25 @@ def calculate_alphas(
 
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
+    soil_text_nodata = raster_utils.get_nodata_from_uri(soil_text_uri)
+    LOGGER.debug('Soil Text Nodata: %s', soil_text_nodata)
     slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
     smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
 
-    def alpha_one_op(slope_pix):
+    def alpha_one_op(slope_pix, soil_text_pix):
         """Vectorization operation to calculate the alpha one variable used in
             equations throughout the monthly water yield model
 
             slope_pix - the slope value for a pixel
+            soil_text_pix - the soil texture value for a pixel
 
             returns - out_nodata if slope_pix is a nodata value, else returns
                 the alpha one value"""
-        if slope_pix == slope_nodata:
+        if slope_pix == slope_nodata or soil_text_pix == soil_text_nodata:
             return out_nodata
         else:
             return (alpha_one['a_one'] + (alpha_one['b_one'] * slope_pix) -
-                        (alpha_one['c_one'] * sandy_sa))
+                        (alpha_one['c_one'] * soil_text_pix))
 
     def alpha_two_op(smax_pix):
         """Vectorization operation to calculate the alpha two variable used in
@@ -952,8 +952,8 @@ def calculate_alphas(
                     math.pow(smax_pix, -1 * alpha_three['b_three']))
 
     raster_utils.vectorize_datasets(
-            [slope_uri], alpha_one_op, output_uri_list[0], gdal.GDT_Float32,
-            out_nodata, slope_cell_size, 'intersection')
+            [slope_uri, soil_text_uri], alpha_one_op, output_uri_list[0],
+            gdal.GDT_Float32, out_nodata, slope_cell_size, 'intersection')
 
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_two_op, output_uri_list[1], gdal.GDT_Float32,
