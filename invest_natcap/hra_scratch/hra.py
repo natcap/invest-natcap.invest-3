@@ -5,11 +5,9 @@ import os
 import shutil
 import logging
 import fnmatch
-import numpy as np
 import math
 
-from osgeo import gdal, ogr, osr
-from scipy import ndimage
+from osgeo import gdal, ogr
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
 from invest_natcap import raster_utils
