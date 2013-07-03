@@ -104,17 +104,16 @@ def execute(args):
     #2. There should be criteria of each type (exposure, sensitivity,
     # resilience). Exposure can be either a C applied criteria or an E applied
     #criteria.
-    if (len(args['exposure_e_crits']) == 0 and len(args['exposure_c_crits']) ==0) \
-            or len(args['resilience_crits']) == 0 \
-            or len(args['sensitivity_crits']) == 0:
+    if (len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
+            or len(args['sensitivity_crits']) == 0):
 
         raise ImproperCriteriaSpread("This model requires there to be one \
                 criteria in each of the following catagories: Exposure, \
                 Sensitivity, and Resilience.")
     
     #3. There should be > 4 criteria total.
-    total_crits = len(args['exposure_e_crits']) + len(args['exposure_c_crits']) +  \
-        len(args['resilience_crits']) + len(args['sensitivity_crits'])
+    total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) + \
+                len(args['sensitivity_crits'])
    
     if total_crits < 4:
         raise NotEnoughCriteria("This model requires you to use at least 4 \
