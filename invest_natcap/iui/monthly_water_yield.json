@@ -88,7 +88,7 @@
                     "type": "file",
                     "label": "DEM",
                     "defaultValue": "",
-                    "required": false,
+                    "required": true,
                     "validateAs": {"type": "GDAL"}
                 },    
                 {
@@ -97,7 +97,7 @@
                     "type": "file",
                     "label": "Watersheds",
                     "defaultValue": "",
-                    "required": false,
+                    "required": true,
                     "validateAs": {"type": "OGR"}
                  },
                  {

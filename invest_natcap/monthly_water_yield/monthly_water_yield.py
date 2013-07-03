@@ -49,6 +49,12 @@ def execute(args):
         args[lulc_data_uri] - a URI to a CSV file for the land cover code lookup
             table
 
+        args[watersheds_uri] - a URI to an ogr shapefile of polygon geometry
+            type
+        
+        args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
+            type
+
         returns - nothing
     """
     LOGGER.debug('Start Executing Model')
@@ -67,7 +73,14 @@ def execute(args):
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
-   
+    
+    try:
+        sub_shed_uri = args['sub_watersheds_uri']
+        sub_shed_present = True
+    except:
+        LOGGER.info('Sub Watersheds Not Provided')
+        sub_shed_present = False
+
     # Set out_nodata value
     #float_nodata = float(np.finfo(np.float32).min) + 1.0
     float_nodata = -35432.0
@@ -141,12 +154,23 @@ def execute(args):
     # Create individual CSV URIs for each shed / sub-shed based on the water /
     # sub-watershed ID's. Store these URIs in a dictionary mapping to their
     # respective shed / sub-shed ID's
-    csv_out_dict = {}
+    csv_shed_dict = {}
     for key in shed_dict.iterkeys():
         csv_uri = os.path.join(intermediate_dir, 'output_shed_'+str(key)+'.csv')
         if os.path.isfile(csv_uri):
             os.remove(csv_uri)
-        csv_out_dict[key] = csv_uri
+        csv_shed_dict[key] = csv_uri
+
+    if sub_shed_present:
+        sub_shed_dict = raster_utils.extract_datasource_table_by_key(
+            sub_shed_uri, 'subws_id')
+        
+        csv_sub_shed_dict = {}
+        for key in sub_shed_dict.iterkeys():
+            csv_uri = os.path.join(intermediate_dir, 'output_sub_shed_'+str(key)+'.csv')
+            if os.path.isfile(csv_uri):
+                os.remove(csv_uri)
+            csv_sub_shed_dict[key] = csv_uri
 
     # Define the column header for the output CSV files
     column_header = ['Date', 'Streamflow', 'Soil Storage']
@@ -268,6 +292,29 @@ def execute(args):
         
         max_storage = raster_utils.aggregate_raster_values_uri(
                 soil_storage_uri, watershed_uri, 'ws_id').pixel_max
+       
+        if sub_shed_present:
+            sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
+                    streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
+            
+            sub_max_storage = raster_utils.aggregate_raster_values_uri(
+                    soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
+        
+            for key, value in sub_max_streamflow.iteritems():
+                # Dictionary to aggregate the output information
+                line_dict = {}
+                line_dict[key] = {}
+                # Get corresponding CSV URI
+                csv_uri = csv_sub_shed_dict[key]
+                # Get Output values
+                streamflow = value
+                storage = sub_max_storage[key]
+                # Build the dictionary representing the next monthly line to write
+                line_dict[key]['Date'] = cur_month
+                line_dict[key]['Soil Storage'] = storage
+                line_dict[key]['Streamflow'] = streamflow
+                # Write new line to file
+                add_monthly_line(csv_uri, column_header, line_dict)
 
         # For each shed / sub-shed add the corresponding output values to their
         # respective CSV file
@@ -276,7 +323,7 @@ def execute(args):
             line_dict = {}
             line_dict[key] = {}
             # Get corresponding CSV URI
-            csv_uri = csv_out_dict[key]
+            csv_uri = csv_shed_dict[key]
             # Get Output values
             streamflow = value
             storage = max_storage[key]
