@@ -1769,7 +1769,6 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         original_sr = original_layer.GetSpatialRef()
 
         #Create a coordinate transformation
-        print('original_sr', original_sr, 'output_sr', output_sr)
         coord_trans = osr.CoordinateTransformation(original_sr, output_sr)
 
         #Copy all of the features in original_layer to the new shapefile
@@ -1777,7 +1776,6 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
             geom = original_feature.GetGeometryRef()
             
             #Transform the geometry into a format desired for the new projection
-            print('coord_trans', coord_trans)
             geom.Transform(coord_trans)
             
             #Copy original_datasource's feature and set as new shapes feature
