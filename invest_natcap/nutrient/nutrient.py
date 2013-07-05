@@ -17,6 +17,14 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 
 def execute(args):
+    """A high level wrapper for the InVEST nutrient model that first calls
+        through to the InVEST water yield function.  This is a historical
+        separation that used to make sense when we manually required users
+        to pass the water yield pixel raster to the nutrient output."""
+    _execute_nutrient(args)
+
+
+def _execute_nutrient(args):
     """File opening layer for the InVEST nutrient retention model.
 
         args - a python dictionary with the following entries:
@@ -31,7 +39,24 @@ def execute(args):
             'subwatersheds_uri' - a string uri pointing to an OGR shapefile on
                 disk representing the user's subwatersheds.
             'biophysical_table_uri' - a string uri to a supported table on disk
-                containing nutrient retention values.
+                containing nutrient retention values. (SAY WHAT VALUES ARE)
+            'soil_depth_uri' - a uri to an input raster describing the 
+                average soil depth value for each cell (mm) (required)
+            'precipitation_uri' - a uri to an input raster describing the 
+                average annual precipitation value for each cell (mm) (required)
+            'pawc_uri' - a uri to an input raster describing the 
+                plant available water content value for each cell. Plant Available
+                Water Content fraction (PAWC) is the fraction of water that can be
+                stored in the soil profile that is available for plants' use. 
+                PAWC is a fraction from 0 to 1 (required)
+            'eto_uri' - a uri to an input raster describing the 
+                annual average evapotranspiration value for each cell. Potential
+                evapotranspiration is the potential loss of water from soil by
+                both evaporation from the soil and transpiration by healthy Alfalfa
+                (or grass) if sufficient water is available (mm) (required)
+            'seasonality_constant' - floating point value between 1 and 10 
+                corresponding to the seasonal distribution of precipitation 
+                (required)
             'calc_p' - True if phosphorous is meant to be modeled, if True then
                 biophyscial table and threshold table and valuation table must
                 have p fields in them.

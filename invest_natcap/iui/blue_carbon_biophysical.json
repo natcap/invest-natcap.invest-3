@@ -26,6 +26,16 @@
                                     "required": true
                                 },
                                 {
+                                    "id" : "year1",
+                                    "args_id" : "year1",
+                                    "type": "text",
+                                    "label": "Year",
+                                    "validateAs": {"type": "number"},
+                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                    "dataType": "float",
+                                    "required": true
+                                },                                                                
+                                {
                                     "id": "lulc2_uri",
                                     "args_id": "lulc2_uri",
                                     "type": "file",
@@ -33,15 +43,15 @@
                                     "required": true
                                 },
                                 {
-                                    "id" : "years",
-                                    "args_id" : "years",
+                                    "id" : "year2",
+                                    "args_id" : "year2",
                                     "type": "text",
-                                    "label": "Years",
+                                    "label": "Year",
                                     "validateAs": {"type": "number"},
                                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                                     "dataType": "float",
                                     "required": true
-                                },                                
+                                },                                                                
                                 {
                                     "id": "carbon_pools_uri",
                                     "args_id": "carbon_pools_uri",
