@@ -17,9 +17,18 @@ def execute(args):
     workspace_dir = args["workspace_dir"]
     lulc1_uri = args["lulc1_uri"]
     lulc2_uri = args["lulc2_uri"]
-    years = args["years"]
+    years = args["year2"] - args["year1"]
     carbon_uri = args["carbon_pools_uri"]
     transition_matrix_uri = args["transition_matrix_uri"]
+
+    private_valuation = args["private_valuation"]
+    if private_valuation:
+        carbon_value = args["carbon_value"]
+        if args["carbon_units"] == "Carbon Dioxide (CO2)":
+            carbon_value *= (15.9994*2+12.0107)/12.0107
+        discount_rate = args["discount_rate"]
+        rate_change = args["rate_change"]
+            
 
     #intermediate
     depth_uri = os.path.join(workspace_dir, "depth.tif")
@@ -28,7 +37,6 @@ def execute(args):
     carbon1_below_uri = os.path.join(workspace_dir, "carbon1_below.tif")
     carbon1_soil_uri = os.path.join(workspace_dir, "carbon1_soil.tif")
     carbon1_litter_uri = os.path.join(workspace_dir, "carbon1_litter.tif")
-    carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
 
     transition_uri = os.path.join(workspace_dir, "transition.tif")
 
@@ -36,9 +44,12 @@ def execute(args):
     carbon2_below_uri = os.path.join(workspace_dir, "carbon2_below.tif")
     carbon2_soil_uri = os.path.join(workspace_dir, "carbon2_soil.tif")
     carbon2_litter_uri = os.path.join(workspace_dir, "carbon2_litter.tif")
-    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")
-    
+
+    #outputs
+    carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
+    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")   
     sequestration_uri = os.path.join(workspace_dir, "sequestration.tif")
+    private_valuation_uri = os.path.join(workspace_dir, "private_valuation.tif")
 
     #accessors
     nodata = raster_utils.get_nodata_from_uri(lulc1_uri)
@@ -51,22 +62,6 @@ def execute(args):
 
     ###create carbon storage raster for t1
 
-    #calculate depth
-    def depth_op(value):
-        if value == nodata:
-            return nodata
-        else:
-            return 1
-
-    LOGGER.debug("Creating sediment depth raster.")
-    raster_utils.vectorize_datasets([lulc1_uri],
-                                    depth_op,
-                                    depth_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
-
     #construct dictionary from carbon storage table
     #converts hectares to square meters
     LOGGER.debug("Parsing carbon storage table.")
@@ -74,51 +69,74 @@ def execute(args):
     #skip header
     carbon_file.readline()
     #parse table
-    carbon_dict={}
-    above_index = 0
-    below_index = 1
-    soil_index = 2
-    litter_index = 3
+    above_dict = {}
+    below_dict = {}
+    soil_dict = {}
+    litter_dict = {}
+    depth_dict = {}
+    emission_dict = {}
+    disturbance_dict = {}
+    soil_life_dict = {}
+    biomass_life_dict = {}
+
+    LOGGER.info("Parsing carbon table.")
     for line in carbon_file:
-        lulc_code, name, above, below, soil, litter = line.strip().split(",")
-        carbon_dict[int(lulc_code)] = [float(above) * cell_area * 1e4,
-                                       float(below) * cell_area * 1e4,
-                                       float(soil) * cell_area * 1e4,
-                                       float(litter) * cell_area * 1e4]
+        row = line.strip().split(",")
+        lulc_code = int(row[0])
+        above_dict[lulc_code] = float(row[2]) * cell_area * 1e4
+        below_dict[lulc_code]  = float(row[3]) * cell_area * 1e4
+        soil_dict[lulc_code]  = float(row[4]) * cell_area * 1e4
+        litter_dict[lulc_code]  = float(row[5]) * cell_area * 1e4
+        depth_dict[lulc_code]  = float(row[6])
+        emission_dict[lulc_code] = float(row[7])
+        disturbance_dict[lulc_code] = float(row[8])
+        soil_life_dict[lulc_code] = float(row[9])
+        biomass_life_dict[lulc_code] = float(row[10])
     carbon_file.close()
     
+    assert nodata not in above_dict
 
-    assert nodata not in carbon_dict
+    LOGGER.info("Creating depth raster.")
+    raster_utils.reclassify_dataset_uri(lulc1_uri,
+                               depth_dict,
+                               depth_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
-    #construct ops
-    #above pool op
-    def carbon_above_op(lulc_id):
-        if lulc_id == nodata:
-            return nodata
-        else:
-            return carbon_dict[lulc_id][above_index]
+    LOGGER.info("Creating carbon above pool raster for time 1.")
+    raster_utils.reclassify_dataset_uri(lulc1_uri,
+                               above_dict,
+                               carbon1_above_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
-    #below pool op
-    def carbon_below_op(lulc_id):
-        if lulc_id == nodata:
-            return nodata
-        else:
-            return carbon_dict[lulc_id][below_index]
+    LOGGER.info("Creating carbon below pool raster for time 1.")
+    raster_utils.reclassify_dataset_uri(lulc1_uri,
+                               below_dict,
+                               carbon1_below_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
-    #soil pool op
-    def carbon_soil_op(lulc_id, depth):
-        if lulc_id == nodata or depth == nodata:
-            return nodata
-        else:
-            return carbon_dict[lulc_id][soil_index]*depth
+    LOGGER.info("Creating carbon soil pool raster for time 1.")
+    raster_utils.reclassify_dataset_uri(lulc1_uri,
+                               soil_dict,
+                               carbon1_soil_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
-    #litter pool op
-    def carbon_litter_op(lulc_id):
-        if lulc_id == nodata:
-            return nodata
-        else:
-            return carbon_dict[lulc_id][litter_index]
+    LOGGER.info("Creating carbon litter pool raster for time 1.")
+    raster_utils.reclassify_dataset_uri(lulc1_uri,
+                               litter_dict,
+                               carbon1_litter_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
+    LOGGER.debug("Creating carbon pool sumation operator.")
     def carbon_total_op(above, below, soil, litter):
         pixel_stack = [above, below, soil, litter]
         if nodata in pixel_stack:
@@ -126,49 +144,7 @@ def execute(args):
         else:
             return sum(pixel_stack)
     
-    #calculate rasters
-    #calculate above ground carbon pool
-    LOGGER.debug("Calculating the above ground carbon pool for time 1.")
-    raster_utils.vectorize_datasets([lulc1_uri],
-                                    carbon_above_op,
-                                    carbon1_above_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
-
-    #calculate below ground carbon pool
-    LOGGER.debug("Calculating the below ground carbon pool for time 1.")
-    raster_utils.vectorize_datasets([lulc1_uri],
-                                    carbon_below_op,
-                                    carbon1_below_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
-
-    #calculate soil carbon pool
-    LOGGER.debug("Calculating the soil carbon pool for time 1.")
-    raster_utils.vectorize_datasets([lulc1_uri, depth_uri],
-                                    carbon_soil_op,
-                                    carbon1_soil_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
-
-    #calculate litter carbon pool
-    LOGGER.debug("Calculating the litter carbon pool for time 1.")
-    raster_utils.vectorize_datasets([lulc1_uri],
-                                    carbon_litter_op,
-                                    carbon1_litter_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
-
-    #calculate total carbon pool
-    LOGGER.debug("Calculating the total carbon pool for time 1.")
+    LOGGER.info("Creating total carbon pool for time 1.")
     raster_utils.vectorize_datasets([carbon1_above_uri, carbon1_below_uri,
                                      carbon1_soil_uri, carbon1_litter_uri],
                                     carbon_total_op,
@@ -181,7 +157,7 @@ def execute(args):
     #create accumulation raster for t1 to t2
 
     #construct op from transition matrix
-    LOGGER.debug("Parsing transition matrix.")
+    LOGGER.info("Parsing transition table.")
     transition_file = open(transition_matrix_uri)
 
     #read header, discard LULC code and name header
@@ -231,29 +207,24 @@ def execute(args):
         else:
             return carbon1-carbon2
 
-    #calculate rasters
-    #calculate above ground carbon pool
-    LOGGER.debug("Calculating the above ground carbon pool for time 2.")
-    raster_utils.vectorize_datasets([lulc2_uri],
-                                    carbon_above_op,
-                                    carbon2_above_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
+    LOGGER.info("Creating carbon above pool raster for time 2.")
+    raster_utils.reclassify_dataset_uri(lulc2_uri,
+                               above_dict,
+                               carbon2_above_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
-    #calculate below ground carbon pool
-    LOGGER.debug("Calculating the below ground carbon pool for time 2.")
-    raster_utils.vectorize_datasets([lulc2_uri],
-                                    carbon_below_op,
-                                    carbon2_below_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
+    LOGGER.info("Creating carbon below pool raster for time 2.")
+    raster_utils.reclassify_dataset_uri(lulc2_uri,
+                               below_dict,
+                               carbon2_below_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
     #calculate soil carbon pool
-    LOGGER.debug("Calculating the soil carbon pool for time 2 based on the transition rate from time 1.")
+    LOGGER.info("Calculating the soil carbon pool for time 2 based on the transition rate from time 1.")
     raster_utils.vectorize_datasets([lulc1_uri, transition_uri],
                                     soil_transition_op,
                                     carbon2_soil_uri,
@@ -262,18 +233,16 @@ def execute(args):
                                     cell_size,
                                     "union")
 
-    #calculate litter carbon pool
-    LOGGER.debug("Calculating the litter carbon pool for time 2.")
-    raster_utils.vectorize_datasets([lulc2_uri],
-                                    carbon_litter_op,
-                                    carbon2_litter_uri,
-                                    gdal.GDT_Float32,
-                                    nodata,
-                                    cell_size,
-                                    "union")
+    LOGGER.info("Creating carbon litter pool raster for time 2.")
+    raster_utils.reclassify_dataset_uri(lulc2_uri,
+                               litter_dict,
+                               carbon2_litter_uri,
+                               gdal.GDT_Float32,
+                               nodata,
+                               exception_flag="values_required")
 
     #calculate total carbon pool
-    LOGGER.debug("Calculating the total carbon pool for time 2.")
+    LOGGER.info("Calculating the total carbon pool for time 2.")
     raster_utils.vectorize_datasets([carbon2_above_uri, carbon2_below_uri,
                                      carbon2_soil_uri, carbon2_litter_uri],
                                     carbon_total_op,
@@ -292,3 +261,27 @@ def execute(args):
                                     nodata,
                                     cell_size,
                                     "union")
+
+
+
+    ###valuation
+    if private_valuation:
+        LOGGER.debug("Constructing private valuation operation")
+        def private_valuation_op(sequest):
+            if sequest == nodata:
+                return nodata
+            else:
+                valuation = 0
+                for t in range(years):
+                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0))
+                    
+            return valuation
+
+        LOGGER.info("Creating private valuation raster.")
+        raster_utils.vectorize_datasets([sequestration_uri],
+                                        private_valuation_op,
+                                        private_valuation_uri,
+                                        gdal.GDT_Float32,
+                                        nodata,
+                                        cell_size,
+                                        "union")
