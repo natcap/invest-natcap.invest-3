@@ -5,11 +5,9 @@ import os
 import shutil
 import logging
 import fnmatch
-import numpy as np
 import math
 
-from osgeo import gdal, ogr, osr
-from scipy import ndimage
+from osgeo import gdal, ogr
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
 from invest_natcap import raster_utils
@@ -169,7 +167,7 @@ def execute(args):
 
     hra_args['risk_eq'] = args['risk_eq']
     
-    #Depending on the risk calculation equatioa, this should return the highest
+    #Depending on the risk calculation equation, this should return the highest
     #possible value of risk for any given habitat-stressor pairing. The highest
     #risk for a habitat would just be this risk value * the number of stressor
     #pairs that apply to it.
@@ -252,9 +250,8 @@ def execute(args):
 
     #Want a super simple dictionary of the stressor rasters we will use for overlap.
     #The local var stress_dir is the location that should be used for rasterized
-    #stressor shapefiles. args['stressors_dir'] is the location of the original
-    #stressor shapefiles. 
-    stress_dict = make_stress_rasters(stress_dir, hra_args['stressors_dir'], args['grid_size'])
+    #stressor shapefiles.
+    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'])
 
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
@@ -453,6 +450,33 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
         habitats[name]['DS'] = out_uri
+
+def calc_max_rating(risk_eq, max_rating):
+    ''' Should take in the max possible risk, and return the highest possible
+    per pixel risk that would be seen on a H-S raster pixel.
+
+    Input:
+        risk_eq- The equation that will be used to determine risk.
+        max_rating- The highest possible value that could be given as a
+            criteria rating, data quality, or weight.
+    
+    Returns:
+        An int representing the highest possible risk value for any given h-s
+        overlap raster.
+    '''
+    
+    #The max_rating ends up being the simplified result of each of the E and
+    #C equations when the same value is used in R/DQ/W. Thus for E and C, their
+    #max value is equivalent to the max_rating.
+    
+    if risk_eq == 'Multiplicative':
+        max_r = max_rating * max_rating
+
+    elif risk_eq == 'Euclidean':
+        under_rt = (max_rating - 1)**2 + (max_rating - 1)**2
+        max_r = math.sqrt(under_rt)
+
+    return max_r
 
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
