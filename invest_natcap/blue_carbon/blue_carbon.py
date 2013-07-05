@@ -268,8 +268,8 @@ def execute(args):
     if private_valuation:
         LOGGER.debug("Constructing private valuation formula.")
         ratio = 1.0 / ((1 + discount_rate / 100.0) * (1 + rate_change / 100.0))
-        valuation_constant = carbon_value / (years) * \
-            (1.0 - ratio ** (years)) / (1.0 - ratio)
+        valuation_constant = carbon_value / years * \
+            (1.0 - ratio ** years) / (1.0 - ratio)
 
         LOGGER.debug("Constructing private valuation operation")
         def private_valuation_op(sequest):
@@ -284,4 +284,4 @@ def execute(args):
                                         gdal.GDT_Float32,
                                         nodata,
                                         cell_size,
-                                        "union")                                        
+                                        "union")
