@@ -266,16 +266,16 @@ def execute(args):
 
     ###valuation
     if private_valuation:
-        LOGGER.debug("Constructing private valuation formula.")
-        ratio = 1.0 / ((1 + discount_rate / 100.0) * (1 + rate_change / 100.0))
-        valuation_constant = carbon_value / years * \
-            (1.0 - ratio ** years) / (1.0 - ratio)
-
         LOGGER.debug("Constructing private valuation operation")
         def private_valuation_op(sequest):
             if sequest == nodata:
                 return nodata
-            return sequest * valuation_constant
+            else:
+                valuation = 0
+                for t in range(years):
+                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0))
+                    
+            return valuation
 
         LOGGER.info("Creating private valuation raster.")
         raster_utils.vectorize_datasets([sequestration_uri],
