@@ -25,7 +25,17 @@ def execute(args):
         separation that used to make sense when we manually required users
         to pass the water yield pixel raster to the nutrient output."""
 
+    
+    #Set up the water yield arguments that might be a little different than
+    #nutrient retention
+    water_yield_args = args.copy()
+    water_yield_args['workspace_dir'] = os.path.join(
+        args['workspace_dir'], 'water_yield_workspace')
     invest_natcap.hydropower.hydropower_water_yield.execute(args)
+
+    #Get the pixel output of hydropower to plug into nutrient retention.
+    args['pixel_yield_uri'] = os.path.join(
+        water_yield_args['workspace_dir'], 'output', 'pixel', 'wyield.tif')
     _execute_nutrient(args)
 
 
