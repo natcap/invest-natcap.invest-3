@@ -31,7 +31,7 @@ def execute(args):
     water_yield_args = args.copy()
     water_yield_args['workspace_dir'] = os.path.join(
         args['workspace_dir'], 'water_yield_workspace')
-    invest_natcap.hydropower.hydropower_water_yield.execute(args)
+    invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
 
     #Get the pixel output of hydropower to plug into nutrient retention.
     args['pixel_yield_uri'] = os.path.join(
@@ -233,7 +233,7 @@ def _execute_nutrient(args):
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection")
         eff_uri[nutrient] = os.path.join(
-            intermediate_dir, 'eff_%s.tif' % (nutrient))
+            intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [landuse_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
