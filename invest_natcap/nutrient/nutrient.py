@@ -11,6 +11,9 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
 
+import invest_natcap.hydropower.hydropower_water_yield
+
+
 LOGGER = logging.getLogger('nutrient')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -21,6 +24,8 @@ def execute(args):
         through to the InVEST water yield function.  This is a historical
         separation that used to make sense when we manually required users
         to pass the water yield pixel raster to the nutrient output."""
+
+    invest_natcap.hydropower.hydropower_water_yield.execute(args)
     _execute_nutrient(args)
 
 
