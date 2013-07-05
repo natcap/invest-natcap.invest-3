@@ -21,6 +21,15 @@ def execute(args):
     carbon_uri = args["carbon_pools_uri"]
     transition_matrix_uri = args["transition_matrix_uri"]
 
+    private_valuation = args["private_valuation"]
+    if private_valuation:
+        carbon_value = args["carbon_value"]
+        if args["carbon_units"] == "Carbon Dioxide (CO2)":
+            carbon_value *= (15.9994*2+12.0107)/12.0107
+        discount_rate = args["discount_rate"]
+        rate_change = args["rate_change"]
+            
+
     #intermediate
     depth_uri = os.path.join(workspace_dir, "depth.tif")
 
@@ -28,7 +37,6 @@ def execute(args):
     carbon1_below_uri = os.path.join(workspace_dir, "carbon1_below.tif")
     carbon1_soil_uri = os.path.join(workspace_dir, "carbon1_soil.tif")
     carbon1_litter_uri = os.path.join(workspace_dir, "carbon1_litter.tif")
-    carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
 
     transition_uri = os.path.join(workspace_dir, "transition.tif")
 
@@ -36,9 +44,12 @@ def execute(args):
     carbon2_below_uri = os.path.join(workspace_dir, "carbon2_below.tif")
     carbon2_soil_uri = os.path.join(workspace_dir, "carbon2_soil.tif")
     carbon2_litter_uri = os.path.join(workspace_dir, "carbon2_litter.tif")
-    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")
-    
+
+    #outputs
+    carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
+    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")   
     sequestration_uri = os.path.join(workspace_dir, "sequestration.tif")
+    private_valuation_uri = os.path.join(workspace_dir, "private_valuation.tif")
 
     #accessors
     nodata = raster_utils.get_nodata_from_uri(lulc1_uri)
@@ -213,7 +224,7 @@ def execute(args):
                                exception_flag="values_required")
 
     #calculate soil carbon pool
-    LOGGER.debug("Calculating the soil carbon pool for time 2 based on the transition rate from time 1.")
+    LOGGER.info("Calculating the soil carbon pool for time 2 based on the transition rate from time 1.")
     raster_utils.vectorize_datasets([lulc1_uri, transition_uri],
                                     soil_transition_op,
                                     carbon2_soil_uri,
@@ -231,7 +242,7 @@ def execute(args):
                                exception_flag="values_required")
 
     #calculate total carbon pool
-    LOGGER.debug("Calculating the total carbon pool for time 2.")
+    LOGGER.info("Calculating the total carbon pool for time 2.")
     raster_utils.vectorize_datasets([carbon2_above_uri, carbon2_below_uri,
                                      carbon2_soil_uri, carbon2_litter_uri],
                                     carbon_total_op,
@@ -250,3 +261,27 @@ def execute(args):
                                     nodata,
                                     cell_size,
                                     "union")
+
+
+
+    ###valuation
+    if private_valuation:
+        LOGGER.debug("Constructing private valuation operation")
+        def private_valuation_op(sequest):
+            if sequest == nodata:
+                return nodata
+            else:
+                valuation = 0
+                for t in range(years):
+                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0))
+                    
+            return valuation
+
+        LOGGER.info("Creating private valuation raster.")
+        raster_utils.vectorize_datasets([sequestration_uri],
+                                        private_valuation_op,
+                                        private_valuation_uri,
+                                        gdal.GDT_Float32,
+                                        nodata,
+                                        cell_size,
+                                        "union")

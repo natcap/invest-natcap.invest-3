@@ -7,66 +7,132 @@
     "height": 600,
     "width" : 700,
     "elements": [
-            {
-            "id" : "workspace_list",
-            "type": "list",	        
-		    "elements": [
-                                {
-                                    "id": "workspace_dir",
-                                    "args_id": "workspace_dir",
-                                    "type": "folder",
-                                    "label": "Workspace",
-                                    "required": true
-                                },
-                                {
-                                    "id": "lulc1_uri",
-                                    "args_id": "lulc1_uri",
-                                    "type": "file",
-                                    "label": "LULC Time 1",
-                                    "required": true
-                                },
-                                {
-                                    "id" : "year1",
-                                    "args_id" : "year1",
-                                    "type": "text",
-                                    "label": "Year",
-                                    "validateAs": {"type": "number"},
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                    "dataType": "float",
-                                    "required": true
-                                },                                                                
-                                {
-                                    "id": "lulc2_uri",
-                                    "args_id": "lulc2_uri",
-                                    "type": "file",
-                                    "label": "LULC Time 2",
-                                    "required": true
-                                },
-                                {
-                                    "id" : "year2",
-                                    "args_id" : "year2",
-                                    "type": "text",
-                                    "label": "Year",
-                                    "validateAs": {"type": "number"},
-                                    "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                    "dataType": "float",
-                                    "required": true
-                                },                                                                
-                                {
-                                    "id": "carbon_pools_uri",
-                                    "args_id": "carbon_pools_uri",
-                                    "type": "file",
-                                    "label": "Carbon pools",
-                                    "required": true
-                                },
-                                {
-                                    "id": "transition_matrix_uri",
-                                    "args_id": "transition_matrix_uri",
-                                    "type": "file",
-                                    "label": "Transition matrix",
-                                    "required": true
-                                }
-		    ]
-	   }
-    ]
+                    {
+                    "id" : "workspace_list",
+                    "type": "list",	        
+                            "elements": [
+                                            {
+                                                "id": "workspace_dir",
+                                                "args_id": "workspace_dir",
+                                                "type": "folder",
+                                                "label": "Workspace",
+                                                "required": true
+                                            },
+                                            {
+                                                "id": "lulc1_uri",
+                                                "args_id": "lulc1_uri",
+                                                "type": "file",
+                                                "label": "LULC Time 1",
+                                                "required": true
+                                            },
+                                            {
+                                                "id" : "year1",
+                                                "args_id" : "year1",
+                                                "type": "text",
+                                                "label": "Year",
+                                                "validateAs": {"type": "number"},
+                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                                "dataType": "float",
+                                                "required": true
+                                            },                                                                
+                                            {
+                                                "id": "lulc2_uri",
+                                                "args_id": "lulc2_uri",
+                                                "type": "file",
+                                                "label": "LULC Time 2",
+                                                "required": true
+                                            },
+                                            {
+                                                "id" : "year2",
+                                                "args_id" : "year2",
+                                                "type": "text",
+                                                "label": "Year",
+                                                "validateAs": {"type": "number"},
+                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                                "dataType": "float",
+                                                "required": true
+                                            },                                                                
+                                            {
+                                                "id": "carbon_pools_uri",
+                                                "args_id": "carbon_pools_uri",
+                                                "type": "file",
+                                                "label": "Carbon pools",
+                                                "required": true
+                                            },
+                                            {
+                                                "id": "transition_matrix_uri",
+                                                "args_id": "transition_matrix_uri",
+                                                "type": "file",
+                                                "label": "Transition matrix",
+                                                "required": true
+                                            }
+
+                                    ]
+                   },
+                   {
+                       "id" : "private_valuation",
+                       "type" : "container",
+                       "collapsible" : true,
+                       "args_id" : "private_valuation",
+                       "label" : "Private market valuation.",
+                       "elements" : [
+                                       {
+                                           "id" : "private_valuation_list",
+                                           "type" : "list",
+                                           "elements" : [
+                                                            {
+                                                                "id": "carbon_units",
+                                                                "args_id": "carbon_units",
+                                                                "type": "dropdown",
+                                                                "label": "Price in terms of metric tons of",
+                                                                "options": ["Carbon (C)",
+                                                                            "Carbon Dioxide (CO2)"],
+                                                                "defaultValue": 0,
+                                                                "required": true,
+                                                                "helpText": "The units for the price per unit of carbon type."
+                                                            },
+                                                            {
+                                                                "id": "carbon_value",
+                                                                "args_id": "carbon_value",
+                                                                "type": "text",
+                                                                "width": 70,
+                                                                "label": "Value of Carbon (USD/metric ton)",
+                                                                "required": true,
+                                                                "dataType": "float",
+                                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
+                                                                "defaultValue": "43.00",
+                                                                "validateAs": {"type": "number"},
+                                                                "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units."
+                                                            },
+                                                            {
+                                                                "id": "discount_rate",
+                                                                "args_id": "discount_rate",
+                                                                "type": "text",
+                                                                "width": 70,
+                                                                "label": "Market discount in price of Carbon (%)",
+                                                                "required": true,
+                                                                "dataType": "int",
+                                                                "validText": "-?([0-9]+)?\\.[0-9]+",
+                                                                "defaultValue": "7",
+                                                                "validateAs": {"type": "number"},
+                                                                "helpText": "The discount rate as an integer percent."
+                                                            },
+                                                            {
+                                                                "id": "rate_change",
+                                                                "args_id": "rate_change",
+                                                                "type": "text",
+                                                                "width": 70,
+                                                                "label": "Annual rate of change in price of Carbon (%)",
+                                                                "required": true,
+                                                                "dataType": "float",
+                                                                "validText": "-?([0-9]+)?\\.[0-9]+",
+                                                                "defaultValue": "0",
+                                                                "validateAs": {"type": "number"},
+                                                                "helpText": "The integer percent increase of the price of carbon per year."
+                                                            }
+                                                       ]
+                                   }
+                                ]
+                }
+            ]
 }
