@@ -155,25 +155,24 @@ def execute(args):
     # sub-watershed ID's. Store these URIs in a dictionary mapping to their
     # respective shed / sub-shed ID's
     csv_shed_dict = {}
+#   for key in shed_dict.iterkeys():
+#       csv_uri = os.path.join(intermediate_dir, 'output_shed_'+str(key)+'.csv')
+#       if os.path.isfile(csv_uri):
+#           os.remove(csv_uri)
+#       csv_shed_dict[key] = csv_uri
+    field_list = ['Streamflow', 'Soil Storage']    
+    shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
-        csv_uri = os.path.join(intermediate_dir, 'output_shed_'+str(key)+'.csv')
-        if os.path.isfile(csv_uri):
-            os.remove(csv_uri)
-        csv_shed_dict[key] = csv_uri
+        for field in field_list:
+            shed_field_list.append(field + ' ' + str(key))
+    
+    LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
 
-    if sub_shed_present:
-        sub_shed_dict = raster_utils.extract_datasource_table_by_key(
-            sub_shed_uri, 'subws_id')
-        
-        csv_sub_shed_dict = {}
-        for key in sub_shed_dict.iterkeys():
-            csv_uri = os.path.join(intermediate_dir, 'output_sub_shed_'+str(key)+'.csv')
-            if os.path.isfile(csv_uri):
-                os.remove(csv_uri)
-            csv_sub_shed_dict[key] = csv_uri
+    out_dict = {}
+
 
     # Define the column header for the output CSV files
-    column_header = ['Date', 'Streamflow', 'Soil Storage']
+    #column_header = ['Date', 'Streamflow', 'Soil Storage']
     
     # A list of the fields from the time step table we are interested in and
     # need.
@@ -288,53 +287,55 @@ def execute(args):
         # Use Aggregate Raster function to get the max values under the
         # watersheds. For now this is what our outputs will be
         max_streamflow = raster_utils.aggregate_raster_values_uri(
-                streamflow_uri, watershed_uri, 'ws_id').pixel_max
+                streamflow_uri, watershed_uri, 'ws_id').pixel_mean
         
         max_storage = raster_utils.aggregate_raster_values_uri(
                 soil_storage_uri, watershed_uri, 'ws_id').pixel_max
-       
-        if sub_shed_present:
-            sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
-                    streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
-            
-            sub_max_storage = raster_utils.aggregate_raster_values_uri(
-                    soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
-        
-            for key, value in sub_max_streamflow.iteritems():
-                # Dictionary to aggregate the output information
-                line_dict = {}
-                line_dict[key] = {}
-                # Get corresponding CSV URI
-                csv_uri = csv_sub_shed_dict[key]
-                # Get Output values
-                streamflow = value
-                storage = sub_max_storage[key]
-                # Build the dictionary representing the next monthly line to write
-                line_dict[key]['Date'] = cur_month
-                line_dict[key]['Soil Storage'] = storage
-                line_dict[key]['Streamflow'] = streamflow
-                # Write new line to file
-                add_monthly_line(csv_uri, column_header, line_dict)
+
+        LOGGER.debug('Max_streamflow dict', max_streamflow)
+        LOGGER.debug('max_storage dict', max_storage)
+
+        for result_dict, field in zip(
+                [max_streamflow, max_storage], field_list):
+            out_dict = build_csv_dict(
+                    result_dict, shed_field_list, out_dict, field)
+
+        LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
+        write_new_table(csv_uri, shed_field_list, out_dict)
+
 
         # For each shed / sub-shed add the corresponding output values to their
         # respective CSV file
-        for key, value in max_streamflow.iteritems():
-            # Dictionary to aggregate the output information
-            line_dict = {}
-            line_dict[key] = {}
-            # Get corresponding CSV URI
-            csv_uri = csv_shed_dict[key]
-            # Get Output values
-            streamflow = value
-            storage = max_storage[key]
-            # Build the dictionary representing the next monthly line to write
-            line_dict[key]['Date'] = cur_month
-            line_dict[key]['Soil Storage'] = storage
-            line_dict[key]['Streamflow'] = streamflow
-            # Write new line to file
-            add_monthly_line(csv_uri, column_header, line_dict)
+#       for key, value in max_streamflow.iteritems():
+#           # Dictionary to aggregate the output information
+#           line_dict = {}
+#           line_dict[key] = {}
+#           # Get corresponding CSV URI
+#           csv_uri = csv_shed_dict[key]
+#           # Get Output values
+#           streamflow = value
+#           storage = max_storage[key]
+#           # Build the dictionary representing the next monthly line to write
+#           line_dict[key]['Date'] = cur_month
+#           line_dict[key]['Soil Storage'] = storage
+#           line_dict[key]['Streamflow'] = streamflow
+#           # Write new line to file
+#           add_monthly_line(csv_uri, column_header, line_dict)
 
         # Move on to next month
+
+def build_csv_dict(value_dict, columns, out_dict, adv):
+    for key, value in value_dict.iteritems:
+        key_str = str(key)
+        for field in columns[1:]:
+            if re.search(key_str, field) != None and re.match(adv, field) != None:
+                try:
+                    out_dict[key][field] = value
+                except KeyError:
+                    out_dict[key] = {}
+                    out_dict[key][field] = value
+    return out_dict
+
 
 def add_monthly_line(csv_uri, column_header, single_dict):
     """Write a new row to a CSV file if it already exists or creates a new one
