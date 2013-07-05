@@ -159,3 +159,78 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             as crit_lists, but the innermost values will be floats instead of
             lists.
     '''
+    pre_raster_dir = os.path.join(dir, 'ReBurned_Crit_Rasters')
+
+    os.mkdir(pre_raster_dir)
+
+    crit_lists = {'Risk': {'h_s_c': {}, 'h':{}, 'h_s_e':{}},
+                  'Recovery': {}
+                 }
+    denoms = {'Risk': {'h_s_c': {}, 'h':{}, 'h_s_e':{}},
+                  'Recovery': {}
+                 }
+    
+    #Now will iterrate through the dictionaries one at a time, since each has
+    #to be placed uniquely.
+
+    for pair in h_s_c:
+        h, s = pair
+
+        crit_lists['Risk']['h_s_c'][pair] = []
+        denoms['Risk']['h_s_c'][pair] = 0
+
+        #The base dataset for all h_s overlap criteria. Will need to load bases
+        #for each of the h/s crits too.
+        base_ds_uri = h_s_c[pair]['DS']
+        base_nodata = raster_utils.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = raster_utils.get_cell_size_from_uri(base_ds_uri)
+
+        #First, want to make a raster of added individual numerator criteria.
+        #We will pre-sum all r / (dq*w), and then vectorize that with the 
+        #spatially explicit criteria later. Should be okay, as long as we keep
+        #the denoms separate until after all raster crits are added.
+
+        '''The following handle the cases for each dictionary for rasterizing
+        the individual numerical criteria, and then the raster criteria.'''
+
+        crit_rate_numerator = 0
+        
+        #H-S dictionary, Numerical Criteria: should output a 
+        #single raster that equals to the sum of r/dq*w for all single number 
+        #criteria in H-S
+
+        for crit_dict in (h_s_c[pair]['Crit_Ratings']).values():
+                    
+            r = crit_dict['Rating']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
+
+            #Explicitly want a float output so as not to lose precision.
+            crit_rate_numerator += r / float(dq*w)
+            denoms['Risk']['h_s_c'][pair] += 1 / float(dq*w)
+        
+        #This will not be spatially explicit, since we need to add the
+        #others in first before multiplying against the decayed raster.
+        #Instead, want to only have the crit_rate_numerator where data
+        #exists, but don't want to multiply it.
+        
+        single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + \
+                                               s + ']' + '_Indiv_C_Raster.tif')
+        #To save memory, want to use vectorize rasters instead of casting to an
+        #array. Anywhere that we have nodata, leave alone. Otherwise, use
+        #crit_rate_numerator as the burn value.
+        def burn_numerator_single_hs(pixel):
+
+            if pixel == base_nodata:
+                return 0.
+            else:
+                return crit_rate_numerator
+
+        raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
+                        single_crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
+                        "union", resample_method_list=None, 
+                        dataset_to_align_index=None, aoi_uri=None)
+
+        #Add the burned ds URI containing only the numerator burned ratings to
+        #the list in which all rasters will reside
+        crit_lists['Risk']['h_s_c'][pair].append(single_crit_C_uri)
