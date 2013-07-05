@@ -122,7 +122,22 @@
 				  },
 		    "helpText": "This is a layer of watersheds such that each watershed contributes to a point of interest where water quality will be analyzed.  It must have the integer field 'ws_id' where the values uniquely identify each watershed."
 		},
-		{        
+                {
+                   "id" : "sub_watersheds",
+                   "args_id": "sub_watersheds_uri",
+                   "type": "file",
+                   "label": "Sub-Watersheds",
+                   "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
+                   "required": true,
+                   "validateAs": {"type": "OGR", 
+                                  "layers": [{"name": {"inheritFrom": "file"}, 
+                                              "type": "polygons",
+				       "projection": {"exists": true}
+                                            }],
+                                  "fieldsExist": ["subws_id"]
+                                  }
+                },
+		{
 		    "id" : "biophysical_table_uri",
 		    "args_id" : "biophysical_table_uri",
 		    "type": "file",
