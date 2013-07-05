@@ -145,8 +145,19 @@
 		    "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
-				  "fieldsExist": ["lucode"]
-				  },
+				  "fieldsExist": ["lucode", "etk", "root_depth"],
+                                    "restrictions": [{"field": "lucode",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
+                                                                  }},
+                                                     {"field": "etk",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                     }},
+                                                     {"field": "root_depth",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"^[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                     }}]},
 		    "helpText": "A table containing model information corresponding to each of the land use classes in the LULC raster input. It must contain the fields 'lucode', then 'load_n' (or p), 'eff_n' (or p), depending on which nutrients are selected."
 		},
 		{
