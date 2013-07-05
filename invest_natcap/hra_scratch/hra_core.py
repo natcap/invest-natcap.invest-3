@@ -450,3 +450,37 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #the list in which all rasters will reside
         crit_lists['Risk']['h_s_e'][pair].append(single_crit_E_uri)
         
+        #H-S-E dictionary, Raster Criteria: should output multiple rasters, each
+        #of which is reburned with the pixel value r, as r/dq*w.
+
+        #.iteritems creates a key, value pair for each one.
+        for crit, crit_dict in h_s_e[pair]['Crit_Rasters'].iteritems():
+
+            crit_ds_uri = crit_dict['DS']
+            crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
+
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
+            denoms['Risk']['h_s_e'][pair] += 1/ float(dq * w)
+
+            crit_E_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
+                                        ']_' + crit + '_' + 'E_Raster.tif')
+
+            def burn_numerator_hs(pixel):
+
+                if pixel == crit_nodata:
+                    return 0.
+
+                else:
+                    burn_rating = float(pixel) / (dq * w)
+                    return burn_rating
+            
+            raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
+                        crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
+                        "union", resample_method_list=None, 
+                        dataset_to_align_index=None, aoi_uri=None)
+
+            crit_lists['Risk']['h_s_e'][pair].append(crit_C_uri)
+    
+    #This might help.
+    return (crit_lists, denoms)
