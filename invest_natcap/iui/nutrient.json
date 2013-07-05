@@ -43,15 +43,59 @@
 		    "helpText": "A GIS raster dataset with an elevation value for each cell. Make sure the DEM is corrected by filling in sinks, and if necessary burning hydrographic features into the elevation model (recommended when you see unusual streams.) See the Working with the DEM section of the InVEST user's guide for more information."
 		},
 		{
-		    "id" : "pixel_yield_uri",
-		    "args_id" : "pixel_yield_uri",
-		    "type": "file",
-		    "label": "Water yield (per pixel)",
-		    "defaultValue": "../WP_Nutrient_Retention/Input/wyield.tif",
-		    "required": true,
-		    "validateAs": {"type": "GDAL"},
-		    "helpText": "This is the pixel level water yield output from the InVEST hydropower model."
-		},
+                    "id" : "precipitation",
+                    "args_id" : "precipitation_uri",
+                    "type": "file",
+                    "label": "Precipitation",
+                    "defaultValue": "../Base_Data/Freshwater/precip",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {
+                    "id" : "potential_evapotranspiration",
+                    "args_id" : "eto_uri",
+                    "type": "file",
+                    "label": "Potential Evapotranspiration",
+                    "defaultValue": "../Base_Data/Freshwater/eto",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {
+                    "id" : "soil_depth",
+                    "args_id" : "soil_depth_uri",
+                    "type": "file",
+                    "label": "Soil Depth",
+                    "defaultValue": "../Base_Data/Freshwater/soil_depth",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {
+                    "id" : "plant_available_water_fraction",
+                    "args_id" : "pawc_uri",
+                    "type": "file",
+                    "label": "Plant Available Water Fraction",
+                    "defaultValue": "../Base_Data/Freshwater/pawc",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {
+                    "id" : "land_use",
+                    "args_id" : "lulc_uri",
+                    "type": "file",
+                    "label": "Land Use",
+                    "defaultValue": "../Base_Data/Freshwater/landuse_90",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
+                },
+                {
+                    "id" : "seasonality_constant",
+                    "args_id" : "seasonality_constant",
+                    "type": "text",
+                    "label": "Seasonality Constant",
+                    "defaultValue": "5",
+                    "required": true,
+                    "validText": "^[0-9]+\\.?[0-9]+$"
+                },
 		{
 		    "id" : "landuse_uri",
 		    "args_id" : "landuse_uri",
