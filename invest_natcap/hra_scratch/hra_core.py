@@ -266,3 +266,122 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                         dataset_to_align_index=None, aoi_uri=None)
 
             crit_lists['Risk']['h_s_c'][pair].append(crit_C_uri)
+
+    #Habitats are a special case, since each raster needs to be burned twice-
+    #once for risk (r/dq*w), and once for recovery potential (r/dq).
+    for h in hab:
+
+        crit_lists['Risk']['h'][h] = []
+        crit_lists['Recovery'][h] = []
+        denoms['Risk']['h'][h] = 0
+        denoms['Recovery'][h] = 0
+
+        #The base dataset for all h_s overlap criteria. Will need to load bases
+        #for each of the h/s crits too.
+        base_ds_uri = hab[h]['DS']
+        base_nodata = raster_utils.get_nodata_from_uri(base_ds_uri)
+        base_pixel_size = raster_utils.get_cell_size_from_uri(base_ds_uri)
+
+        rec_crit_rate_numerator = 0
+        risk_crit_rate_numerator = 0
+
+        for crit_dict in hab[h]['Crit_Ratings'].values():
+                    
+            r = crit_dict['Rating']
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
+
+            #Explicitly want a float output so as not to lose precision.
+            risk_crit_rate_numerator += r / float(dq*w)
+            rec_crit_rate_numerator += r/ float(dq)
+            denoms['Risk']['h'][h] += 1 / float(dq*w)
+            denoms['Recovery'][h] += 1 / float(dq)
+
+        #First, burn the crit raster for risk
+        single_crit_C_uri = os.path.join(pre_raster_dir, h + 
+                                                        '_Indiv_C_Raster.tif')
+        def burn_numerator_risk_single(pixel):
+            
+            if pixel == base_nodata:
+                return 0.
+
+            else:
+                return risk_crit_rate_numerator
+
+        raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_risk_single,
+                            single_crit_C_uri, gdal.GDT_Float32, 0., 
+                            base_pixel_size, "union", 
+                            resample_method_list=None, 
+                            dataset_to_align_index=None, aoi_uri=None)
+
+        crit_lists['Risk']['h'][h].append(single_crit_C_uri)
+
+        #Now, burn the recovery potential raster, and add that.
+        single_crit_rec_uri = os.path.join(pre_raster_dir, h + 
+                                                  '_Indiv_Recov_Raster.tif')
+
+        def burn_numerator_rec_single(pixel):
+            
+            if pixel == base_nodata:
+                return 0.
+
+            else:
+                return rec_crit_rate_numerator
+
+        raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_rec_single,
+                            single_crit_rec_uri, gdal.GDT_Float32, 0., 
+                            base_pixel_size, "union", 
+                            resample_method_list=None, 
+                            dataset_to_align_index=None, aoi_uri=None)
+
+        crit_lists['Recovery'][h].append(single_crit_rec_uri)
+        
+        #Raster Criteria: should output multiple rasters, each
+        #of which is reburned with the old pixel value r as r/dq*w, or r/dq.
+        for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
+            dq = crit_dict['DQ']
+            w = crit_dict['Weight']
+
+            crit_ds_uri = crit_dict['DS']
+            crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
+
+            denoms['Risk']['h'][h] += 1/ float(dq * w)
+            denoms['Recovery'][h] += 1/ float(dq)
+
+            #First the risk rasters
+            crit_C_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
+                                                    '_' + 'C_Raster.tif')
+            def burn_numerator_risk(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0.
+
+                else:
+                    burn_rating = float(pixel) / (w*dq)
+                    return burn_rating
+
+            raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_risk,
+                                crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size, 
+                                "union", resample_method_list=None, 
+                                dataset_to_align_index=None, aoi_uri=None)
+            
+            crit_lists['Risk']['h'][h].append(crit_C_uri)
+            
+            #Then the recovery rasters
+            crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
+                                                    '_' + 'Recov_Raster.tif')
+            def burn_numerator_rec(pixel):
+            
+                if pixel == crit_nodata:
+                    return 0.
+
+                else:
+                    burn_rating = float(pixel) / dq
+                    return burn_rating
+
+            raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_rec,
+                                crit_recov_uri, gdal.GDT_Float32, 0., base_pixel_size, 
+                                "union", resample_method_list=None, 
+                                dataset_to_align_index=None, aoi_uri=None)
+            
+            crit_lists['Recovery'][h].append(crit_recov_uri)
