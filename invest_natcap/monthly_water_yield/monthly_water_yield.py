@@ -301,23 +301,22 @@ def execute(args):
 
         # Move on to next month
 
-def build_csv_dict(new_dict, keys, out_dict, field):
+def build_csv_dict(new_dict, columns, out_dict, field):
     """Combines a single level dictionary to an existing or non existing single
         level dicitonary
         
-        new_dict - 
-        keys - 
-        out_dict - 
-        field - 
+        new_dict - a dictionary with keys pointing to values 
+        columns - a list of strings 
+        out_dict - the dictionary to add the new keys and values to
+        field - a string representing which key in 'key_list' we want to add
 
     """
-    for key, value in value_dict.iteritems():
+    for key, value in new_dict.iteritems():
         key_str = str(key)
-        for field in columns[1:]:
-            if re.search(key_str, field) != None and re.match(adv, field) != None:
-                out_dict[field] = value
+        for col_name in columns[1:]:
+            if re.search(key_str, col_name) != None and re.match(field, col_name) != None:
+                out_dict[col_name] = value
     return out_dict
-
 
 def add_row_csv_table(csv_uri, column_header, single_dict):
     """Write a new row to a CSV file if it already exists or creates a new one
