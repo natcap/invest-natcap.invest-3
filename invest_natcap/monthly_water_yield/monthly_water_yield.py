@@ -155,11 +155,6 @@ def execute(args):
     # sub-watershed ID's. Store these URIs in a dictionary mapping to their
     # respective shed / sub-shed ID's
     csv_shed_dict = {}
-#   for key in shed_dict.iterkeys():
-#       csv_uri = os.path.join(intermediate_dir, 'output_shed_'+str(key)+'.csv')
-#       if os.path.isfile(csv_uri):
-#           os.remove(csv_uri)
-#       csv_shed_dict[key] = csv_uri
     field_list = ['Streamflow', 'Soil Storage']    
     shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
@@ -168,8 +163,8 @@ def execute(args):
     
     LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
 
-    out_dict = {}
-
+    csv_uri = os.path.join(intermediate_dir, 'watershed_table.csv')
+    clean_uri([csv_uri])
 
     # Define the column header for the output CSV files
     column_header = ['Date', 'Streamflow', 'Soil Storage']
@@ -201,6 +196,8 @@ def execute(args):
     streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
 
     for cur_month in list_of_months:
+        out_dict = {}
+        out_dict['Date'] = cur_month
         # Get the dictionary for the current time step month
         cur_step_dict = precip_data_dict[cur_month]
         # Since the time step signature has a 'slash' we need to replace it with
@@ -300,39 +297,25 @@ def execute(args):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
-        write_new_table(csv_uri, shed_field_list, out_dict)
-
-
-        # For each shed / sub-shed add the corresponding output values to their
-        # respective CSV file
-#       for key, value in max_streamflow.iteritems():
-#           # Dictionary to aggregate the output information
-#           line_dict = {}
-#           line_dict[key] = {}
-#           # Get corresponding CSV URI
-#           csv_uri = csv_shed_dict[key]
-#           # Get Output values
-#           streamflow = value
-#           storage = max_storage[key]
-#           # Build the dictionary representing the next monthly line to write
-#           line_dict[key]['Date'] = cur_month
-#           line_dict[key]['Soil Storage'] = storage
-#           line_dict[key]['Streamflow'] = streamflow
-#           # Write new line to file
-#           add_monthly_line(csv_uri, column_header, line_dict)
+        add_monthly_line(csv_uri, shed_field_list, out_dict)
 
         # Move on to next month
 
-def build_csv_dict(value_dict, columns, out_dict, adv):
+def build_csv_dict(new_dict, keys, out_dict, field):
+    """Combines a single level dictionary to an existing or non existing single
+        level dicitonary
+        
+        new_dict - 
+        keys - 
+        out_dict - 
+        field - 
+
+    """
     for key, value in value_dict.iteritems():
         key_str = str(key)
         for field in columns[1:]:
             if re.search(key_str, field) != None and re.match(adv, field) != None:
-                try:
-                    out_dict[key][field] = value
-                except KeyError:
-                    out_dict[key] = {}
-                    out_dict[key][field] = value
+                out_dict[field] = value
     return out_dict
 
 
@@ -353,21 +336,25 @@ def add_monthly_line(csv_uri, column_header, single_dict):
 
         returns - Nothing"""
     
+    csv_writer = None
     # If the file does note exist then write a new file, else append a new row
     # to the file
     if not os.path.isfile(csv_uri):
-        write_new_table(csv_uri, column_header, single_dict)
+        csv_file = open(csv_uri, 'wb')
+
+        csv_writer = csv.DictWriter(csv_file, column_header)
+        # Write the columns as the first row in the table
+        csv_writer.writerow(dict((fn,fn) for fn in column_header))
+
     else:
         # Open the CSV file in append mode 'a'. This will allow us to just tack
         # on a new row
         csv_file = open(csv_uri, 'a')
         csv_writer = csv.DictWriter(csv_file, column_header)
-        # Even though there is only one key it seems efficient to let the loop
-        # do the work in getting that key
-        for key, value in single_dict.iteritems():
-            csv_writer.writerow(value)
-        
-        csv_file.close()
+    
+    csv_writer.writerow(single_dict)
+
+    csv_file.close()
 
 def write_new_table(filename, fields, data):
     """Create a new csv table from a dictionary
