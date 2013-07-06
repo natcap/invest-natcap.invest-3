@@ -297,7 +297,7 @@ def execute(args):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
-        add_monthly_line(csv_uri, shed_field_list, out_dict)
+        add_row_csv_table(csv_uri, shed_field_list, out_dict)
 
         # Move on to next month
 
@@ -319,20 +319,18 @@ def build_csv_dict(new_dict, keys, out_dict, field):
     return out_dict
 
 
-def add_monthly_line(csv_uri, column_header, single_dict):
+def add_row_csv_table(csv_uri, column_header, single_dict):
     """Write a new row to a CSV file if it already exists or creates a new one
         with that row.
 
-        csv_uri - a URI to a CSV file location to write to
+        csv_uri - a URI to a CSV file location to write to disk
 
         column_header - a Python list of strings representing the column headers
             for the CSV file
 
-        data_dict - a Dictionary with two levels, where the top level has one
-            key that points to a dictionary where the fields and values live.
-            The fields in the inner dictionary should match with the fields
-            given in 'column_header'
-            example : {0: {'Date':'01/1988', 'Sum':56, 'Mean':32}}
+        single_dict - a Dictionary with keys matching the 'column_header' list,
+            that point to wanted values
+            example : {'Date':'01/1988', 'Sum':56, 'Mean':32}
 
         returns - Nothing"""
     
