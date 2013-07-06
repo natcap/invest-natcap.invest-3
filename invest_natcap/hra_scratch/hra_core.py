@@ -94,7 +94,7 @@ def execute(args):
     crit_lists, denoms = pre_calc_denoms_and_criteria(inter_dir, args['h_s_c'],
                                     args['habitats'], args['h_s_e'])
 
-    #Need to have h-s in there so that we can use the DS for each H-S pair to
+    #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
     risk_dict = make_risk_rasters(args['h_s_c'], inter_dir, crit_lists, denoms, 
                                     args['risk_eq'])
@@ -121,7 +121,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
                         'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
                                 ...
                                },
-                        'h_s_e':   { stressA: ["indiv num raster URI", ...]
+                        'h_s_e': { (hab1, stressA): ["indiv num raster URI", ...]
                                }
                      }
              'Recovery': { hab1: ["indiv num raster URI", ...],
@@ -138,7 +138,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
                         'h':   { hab1: 3.2,
                                 ...
                                },
-                        'h_s_e':   { stressA: 1.2
+                        'h_s_e': { (hab1, stressA): 1.2
                                }
                      }
              'Recovery': { hab1: 1.6,
@@ -160,6 +160,65 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             ('HabA', 'Stress2'): "A-2 Risk Raster URI",
             ...
             }
+    '''
+    
+    #Create dictionary that we can pass back to execute to be passed along to
+    #make_habitat_rasters
+    risk_rasters = {}
+
+    #We will use the h-s pairs as the way of iterrating through everything else.
+    for pair in crit_lists['Risk']['h_s_c']:
+
+        h, s = pair
+
+        #Want to create an E and a C raster from the applicable 
+        #pre-calc'd rasters. We should be able to use vec_ds to straight add 
+        #the pixels and divide by the saved denoms total. These are the URIs to
+        #which these parts of the risk equation will be burned. 
+        c_out_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
+        e_out_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        #Each of the E/C calculations should take in all of the relevant 
+        #subdictionary data, and return a raster to be used in risk calculation. 
+        calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
+                        denoms['h_s_e'][pair])
+
+        calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
+                    denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
+                    denoms['Risk']['h'][h])
+
+        
+def calc_E_raster(out_uri, h_s_list, h_s_denom):
+    '''Should return a raster burned with an 'E' raster that is a combination
+    of all the rasters passed in within the list, divided by the denominator.
+
+    Input:
+        out_uri- The location to which the E raster should be burned.
+        h_s_list- A list of rasters burned with the equation r/dq*w for every
+            criteria applicable for that h, s pair.
+        h_s_denom- A double representing the sum total of all applicable criteria
+            using the equation 1/dq*w.
+            criteria applicable for that s.
+
+    Returns nothing.
+    '''
+
+def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
+    '''Should return a raster burned with a 'C' raster that is a combination
+    of all the rasters passed in within the list, divided by the denominator.
+
+    Input:
+        out_uri- The location to which the calculated C raster should be burned.
+        h_s_list- A list of rasters burned with the equation r/dq*w for every
+            criteria applicable for that h, s pair.
+        h_s_denom- A double representing the sum total of all applicable criteria
+            using the equation 1/dq*w.
+        s_list- A list of rasters burned with the equation r/dq*w for every
+            criteria applicable for that s.
+        s_denom- A double representing the sum total of all applicable criteria
+            using the equation 1/dq*w.
+
+    Returns nothing.
     '''
 def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
     '''Want to return two dictionaries in the format of the following:
