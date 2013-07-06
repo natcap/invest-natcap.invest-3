@@ -235,6 +235,24 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
 
     Returns nothing.
     '''
+    tot_crit_list = h_s_list + h_list
+    tot_denom = h_s_denom + h_denom
+    grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
+
+    def add_c_pix(*pixels):
+        
+        value = 0.
+        
+        for p in pixels:
+            value += p
+    
+        return value / tot_denom
+
+    raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
 def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
     '''Want to return two dictionaries in the format of the following:
     (Note: the individual num raster comes from the crit_ratings
