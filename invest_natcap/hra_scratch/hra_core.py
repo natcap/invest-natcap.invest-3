@@ -202,6 +202,21 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
 
     Returns nothing.
     '''
+    grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
+
+    def add_e_pix(*pixels):
+        
+        value = 0.
+        
+        for p in pixels:
+            value += p
+    
+        return value / h_s_denom
+
+    raster_utils.vectorize_datasets(h_s_list, add_e_pix, out_uri,
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     '''Should return a raster burned with a 'C' raster that is a combination
