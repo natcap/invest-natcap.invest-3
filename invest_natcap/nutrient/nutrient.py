@@ -11,6 +11,9 @@ import numpy
 from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
 
+import invest_natcap.hydropower.hydropower_water_yield
+
+
 LOGGER = logging.getLogger('nutrient')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -21,6 +24,27 @@ def execute(args):
         through to the InVEST water yield function.  This is a historical
         separation that used to make sense when we manually required users
         to pass the water yield pixel raster to the nutrient output."""
+
+    
+    #Set up the water yield arguments that might be a little different than
+    #nutrient retention
+    water_yield_args = args.copy()
+    water_yield_args['workspace_dir'] = os.path.join(
+        args['workspace_dir'], 'water_yield_workspace')
+    water_yield_args['results_suffix'] = args['results_suffix']
+    invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
+
+    #Get the pixel output of hydropower to plug into nutrient retention.
+    #Tricky because the water yield output might have a different suffix.
+    try:
+        file_suffix = args['results_suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+    args['pixel_yield_uri'] = os.path.join(
+        water_yield_args['workspace_dir'], 'output', 'pixel',
+        'wyield%s.tif' % file_suffix)
     _execute_nutrient(args)
 
 
@@ -63,7 +87,7 @@ def _execute_nutrient(args):
             'calc_n' - True if nitrogen is meant to be modeled, if True then
                 biophyscial table and threshold table and valuation table must
                 have n fields in them.
-            'suffix' - (optional) a text field to append to all output files.
+            'results_suffix' - (optional) a text field to append to all output files.
             'water_purification_threshold_table_uri' - a string uri to a
                 csv table containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
@@ -125,7 +149,7 @@ def _execute_nutrient(args):
     intermediate_dir = os.path.join(workspace, 'intermediate')
 
     try:
-        file_suffix = args['suffix']
+        file_suffix = args['results_suffix']
         if not file_suffix.startswith('_'):
             file_suffix = '_' + file_suffix
     except KeyError:
@@ -218,7 +242,7 @@ def _execute_nutrient(args):
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection")
         eff_uri[nutrient] = os.path.join(
-            intermediate_dir, 'eff_%s.tif' % (nutrient))
+            intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
             [landuse_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,

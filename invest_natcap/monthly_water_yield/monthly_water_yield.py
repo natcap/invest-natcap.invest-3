@@ -172,7 +172,7 @@ def execute(args):
 
 
     # Define the column header for the output CSV files
-    #column_header = ['Date', 'Streamflow', 'Soil Storage']
+    column_header = ['Date', 'Streamflow', 'Soil Storage']
     
     # A list of the fields from the time step table we are interested in and
     # need.
@@ -287,18 +287,17 @@ def execute(args):
         # Use Aggregate Raster function to get the max values under the
         # watersheds. For now this is what our outputs will be
         max_streamflow = raster_utils.aggregate_raster_values_uri(
-                streamflow_uri, watershed_uri, 'ws_id').pixel_mean
+                streamflow_uri, watershed_uri, 'ws_id').pixel_max
         
         max_storage = raster_utils.aggregate_raster_values_uri(
                 soil_storage_uri, watershed_uri, 'ws_id').pixel_max
 
-        LOGGER.debug('Max_streamflow dict', max_streamflow)
-        LOGGER.debug('max_storage dict', max_storage)
+        LOGGER.debug('Max_streamflow dict %s', max_streamflow)
+        LOGGER.debug('max_storage dict %s', max_storage)
 
         for result_dict, field in zip(
                 [max_streamflow, max_storage], field_list):
-            out_dict = build_csv_dict(
-                    result_dict, shed_field_list, out_dict, field)
+            build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
         write_new_table(csv_uri, shed_field_list, out_dict)
@@ -325,7 +324,7 @@ def execute(args):
         # Move on to next month
 
 def build_csv_dict(value_dict, columns, out_dict, adv):
-    for key, value in value_dict.iteritems:
+    for key, value in value_dict.iteritems():
         key_str = str(key)
         for field in columns[1:]:
             if re.search(key_str, field) != None and re.match(adv, field) != None:

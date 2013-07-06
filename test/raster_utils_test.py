@@ -54,6 +54,22 @@ class TestRasterUtils(unittest.TestCase):
             raster_utils.reclassify_dataset, dataset, value_map, output_uri, 
             gdal.GDT_Float32, -1.0, exception_flag = 'values_required')
 
+    def test_aggregate_raster_values_uri(self):
+        raster_uri = 'data/base_data/terrestrial/lulc_samp_cur'
+        shapefile_uri = os.path.join(
+            'data', 'hydropower_data', 'test_input', 'watersheds.shp')
+        shapefile_field = 'ws_id'
+        
+        result_dict = raster_utils.aggregate_raster_values_uri(
+            raster_uri, shapefile_uri, shapefile_field, ignore_nodata=True, 
+            threshold_amount_lookup=None)
+
+        #I did these by hand.  Better than nothing:
+        self.assertEqual(result_dict.total[0], 2724523.0)
+        self.assertEqual(result_dict.pixel_max[2], 95.0)
+        self.assertEqual(result_dict.n_pixels[1], 93016.0)
+
+
     def test_gaussian_filter(self):
         base_dir = 'data/test_out/gaussian_filter'
 
