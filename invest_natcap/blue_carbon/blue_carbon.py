@@ -17,7 +17,7 @@ def execute(args):
     workspace_dir = args["workspace_dir"]
     lulc1_uri = args["lulc1_uri"]
     lulc2_uri = args["lulc2_uri"]
-    years = args["year2"] - args["year1"]
+    years = int(args["year2"]) - int(args["year1"])
     carbon_uri = args["carbon_pools_uri"]
     transition_matrix_uri = args["transition_matrix_uri"]
 
@@ -28,6 +28,13 @@ def execute(args):
             carbon_value *= (15.9994*2+12.0107)/12.0107
         discount_rate = args["discount_rate"]
         rate_change = args["rate_change"]
+        private_valuation_uri = os.path.join(workspace_dir, "private_valuation.tif")
+
+    social_valuation = args["social_valuation"]
+    if social_valuation:
+        carbon_schedule = args["carbon_schedule"]
+        carbon_schedule_field = args["carbon_schedule_field"]
+        social_valuation_uri = os.path.join(workspace_dir, "social_valuation.tif")
             
 
     #intermediate
@@ -49,7 +56,6 @@ def execute(args):
     carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
     carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")   
     sequestration_uri = os.path.join(workspace_dir, "sequestration.tif")
-    private_valuation_uri = os.path.join(workspace_dir, "private_valuation.tif")
 
     #accessors
     nodata = raster_utils.get_nodata_from_uri(lulc1_uri)
@@ -262,11 +268,9 @@ def execute(args):
                                     cell_size,
                                     "union")
 
-
-
     ###valuation
     if private_valuation:
-        LOGGER.debug("Constructing private valuation operation")
+        LOGGER.debug("Constructing private valuation operation.")
         def private_valuation_op(sequest):
             if sequest == nodata:
                 return nodata
@@ -274,7 +278,7 @@ def execute(args):
                 valuation = 0
                 for t in range(years):
                     valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0))
-                    
+ 
             return valuation
 
         LOGGER.info("Creating private valuation raster.")
@@ -285,3 +289,10 @@ def execute(args):
                                         nodata,
                                         cell_size,
                                         "union")
+
+    if social_valuation:
+        LOGGER.info("Parsing social cost of carbon table.")
+
+        LOGGER.debug("Constructing social cost of carbon operation from field %s.", carbon_schedule_field)
+
+        LOGGER.info("Creating social valuation raster.")

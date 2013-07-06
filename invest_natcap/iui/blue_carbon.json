@@ -1,9 +1,9 @@
 {
     "id" : "window",
     "label": "Blue Carbon Biophysical",
-    "targetScript" : "invest_natcap.blue_carbon.blue_carbon_biophysical",
-    "modelName" : "blue_carbon_biophysical",
-    "localDocURI": "../documentation/blue_carbon_biophysical.html",
+    "targetScript" : "invest_natcap.blue_carbon.blue_carbon",
+    "modelName" : "blue_carbon",
+    "localDocURI": "../documentation/blue_carbon.html",
     "height": 600,
     "width" : 700,
     "elements": [
@@ -131,6 +131,36 @@
                                                                 "helpText": "The integer percent increase of the price of carbon per year."
                                                             }
                                                        ]
+                                   }
+                                ]
+                },
+                {
+                   "id" : "social_valuation",
+                   "type" : "container",
+                   "collapsible" : true,
+                   "args_id" : "social_valuation",
+                   "label" : "Social market valuation.",
+                   "elements" : [
+                                   {
+                                       "id" : "social_valuation_list",
+                                       "type" : "list",
+                                       "elements" : [
+                                                        {
+                                                            "id": "carbon_schedule",
+                                                            "args_id": "carbon_schedule",
+                                                            "type": "file",
+                                                            "label": "SCC Table",
+                                                            "required": true
+                                                        },
+                                                        {
+                                                            "id": "carbon_schedule_field",
+                                                            "args_id": "carbon_schedule_field",
+                                                            "type": "OGRFieldDropdown",
+                                                            "label": "SCC field",
+                                                            "enabledBy": "carbon_schedule",
+                                                            "returns": "strings"
+                                                        }
+                                                    ]
                                    }
                                 ]
                 }
