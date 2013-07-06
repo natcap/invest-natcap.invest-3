@@ -356,38 +356,6 @@ def add_monthly_line(csv_uri, column_header, single_dict):
 
     csv_file.close()
 
-def write_new_table(filename, fields, data):
-    """Create a new csv table from a dictionary
-
-        filename - a URI path for the new table to be written to disk
-        
-        fields - a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
-            ['id', 'precip', 'total']
-        
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
-
-        returns - nothing
-    """
-    csv_file = open(filename, 'wb')
-
-    # Sort the keys so that the rows are written in order
-    row_keys = data.keys()
-    row_keys.sort() 
-
-    csv_writer = csv.DictWriter(csv_file, fields)
-    # Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn,fn) for fn in fields))
-
-    for index in row_keys:
-        csv_writer.writerow(data[index])
-
-    csv_file.close()
-
 def clean_uri(in_uri_list):
     """Removes a file by its URI if it exists
         
