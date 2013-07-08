@@ -12,6 +12,15 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('blue_carbon')
 
+def transition_soil_carbon(area_final, carbon_final, depth_final,
+                           transition_rate, year, area_initial,
+                           carbon_initial, depth_initial):
+
+    return (area_final * carbon_final * depth_final) - \
+           (1/((1 + transition_rate) ** year)) * \
+           ((area_final * carbon_final * depth_final) - \
+            (area_initial * carbon_initial * depth_initial))
+
 def execute(args):
     #inputs
     workspace_dir = args["workspace_dir"]
@@ -202,7 +211,14 @@ def execute(args):
             return nodata
         else:
             try:
-                return transition_dict[int(lulc1)][int(lulc2)]
+                return transition_soil_carbon(1,
+                                              soil_dict[lulc2],
+                                              depth_dict[lulc2],
+                                              transition_dict[int(lulc1)][int(lulc2)],
+                                              years,
+                                              1,
+                                              soil_dict[lulc1],
+                                              depth_dict[lulc1])
             except KeyError:
                 return 1
 
