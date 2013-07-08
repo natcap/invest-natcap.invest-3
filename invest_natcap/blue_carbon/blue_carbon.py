@@ -16,8 +16,10 @@ def execute(args):
     #inputs
     workspace_dir = args["workspace_dir"]
     lulc1_uri = args["lulc1_uri"]
+    year1 = int(args["year1"])
     lulc2_uri = args["lulc2_uri"]
-    years = int(args["year2"]) - int(args["year1"])
+    year2 = int(args["year2"])
+    years = year2 - year1
     carbon_uri = args["carbon_pools_uri"]
     transition_matrix_uri = args["transition_matrix_uri"]
 
@@ -35,7 +37,21 @@ def execute(args):
         carbon_schedule = args["carbon_schedule"]
         carbon_schedule_field = args["carbon_schedule_field"]
         social_valuation_uri = os.path.join(workspace_dir, "social_valuation.tif")
-            
+
+        LOGGER.info("Parsing social cost of carbon table for field %s.", carbon_schedule_field)
+        carbon_schedule_file = open(carbon_schedule)
+        carbon_schedule_index = carbon_schedule_file.readline().split(",").index(carbon_schedule_field)
+        carbon_schedule_dict = {}
+        for line in carbon_schedule_file:
+            row = line.split(",")
+            carbon_schedule_dict[int(row[0])] = float(row[carbon_schedule_index])
+
+        #check schedule for all required years
+        for year in range(year1, year2):
+            if year not in carbon_schedule_dict:
+                msg = "Social cost of carbon missing value for year %i." % year
+                LOGGER.error(msg)
+                raise ValueError, msg
 
     #intermediate
     depth_uri = os.path.join(workspace_dir, "depth.tif")
@@ -291,8 +307,22 @@ def execute(args):
                                         "union")
 
     if social_valuation:
-        LOGGER.info("Parsing social cost of carbon table.")
+        LOGGER.debug("Constructing social cost of carbon operation.")
+        def social_valuation_op(sequest):
+            if sequest == nodata:
+                return nodata
+            else:
+                valuation = 0
+                for year in range(year1, year2):
+                    valuation += sequest * carbon_schedule_dict[year]
 
-        LOGGER.debug("Constructing social cost of carbon operation from field %s.", carbon_schedule_field)
+                return valuation
 
         LOGGER.info("Creating social valuation raster.")
+        raster_utils.vectorize_datasets([sequestration_uri],
+                                        social_valuation_op,
+                                        social_valuation_uri,
+                                        gdal.GDT_Float32,
+                                        nodata,
+                                        cell_size,
+                                        "union")
