@@ -195,7 +195,7 @@
                           "id": "confidence_threshold",
                           "type": "text",
                           "width": 50,
-                          "validText": "[0-9][0-9]",
+                          "validText": "[0-9][0-9]([.][0-9]*)?",
                           "defaultValue": "90",
                           "dataType": "int",
                           "args_id": "confidence_threshold",
