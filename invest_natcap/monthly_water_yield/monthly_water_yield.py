@@ -49,6 +49,12 @@ def execute(args):
         args[lulc_data_uri] - a URI to a CSV file for the land cover code lookup
             table
 
+        args[watersheds_uri] - a URI to an ogr shapefile of polygon geometry
+            type
+        
+        args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
+            type
+
         returns - nothing
     """
     LOGGER.debug('Start Executing Model')
@@ -62,11 +68,19 @@ def execute(args):
     pet_data_uri = args['pet_data_uri']
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
+    soil_text_uri = args['soil_texture_uri']
     pawc_uri = args['pawc_uri']
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
-   
+    
+    try:
+        sub_shed_uri = args['sub_watersheds_uri']
+        sub_shed_present = True
+    except:
+        LOGGER.info('Sub Watersheds Not Provided')
+        sub_shed_present = False
+
     # Set out_nodata value
     #float_nodata = float(np.finfo(np.float32).min) + 1.0
     float_nodata = -35432.0
@@ -83,9 +97,6 @@ def execute(args):
                 lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
-    # I have yet to determine how the sandy coefficient will be provided as an
-    # input, so I am just hard coding in a value for now
-    sandy_sa = 0.25
     beta = 2.0
 
     # Get DEM WKT
@@ -118,7 +129,7 @@ def execute(args):
                    'alpha_three':{'a_three':1.44, 'b_three':0.68}}
 
     calculate_alphas(
-        slope_uri, sandy_sa, smax_uri, alpha_table, float_nodata,
+        slope_uri, soil_text_uri, smax_uri, alpha_table, float_nodata,
         alpha_uri_list)
 
     absorption_uri = os.path.join(intermediate_dir, 'absorption.tif')
@@ -134,6 +145,29 @@ def execute(args):
     LOGGER.debug('Constructed PET DATA : %s', pet_data_dict)
     pet_raster_dict = build_monthly_pets(pet_data_dict, dem_uri, float_nodata)
     LOGGER.debug(pet_raster_dict)
+
+    # Get a dictionary from the water / sub-watershed by the id so that we can
+    # have a handle on the id values for each shed / sub-shed
+    shed_dict = raster_utils.extract_datasource_table_by_key(
+            watershed_uri, 'ws_id')
+
+    # Create individual CSV URIs for each shed / sub-shed based on the water /
+    # sub-watershed ID's. Store these URIs in a dictionary mapping to their
+    # respective shed / sub-shed ID's
+    csv_shed_dict = {}
+    field_list = ['Streamflow', 'Soil Storage']    
+    shed_field_list = ['Date']
+    for key in shed_dict.iterkeys():
+        for field in field_list:
+            shed_field_list.append(field + ' ' + str(key))
+    
+    LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
+
+    csv_uri = os.path.join(intermediate_dir, 'watershed_table.csv')
+    clean_uri([csv_uri])
+
+    # Define the column header for the output CSV files
+    column_header = ['Date', 'Streamflow', 'Soil Storage']
     
     # A list of the fields from the time step table we are interested in and
     # need.
@@ -162,6 +196,8 @@ def execute(args):
     streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
 
     for cur_month in list_of_months:
+        out_dict = {}
+        out_dict['Date'] = cur_month
         # Get the dictionary for the current time step month
         cur_step_dict = precip_data_dict[cur_month]
         # Since the time step signature has a 'slash' we need to replace it with
@@ -245,38 +281,75 @@ def execute(args):
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
                 soil_storage_uri, float_nodata)
 
-        # Add values to output table
+        # Use Aggregate Raster function to get the max values under the
+        # watersheds. For now this is what our outputs will be
+        max_streamflow = raster_utils.aggregate_raster_values_uri(
+                streamflow_uri, watershed_uri, 'ws_id').pixel_max
+        
+        max_storage = raster_utils.aggregate_raster_values_uri(
+                soil_storage_uri, watershed_uri, 'ws_id').pixel_max
+
+        LOGGER.debug('Max_streamflow dict %s', max_streamflow)
+        LOGGER.debug('max_storage dict %s', max_storage)
+
+        for result_dict, field in zip(
+                [max_streamflow, max_storage], field_list):
+            build_csv_dict(result_dict, shed_field_list, out_dict, field)
+
+        LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
+        add_row_csv_table(csv_uri, shed_field_list, out_dict)
 
         # Move on to next month
 
-def write_new_table(filename, fields, data):
-    """Create a new csv table from a dictionary
-
-        filename - a URI path for the new table to be written to disk
+def build_csv_dict(new_dict, columns, out_dict, field):
+    """Combines a single level dictionary to an existing or non existing single
+        level dicitonary
         
-        fields - a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
-            ['id', 'precip', 'total']
-        
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
+        new_dict - a dictionary with keys pointing to values 
+        columns - a list of strings 
+        out_dict - the dictionary to add the new keys and values to
+        field - a string representing which key in 'key_list' we want to add
 
-        returns - nothing
     """
-    csv_file = open(filename, 'wb')
+    for key, value in new_dict.iteritems():
+        key_str = str(key)
+        for col_name in columns[1:]:
+            if re.search(key_str, col_name) != None and re.match(field, col_name) != None:
+                out_dict[col_name] = value
+    return out_dict
 
-    # Sort the keys so that the rows are written in order
-    row_keys = data.keys().sort()
+def add_row_csv_table(csv_uri, column_header, single_dict):
+    """Write a new row to a CSV file if it already exists or creates a new one
+        with that row.
+
+        csv_uri - a URI to a CSV file location to write to disk
+
+        column_header - a Python list of strings representing the column headers
+            for the CSV file
+
+        single_dict - a Dictionary with keys matching the 'column_header' list,
+            that point to wanted values
+            example : {'Date':'01/1988', 'Sum':56, 'Mean':32}
+
+        returns - Nothing"""
     
-    csv_writer = csv.DictWriter(csv_file, fields)
-    # Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn,fn) for fn in fields))
+    csv_writer = None
+    # If the file does note exist then write a new file, else append a new row
+    # to the file
+    if not os.path.isfile(csv_uri):
+        csv_file = open(csv_uri, 'wb')
 
-    for index in keys:
-        csv_writer.writerow(data[index])
+        csv_writer = csv.DictWriter(csv_file, column_header)
+        # Write the columns as the first row in the table
+        csv_writer.writerow(dict((fn,fn) for fn in column_header))
+
+    else:
+        # Open the CSV file in append mode 'a'. This will allow us to just tack
+        # on a new row
+        csv_file = open(csv_uri, 'a')
+        csv_writer = csv.DictWriter(csv_file, column_header)
+    
+    csv_writer.writerow(single_dict)
 
     csv_file.close()
 
@@ -798,14 +871,13 @@ def calculate_direct_flow(
             gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_alphas(
-        slope_uri, sandy_sa, smax_uri, alpha_table, out_nodata, output_uri_list):
+        slope_uri, soil_text_uri, smax_uri, alpha_table, out_nodata, output_uri_list):
     """Calculates and creates gdal datasets for three alpha values used in
         various equations throughout the monthly water yield model
 
         slope_uri - a uri to a gdal dataset for the slope
         
-        sandy_sa - could be a uri to a dataset, but right now just passing in a
-            constant value. Need to learn more from Yonas
+        soil_text_uri - a uri to a gdal dataset for the soil texture 
         
         smax_uri - a uri to a gdal dataset for the maximum soil water content
         
@@ -828,22 +900,25 @@ def calculate_alphas(
 
     slope_nodata = raster_utils.get_nodata_from_uri(slope_uri)
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
+    soil_text_nodata = raster_utils.get_nodata_from_uri(soil_text_uri)
+    LOGGER.debug('Soil Text Nodata: %s', soil_text_nodata)
     slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
     smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
 
-    def alpha_one_op(slope_pix):
+    def alpha_one_op(slope_pix, soil_text_pix):
         """Vectorization operation to calculate the alpha one variable used in
             equations throughout the monthly water yield model
 
             slope_pix - the slope value for a pixel
+            soil_text_pix - the soil texture value for a pixel
 
             returns - out_nodata if slope_pix is a nodata value, else returns
                 the alpha one value"""
-        if slope_pix == slope_nodata:
+        if slope_pix == slope_nodata or soil_text_pix == soil_text_nodata:
             return out_nodata
         else:
             return (alpha_one['a_one'] + (alpha_one['b_one'] * slope_pix) -
-                        (alpha_one['c_one'] * sandy_sa))
+                        (alpha_one['c_one'] * soil_text_pix))
 
     def alpha_two_op(smax_pix):
         """Vectorization operation to calculate the alpha two variable used in
@@ -876,8 +951,8 @@ def calculate_alphas(
                     math.pow(smax_pix, -1 * alpha_three['b_three']))
 
     raster_utils.vectorize_datasets(
-            [slope_uri], alpha_one_op, output_uri_list[0], gdal.GDT_Float32,
-            out_nodata, slope_cell_size, 'intersection')
+            [slope_uri, soil_text_uri], alpha_one_op, output_uri_list[0],
+            gdal.GDT_Float32, out_nodata, slope_cell_size, 'intersection')
 
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_two_op, output_uri_list[1], gdal.GDT_Float32,

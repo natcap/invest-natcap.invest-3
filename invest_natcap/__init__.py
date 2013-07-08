@@ -43,8 +43,12 @@ def log_model(model_name, model_version=None):
             'os': platform.system(),
             'release': platform.release(),
             'full_platform_string': platform.platform(),
-            'fs_encoding': sys.getfilesystemencoding()
-        }
+            'fs_encoding': sys.getfilesystemencoding(),
+            'python': {
+                'version': platform.python_version(),
+                'bits': platform.architecture()[0],
+            },
+        },
     }
 
     if model_version == None:

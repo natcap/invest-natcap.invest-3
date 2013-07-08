@@ -5,11 +5,9 @@ import os
 import shutil
 import logging
 import fnmatch
-import numpy as np
 import math
 
-from osgeo import gdal, ogr, osr
-from scipy import ndimage
+from osgeo import gdal, ogr
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra_preprocessor
 from invest_natcap import raster_utils
@@ -17,6 +15,27 @@ from invest_natcap import raster_utils
 LOGGER = logging.getLogger('HRA')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+class ImproperCriteriaAttributeName(Exception):
+    '''An excepion to pass in hra non core if the criteria provided by the user
+    for use in spatially explicit rating do not contain the proper attribute 
+    name. The attribute should be named 'RATING', and must exist for every shape 
+    in every layer provided.'''
+    pass
+
+class ImproperAOIAttributeName(Exception):
+    '''An exception to pass in hra non core if the AOIzone files do not
+    contain the proper attribute name for individual indentification. The
+    attribute should be named 'name', and must exist for every shape in the
+    AOI layer.'''
+    pass
+
+class DQWeightNotFound(Exception):
+    '''An exception to be passed if there is a shapefile within the spatial
+    criteria directory, but no corresponing data quality and weight to support
+    it. This would likely indicate that the user is try to run HRA without
+    having added the criteria name into hra_preprocessor properly.'''
+    pass
 
 def execute(args):
     '''This function will prepare files passed from the UI to be sent on to the
@@ -148,7 +167,7 @@ def execute(args):
 
     hra_args['risk_eq'] = args['risk_eq']
     
-    #Depending on the risk calculation equatioa, this should return the highest
+    #Depending on the risk calculation equation, this should return the highest
     #possible value of risk for any given habitat-stressor pairing. The highest
     #risk for a habitat would just be this risk value * the number of stressor
     #pairs that apply to it.
@@ -231,14 +250,22 @@ def execute(args):
 
     #Want a super simple dictionary of the stressor rasters we will use for overlap.
     #The local var stress_dir is the location that should be used for rasterized
-    #stressor shapefiles. args['stressors_dir'] is the location of the original
-    #stressor shapefiles. 
-    stress_dict = make_stress_rasters(stress_dir, hra_args['stressors_dir'], args['grid_size'])
+    #stressor shapefiles.
+    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'])
 
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
     #the same keys.
-    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], stress_dict, hra_args['h_s_c'],                    hra_args['h_s_e'], args['grid_size'])
+    make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
+            stress_dict, hra_args['h_s_c'],hra_args['h_s_e'], args['grid_size'])
+    
+    #No reason to hold the directory paths in memory since all info is now
+    #within dictionaries. Can remove them here before passing to core.
+    for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
+        if name in hra_args:
+            del hra_args[name]
+
+    hra_core.execute(hra_args)
 
 def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size):
     '''For every pair in h_s_c and h_s_e, want to get the corresponding habitat 
@@ -326,7 +353,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         h_s_e[pair]['DS'] = out_uri
 
 
-def make_stress_rasters(dir, stress_list, grid_size)
+def make_stress_rasters(dir, stress_list, grid_size):
     '''Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing 
     stressor name, and the value will be the URI of the rasterized shapefile.
@@ -423,6 +450,33 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
         habitats[name]['DS'] = out_uri
+
+def calc_max_rating(risk_eq, max_rating):
+    ''' Should take in the max possible risk, and return the highest possible
+    per pixel risk that would be seen on a H-S raster pixel.
+
+    Input:
+        risk_eq- The equation that will be used to determine risk.
+        max_rating- The highest possible value that could be given as a
+            criteria rating, data quality, or weight.
+    
+    Returns:
+        An int representing the highest possible risk value for any given h-s
+        overlap raster.
+    '''
+    
+    #The max_rating ends up being the simplified result of each of the E and
+    #C equations when the same value is used in R/DQ/W. Thus for E and C, their
+    #max value is equivalent to the max_rating.
+    
+    if risk_eq == 'Multiplicative':
+        max_r = max_rating * max_rating
+
+    elif risk_eq == 'Euclidean':
+        under_rt = (max_rating - 1)**2 + (max_rating - 1)**2
+        max_r = math.sqrt(under_rt)
+
+    return max_r
 
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning

@@ -944,11 +944,11 @@ def aggregate_raster_values_uri(
             will be clamped to zero.
 
         returns a named tuple of the form 
-           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels')
+           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
            Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
-           shapefile_field value to either the total, pixel mean or hecatare mean of
-           the values under that feature.  'n_pixels' contains the total number of
-           valid pixels used in that calculation.
+           shapefile_field value to either the total, pixel mean, hecatare mean, pixel max,
+           and pixel min of the values under that feature.  'n_pixels' contains the
+           total number of valid pixels used in that calculation.
         """
 
     #Generate a temporary mask filename
@@ -990,6 +990,9 @@ def aggregate_raster_values_uri(
 
     #Loop over each row in out_band
     clipped_band = clipped_raster.GetRasterBand(1)
+    pixel_min_dict = dict(
+        [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
+    pixel_max_dict = pixel_min_dict.copy()
     for row_index in range(clipped_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
         clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
@@ -1001,27 +1004,47 @@ def aggregate_raster_values_uri(
 
             #Only consider values which lie in the polygon for attribute_id
             masked_values = clipped_array[mask_array == attribute_id]
+            #Remove the nodata values for later processing
+            masked_values_nodata_removed = (
+                masked_values[masked_values != raster_nodata])
+
+            #Find the min and max which might not yet be calculated
+            if masked_values_nodata_removed.size > 0:
+                if pixel_min_dict[attribute_id] is None:
+                    pixel_min_dict[attribute_id] = numpy.min(
+                        masked_values_nodata_removed)
+                    pixel_max_dict[attribute_id] = numpy.max(
+                        masked_values_nodata_removed)
+                else:
+                    pixel_min_dict[attribute_id] = min(
+                        pixel_min_dict[attribute_id],
+                        numpy.min(masked_values_nodata_removed))
+                    pixel_max_dict[attribute_id] = max(
+                        pixel_max_dict[attribute_id],
+                        numpy.max(masked_values_nodata_removed))
+                
             if ignore_nodata:
                 #Only consider values which are not nodata values
-                masked_values = masked_values[masked_values != raster_nodata]
-                attribute_sum = numpy.sum(masked_values)
+                aggregate_dict_counts[attribute_id] += (
+                    masked_values_nodata_removed.size)
             else:
-                #We leave masked_values alone, but only sum the non-nodata 
-                #values
-                attribute_sum = \
-                    numpy.sum(masked_values[masked_values != raster_nodata])
+                aggregate_dict_counts[attribute_id] += masked_values.size
 
-            aggregate_dict_values[attribute_id] += attribute_sum
-            aggregate_dict_counts[attribute_id] += masked_values.size
+            aggregate_dict_values[attribute_id] += numpy.sum(
+                masked_values_nodata_removed)
 
     #Initalize the dictionary to have an n_pixels field that contains the
     #counts of all the pixels used in the calculation.
-    AggregatedValues = collections.namedtuple('AggregatedValues', 'total pixel_mean hectare_mean n_pixels')
+    AggregatedValues = collections.namedtuple(
+        'AggregatedValues',
+        'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
     result_tuple = AggregatedValues(
         total={},
         pixel_mean={},
         hectare_mean={},
-        n_pixels=aggregate_dict_counts.copy())
+        n_pixels=aggregate_dict_counts.copy(),
+        pixel_min=pixel_min_dict.copy(),
+        pixel_max=pixel_max_dict.copy())
 
     for attribute_id in aggregate_dict_values:
         if threshold_amount_lookup != None:
@@ -1746,7 +1769,6 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         original_sr = original_layer.GetSpatialRef()
 
         #Create a coordinate transformation
-        print('original_sr', original_sr, 'output_sr', output_sr)
         coord_trans = osr.CoordinateTransformation(original_sr, output_sr)
 
         #Copy all of the features in original_layer to the new shapefile
@@ -1754,7 +1776,6 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
             geom = original_feature.GetGeometryRef()
             
             #Transform the geometry into a format desired for the new projection
-            print('coord_trans', coord_trans)
             geom.Transform(coord_trans)
             
             #Copy original_datasource's feature and set as new shapes feature
