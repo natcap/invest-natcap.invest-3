@@ -155,11 +155,6 @@ def execute(args):
     # sub-watershed ID's. Store these URIs in a dictionary mapping to their
     # respective shed / sub-shed ID's
     csv_shed_dict = {}
-#   for key in shed_dict.iterkeys():
-#       csv_uri = os.path.join(intermediate_dir, 'output_shed_'+str(key)+'.csv')
-#       if os.path.isfile(csv_uri):
-#           os.remove(csv_uri)
-#       csv_shed_dict[key] = csv_uri
     field_list = ['Streamflow', 'Soil Storage']    
     shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
@@ -168,8 +163,8 @@ def execute(args):
     
     LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
 
-    out_dict = {}
-
+    csv_uri = os.path.join(intermediate_dir, 'watershed_table.csv')
+    clean_uri([csv_uri])
 
     # Define the column header for the output CSV files
     column_header = ['Date', 'Streamflow', 'Soil Storage']
@@ -201,6 +196,8 @@ def execute(args):
     streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
 
     for cur_month in list_of_months:
+        out_dict = {}
+        out_dict['Date'] = cur_month
         # Get the dictionary for the current time step month
         cur_step_dict = precip_data_dict[cur_month]
         # Since the time step signature has a 'slash' we need to replace it with
@@ -300,104 +297,59 @@ def execute(args):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
-        write_new_table(csv_uri, shed_field_list, out_dict)
-
-
-        # For each shed / sub-shed add the corresponding output values to their
-        # respective CSV file
-#       for key, value in max_streamflow.iteritems():
-#           # Dictionary to aggregate the output information
-#           line_dict = {}
-#           line_dict[key] = {}
-#           # Get corresponding CSV URI
-#           csv_uri = csv_shed_dict[key]
-#           # Get Output values
-#           streamflow = value
-#           storage = max_storage[key]
-#           # Build the dictionary representing the next monthly line to write
-#           line_dict[key]['Date'] = cur_month
-#           line_dict[key]['Soil Storage'] = storage
-#           line_dict[key]['Streamflow'] = streamflow
-#           # Write new line to file
-#           add_monthly_line(csv_uri, column_header, line_dict)
+        add_row_csv_table(csv_uri, shed_field_list, out_dict)
 
         # Move on to next month
 
-def build_csv_dict(value_dict, columns, out_dict, adv):
-    for key, value in value_dict.iteritems():
+def build_csv_dict(new_dict, columns, out_dict, field):
+    """Combines a single level dictionary to an existing or non existing single
+        level dicitonary
+        
+        new_dict - a dictionary with keys pointing to values 
+        columns - a list of strings 
+        out_dict - the dictionary to add the new keys and values to
+        field - a string representing which key in 'key_list' we want to add
+
+    """
+    for key, value in new_dict.iteritems():
         key_str = str(key)
-        for field in columns[1:]:
-            if re.search(key_str, field) != None and re.match(adv, field) != None:
-                try:
-                    out_dict[key][field] = value
-                except KeyError:
-                    out_dict[key] = {}
-                    out_dict[key][field] = value
+        for col_name in columns[1:]:
+            if re.search(key_str, col_name) != None and re.match(field, col_name) != None:
+                out_dict[col_name] = value
     return out_dict
 
-
-def add_monthly_line(csv_uri, column_header, single_dict):
+def add_row_csv_table(csv_uri, column_header, single_dict):
     """Write a new row to a CSV file if it already exists or creates a new one
         with that row.
 
-        csv_uri - a URI to a CSV file location to write to
+        csv_uri - a URI to a CSV file location to write to disk
 
         column_header - a Python list of strings representing the column headers
             for the CSV file
 
-        data_dict - a Dictionary with two levels, where the top level has one
-            key that points to a dictionary where the fields and values live.
-            The fields in the inner dictionary should match with the fields
-            given in 'column_header'
-            example : {0: {'Date':'01/1988', 'Sum':56, 'Mean':32}}
+        single_dict - a Dictionary with keys matching the 'column_header' list,
+            that point to wanted values
+            example : {'Date':'01/1988', 'Sum':56, 'Mean':32}
 
         returns - Nothing"""
     
+    csv_writer = None
     # If the file does note exist then write a new file, else append a new row
     # to the file
     if not os.path.isfile(csv_uri):
-        write_new_table(csv_uri, column_header, single_dict)
+        csv_file = open(csv_uri, 'wb')
+
+        csv_writer = csv.DictWriter(csv_file, column_header)
+        # Write the columns as the first row in the table
+        csv_writer.writerow(dict((fn,fn) for fn in column_header))
+
     else:
         # Open the CSV file in append mode 'a'. This will allow us to just tack
         # on a new row
         csv_file = open(csv_uri, 'a')
         csv_writer = csv.DictWriter(csv_file, column_header)
-        # Even though there is only one key it seems efficient to let the loop
-        # do the work in getting that key
-        for key, value in single_dict.iteritems():
-            csv_writer.writerow(value)
-        
-        csv_file.close()
-
-def write_new_table(filename, fields, data):
-    """Create a new csv table from a dictionary
-
-        filename - a URI path for the new table to be written to disk
-        
-        fields - a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
-            ['id', 'precip', 'total']
-        
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
-
-        returns - nothing
-    """
-    csv_file = open(filename, 'wb')
-
-    # Sort the keys so that the rows are written in order
-    row_keys = data.keys()
-    row_keys.sort() 
-
-    csv_writer = csv.DictWriter(csv_file, fields)
-    # Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn,fn) for fn in fields))
-
-    for index in row_keys:
-        csv_writer.writerow(data[index])
+    
+    csv_writer.writerow(single_dict)
 
     csv_file.close()
 
