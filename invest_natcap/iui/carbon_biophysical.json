@@ -197,7 +197,7 @@
                           "width": 50,
                           "validText": "[0-9][0-9]([.][0-9]*)?",
                           "defaultValue": "90",
-                          "dataType": "int",
+                          "dataType": "float",
                           "args_id": "confidence_threshold",
                           "label": "Confidence threshold",
                           "requiredIf": ["carbon_pools_uncertain"],
