@@ -212,6 +212,7 @@ def execute_30(**args):
 
         if use_uncertainty:
             confidence_threshold = args['confidence_threshold']
+            print 'confidence threshold:', confidence_threshold
 
             # Returns 1 if we're confident storage will increase,
             #         -1 if we're confident storage will decrease,
