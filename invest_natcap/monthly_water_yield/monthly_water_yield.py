@@ -24,9 +24,10 @@ LOGGER = logging.getLogger('monthly_water_yield')
 
 
 def execute(args):
-    """Doc string for the purpose of the model and the inputs packaged in 'args'
-   
-        args -
+    """Executes the Monthly Water Yield Model given the arguments in 'args'
+        which are defined as follows:
+
+        args - a Python dictionary with the following keys and values:
 
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
@@ -55,14 +56,19 @@ def execute(args):
         args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
             type
 
+        args['suffix'] - a string that will be concatenated onto the
+           end of file names (optional)
+        
         returns - nothing
     """
     LOGGER.debug('Start Executing Model')
-    
+   
+    # Set up directories for model outputs
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
     raster_utils.create_directories([intermediate_dir, output_dir])
+    
     # Get input URIS
     precip_data_uri = args['precip_data_uri']
     pet_data_uri = args['pet_data_uri']
@@ -82,7 +88,6 @@ def execute(args):
         sub_shed_present = False
 
     # Set out_nodata value
-    #float_nodata = float(np.finfo(np.float32).min) + 1.0
     float_nodata = -35432.0
    
     imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
