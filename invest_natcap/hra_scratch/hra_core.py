@@ -187,7 +187,26 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
                     denoms['Risk']['h'][h])
 
+        #Function that we call now will depend on what the risk calculation
+        #equation desired is.
+        risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
+
+        #Want to get the relevant ds for this H-S pair.
+        #Arbitrarily using the h_s_c dictionary, but it exists in h_s_e too.
+        base_ds_uri = h_s_c[pair]['DS']
+
+        if risk_eq == 'Multiplicative':
+            
+            make_risk_mult(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
         
+        elif risk_eq == 'Euclidean':
+            
+            make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
+
+        risk_rasters[pair] = risk_uri
+
+    return risk_rasters
+
 def calc_E_raster(out_uri, h_s_list, h_s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
