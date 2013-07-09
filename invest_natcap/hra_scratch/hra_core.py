@@ -207,6 +207,109 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
 
     return risk_rasters
 
+def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
+    '''Combines the E and C rasters according to the multiplicative combination
+    equation.
+
+    Input:
+        base- The h-s overlap raster, including potentially decayed values from
+            the stressor layer.
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run. 
+        c_rast- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run. 
+        risk_uri- The file path to which we should be burning our new raster.
+            
+    Returns the URI for a raster representing the multiplied E raster, C raster, 
+    and the base raster.
+    '''
+    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+    
+    #Since we aren't necessarily sure what base nodata is coming in as, just
+    #want to be sure that this will output 0.
+    def combine_risk_mult(*pixels):
+
+        #since the E and C are created within this module, we are very sure
+        #that their nodata will be 0. Just need to check base, which we know
+        #was the first ds passed.
+        b_pixel = pixels[0]
+        if b_pixel == base_nodata:
+            return 0.       
+
+        #Otherwise, straight multiply all of the pixel values. We assume that
+        #base could potentially be decayed.
+        value = 1.
+ 
+        for p in pixels:
+            value = value * p
+
+        return value
+
+    raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult, risk_uri, 
+                    gdal.GDT_Float32, 0., grid_size, "union", 
+                    resample_method_list=None, dataset_to_align_index=None,
+                    aoi_uri=None)
+
+def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
+    '''Combines the E and C rasters according to the euclidean combination
+    equation.
+
+    Input:
+        base- The h-s overlap raster, including potentially decayed values from
+            the stressor layer.
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run.         
+        c_rast- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run.
+        risk_uri- The file path to which we should be burning our new raster.
+
+    Returns a raster representing the euclidean calculated E raster, C raster, 
+    and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
+    '''
+    #Already have base open for nodata values, just using pixel_size
+    #version of the function.
+    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+    e_nodata = raster_utils.get_nodata_from_uri(e_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+
+    #we need to know very explicitly which rasters are being passed in which
+    #order. However, since it's all within the make_risk_euc function, should
+    #be safe.
+    def combine_risk_euc(b_pix, e_pix, c_pix):
+
+        #Want to make sure we return nodata if there is no base, or no exposure
+        if b_pix == base_nodata or e_pix == e_nodata:
+            return 0.
+        
+        #Want to make sure that the decay is applied to E first, then that product
+        #is what is used as the new E
+        e_val = b_pix * e_pix
+
+        #Only want to perform these operation if there is data in the cell, else
+        #we end up with false positive data when we subtract 1. If we have
+        #gotten here, we know that e_pix != 0. Just need to check for c_pix.
+        if not c_pix == 0:
+            c_val = c_pix - 1
+        else:
+            c_val = 0.
+
+        e_val -= 1
+
+        #Now square both.
+        c_val = c_val ** 2
+        e_val = e_val ** 2
+        
+        #Combine, and take the sqrt
+        value = math.sqrt(e_val + c_val)
+        
+        return value
+
+    raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0., grid_size,
+                    "union", resample_method_list=None, 
+                    dataset_to_align_index=None, aoi_uri=None)
+
 def calc_E_raster(out_uri, h_s_list, h_s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
