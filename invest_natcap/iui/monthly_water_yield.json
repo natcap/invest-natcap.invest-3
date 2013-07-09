@@ -4,8 +4,8 @@
     "targetScript" : "invest_natcap.monthly_water_yield.monthly_water_yield",
     "modelName" : "monthly_water_yield",
     "localDocURI": "../documentation/monthlywateryield.html",
-    "height": 500,
-    "width" : 700,
+    "height": 700,
+    "width" : 900,
     "elements": [
         {
             "id" : "workspace_list",
@@ -91,6 +91,15 @@
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },    
+		        {
+                    "id" : "model_param_data",
+                    "args_id": "model_params_uri",
+                    "type": "file",
+                    "label": "Model Parameters",
+                    "defaultValue": "",
+                    "required": true,
+                    "validateAs": {"type": "CSV"}
+                },
                 {
                     "id" : "watersheds",
                     "args_id": "watersheds_uri",
@@ -107,8 +116,8 @@
                     "label": "Sub Watersheds",
                     "defaultValue": "",
                     "required": false,
-                    "validateAs": {"type": "OGR"}
-                    "returns": {"ifEmpty": "pass"},
+                    "validateAs": {"type": "OGR"},
+                    "returns": {"ifEmpty": "pass"}
                  },
                  {        
                     "id" : "results_suffix",
