@@ -1,3 +1,4 @@
+"""Pollinator service model for InVEST."""
 
 import os
 import logging
@@ -9,9 +10,7 @@ import struct
 from osgeo import gdal
 from osgeo import ogr
 
-from invest_natcap import raster_utils as raster_utils
 from invest_natcap.invest_core import fileio as fileio
-from invest_natcap.iui import iui_validator as iui_validator
 from invest_natcap.pollination import pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -138,18 +137,18 @@ def execute(args):
         biophysical_args['guilds'] = guilds_handler
 
         # Convert agricultural classes (a space-separated list of ints) into a
-        # list of ints.  If the user has not provided a string list of ints, then
-        # use an empty list instead.
+        # list of ints.  If the user has not provided a string list of ints,
+        # then use an empty list instead.
         LOGGER.info('Processing agricultural classes')
         try:
-            # This approach will create a list with only ints, even if the user has
-            # accidentally entered additional spaces.  Any other incorrect input
-            # will throw a ValueError exception.
+            # This approach will create a list with only ints, even if the user
+            # has accidentally entered additional spaces.  Any other incorrect
+            # input will throw a ValueError exception.
             user_ag_list = args['ag_classes'].split(' ')
             ag_class_list = [int(r) for r in user_ag_list if r != '']
         except KeyError:
-            # If the 'ag_classes' key is not present in the args dictionary, use an
-            # empty list in its stead.
+            # If the 'ag_classes' key is not present in the args dictionary,
+            # use an empty list in its stead.
             ag_class_list = []
 
         LOGGER.debug('Parsed ag classes: %s', ag_class_list)
@@ -179,8 +178,8 @@ def execute(args):
         species_list = [row['species'] for row in guilds_handler.table]
 
         # Make new rasters for each species.  In this list of tuples, the first
-        # value of each tuple is the args dictionary key, and the second value of
-        # each tuple is the raster prefix.  The third value is the folder in
+        # value of each tuple is the args dictionary key, and the second value
+        # of each tuple is the raster prefix.  The third value is the folder in
         # which the created raster should exist.
         species_rasters = [
             ('nesting', 'hn', inter_dir),
@@ -224,10 +223,10 @@ def execute(args):
                 shutil.rmtree(shapefile_folder)
                 LOGGER.debug('Removed old farms folder at %s',
                      shapefile_folder)
-            except OSError as e:
+            except OSError as exception:
                 # The shapefile folder does not exist.  We need to make it
                 # anyways, so we really don't care.
-                LOGGER.debug('Exception: %s', e)
+                LOGGER.debug('Exception: %s', exception)
                 LOGGER.debug('Farms folder did not exist previously: %s',
                     shapefile_folder)
 
@@ -294,8 +293,9 @@ def execute(args):
                                 supply_uri = biophysical_args['species'][species_name]['species_abundance']
                                 LOGGER.debug('Supply raster URI="%s"', supply_uri)
                                 pixel_value = get_point(supply_uri, farm_site)[0]
-                                LOGGER.debug('Crop="%s", species="%s", pixel_value=%s',
-                                            crop, species_name, pixel_value)
+                                LOGGER.debug(('Crop="%s", species="%s"'
+                                    'pixel_value=%s'), crop, species_name,
+                                    pixel_value)
                                 crop_sum += pixel_value
 
                     LOGGER.info('Sum across %s for crop "%s": %s',
@@ -348,12 +348,12 @@ def get_point(raster_uri, point):
     raster_band = raster.GetRasterBand(1)
 
     geometry = point.GetGeometryRef()
-    mx, my = geometry.GetX(), geometry.GetY()  # Coordinates in map units
+    geom_x, geom_y = geometry.GetX(), geometry.GetY()  # Coord. in map units
 
     # Convert from map to pixel coordinates
-    px = int((mx - raster_gt[0]) / (raster_gt[1]))
-    py = int((my - raster_gt[3]) / (raster_gt[5]))
-    structval = raster_band.ReadRaster(px, py, 1, 1,
+    pixel_x = int((geom_x - raster_gt[0]) / (raster_gt[1]))
+    pixel_y = int((geom_y - raster_gt[3]) / (raster_gt[5]))
+    structval = raster_band.ReadRaster(pixel_x, pixel_y, 1, 1,
         buf_type=gdal.GDT_Float32)
     intval = struct.unpack('f', structval)
 
