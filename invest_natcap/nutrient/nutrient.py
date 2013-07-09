@@ -33,6 +33,7 @@ def execute(args):
         args['workspace_dir'], 'water_yield_workspace')
     if 'results_suffix' in args:
         water_yield_args['results_suffix'] = args['results_suffix']
+    water_yield_args['lulc_uri'] = args['landuse_uri']
     invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
 
     #Get the pixel output of hydropower to plug into nutrient retention.
