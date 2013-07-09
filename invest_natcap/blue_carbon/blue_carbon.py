@@ -79,7 +79,9 @@ def execute(args):
 
     #outputs
     carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
-    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")   
+    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")
+    magnitude_uri = os.path.join(workspace_dir, "magnitude.tif")
+    timing_uri = os.path.join(workspace_dir, "timing.tif")
     sequestration_uri = os.path.join(workspace_dir, "sequestration.tif")
 
     #accessors
@@ -206,11 +208,16 @@ def execute(args):
         transition_dict[k] = dict(zip(header, transition_coefficients))
     transition_file.close()
 
+    undefined_transition_set=set([])
     def transition_op(lulc1, lulc2):
         if (lulc1 == nodata) or (lulc2 == nodata):
             return nodata
         else:
-            return transition_dict[int(lulc1)][int(lulc2)]
+            try:
+                return transition_dict[int(lulc1)][int(lulc2)]
+            except KeyError:
+                undefined_transition_set.add((int(lulc1), int(lulc2)))
+                return 1
 
     LOGGER.debug("Creating transition coefficents raster.")
     raster_utils.vectorize_datasets([lulc1_uri, lulc2_uri],
@@ -221,6 +228,9 @@ def execute(args):
                                     cell_size,
                                     "union")
 
+    for lulc1, lulc2 in undefined_transition_set:
+        LOGGER.warning("Transition from %i to %i undefined and assigned value of 1.", lulc1, lulc2)
+            
     #soil at time 2 op
     def soil_transition_op (carbon, coefficient):
         if (carbon == nodata) or (coefficient == nodata):
@@ -289,6 +299,43 @@ def execute(args):
                                     nodata,
                                     cell_size,
                                     "union")
+
+    ###emission
+
+    #magnitude
+    LOGGER.debug("Creating magnitude operation.")
+    def magnitude_op(lulc_code):
+        if lulc_code == nodata:
+            return nodata
+        else:
+            return (emission_dict[lulc_code]*(above_dict[lulc_code] + below_dict[lulc_code])) +(soil_dict[lulc_code]*disturbance_dict[lulc_code]) + litter_dict[lulc_code]
+
+    LOGGER.info("Calculating magnitude of carbon emission.")
+    raster_utils.vectorize_datasets([lulc1_uri],
+                                    magnitude_op,
+                                    magnitude_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+        
+    #timing
+    LOGGER.debug("Creating timing operation.")
+    def timing_op(lulc_code):
+        if lulc_code == nodata:
+            return nodata
+        else:
+            return ((0.5 ** (years/biomass_life_dict[lulc_code]))*(emission_dict[lulc_code]*(above_dict[lulc_code] + below_dict[lulc_code])) + litter_dict[lulc_code]) + ((0.5 ** (years/soil_life_dict[lulc_code])) * (soil_dict[lulc_code]*disturbance_dict[lulc_code]))
+
+    LOGGER.info("Calculating timing of carbon emission.")
+    raster_utils.vectorize_datasets([lulc1_uri],
+                                    timing_op,
+                                    timing_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+    
 
     ###valuation
     if private_valuation:
