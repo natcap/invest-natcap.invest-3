@@ -99,6 +99,18 @@ def execute(args):
     risk_dict = make_risk_rasters(args['h_s_c'], inter_dir, crit_lists, denoms, 
                                     args['risk_eq'])
 
+    #Know at this point that the non-core has re-created the ouput directory
+    #So we can go ahead and make the maps directory without worrying that
+    #it will throw an 'already exists.'
+    maps_dir = os.path.join(output_dir, 'Maps')
+    os.mkdir(maps_dir)
+
+    #We will combine all of the h-s rasters of the same habitat into
+    #cumulative habitat risk rastersma db return a list of the DS's of each,
+    #so that it can be read into the ecosystem risk raster's vectorize.
+    h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
+
+
 def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
