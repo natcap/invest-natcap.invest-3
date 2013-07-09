@@ -110,6 +110,83 @@ def execute(args):
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
+def make_hab_risk_raster(dir, risk_dict):
+    '''This will create a combined raster for all habitat-stressor pairings
+    within one habitat. It should return a list of open rasters that correspond
+    to all habitats within the model.
+
+    Input:
+        dir- The directory in which all completed habitat rasters should be 
+            placed.
+        risk_dict- A dictionary containing the risk rasters for each pairing of
+            habitat and stressor. The key is the tuple of (habitat, stressor),
+            and the value is the raster dataset URI corresponding to that
+            combination.
+            
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+    Output:
+        A cumulative risk raster for every habitat included within the model.
+    
+    Returns:
+        h_rasters- A dictionary containing habitat names mapped to the dataset
+            URI of the overarching habitat risk map for this model run.
+            
+            {'Habitat A': "Overall Habitat A Risk Map URI",
+            'Habitat B': "Overall Habitat B Risk URI"
+             ...
+            }
+    '''
+    def add_risk_pixels(*pixels):
+        '''Sum all risk pixels to make a single habitat raster out of all the 
+        h-s overlap rasters.'''
+        pixel_sum = 0.0
+
+        for p in pixels:
+            pixel_sum += p
+
+        return pixel_sum
+
+
+    #This will give us two lists where we have only the unique habs and
+    #stress for the system. List(set(list)) cast allows us to only get the
+    #unique names within each.
+    habitats, stressors = zip(*risk_dict.keys())
+    habitats = list(set(habitats))
+    stressors = list(set(stressors))
+
+    #Want to get an arbitrary element in order to have a pixel size.
+    pixel_size = \
+        raster_utils.get_cell_size_from_uri(risk_dict[(habitats[0], stressors[0])])
+
+    #List to store the completed h rasters in. Will be passed on to the
+    #ecosystem raster function to be used in vectorize_dataset.
+    h_rasters = {} 
+
+    #Run through all potential pairings, and make lists for the ones that
+    #share the same habitat.
+    for h in habitats:
+
+        ds_list = []
+        for s in stressors:
+            pair = (h, s)
+
+            ds_list.append(risk_dict[pair])
+
+        #Once we have the complete list, we can pass it to vectorize.
+        out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
+
+        raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
+                        gdal.GDT_Float32, 0., pixel_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        h_rasters[h] = out_uri 
+
+    return h_rasters
+
 
 def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
