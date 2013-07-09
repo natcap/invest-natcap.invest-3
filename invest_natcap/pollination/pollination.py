@@ -12,7 +12,6 @@ from osgeo import ogr
 from invest_natcap import raster_utils as raster_utils
 from invest_natcap.invest_core import fileio as fileio
 from invest_natcap.iui import iui_validator as iui_validator
-from invest_natcap.nutrient import nutrient_core as nutrient_core
 from invest_natcap.pollination import pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
