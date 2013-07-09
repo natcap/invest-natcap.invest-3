@@ -210,17 +210,7 @@ def execute(args):
         if (lulc1 == nodata) or (lulc2 == nodata):
             return nodata
         else:
-            try:
-                return transition_soil_carbon(1,
-                                              soil_dict[lulc2],
-                                              depth_dict[lulc2],
-                                              transition_dict[int(lulc1)][int(lulc2)],
-                                              years,
-                                              1,
-                                              soil_dict[lulc1],
-                                              depth_dict[lulc1])
-            except KeyError:
-                return 1
+            return transition_dict[int(lulc1)][int(lulc2)]
 
     LOGGER.debug("Creating transition coefficents raster.")
     raster_utils.vectorize_datasets([lulc1_uri, lulc2_uri],
@@ -309,7 +299,7 @@ def execute(args):
             else:
                 valuation = 0
                 for t in range(years):
-                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0))
+                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0)) ** t
  
             return valuation
 
