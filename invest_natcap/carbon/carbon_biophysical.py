@@ -33,7 +33,7 @@ def execute_30(**args):
             and other temporary files during calculation. (required)
         args['suffix'] - a string to append to any output file name (optional)
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
-        args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
+        args['carbon_pools_uri'] - is a uri to a CSV or DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
             lulc rasters. (required if 'use_uncertainty' is false)
         args['carbon_pools_uncertain_uri'] - as above, but has probability distribution
@@ -212,6 +212,7 @@ def execute_30(**args):
 
         if use_uncertainty:
             confidence_threshold = args['confidence_threshold']
+            print 'confidence threshold:', confidence_threshold
 
             # Returns 1 if we're confident storage will increase,
             #         -1 if we're confident storage will decrease,
@@ -243,15 +244,15 @@ def execute_30(**args):
                 # Calculate the cumulative distribution function for the standard normal distribution.
                 # This gives us the probability that future carbon storage is greater than
                 # current carbon storage.
-                # Copied from http://docs.python.org/3.2/library/math.html
+                # This formula is copied from http://docs.python.org/3.2/library/math.html
                 probability = (1.0 + math.erf(standard_score / math.sqrt(2.0))) / 2.0
 
                 # Multiply by 100 so we have probability in the same units as the confidence_threshold.
                 confidence = 100 * probability
-                if confidence > confidence_threshold:
+                if confidence >= confidence_threshold:
                     # We're confident carbon storage will increase.
                     return 1
-                if confidence < 100 - confidence_threshold:
+                if confidence <= 100 - confidence_threshold:
                     # We're confident carbon storage will decrease.
                     return -1
                 # We're not confident about whether storage will increase or decrease.
