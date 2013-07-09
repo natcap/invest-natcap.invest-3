@@ -24,9 +24,10 @@ LOGGER = logging.getLogger('monthly_water_yield')
 
 
 def execute(args):
-    """Doc string for the purpose of the model and the inputs packaged in 'args'
-   
-        args -
+    """Executes the Monthly Water Yield Model given the arguments in 'args'
+        which are defined as follows:
+
+        args - a Python dictionary with the following keys and values:
 
         args[workspace_dir] - a uri to the workspace directory where outputs
             will be written to disk
@@ -55,14 +56,19 @@ def execute(args):
         args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
             type
 
+        args['suffix'] - a string that will be concatenated onto the
+           end of file names (optional)
+        
         returns - nothing
     """
     LOGGER.debug('Start Executing Model')
-    
+   
+    # Set up directories for model outputs
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
     raster_utils.create_directories([intermediate_dir, output_dir])
+    
     # Get input URIS
     precip_data_uri = args['precip_data_uri']
     pet_data_uri = args['pet_data_uri']
@@ -73,6 +79,7 @@ def execute(args):
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
+    model_params_uri = args['model_params_uri']
     
     try:
         sub_shed_uri = args['sub_watersheds_uri']
@@ -82,7 +89,6 @@ def execute(args):
         sub_shed_present = False
 
     # Set out_nodata value
-    #float_nodata = float(np.finfo(np.float32).min) + 1.0
     float_nodata = -35432.0
    
     imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
@@ -96,8 +102,6 @@ def execute(args):
         raster_utils.reclassify_dataset_uri(
                 lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
-
-    beta = 2.0
 
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
@@ -124,12 +128,12 @@ def execute(args):
     alpha_three_uri = os.path.join(intermediate_dir, 'alpha_three.tif')
     alpha_uri_list = [alpha_one_uri, alpha_two_uri, alpha_three_uri]
     
-    alpha_table = {'alpha_one':{'a_one':0.07, 'b_one':0.01, 'c_one':0.002},
-                   'alpha_two':{'a_two':0.2, 'b_two':2.2},
-                   'alpha_three':{'a_three':1.44, 'b_three':0.68}}
+    model_param_dict = model_parameters_to_dict(model_params_uri)
+    LOGGER.debug('MODEL PARAMETERS: %s', model_param_dict)
+    beta = model_param_dict['beta']['beta']
 
     calculate_alphas(
-        slope_uri, soil_text_uri, smax_uri, alpha_table, float_nodata,
+        slope_uri, soil_text_uri, smax_uri, model_param_dict, float_nodata,
         alpha_uri_list)
 
     absorption_uri = os.path.join(intermediate_dir, 'absorption.tif')
@@ -961,6 +965,32 @@ def calculate_alphas(
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
             out_nodata, smax_cell_size, 'intersection')
+
+def model_parameters_to_dict(csv_uri):
+    """Build a dictionary from the model parameters CSV table
+
+        csv_uri - a URI to a CSV file for the model parameters 
+
+        returns - a dictionary with the following structure:
+            
+    """
+    data_file = open(csv_uri)
+    data_handler = csv.DictReader(data_file)
+    
+    # Make the fieldnames lowercase
+    data_handler.fieldnames = [f.lower() for f in data_handler.fieldnames]
+    LOGGER.debug('Lowercase Fieldnames : %s', data_handler.fieldnames)
+
+    param_dict = {}
+
+    for row in data_handler:
+        try:
+            param_dict[row['use']][row['param']] = float(row['value'])
+        except KeyError:
+            param_dict[row['use']] = {}
+            param_dict[row['use']][row['param']] = float(row['value'])
+
+    return param_dict
 
 def construct_lulc_lookup_dict(lulc_data_uri, field):
     """Parse a LULC lookup CSV table and construct a dictionary mapping the LULC

@@ -99,6 +99,223 @@ def execute(args):
     risk_dict = make_risk_rasters(args['h_s_c'], inter_dir, crit_lists, denoms, 
                                     args['risk_eq'])
 
+    #Know at this point that the non-core has re-created the ouput directory
+    #So we can go ahead and make the maps directory without worrying that
+    #it will throw an 'already exists.'
+    maps_dir = os.path.join(output_dir, 'Maps')
+    os.mkdir(maps_dir)
+
+    #We will combine all of the h-s rasters of the same habitat into
+    #cumulative habitat risk rastersma db return a list of the DS's of each,
+    #so that it can be read into the ecosystem risk raster's vectorize.
+    h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
+
+    #Also want to output a polygonized version of high and low risk areas in each
+    #habitat. Will polygonize everything that falls above a certain percentage
+    #of the total raster risk, or below that threshold. These can then be fed into
+    #different models.
+    num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
+
+def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
+    '''This function will take in the current rasterized risk files for each
+    habitat, and output a shapefile where the areas that are "HIGH RISK" (high
+    percentage of risk over potential risk) are the only existing polygonized
+    areas.
+
+    Additonally, we also want to create a shapefile which is only the "low risk"
+    areas- actually, those that are just not high risk (it's the combination of
+    low risk areas and medium risk areas). 
+    
+    Since the raster_utils function can only take in ints, want to predetermine
+    what areas are or are not going to be shapefile, and pass in a raster that
+    is only 1 or nodata.
+    
+    Input:
+        dir- Directory in which the completed shapefiles should be placed.
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
+
+            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster URI", 
+                                    "raster 1 URI", ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
+                                ...
+                               },
+                        's':   { stressA: ["indiv num raster URI", ...]
+                               }
+                     }
+             'Recovery': { hab1: ["indiv num raster URI", ...],
+                           hab2: ...
+                         }
+            }
+        h_dict- A dictionary that contains raster dataseti URIs corresponding
+            to each of the habitats in the model. The key in this dictionary is
+            the name of the habiat, and it maps to the open dataset.
+        max_risk- Double representing the highest potential value for a single
+            h-s raster. The amount of risk for a given Habitat raster would be
+            SUM(s) for a given h.
+
+     Output:
+        Returns two shapefiles for every habitat, one which shows features only for the
+        areas that are "high risk" within that habitat, and one which shows features only
+        for the combined low + medium risk areas. 
+
+     Return:
+        num_stress- A dictionary containing the number of stressors being 
+            associated with each habitat. The key is the string name of the 
+            habitat, and it maps to an int counter of number of stressors.
+     '''
+    #For each h, want  to know how many stressors are associated with it. This
+    #allows us to not have to think about whether or not a h-s pair was zero'd
+    #out by weighting or DQ.
+    num_stress = collections.Counter()
+    for pair in crit_lists['Risk']['h-s']:
+        h, _ = pair
+        
+        if h in num_stress:
+            num_stress[h] += 1
+        else:
+            num_stress[h] = 1
+    
+    curr_top_risk = None
+
+    def high_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
+        #areas are.
+        if percent > 66.6:
+            return 1
+        else:
+            return 0.
+
+    def low_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
+        #areas are.
+        if 0 < percent <= 66.6:
+            return 1
+        else:
+            return 0.
+
+    for h in h_dict:
+        #Want to know the number of stressors for the current habitat        
+        curr_top_risk = num_stress[h] * max_risk
+        old_ds_uri = h_dict[h]
+        grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
+
+        h_out_uri_r = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.tif') 
+        h_out_uri = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.shp')
+        
+        raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, h_out_uri_r,
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
+
+        
+        #Now, want to do the low + medium areas as well.
+        l_out_uri_r = os.path.join(dir, 'H[' + h + ']_LOW_RISK.tif') 
+        l_out_uri = os.path.join(dir, 'H[' + h + ']_LOW_RISK.shp')
+        
+        raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, l_out_uri_r,
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
+
+    return num_stress
+
+def make_hab_risk_raster(dir, risk_dict):
+    '''This will create a combined raster for all habitat-stressor pairings
+    within one habitat. It should return a list of open rasters that correspond
+    to all habitats within the model.
+
+    Input:
+        dir- The directory in which all completed habitat rasters should be 
+            placed.
+        risk_dict- A dictionary containing the risk rasters for each pairing of
+            habitat and stressor. The key is the tuple of (habitat, stressor),
+            and the value is the raster dataset URI corresponding to that
+            combination.
+            
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+    Output:
+        A cumulative risk raster for every habitat included within the model.
+    
+    Returns:
+        h_rasters- A dictionary containing habitat names mapped to the dataset
+            URI of the overarching habitat risk map for this model run.
+            
+            {'Habitat A': "Overall Habitat A Risk Map URI",
+            'Habitat B': "Overall Habitat B Risk URI"
+             ...
+            }
+    '''
+    def add_risk_pixels(*pixels):
+        '''Sum all risk pixels to make a single habitat raster out of all the 
+        h-s overlap rasters.'''
+        pixel_sum = 0.0
+
+        for p in pixels:
+            pixel_sum += p
+
+        return pixel_sum
+
+
+    #This will give us two lists where we have only the unique habs and
+    #stress for the system. List(set(list)) cast allows us to only get the
+    #unique names within each.
+    habitats, stressors = zip(*risk_dict.keys())
+    habitats = list(set(habitats))
+    stressors = list(set(stressors))
+
+    #Want to get an arbitrary element in order to have a pixel size.
+    pixel_size = \
+        raster_utils.get_cell_size_from_uri(risk_dict[(habitats[0], stressors[0])])
+
+    #List to store the completed h rasters in. Will be passed on to the
+    #ecosystem raster function to be used in vectorize_dataset.
+    h_rasters = {} 
+
+    #Run through all potential pairings, and make lists for the ones that
+    #share the same habitat.
+    for h in habitats:
+
+        ds_list = []
+        for s in stressors:
+            pair = (h, s)
+
+            ds_list.append(risk_dict[pair])
+
+        #Once we have the complete list, we can pass it to vectorize.
+        out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
+
+        raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
+                        gdal.GDT_Float32, 0., pixel_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        h_rasters[h] = out_uri 
+
+    return h_rasters
+
+
 def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
@@ -187,7 +404,129 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
                     denoms['Risk']['h'][h])
 
+        #Function that we call now will depend on what the risk calculation
+        #equation desired is.
+        risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
+
+        #Want to get the relevant ds for this H-S pair.
+        #Arbitrarily using the h_s_c dictionary, but it exists in h_s_e too.
+        base_ds_uri = h_s_c[pair]['DS']
+
+        if risk_eq == 'Multiplicative':
+            
+            make_risk_mult(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
         
+        elif risk_eq == 'Euclidean':
+            
+            make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
+
+        risk_rasters[pair] = risk_uri
+
+    return risk_rasters
+
+def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
+    '''Combines the E and C rasters according to the multiplicative combination
+    equation.
+
+    Input:
+        base- The h-s overlap raster, including potentially decayed values from
+            the stressor layer.
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run. 
+        c_rast- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run. 
+        risk_uri- The file path to which we should be burning our new raster.
+            
+    Returns the URI for a raster representing the multiplied E raster, C raster, 
+    and the base raster.
+    '''
+    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+    
+    #Since we aren't necessarily sure what base nodata is coming in as, just
+    #want to be sure that this will output 0.
+    def combine_risk_mult(*pixels):
+
+        #since the E and C are created within this module, we are very sure
+        #that their nodata will be 0. Just need to check base, which we know
+        #was the first ds passed.
+        b_pixel = pixels[0]
+        if b_pixel == base_nodata:
+            return 0.       
+
+        #Otherwise, straight multiply all of the pixel values. We assume that
+        #base could potentially be decayed.
+        value = 1.
+ 
+        for p in pixels:
+            value = value * p
+
+        return value
+
+    raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult, risk_uri, 
+                    gdal.GDT_Float32, 0., grid_size, "union", 
+                    resample_method_list=None, dataset_to_align_index=None,
+                    aoi_uri=None)
+
+def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
+    '''Combines the E and C rasters according to the euclidean combination
+    equation.
+
+    Input:
+        base- The h-s overlap raster, including potentially decayed values from
+            the stressor layer.
+        e_rast- The r/dq*w burned raster for all stressor-specific criteria
+            in this model run.         
+        c_rast- The r/dq*w burned raster for all habitat-specific and
+            habitat-stressor-specific criteria in this model run.
+        risk_uri- The file path to which we should be burning our new raster.
+
+    Returns a raster representing the euclidean calculated E raster, C raster, 
+    and the base raster. The equation will be sqrt((C-1)^2 + (E-1)^2)
+    '''
+    #Already have base open for nodata values, just using pixel_size
+    #version of the function.
+    base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+    e_nodata = raster_utils.get_nodata_from_uri(e_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+
+    #we need to know very explicitly which rasters are being passed in which
+    #order. However, since it's all within the make_risk_euc function, should
+    #be safe.
+    def combine_risk_euc(b_pix, e_pix, c_pix):
+
+        #Want to make sure we return nodata if there is no base, or no exposure
+        if b_pix == base_nodata or e_pix == e_nodata:
+            return 0.
+        
+        #Want to make sure that the decay is applied to E first, then that product
+        #is what is used as the new E
+        e_val = b_pix * e_pix
+
+        #Only want to perform these operation if there is data in the cell, else
+        #we end up with false positive data when we subtract 1. If we have
+        #gotten here, we know that e_pix != 0. Just need to check for c_pix.
+        if not c_pix == 0:
+            c_val = c_pix - 1
+        else:
+            c_val = 0.
+
+        e_val -= 1
+
+        #Now square both.
+        c_val = c_val ** 2
+        e_val = e_val ** 2
+        
+        #Combine, and take the sqrt
+        value = math.sqrt(e_val + c_val)
+        
+        return value
+
+    raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, 0., grid_size,
+                    "union", resample_method_list=None, 
+                    dataset_to_align_index=None, aoi_uri=None)
+
 def calc_E_raster(out_uri, h_s_list, h_s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
