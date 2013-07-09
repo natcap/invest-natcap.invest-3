@@ -110,6 +110,134 @@ def execute(args):
     #so that it can be read into the ecosystem risk raster's vectorize.
     h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
+    #Also want to output a polygonized version of high and low risk areas in each
+    #habitat. Will polygonize everything that falls above a certain percentage
+    #of the total raster risk, or below that threshold. These can then be fed into
+    #different models.
+    num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
+
+def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
+    '''This function will take in the current rasterized risk files for each
+    habitat, and output a shapefile where the areas that are "HIGH RISK" (high
+    percentage of risk over potential risk) are the only existing polygonized
+    areas.
+
+    Additonally, we also want to create a shapefile which is only the "low risk"
+    areas- actually, those that are just not high risk (it's the combination of
+    low risk areas and medium risk areas). 
+    
+    Since the raster_utils function can only take in ints, want to predetermine
+    what areas are or are not going to be shapefile, and pass in a raster that
+    is only 1 or nodata.
+    
+    Input:
+        dir- Directory in which the completed shapefiles should be placed.
+        crit_lists- A dictionary containing pre-burned criteria which can be
+            combined to get the E/C for that H-S pairing.
+
+            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster URI", 
+                                    "raster 1 URI", ...],
+                                 (hab1, stressB): ...
+                               },
+                        'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
+                                ...
+                               },
+                        's':   { stressA: ["indiv num raster URI", ...]
+                               }
+                     }
+             'Recovery': { hab1: ["indiv num raster URI", ...],
+                           hab2: ...
+                         }
+            }
+        h_dict- A dictionary that contains raster dataseti URIs corresponding
+            to each of the habitats in the model. The key in this dictionary is
+            the name of the habiat, and it maps to the open dataset.
+        max_risk- Double representing the highest potential value for a single
+            h-s raster. The amount of risk for a given Habitat raster would be
+            SUM(s) for a given h.
+
+     Output:
+        Returns two shapefiles for every habitat, one which shows features only for the
+        areas that are "high risk" within that habitat, and one which shows features only
+        for the combined low + medium risk areas. 
+
+     Return:
+        num_stress- A dictionary containing the number of stressors being 
+            associated with each habitat. The key is the string name of the 
+            habitat, and it maps to an int counter of number of stressors.
+     '''
+    #For each h, want  to know how many stressors are associated with it. This
+    #allows us to not have to think about whether or not a h-s pair was zero'd
+    #out by weighting or DQ.
+    num_stress = collections.Counter()
+    for pair in crit_lists['Risk']['h-s']:
+        h, _ = pair
+        
+        if h in num_stress:
+            num_stress[h] += 1
+        else:
+            num_stress[h] = 1
+    
+    curr_top_risk = None
+
+    def high_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
+        #areas are.
+        if percent > 66.6:
+            return 1
+        else:
+            return 0.
+
+    def low_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
+        #areas are.
+        if 0 < percent <= 66.6:
+            return 1
+        else:
+            return 0.
+
+    for h in h_dict:
+        #Want to know the number of stressors for the current habitat        
+        curr_top_risk = num_stress[h] * max_risk
+        old_ds_uri = h_dict[h]
+        grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
+
+        h_out_uri_r = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.tif') 
+        h_out_uri = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.shp')
+        
+        raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, h_out_uri_r,
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
+
+        
+        #Now, want to do the low + medium areas as well.
+        l_out_uri_r = os.path.join(dir, 'H[' + h + ']_LOW_RISK.tif') 
+        l_out_uri = os.path.join(dir, 'H[' + h + ']_LOW_RISK.shp')
+        
+        raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, l_out_uri_r,
+                        gdal.GDT_Float32, 0., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=None,
+                        aoi_uri=None)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
+
+    return num_stress
+
 def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
     within one habitat. It should return a list of open rasters that correspond
