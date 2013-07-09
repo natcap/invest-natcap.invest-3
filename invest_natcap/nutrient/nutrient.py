@@ -31,7 +31,8 @@ def execute(args):
     water_yield_args = args.copy()
     water_yield_args['workspace_dir'] = os.path.join(
         args['workspace_dir'], 'water_yield_workspace')
-    water_yield_args['results_suffix'] = args['results_suffix']
+    if 'results_suffix' in args:
+        water_yield_args['results_suffix'] = args['results_suffix']
     invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
 
     #Get the pixel output of hydropower to plug into nutrient retention.
