@@ -1,8 +1,0 @@
-MAX_DIST,WEIGHT,THREAT
-8.0,0.7,crp
-5.0,0.6,rr
-10.0,1.0,urb
-6.0,0.5,rot
-3.0,1.0,prds
-1.0,0.7,srds
-0.5,0.5,lrds

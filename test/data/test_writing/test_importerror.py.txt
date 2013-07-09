@@ -1,9 +1,0 @@
-import unittest
-import invest_test_core_not_here
-
-class ExampleClass(unittest.TestCase):
-    def test_function_1(self):
-        pass
-
-    def test_function_2(self):
-        pass
