@@ -22,10 +22,10 @@ class TestMZCore(unittest.TestCase):
         
         args = {}
 
-        args['workspace_dir'] = './data/test_out/Overlap'
-        args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_mz.shp')
+        args['workspace_dir'] = './invest-data/test/data/test_out/Overlap'
+        args['zone_layer_file'] = ogr.Open('./invest-data/test/data/test_out/Overlap/Input/test_mz.shp')
         
-        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+        files_loc = './invest-data/test/data/test_out/Overlap/Input/Test_Activity'
         files_dict = overlap_core.get_files_dict(files_loc)
         args['over_layer_dict'] = files_dict
 
@@ -35,10 +35,10 @@ class TestMZCore(unittest.TestCase):
         
         #Redefining args to check against what we already have
         self.args['workspace_dir'] = '.data/overlap_analysis'
-        self.args['zone_layer_file'] = './data/overlap_analysis/ManagementZones_WCVI.shp'
+        self.args['zone_layer_file'] = './invest-data/test/data/overlap_analysis/ManagementZones_WCVI.shp'
         
         
-        files_loc = './data/overlap_analysis/FisheriesLayers_RI'
+        files_loc = './invest-data/test/data/overlap_analysis/FisheriesLayers_RI'
         files_dict = overlap_core.get_files_dict(files_loc)
         self.args['over_layer_dict'] = files_dict
         
@@ -46,6 +46,6 @@ class TestMZCore(unittest.TestCase):
         
         out_file = os.path.join(self.args['workspace_dir'], 'Output', 'mz_frequency.shp')
 
-        reg_mz_out = './data/overlap_analysis_regression_data/mz_frequency.shp'
+        reg_mz_out = './invest-data/test/data/overlap_analysis_regression_data/mz_frequency.shp'
 
         invest_test_core.assertTwoShapesEqualURI(self, out_file, reg_mz_out)

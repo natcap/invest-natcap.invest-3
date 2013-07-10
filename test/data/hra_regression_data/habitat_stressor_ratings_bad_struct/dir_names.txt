@@ -1,1 +1,0 @@
-{"habitats_dir": "/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/HabitatLayers", "stressors_dir": "/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/StressorLayers", "criteria_dir": "/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Shape_Criteria_Bad_Struct"}

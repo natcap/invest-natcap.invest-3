@@ -8,7 +8,7 @@ from PyQt4.QtTest import QTest as QTest
 
 from invest_natcap.iui import base_widgets as base_widgets
 
-JSON_DIR = os.path.join('data', 'iui', 'sample_json')
+JSON_DIR = os.path.join('invest-data/test/data', 'iui', 'sample_json')
 QT_APPLICATION = QtGui.QApplication([])
 
 # This is a new exception class to make it extra clear that a test needs to be

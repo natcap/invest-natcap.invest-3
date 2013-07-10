@@ -19,8 +19,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestMWQBiophysical(unittest.TestCase):
     """Main testing class for the MWQ biophysical tests"""
     def test_marine_water_quality_biophysical(self):
-        output_base = './data/test_out/marine_water_quality_test/'
-        input_dir = './data/marine_water_quality_data/'
+        output_base = './invest-data/test/data/test_out/marine_water_quality_test/'
+        input_dir = './invest-data/test/data/marine_water_quality_data/'
 
         args = {}
         args['workspace'] = output_base

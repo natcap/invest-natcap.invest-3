@@ -13,10 +13,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
     def test_wind_energy_uri_handler_no_options(self):
         """Regression test for the uri handler given no optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/no_options/'
-        output_dir = './data/test_out/wind_energy/uri_handler/no_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/no_options/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/no_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -82,10 +82,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given aoi as the only optional
             argument"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/aoi_option/'
-        output_dir = './data/test_out/wind_energy/uri_handler/aoi_option/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/aoi_option/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/aoi_option/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -156,10 +156,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given the aoi and land polygon
             optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/aoi_land_options/'
-        output_dir = './data/test_out/wind_energy/uri_handler/aoi_land_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/aoi_land_options/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/aoi_land_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -238,10 +238,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given the aoi, land polygon,
             and distance optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/dist_options/'
-        output_dir = './data/test_out/wind_energy/uri_handler/dist_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/dist_options/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/dist_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -323,10 +323,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given the aoi, land polygon,
             optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/val_land_options/'
-        output_dir = './data/test_out/wind_energy/uri_handler/val_land_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/val_land_options/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/val_land_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -410,10 +410,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given the aoi and grid point
             optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/val_grid_options/'
-        output_dir = './data/test_out/wind_energy/uri_handler/val_grid_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/val_grid_options/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/val_grid_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -500,10 +500,10 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given the aoi, land polygon,
             and distance optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/val_dist_land_options/'
-        output_dir = './data/test_out/wind_energy/uri_handler/val_dist_land_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/val_dist_land_options/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/uri_handler/val_dist_land_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -589,11 +589,11 @@ class TestWindEnergyUriHandler(unittest.TestCase):
     def test_wind_energy_uri_handler_val_dist_land_grid_options(self):
         """Regression test for the uri handler given all optional arguments"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/val_dist_land_grid_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/val_dist_land_grid_options/'
         output_dir = \
-            './data/test_out/wind_energy/uri_handler/val_dist_land_grid_options/'
+            './invest-data/test/data/test_out/wind_energy/uri_handler/val_dist_land_grid_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -683,11 +683,11 @@ class TestWindEnergyUriHandler(unittest.TestCase):
         """Regression test for the uri handler given all optional arguments and
             the suffix"""
         #raise SkipTest
-        input_dir = './data/wind_energy_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/val_suffix_options/'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/val_suffix_options/'
         output_dir = \
-            './data/test_out/wind_energy/uri_handler/val_suffix_options/'
+            './invest-data/test/data/test_out/wind_energy/uri_handler/val_suffix_options/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)

@@ -14,11 +14,11 @@ import invest_natcap.testing as testing
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-TEST_DATA_DIR = 'data/pollination/samp_input'
-REGRESSION_FOLDER_BASE = 'data/pollination/'
+TEST_DATA_DIR = 'invest-data/test/data/pollination/samp_input'
+REGRESSION_FOLDER_BASE = 'invest-data/test/data/pollination/'
 LOGGER = logging.getLogger('pollination_test')
 
-WORKSPACE_DIR = 'data/pollination/test_workspace'
+WORKSPACE_DIR = 'invest-data/test/data/pollination/test_workspace'
 GUILDS_URI = TEST_DATA_DIR + '/Guild.csv'
 
 class UnifiedPollinationTest(testing.GISTest):
@@ -124,19 +124,19 @@ class PollinationSmokeTest(unittest.TestCase):
         """
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
             + ' 83 84 85 88 90 91 92')
-        self.args['landuse_cur_uri'] = 'data/base_data/terrestrial/lulc_samp_cur'
+        self.args['landuse_cur_uri'] = 'invest-data/test/data/base_data/terrestrial/lulc_samp_cur'
         pollination.execute(self.args)
 
     def test_ag_200m_smoke(self):
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
             + ' 83 84 85 88 90 91 92')
         self.args['landuse_cur_uri'] =\
-            'data/pollination/samp_input/landuse_cur_200m.tif'
+            'invest-data/test/data/pollination/samp_input/landuse_cur_200m.tif'
         pollination.execute(self.args)
 
     def test_noag_200m_smoke(self):
         self.args['landuse_cur_uri'] =\
-            'data/pollination/samp_input/landuse_cur_200m.tif'
+            'invest-data/test/data/pollination/samp_input/landuse_cur_200m.tif'
         pollination.execute(self.args)
 
     @unittest.skip('This takes too long.  Only run if you really mean it')

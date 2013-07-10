@@ -24,7 +24,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = './data/test_out/Overlap'
+        args['workspace_dir'] = './invest-data/test/data/test_out/Overlap'
         args['intermediate'] = os.path.join(args['workspace_dir'], 'Intermediate')
         args['output'] = os.path.join(args['workspace_dir'], 'Ouput')
 
@@ -40,21 +40,21 @@ class TestOverlapAnalysisCore(unittest.TestCase):
         
     def test_all_on(self):
         
-        self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
+        self.args['zone_layer_file'] = ogr.Open('./invest-data/test/data/test_out/Overlap/Input/test_aoi.shp')
         self.args['do_inter'] = True
         self.args['do_intra'] = True
         self.args['intra_name'] = 'RI'    
         self.args['do_hubs'] = True
         self.args['decay_amt'] = 0.0005
-        self.args['hubs_uri'] = './data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
+        self.args['hubs_uri'] = './invest-data/test/data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
 
-        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+        files_loc = './invest-data/test/data/test_out/Overlap/Input/Test_Activity'
 
         files_dict = overlap_core.get_files_dict(files_loc)
 
         self.args['overlap_files'] = files_dict
      
-        inter_table_loc = './data/test_out/Overlap/Input/inter_activ_table.csv'
+        inter_table_loc = './invest-data/test/data/test_out/Overlap/Input/inter_activ_table.csv'
         inter_table = overlap_analysis.format_over_table(inter_table_loc)
         self.args['over_layer_dict'] = inter_table
 
@@ -64,11 +64,11 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
     def test_no_weighted(self):
 
-        self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
+        self.args['zone_layer_file'] = ogr.Open('./invest-data/test/data/test_out/Overlap/Input/test_aoi.shp')
         self.args['do_inter'] = False 
         self.args['do_intra'] = False
 
-        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+        files_loc = './invest-data/test/data/test_out/Overlap/Input/Test_Activity'
 
         files_dict = overlap_core.get_files_dict(files_loc)
 
@@ -80,12 +80,12 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
     def test_only_intra(self):
 
-        self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
+        self.args['zone_layer_file'] = ogr.Open('./invest-data/test/data/test_out/Overlap/Input/test_aoi.shp')
         self.args['do_inter'] = False 
         self.args['do_intra'] = True
         self.args['intra_name'] = 'RI'    
 
-        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+        files_loc = './invest-data/test/data/test_out/Overlap/Input/Test_Activity'
 
         files_dict = overlap_core.get_files_dict(files_loc)
 
@@ -97,17 +97,17 @@ class TestOverlapAnalysisCore(unittest.TestCase):
        
     def test_only_inter(self):
         
-        self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
+        self.args['zone_layer_file'] = ogr.Open('./invest-data/test/data/test_out/Overlap/Input/test_aoi.shp')
         self.args['do_inter'] = True
         self.args['do_intra'] = False
 
-        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+        files_loc = './invest-data/test/data/test_out/Overlap/Input/Test_Activity'
 
         files_dict = overlap_core.get_files_dict(files_loc)
 
         self.args['overlap_files'] = files_dict
      
-        inter_table_loc = './data/test_out/Overlap/Input/inter_activ_table.csv'
+        inter_table_loc = './invest-data/test/data/test_out/Overlap/Input/inter_activ_table.csv'
         inter_table = overlap_analysis.format_over_table(inter_table_loc)
         self.args['over_layer_dict'] = inter_table
 
@@ -117,14 +117,14 @@ class TestOverlapAnalysisCore(unittest.TestCase):
     
     def test_only_hubs(self):
 
-        self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
+        self.args['zone_layer_file'] = ogr.Open('./invest-data/test/data/test_out/Overlap/Input/test_aoi.shp')
         self.args['do_inter'] = False 
         self.args['do_intra'] = False
         self.args['do_hubs'] = True
         self.args['decay_amt'] = 0.0005
-        self.args['hubs_uri'] = './data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
+        self.args['hubs_uri'] = './invest-data/test/data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
         
-        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+        files_loc = './invest-data/test/data/test_out/Overlap/Input/Test_Activity'
 
         files_dict = overlap_core.get_files_dict(files_loc)
 

@@ -61,8 +61,8 @@ def _execute_nutrient(args):
             'lulc_uri' - a string uri pointing to the landcover GDAL raster.
             'watersheds_uri' - a string uri pointing to an OGR shapefile on
                 disk representing the user's watersheds.
-            'subwatersheds_uri' - a string uri pointing to an OGR shapefile on
-                disk representing the user's subwatersheds.
+            'sub_watersheds_uri' - (optional) a string uri pointing to an OGR
+                shapefile on disk representing the user's subwatersheds.
             'biophysical_table_uri' - a string uri to a supported table on disk
                 containing nutrient retention values. (SAY WHAT VALUES ARE)
             'soil_depth_uri' - a uri to an input raster describing the 

@@ -27,8 +27,8 @@ class TestMonthlyWaterYield(unittest.TestCase):
         """A unit test for constructing the dictionary from step data
         """
         #raise SkipTest
-        test_dir = './data/monthly_water_yield'
-        output_dir = './data/test_out/monthly_water_yield/construct_step_data'
+        test_dir = './invest-data/test/data/monthly_water_yield'
+        output_dir = './invest-data/test/data/test_out/monthly_water_yield/construct_step_data'
         raster_utils.create_directories([output_dir])
 
         samp_data_uri = os.path.join(
@@ -68,8 +68,8 @@ class TestMonthlyWaterYield(unittest.TestCase):
         """
 
         #raise SkipTest
-        test_dir = './data/monthly_water_yield'
-        output_dir = './data/test_out/monthly_water_yield/create_alphas'
+        test_dir = './invest-data/test/data/monthly_water_yield'
+        output_dir = './invest-data/test/data/test_out/monthly_water_yield/create_alphas'
         regression_dir = os.path.join(test_dir, 'regression')
 
         raster_utils.create_directories([output_dir])

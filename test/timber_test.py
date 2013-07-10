@@ -7,7 +7,7 @@ import invest_test_core
 
 class TestInvestTimberCore(unittest.TestCase):
     def test_timber_model(self):
-        data_dir = './data/timber'
+        data_dir = './invest-data/test/data/timber'
         output_dir = './test_out/timber'
         
         if not os.path.isdir(output_dir):
