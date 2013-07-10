@@ -14,6 +14,8 @@ from scipy.stats import norm
 
 from invest_natcap import raster_utils
 
+from carbon import carbon_utils
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -626,11 +628,5 @@ def _calculate_summary(args):
         #if we didn't.
         if raster_key not in args:
             continue
-        dataset = gdal.Open(args[raster_key])
-        band, nodata = raster_utils.extract_band_and_nodata(dataset)
-        total_sum = 0.0
-        #Loop over each row in out_band
-        for row_index in range(band.YSize):
-            row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
-            total_sum += numpy.sum(row_array[row_array != nodata])
+        total_sum = carbon_utils.sum_pixel_values_from_uri(args[raster_key])
         LOGGER.info("%s %s Mg" % (message, total_sum))
