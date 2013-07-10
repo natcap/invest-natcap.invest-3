@@ -749,6 +749,48 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
     return num_stress
 
+def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
+    '''This will take in a raster file, and output a shapefile of the same
+    area and shape.
+
+    Input:
+        raster_uri- The raster that needs to be turned into a shapefile. This is
+            only the URI to the raster, we will need to get the band. 
+        out_uri- The desired URI for the new shapefile.
+        layer_name- The name of the layer going into the new shapefile.
+        field-name- The name of the field that will contain the raster pixel
+            value.
+    
+    Output:
+        This will be a shapefile in the shape of the raster. The raster being
+        passed in will be solely "high risk" areas that conatin data, and
+        nodata values for everything else.
+
+    Returns nothing.
+    '''
+    raster = gdal.Open(raster_uri)
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+    ds = driver.CreateDataSource(out_uri)
+                
+    spat_ref = osr.SpatialReference()
+    proj = raster.GetProjectionRef() 
+    spat_ref.ImportFromWkt(proj)
+    
+    layer_name = layer_name.encode('utf-8')
+    layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
+
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
+
+    band = raster.GetRasterBand(1)
+    mask = band.GetMaskBand()
+
+    gdal.Polygonize(band, mask, layer, 0)
+
+    layer = None
+
+    ds.SyncToDisk()
+
 def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
     within one habitat. It should return a list of open rasters that correspond
