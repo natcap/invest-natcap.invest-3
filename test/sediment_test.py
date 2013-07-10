@@ -26,9 +26,9 @@ class TestSediment(unittest.TestCase):
         """Test for sediment function running with default InVEST 
            sample input."""
         args = {}
-        args['workspace_dir'] = './data/test_out/sediment_output'
+        args['workspace_dir'] = './invest-data/test/data/test_out/sediment_output'
 #        args['suffix'] = None
-        base_dir = './data/sediment_test_data'
+        base_dir = './invest-data/test/data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % base_dir
         args['erosivity_uri'] = '%s/erosivity' % base_dir
         args['erodibility_uri'] = '%s/erodibility.tif' % base_dir

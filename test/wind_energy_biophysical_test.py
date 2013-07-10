@@ -17,8 +17,8 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for turning a binary text file into a dictionary"""
         #raise SkipTest
 
-        wind_data_uri = './data/wind_energy_data/ECNA_EEZ_WEBPAR_Aug27_2012.bin'
-        regression_dir = './data/wind_energy_regression_data/biophysical'
+        wind_data_uri = './invest-data/test/data/wind_energy_data/ECNA_EEZ_WEBPAR_Aug27_2012.bin'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/biophysical'
         expected_uri = os.path.join(regression_dir, 'testing_binary_dict.pick')
 
         field_list = ['LATI', 'LONG', 'Ram-050m', 'K-010m']
@@ -41,8 +41,8 @@ class TestWindEnergyBiophysical(unittest.TestCase):
             scale key"""
         #raise SkipTest
 
-        wind_data_uri = './data/wind_energy_data/ECNA_EEZ_WEBPAR_Aug27_2012.bin'
-        regression_dir = './data/wind_energy_regression_data/biophysical'
+        wind_data_uri = './invest-data/test/data/wind_energy_data/ECNA_EEZ_WEBPAR_Aug27_2012.bin'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/biophysical'
         expected_uri = os.path.join(regression_dir, 'testing_binary_dict.pick')
 
         field_list = ['LATI', 'LONG', 'Ram-250m', 'K-010m']
@@ -56,11 +56,11 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Compare the output shapefile created from a known dictionary against
             a regression shape file that has been verified correct""" 
         #raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/biophysical'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/biophysical'
         shape_uri = os.path.join(regression_dir, 'wind_data_to_points.shp')
 
         output_dir = \
-                './data/test_out/wind_energy/biophysical/wind_data_to_point_shape/'
+                './invest-data/test/data/test_out/wind_energy/biophysical/wind_data_to_point_shape/'
         
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -90,8 +90,8 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for clipping a shapefile from another shapefile"""
         #raise SkipTest
         
-        input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/'
         
         original_shape_uri = os.path.join(
                 input_dir, 'testing_land.shp')
@@ -104,7 +104,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         regression_shape_uri = os.path.join(
                 regression_dir, 'biophysical/land_poly_clipped.shp')
         
-        output_dir = './data/test_out/wind_energy/biophysical/clip_datasource/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/biophysical/clip_datasource/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -129,7 +129,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for clipping a shapefile from another shapefile"""
         #raise SkipTest
 
-        regression_dir = './data/wind_energy_regression_data/biophysical'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/biophysical'
         original_shape_uri = os.path.join(
                 regression_dir, 'clip_dsource_orig.shp')
 
@@ -138,7 +138,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         regression_shape_uri = os.path.join(
                 regression_dir, 'clip_dsource_result.shp')
         
-        output_dir = './data/test_out/wind_energy/biophysical/clip_datasource/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/biophysical/clip_datasource/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -165,8 +165,8 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         #raise SkipTest
 
         regression_dir = \
-              './data/wind_energy_regression_data/biophysical/clip_project_map'
-        input_dir = './data/wind_energy_data/'
+              './invest-data/test/data/wind_energy_regression_data/biophysical/clip_project_map'
+        input_dir = './invest-data/test/data/wind_energy_data/'
 
         original_shape_uri = os.path.join(
                 input_dir, 'testing_land.shp')
@@ -183,7 +183,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         reg_file_list = [
                 regression_proj_uri, regression_clip_uri, regression_aoi_uri]
 
-        output_dir = './data/test_out/wind_energy/biophysical/clip_project/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/biophysical/clip_project/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -217,8 +217,8 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         #raise SkipTest
 
         regression_dir = \
-              './data/wind_energy_regression_data/biophysical/clip_project_map'
-        input_dir = './data/wind_energy_data/'
+              './invest-data/test/data/wind_energy_regression_data/biophysical/clip_project_map'
+        input_dir = './invest-data/test/data/wind_energy_data/'
 
         original_raster_uri = os.path.join(
                 input_dir, 'testing_bathym.tif')
@@ -234,7 +234,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         
         reg_file_list = [regression_proj_uri, regression_clip_uri]
 
-        output_dir = './data/test_out/wind_energy/biophysical/clip_project/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/biophysical/clip_project/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)

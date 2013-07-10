@@ -19,8 +19,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestHydropowerValuation(unittest.TestCase):
     """Main testing class for the hydropower valuation tests"""
     def test_hydropower_valuation_default_inputs(self):
-        base = './data/hydropower_data/test_input/'
-        output_base = './data/test_out/hydropower_valuation_default_inputs/'
+        base = './invest-data/test/data/hydropower_data/test_input/'
+        output_base = './invest-data/test/data/test_out/hydropower_valuation_default_inputs/'
         raise SkipTest        
         #Create the output directories
         if not os.path.isdir(output_base):
@@ -48,8 +48,8 @@ class TestHydropowerValuation(unittest.TestCase):
         hydropower_valuation.execute(args)
 
     def test_hydropower_valuation_re(self):
-        base = './data/hydropower_regression_data/'
-        output_base = './data/test_out/hydropower_valuation_uri/'
+        base = './invest-data/test/data/hydropower_regression_data/'
+        output_base = './invest-data/test/data/test_out/hydropower_valuation_uri/'
         
         #Create the output directories
         if not os.path.isdir(output_base):
@@ -76,7 +76,7 @@ class TestHydropowerValuation(unittest.TestCase):
         
         hydropower_valuation.execute(args)
         
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_hp_energy_uri = regression_dir + 'hp_energy.tif'
         reg_hp_val_uri = regression_dir + 'hp_val.tif'
         reg_hp_val_ws_uri = \

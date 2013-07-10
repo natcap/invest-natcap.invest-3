@@ -21,7 +21,7 @@ class TestWaterYield(unittest.TestCase):
         """This is a test that runs the water yield model with the default
            data given as input."""
 
-        output_base = './data/test_out/bonnie_water_yield_test/'
+        output_base = './invest-data/test/data/test_out/bonnie_water_yield_test/'
         input_dir = '../../InVEST_BLK/'
         
         args = {}
@@ -46,8 +46,8 @@ class TestWaterYield(unittest.TestCase):
 
         raise SkipTest
 
-        output_base = './data/test_out/hydropower_water_yield_default_inputs/'
-        input_dir = './data/hydropower_data/test_input/'
+        output_base = './invest-data/test/data/test_out/hydropower_water_yield_default_inputs/'
+        input_dir = './invest-data/test/data/hydropower_data/test_input/'
         
         args = {}
         args['workspace_dir'] = output_base
@@ -72,8 +72,8 @@ class TestWaterYield(unittest.TestCase):
 
         raise SkipTest
         
-        output_base = './data/test_out/hydropower_water_yield_uri/'
-        input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
+        output_base = './invest-data/test/data/test_out/hydropower_water_yield_uri/'
+        input_dir = './invest-data/test/data/hydropower_regression_data/hydro_regression_byhand/'
         
 #        if not os.path.isdir(output_base):
 #            os.makedirs(output_base)
@@ -94,7 +94,7 @@ class TestWaterYield(unittest.TestCase):
         
         water_yield.execute(args)
         
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_pixel_aet_uri = regression_dir + 'aet_pixel.tif'
         reg_pixel_fractp_uri = regression_dir + 'fractp_pixel.tif'
         reg_pixel_wyield_uri = regression_dir + 'wyield_pixel.tif'

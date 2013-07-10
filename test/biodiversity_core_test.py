@@ -24,7 +24,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         #raise SkipTest
 
         samp_lulc_cur_uri = \
-            './data/biodiversity_regression_data/samp_input/lc_samp_cur_b.tif'
+            './invest-data/test/data/biodiversity_regression_data/samp_input/lc_samp_cur_b.tif'
         ds = gdal.Open(samp_lulc_cur_uri)
 
         results = biodiversity_core.raster_pixel_count(ds)
@@ -77,8 +77,8 @@ class TestInvestBiodiversityCore(unittest.TestCase):
     def test_biodiversity_core_map_raster_to_dict_values_regression(self):
         """A regression test for map_raster_to_dict_values"""
         #raise SkipTest
-        out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
-        input_dir = './data/biodiversity_regression_data/samp_input/'
+        out_dir = './invest-data/test/data/test_out/biodiversity/map_raster_to_dict_values/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input/'
                 
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
@@ -102,7 +102,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
                     sensitivity_dict, field, out_nodata, 'values_required')
 
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/'
 
         regression_ds = \
                 gdal.Open(os.path.join(regression_dir, 'sens_crp_c.tif'))
@@ -113,7 +113,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         """Test mapping a set of values from a dictionary to a raster by hand
         creating a raster and dictionary"""
         
-        out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
+        out_dir = './invest-data/test/data/test_out/biodiversity/map_raster_to_dict_values/'
         
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
@@ -168,7 +168,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         leave out a value from the sensitivity table and assert that an
         exception was raised"""
         #raise SkipTest 
-        out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
+        out_dir = './invest-data/test/data/test_out/biodiversity/map_raster_to_dict_values/'
         
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
@@ -207,13 +207,13 @@ class TestInvestBiodiversityCore(unittest.TestCase):
     def test_biodiversity_core_make_raster_from_shape(self):
         """A regression test for make_raster_from_shape """
         #raise SkipTest
-        test_dir = './data/biodiversity_regression_data/samp_input/'
-        out_dir = './data/test_out/biodiversity/make_raster_from_shape/'
+        test_dir = './invest-data/test/data/biodiversity_regression_data/samp_input/'
+        out_dir = './invest-data/test/data/test_out/biodiversity/make_raster_from_shape/'
         shape_uri = os.path.join(test_dir, 'access_samp.shp')
         base_ds_uri = os.path.join(test_dir, 'lc_samp_cur_b.tif')
         out_uri = os.path.join(out_dir, 'new_raster.tif')
         regression_ds_uri = \
-            './data/biodiversity_regression_data/access_regression.tif'
+            './invest-data/test/data/biodiversity_regression_data/access_regression.tif'
 
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)

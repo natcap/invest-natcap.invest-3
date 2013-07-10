@@ -21,13 +21,13 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestInvestCore(unittest.TestCase):
     def testflowDirectionD8(self):
         """Regression test for flow direction on a DEM"""
-        dem = gdal.Open('./data/sediment_test_data/dem')
+        dem = gdal.Open('./invest-data/test/data/sediment_test_data/dem')
         flow = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/flow.tif', 'GTiff', 0, gdal.GDT_Float32)
+            './invest-data/test/data/test_out/flow.tif', 'GTiff', 0, gdal.GDT_Float32)
         invest_cython_core.flowDirectionD8(dem,
             [0, 0, dem.RasterXSize, dem.RasterYSize], flow)
         regressionFlow = \
-            gdal.Open('./data/sediment_test_data/flowregression.tif')
+            gdal.Open('./invest-data/test/data/sediment_test_data/flowregression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
 
     def testflowDirectionD8Simple(self):
@@ -83,24 +83,24 @@ class TestInvestCore(unittest.TestCase):
 
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
-        dem = gdal.Open('./data/sediment_test_data/dem')
+        dem = gdal.Open('./invest-data/test/data/sediment_test_data/dem')
         slope_output = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/slope.tif', 'GTiff', -1, gdal.GDT_Float32)
+            './invest-data/test/data/test_out/slope.tif', 'GTiff', -1, gdal.GDT_Float32)
         invest_cython_core.calculate_slope(dem,
             [0, 0, dem.RasterXSize, dem.RasterYSize], slope_output)
         regressionSlope = \
-            gdal.Open('./data/sediment_test_data/slopeRegression.tif')
+            gdal.Open('./invest-data/test/data/sediment_test_data/slopeRegression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, slope_output, regressionSlope)
 
     def testvectorizeRasters(self):
-        r1 = gdal.Open('./data/base_data/terrestrial/lulc_samp_cur')
-        r2 = gdal.Open('./data/base_data/Freshwater/precip')
+        r1 = gdal.Open('./invest-data/test/data/base_data/terrestrial/lulc_samp_cur')
+        r2 = gdal.Open('./invest-data/test/data/base_data/Freshwater/precip')
 
         def op(a, b):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='./data/test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+            rasterName='./invest-data/test/data/test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
@@ -200,7 +200,7 @@ class TestInvestCore(unittest.TestCase):
     def test_carbon_pixel_area(self):
         """Verify the correct output of carbon.pixelArea()"""
 
-        dataset = gdal.Open('./data/carbon_regression_data/sequest_regression.tif',
+        dataset = gdal.Open('./invest-data/test/data/carbon_regression_data/sequest_regression.tif',
                             gdal.GA_ReadOnly)
         area = invest_cython_core.pixelArea(dataset)
 
@@ -211,13 +211,13 @@ class TestInvestCore(unittest.TestCase):
     def test_wave_energy_pixel_size_in_meters(self):
         """Verify the correct output of wave_energy.pixel_size_in_meters()"""
         #This file is known/tested to have the right conversion
-        correct_pixel_path = './data/wave_energy_regression_data/npv_usd_regression.tif'
+        correct_pixel_path = './invest-data/test/data/wave_energy_regression_data/npv_usd_regression.tif'
         dataset_correct_pixel = gdal.Open(correct_pixel_path, gdal.GA_ReadOnly)
-        dataset = gdal.Open('./data/wave_energy_data/samp_input/global_dem',
+        dataset = gdal.Open('./invest-data/test/data/wave_energy_data/samp_input/global_dem',
                             gdal.GA_ReadOnly)
         #We need to get a point from the shapefile in the same vacinity as
         #the projection
-        shape = ogr.Open('./data/wave_energy_regression_data/WEM_InputOutput_Pts_bio_regression.shp')
+        shape = ogr.Open('./invest-data/test/data/wave_energy_regression_data/WEM_InputOutput_Pts_bio_regression.shp')
         layer = shape.GetLayer(0)
         feat = layer.GetNextFeature()
         geom = feat.GetGeometryRef()
@@ -249,7 +249,7 @@ class TestInvestCore(unittest.TestCase):
 
     def test_createRasterFromVectorExtents(self):
         fsencoding = sys.getfilesystemencoding()
-        shp = ogr.Open('./data/sediment_test_data/subwatersheds.shp'.\
+        shp = ogr.Open('./invest-data/test/data/sediment_test_data/subwatersheds.shp'.\
                        encode(fsencoding))
         raster = invest_cython_core.createRasterFromVectorExtents(30, 30,
-                       gdal.GDT_Float32, -5.0, './data/test_out/subwatershed.tif', shp)
+                       gdal.GDT_Float32, -5.0, './invest-data/test/data/test_out/subwatershed.tif', shp)

@@ -12,7 +12,7 @@ import invest_test_core
 from invest_natcap.routing import routing_utils
 import routing_cython_core
 
-TEST_DATA = os.path.join('data', 'flood_mitigation')
+TEST_DATA = os.path.join('invest-data/test/data', 'flood_mitigation')
 SAMP_INPUT = os.path.join(TEST_DATA, 'samp_input')
 REGRESSION_DATA = os.path.join(TEST_DATA, 'regression')
 
@@ -21,10 +21,10 @@ class FloodMitigationTest(unittest.TestCase):
         self.workspace = os.path.join(TEST_DATA, 'test_workspace')
         self.curve_numbers = os.path.join(SAMP_INPUT, 'curve_numbers.tif')
         self.curve_numbers_30m = os.path.join(SAMP_INPUT, 'curve_numbers_30m.tif')
-        self.dem = os.path.join('data', 'sediment_test_data', 'dem', 'hdr.adf')
+        self.dem = os.path.join('invest-data/test/data', 'sediment_test_data', 'dem', 'hdr.adf')
         self.dem_small = os.path.join(SAMP_INPUT, 'dem_200m.tif')
         self.precip = os.path.join(SAMP_INPUT, 'precipitation.csv')
-        self.landcover = os.path.join('data', 'base_data', 'terrestrial', 'lulc_samp_cur')
+        self.landcover = os.path.join('invest-data/test/data', 'base_data', 'terrestrial', 'lulc_samp_cur')
         self.landcover_small = os.path.join(SAMP_INPUT, 'landuse_cur_200m.tif')
         self.mannings = os.path.join(SAMP_INPUT, 'mannings.csv')
 

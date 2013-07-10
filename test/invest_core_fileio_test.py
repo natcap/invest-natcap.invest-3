@@ -3,8 +3,8 @@ from csv import DictReader
 import invest_natcap.invest_core.fileio
 import os 
 
-GUILDS_URI = './data/iui/Guild.csv'
-TEST_DIR = './data/iui/'
+GUILDS_URI = './invest-data/test/data/iui/Guild.csv'
+TEST_DIR = './invest-data/test/data/iui/'
 
 class CSVDriverTest(unittest.TestCase):
     def setUp(self):

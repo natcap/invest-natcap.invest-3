@@ -17,8 +17,8 @@ class TestWindEnergyValuation(unittest.TestCase):
         #raise SkipTest
 
         regression_dir = \
-              './data/wind_energy_regression_data/valuation/'
-        input_dir = './data/wind_energy_data/'
+              './invest-data/test/data/wind_energy_regression_data/valuation/'
+        input_dir = './invest-data/test/data/wind_energy_data/'
 
         original_shape_uri = os.path.join(
                 input_dir, 'testing_land.shp')
@@ -35,7 +35,7 @@ class TestWindEnergyValuation(unittest.TestCase):
         reg_file_list = [
                 regression_proj_uri, regression_clip_uri, regression_aoi_uri]
 
-        output_dir = './data/test_out/wind_energy/valuation/clip_project/'
+        output_dir = './invest-data/test/data/test_out/wind_energy/valuation/clip_project/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
