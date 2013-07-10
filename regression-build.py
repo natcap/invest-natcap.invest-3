@@ -59,8 +59,8 @@ def set_input_archive_name():
 
 def set_output_archive_name():
     output_archive_name = _set_archive_name('output archive')
-    if archive_archive_name[-7:] != '.tar.gz':
-        archive_archive_name += '.tar.gz'
+    if output_archive_name[-7:] != '.tar.gz':
+        output_archive_name += '.tar.gz'
     CONFIG_DATA['Output archive']['path'] = output_archive_name
 
 def set_test_file_name():

@@ -93,9 +93,14 @@ class TestTimber(unittest.TestCase):
         smoke_path = './invest-data/test/data/test_out/timber/Smoke/'
         if not os.path.isdir(smoke_path):
             os.makedirs(smoke_path)
+        else:
+            try:
+                os.remove(smoke_path)
+            except:
+                os.rmdir(smoke_path)
         #Define the paths for the sample input/output files
         dbf_path = os.path.join(smoke_path, 'test.dbf')
-        shp_path = smoke_path
+        shp_path = os.path.join(smoke_path, 'timber.shp')
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
         db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1),

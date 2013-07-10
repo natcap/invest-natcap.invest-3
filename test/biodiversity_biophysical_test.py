@@ -21,6 +21,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -77,6 +80,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -133,6 +139,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -189,6 +198,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -245,6 +257,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -301,6 +316,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -357,6 +375,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -413,6 +434,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -469,6 +493,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -526,6 +553,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
