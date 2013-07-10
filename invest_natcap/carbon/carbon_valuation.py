@@ -5,6 +5,7 @@ import logging
 
 from osgeo import gdal
 
+from carbon import carbon_utils
 from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -98,11 +99,20 @@ def _CreateHtmlSummary(html_uri, sequest_uri, value_seq_uri):
     html.write("<title>InVEST Carbon Model</title>")
     html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
     html.write("<table border='1', cellpadding='5'>")
-    column_titles = ["Scenario", "Change in Carbon Stocks", "Net Present Value"]
-    html.write("<tr>")
-    for title in column_titles:
-        html.write("<td><b>" + title + "</b></td>")
-    html.write("</tr>")
+
+    def write_row(cells):
+        html.write("<tr>")
+        for cell in cells:
+            html.write("<td>" + str(cell) + "</td>")
+        html.write("</tr>")
+
+    column_titles = ["Change in Carbon Stocks", "Net Present Value"]
+    write_row("<strong>" + title + "</strong>" for title in column_titles)
+
+    total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
+    total_val = carbon_utils.sum_pixel_values_from_uri(value_seq_uri)
+    write_row([total_seq, total_val])
+
     html.write("</table>")
     html.write("</html>")
 
