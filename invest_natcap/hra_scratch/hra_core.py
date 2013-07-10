@@ -1531,7 +1531,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     return burn_rating
             
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
-                        crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
+                        crit_E_uri, gdal.GDT_Float32, 0., base_pixel_size,
                         "union", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
 
