@@ -129,6 +129,30 @@ def execute(args):
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
         avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
+        aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
+
+def rewrite_avgs_dict(avgs_dict, aoi_names):
+    '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
+    centric instead. Should produce something like the following:
+    
+    {'AOIName':
+        [(HName, SName, E, C, Risk), ...],
+        ....
+    }
+    '''
+    pair_dict = {}
+
+    for aoi_name in aoi_names:
+        pair_dict[aoi_name] = []
+
+        for h_name, h_dict in avgs_dict.items():
+            for s_name, s_list in h_dict.items():
+                        
+                for aoi_dict in s_list:
+                    if aoi_dict['Name'] == aoi_name:
+                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']))
+
+    return pair_dict
 
 def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     '''This funtion is a helper to make_aoi_tables, and will just handle
