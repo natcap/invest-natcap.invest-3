@@ -131,6 +131,84 @@ def execute(args):
         avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
         aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
 
+        tables_dir = os.path.join(output_dir, 'HTML_Plots')
+        os.mkdir(tables_dir)
+        
+        make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
+
+def make_aoi_tables(out_dir, aoi_pairs, max_risk):
+    '''This function will take in an shapefile containing multiple AOIs, and
+    output a table containing values averaged over those areas.
+
+    Input:
+        out_dir- The directory into which the completed HTML tables should be
+            placed.
+        aoi_pairs- Replacement for avgs_dict, holds all the averaged values on
+            a H, S basis.
+
+            {'AOIName':
+                [(HName, SName, E, C, Risk), ...],
+                ....
+            }
+     Output:
+        A set of HTML tables which will contain averaged values of E, C, and
+        risk for each H, S pair within each AOI. Additionally, the tables will
+        contain a column for risk %, which is the averaged risk value in that
+        area divided by the total potential risk for a given pixel in the map.
+
+     Returns nothing.
+    '''
+
+    filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
+                   % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
+
+    file = open(filename, "w")
+
+    file.write("<html>")
+    file.write("<title>" + "InVEST HRA" + "</title>")
+    file.write("<CENTER><H1>" + "Habitat Risk Assessment Model" + "</H1></CENTER>")
+    file.write("<br>")
+    file.write("This page contains results from running the InVEST Habitat Risk \
+    Assessment model." + "<p>" + "Each table displays values on a per-habitat \
+    basis. For each overlapping stressor within the model, the averages for the \
+    desired sub-regions are presented. C, E, and Risk values are calculated as \
+    an average across a given subregion. Risk Percentage is calculated as a \
+    function of total potential risk within that area.")
+    file.write("<br><br>")
+    file.write("<HR>")
+
+
+    #Now, all of the actual calculations within the table. We want to make one
+    #table for each AOi used on the subregions shapefile.
+    for aoi_name, aoi_list in aoi_pairs.items():
+        
+        file.write("<H2>" + aoi_name + "</H2>")
+        file.write('<table border="1", cellpadding="5">')
+
+        #Headers row
+        file.write("<tr><b><td>Habitat Name</td><td>Stressor Name</td><td>E</td>" + \
+            "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
+
+        #Element looks like (HabName, StressName, E, C, Risk)
+        for element in aoi_list:
+
+            file.write("<tr>")
+            file.write("<td>" + element[0]+ "</td>")
+            file.write("<td>" + element[1] + "</td>")
+            file.write("<td>" + str(round(element[2], 2)) + "</td>")
+            file.write("<td>" + str(round(element[3], 2)) + "</td>")
+            file.write("<td>" + str(round(element[4], 2)) + "</td>")
+            file.write("<td>" + str(round(element[4] * 100 / max_risk, 2)) + "</td>")
+            file.write("</tr>")
+            
+        #End of the AOI-specific table
+        file.write("</table>")
+
+    #End of the page.
+    file.write("</html>")
+    file.close()
+
+
 def rewrite_avgs_dict(avgs_dict, aoi_names):
     '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
     centric instead. Should produce something like the following:
