@@ -23,8 +23,8 @@ class TestHydropowerCore(unittest.TestCase):
     def test_hydropower_core_water_yield_reg_byhand(self):
         """Regression test for the water_yield function in hydropower_core"""
         
-        base = './data/hydropower_regression_data/hydro_regression_byhand/'
-        output_base = './data/test_out/hydro_regression_byhand/'
+        base = './invest-data/test/data/hydropower_regression_data/hydro_regression_byhand/'
+        output_base = './invest-data/test/data/test_out/hydro_regression_byhand/'
         
         if not os.path.isdir(output_base):
             os.mkdir(output_base)
@@ -65,7 +65,7 @@ class TestHydropowerCore(unittest.TestCase):
         
         hydropower_core.water_yield(args)
         
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_pixel_aet_uri = regression_dir + 'aet_pixel.tif'
         reg_pixel_fractp_uri = regression_dir + 'fractp_pixel.tif'
         reg_pixel_wyield_uri = regression_dir + 'wyield_pixel.tif'
@@ -114,8 +114,8 @@ class TestHydropowerCore(unittest.TestCase):
            identified with watersheds
         """
         
-        input_dir = './data/hydropower_data/test_input/'
-        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
+        input_dir = './invest-data/test/data/hydropower_data/test_input/'
+        output_base = './invest-data/test/data/test_out/hydropower_sheds_map_subsheds/'
 
         sub_sheds_path = input_dir + 'subwatersheds.shp'
         sheds_path = input_dir + 'watersheds.shp'
@@ -155,8 +155,8 @@ class TestHydropowerCore(unittest.TestCase):
            Here, I created two polygon shapefiles by hand and test them
         """
         
-        input_dir = './data/hydropower_data/test_input/'
-        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
+        input_dir = './invest-data/test/data/hydropower_data/test_input/'
+        output_base = './invest-data/test/data/test_out/hydropower_sheds_map_subsheds/'
 
         sub_sheds_path = input_dir + 'test_hydro_sheds.shp'
         sheds_path = input_dir + 'test_hydro_subsheds.shp'
@@ -192,8 +192,8 @@ class TestHydropowerCore(unittest.TestCase):
            Here, I created two polygon shapefiles by hand and test them
         """
         
-        input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
-        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
+        input_dir = './invest-data/test/data/hydropower_regression_data/hydro_regression_byhand/'
+        output_base = './invest-data/test/data/test_out/hydropower_sheds_map_subsheds/'
 
         sub_sheds_path = input_dir + 'simple_reg_subws.shp'
         sheds_path = input_dir + 'simple_reg_ws.shp'
@@ -225,7 +225,7 @@ class TestHydropowerCore(unittest.TestCase):
         """A test to make sure the area rasters are being created properly
            by making hand calculated input data
         """
-        input_dir = './data/hydropower_regression_data/hydro_regression_byhand/' 
+        input_dir = './invest-data/test/data/hydropower_regression_data/hydro_regression_byhand/' 
         
         shapefile = ogr.Open(input_dir + 'simple_reg_subws.shp')
         
@@ -245,8 +245,8 @@ class TestHydropowerCore(unittest.TestCase):
         """A regression test for the core water scarcity functionality
         
         """
-        base = './data/hydropower_regression_data/'
-        output_base = './data/test_out/hydro_regression_byhand/'
+        base = './invest-data/test/data/hydropower_regression_data/'
+        output_base = './invest-data/test/data/test_out/hydro_regression_byhand/'
         #place code here
         args = {}
         args['workspace_dir'] = output_base
@@ -317,7 +317,7 @@ class TestHydropowerCore(unittest.TestCase):
         
         hydropower_core.water_scarcity(args)
         
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_consum_vol_uri = regression_dir + 'consum_vol.tif'
         reg_consum_mn_uri = regression_dir + 'consum_mn.tif'
         reg_rsup_vol_uri = regression_dir + 'rsup_vol.tif'
@@ -359,9 +359,9 @@ class TestHydropowerCore(unittest.TestCase):
         """
         
         #place code here
-        output_base = './data/test_out/write_csv_table/'
+        output_base = './invest-data/test/data/test_out/write_csv_table/'
         output_path = output_base + 'test_csv_table_ws.csv'
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_table_path = regression_dir + 'hand_calc_table_ws.csv'
         
         if not os.path.isdir(output_base):
@@ -388,9 +388,9 @@ class TestHydropowerCore(unittest.TestCase):
         """
         
         #place code here
-        output_base = './data/test_out/write_csv_table/'
+        output_base = './invest-data/test/data/test_out/write_csv_table/'
         output_path = output_base + 'test_csv_table_sws.csv'
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_table_path = regression_dir + 'hand_calc_table_sws.csv'
         
         if not os.path.isdir(output_base):
@@ -455,8 +455,8 @@ class TestHydropowerCore(unittest.TestCase):
         """
         
         #place code here
-        base = './data/hydropower_regression_data/'
-        output_base = './data/test_out/hydro_regression_byhand/'
+        base = './invest-data/test/data/hydropower_regression_data/'
+        output_base = './invest-data/test/data/test_out/hydro_regression_byhand/'
         
         args = {}
         args['workspace_dir'] = output_base
@@ -509,7 +509,7 @@ class TestHydropowerCore(unittest.TestCase):
         
         hydropower_core.valuation(args)
         
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_hp_energy_uri = regression_dir + 'hp_energy.tif'
         reg_hp_val_uri = regression_dir + 'hp_val.tif'
         reg_hp_val_ws_uri = \

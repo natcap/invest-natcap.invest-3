@@ -21,14 +21,14 @@ class TestHRACore(unittest.TestCase):
         
         args = {}
 
-        args['workspace_dir'] = './data/test_out/HRA/Test1'
+        args['workspace_dir'] = './invest-data/test/data/test_out/HRA/Test1'
     
         #For purposes of running test independently of HRA non-core, need to
         #delete current intermediate and output folders
         out_dir = os.path.join(args['workspace_dir'], 'Output')
         inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
    
-        overlap_dir = './data/test_out/HRA/Reg_Inputs/Intermediate/Overlap_Rasters'
+        overlap_dir = './invest-data/test/data/test_out/HRA/Reg_Inputs/Intermediate/Overlap_Rasters'
 
         for folder in [out_dir, inter_dir]:
             if (os.path.exists(folder)):
@@ -50,7 +50,7 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                           './data/test_out/HRA/Criteria_Rasters/kelp_finfishaquaculturecomm_change_in_area.tif'
+                           './invest-data/test/data/test_out/HRA/Criteria_Rasters/kelp_finfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
@@ -67,7 +67,7 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/kelp_shellfishaquaculturecomm_change_in_area.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/kelp_shellfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
@@ -84,7 +84,7 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/eelgrass_finfishaquaculturecomm_change_in_area.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/eelgrass_finfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
@@ -101,7 +101,7 @@ class TestHRACore(unittest.TestCase):
                     {'change_in_area':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/eelgrass_shellfishaquaculturecomm_change_in_area.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/eelgrass_shellfishaquaculturecomm_change_in_area.tif'
                         }
                     },
                  'DS': 
@@ -121,11 +121,11 @@ class TestHRACore(unittest.TestCase):
                     {'connectivity_rating':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/kelp_connectivity_rating.tif'
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/kelp.tif'
+                    './invest-data/test/data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/kelp.tif'
                 },
             ('eelgrass'):
                 {'Crit_Ratings':
@@ -138,11 +138,11 @@ class TestHRACore(unittest.TestCase):
                     {'connectivity_rating':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/eelgrass_connectivity_rating.tif'
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/eelgrass.tif'
+                    './invest-data/test/data/test_out/HRA/Reg_Inputs/Intermediate/Habitat_Rasters/eelgrass.tif'
                 }
             }
         args['stressors'] = \
@@ -157,11 +157,11 @@ class TestHRACore(unittest.TestCase):
                     {'new_stresscrit':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/finfishaquaculturecomm_new_stresscrit.tif'
                         }
                     },
                  'DS': 
-                    './data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif'
+                    './invest-data/test/data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/FinfishAquacultureComm_buff.tif'
                 },
             ('shellfishaquaculturecomm'):
                {'Crit_Ratings':
@@ -174,11 +174,11 @@ class TestHRACore(unittest.TestCase):
                     {'new_stresscrit':
                         {'Weight': 1.0, 'DQ': 1.0, 
                         'DS':
-                            './data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif'
+                            './invest-data/test/data/test_out/HRA/Criteria_Rasters/shellfishaquaculturecomm_new_stresscrit.tif'
                         }
                     },
                 'DS': 
-                    './data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif'
+                    './invest-data/test/data/test_out/HRA/Reg_Inputs/Intermediate/Stressor_Rasters/ShellfishAquacultureComm_buff.tif'
                 } 
             }
         self.args = args

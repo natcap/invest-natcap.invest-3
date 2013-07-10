@@ -25,9 +25,9 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         """A regression test for the distance_transform_dataset function"""
         #raise SkipTest        
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/dist_options/intermediate'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/dist_options/intermediate'
         output_dir = \
-            './data/test_out/wind_energy/biophysical/distance_transform_dataset/'
+            './invest-data/test/data/test_out/wind_energy/biophysical/distance_transform_dataset/'
         # Where the created test file will be written to
         out_uri = os.path.join(output_dir, 'transformed_ds.tif')
         # The path of the regression file to test against
@@ -60,7 +60,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         #raise SkipTest        
         
         output_dir = \
-                './data/test_out/wind_energy/biophysical/distance_transform_dataset/'
+                './invest-data/test/data/test_out/wind_energy/biophysical/distance_transform_dataset/'
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -117,11 +117,11 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         # Datasource from regression directory is used for its projection and to
         # locate the linestring to a known point
         regression_dir = \
-            './data/wind_energy_regression_data/uri_handler/val_dist_land_options/output'
+            './invest-data/test/data/wind_energy_regression_data/uri_handler/val_dist_land_options/output'
         datasource_uri = os.path.join(regression_dir, 'wind_energy_points.shp')
         # Directory and path to save the created rectangular polygon
         test_dir = \
-            './data/test_out/wind_energy/valuation/create_wind_farm_box'
+            './invest-data/test/data/test_out/wind_energy/valuation/create_wind_farm_box'
         out_uri = os.path.join(test_dir, 'wind_farm_box.shp')
         # The regression file to test against
         reg_uri = os.path.join(
@@ -179,7 +179,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
             to a polygon geometry"""
         #raise SkipTest
 
-        regression_dir = './data/wind_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/'
         polygon_ds_uri = os.path.join(regression_dir, 
                 'uri_handler/val_dist_land_options/intermediate/val_land_poly_projected.shp')
         point_ds_uri = os.path.join(regression_dir,
@@ -203,7 +203,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
             to another point geometry"""
         #raise SkipTest
 
-        regression_dir = './data/wind_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/'
         point_1_ds_uri = os.path.join(regression_dir,
                 'wind_energy_core/testing_distance_points.shp')
         point_2_ds_uri = os.path.join(regression_dir,
@@ -226,13 +226,13 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         """A regression test for adding a field to a shapefile given a list of
             data entries"""
         #raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/'
         points_ds_uri = os.path.join(regression_dir,
                 'wind_energy_core/testing_distance_points.shp')
         expected_ds_uri = os.path.join(regression_dir,
                 'wind_energy_core/testing_point_fields.shp')
 
-        out_dir = './data/test_out/wind_energy/valuation/add_field_to_shape/'
+        out_dir = './invest-data/test/data/test_out/wind_energy/valuation/add_field_to_shape/'
         copy_uri = os.path.join(out_dir, 'wind_points_new_field.shp')
 
         if not os.path.isdir(out_dir):
@@ -260,7 +260,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         """A unit test for properly reading coordinates into a list from a
             point shapefile """
         #raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/wind_energy_core'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/wind_energy_core'
         datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
 
         datasource = ogr.Open(datasource_uri)
@@ -276,7 +276,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_valuation_get_dictionary_from_shape(self):
         """A unit test for building a dictionary from a shapefile"""
         #raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/wind_energy_core'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/wind_energy_core'
         datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
       
         datasource = ogr.Open(datasource_uri)

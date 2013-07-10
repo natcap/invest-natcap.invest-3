@@ -85,7 +85,7 @@
                     "type": "file",
                     "label": "Sub-Watersheds",
                     "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
-                    "required": true,
+                    "required": false,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons",

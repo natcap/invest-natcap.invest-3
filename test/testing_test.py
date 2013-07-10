@@ -8,13 +8,13 @@ from invest_natcap.testing import data_storage
 from invest_natcap.testing import test_writing
 from invest_natcap import raster_utils
 
-POLLINATION_DATA = os.path.join('data', 'pollination', 'samp_input')
-CARBON_DATA = os.path.join('data', 'carbon', 'input')
-REGRESSION_ARCHIVES = os.path.join('data', 'data_storage', 'regression')
-WRITING_ARCHIVES = os.path.join('data', 'test_writing')
-TEST_INPUT = os.path.join('data', 'data_storage', 'test_input')
-TEST_OUT = os.path.join('data', 'test_out')
-BASE_DATA = os.path.join('data', 'base_data')
+POLLINATION_DATA = os.path.join('invest-data/test/data', 'pollination', 'samp_input')
+CARBON_DATA = os.path.join('invest-data/test/data', 'carbon', 'input')
+REGRESSION_ARCHIVES = os.path.join('invest-data/test/data', 'data_storage', 'regression')
+WRITING_ARCHIVES = os.path.join('invest-data/test/data', 'test_writing')
+TEST_INPUT = os.path.join('invest-data/test/data', 'data_storage', 'test_input')
+TEST_OUT = os.path.join('invest-data/test/data', 'test_out')
+BASE_DATA = os.path.join('invest-data/test/data', 'base_data')
 
 
 class TestWritingTest(testing.GISTest):
@@ -134,7 +134,7 @@ class DataStorageTest(testing.GISTest):
 
     def test_archive_arc_raster_nice(self):
         params = {
-            'raster': os.path.join('data', 'base_data', 'Freshwater', 'precip')
+            'raster': os.path.join('invest-data/test/data', 'base_data', 'Freshwater', 'precip')
         }
 
         archive_uri = os.path.join(TEST_OUT, 'raster_nice')
@@ -177,13 +177,13 @@ class DataStorageTest(testing.GISTest):
             u'ag_classes': '67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92',
             u'do_valuation': True,
             u'farms_shapefile':
-            u'data/pollination/samp_input/farms.shp',
+            u'invest-data/test/data/pollination/samp_input/farms.shp',
             u'guilds_uri':
-            u'data/pollination/samp_input/Guild.csv',
+            u'invest-data/test/data/pollination/samp_input/Guild.csv',
             u'half_saturation': 0.125,
-            u'landuse_attributes_uri': u'data/pollination/samp_input/LU.csv',
-            u'landuse_cur_uri': u'data/pollination/samp_input/lulc_samp_cur/hdr.adf',
-            u'landuse_fut_uri': u'data/pollination/samp_input/lulc_samp_fut/hdr.adf',
+            u'landuse_attributes_uri': u'invest-data/test/data/pollination/samp_input/LU.csv',
+            u'landuse_cur_uri': u'invest-data/test/data/base_data/terrestrial/lulc_samp_cur/hdr.adf',
+            u'landuse_fut_uri': u'invest-data/test/data/base_data/terrestrial/lulc_samp_fut/hdr.adf',
             u'results_suffix': 'suff',
             u'wild_pollination_proportion': 1.0,
             u'workspace_dir': u'/home/jadoug06/workspace/Pollination_Mary',
@@ -213,8 +213,8 @@ class DataStorageTest(testing.GISTest):
             u'guilds_uri': os.path.join(input_folder, u'Guild.csv'),
             u'half_saturation': 0.125,
             u'landuse_attributes_uri': os.path.join(input_folder, u'LU.csv'),
-            u'landuse_cur_uri': os.path.join(input_folder, u'raster_HECCBZ'),
-            u'landuse_fut_uri': os.path.join(input_folder, u'raster_7POJV7'),
+            u'landuse_cur_uri': os.path.join(input_folder, u'raster_5C3Z51'),
+            u'landuse_fut_uri': os.path.join(input_folder, u'raster_NC9LSJ'),
             u'results_suffix': u'suff',
             u'wild_pollination_proportion': 1.0,
             u'workspace_dir': workspace,
@@ -237,9 +237,9 @@ class DataStorageTest(testing.GISTest):
             },
             'c': os.path.join(CARBON_DATA, 'harv_samp_cur.shp'),
             'raster_list': [
-                os.path.join('data', 'base_data', 'Freshwater', 'precip'),
+                os.path.join('invest-data/test/data', 'base_data', 'Freshwater', 'precip'),
                 {
-                    'lulc_samp_cur': os.path.join('data', 'base_data',
+                    'lulc_samp_cur': os.path.join('invest-data/test/data', 'base_data',
                         'terrestrial', 'lulc_samp_cur'),
                     'do_biophysical': True,
                 }
@@ -434,39 +434,39 @@ class GISTestTester(testing.GISTest):
 
     def test_json_same(self):
         """Check that asserting equal json objects passes."""
-        json_path = os.path.join('data', 'testing_regression',
+        json_path = os.path.join('invest-data/test/data', 'testing_regression',
             'sample_json.json')
         self.assertJSON(json_path, json_path)
 
     def test_json_different(self):
         """Check that asserting different json objects fails"""
-        json_path = os.path.join('data', 'testing_regression',
+        json_path = os.path.join('invest-data/test/data', 'testing_regression',
             'sample_json.json')
-        json_path_new = os.path.join('data', 'testing_regression',
+        json_path_new = os.path.join('invest-data/test/data', 'testing_regression',
             'sample_json_2.json')
         self.assertRaises(AssertionError, self.assertJSON, json_path,
             json_path_new)
 
     def test_assert_files_ext_diff(self):
-        uri_1 = os.path.join('data', 'testing_regression', 'sample_json.json')
+        uri_1 = os.path.join('invest-data/test/data', 'testing_regression', 'sample_json.json')
         uri_2 = os.path.join(REGRESSION_ARCHIVES, 'arc_raster_nice.tar.gz')
         self.assertRaises(AssertionError, self.assertFiles, uri_1, uri_2)
 
     def test_assert_files_dne(self):
-        uri_1 = os.path.join('data', 'file_not_exists.txt')
+        uri_1 = os.path.join('invest-data/test/data', 'file_not_exists.txt')
         uri_2 = os.path.join(REGRESSION_ARCHIVES, 'arc_raster_nice.tar.gz')
         self.assertRaises(AssertionError, self.assertFiles, uri_1, uri_2)
 
     def test_assert_files_json_same(self):
-        json_path = os.path.join('data', 'testing_regression',
+        json_path = os.path.join('invest-data/test/data', 'testing_regression',
             'sample_json.json')
         self.assertFiles(json_path, json_path)
 
     def test_assert_files_json_different(self):
         """Check that asserting different json objects fails"""
-        json_path = os.path.join('data', 'testing_regression',
+        json_path = os.path.join('invest-data/test/data', 'testing_regression',
             'sample_json.json')
-        json_path_new = os.path.join('data', 'testing_regression',
+        json_path_new = os.path.join('invest-data/test/data', 'testing_regression',
             'sample_json_2.json')
         self.assertRaises(AssertionError, self.assertFiles, json_path,
             json_path_new)

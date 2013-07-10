@@ -26,11 +26,11 @@ class TestOverlapAnalysis(unittest.TestCase):
         '''
         args = {}
 
-        args['workspace_dir'] = './data/overlap_analysis'
-        args['zone_layer_loc'] = './data/overlap_analysis/AOI_WCVI.shp'
+        args['workspace_dir'] = './invest-data/test/data/overlap_analysis'
+        args['zone_layer_loc'] = './invest-data/test/data/overlap_analysis/AOI_WCVI.shp'
         args['grid_size'] = 500 
-        args['overlap_data_dir_loc'] = './data/overlap_analysis/FisheriesLayers_RI'
-        args['overlap_layer_tbl'] = './data/overlap_analysis/Fisheries_Inputs.csv'
+        args['overlap_data_dir_loc'] = './invest-data/test/data/overlap_analysis/FisheriesLayers_RI'
+        args['overlap_layer_tbl'] = './invest-data/test/data/overlap_analysis/Fisheries_Inputs.csv'
         args['do_inter'] = True
         args['do_intra'] = True
         args['intra_name'] = 'RI'
@@ -75,8 +75,8 @@ class TestOverlapAnalysis(unittest.TestCase):
         unweighted_output = os.path.join(output_dir, 'hu_freq.tif')
         weighted_output = os.path.join(output_dir, 'hu_impscore.tif')
         
-        reg_unweighted = './data/overlap_analysis_regression_data/hu_freq.tif'
-        reg_weighted ='./data/overlap_analysis_regression_data/hu_impscore.tif'
+        reg_unweighted = './invest-data/test/data/overlap_analysis_regression_data/hu_freq.tif'
+        reg_weighted ='./invest-data/test/data/overlap_analysis_regression_data/hu_impscore.tif'
 
         invest_test_core.assertTwoDatasetEqualURI(self, unweighted_output, reg_unweighted)
         invest_test_core.assertTwoDatasetEqualURI(self, weighted_output, reg_weighted)

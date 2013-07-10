@@ -27,8 +27,8 @@ class TestWaveEnergy(unittest.TestCase):
             inputs.
         """
         #raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy/no_options'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy/no_options'
         
         #Set all arguments to be passed
         args = {}
@@ -58,7 +58,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy.execute(args)
         
-        regression_dir = './data/wave_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wave_energy_regression_data/'
         
         # Path names for output rasters to test 
         regression_raster_uris = [
@@ -138,8 +138,8 @@ class TestWaveEnergy(unittest.TestCase):
         """Regression test for the wave energy model when using an AOI.
         """
         #raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy/aoi'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy/aoi'
         
         #Set all arguments to be passed
         args = {}
@@ -169,7 +169,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy.execute(args)
         
-        regression_dir = './data/wave_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wave_energy_regression_data/'
         
         # Path names for output rasters to test 
         regression_raster_uris = [
@@ -250,8 +250,8 @@ class TestWaveEnergy(unittest.TestCase):
             using an AOI.
         """
         #raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy/aoi_val'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy/aoi_val'
         
         #Set all arguments to be passed
         args = {}
@@ -281,7 +281,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy.execute(args)
         
-        regression_dir = './data/wave_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wave_energy_regression_data/'
         
         # Path names for output rasters to test 
         regression_raster_uris = [
@@ -356,8 +356,8 @@ class TestWaveEnergy(unittest.TestCase):
             using an AOI, and a suffix.
         """
         #raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy/aoi_val'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy/aoi_val'
         
         #Set all arguments to be passed
         args = {}
@@ -387,7 +387,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy.execute(args)
         
-        regression_dir = './data/wave_energy_regression_data/'
+        regression_dir = './invest-data/test/data/wave_energy_regression_data/'
         
         # Path names for output rasters to test 
         regression_raster_uris = [
@@ -461,9 +461,9 @@ class TestWaveEnergy(unittest.TestCase):
         """A regression test that uses known data and inputs to test
             the validity of the function build_point_shapefile"""
         #raise SkipTest
-        output_dir = './data/test_out/wave_energy_build_pt_shapefile'
+        output_dir = './invest-data/test/data/test_out/wave_energy_build_pt_shapefile'
         reg_shape_path = \
-            './data/wave_energy_regression_data/LandPts_prj_regression.shp'
+            './invest-data/test/data/wave_energy_regression_data/LandPts_prj_regression.shp'
         reg_shape = ogr.Open(reg_shape_path)
         driver_name = 'ESRI Shapefile'
         layer_name = 'landpoints'
@@ -498,8 +498,8 @@ class TestWaveEnergy(unittest.TestCase):
             input"""
 
         #raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_clip_shape'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
                 test_dir, 'test_input/NAmerica_WestCoast_4m.shp')
         binding_shape_path = os.path.join(
@@ -525,8 +525,8 @@ class TestWaveEnergy(unittest.TestCase):
             shape's features"""
 
         #raise SkipTest
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_clip_shape'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
                 test_dir, 'test_input/pointShapeTest.shp')
         binding_shape_path = os.path.join(test_dir, 'test_input/AOI_WCVI.shp')
@@ -554,8 +554,8 @@ class TestWaveEnergy(unittest.TestCase):
         """
         #raise SkipTest
 
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_clip_shape'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy_clip_shape'
         shape_to_clip_path = os.path.join(
                 test_dir, 'test_input/NAmerica_WestCoast_4m.shp')
         binding_shape_path = os.path.join(
@@ -613,9 +613,9 @@ class TestWaveEnergy(unittest.TestCase):
         """
         #raise SkipTest
 
-        shape_path = './data/wave_energy_data/test_input/pointShapeTest.shp'
+        shape_path = './invest-data/test/data/wave_energy_data/test_input/pointShapeTest.shp'
         out_dir = \
-            './data/test_out/wave_energy/captured_wave_energy_to_shape'
+            './invest-data/test/data/test_out/wave_energy/captured_wave_energy_to_shape'
         shape_copy_path = os.path.join(out_dir,'pointShapeTest_copy.shp')
 
         wave_shape = ogr.Open(shape_path)
@@ -744,8 +744,8 @@ class TestWaveEnergy(unittest.TestCase):
             comparing returned value against known results."""
         #raise SkipTest
 
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_wave_power'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy_wave_power'
         shape_path = os.path.join(
                 test_dir, 'test_input/test_wave_power_shape.shp')
         shape_copy_path = os.path.join(output_dir, 'test_wave_power_shape.shp')
@@ -813,9 +813,9 @@ class TestWaveEnergy(unittest.TestCase):
         """A regresssion test for the wave_power function."""
         #raise SkipTest
 
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy_wave_power'
-        regression_dir = './data/wave_energy_regression_data'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy_wave_power'
+        regression_dir = './invest-data/test/data/wave_energy_regression_data'
         shape_path = os.path.join(
                 test_dir, 'test_input/test_wavepower_withfields.shp')
         shape_copy_path = os.path.join(
@@ -865,8 +865,8 @@ class TestWaveEnergy(unittest.TestCase):
             and checked returned value against calculated ones."""
         #raise SkipTest
         shape_path = \
-            './data/wave_energy_data/test_input/test_wavepower_withfields.shp'
-        out_dir = './data/test_out/wave_energy/get_points_geometries'
+            './invest-data/test/data/wave_energy_data/test_input/test_wavepower_withfields.shp'
+        out_dir = './invest-data/test/data/test_out/wave_energy/get_points_geometries'
         out_path = os.path.join(out_dir, 'points_geom.shp')
         
         if not os.path.isdir(out_dir):
@@ -930,9 +930,9 @@ class TestWaveEnergy(unittest.TestCase):
         """A regression test for create_percentile_raster."""
         #raise SkipTest
         
-        test_dir = './data/wave_energy_data'
-        output_dir = './data/test_out/wave_energy/create_percentile_raster'
-        regression_dir = './data/wave_energy_regression_data'
+        test_dir = './invest-data/test/data/wave_energy_data'
+        output_dir = './invest-data/test/data/test_out/wave_energy/create_percentile_raster'
+        regression_dir = './invest-data/test/data/wave_energy_regression_data'
         aoi_path = os.path.join(test_dir, 'samp_input/AOI_WCVI.shp')
         #The raster dataset input
         regression_dataset_uri = os.path.join(
@@ -1020,7 +1020,7 @@ class TestWaveEnergy(unittest.TestCase):
             from the function being tested."""
         #raise SkipTest
         
-        output_dir = './data/test_out/wave_energy_attribute_table'
+        output_dir = './invest-data/test/data/test_out/wave_energy_attribute_table'
         raster_uri = os.path.join(output_dir, 'test_attr_table.tif')
         dbf_uri = raster_uri + '.vat.dbf'
         #Add the Output directory onto the given workspace

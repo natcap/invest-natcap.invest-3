@@ -19,11 +19,11 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     
     def setUp(self):
     
-        ff_farm_loc = './data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_farm_loc = './invest-data/test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args = {}
         
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './data/test_out/Aquaculture/Re_Testing'
+        ff_aqua_args['workspace_dir'] = './invest-data/test/data/test_out/Aquaculture/Re_Testing'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
         ff_aqua_args['g_param_a'] = 0.038
