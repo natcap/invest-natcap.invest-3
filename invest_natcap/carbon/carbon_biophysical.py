@@ -13,7 +13,6 @@ import numpy
 from scipy.stats import norm
 
 from invest_natcap import raster_utils
-
 from carbon import carbon_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
