@@ -4,7 +4,10 @@ calcs, and return the appropriate outputs.
 
 import logging
 import os
-import matlib.pyplot
+import collections 
+import math
+import datetime
+import matplotlib.pyplot
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
