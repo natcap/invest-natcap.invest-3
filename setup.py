@@ -176,10 +176,12 @@ if platform.system() == 'Windows':
               'libstdc++-6.dll',
               ]))
 
-    # Put the c/c++ libraries where we need them, in lib/site-packages.  Only
-    # necessary for binary package installer, but I can't seem to figure out how
-    # to do that only for the binary package installer.
+    # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
+    # Only necessary for binary package installer, but I can't seem to figure
+    # out how to do that only for the binary package installer.
     data_files.append(('lib/site-packages',
+        ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+    data_files.append(('lib',
         ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
 
     data_files.append(('invest_natcap/recreation',
