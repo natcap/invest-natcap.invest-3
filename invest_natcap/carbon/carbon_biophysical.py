@@ -13,7 +13,7 @@ import numpy
 from scipy.stats import norm
 
 from invest_natcap import raster_utils
-from carbon import carbon_utils
+import carbon_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -217,7 +217,6 @@ def execute_30(**args):
 
         if use_uncertainty:
             confidence_threshold = args['confidence_threshold']
-            print 'confidence threshold:', confidence_threshold
 
             # Returns 1 if we're confident storage will increase,
             #         -1 if we're confident storage will decrease,
