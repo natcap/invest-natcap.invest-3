@@ -136,6 +136,149 @@ def execute(args):
         
         make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
 
+        if args['risk_eq'] == 'Euclidean':
+            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress, len(h_risk_dict))
+
+def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
+    '''This function will produce risk plots when the risk equation is
+    euclidean.
+
+    Input:
+        out_dir- The directory into which the completed risk plots should be
+            placed.
+        
+        aoi_pairs-
+
+            {'AOIName':
+                [(HName, SName, E, C, Risk), ...],
+                ....
+            }
+
+        num_stress- A dictionary that simply associates every habaitat with the
+            number of stressors associated with it. This will help us determine
+            the max E/C we shoudl be expecting in our overarching ecosystem plot.
+    Output:
+        A set of .png images containing the matplotlib plots for every H-S
+        combination. Within that, each AOI will be displayed as plotted by
+        (E,C) values.
+
+        A single png that is the "ecosystem plot" where the E's for each AOI
+        are the summed 
+
+
+    '''
+    def plot_background_circle(max_value):
+        circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'),
+                        (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'),
+                        (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'),
+                        (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'),
+                        (1, '#305FCF')]
+        index = 0
+        for radius, color in circle_stuff:
+            index += 1
+            linestyle = 'solid' if index % 2 == 0 else 'dashed'
+            cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', linestyle=linestyle, 
+                        radius=radius * max_value/ 3.5, fc=color)
+            matplotlib.pyplot.gca().add_patch(cir)
+
+    
+    #Create plots for each combination of AOI, Hab
+    plot_index = 0
+
+    for aoi_name, aoi_list in aoi_pairs.iteritems():
+
+        matplotlib.pyplot.figure(plot_index)
+        plot_index += 1
+        matplotlib.pyplot.suptitle(aoi_name)
+
+        hab_index = 0
+        curr_hab_name = aoi_list[0][0]
+
+        #Elements look like: (HabName, StressName, E, C, Risk)
+        for element in aoi_list:
+            if element == aoi_list[0]:
+
+                max_risk = max_h_s_risk * num_stress[curr_hab_name]
+
+                #Want to have two across, and make sure there are enough spaces
+                #going down for each of the subplots 
+                matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+                plot_background_circle(max_risk)
+                matplotlib.pyplot.title(curr_hab_name)
+                matplotlib.pyplot.xlim([0.5, max_risk])
+                matplotlib.pyplot.ylim([0.5, max_risk])
+                matplotlib.pyplot.xlabel("Exposure")
+                matplotlib.pyplot.ylabel("Consequence")
+
+            hab_name = element[0]
+            if curr_hab_name == hab_name:
+
+                matplotlib.pyplot.plot(element[2], element[3], 'k^', 
+                        markerfacecolor='black', markersize=8)
+                matplotlib.pyplot.annotate(element[1], xy=(element[2], 
+                        element[3]), xytext=(element[2], element[3]+0.07))
+                continue    
+            
+            #We get here once we get to the next habitat
+            hab_index += 1
+            matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+            plot_background_circle(max_risk)
+        
+            curr_hab_name = hab_name
+
+            max_risk = max_h_s_risk * num_stress[curr_hab_name]
+            
+            matplotlib.pyplot.title(curr_hab_name)
+            matplotlib.pyplot.xlim([0.5, max_risk])
+            matplotlib.pyplot.ylim([0.5, max_risk])
+            matplotlib.pyplot.xlabel("Exposure")
+            matplotlib.pyplot.ylabel("Consequence")
+
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
+
+        matplotlib.pyplot.savefig(out_uri, format='png')
+
+    #Create one ecosystem megaplot that plots the points as summed E,C from
+    #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
+    #for all habitats in the ecosystem.
+    plot_index += 1
+    max_tot_risk = max_h_s_risk * max(num_stress.values()) * num_habs 
+    
+    matplotlib.pyplot.figure(plot_index)
+    matplotlib.pyplot.suptitle("Ecosystem Risk")
+    
+    plot_background_circle(max_tot_risk)
+    
+    points_dict = {}
+    
+    for aoi_name, aoi_list in aoi_pairs.items():
+
+        for element in aoi_list:
+        
+            if aoi_name in points_dict:
+                points_dict[aoi_name]['E'] += element[2]
+                points_dict[aoi_name]['C'] += element[3]
+            else:
+                points_dict[aoi_name] = {}
+                points_dict[aoi_name]['E'] = 0
+                points_dict[aoi_name]['C'] = 0
+
+    for aoi_name, p_dict in points_dict.items():
+        #Create the points which are summed AOI's across all Habitats.    
+        matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
+                    markerfacecolor='black', markersize=8)
+        matplotlib.pyplot.annotate(aoi_name,
+                    xy=(p_dict['E'], p_dict['C']), 
+                    xytext=(p_dict['E'], p_dict['C']+0.07))
+                        
+    matplotlib.pyplot.xlim([0.5, max_tot_risk])
+    matplotlib.pyplot.ylim([0.5, max_tot_risk])
+    matplotlib.pyplot.xlabel("Exposure (Cumulative)")
+    matplotlib.pyplot.ylabel("Consequence (Cumulative)")
+
+    out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
+    matplotlib.pyplot.savefig(out_uri, format='png')
+
 def make_aoi_tables(out_dir, aoi_pairs, max_risk):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
