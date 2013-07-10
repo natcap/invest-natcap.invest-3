@@ -340,16 +340,25 @@ def execute(args):
     ###valuation
     if private_valuation:
         LOGGER.debug("Constructing private valuation operation.")
+
+        discount_sum = 1
+        d_rate = 1
+        d_mult = discount_rate / 100.0
+        r_change = 1
+        r_mult = 1 + (rate_change / 100.0)
+
+        for t in range(1,years):
+            d_rate *= d_mult
+            r_change *= r_mult                    
+            discount_sum += d_rate / r_change
+
+        discount_sum = discount_sum * carbon_value
         def private_valuation_op(sequest):
             if sequest == nodata:
                 return nodata
             else:
-                valuation = 0
-                for t in range(years):
-                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0)) ** t
+                return sequest * discount_sum
  
-            return valuation
-
         LOGGER.info("Creating private valuation raster.")
         raster_utils.vectorize_datasets([sequestration_uri],
                                         private_valuation_op,
@@ -361,15 +370,12 @@ def execute(args):
 
     if social_valuation:
         LOGGER.debug("Constructing social cost of carbon operation.")
+        schedule_sum = sum(map(carbon_schedule_dict.__getitem__,range(year1, year2)))        
         def social_valuation_op(sequest):
             if sequest == nodata:
                 return nodata
             else:
-                valuation = 0
-                for year in range(year1, year2):
-                    valuation += sequest * carbon_schedule_dict[year]
-
-                return valuation
+                return sequest * schedule_sum
 
         LOGGER.info("Creating social valuation raster.")
         raster_utils.vectorize_datasets([sequestration_uri],
