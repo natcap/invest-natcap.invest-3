@@ -37,7 +37,7 @@
                     "label": "Carbon sequestration raster",
                     "required": true,
                     "args_id": "sequest_uri",
-                    "defaultValue": "../Carbon/Output/sequest.tif",
+                    "defaultValue": "../Carbon/output/sequest.tif",
                   "validateAs": {"type": "GDAL"},
 		  "helpText": "The per-pixel sequestered carbon either from a run of the InVEST Carbon Biophysical model, or from a user defined source."
                 },
