@@ -33,7 +33,6 @@ def execute(args):
         args['workspace_dir'], 'water_yield_workspace')
     if 'results_suffix' in args:
         water_yield_args['results_suffix'] = args['results_suffix']
-    water_yield_args['lulc_uri'] = args['landuse_uri']
     invest_natcap.hydropower.hydropower_water_yield.execute(water_yield_args)
 
     #Get the pixel output of hydropower to plug into nutrient retention.
@@ -59,7 +58,7 @@ def _execute_nutrient(args):
                 (DEM), a GDAL raster on disk.
             'pixel_yield_uri' - a string uri pointing to the water yield raster
                 output from the InVEST Water Yield model.
-            'landuse_uri' - a string uri pointing to the landcover GDAL raster.
+            'lulc_uri' - a string uri pointing to the landcover GDAL raster.
             'watersheds_uri' - a string uri pointing to an OGR shapefile on
                 disk representing the user's watersheds.
             'subwatersheds_uri' - a string uri pointing to an OGR shapefile on
@@ -191,7 +190,7 @@ def _execute_nutrient(args):
                 value['thresh_%s' % (nutrient_id)])
 
     landuse_pixel_size = raster_utils.get_cell_size_from_uri(
-        args['landuse_uri'])
+        args['lulc_uri'])
     #Pixel size is in m^2, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = landuse_pixel_size ** 2 / 10000.0
     out_pixel_size = landuse_pixel_size
@@ -199,14 +198,14 @@ def _execute_nutrient(args):
     #Align all the input rasters
     dem_uri = raster_utils.temporary_filename()
     water_yield_uri = raster_utils.temporary_filename()
-    landuse_uri = raster_utils.temporary_filename()
+    lulc_uri = raster_utils.temporary_filename()
     raster_utils.align_dataset_list(
-        [args['dem_uri'], args['pixel_yield_uri'], args['landuse_uri']],
-        [dem_uri, water_yield_uri, landuse_uri], ['nearest'] * 3,
+        [args['dem_uri'], args['pixel_yield_uri'], args['lulc_uri']],
+        [dem_uri, water_yield_uri, lulc_uri], ['nearest'] * 3,
         out_pixel_size, 'intersection', dataset_to_align_index=2,
         aoi_uri=args['watersheds_uri'])
 
-    nodata_landuse = raster_utils.get_nodata_from_uri(landuse_uri)
+    nodata_landuse = raster_utils.get_nodata_from_uri(lulc_uri)
     nodata_load = -1.0
 
     #Make the streams
@@ -240,13 +239,13 @@ def _execute_nutrient(args):
         load_uri[nutrient] = os.path.join(
             intermediate_dir, 'load_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
-            [landuse_uri], map_load_function('load_%s' % nutrient),
+            [lulc_uri], map_load_function('load_%s' % nutrient),
             load_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection")
         eff_uri[nutrient] = os.path.join(
             intermediate_dir, 'eff_%s%s.tif' % (nutrient, file_suffix))
         raster_utils.vectorize_datasets(
-            [landuse_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
+            [lulc_uri, stream_uri], map_eff_function('eff_%s' % nutrient),
             eff_uri[nutrient], gdal.GDT_Float32, nodata_load, out_pixel_size,
             "intersection")
 
