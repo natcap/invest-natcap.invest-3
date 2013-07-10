@@ -179,7 +179,7 @@ class DataStorageTest(testing.GISTest):
             u'farms_shapefile':
             u'invest-data/test/data/pollination/samp_input/farms.shp',
             u'guilds_uri':
-            u'invest_data/test/data/pollination/samp_input/Guild.csv',
+            u'invest-data/test/data/pollination/samp_input/Guild.csv',
             u'half_saturation': 0.125,
             u'landuse_attributes_uri': u'invest-data/test/data/pollination/samp_input/LU.csv',
             u'landuse_cur_uri': u'invest-data/test/data/base_data/terrestrial/lulc_samp_cur/hdr.adf',
@@ -213,8 +213,8 @@ class DataStorageTest(testing.GISTest):
             u'guilds_uri': os.path.join(input_folder, u'Guild.csv'),
             u'half_saturation': 0.125,
             u'landuse_attributes_uri': os.path.join(input_folder, u'LU.csv'),
-            u'landuse_cur_uri': os.path.join(input_folder, u'raster_HECCBZ'),
-            u'landuse_fut_uri': os.path.join(input_folder, u'raster_7POJV7'),
+            u'landuse_cur_uri': os.path.join(input_folder, u'raster_5C3Z51'),
+            u'landuse_fut_uri': os.path.join(input_folder, u'raster_NC9LSJ'),
             u'results_suffix': u'suff',
             u'wild_pollination_proportion': 1.0,
             u'workspace_dir': workspace,
