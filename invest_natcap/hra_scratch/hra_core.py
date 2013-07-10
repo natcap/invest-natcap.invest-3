@@ -135,14 +135,14 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         crit_lists- A dictionary containing pre-burned criteria which can be
             combined to get the E/C for that H-S pairing.
 
-            {'Risk': {  'h-s': { (hab1, stressA): ["indiv num raster URI", 
+            {'Risk': {  'h_s_c': { (hab1, stressA): ["indiv num raster URI", 
                                     "raster 1 URI", ...],
                                  (hab1, stressB): ...
                                },
                         'h':   { hab1: ["indiv num raster URI", "raster 1 URI", ...],
                                 ...
                                },
-                        's':   { stressA: ["indiv num raster URI", ...]
+                        'h_s_e': {(hab1,  stressA): ["indiv num raster URI", ...]
                                }
                      }
              'Recovery': { hab1: ["indiv num raster URI", ...],
@@ -170,7 +170,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     #allows us to not have to think about whether or not a h-s pair was zero'd
     #out by weighting or DQ.
     num_stress = collections.Counter()
-    for pair in crit_lists['Risk']['h-s']:
+    for pair in crit_lists['Risk']['h_s_c']:
         h, _ = pair
         
         if h in num_stress:
