@@ -16,7 +16,7 @@
                                                 "args_id": "workspace_dir",
                                                 "type": "folder",
                                                 "label": "Workspace",
-                                                "defaultValue": "../BlueCarbon",
+                                                "defaultValue": "../BlueCarbon/output",
                                                 "required": true
                                             },
                                             {
@@ -24,7 +24,7 @@
                                                 "args_id": "lulc1_uri",
                                                 "type": "file",
                                                 "label": "LULC Time 1",
-                                                "defaultValue": "../BlueCarbon/GBJC_2004_mean.tif",
+                                                "defaultValue": "../BlueCarbon/input/GBJC_2004_mean.tif",
                                                 "required": true
                                             },
                                             {
@@ -43,7 +43,7 @@
                                                 "args_id": "lulc2_uri",
                                                 "type": "file",
                                                 "label": "LULC Time 2",
-                                                "defaultValue": "../BlueCarbon/GBJC_2050_mean.tif",
+                                                "defaultValue": "../BlueCarbon/input/GBJC_2050_mean.tif",
                                                 "required": true
                                             },
                                             {
@@ -62,7 +62,7 @@
                                                 "args_id": "carbon_pools_uri",
                                                 "type": "file",
                                                 "label": "Carbon pools",
-                                                "defaultValue": "../BlueCarbon/carbon.csv",
+                                                "defaultValue": "../BlueCarbon/input/carbon.csv",
                                                 "required": true
                                             },
                                             {
@@ -70,7 +70,7 @@
                                                 "args_id": "transition_matrix_uri",
                                                 "type": "file",
                                                 "label": "Transition matrix",
-                                                "defaultValue": "../BlueCarbon/transitionmatrix.csv",
+                                                "defaultValue": "../BlueCarbon/input/transitionmatrix.csv",
                                                 "required": true
                                             }
 
@@ -157,7 +157,7 @@
                                                             "args_id": "carbon_schedule",
                                                             "type": "file",
                                                             "label": "SCC Table",
-                                                            "defaultValue": "../BlueCarbon/SCC.csv",
+                                                            "defaultValue": "../BlueCarbon/input/SCC.csv",
                                                             "required": true
                                                         },
                                                         {
