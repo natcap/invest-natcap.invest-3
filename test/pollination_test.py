@@ -149,80 +149,80 @@ class PollinationSmokeTest(unittest.TestCase):
 import invest_natcap.testing
 class PollinationRegression(invest_natcap.testing.GISTest):
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_pollination_ag_cur_noval_no_spp_weight.tar.gz",
-        workspace_archive="data/pollination/output_pollination_ag_cur_noval_no_spp_weight.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_pollination_ag_cur_noval_no_spp_weight.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_pollination_ag_cur_noval_no_spp_weight.tar.gz")
     def test_pollination_ag_cur_noval_no_spp_weight(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_pollination_noag_cur_val.tar.gz",
-        workspace_archive="data/pollination/output_pollination_noag_cur_val.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_pollination_noag_cur_val.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_pollination_noag_cur_val.tar.gz")
     def test_pollination_noag_cur_val(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_pollination_noag_cur_noval.tar.gz",
-        workspace_archive="data/pollination/output_pollination_noag_cur_noval.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_pollination_noag_cur_noval.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_pollination_noag_cur_noval.tar.gz")
     def test_pollination_noag_cur_noval(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_noag_cur_only.tar.gz",
-        workspace_archive="data/pollination/output_noag_cur_only.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_noag_cur_only.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_noag_cur_only.tar.gz")
     def test_noag_cur_only(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_noag_cur_fut_noval.tar.gz",
-        workspace_archive="data/pollination/output_noag_cur_fut_noval.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_noag_cur_fut_noval.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_noag_cur_fut_noval.tar.gz")
     def test_noag_cur_fut_noval(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_noag_cur_fut.tar.gz",
-        workspace_archive="data/pollination/output_noag_cur_fut.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_noag_cur_fut.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_noag_cur_fut.tar.gz")
     def test_noag_cur_fut(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_noag_cur_fut_farms.tar.gz",
-        workspace_archive="data/pollination/output_noag_cur_fut_farms.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_noag_cur_fut_farms.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_noag_cur_fut_farms.tar.gz")
     def test_noag_cur_fut_farms(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_ag_cur_val.tar.gz",
-        workspace_archive="data/pollination/output_ag_cur_val.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_ag_cur_val.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_ag_cur_val.tar.gz")
     def test_ag_cur_val(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_ag_cur_only.tar.gz",
-        workspace_archive="data/pollination/output_ag_cur_only.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_ag_cur_only.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_ag_cur_only.tar.gz")
     def test_ag_cur_only(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_ag_cur_noval.tar.gz",
-        workspace_archive="data/pollination/output_ag_cur_noval.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_ag_cur_noval.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_ag_cur_noval.tar.gz")
     def test_ag_cur_noval(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_ag_cur_fut_noval.tar.gz",
-        workspace_archive="data/pollination/output_ag_cur_fut_noval.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_ag_cur_fut_noval.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_ag_cur_fut_noval.tar.gz")
     def test_ag_cur_fut_noval(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_ag_cur_fut.tar.gz",
-        workspace_archive="data/pollination/output_ag_cur_fut.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_ag_cur_fut.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_ag_cur_fut.tar.gz")
     def test_ag_cur_fut(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
     @invest_natcap.testing.regression(
-        input_archive="data/pollination/input_ag_cur_fut_farms.tar.gz",
-        workspace_archive="data/pollination/output_ag_cur_fut_farms.tar.gz")
+        input_archive="invest-data/test/data/pollination/input_ag_cur_fut_farms.tar.gz",
+        workspace_archive="invest-data/test/data/pollination/output_ag_cur_fut_farms.tar.gz")
     def test_ag_cur_fut_farms(self):
         invest_natcap.pollination.pollination.execute(self.args)
 
