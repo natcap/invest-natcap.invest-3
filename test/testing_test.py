@@ -179,7 +179,7 @@ class DataStorageTest(testing.GISTest):
             u'farms_shapefile':
             u'invest-data/test/data/pollination/samp_input/farms.shp',
             u'guilds_uri':
-            u'invest_data/test/data/pollination/samp_input/Guild.csv',
+            u'invest-data/test/data/pollination/samp_input/Guild.csv',
             u'half_saturation': 0.125,
             u'landuse_attributes_uri': u'invest-data/test/data/pollination/samp_input/LU.csv',
             u'landuse_cur_uri': u'invest-data/test/data/base_data/terrestrial/lulc_samp_cur/hdr.adf',
