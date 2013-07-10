@@ -71,6 +71,7 @@ then
         wind_energy_valuation_test.py
         wind_energy_uri_handler_test.py
         coastal_vulnerability_test.py
+	marine_water_quality_regression_test.py
 #        coastal_vulnerability_core_test.py
         )
     echo "Testing " ${test_files[*]}
