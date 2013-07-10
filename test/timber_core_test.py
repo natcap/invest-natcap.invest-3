@@ -93,6 +93,11 @@ class TestTimber(unittest.TestCase):
         smoke_path = './invest-data/test/data/test_out/timber/Smoke/'
         if not os.path.isdir(smoke_path):
             os.makedirs(smoke_path)
+        else:
+            try:
+                os.remove(smoke_path)
+            except:
+                os.rmdir(smoke_path)
         #Define the paths for the sample input/output files
         dbf_path = os.path.join(smoke_path, 'test.dbf')
         shp_path = smoke_path
