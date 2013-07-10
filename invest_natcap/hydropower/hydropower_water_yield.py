@@ -51,7 +51,7 @@ def execute(args):
         
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
             subwatersheds of interest that are contained in the
-            'watersheds_uri' shape provided as input. (required)
+            'watersheds_uri' shape provided as input. (optional)
         
         args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
