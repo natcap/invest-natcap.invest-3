@@ -124,6 +124,136 @@ def execute(args):
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
 
+    if 'aoi_tables' in args:
+
+        #Let's pre-calc stuff so we don't have to worry about it in the middle of
+        #the file creation.
+        avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
+
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
+    '''This funtion is a helper to make_aoi_tables, and will just handle
+    pre-calculation of the average values for each aoi zone.
+
+    Input:
+        inter_dir- The directory which contains the individual E and C rasters.
+            We can use these to get the avg. E and C values per area. Since we
+            don't really have these in any sort of dictionary, will probably
+            just need to explicitly call each individual file based on the
+            names that we pull from the risk_dict keys.
+        risk_dict- A simple dictionary that maps a tuple of 
+            (Habitat, Stressor) to the URI for the risk raster created when the 
+            various sub components (H/S/H_S) are combined.
+
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+        aoi_uri- The location of the AOI zone files. Each feature within this
+            file (identified by a 'name' attribute) will be used to average 
+            an area of E/C/Risk values.
+
+    Returns:
+        avgs_dict- A multi level dictionary to hold the average values that
+            will be placed into the HTML table.
+
+            {'HabitatName':
+                {'StressorName':
+                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                        {...},
+                    ...
+                    ]
+                },
+                ....
+            }
+       aoi_names- Quick and dirty way of getting the AOI keys.
+    '''
+    #Since we know that the AOI will be consistent across all of the rasters,
+    #want to create the new int field, and the name mapping dictionary upfront
+    
+    driver = ogr.GetDriverByName('Memory')
+    aoi = ogr.Open(aoi_uri)
+    cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
+    cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)
+    layer = cp_aoi.GetLayer()
+
+    field_defn = ogr.FieldDefn('BURN_ID', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    name_map = {}
+    count = 0
+    ids = []
+
+    for feature in layer:
+
+        ids.append(count)
+        name = feature.items()[aoi_key]
+        feature.SetField('BURN_ID', count)
+        name_map[count] = name
+        count += 1
+
+        layer.SetFeature(feature)
+        
+    layer.ResetReading()
+
+    #Now we will loop through all of the various pairings to deal with all their
+    #component parts across our AOI. Want to make sure to use our new field as
+    #the index.
+    avgs_dict = {}
+
+    for pair in risk_dict:
+        h, s = pair
+
+        if h not in avgs_dict:
+            avgs_dict[h] = {}
+        if s not in avgs_dict[h]:
+            avgs_dict[h][s] = []
+
+        #The way that aggregate_raster_values is written, it does not include an
+        #entry for any AOI feature that does not overlap a valid pixel.
+        #Thus, we want to initialize ALL to 0, then just update if there is any
+        #change.
+        r_agg_dict = dict.fromkeys(ids, 0)
+        e_agg_dict = dict.fromkeys(ids, 0)
+        c_agg_dict = dict.fromkeys(ids, 0)
+
+        #GETTING MEANS OF THE RISK RASTERS HERE
+
+        r_raster_uri = risk_dict[pair]
+
+        #We explicitly placed the 'BURN_ID' feature on each layer. Since we know
+        #currently there is a 0 value for all means, can just update each entry
+        #if there is a real mean found.
+        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                r_raster_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
+
+        #GETTING MEANS OF THE E RASTERS HERE
+
+        #Just going to have to pull explicitly. Too late to go back and
+        #rejigger now.
+        e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
+
+        #GETTING MEANS OF THE C RASTER HERE
+
+        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
+
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
+                            cp_aoi_uri, 'BURN_ID').pixel_mean)
+
+        #Now, want to place all values into the dictionary. Since we know that
+        #the names of the attributes will be the same for each dictionary, can
+        #just use the names of one to index into the rest.
+        for ident in r_agg_dict:
+            
+            name = name_map[ident]
+           
+            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
+                           'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
+
+    return avgs_dict, name_map.values()
+
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same h-s calculation as used for the individual E/C 
     calculations, but instead will use r/dq as the equation for each criteria.
