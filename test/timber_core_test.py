@@ -90,12 +90,17 @@ class TestTimber(unittest.TestCase):
             basic input requirements"""
         #Set the path for the test inputs/outputs and check to make sure the
         #directory does not exist
-        smoke_path = './data/test_out/timber/Smoke/'
+        smoke_path = './invest-data/test/data/test_out/timber/Smoke/'
         if not os.path.isdir(smoke_path):
             os.makedirs(smoke_path)
+        else:
+            try:
+                os.remove(smoke_path)
+            except:
+                os.rmdir(smoke_path)
         #Define the paths for the sample input/output files
         dbf_path = os.path.join(smoke_path, 'test.dbf')
-        shp_path = smoke_path
+        shp_path = os.path.join(smoke_path, 'timber.shp')
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
         db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1),
@@ -175,7 +180,7 @@ class TestTimber(unittest.TestCase):
         and Volume with that from running the shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure
         #the directory does not exist
-        dir_path = './data/test_out/timber/biovol/Output/'
+        dir_path = './invest-data/test/data/test_out/timber/biovol/Output/'
 
         #Deleting any files in the output if they already exist, this
         #caused a bug once when I didn't do this.
@@ -266,8 +271,8 @@ class TestTimber(unittest.TestCase):
             modified shapefile with valid shapefile that was created from
             the same inputs.  Regression test."""
         #Open table and shapefile
-        input_dir = './data/timber/input/'
-        out_dir = './data/test_out/timber/with_inputs/'
+        input_dir = './invest-data/test/data/timber/input/'
+        out_dir = './invest-data/test/data/test_out/timber/with_inputs/'
         attr_table = dbf.Dbf(os.path.join(input_dir, 'plant_table.dbf'))
         test_shape = ogr.Open(os.path.join(input_dir, 'plantation.shp'), 1)
 
@@ -294,7 +299,7 @@ class TestTimber(unittest.TestCase):
         timber_core.execute(args)
 
         valid_output_shape = ogr.Open(
-                './data/timber/regression_data/timber.shp')
+                './invest-data/test/data/timber/regression_data/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         #Check that the number of features (polygons) are the same between
         #shapefiles

@@ -23,8 +23,8 @@ class TestWaterScarcity(unittest.TestCase):
 
         raise SkipTest
 
-        output_base = './data/test_out/hydropower_water_scarcity_default_inputs/'
-        input_dir = './data/hydropower_data/test_input/'
+        output_base = './invest-data/test/data/test_out/hydropower_water_scarcity_default_inputs/'
+        input_dir = './invest-data/test/data/hydropower_data/test_input/'
         
         #Create the output directories
         if not os.path.isdir(output_base):
@@ -57,8 +57,8 @@ class TestWaterScarcity(unittest.TestCase):
     
     def test_water_scarcity_re(self):
         
-        output_base = './data/test_out/hydropower_water_scarcity_uri/'
-        input_dir = './data/hydropower_regression_data/'
+        output_base = './invest-data/test/data/test_out/hydropower_water_scarcity_uri/'
+        input_dir = './invest-data/test/data/hydropower_regression_data/'
         
         #Create the output directories
         if not os.path.isdir(output_base):
@@ -89,7 +89,7 @@ class TestWaterScarcity(unittest.TestCase):
         
         water_scarcity.execute(args)
         
-        regression_dir = './data/hydropower_regression_data/'
+        regression_dir = './invest-data/test/data/hydropower_regression_data/'
         reg_consum_vol_uri = regression_dir + 'consum_vol.tif'
         reg_consum_mn_uri = regression_dir + 'consum_mn.tif'
         reg_rsup_vol_uri = regression_dir + 'rsup_vol.tif'

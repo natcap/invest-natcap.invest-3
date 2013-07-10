@@ -5,7 +5,7 @@ import os
 
 from invest_natcap.iui import fileio
 
-TEST_DATA = 'data/'
+TEST_DATA = 'invest-data/test/data/'
 
 class TableTestTemplate():
     # This is a unittest to test the table handling functionality of the
@@ -86,19 +86,19 @@ class CSVHandlerTest(TableTestTemplate, unittest.TestCase):
     """This is a unittest to test the table handling functionality of the
     DBFHandler class."""
     def setUp(self):
-        self.input_file = './data/iui/Guild.dbf'
+        self.input_file = './invest-data/test/data/iui/Guild.dbf'
         self.handler = fileio.find_handler(self.input_file)
 
 class DBFHandlerTest(TableTestTemplate, unittest.TestCase):
     """This is a unittest to test the table handling functionality of the
     DBFHandler class."""
     def setUp(self):
-        self.input_file = './data/iui/Guild.dbf'
+        self.input_file = './invest-data/test/data/iui/Guild.dbf'
         self.handler = fileio.find_handler(self.input_file)
 
 class JSONHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.uri = './data/iui/test_resources/resources.json'
+        self.uri = './invest-data/test/data/iui/test_resources/resources.json'
         self.handler = fileio.JSONHandler(self.uri)
 
     def test_get_attributes(self):
@@ -115,7 +115,7 @@ class JSONHandlerTest(unittest.TestCase):
 
 class ResourceHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.uri = './data/iui/test_resources/'
+        self.uri = './invest-data/test/data/iui/test_resources/'
         self.handler = fileio.ResourceHandler(self.uri)
 
     def test_get_icon(self):
@@ -140,7 +140,7 @@ class ResourceManager(unittest.TestCase):
 
     def test_overrides(self):
         """Assert overrides used when necessary."""
-        self.overrides_dir = './data/iui/test_resources'
+        self.overrides_dir = './invest-data/test/data/iui/test_resources'
         self.manager = fileio.ResourceManager(self.overrides_dir)
         icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
         default_icon_path = 'test_image.png'
@@ -158,7 +158,7 @@ class SaveModelRun(unittest.TestCase):
         }
 
         module = 'invest_natcap.pollination.pollination'
-        out_file = os.path.join('data', 'iui', 'model_run.txt')
+        out_file = os.path.join('invest-data/test/data', 'iui', 'model_run.txt')
 
         fileio.save_model_run(arguments, module, out_file)
 

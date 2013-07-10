@@ -31,7 +31,7 @@ echo $processes
 # top-level timing mechanism.  It's a known but with nosetests.  See:
 # http://stackoverflow.com/a/13306487
 #run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
-run_tests="nosetests -v --with-xunit --with-coverage --cover-xml --cover-package=invest_natcap  --logging-filter=None"
+run_tests="nosetests -v --with-xunit --with-coverage --cover-xml --cover-tests --cover-package=invest_natcap  --logging-filter=None"
 test_files=""
 
 if [ $# -eq 0 ]
@@ -71,6 +71,7 @@ then
         wind_energy_valuation_test.py
         wind_energy_uri_handler_test.py
         coastal_vulnerability_test.py
+	marine_water_quality_regression_test.py
 #        coastal_vulnerability_core_test.py
         )
     echo "Testing " ${test_files[*]}

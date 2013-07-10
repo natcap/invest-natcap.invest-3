@@ -9,7 +9,7 @@ import platform
 
 from invest_natcap.iui import iui_validator
 
-TEST_DATA = 'data/'
+TEST_DATA = 'invest-data/test/data/'
 IUI_TEST_DATA = os.path.join(TEST_DATA, 'iui')
 
 class CheckerTester(unittest.TestCase):

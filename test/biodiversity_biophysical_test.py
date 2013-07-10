@@ -16,11 +16,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with all 
             possible inputs"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/all_inputs/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/all_inputs/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -40,7 +43,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/'
         output_dir = os.path.join(out_dir, 'output')
 
         reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -72,11 +75,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with all 
             possible inputs and suffix"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/suffix/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/suffix/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -96,7 +102,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/suffix/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/suffix/'
         output_dir = os.path.join(out_dir, 'output')
 
         reg_rarity_c = os.path.join(regression_dir, 'rarity_c_test.tif')
@@ -128,11 +134,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with only the 
             required inputs"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/no_options/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/no_options/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -152,7 +161,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/no_access/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/no_access/'
         output_dir = os.path.join(out_dir, 'output')
 
         #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -184,11 +193,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with only the 
             optional access input"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/access/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/access/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -208,7 +220,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/'
         output_dir = os.path.join(out_dir, 'output')
 
         #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -240,11 +252,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with both
             current and base landcovers. No access or future lancover"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/cur_bse/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/cur_bse/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -264,7 +279,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/no_access'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/no_access'
         output_dir = os.path.join(out_dir, 'output')
 
         reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -296,11 +311,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with both
             current and future landcovers. No access or base lancover"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/cur_fut/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/cur_fut/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -320,7 +338,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/no_access'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/no_access'
         output_dir = os.path.join(out_dir, 'output')
 
         #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -352,11 +370,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with both
             current and future landcovers as well as access. No base lancover"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/fut_access/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/fut_access/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -376,7 +397,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/'
         output_dir = os.path.join(out_dir, 'output')
 
         #reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -408,11 +429,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with both
             current, future, and base landcovers. No access"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/fut_bse/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/fut_bse/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -432,7 +456,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/no_access'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/no_access'
         output_dir = os.path.join(out_dir, 'output')
 
         reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -464,11 +488,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """A regression test for the biodiversity model with both
             current and base landcovers as well as access. No future lancover"""
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/bse_access/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/bse_access/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -488,7 +515,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         biodiversity_biophysical.execute(args)
     
         regression_dir = \
-            './data/biodiversity_regression_data/regression_outputs/'
+            './invest-data/test/data/biodiversity_regression_data/regression_outputs/'
         output_dir = os.path.join(out_dir, 'output')
 
         reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
@@ -521,11 +548,14 @@ class TestBiodiversityBiophysical(unittest.TestCase):
             Shouldn't crash with zero length inputs"""
         
         #raise SkipTest
-        input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/samp_workspace/smoke/'
+        input_dir = './invest-data/test/data/biodiversity_regression_data/samp_input'
+        out_dir = './invest-data/test/data/test_out/biodiversity/samp_workspace/smoke/'
       
         # copy the workspace to test_out so that it can be properly managed on
         # everyones machine without polluting their test/data/ directory
+        if os.path.isdir(out_dir):
+            os.rmdir(out_dir)
+
         shutil.copytree(input_dir, out_dir)
         
         args = {}
@@ -548,7 +578,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Test multiple uri types for open_ambiguous_raster and assert that
             the proper behavior is seen"""
         #raise SkipTest
-        reg_dir = './data/biodiversity_regression_data/'
+        reg_dir = './invest-data/test/data/biodiversity_regression_data/'
         uri_1 = os.path.join(reg_dir, 'empty_dir')
         uri_2 = os.path.join(reg_dir, 'test_dir')
         uri_3 = os.path.join(reg_dir, 'test_open_amb')
@@ -568,7 +598,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Test a few hand made CSV files to make sure make_dict_from_csv
             returns properly """
         #raise SkipTest
-        reg_dir = './data/biodiversity_regression_data/'
+        reg_dir = './invest-data/test/data/biodiversity_regression_data/'
         csv_uri = os.path.join(reg_dir, 'test_csv.csv')
         field = 'LULC'
 
@@ -584,7 +614,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Test a list of gdal datasets and assert that we see success and
             failures where we would expect """
         #raise SkipTest
-        reg_dir = './data/biodiversity_regression_data/samp_input/'
+        reg_dir = './invest-data/test/data/biodiversity_regression_data/samp_input/'
         ds_1 = gdal.Open(os.path.join(reg_dir, 'lc_samp_bse_b.tif'))
         ds_2 = gdal.Open(os.path.join(reg_dir, 'lc_samp_cur_b.tif'))
         ds_3 = gdal.Open(os.path.join(reg_dir, 'lc_samp_fut_b.tif'))
@@ -599,7 +629,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Test a list of gdal datasets and assert that we see success and
             failures where we would expect """
         #raise SkipTest
-        reg_dir = './data/biodiversity_regression_data/'
+        reg_dir = './invest-data/test/data/biodiversity_regression_data/'
         ds_1 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_bse_b.tif'))
         ds_2 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_cur_b.tif'))
         ds_3 = gdal.Open(os.path.join(reg_dir, 'unprojected_raster.tif'))

@@ -21,10 +21,10 @@ class TestHRA(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = './data/test_out/HRA/New_Test' 
+        args['workspace_dir'] = './invest-data/test/data/test_out/HRA/New_Test' 
         args['grid_size'] = 500
         args['max_rating'] = 3
-        args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings'
+        args['csv_uri'] = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings'
 
         self.args = args
     
@@ -61,7 +61,7 @@ class TestHRA(unittest.TestCase):
         self.args['decay_eq'] = 'None'
         
         #And now the optional
-        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions_incorrect.shp'
+        self.args['aoi_tables'] = './invest-data/test/data/hra_regression_data/Input/subregions_incorrect.shp'
 
         self.assertRaises(hra.ImproperAOIAttributeName,
                         hra.execute, self.args)
@@ -78,7 +78,7 @@ class TestHRA(unittest.TestCase):
         self.args['decay_eq'] = 'None'
 
         #And the incorrect optional
-        self.args['csv_uri'] = './data/hra_regression_data/habitat_stressor_ratings_bad_attrib'
+        self.args['csv_uri'] = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings_bad_attrib'
 
         self.assertRaises(hra.ImproperCriteriaAttributeName,
                         hra.execute, self.args)
@@ -86,13 +86,13 @@ class TestHRA(unittest.TestCase):
     def test_euc_full_regression(self):
         '''Alright. Let's do this shit.'''
 
-        exp_workspace = './data/hra_regression_data/'
+        exp_workspace = './invest-data/test/data/hra_regression_data/'
 
-        self.args['workspace_dir'] = './data/test_out/HRA/Reg_Folder'
+        self.args['workspace_dir'] = './invest-data/test/data/test_out/HRA/Reg_Folder'
         self.args['risk_eq'] = 'Euclidean'
         self.args['decay_eq'] = 'Linear'
         self.args['grid_size'] = 100
-        self.args['aoi_tables'] = './data/hra_regression_data/Input/subregions.shp'
+        self.args['aoi_tables'] = './invest-data/test/data/hra_regression_data/Input/subregions.shp'
 
         hra.execute(self.args)
 
@@ -126,7 +126,7 @@ class TestHRA(unittest.TestCase):
                 elif tail == '.html':
                     #There is only one file here that we want to compare against.
                     #Just explicitly call it so I can be done.
-                    exp_html = './data/hra_regression_data/Output/HTML_Tables/Sub_Region_Averaged_Results_[2013-04-16_14_37].html'
+                    exp_html = './invest-data/test/data/hra_regression_data/Output/HTML_Tables/Sub_Region_Averaged_Results_[2013-04-16_14_37].html'
 
                     self.assertTrue(filecmp.cmp(item, exp_html))
         

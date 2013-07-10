@@ -12,6 +12,15 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('blue_carbon')
 
+def transition_soil_carbon(area_final, carbon_final, depth_final,
+                           transition_rate, year, area_initial,
+                           carbon_initial, depth_initial):
+
+    return (area_final * carbon_final * depth_final) - \
+           (1/((1 + transition_rate) ** year)) * \
+           ((area_final * carbon_final * depth_final) - \
+            (area_initial * carbon_initial * depth_initial))
+
 def execute(args):
     #inputs
     workspace_dir = args["workspace_dir"]
@@ -70,7 +79,9 @@ def execute(args):
 
     #outputs
     carbon1_total_uri = os.path.join(workspace_dir, "carbon1_total.tif")
-    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")   
+    carbon2_total_uri = os.path.join(workspace_dir, "carbon2_total.tif")
+    magnitude_uri = os.path.join(workspace_dir, "magnitude.tif")
+    timing_uri = os.path.join(workspace_dir, "timing.tif")
     sequestration_uri = os.path.join(workspace_dir, "sequestration.tif")
 
     #accessors
@@ -197,6 +208,7 @@ def execute(args):
         transition_dict[k] = dict(zip(header, transition_coefficients))
     transition_file.close()
 
+    undefined_transition_set=set([])
     def transition_op(lulc1, lulc2):
         if (lulc1 == nodata) or (lulc2 == nodata):
             return nodata
@@ -204,6 +216,7 @@ def execute(args):
             try:
                 return transition_dict[int(lulc1)][int(lulc2)]
             except KeyError:
+                undefined_transition_set.add((int(lulc1), int(lulc2)))
                 return 1
 
     LOGGER.debug("Creating transition coefficents raster.")
@@ -215,6 +228,9 @@ def execute(args):
                                     cell_size,
                                     "union")
 
+    for lulc1, lulc2 in undefined_transition_set:
+        LOGGER.warning("Transition from %i to %i undefined and assigned value of 1.", lulc1, lulc2)
+            
     #soil at time 2 op
     def soil_transition_op (carbon, coefficient):
         if (carbon == nodata) or (coefficient == nodata):
@@ -284,19 +300,65 @@ def execute(args):
                                     cell_size,
                                     "union")
 
+    ###emission
+
+    #magnitude
+    LOGGER.debug("Creating magnitude operation.")
+    def magnitude_op(lulc_code):
+        if lulc_code == nodata:
+            return nodata
+        else:
+            return (emission_dict[lulc_code]*(above_dict[lulc_code] + below_dict[lulc_code])) +(soil_dict[lulc_code]*disturbance_dict[lulc_code]) + litter_dict[lulc_code]
+
+    LOGGER.info("Calculating magnitude of carbon emission.")
+    raster_utils.vectorize_datasets([lulc1_uri],
+                                    magnitude_op,
+                                    magnitude_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+        
+    #timing
+    LOGGER.debug("Creating timing operation.")
+    def timing_op(lulc_code):
+        if lulc_code == nodata:
+            return nodata
+        else:
+            return ((0.5 ** (years/biomass_life_dict[lulc_code]))*(emission_dict[lulc_code]*(above_dict[lulc_code] + below_dict[lulc_code])) + litter_dict[lulc_code]) + ((0.5 ** (years/soil_life_dict[lulc_code])) * (soil_dict[lulc_code]*disturbance_dict[lulc_code]))
+
+    LOGGER.info("Calculating timing of carbon emission.")
+    raster_utils.vectorize_datasets([lulc1_uri],
+                                    timing_op,
+                                    timing_uri,
+                                    gdal.GDT_Float32,
+                                    nodata,
+                                    cell_size,
+                                    "union")
+    
+
     ###valuation
     if private_valuation:
         LOGGER.debug("Constructing private valuation operation.")
+
+        discount_sum = 1
+        d_rate = 1
+        d_mult = discount_rate / 100.0
+        r_change = 1
+        r_mult = 1 + (rate_change / 100.0)
+
+        for t in range(1,years):
+            d_rate *= d_mult
+            r_change *= r_mult                    
+            discount_sum += d_rate / r_change
+
+        discount_sum = discount_sum * carbon_value
         def private_valuation_op(sequest):
             if sequest == nodata:
                 return nodata
             else:
-                valuation = 0
-                for t in range(years):
-                    valuation += (sequest * ((discount_rate / 100.0) ** t) * carbon_value) / (1 + (rate_change / 100.0))
+                return sequest * discount_sum
  
-            return valuation
-
         LOGGER.info("Creating private valuation raster.")
         raster_utils.vectorize_datasets([sequestration_uri],
                                         private_valuation_op,
@@ -308,15 +370,12 @@ def execute(args):
 
     if social_valuation:
         LOGGER.debug("Constructing social cost of carbon operation.")
+        schedule_sum = sum(map(carbon_schedule_dict.__getitem__,range(year1, year2)))        
         def social_valuation_op(sequest):
             if sequest == nodata:
                 return nodata
             else:
-                valuation = 0
-                for year in range(year1, year2):
-                    valuation += sequest * carbon_schedule_dict[year]
-
-                return valuation
+                return sequest * schedule_sum
 
         LOGGER.info("Creating social valuation raster.")
         raster_utils.vectorize_datasets([sequestration_uri],

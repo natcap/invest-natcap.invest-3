@@ -51,7 +51,7 @@ def execute(args):
         
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
             subwatersheds of interest that are contained in the
-            'watersheds_uri' shape provided as input. (required)
+            'watersheds_uri' shape provided as input. (optional)
         
         args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
@@ -95,7 +95,10 @@ def execute(args):
     precip_uri = args['precipitation_uri']
     soil_depth_uri = args['soil_depth_uri']
     pawc_uri = args['pawc_uri']
-    sub_sheds_uri = args['sub_watersheds_uri']
+    sub_sheds_uri = None
+    if 'sub_watersheds_uri' in args and args['sub_watersheds_uri'] != '':
+        sub_sheds_uri = args['sub_watersheds_uri']
+
     sheds_uri = args['watersheds_uri']
     seasonality_constant = float(args['seasonality_constant'])
     
@@ -199,7 +202,7 @@ def execute(args):
     # Create clipped fractp_clipped raster
     raster_utils.vectorize_datasets(
             raster_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
-            out_nodata, pixel_size, 'intersection', aoi_uri=sub_sheds_uri)
+            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
     
     def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
@@ -219,14 +222,16 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sub_sheds_uri)
+            aoi_uri=sheds_uri)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
-    wyield_sub_sheds_uri = os.path.join(output_dir, 'wyield_sub_sheds%s.shp' % file_suffix)
     wyield_sheds_uri = os.path.join(output_dir, 'wyield_sheds%s.shp' % file_suffix)
-    raster_utils.copy_datasource_uri(sub_sheds_uri, wyield_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, wyield_sheds_uri)
+
+    if sub_sheds_uri is not None:
+        wyield_sub_sheds_uri = os.path.join(output_dir, 'wyield_sub_sheds%s.shp' % file_suffix)
+        raster_utils.copy_datasource_uri(sub_sheds_uri, wyield_sub_sheds_uri)
 
     def aet_op(fractp, precip):
         """Function to compute the actual evapotranspiration values
@@ -248,54 +253,55 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [fractp_clipped_path, precip_uri], aet_op, aet_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sub_sheds_uri)
+            aoi_uri=sheds_uri)
    
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
-    sws_tuple_names_uris = [
-            ('precip_mn', precip_uri),('PET_mn', eto_uri),
-            ('AET_mn', aet_path),('wyield_mn', wyield_clipped_path),
-            ('fractp_mn', fractp_clipped_path)]
+    if sub_sheds_uri is not None:
+        sws_tuple_names_uris = [
+                ('precip_mn', precip_uri),('PET_mn', eto_uri),
+                ('AET_mn', aet_path),('wyield_mn', wyield_clipped_path),
+                ('fractp_mn', fractp_clipped_path)]
+
+        for key_name, rast_uri in sws_tuple_names_uris:
+            # Aggregrate mean over the sub-watersheds for each uri listed in
+            # 'sws_tuple_names_uri'
+            LOGGER.debug('AGGREGATE OVER %s', key_name)
+            key_dict = raster_utils.aggregate_raster_values_uri(
+                rast_uri, sub_sheds_uri, 'subws_id', ignore_nodata=False).pixel_mean
+            # Add aggregated values to sub-watershed shapefile under new field
+            # 'key_name'
+            add_dict_to_shape(wyield_sub_sheds_uri, key_dict, key_name, 'subws_id')
+
+        # Compute the water yield volume and water yield volume per hectare. The
+        # values per sub-watershed will be added as fields in the sub-watersheds
+        # shapefile
+        compute_water_yield_volume(wyield_sub_sheds_uri)
+    
+        # Create a dictionary that maps watersheds to sub-watersheds given the
+        # watershed and sub-watershed shapefiles
+        sub_sheds_map_sheds_dict = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
+        LOGGER.debug('sub_sheds_map_sheds_dict : %s', sub_sheds_map_sheds_dict)
    
-    for key_name, rast_uri in sws_tuple_names_uris:
-        # Aggregrate mean over the sub-watersheds for each uri listed in
-        # 'sws_tuple_names_uri'
-        LOGGER.debug('AGGREGATE OVER %s', key_name)
-        key_dict = raster_utils.aggregate_raster_values_uri(
-            rast_uri, sub_sheds_uri, 'subws_id').pixel_mean
-        # Add aggregated values to sub-watershed shapefile under new field
-        # 'key_name'
-        add_dict_to_shape(wyield_sub_sheds_uri, key_dict, key_name, 'subws_id')
+        # Add the corresponding watershed ids to the sub-watershed shapefile as a
+        # new field
+        add_dict_to_shape(
+                wyield_sub_sheds_uri, sub_sheds_map_sheds_dict, 'ws_id', 'subws_id')
     
-    # Compute the water yield volume and water yield volume per hectare. The
-    # values per sub-watershed will be added as fields in the sub-watersheds
-    # shapefile
-    compute_water_yield_volume(wyield_sub_sheds_uri)
+        # List of wanted fields to output in the sub-watershed CSV table
+        field_list_sws = [
+                'ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                'wyield_mn', 'wyield_vol']
     
-    # Create a dictionary that maps watersheds to sub-watersheds given the
-    # watershed and sub-watershed shapefiles
-    sub_sheds_map_sheds_dict = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
-    LOGGER.debug('sub_sheds_map_sheds_dict : %s', sub_sheds_map_sheds_dict)
-   
-    # Add the corresponding watershed ids to the sub-watershed shapefile as a
-    # new field
-    add_dict_to_shape(
-            wyield_sub_sheds_uri, sub_sheds_map_sheds_dict, 'ws_id', 'subws_id')
+        # Get a dictionary from the sub-watershed shapefiles attributes based on the
+        # fields to be outputted to the CSV table
+        wyield_value_dict_sws = extract_datasource_table_by_key(
+                wyield_sub_sheds_uri, 'subws_id', field_list_sws)
     
-    # List of wanted fields to output in the sub-watershed CSV table
-    field_list_sws = [
-            'ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
-            'wyield_mn', 'wyield_vol']
+        LOGGER.debug('wyield_value_dict_sws : %s', wyield_value_dict_sws)
     
-    # Get a dictionary from the sub-watershed shapefiles attributes based on the
-    # fields to be outputted to the CSV table
-    wyield_value_dict_sws = extract_datasource_table_by_key(
-            wyield_sub_sheds_uri, 'subws_id', field_list_sws)
-    
-    LOGGER.debug('wyield_value_dict_sws : %s', wyield_value_dict_sws)
-    
-    # Write sub-watershed CSV table
-    write_new_table(wyield_sws_table_uri, field_list_sws, wyield_value_dict_sws)
+        # Write sub-watershed CSV table
+        write_new_table(wyield_sws_table_uri, field_list_sws, wyield_value_dict_sws)
     
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
@@ -307,7 +313,7 @@ def execute(args):
         # Aggregrate mean over the watersheds for each uri listed in
         # 'ws_tuple_names_uri'
         key_dict = raster_utils.aggregate_raster_values_uri(
-            rast_uri, sheds_uri, 'ws_id').pixel_mean
+            rast_uri, sheds_uri, 'ws_id', ignore_nodata=False).pixel_mean
         # Add aggregated values to watershed shapefile under new field
         # 'key_name'
         add_dict_to_shape(wyield_sheds_uri, key_dict, key_name, 'ws_id')
@@ -341,7 +347,8 @@ def execute(args):
     # Paths for watershed and sub watershed scarcity tables
     scarcity_table_ws_uri = os.path.join(
             output_dir, 'water_scarcity_watershed%s.csv' % file_suffix) 
-    scarcity_table_sws_uri = os.path.join(
+    if sub_sheds_uri is not None:
+        scarcity_table_sws_uri = os.path.join(
             output_dir, 'water_scarcity_subwatershed%s.csv' % file_suffix) 
     
     # Open/read in the demand csv file into a dictionary
@@ -366,14 +373,17 @@ def execute(args):
     
     # Making a copy of watershed and sub-watershed to add water scarcity results
     # to
-    scarcity_sub_sheds_uri = os.path.join(output_dir, 'scarcity_sub_sheds%s.shp' % file_suffix)
     scarcity_sheds_uri = os.path.join(output_dir, 'scarcity_sheds%s.shp' % file_suffix)
-    raster_utils.copy_datasource_uri(sub_sheds_uri, scarcity_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, scarcity_sheds_uri)
+
+    if sub_sheds_uri is not None:
+        scarcity_sub_sheds_uri = os.path.join(output_dir, 'scarcity_sub_sheds%s.shp' % file_suffix)
+        raster_utils.copy_datasource_uri(sub_sheds_uri, scarcity_sub_sheds_uri)
    
     # Calculate the calibrated water yield for sheds and sub-sheds
     LOGGER.debug('Calculating CYIELD')
-    calculate_cyield_vol(
+    if sub_sheds_uri is not None:
+        calculate_cyield_vol(
             wyield_sub_sheds_uri, calib_dict, scarcity_sub_sheds_uri)
     calculate_cyield_vol(wyield_sheds_uri, calib_dict, scarcity_sheds_uri)
     
@@ -387,70 +397,70 @@ def execute(args):
     # Aggregate the consumption volume over sheds and sub-sheds using the
     # reclassfied demand raster
     LOGGER.info('Aggregating Consumption Volume and Mean')
-    consump_sws = raster_utils.aggregate_raster_values_uri(
-        tmp_demand_uri, sub_sheds_uri, 'subws_id')
-    consump_vol_dict_sws = consump_sws.total
-    consump_mn_dict_sws = consump_sws.pixel_mean
+    if sub_sheds_uri is not None:
+        consump_sws = raster_utils.aggregate_raster_values_uri(
+            tmp_demand_uri, sub_sheds_uri, 'subws_id', ignore_nodata=False)
+        consump_vol_dict_sws = consump_sws.total
+        consump_mn_dict_sws = consump_sws.pixel_mean
 
     consump_ws = raster_utils.aggregate_raster_values_uri(
-        tmp_demand_uri, sheds_uri, 'ws_id')
+        tmp_demand_uri, sheds_uri, 'ws_id', ignore_nodata=False)
     consump_vol_dict_ws = consump_ws.total
     consump_mn_dict_ws = consump_ws.pixel_mean
     
     # Add aggregated consumption to sheds and sub-sheds shapefiles
-    add_dict_to_shape(
+    if sub_sheds_uri is not None:
+        add_dict_to_shape(
             scarcity_sub_sheds_uri, consump_vol_dict_sws, 'consum_vol',
             'subws_id')
+        LOGGER.debug('Demand_Sum_Dict : %s', consump_vol_dict_sws)
+
     add_dict_to_shape(
             scarcity_sheds_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
     
-    LOGGER.debug('Demand_Sum_Dict : %s', consump_vol_dict_sws)
-
-    
     # Add aggregated consumption means to sheds and sub-sheds shapefiles
-    add_dict_to_shape(
+    if sub_sheds_uri is not None:
+        add_dict_to_shape(
             scarcity_sub_sheds_uri, consump_mn_dict_sws, 'consum_mn',
             'subws_id')
+        LOGGER.debug('mean_dict : %s', consump_mn_dict_sws)
     add_dict_to_shape(
             scarcity_sheds_uri, consump_mn_dict_ws, 'consum_mn', 'ws_id')
     
-    LOGGER.debug('mean_dict : %s', consump_mn_dict_sws)
-
     # Calculate the realised water supply after consumption
     LOGGER.info('Calculating RSUPPLY')
-    compute_rsupply_volume(scarcity_sub_sheds_uri, wyield_sub_sheds_uri)
     compute_rsupply_volume(scarcity_sheds_uri, wyield_sheds_uri)
+    if sub_sheds_uri is not None:
+        compute_rsupply_volume(scarcity_sub_sheds_uri, wyield_sub_sheds_uri)
+        # Add the corresponding watershed ids to the sub-watershed shapefile as a
+        # new field
+        add_dict_to_shape(
+                scarcity_sub_sheds_uri, sub_sheds_map_sheds_dict, 'ws_id',
+                'subws_id')
     
-    # Add the corresponding watershed ids to the sub-watershed shapefile as a
-    # new field
-    add_dict_to_shape(
-            scarcity_sub_sheds_uri, sub_sheds_map_sheds_dict, 'ws_id',
-            'subws_id')
-    
-    # List of wanted fields to output in the sub-watershed CSV table
-    scarcity_field_list_sws = [
-            'ws_id', 'subws_id', 'cyield_vol', 'consum_vol', 'consum_mn', 
-            'rsupply_vl', 'rsupply_mn']
-   
-    # Aggregate water yield and water scarcity fields, where we exclude the
-    # first two fields in the scarcity list because they are duplicates already
-    # in the water yield list
-    field_list_sws = field_list_sws + scarcity_field_list_sws[2:]
+        scarcity_field_list_sws = [
+                'ws_id', 'subws_id', 'cyield_vol', 'consum_vol', 'consum_mn', 
+                'rsupply_vl', 'rsupply_mn']
 
-    # Get a dictionary from the sub-watershed shapefiles attributes based on the
-    # fields to be outputted to the CSV table
-    scarcity_sub_value_dict = extract_datasource_table_by_key(
-            scarcity_sub_sheds_uri, 'subws_id', scarcity_field_list_sws)
-    
-    # Since we want the scarcity output to have both water yield and scarcity
-    # values, combine the scarcity and water yield dictionaries 
-    scarcity_dict_sws = combine_dictionaries(
-            wyield_value_dict_sws, scarcity_sub_value_dict)
+        # Aggregate water yield and water scarcity fields, where we exclude the
+        # first two fields in the scarcity list because they are duplicates already
+        # in the water yield list
+        field_list_sws = field_list_sws + scarcity_field_list_sws[2:]
 
-    LOGGER.debug('Scarcity_dict_sws : %s', scarcity_dict_sws)
-    
-    # Write sub-watershed CSV table for water scarcity
-    write_new_table(scarcity_table_sws_uri, field_list_sws, scarcity_dict_sws)
+        # Get a dictionary from the sub-watershed shapefiles attributes based on the
+        # fields to be outputted to the CSV table
+        scarcity_sub_value_dict = extract_datasource_table_by_key(
+                scarcity_sub_sheds_uri, 'subws_id', scarcity_field_list_sws)
+
+        # Since we want the scarcity output to have both water yield and scarcity
+        # values, combine the scarcity and water yield dictionaries 
+        scarcity_dict_sws = combine_dictionaries(
+                wyield_value_dict_sws, scarcity_sub_value_dict)
+
+        LOGGER.debug('Scarcity_dict_sws : %s', scarcity_dict_sws)
+
+        # Write sub-watershed CSV table for water scarcity
+        write_new_table(scarcity_table_sws_uri, field_list_sws, scarcity_dict_sws)
     
     # List of wanted fields to output in the watershed CSV table
     scarcity_field_list_ws = [
@@ -491,7 +501,8 @@ def execute(args):
     # Paths for the watershed and subwatershed tables
     valuation_table_ws_uri = os.path.join(
             service_dir, 'hydropower_value_watershed%s.csv' % file_suffix)
-    valuation_table_sws_uri = os.path.join(
+    if sub_sheds_uri is not None:
+        valuation_table_sws_uri = os.path.join(
             service_dir, 'hydropower_value_subwatershed%s.csv' % file_suffix) 
     
     # Open/read in valuation parameters from CSV file
@@ -510,11 +521,13 @@ def execute(args):
     valuation_table_file.close()
     
     # Making a copy of watershed and sub-watershed to add valuation results to
-    valuation_sub_sheds_uri = os.path.join(
-            service_dir, 'valuation_sub_sheds%s.shp' % file_suffix)
     valuation_sheds_uri = os.path.join(service_dir, 'valuation_sheds%s.shp' % file_suffix)
-    raster_utils.copy_datasource_uri(sub_sheds_uri, valuation_sub_sheds_uri)
     raster_utils.copy_datasource_uri(sheds_uri, valuation_sheds_uri)
+
+    if sub_sheds_uri is not None:
+        valuation_sub_sheds_uri = os.path.join(
+            service_dir, 'valuation_sub_sheds%s.shp' % file_suffix)
+        raster_utils.copy_datasource_uri(sub_sheds_uri, valuation_sub_sheds_uri)
    
     # Compute NPV and Energy for the watersheds
     LOGGER.info('Calculating NPV/ENERGY for Sheds')
@@ -537,30 +550,34 @@ def execute(args):
 
     LOGGER.debug('Hydro WS Dict: %s', hydropower_dict_ws)
 
-    # Compute NPV and Energy for the sub-watersheds
-    LOGGER.info('Calculating NPV/ENERGY for Sub-Sheds')
-    compute_subshed_valuation(
-            valuation_sub_sheds_uri, scarcity_sub_sheds_uri, hydropower_dict_ws)
     
     # Get a dictionary from the sub-watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    valuation_dict_sws = extract_datasource_table_by_key(
+    if sub_sheds_uri is not None:
+        # Compute NPV and Energy for the sub-watersheds
+        LOGGER.info('Calculating NPV/ENERGY for Sub-Sheds')
+        compute_subshed_valuation(
+            valuation_sub_sheds_uri, scarcity_sub_sheds_uri, hydropower_dict_ws)
+
+        valuation_dict_sws = extract_datasource_table_by_key(
             valuation_sub_sheds_uri, 'subws_id', val_field_list_sws)
     
-    # Since we want the valuation output to have water yield and scarcity
-    # values also, combine the dictionaries
-    hydropower_dict_sws = combine_dictionaries(
-            scarcity_dict_sws, valuation_dict_sws)
+        # Since we want the valuation output to have water yield and scarcity
+        # values also, combine the dictionaries
+        hydropower_dict_sws = combine_dictionaries(
+                scarcity_dict_sws, valuation_dict_sws)
     
-    # Aggregate all fields together, where we exclude the first field in the
-    # valuation list because they are duplicates
-    field_list_sws = field_list_sws + val_field_list_sws[2:]
+        # Aggregate all fields together, where we exclude the first field in the
+        # valuation list because they are duplicates
+        field_list_sws = field_list_sws + val_field_list_sws[2:]
     field_list_ws = field_list_ws + val_field_list_ws[1:]
    
     # Generate the final CSV files
-    write_new_table(
+    if sub_sheds_uri is not None:
+        write_new_table(
             valuation_table_sws_uri, field_list_sws, hydropower_dict_sws)
     write_new_table(valuation_table_ws_uri, field_list_ws, hydropower_dict_ws)
+
 
 def compute_subshed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
     """Computes and adds the net present value and energy for the sub-sheds to
@@ -938,7 +955,8 @@ def compute_water_yield_volume(shape_uri):
         geom = feat.GetGeometryRef()
         feat_area = geom.GetArea()
         
-        # Calculate water yield volume
+        # Calculate water yield volume, 
+        #1000 is for converting the mm of wyield to meters
         vol = wyield_mn * feat_area / 1000.0
         # Get the volume field index and add value
         vol_index = feat.GetFieldIndex(vol_name)

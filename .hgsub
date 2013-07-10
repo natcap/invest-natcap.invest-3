@@ -1,0 +1,3 @@
+test/invest-data = http://ncp-yamato.stanford.edu/hg_wkspace/invest-data
+[extensions]
+largefiles=

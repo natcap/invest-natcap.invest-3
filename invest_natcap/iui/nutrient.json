@@ -97,16 +97,6 @@
                     "validText": "^[0-9]+\\.?[0-9]+$"
                 },
 		{
-		    "id" : "landuse_uri",
-		    "args_id" : "landuse_uri",
-		    "type": "file",
-		    "label": "LULC Raster",
-		    "defaultValue": "../Base_Data/Freshwater/landuse_90",
-		    "required": true,
-		    "validateAs": {"type": "GDAL"},
-		    "helpText": "A GIS raster dataset, with an integer LULC code for each cell."
-		},
-		{        
 		    "id" : "watersheds_uri",
 		    "args_id" : "watersheds_uri",
 		    "type": "file",
@@ -128,7 +118,7 @@
                    "type": "file",
                    "label": "Sub-Watersheds",
                    "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
-                   "required": true,
+                   "required": false,
                    "validateAs": {"type": "OGR", 
                                   "layers": [{"name": {"inheritFrom": "file"}, 
                                               "type": "polygons",

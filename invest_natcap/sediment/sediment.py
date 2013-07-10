@@ -231,11 +231,11 @@ def execute(args):
     esri_driver = ogr.GetDriverByName('ESRI Shapefile')
 
     field_summaries = {
-        'usle_mean': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id', 'mean'),
-        'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id', 'sum'),
-        'upret_mean': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id', 'mean')
+        'usle_mean': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').pixel_mean,
+        'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
+        'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
+        'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
+        'upret_mean': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
         }
 
     #Create the service field sums

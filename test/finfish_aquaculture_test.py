@@ -15,13 +15,13 @@ class TestFinfishAquaculture(unittest.TestCase):
     
         ff_aqua_args = {}
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './data/test_out/Aquaculture/Re_Testing'
-        ff_aqua_args['ff_farm_loc'] = './data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_aqua_args['workspace_dir'] = './invest-data/test/data/test_out/Aquaculture/Re_Testing'
+        ff_aqua_args['ff_farm_loc'] = './invest-data/test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['g_param_a'] = 0.038
         ff_aqua_args['g_param_b'] = 2.0
-        ff_aqua_args['water_temp_tbl'] = './data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
-        ff_aqua_args['farm_op_tbl'] = './data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
+        ff_aqua_args['water_temp_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
+        ff_aqua_args['farm_op_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         ff_aqua_args['outplant_buffer'] = 3
         
         #Valuation
@@ -151,8 +151,8 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['farm_ID'] = self.ff_aqua_args['farm_ID']
         args['g_param_a'] = self.ff_aqua_args['g_param_a']
         args['g_param_b'] = self.ff_aqua_args['g_param_b']
-        args['water_temp_tbl'] = './data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
-        args['farm_op_tbl'] = './data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
+        args['water_temp_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
+        args['farm_op_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         args['outplant_buffer'] = self.ff_aqua_args['outplant_buffer']
         args['do_valuation'] = self.ff_aqua_args['do_valuation']
         args['p_per_kg'] = self.ff_aqua_args['p_per_kg']
@@ -167,7 +167,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         print path
         completed_shp = path
        
-        reg_shp = './data/aquaculture_data/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
+        reg_shp = './invest-data/test/data/aquaculture_data/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
 
         print type(completed_shp)
         print type(reg_shp)
@@ -188,7 +188,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             if html_out:
                 html_file = html_out
         
-        reg_html_file = './data/aquaculture_data/Test_Data/Harvest_Results_Reg_Test.html'
+        reg_html_file = './invest-data/test/data/aquaculture_data/Test_Data/Harvest_Results_Reg_Test.html'
         
         filecmp.cmp(html_file, reg_html_file, shallow=False)
         
@@ -204,7 +204,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             if text_out:
                 text_file = text_out
                 
-        reg_text_file = './data/aquaculture_data/Test_Data/Parameter_Log_Reg_Test.txt'
+        reg_text_file = './invest-data/test/data/aquaculture_data/Test_Data/Parameter_Log_Reg_Test.txt'
         
         filecmp.cmp(text_file, reg_text_file, shallow=False)
         

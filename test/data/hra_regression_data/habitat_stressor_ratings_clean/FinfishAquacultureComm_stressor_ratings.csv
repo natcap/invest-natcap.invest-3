@@ -1,7 +1,0 @@
-STRESSOR NAME,FinfishAquacultureComm
-
-Stressor Buffer (m):,<enter a buffer region in meters>
-
-,Rating,DQ,Weight
-management effectiveness,"<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>","<enter (3) best, (2) adequate, (1) limited>","<enter (3) more important, (2) equal importance, (1) less important>"
-intensity rating,"<enter (3) high, (2) medium, (1) low, (0) no score>","<enter (3) best, (2) adequate, (1) limited>","<enter (3) more important, (2) equal importance, (1) less important>"
