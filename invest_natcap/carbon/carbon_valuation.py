@@ -86,3 +86,24 @@ def execute_30(**args):
         [args['sequest_uri']], value_op, value_seq_uri,
         gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
     LOGGER.info('finished valuation of each pixel')
+
+    # The output html file with a table to summarize model data.
+    html_uri = os.path.join(output_directory, 'summary%s.html' % file_suffix)
+    _CreateHtmlSummary(html_uri, args['sequest_uri'], value_seq_uri)
+
+def _CreateHtmlSummary(html_uri, sequest_uri, value_seq_uri):
+    html = open(html_uri, 'w')
+    
+    html.write("<html>")
+    html.write("<title>InVEST Carbon Model</title>")
+    html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
+    html.write("<table border='1', cellpadding='5'>")
+    column_titles = ["Scenario", "Change in Carbon Stocks", "Net Present Value"]
+    html.write("<tr>")
+    for title in column_titles:
+        html.write("<td><b>" + title + "</b></td>")
+    html.write("</tr>")
+    html.write("</table>")
+    html.write("</html>")
+
+    html.close()
