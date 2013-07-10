@@ -4,7 +4,10 @@ calcs, and return the appropriate outputs.
 
 import logging
 import os
-import matlib.pyplot
+import collections 
+import math
+import datetime
+import matplotlib.pyplot
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
@@ -123,6 +126,389 @@ def execute(args):
     #Recovery potential will use the 'Recovery' subdictionary from the
     #crit_lists and denoms dictionaries
     make_recov_potent_raster(maps_dir, crit_lists, denoms)
+
+    if 'aoi_tables' in args:
+
+        #Let's pre-calc stuff so we don't have to worry about it in the middle of
+        #the file creation.
+        avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
+        aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
+
+        tables_dir = os.path.join(output_dir, 'HTML_Plots')
+        os.mkdir(tables_dir)
+        
+        make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
+
+        if args['risk_eq'] == 'Euclidean':
+            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress, len(h_risk_dict))
+    '''
+    #Want to clean up the intermediate folder containing the added r/dq*w
+    #rasters, since it serves no purpose for the users.
+    unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
+    os.removedirs(unecessary_folder)
+    #Want to remove that AOI copy that we used for ID number->name translation.
+    unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
+    os.remove(unnecessary_file)
+    '''
+def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
+    '''This function will produce risk plots when the risk equation is
+    euclidean.
+
+    Input:
+        out_dir- The directory into which the completed risk plots should be
+            placed.
+        
+        aoi_pairs-
+
+            {'AOIName':
+                [(HName, SName, E, C, Risk), ...],
+                ....
+            }
+
+        num_stress- A dictionary that simply associates every habaitat with the
+            number of stressors associated with it. This will help us determine
+            the max E/C we shoudl be expecting in our overarching ecosystem plot.
+    Output:
+        A set of .png images containing the matplotlib plots for every H-S
+        combination. Within that, each AOI will be displayed as plotted by
+        (E,C) values.
+
+        A single png that is the "ecosystem plot" where the E's for each AOI
+        are the summed 
+
+
+    '''
+    def plot_background_circle(max_value):
+        circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'),
+                        (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'),
+                        (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'),
+                        (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'),
+                        (1, '#305FCF')]
+        index = 0
+        for radius, color in circle_stuff:
+            index += 1
+            linestyle = 'solid' if index % 2 == 0 else 'dashed'
+            cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', linestyle=linestyle, 
+                        radius=radius * max_value/ 3.5, fc=color)
+            matplotlib.pyplot.gca().add_patch(cir)
+
+    
+    #Create plots for each combination of AOI, Hab
+    plot_index = 0
+
+    for aoi_name, aoi_list in aoi_pairs.iteritems():
+
+        matplotlib.pyplot.figure(plot_index)
+        plot_index += 1
+        matplotlib.pyplot.suptitle(aoi_name)
+
+        hab_index = 0
+        curr_hab_name = aoi_list[0][0]
+
+        #Elements look like: (HabName, StressName, E, C, Risk)
+        for element in aoi_list:
+            if element == aoi_list[0]:
+
+                max_risk = max_h_s_risk * num_stress[curr_hab_name]
+
+                #Want to have two across, and make sure there are enough spaces
+                #going down for each of the subplots 
+                matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+                plot_background_circle(max_risk)
+                matplotlib.pyplot.title(curr_hab_name)
+                matplotlib.pyplot.xlim([0.5, max_risk])
+                matplotlib.pyplot.ylim([0.5, max_risk])
+                matplotlib.pyplot.xlabel("Exposure")
+                matplotlib.pyplot.ylabel("Consequence")
+
+            hab_name = element[0]
+            if curr_hab_name == hab_name:
+
+                matplotlib.pyplot.plot(element[2], element[3], 'k^', 
+                        markerfacecolor='black', markersize=8)
+                matplotlib.pyplot.annotate(element[1], xy=(element[2], 
+                        element[3]), xytext=(element[2], element[3]+0.07))
+                continue    
+            
+            #We get here once we get to the next habitat
+            hab_index += 1
+            matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+            plot_background_circle(max_risk)
+        
+            curr_hab_name = hab_name
+
+            max_risk = max_h_s_risk * num_stress[curr_hab_name]
+            
+            matplotlib.pyplot.title(curr_hab_name)
+            matplotlib.pyplot.xlim([0.5, max_risk])
+            matplotlib.pyplot.ylim([0.5, max_risk])
+            matplotlib.pyplot.xlabel("Exposure")
+            matplotlib.pyplot.ylabel("Consequence")
+
+        out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
+
+        matplotlib.pyplot.savefig(out_uri, format='png')
+
+    #Create one ecosystem megaplot that plots the points as summed E,C from
+    #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
+    #for all habitats in the ecosystem.
+    plot_index += 1
+    max_tot_risk = max_h_s_risk * max(num_stress.values()) * num_habs 
+    
+    matplotlib.pyplot.figure(plot_index)
+    matplotlib.pyplot.suptitle("Ecosystem Risk")
+    
+    plot_background_circle(max_tot_risk)
+    
+    points_dict = {}
+    
+    for aoi_name, aoi_list in aoi_pairs.items():
+
+        for element in aoi_list:
+        
+            if aoi_name in points_dict:
+                points_dict[aoi_name]['E'] += element[2]
+                points_dict[aoi_name]['C'] += element[3]
+            else:
+                points_dict[aoi_name] = {}
+                points_dict[aoi_name]['E'] = 0
+                points_dict[aoi_name]['C'] = 0
+
+    for aoi_name, p_dict in points_dict.items():
+        #Create the points which are summed AOI's across all Habitats.    
+        matplotlib.pyplot.plot(p_dict['E'], p_dict['C'], 'k^', 
+                    markerfacecolor='black', markersize=8)
+        matplotlib.pyplot.annotate(aoi_name,
+                    xy=(p_dict['E'], p_dict['C']), 
+                    xytext=(p_dict['E'], p_dict['C']+0.07))
+                        
+    matplotlib.pyplot.xlim([0.5, max_tot_risk])
+    matplotlib.pyplot.ylim([0.5, max_tot_risk])
+    matplotlib.pyplot.xlabel("Exposure (Cumulative)")
+    matplotlib.pyplot.ylabel("Consequence (Cumulative)")
+
+    out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
+    matplotlib.pyplot.savefig(out_uri, format='png')
+
+def make_aoi_tables(out_dir, aoi_pairs, max_risk):
+    '''This function will take in an shapefile containing multiple AOIs, and
+    output a table containing values averaged over those areas.
+
+    Input:
+        out_dir- The directory into which the completed HTML tables should be
+            placed.
+        aoi_pairs- Replacement for avgs_dict, holds all the averaged values on
+            a H, S basis.
+
+            {'AOIName':
+                [(HName, SName, E, C, Risk), ...],
+                ....
+            }
+     Output:
+        A set of HTML tables which will contain averaged values of E, C, and
+        risk for each H, S pair within each AOI. Additionally, the tables will
+        contain a column for risk %, which is the averaged risk value in that
+        area divided by the total potential risk for a given pixel in the map.
+
+     Returns nothing.
+    '''
+
+    filename = os.path.join(out_dir, 'Sub_Region_Averaged_Results_[%s].html' \
+                   % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
+
+    file = open(filename, "w")
+
+    file.write("<html>")
+    file.write("<title>" + "InVEST HRA" + "</title>")
+    file.write("<CENTER><H1>" + "Habitat Risk Assessment Model" + "</H1></CENTER>")
+    file.write("<br>")
+    file.write("This page contains results from running the InVEST Habitat Risk \
+    Assessment model." + "<p>" + "Each table displays values on a per-habitat \
+    basis. For each overlapping stressor within the model, the averages for the \
+    desired sub-regions are presented. C, E, and Risk values are calculated as \
+    an average across a given subregion. Risk Percentage is calculated as a \
+    function of total potential risk within that area.")
+    file.write("<br><br>")
+    file.write("<HR>")
+
+
+    #Now, all of the actual calculations within the table. We want to make one
+    #table for each AOi used on the subregions shapefile.
+    for aoi_name, aoi_list in aoi_pairs.items():
+        
+        file.write("<H2>" + aoi_name + "</H2>")
+        file.write('<table border="1", cellpadding="5">')
+
+        #Headers row
+        file.write("<tr><b><td>Habitat Name</td><td>Stressor Name</td><td>E</td>" + \
+            "<td>C</td><td>Risk</td><td>Risk %</td></b></tr>")
+
+        #Element looks like (HabName, StressName, E, C, Risk)
+        for element in aoi_list:
+
+            file.write("<tr>")
+            file.write("<td>" + element[0]+ "</td>")
+            file.write("<td>" + element[1] + "</td>")
+            file.write("<td>" + str(round(element[2], 2)) + "</td>")
+            file.write("<td>" + str(round(element[3], 2)) + "</td>")
+            file.write("<td>" + str(round(element[4], 2)) + "</td>")
+            file.write("<td>" + str(round(element[4] * 100 / max_risk, 2)) + "</td>")
+            file.write("</tr>")
+            
+        #End of the AOI-specific table
+        file.write("</table>")
+
+    #End of the page.
+    file.write("</html>")
+    file.close()
+
+
+def rewrite_avgs_dict(avgs_dict, aoi_names):
+    '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
+    centric instead. Should produce something like the following:
+    
+    {'AOIName':
+        [(HName, SName, E, C, Risk), ...],
+        ....
+    }
+    '''
+    pair_dict = {}
+
+    for aoi_name in aoi_names:
+        pair_dict[aoi_name] = []
+
+        for h_name, h_dict in avgs_dict.items():
+            for s_name, s_list in h_dict.items():
+                        
+                for aoi_dict in s_list:
+                    if aoi_dict['Name'] == aoi_name:
+                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']))
+
+    return pair_dict
+
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
+    '''This funtion is a helper to make_aoi_tables, and will just handle
+    pre-calculation of the average values for each aoi zone.
+
+    Input:
+        inter_dir- The directory which contains the individual E and C rasters.
+            We can use these to get the avg. E and C values per area. Since we
+            don't really have these in any sort of dictionary, will probably
+            just need to explicitly call each individual file based on the
+            names that we pull from the risk_dict keys.
+        risk_dict- A simple dictionary that maps a tuple of 
+            (Habitat, Stressor) to the URI for the risk raster created when the 
+            various sub components (H/S/H_S) are combined.
+
+            {('HabA', 'Stress1'): "A-1 Risk Raster URI",
+            ('HabA', 'Stress2'): "A-2 Risk Raster URI",
+            ...
+            }
+        aoi_uri- The location of the AOI zone files. Each feature within this
+            file (identified by a 'name' attribute) will be used to average 
+            an area of E/C/Risk values.
+
+    Returns:
+        avgs_dict- A multi level dictionary to hold the average values that
+            will be placed into the HTML table.
+
+            {'HabitatName':
+                {'StressorName':
+                    [{'Name': AOIName, 'E': 4.6, 'C': 2.8, 'Risk': 4.2},
+                        {...},
+                    ...
+                    ]
+                },
+                ....
+            }
+       aoi_names- Quick and dirty way of getting the AOI keys.
+    '''
+    #Since we know that the AOI will be consistent across all of the rasters,
+    #want to create the new int field, and the name mapping dictionary upfront
+    
+    driver = ogr.GetDriverByName('Memory')
+    aoi = ogr.Open(aoi_uri)
+    cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
+    cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)
+    layer = cp_aoi.GetLayer()
+
+    field_defn = ogr.FieldDefn('BURN_ID', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    name_map = {}
+    count = 0
+    ids = []
+
+    for feature in layer:
+
+        ids.append(count)
+        name = feature.items()[aoi_key]
+        feature.SetField('BURN_ID', count)
+        name_map[count] = name
+        count += 1
+
+        layer.SetFeature(feature)
+        
+    layer.ResetReading()
+
+    #Now we will loop through all of the various pairings to deal with all their
+    #component parts across our AOI. Want to make sure to use our new field as
+    #the index.
+    avgs_dict = {}
+
+    for pair in risk_dict:
+        h, s = pair
+
+        if h not in avgs_dict:
+            avgs_dict[h] = {}
+        if s not in avgs_dict[h]:
+            avgs_dict[h][s] = []
+
+        #The way that aggregate_raster_values is written, it does not include an
+        #entry for any AOI feature that does not overlap a valid pixel.
+        #Thus, we want to initialize ALL to 0, then just update if there is any
+        #change.
+        r_agg_dict = dict.fromkeys(ids, 0)
+        e_agg_dict = dict.fromkeys(ids, 0)
+        c_agg_dict = dict.fromkeys(ids, 0)
+
+        #GETTING MEANS OF THE RISK RASTERS HERE
+
+        r_raster_uri = risk_dict[pair]
+
+        #We explicitly placed the 'BURN_ID' feature on each layer. Since we know
+        #currently there is a 0 value for all means, can just update each entry
+        #if there is a real mean found.
+        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                r_raster_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
+
+        #GETTING MEANS OF THE E RASTERS HERE
+
+        #Just going to have to pull explicitly. Too late to go back and
+        #rejigger now.
+        e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+
+        e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
+
+        #GETTING MEANS OF THE C RASTER HERE
+
+        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
+
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
+                            cp_aoi_uri, 'BURN_ID').pixel_mean)
+
+        #Now, want to place all values into the dictionary. Since we know that
+        #the names of the attributes will be the same for each dictionary, can
+        #just use the names of one to index into the rest.
+        for ident in r_agg_dict:
+            
+            name = name_map[ident]
+           
+            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
+                           'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
+
+    return avgs_dict, name_map.values()
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
     '''This will do the same h-s calculation as used for the individual E/C 
@@ -362,6 +748,48 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
 
     return num_stress
+
+def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
+    '''This will take in a raster file, and output a shapefile of the same
+    area and shape.
+
+    Input:
+        raster_uri- The raster that needs to be turned into a shapefile. This is
+            only the URI to the raster, we will need to get the band. 
+        out_uri- The desired URI for the new shapefile.
+        layer_name- The name of the layer going into the new shapefile.
+        field-name- The name of the field that will contain the raster pixel
+            value.
+    
+    Output:
+        This will be a shapefile in the shape of the raster. The raster being
+        passed in will be solely "high risk" areas that conatin data, and
+        nodata values for everything else.
+
+    Returns nothing.
+    '''
+    raster = gdal.Open(raster_uri)
+    driver = ogr.GetDriverByName("ESRI Shapefile")
+    ds = driver.CreateDataSource(out_uri)
+                
+    spat_ref = osr.SpatialReference()
+    proj = raster.GetProjectionRef() 
+    spat_ref.ImportFromWkt(proj)
+    
+    layer_name = layer_name.encode('utf-8')
+    layer = ds.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
+
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(field_defn)
+
+    band = raster.GetRasterBand(1)
+    mask = band.GetMaskBand()
+
+    gdal.Polygonize(band, mask, layer, 0)
+
+    layer = None
+
+    ds.SyncToDisk()
 
 def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
@@ -1103,7 +1531,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     return burn_rating
             
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
-                        crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
+                        crit_E_uri, gdal.GDT_Float32, 0., base_pixel_size,
                         "union", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
 
