@@ -116,6 +116,53 @@ def execute(args):
     #different models.
     num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, args['max_risk'])
 
+    #Now, combine all of the habitat rasters unto one overall ecosystem
+    #rasterusing the DS's from the previous function.
+    make_ecosys_risk_raster(maps_dir, h_risk_dict)
+
+def make_ecosys_risk_raster(dir, h_dict):
+    '''This will make the compiled raster for all habitats within the ecosystem.
+    The ecosystem raster will be a direct sum of each of the included habitat
+    rasters.
+
+    Input:
+        dir- The directory in which all completed should be placed.
+        h_dict- A dictionary of raster dataset URIs which can be combined to 
+            create an overall ecosystem raster. The key is the habitat name, 
+            and the value is the dataset URI.
+            
+            {'Habitat A': "Overall Habitat A Risk Map URI",
+            'Habitat B': "Overall Habitat B Risk URI"
+             ...
+            }
+    Output:
+        ecosys_risk.tif- An overall risk raster for the ecosystem. It will
+            be placed in the dir folder.
+
+    Returns nothing.
+    '''
+    #Need a straight list of the values from h_dict
+    h_list = h_dict.values()
+    pixel_size = raster_utils.get_cell_size_from_uri(h_list[0])
+
+    out_uri = os.path.join(dir, 'ecosys_risk.tif')
+
+    def add_e_pixels(*pixels):
+        '''Sum all habitat pixels for ecosystem raster.'''
+ 
+        pixel_sum = 0.0
+        
+        for p in pixels:
+ 
+            pixel_sum += p
+ 
+        return pixel_sum
+     
+    raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
+                gdal.GDT_Float32, 0., pixel_size, "union", 
+                resample_method_list=None, dataset_to_align_index=None,
+                aoi_uri=None)
+
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     '''This function will take in the current rasterized risk files for each
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
