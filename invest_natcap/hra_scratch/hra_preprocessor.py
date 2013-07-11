@@ -589,9 +589,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             criteria. The dictionary will look identical to the 'habs' dictionary,
             but each key will be a tuple of two strings- (HabName, StressName).
     '''
-
-    LOGGER.debug(habs)
-
+    
     with open(uri, 'rU') as hab_file:
         
         csv_reader = csv.reader(hab_file)
@@ -634,7 +632,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                         Data Quality or Weight columns.", hab_name)
             
             line = csv_reader.next()
-         
+
         #We will have just loaded in a null line from under the hab-specific
         #criteria, now drainthe next two, since they're just headers for users.
         #Drain the next two lines
@@ -648,6 +646,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         while True:
             try:
                 line = csv_reader.next()
+
                 stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
                 
@@ -661,7 +660,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                 h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
                         'Crit_Rasters': {}}
                 
-                if line != '':
+                while line[0] != '':
                     
                     #Just abstract all of the erroring out, so that we know if
                     #we're below here, it should all work perfectly. LOL
@@ -692,6 +691,8 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                         else:
                             h_s_c[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
                                 dict(zip(headers, map(float,line[1:4])))
+
+                    line = csv_reader.next()
 
             except StopIteration:
                 break
@@ -754,7 +755,8 @@ def error_check(line, hab_name, stress_name):
             Weight columns." % (hab_name, stress_name))
 
     #Exposure vs Consequence
-    if line[4] != 'E' or line[4] != 'C':
+    if line[4] != 'E' and line[4] != 'C':
+
         raise ImproperECSelection("Entries in the E/C column of a CSV table may \
             only be \"E\" or \"C\". Please select one of those options for the \
             criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
