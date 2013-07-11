@@ -9,6 +9,7 @@ import shutil
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('hra_preprocessor')
 
 class MissingHabitatsOrSpecies(Exception):
     '''An exception to pass if the hra_preprocessor args dictionary being
@@ -535,15 +536,15 @@ def parse_hra_tables(folder_uri):
     csv_uris = fnmatch.filter(file_names, '*_ratings.csv')
 
     #Initialize the three dictionaries that we will use to store criteria info
-    habitat_dict = {}
-    h_s_e_dict = {}
-    h_s_c_dict = {}
+    habitat_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
+    h_s_e_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
+    h_s_c_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
 
     for habitat_uri in csv_uris:
         
         #Instead of having to know what came from where, let's just have it update
         #the global dictionaries while the function is running. 
-        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
+        parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
 
     
     #Add everything to the parse dictionary
@@ -554,7 +555,7 @@ def parse_hra_tables(folder_uri):
 
     return parse_dictionary
 
-def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
+def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
     passed with the new Hab/Stress subdictionary info that we're getting from 
     the CSV at URI.
