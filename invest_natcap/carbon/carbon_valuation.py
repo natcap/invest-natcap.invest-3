@@ -114,20 +114,34 @@ def _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris):
     html.write("<table border='1', cellpadding='5'>")
 
     def write_row(cells):
+        ''
         html.write("<tr>")
         for cell in cells:
             html.write("<td>" + str(cell) + "</td>")
         html.write("</tr>")
 
-    column_titles = ["Scenario", "Change in Carbon Stocks", "Net Present Value"]
-    write_row("<strong>" + title + "</strong>" for title in column_titles)
+    def write_bold_row(cells):
+        write_row("<strong>" + str(cell) + "</strong>" for cell in cells)
+
+    write_bold_row(["Scenario", "Change in Carbon Stocks", "Net Present Value"])
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
+    scenario_results = {}
     for scenario_type, sequest_uri in sequest_uris.items():
         scenario_name = scenario_names[scenario_type]
         total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
         total_val = carbon_utils.sum_pixel_values_from_uri(value_seq_uris[scenario_type])
+        scenario_results[scenario_type] = (total_seq, total_val)
         write_row([scenario_name, total_seq, total_val])
+
+    if 'base' in scenario_results and 'redd' in scenario_results:
+        write_row([' ', ' ', ' '])
+        write_bold_row(["Scenario Comparison", "Difference in Carbon Stocks",
+                        "Difference in Net Present Value"])
+        write_row(['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
+                   scenario_results['redd'][0] - scenario_results['base'][0], # subtract carbon amounts
+                   scenario_results['redd'][1] - scenario_results['base'][1]  # subtract value
+                   ])
 
     html.write("</table>")
     html.write("</html>")
