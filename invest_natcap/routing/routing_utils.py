@@ -87,7 +87,7 @@ def route_flux(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri, dem_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
-        source_uri, absorption_rate_uri, loss_uri, flux_uri)
+        source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
 
 
 def flow_accumulation(dem_uri, flux_output_uri):
