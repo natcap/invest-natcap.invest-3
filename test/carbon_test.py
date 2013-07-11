@@ -53,7 +53,7 @@ do sequestration and harvested wood products on lulc maps."""
                 './invest-data/test/data/carbon_regression_data/tot_C_fut.tif')
 
             invest_test_core.assertTwoDatasetEqualURI(self,
-                args['workspace_dir'] + "/output/sequest.tif",
+                args['workspace_dir'] + "/output/sequest_fut.tif",
                 './invest-data/test/data/carbon_regression_data/sequest.tif')
 
             if use_uncertainty:
