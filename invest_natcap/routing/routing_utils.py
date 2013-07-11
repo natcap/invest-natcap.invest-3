@@ -109,7 +109,7 @@ def flow_accumulation(dem_uri, flux_output_uri):
 
     route_flux(
         dem_uri, constant_flux_source_uri,
-        zero_absorption_source_uri, loss_uri, flux_output_uri)
+        zero_absorption_source_uri, loss_uri, flux_output_uri, 'flux_only')
 
 
 def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
