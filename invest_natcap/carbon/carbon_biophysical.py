@@ -13,7 +13,7 @@ import numpy
 from scipy.stats import norm
 
 from invest_natcap import raster_utils
-from carbon import carbon_utils
+from invest_natcap.carbon import carbon_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -53,6 +53,10 @@ def execute_30(**args):
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args contains a 
             'hwp_fut_shape_uri' key)
+        args['do_redd'] - a boolean that indicates whether we should do REDD scenario
+             analysis. Default to False if not present.
+        args['lulc_redd_uri'] - is a uri to a GDAL raster dataset (required if 'do_redd'
+             is True).
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
             calculation (optional, include if calculating current lulc hwp) 
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
@@ -213,7 +217,6 @@ def execute_30(**args):
 
         if use_uncertainty:
             confidence_threshold = args['confidence_threshold']
-            print 'confidence threshold:', confidence_threshold
 
             # Returns 1 if we're confident storage will increase,
             #         -1 if we're confident storage will decrease,
