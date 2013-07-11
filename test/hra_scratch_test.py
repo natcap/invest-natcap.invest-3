@@ -10,7 +10,7 @@ import filecmp
 
 import invest_test_core
 
-from invest_natcap.hra_scatch import hra
+from invest_natcap.hra_scratch import hra
 from invest_natcap.hra_scratch import hra_core
 
 LOGGER = logging.getLogger('hra_scratch_test')
