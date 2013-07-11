@@ -42,7 +42,7 @@ LOGGER = logging.getLogger('routing')
 
 def route_flux(
     in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri, flux_uri,
-    aoi_uri=None):
+    absorption_mode, aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -57,6 +57,10 @@ def route_flux(
             amount of flux absorbed by each pixel
         flux_uri - a URI to an output dataset that records the amount of flux
             traveling through each pixel
+        absorption_mode - either 'flux_only' or 'source_and_flux'. For
+            'flux_only' the outgoing flux is (in_flux * absorption + source).
+            If 'source_and_flux' then the output flux 
+            is (in_flux + source) * absorption.
         aoi_uri - an OGR datasource for an area of interest polygon.
             the routing flux calculation will only occur on those pixels
             and neighboring pixels will either be raw outlets or
