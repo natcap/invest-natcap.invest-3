@@ -589,6 +589,8 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             but each key will be a tuple of two strings- (HabName, StressName).
     '''
 
+    LOGGER.debug(habs)
+
     with open(uri, 'rU') as hab_file:
         
         csv_reader = csv.reader(hab_file)
