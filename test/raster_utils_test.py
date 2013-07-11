@@ -84,7 +84,10 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, regression_uri, output_uri)
 
     def test_get_rat_as_dictionary(self):
-        ds = gdal.Open('invest-data/test/data/get_rat_as_dict/activity_transition_map.tif')
+        path = 'invest-data/test/data/get_rat_as_dict/activity_transition_map.tif'
+        ds = gdal.Open(path)
+        LOGGER.debug("Get Rat As Dict Path: %s", path)
+        LOGGER.debug("Get Rat As Dict DS: %s", ds)
         rat_dict = raster_utils.get_rat_as_dictionary(ds)
 
         unit_dict = {
