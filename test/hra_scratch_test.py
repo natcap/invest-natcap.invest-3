@@ -10,10 +10,10 @@ import filecmp
 
 import invest_test_core
 
-from invest_natcap.habitat_risk_assessment import hra
-from invest_natcap.habitat_risk_assessment import hra_core
+from invest_natcap.hra_scatch import hra
+from invest_natcap.hra_scratch import hra_core
 
-LOGGER = logging.getLogger('hra_test')
+LOGGER = logging.getLogger('hra_scratch_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -30,7 +30,7 @@ class TestHRA(unittest.TestCase):
         self.args = args
 
     def test_standard_config(self):
-        'Simplistic mock up stored in personal test_out so that we can start to debug
+        '''Simplistic mock up stored in personal test_out so that we can start to debug
         pre_proc/hra/core.'''
         self.args['csv_uri'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Scratch/habitat_stressor_ratings'
         self.args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Scratch'
