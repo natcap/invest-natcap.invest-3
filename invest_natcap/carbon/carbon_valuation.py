@@ -24,7 +24,9 @@ def execute_30(**args):
             and other temporary files during calculation. (required)
         args['suffix'] - a string to append to any output file name (optional)
         args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
-            amount of carbon sequestered
+            amount of carbon sequestered (baseline scenario, if this is REDD)
+        args['sequest_redd_uri'] (optional) - uri to the raster dataset for
+            sequestration under the REDD policy scenario
         args['carbon_price_units'] - a string indicating whether the price is 
             in terms of carbon or carbon dioxide. Can value either as
             'Carbon (C)' or 'Carbon Dioxide (CO2)'.
@@ -51,10 +53,6 @@ def execute_30(**args):
         LOGGER.debug('creating directory %s', output_directory)
         os.makedirs(output_directory)
 
-    #This defines the sequestration output raster.  Notice the 1e38 value as
-    #nodata.  This is something very large that should be outside the range
-    #of reasonable valuation values.
-    value_seq_uri = os.path.join(output_directory, 'value_seq%s.tif' % file_suffix)
 
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
         #Cover to price per unit of Carbon do this by dividing
@@ -71,29 +69,43 @@ def execute_30(**args):
 
     nodata_out = -1.0e10
 
-    sequest_nodata = raster_utils.get_nodata_from_uri(args['sequest_uri'])
+    # Set up a dict from scenario type to output file name.
+    value_seq_uris = {
+        'base': os.path.join(output_directory, 'value_seq%s.tif' % file_suffix),
+        'redd': os.path.join(output_directory, 'value_seq_redd%s.tif' % file_suffix)}
 
-    def value_op(sequest):
-        if sequest == sequest_nodata:
-            return nodata_out
-        return sequest * valuation_constant
+    # Set up a dict from scenario type to sequestration raster uri.
+    sequest_uris = {}
+    sequest_uris['base'] = args['sequest_uri']
+    if 'sequest_redd_uri' in args and args['sequest_redd_uri']:
+        sequest_uris['redd'] = args['sequest_redd_uri']
 
-    LOGGER.debug('finished constructing valuation formula')
+    for scenario_type, sequest_uri in sequest_uris.items():
+        sequest_nodata = raster_utils.get_nodata_from_uri(sequest_uri)
 
-    LOGGER.info('starting valuation of each pixel')
+        def value_op(sequest):
+            if sequest == sequest_nodata:
+                return nodata_out
+            return sequest * valuation_constant
 
-    pixel_size_out = raster_utils.get_cell_size_from_uri(args['sequest_uri'])
-    LOGGER.debug("pixel_size_out %s" % pixel_size_out)
-    raster_utils.vectorize_datasets(
-        [args['sequest_uri']], value_op, value_seq_uri,
-        gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
-    LOGGER.info('finished valuation of each pixel')
+        LOGGER.debug('finished constructing valuation formula for %s scenario' % scenario_type)
+        
+        LOGGER.info('starting valuation of each pixel')
 
-    # The output html file with a table to summarize model data.
+        pixel_size_out = raster_utils.get_cell_size_from_uri(sequest_uri)
+        LOGGER.debug("pixel_size_out %s" % pixel_size_out)
+        raster_utils.vectorize_datasets(
+            [sequest_uri], value_op, value_seq_uris[scenario_type],
+            gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
+
+        LOGGER.info('finished valuation of each pixel')
+
+    # The output html file with a table to summarize model data.    for scenario_
     html_uri = os.path.join(output_directory, 'summary%s.html' % file_suffix)
-    _CreateHtmlSummary(html_uri, args['sequest_uri'], value_seq_uri)
+    
+    _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris)
 
-def _CreateHtmlSummary(html_uri, sequest_uri, value_seq_uri):
+def _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris):
     html = open(html_uri, 'w')
     
     html.write("<html>")
@@ -107,12 +119,15 @@ def _CreateHtmlSummary(html_uri, sequest_uri, value_seq_uri):
             html.write("<td>" + str(cell) + "</td>")
         html.write("</tr>")
 
-    column_titles = ["Change in Carbon Stocks", "Net Present Value"]
+    column_titles = ["Scenario", "Change in Carbon Stocks", "Net Present Value"]
     write_row("<strong>" + title + "</strong>" for title in column_titles)
 
-    total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
-    total_val = carbon_utils.sum_pixel_values_from_uri(value_seq_uri)
-    write_row([total_seq, total_val])
+    scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
+    for scenario_type, sequest_uri in sequest_uris.items():
+        scenario_name = scenario_names[scenario_type]
+        total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
+        total_val = carbon_utils.sum_pixel_values_from_uri(value_seq_uris[scenario_type])
+        write_row([scenario_name, total_seq, total_val])
 
     html.write("</table>")
     html.write("</html>")
