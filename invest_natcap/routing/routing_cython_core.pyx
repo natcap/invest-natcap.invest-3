@@ -28,7 +28,7 @@ cdef double EPS = 1e-6
 
 def calculate_transport(
     outflow_direction_uri, outflow_weights_uri, sink_cell_set, source_uri,
-    absorption_rate_uri, loss_uri, flux_uri):
+    absorption_rate_uri, loss_uri, flux_uri, absorption_mode):
     """This is a generalized flux transport algorithm that operates
         on a 2D grid given a per pixel flow direction, per pixel source,
         and per pixel absorption rate.  It produces a grid of loss per
@@ -45,20 +45,19 @@ def calculate_transport(
         outflow_weights_uri - a uri to a float32 dataset whose elements
             correspond to the percent outflow from the current cell to its
             first counter-clockwise neighbor
-
         sink_cell_set - a set of flat integer indexes for the cells in flow
             graph that have no outflow
-
         source_uri - a GDAL dataset that has source flux per pixel
-
         absorption_rate_uri - a GDAL floating point dataset that has a percent
             of flux absorbed per pixel
-
         loss_uri - an output URI to to the dataset that will output the
             amount of flux absorbed by each pixel
-
         flux_uri - a URI to an output dataset that records the amount of flux
             traveling through each pixel
+        absorption_mode - either 'flux_only' or 'source_and_flux'. For
+            'flux_only' the outgoing flux is (in_flux * absorption + source).
+            If 'source_and_flux' then the output flux 
+            is (in_flux + source) * absorption.
 
         returns nothing"""
 
@@ -135,6 +134,8 @@ def calculate_transport(
     cdef double outflow_weight
     cdef double in_flux
 
+    cdef int absorb_source = (absorption_mode == 'source_and_flux')
+
     while cells_to_process.size() > 0:
         current_index = cells_to_process.top()
         cells_to_process.pop()
@@ -150,6 +151,13 @@ def calculate_transport(
             flux_array[current_row, current_col] = source_array[
                 current_row, current_col]
             loss_array[current_row, current_col] = 0.0
+            if absorb_source:
+                absorption_rate = (
+                    absorption_rate_array[current_row, current_col])
+                loss_array[current_row, current_col] = (
+                    (1 - absorption_rate) * flux_array[current_row, current_col])
+                flux_array[current_row, current_col] *= absorption_rate
+
 
         current_neighbor_index = cell_neighbor_to_process.top()
         cell_neighbor_to_process.pop()

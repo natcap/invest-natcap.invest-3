@@ -851,7 +851,8 @@ def calculate_direct_flow(
     temp_uri = raster_utils.temporary_filename()
 
     routing_utils.route_flux(
-            dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri, watershed_uri)
+        dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri,
+        'source_and_flux', watershed_uri)
 
     dflow_nodata = raster_utils.get_nodata_from_uri(dt_out_uri)
     no_data_list.append(dflow_nodata)

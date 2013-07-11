@@ -259,7 +259,7 @@ def _execute_nutrient(args):
 
     routing_utils.route_flux(
         dem_uri, water_yield_uri, zero_raster_uri,
-        water_loss_uri, upstream_water_yield_uri,
+        water_loss_uri, upstream_water_yield_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the 'log' of the upstream_water_yield raster
@@ -335,7 +335,7 @@ def _execute_nutrient(args):
         tmp_flux_uri = raster_utils.temporary_filename()
         routing_utils.route_flux(
             dem_uri, alv_uri[nutrient], eff_uri[nutrient],
-            retention_uri[nutrient], tmp_flux_uri,
+            retention_uri[nutrient], tmp_flux_uri, 'flux_only',
             aoi_uri=args['watersheds_uri'])
 
         export_uri[nutrient] = os.path.join(

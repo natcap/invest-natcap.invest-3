@@ -203,7 +203,7 @@ def execute(args):
     sed_flux_uri = raster_utils.temporary_filename()
     routing_utils.route_flux(
         args['dem_uri'], usle_uri, retention_rate_uri,
-        upstream_on_pixel_retention_uri, sed_flux_uri,
+        upstream_on_pixel_retention_uri, sed_flux_uri, 'flux_only',
         aoi_uri=args['watersheds_uri'])
 
     #Calculate the retention due to per pixel retention and the cp factor
