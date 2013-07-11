@@ -424,6 +424,8 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
    '''
+    
+    LOGGER.debug(habitats)
 
     for shape in hab_list:
         

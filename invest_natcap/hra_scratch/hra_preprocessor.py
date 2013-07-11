@@ -536,9 +536,9 @@ def parse_hra_tables(folder_uri):
     csv_uris = fnmatch.filter(file_names, '*_ratings.csv')
 
     #Initialize the three dictionaries that we will use to store criteria info
-    habitat_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
-    h_s_e_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
-    h_s_c_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
+    habitat_dict = {}
+    h_s_e_dict = {}
+    h_s_c_dict = {}
 
     for habitat_uri in csv_uris:
         
@@ -594,6 +594,9 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         
         csv_reader = csv.reader(hab_file)
         hab_name = csv_reader.next()[1]
+        
+        #Can at least initialized the habs dictionary part.
+        habs[hab_name] = {'Crit_Rasters':{}, 'Crit_Ratings':{}}
 
         #Drain the next two lines
         for _ in range(2): 
@@ -602,7 +605,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
-        
+       
         #Drain the habitat-specific dictionary
         while line[0] != '':
             
@@ -613,7 +616,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             #the shapefile later.
             if line[1] == 'SHAPE':
                 try:
-                    habs['Crit_Rasters'][key] = \
+                    habs[hab_name]['Crit_Rasters'][key] = \
                         dict(zip(headers[1:3], map(float, line[2:4])))
                 except ValueError:
                     raise UnexpectedString("Entries in CSV table may not be \
@@ -623,7 +626,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             #Should catch any leftovers from the autopopulation of the helptext        
             else:
                 try:
-                    habs['Crit_Ratings'][key] = \
+                    habs[hab_name]['Crit_Ratings'][key] = \
                         dict(zip(headers, map(float,line[1:4])))
                 except ValueError:
                     raise UnexpectedString("Entries in CSV table may not be \
