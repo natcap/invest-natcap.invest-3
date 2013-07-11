@@ -116,10 +116,10 @@ def execute(args):
     for line in carbon_file:
         row = line.strip().split(",")
         lulc_code = int(row[0])
-        above_dict[lulc_code] = float(row[2]) * cell_area * 1e4
-        below_dict[lulc_code]  = float(row[3]) * cell_area * 1e4
-        soil_dict[lulc_code]  = float(row[4]) * cell_area * 1e4
-        litter_dict[lulc_code]  = float(row[5]) * cell_area * 1e4
+        above_dict[lulc_code] = float(row[2]) * cell_area / 1e4
+        below_dict[lulc_code]  = float(row[3]) * cell_area / 1e4
+        soil_dict[lulc_code]  = float(row[4]) * cell_area / 1e4
+        litter_dict[lulc_code]  = float(row[5]) * cell_area / 1e4
         depth_dict[lulc_code]  = float(row[6])
         emission_dict[lulc_code] = float(row[7])
         disturbance_dict[lulc_code] = float(row[8])

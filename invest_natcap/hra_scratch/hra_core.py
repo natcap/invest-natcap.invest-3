@@ -9,7 +9,7 @@ import math
 import datetime
 import matplotlib.pyplot
 
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
  
 LOGGER = logging.getLogger('HRA_CORE')
@@ -962,8 +962,9 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
 
         #Want to get the relevant ds for this H-S pair.
-        #Arbitrarily using the h_s_c dictionary, but it exists in h_s_e too.
-        base_ds_uri = h_s_c[pair]['DS']
+        #We arbitrarily passed in the h_s_c dictionary as h_s, but it exists in 
+        #h_s_e too.
+        base_ds_uri = h_s[pair]['DS']
 
         if risk_eq == 'Multiplicative':
             
