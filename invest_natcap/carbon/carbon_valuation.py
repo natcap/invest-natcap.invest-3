@@ -22,7 +22,8 @@ def execute_30(**args):
         
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['suffix'] - a string to append to any output file name (optional        args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
+        args['suffix'] - a string to append to any output file name (optional)
+        args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
             amount of carbon sequestered
         args['carbon_price_units'] - a string indicating whether the price is 
             in terms of carbon or carbon dioxide. Can value either as
