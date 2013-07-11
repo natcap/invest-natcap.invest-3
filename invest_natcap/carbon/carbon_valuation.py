@@ -5,7 +5,7 @@ import logging
 
 from osgeo import gdal
 
-from carbon import carbon_utils
+from invest_natcap.carbon import carbon_utils
 from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
