@@ -40,14 +40,7 @@ def execute_30(**args):
         
         returns nothing."""
 
-    try:
-        file_suffix = args['suffix']
-        if not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-
-    #These lines sets up the output directory structure for the workspace
+    # Set up the output directory structure for the workspace.
     output_directory = os.path.join(args['workspace_dir'],'output')
     if not os.path.exists(output_directory):
         LOGGER.debug('creating directory %s', output_directory)
@@ -55,7 +48,7 @@ def execute_30(**args):
 
 
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
-        #Cover to price per unit of Carbon do this by dividing
+        #Convert to price per unit of Carbon do this by dividing
         #the atomic mass of CO2 (15.9994*2+12.0107) by the atomic
         #mass of 12.0107.  Values gotten from the periodic table of
         #elements.
@@ -69,16 +62,18 @@ def execute_30(**args):
 
     nodata_out = -1.0e10
 
-    # Set up a dict from scenario type to output file name.
-    value_seq_uris = {
-        'base': os.path.join(output_directory, 'value_seq%s.tif' % file_suffix),
-        'redd': os.path.join(output_directory, 'value_seq_redd%s.tif' % file_suffix)}
+    outfile_uris = _make_outfile_uris(output_directory, args)
 
-    # Set up a dict from scenario type to sequestration raster uri.
     sequest_uris = {}
     sequest_uris['base'] = args['sequest_uri']
-    if 'sequest_redd_uri' in args and args['sequest_redd_uri']:
+    if args.get('sequest_redd_uri'):
         sequest_uris['redd'] = args['sequest_redd_uri']
+
+    conf_uris = {}
+    if args.get('conf_uri'):
+        conf_uris['base'] = args['conf_uri']
+    if args.get('conf_redd_uri'):
+        conf_uris['redd'] = args['conf_redd_uri']
 
     for scenario_type, sequest_uri in sequest_uris.items():
         sequest_nodata = raster_utils.get_nodata_from_uri(sequest_uri)
@@ -95,18 +90,59 @@ def execute_30(**args):
         pixel_size_out = raster_utils.get_cell_size_from_uri(sequest_uri)
         LOGGER.debug("pixel_size_out %s" % pixel_size_out)
         raster_utils.vectorize_datasets(
-            [sequest_uri], value_op, value_seq_uris[scenario_type],
+            [sequest_uri], value_op, outfile_uris['%s_val' % scenario_type],
             gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
 
         LOGGER.info('finished valuation of each pixel')
 
-    # The output html file with a table to summarize model data.    for scenario_
-    html_uri = os.path.join(output_directory, 'summary%s.html' % file_suffix)
-    
-    _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris)
+        if scenario_type in conf_uris:
+            # TODO: 
+            # produce raster w masked out uncertain areas for sequestration
+            # produce raster w masked out uncertain areas for value sequestration
+            pass
 
-def _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris):
-    html = open(html_uri, 'w')
+    _create_html_summary(outfile_uris, sequest_uris)
+
+def _make_outfile_uris(output_directory, args):
+    '''Set up a dict with uris for outfiles.
+
+    Outfiles include rasters for value sequestration, confidence-masked carbon sequestration,
+    confidence-masked value sequestration, and an HTML summary file.
+    '''
+    try:
+        file_suffix = args['suffix']
+        if not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+
+    outfile_uris = {}
+
+    # Value sequestration for base scenario.
+    outfile_uris['base_val'] = os.path.join(output_directory, 'value_seq%s.tif' % file_suffix)
+
+    # Confidence-masked rasters for base scenario.
+    if args.get('conf_uri'):
+        outfile_uris['base_seq_conf'] = os.path.join(output_directory, 'seq_conf%s.tif' % file_suffix)
+        outfile_uris['base_val_conf'] = os.path.join(output_directory, 'val_conf%s.tif' % file_suffix)
+
+    # Outputs for REDD scenario.
+    if args.get('sequest_redd_uri'):
+        # Value sequestration.
+        outfile_uris['redd_val'] = os.path.join(output_directory, 'value_seq_redd%s.tif' % file_suffix)
+
+        # Confidence-masked rasters for REDD scenario.
+        if args.get('conf_redd_uri'):
+            outfile_uris['redd_seq_conf'] = os.path.join(output_directory, 'seq_conf_redd%s.tif' % file_suffix)
+            outfile_uris['redd_val_conf'] = os.path.join(output_directory, 'val_conf_redd%s.tif' % file_suffix)
+
+    # HTML summary file.
+    outfile_uris['html'] = os.path.join(output_directory, 'summary%s.html' % file_suffix)
+    
+    return outfile_uris
+
+def _create_html_summary(outfile_uris, sequest_uris):
+    html = open(outfile_uris['html'], 'w')
     
     html.write("<html>")
     html.write("<title>InVEST Carbon Model</title>")
@@ -114,7 +150,6 @@ def _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris):
     html.write("<table border='1', cellpadding='5'>")
 
     def write_row(cells):
-        ''
         html.write("<tr>")
         for cell in cells:
             html.write("<td>" + str(cell) + "</td>")
@@ -127,10 +162,13 @@ def _CreateHtmlSummary(html_uri, sequest_uris, value_seq_uris):
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
-    for scenario_type, sequest_uri in sequest_uris.items():
-        scenario_name = scenario_names[scenario_type]
-        total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
-        total_val = carbon_utils.sum_pixel_values_from_uri(value_seq_uris[scenario_type])
+    for scenario_type, scenario_name in scenario_names.items():
+        if scenario_type not in sequest_uris:
+            # REDD scenario might not exist, so skip it.
+            continue
+
+        total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uris[scenario_type])
+        total_val = carbon_utils.sum_pixel_values_from_uri(outfile_uris['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
         write_row([scenario_name, total_seq, total_val])
 
