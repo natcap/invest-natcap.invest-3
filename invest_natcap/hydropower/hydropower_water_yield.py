@@ -254,14 +254,16 @@ def execute(args):
             [fractp_clipped_path, precip_uri], aet_op, aet_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
             aoi_uri=sheds_uri)
-   
+  
+    # Get the area of the pixel to use in later calculations for volume
+    wyield_pixel_area = raster_utils.get_cell_area_from_uri(wyield_clipped_path)
+
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
     if sub_sheds_uri is not None:
         sws_tuple_names_uris = [
                 ('precip_mn', precip_uri),('PET_mn', eto_uri),
-                ('AET_mn', aet_path),('wyield_mn', wyield_clipped_path),
-                ('fractp_mn', fractp_clipped_path)]
+                ('AET_mn', aet_path), ('fractp_mn', fractp_clipped_path)]
 
         for key_name, rast_uri in sws_tuple_names_uris:
             # Aggregrate mean over the sub-watersheds for each uri listed in
@@ -271,12 +273,29 @@ def execute(args):
                 rast_uri, sub_sheds_uri, 'subws_id', ignore_nodata=False).pixel_mean
             # Add aggregated values to sub-watershed shapefile under new field
             # 'key_name'
-            add_dict_to_shape(wyield_sub_sheds_uri, key_dict, key_name, 'subws_id')
+            add_dict_to_shape(
+                    wyield_sub_sheds_uri, key_dict, key_name, 'subws_id')
+        
+        # Aggregate values for the water yield raster under the sub-watershed
+        agg_wyield_tup = raster_utils.aggregate_raster_values_uri(
+                wyield_clipped_path, sub_sheds_uri, 'subws_id', ignore_nodata=False)
+        # Get the pixel mean for aggregated for water yield and the number of
+        # pixels in which it aggregated over
+        wyield_mean_dict = agg_wyield_tup.pixel_mean 
+        hectare_mean_dict = agg_wyield_tup.hectare_mean 
+        pixel_count_dict = agg_wyield_tup.n_pixels
+        # Add the wyield mean and number of pixels to the shapefile
+        add_dict_to_shape(
+                wyield_sub_sheds_uri, wyield_mean_dict, 'wyield_mn', 'subws_id')
+        add_dict_to_shape(
+                wyield_sub_sheds_uri, hectare_mean_dict, 'hectare_mn', 'subws_id')
+        add_dict_to_shape(
+                wyield_sub_sheds_uri, pixel_count_dict, 'num_pixels', 'subws_id')
 
         # Compute the water yield volume and water yield volume per hectare. The
         # values per sub-watershed will be added as fields in the sub-watersheds
         # shapefile
-        compute_water_yield_volume(wyield_sub_sheds_uri)
+        compute_water_yield_volume(wyield_sub_sheds_uri, wyield_pixel_area)
     
         # Create a dictionary that maps watersheds to sub-watersheds given the
         # watershed and sub-watershed shapefiles
@@ -307,7 +326,7 @@ def execute(args):
     # we can nicely do operations below
     ws_tuple_names_uris = [
             ('precip_mn', precip_uri),('PET_mn', eto_uri),
-            ('AET_mn', aet_path),('wyield_mn', wyield_clipped_path)]
+            ('AET_mn', aet_path)]
    
     for key_name, rast_uri in ws_tuple_names_uris:
         # Aggregrate mean over the watersheds for each uri listed in
@@ -317,8 +336,24 @@ def execute(args):
         # Add aggregated values to watershed shapefile under new field
         # 'key_name'
         add_dict_to_shape(wyield_sheds_uri, key_dict, key_name, 'ws_id')
+
+    # Aggregate values for the water yield raster under the watershed
+    agg_wyield_tup = raster_utils.aggregate_raster_values_uri(
+            wyield_clipped_path, sheds_uri, 'ws_id', ignore_nodata=False)
+    # Get the pixel mean for aggregated for water yield and the number of
+    # pixels in which it aggregated over
+    wyield_mean_dict = agg_wyield_tup.pixel_mean 
+    hectare_mean_dict = agg_wyield_tup.hectare_mean 
+    pixel_count_dict = agg_wyield_tup.n_pixels
+    # Add the wyield mean and number of pixels to the shapefile
+    add_dict_to_shape(
+            wyield_sheds_uri, wyield_mean_dict, 'wyield_mn', 'ws_id')
+    add_dict_to_shape(
+            wyield_sheds_uri, hectare_mean_dict, 'hectare_mn', 'ws_id')
+    add_dict_to_shape(
+            wyield_sheds_uri, pixel_count_dict, 'num_pixels', 'ws_id')
     
-    compute_water_yield_volume(wyield_sheds_uri)
+    compute_water_yield_volume(wyield_sheds_uri, wyield_pixel_area)
     
     # List of wanted fields to output in the watershed CSV table
     field_list_ws = [
@@ -923,7 +958,7 @@ def write_new_table(filename, fields, data):
 
     csv_file.close()
 
-def compute_water_yield_volume(shape_uri):
+def compute_water_yield_volume(shape_uri, pixel_area):
     """Calculate the water yield volume per sub-watershed or watershed and
         the water yield volume per hectare per sub-watershed or watershed.
         Add results to shape_uri, units are cubic meters
@@ -931,6 +966,9 @@ def compute_water_yield_volume(shape_uri):
         shape_uri - a URI path to an ogr datasource for the sub-watershed
             or watershed shapefile. This shapefiles features should have a
             'wyield_mn' attribute, which calculations are derived from
+        
+        pixel_area - the area in meters squared of a pixel from the wyield
+            raster. 
 
         returns - Nothing"""
     shape = ogr.Open(shape_uri, 1)
@@ -951,19 +989,23 @@ def compute_water_yield_volume(shape_uri):
         feat = layer.GetFeature(feat_id)
         wyield_mn_id = feat.GetFieldIndex('wyield_mn')
         wyield_mn = feat.GetField(wyield_mn_id)
+        hectare_mn_id = feat.GetFieldIndex('hectare_mn')
+        hectare_mn = feat.GetField(hectare_mn_id)
+        pixel_count_id = feat.GetFieldIndex('num_pixels')
+        pixel_count = feat.GetField(pixel_count_id)
         
         geom = feat.GetGeometryRef()
         feat_area = geom.GetArea()
         
         # Calculate water yield volume, 
         #1000 is for converting the mm of wyield to meters
-        vol = wyield_mn * feat_area / 1000.0
+        vol = wyield_mn * pixel_area * pixel_count / 1000.0
         # Get the volume field index and add value
         vol_index = feat.GetFieldIndex(vol_name)
         feat.SetField(vol_index, vol)
 
         # Calculate water yield volume per hectare
-        vol_ha = vol / (0.0001 * feat_area)
+        vol_ha = hectare_mn * (0.0001 * feat_area)
         # Get the hectare field index and add value
         ha_index = feat.GetFieldIndex(ha_name)
         feat.SetField(ha_index, vol_ha)
