@@ -9,6 +9,7 @@ import shutil
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('hra_preprocessor')
 
 class MissingHabitatsOrSpecies(Exception):
     '''An exception to pass if the hra_preprocessor args dictionary being
@@ -543,7 +544,7 @@ def parse_hra_tables(folder_uri):
         
         #Instead of having to know what came from where, let's just have it update
         #the global dictionaries while the function is running. 
-        parse_habitat_overlap(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
+        parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
 
     
     #Add everything to the parse dictionary
@@ -554,7 +555,7 @@ def parse_hra_tables(folder_uri):
 
     return parse_dictionary
 
-def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
+def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
     passed with the new Hab/Stress subdictionary info that we're getting from 
     the CSV at URI.
@@ -588,11 +589,14 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             criteria. The dictionary will look identical to the 'habs' dictionary,
             but each key will be a tuple of two strings- (HabName, StressName).
     '''
-
+    
     with open(uri, 'rU') as hab_file:
         
         csv_reader = csv.reader(hab_file)
         hab_name = csv_reader.next()[1]
+        
+        #Can at least initialized the habs dictionary part.
+        habs[hab_name] = {'Crit_Rasters':{}, 'Crit_Ratings':{}}
 
         #Drain the next two lines
         for _ in range(2): 
@@ -601,7 +605,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
-        
+       
         #Drain the habitat-specific dictionary
         while line[0] != '':
             
@@ -612,7 +616,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             #the shapefile later.
             if line[1] == 'SHAPE':
                 try:
-                    habs['Crit_Rasters'][key] = \
+                    habs[hab_name]['Crit_Rasters'][key] = \
                         dict(zip(headers[1:3], map(float, line[2:4])))
                 except ValueError:
                     raise UnexpectedString("Entries in CSV table may not be \
@@ -622,7 +626,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
             #Should catch any leftovers from the autopopulation of the helptext        
             else:
                 try:
-                    habs['Crit_Ratings'][key] = \
+                    habs[hab_name]['Crit_Ratings'][key] = \
                         dict(zip(headers, map(float,line[1:4])))
                 except ValueError:
                     raise UnexpectedString("Entries in CSV table may not be \
@@ -631,7 +635,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
                         Data Quality or Weight columns.", hab_name)
             
             line = csv_reader.next()
-         
+
         #We will have just loaded in a null line from under the hab-specific
         #criteria, now drainthe next two, since they're just headers for users.
         #Drain the next two lines
@@ -645,6 +649,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
         while True:
             try:
                 line = csv_reader.next()
+
                 stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
                 
@@ -658,7 +663,7 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
                 h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
                         'Crit_Rasters': {}}
                 
-                if line != '':
+                while line[0] != '':
                     
                     #Just abstract all of the erroring out, so that we know if
                     #we're below here, it should all work perfectly. LOL
@@ -689,6 +694,8 @@ def parse_habitat_overlap(uri, habs, h_s_e, h_s_c):
                         else:
                             h_s_c[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
                                 dict(zip(headers, map(float,line[1:4])))
+
+                    line = csv_reader.next()
 
             except StopIteration:
                 break
@@ -751,7 +758,8 @@ def error_check(line, hab_name, stress_name):
             Weight columns." % (hab_name, stress_name))
 
     #Exposure vs Consequence
-    if line[4] != 'E' or line[4] != 'C':
+    if line[4] != 'E' and line[4] != 'C':
+
         raise ImproperECSelection("Entries in the E/C column of a CSV table may \
             only be \"E\" or \"C\". Please select one of those options for the \
             criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
