@@ -1215,6 +1215,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             as crit_lists, but the innermost values will be floats instead of
             lists.
     '''
+
     pre_raster_dir = os.path.join(dir, 'ReBurned_Crit_Rasters')
 
     os.mkdir(pre_raster_dir)
