@@ -188,6 +188,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
+    masked_scenario_results = {}
     for scenario_type, scenario_name in scenario_names.items():
         if scenario_type not in sequest_uris:
             # REDD scenario might not exist, so skip it.
@@ -198,6 +199,15 @@ def _create_html_summary(outfile_uris, sequest_uris):
         scenario_results[scenario_type] = (total_seq, total_val)
         write_row([scenario_name, total_seq, total_val])
 
+        if ('%s_seq_mask' % scenario_type) in outfile_uris:
+            # Compute output for confidence-masked data.
+            masked_seq = carbon_utils.sum_pixel_values_from_uri(
+                outfile_uris['%s_seq_mask' % scenario_type])
+            masked_val = carbon_utils.sum_pixel_values_from_uri(
+                outfile_uris['%s_val_mask' % scenario_type])
+            write_row(['%s (only confident cells)' % scenario_name, masked_seq, masked_val])
+
+    # Compute comparison data between scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
         write_row([' ', ' ', ' '])
         write_bold_row(["Scenario Comparison", "Difference in Carbon Stocks",
