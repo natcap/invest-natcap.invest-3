@@ -931,7 +931,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             ...
             }
     '''
-    
+   
     #Create dictionary that we can pass back to execute to be passed along to
     #make_habitat_rasters
     risk_rasters = {}
@@ -951,7 +951,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #Each of the E/C calculations should take in all of the relevant 
         #subdictionary data, and return a raster to be used in risk calculation. 
         calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['h_s_e'][pair])
+                        denoms['Risk']['h_s_e'][pair])
 
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
@@ -1444,6 +1444,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             
             crit_lists['Recovery'][h].append(crit_recov_uri)
 
+    LOGGER.debug("H_S_E: %s" % h_s_e)
     #Hab-Stress for Exposure
     for pair in h_s_e:
         h, s = pair
@@ -1499,7 +1500,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 return crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
-                        single_crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
+                        single_crit_E_uri, gdal.GDT_Float32, 0., base_pixel_size,
                         "union", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
 
