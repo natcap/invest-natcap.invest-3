@@ -84,7 +84,10 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self, regression_uri, output_uri)
 
     def test_get_rat_as_dictionary(self):
-        ds = gdal.Open('invest-data/test/data/get_rat_as_dict/activity_transition_map.tif')
+        path = 'invest-data/test/data/get_rat_as_dict/activity_transition_map.tif'
+        ds = gdal.Open(path)
+        LOGGER.debug("Get Rat As Dict Path: %s", path)
+        LOGGER.debug("Get Rat As Dict DS: %s", ds)
         rat_dict = raster_utils.get_rat_as_dictionary(ds)
 
         unit_dict = {
@@ -197,7 +200,7 @@ class TestRasterUtils(unittest.TestCase):
 
 
     def test_create_rat_with_no_rat(self):
-        test_out = './data/test_out/raster_utils/create_rat/'
+        test_out = './invest-data/test/data/test_out/raster_utils/create_rat/'
         out_uri = os.path.join(test_out, 'test_RAT.tif')
 
         if not os.path.isdir(test_out):
@@ -251,7 +254,7 @@ class TestRasterUtils(unittest.TestCase):
         
     def test_get_raster_properties(self):
         """Test get_raster_properties against a known raster saved on disk"""
-        data_dir = './data/raster_utils_data'
+        data_dir = './invest-data/test/data/raster_utils_data'
         ds_uri = os.path.join(data_dir, 'get_raster_properties_ds.tif')
 
         ds = gdal.Open(ds_uri)
@@ -287,7 +290,7 @@ class TestRasterUtils(unittest.TestCase):
         """A regression test using some of Nicks sample data that didn't work on
             his machine"""
         
-        data_dir = './data/raster_utils_data'
+        data_dir = './invest-data/test/data/raster_utils_data'
         barkclay_uri = os.path.join(data_dir, 'AOI_BarkClay.shp')
         lat_long_uri = os.path.join(data_dir, 'lat_long_file.shp')
 
@@ -296,7 +299,7 @@ class TestRasterUtils(unittest.TestCase):
         lat_long_srs = lat_long.GetLayer().GetSpatialRef()
         lat_long_wkt = lat_long_srs.ExportToWkt()
 
-        out_dir = './data/test_out/raster_utils/reproject_datasource'
+        out_dir = './invest-data/test/data/test_out/raster_utils/reproject_datasource'
         
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
@@ -477,11 +480,11 @@ class TestRasterUtils(unittest.TestCase):
 
         #raise SkipTest
 
-        regression_dir = './data/wind_energy_regression_data/valuation/'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/valuation/'
 
         expected_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
 
-        out_dir = './data/test_out/raster_utils/dict_to_point_shape/'
+        out_dir = './invest-data/test/data/test_out/raster_utils/dict_to_point_shape/'
 
         out_uri = os.path.join(out_dir, 'dict_to_shape.shp')
 
@@ -508,11 +511,11 @@ class TestRasterUtils(unittest.TestCase):
 
         #raise SkipTest
 
-        regression_dir = './data/wind_energy_regression_data/valuation/'
+        regression_dir = './invest-data/test/data/wind_energy_regression_data/valuation/'
 
         expected_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
 
-        out_dir = './data/test_out/raster_utils/dict_to_point_shape/pt_shape'
+        out_dir = './invest-data/test/data/test_out/raster_utils/dict_to_point_shape/pt_shape'
 
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
@@ -534,7 +537,7 @@ class TestRasterUtils(unittest.TestCase):
        
         #raise SkipTest
 
-        data_dir = './data/raster_utils_data'
+        data_dir = './invest-data/test/data/raster_utils_data'
         barkclay_uri = os.path.join(data_dir, 'AOI_BarkClay.shp')
         clipped_pop_uri = os.path.join(data_dir, 'clipped_pop.tif')
 
@@ -542,7 +545,7 @@ class TestRasterUtils(unittest.TestCase):
         barkclay_layer = barkclay.GetLayer()
         out_wkt = barkclay_layer.GetSpatialRef().ExportToWkt()
 
-        out_dir = './data/test_out/raster_utils/exp_reproject_dataset'
+        out_dir = './invest-data/test/data/test_out/raster_utils/exp_reproject_dataset'
         
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)

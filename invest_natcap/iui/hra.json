@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Habitat Risk Assessment",
-    "targetScript" : "invest_natcap.habitat_risk_assessment.hra",
+    "targetScript" : "invest_natcap.hra_scratch.hra",
     "modelName" : "habitat_risk_assessment",
     "localDocURI": "../documentation/habitat_risk_assessment.html",
     "height": 550,

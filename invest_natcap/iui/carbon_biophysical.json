@@ -15,6 +15,15 @@
             "required": false
         },
         {
+            "id": "redd",
+            "args_id": "do_redd",
+            "type": "checkbox",
+            "label": "REDD scenario analysis",
+            "enabledBy": "calc_sequestration",
+            "defaultValue": false,
+            "required": false
+        },
+        {
             "id" : "workspace_list",
             "type": "list",
             "elements":[
@@ -92,14 +101,26 @@
                         {
                             "id" : "fut_lulc_raster",
                             "type": "file",
-                            "label": "Raster location",
+                            "label": "Baseline raster",
                             "args_id": "lulc_fut_uri",
                             "required": false,
                             "enabledBy": "calc_sequestration",
                             "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "requiredIf": ["calc_sequestration"],
                             "validateAs": {"type": "GDAL"},
-                            "helpText": "Location of the landcover map for the current scenario."
+                            "helpText": "Location of the landcover map for the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, scenario against which to compare the REDD policy scenario."
+                        },
+                        {
+                            "id" : "redd_lulc_raster",
+                            "type": "file",
+                            "label": "REDD policy raster",
+                            "args_id": "lulc_redd_uri",
+                            "required": false,
+                            "enabledBy": "redd",
+                            "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                            "requiredIf": ["redd"],
+                            "validateAs": {"type": "GDAL"},
+                            "helpText": "Location of the landcover map for the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
                         },
                         {
                             "id" : "fut_lulc_year",

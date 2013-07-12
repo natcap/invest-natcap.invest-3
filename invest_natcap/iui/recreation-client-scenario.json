@@ -21,7 +21,7 @@
                             "args_id" : "mode",
                             "type": "hiddenElement",
                             "returns": "scenario",
-                            "required": true
+                            "required": true                
                         },                        
                         
 		        {
@@ -29,28 +29,32 @@
                             "args_id" : "workspace_dir",
                             "type": "folder",
                             "label": "Workspace Directory",
-                            "required": true
+                            "required": true,
+                            "helpText": "Select a folder to be used as your workspace."                                                
 		        },
                         {
                             "id" : "json",
                             "args_id" : "json",
                             "type": "file",
                             "label": "init.json",
-                            "required": true
+                            "required": true,
+                            "helpText": "The initial tool configuration file (init.json) from the initial run's results."
                         },					        
 		        {
                             "id" : "data_dir",
                             "args_id" : "data_dir",
                             "type": "folder",
                             "label": "Data Directory",
-                            "required": true
+                            "required": true,
+                            "helpText": "A directory that contains all the new data for the scenario that you would like to include in the model run."
 		        },
 		        {
                             "id" : "comments",
                             "args_id" : "comments",
                             "type": "text",
                             "label": "Comments",
-                            "required": false
+                            "required": false,
+                            "helpText": "Any comments for yourself that you would like to have as part of the model run."                            
 		        }
 		   ]
 		   }
