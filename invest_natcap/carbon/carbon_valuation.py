@@ -96,10 +96,13 @@ def execute_30(**args):
         LOGGER.info('finished valuation of each pixel')
 
         if scenario_type in conf_uris:
-            # TODO: 
-            # produce raster w masked out uncertain areas for sequestration
-            # produce raster w masked out uncertain areas for value sequestration
-            pass
+            # Produce a raster for sequestration with uncertain areas masked out.
+            _create_masked_raster(sequest_uri, conf_uris[scenario_type], 
+                                  outfile_uris['%s_seq_mask' % scenario_type])
+
+            # Produce a raster for value sequestration with uncertain areas masked out.
+            _create_masked_raster(outfile_uris['%s_val' % scenario_type], conf_uris[scenario_type],
+                                  outfile_uris['%s_val_mask' % scenario_type])
 
     _create_html_summary(outfile_uris, sequest_uris)
 
@@ -123,8 +126,8 @@ def _make_outfile_uris(output_directory, args):
 
     # Confidence-masked rasters for base scenario.
     if args.get('conf_uri'):
-        outfile_uris['base_seq_conf'] = os.path.join(output_directory, 'seq_conf%s.tif' % file_suffix)
-        outfile_uris['base_val_conf'] = os.path.join(output_directory, 'val_conf%s.tif' % file_suffix)
+        outfile_uris['base_seq_mask'] = os.path.join(output_directory, 'seq_mask%s.tif' % file_suffix)
+        outfile_uris['base_val_mask'] = os.path.join(output_directory, 'val_mask%s.tif' % file_suffix)
 
     # Outputs for REDD scenario.
     if args.get('sequest_redd_uri'):
@@ -133,13 +136,36 @@ def _make_outfile_uris(output_directory, args):
 
         # Confidence-masked rasters for REDD scenario.
         if args.get('conf_redd_uri'):
-            outfile_uris['redd_seq_conf'] = os.path.join(output_directory, 'seq_conf_redd%s.tif' % file_suffix)
-            outfile_uris['redd_val_conf'] = os.path.join(output_directory, 'val_conf_redd%s.tif' % file_suffix)
+            outfile_uris['redd_seq_mask'] = os.path.join(output_directory, 'seq_mask_redd%s.tif' % file_suffix)
+            outfile_uris['redd_val_mask'] = os.path.join(output_directory, 'val_mask_redd%s.tif' % file_suffix)
 
     # HTML summary file.
     outfile_uris['html'] = os.path.join(output_directory, 'summary%s.html' % file_suffix)
     
     return outfile_uris
+
+def _create_masked_raster(orig_uri, mask_uri, result_uri):
+    '''Creates a raster at result_uri with some areas masked out.
+
+    orig_uri -- uri of the original raster
+    mask_uri -- uri of the raster to use as a mask
+    result_uri -- uri at which the new raster should be created
+
+    Masked data in the result file is denoted as no data (not necessarily zero).
+
+    Data is masked out at locations where mask_uri is 0 or no data.
+    '''
+    nodata_orig = raster_utils.get_nodata_from_uri(orig_uri)
+    nodata_mask = raster_utils.get_nodata_from_uri(mask_uri)
+    def mask_op(orig_val, mask_val):
+        if mask_val == 0 or mask_val == nodata_mask:
+            return nodata_orig
+        return orig_val
+            
+    pixel_size = raster_utils.get_cell_size_from_uri(orig_uri)
+    raster_utils.vectorize_datasets(
+        [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32, nodata_orig,
+        pixel_size, 'intersection', dataset_to_align_index=0)
 
 def _create_html_summary(outfile_uris, sequest_uris):
     html = open(outfile_uris['html'], 'w')
