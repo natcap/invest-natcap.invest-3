@@ -139,7 +139,6 @@ if platform.system() == 'Windows':
          'invest_overlap_analysis_mz.py',
          'invest_coastal_vulnerability.py',
          'invest_sediment.py',
-         'invest_malaria.py',
          'invest_nutrient.py',
          'invest_wind_energy.py',
          'invest_test_all.py']
