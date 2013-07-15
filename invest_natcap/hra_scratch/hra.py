@@ -6,8 +6,9 @@ import shutil
 import logging
 import fnmatch
 import math
+import numpy as np
 
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
 from invest_natcap.hra_scratch import hra_core
 from invest_natcap.hra_scratch import hra_preprocessor
 from invest_natcap import raster_utils
@@ -251,7 +252,8 @@ def execute(args):
     #Want a super simple dictionary of the stressor rasters we will use for overlap.
     #The local var stress_dir is the location that should be used for rasterized
     #stressor shapefiles.
-    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'])
+    stress_dict = make_stress_rasters(stress_dir, stress_list, args['grid_size'], 
+                    args['decay_eq'], hra_args['buffer_dict'])
 
     #H_S_C and H_S_E
     #Just add the DS's at the same time to the two dictionaries, since it should be
@@ -353,7 +355,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         h_s_e[pair]['DS'] = out_uri
 
 
-def make_stress_rasters(dir, stress_list, grid_size):
+def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
     '''Creating a simple dictionary that will map stressor name to a rasterized
     version of that stressor shapefile. The key will be a string containing 
     stressor name, and the value will be the URI of the rasterized shapefile.
@@ -364,10 +366,15 @@ def make_stress_rasters(dir, stress_list, grid_size):
             desired within the given model run.
         grid_size- The pixel size desired for the rasters produced based on the
             shapefiles.
+        decay_eq- A string identifying the equation that should be used
+            in calculating the decay of stressor buffer influence.
+        buffer_dict- A dictionary that holds desired buffer sizes for each
+            stressors. The key is the name of the stressor, and the value is an
+            int which correlates to desired buffer size.
 
     Output:
-        A rasterized version of each stressor shapefile provided, which will be
-            stored in 'dir'.
+        A potentially buffered and rasterized version of each stressor shapefile 
+            provided, which will be stored in 'dir'.
 
     Returns:
         stress_dict- A simple dictionary which maps a string key of the stressor
@@ -390,19 +397,78 @@ def make_stress_rasters(dir, stress_list, grid_size):
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
         
-        #Making the nodata value 0 so that it's easier to combine the 
-        #layers later.
-        r_dataset = \
-            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Float32, 0., out_uri, datasource)
+        buff = buffer_dict[name]
+       
+        #Want to set this specifically to make later overlap easier.
+        nodata = 0.
 
-        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        #Need to create a larger base than the envelope that would normally
+        #surround the raster, since we know that we can be expanding by at
+        #least buffer size more. For reference, look to "~/workspace/Examples/expand_raster.py"
+        shp_extent = layer.GetExtent()
+        
+        #These have to be expanded by 2 * buffer to account for both sides
+        width = abs(shp_extent[1] - shp_extent[0]) + 2*buff
+        height = abs(shp_extent[3] - shp_extent[2]) + 2*buff 
+        p_width = int(np.ceil(width / grid_size))
+        p_height = int(np.ceil(height /grid_size))
+         
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(out_uri, p_width, p_height, 1, gdal.GDT_Float32) 
+
+        #increase everything by buffer size
+        transform = [shp_extent[0]-buff, grid_size, 0.0, shp_extent[3]+buff, 0.0, -grid_size]
+        raster.SetGeoTransform(transform)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(layer.GetSpatialRef().__str__())
+        raster.SetProjection(srs.ExportToWkt())
+
+        band = raster.GetRasterBand(1)
         band.Fill(nodata)
+        band.FlushCache()
 
-        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+        gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
-        stress_dict[name] = out_uri
+       
+        #Now, want to take that raster, and make it into a buffered version of
+        #itself.
+        base_array = band.ReadAsArray()
+        
+        #Swaps 0's and 1's for use with the distance transform function.
+        swp_array = (base_array + 1) % 2
 
+        #The array with each value being the distance from its own cell to land
+        dist_array = ndimage.distance_transform_edt(swp_array, 
+                                                    sampling=grid_size)
+
+        #Need to have a special case for 0's, to avoid divide by 0 errors
+        if buff == 0:
+            decay_array = make_zero_buff_decay_array(dist_array, nodata)
+        elif decay_eq == 'None':
+            decay_array = make_no_decay_array(dist_array, buff, nodata)
+        elif decay_eq == 'Exponential':
+            decay_array = make_exp_decay_array(dist_array, buff, nodata)
+        elif decay_eq == 'Linear':
+            decay_array = make_lin_decay_array(dist_array, buff, nodata)
+        
+        #Create a new file to which we should write our buffered rasters.
+        #Eventually, we will use the filename without buff, because it will
+        #just be assumed to be buffered
+        new_buff_uri = os.path.join(dir, name + '_buff.tif')
+        
+        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        
+        n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        n_band.Fill(n_nodata)
+        
+        n_band.WriteArray(decay_array)
+
+        #Now, write the buffered version of the stressor to the stressors
+        #dictionary
+        stress_dict[name] = new_buff_uri
+        
     return stress_dict
 
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
