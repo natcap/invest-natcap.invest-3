@@ -471,6 +471,104 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         
     return stress_dict
 
+def make_zero_buff_decay_array(dist_array, nodata):
+    '''Creates an array in the case of a zero buffer width, where we should
+    have is land and nodata values.
+
+    Input:
+        dist_array- A numpy array where each pixel value represents the
+            distance to the closest piece of land.
+        nodata- The value which should be placed into anything that is not land.
+    Returns:
+        A numpy array reprsenting land with 1's, and everything else with nodata.
+    '''
+
+    #Since we know anything that is land is currently represented as 0's, want
+    #to turn that back into 1's.
+    dist_array[dist_array == 0] = 1
+
+    #everything else will just be nodata
+    dist_array[dist_array > 1] = nodata
+
+    return dist_array
+
+def make_lin_decay_array(dist_array, buff, nodata):
+    '''Should create an array where the area around land is a function of 
+    linear decay from the values representing the land.
+
+    Input:
+        dist_array- A numpy array where each pixel value represents the
+            distance to the closest piece of land.
+        buff- The distance surrounding the land that the user desires to buffer
+            with linearly decaying values.
+        nodata- The value which should be placed into anything not land or
+            buffer area.
+    Returns:
+        A numpy array reprsenting land with 1's, and everything within the buffer
+        zone as linearly decayed values from 1.
+    '''
+
+    #The decay rate should be approximately -1/distance we want 0 to be at.
+    #We add one to have a proper y-intercept.
+    lin_decay_array = -dist_array/buff + 1.0
+    lin_decay_array[lin_decay_array < 0] = nodata
+
+    return lin_decay_array
+
+def make_exp_decay_array(dist_array, buff, nodata):
+    '''Should create an array where the area around the land is a function of
+    exponential decay from the land values.
+
+    Input:
+        dist_array- Numpy array where each pixel value represents the distance
+            to the closest piece of land.
+        buff- The distance surrounding the land that the user desires to buffer
+            with exponentially decaying values.
+        nodata- The value which should be placed into anything not land or
+            buffer area.
+    Returns:
+        A numpy array representing land with 1's and eveything withing the buffer
+        zone as exponentially decayed values from 1.
+    '''
+
+    #Want a cutoff for the decay amount after which we will say things are
+    #equivalent to nodata, since we don't want to have values outside the buffer
+    #zone.
+    cutoff = 0.01
+
+    #Need to have a value representing the decay rate for the exponential decay
+    rate = -math.log(cutoff)/ buff
+
+    exp_decay_array = np.exp(-rate * dist_array)
+    exp_decay_array[exp_decay_array < cutoff] = nodata
+
+    return exp_decay_array
+
+def make_no_decay_array(dist_array, buff, nodata):
+    '''Should create an array where the buffer zone surrounding the land is
+    buffered with the same values as the land, essentially creating an equally
+    weighted larger landmass.
+
+    Input:
+        dist_array- Numpy array where each pixel value represents the distance
+            to the closest piece of land.
+        buff- The distance surrounding the land that the user desires to buffer
+            with land data values.
+        nodata- The value which should be placed into anything not land or
+            buffer area.
+    Returns:
+        A numpy array representing both land and buffer zone with 1's, and \
+        everything outside that with nodata values.
+    '''
+
+    #Setting anything within the buffer zone to 1, and anything outside
+    #that distance to nodata.
+    inner_zone_index = dist_array <= buff
+    dist_array[inner_zone_index] = 1
+    dist_array[~inner_zone_index] = nodata  
+    
+    return dist_array
+
 def add_hab_rasters(dir, habitats, hab_list, grid_size):
     '''Want to get all shapefiles within any directories in hab_list, and burn
     them to a raster.
