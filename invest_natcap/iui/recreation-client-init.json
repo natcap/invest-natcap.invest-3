@@ -80,7 +80,7 @@
                     "type": "text",
                     "label": "Comments",
                     "required": false,
-                    "helpText": "Any commments for yourself that you would like to have as part of the model run."
+                    "helpText": "Any comments for yourself that you would like to have as part of the model run."
                 },
                 {
                     "id" : "data_dir",
@@ -119,7 +119,8 @@
                             "type": "checkbox",
                             "label": "Population",
                             "defaultValue": false,
-                            "required": false
+                            "required": false,
+                            "helpText": "2010 <a href=\"http://www.ornl.gov/sci/landscan\">Landscan</a> global distribution of ambient population from <a href=\"http://www.ornl.gov\">ORNL</a>"
                         },
                         {
                             "id" : "protected",
@@ -127,7 +128,8 @@
                             "type": "checkbox",
                             "label": "Protected Areas",
                             "defaultValue": false,
-                            "required": false
+                            "required": false,
+                            "helpText": "2012 <a href=\"http://www.wdpa.org\">World Database on Protected Areas</a> from <a href=\"http://www.unep-wcmc.org\">UNEP-WCMC</a>, <a href=\"http://www.iucn.org/about/work/programmes/gpap_home/gpap_wcpa\">IUCN-WCPA</a>"
                         }                        
                     ]
                 },
@@ -149,7 +151,8 @@
                                     "type": "checkbox",
                                     "label": "Cultural",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2012 data from <a href=\"http://www.openstreetmap.org\">OpenStreetMap</a>"
                                 },
                                 {
                                     "id" : "osm_2",
@@ -157,7 +160,8 @@
                                     "type": "checkbox",
                                     "label": "Industrial",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2012 data from <a href=\"http://www.openstreetmap.org\">OpenStreetMap</a>"
                                 },
                                 {
                                     "id" : "osm_3",
@@ -165,7 +169,8 @@
                                     "type": "checkbox",
                                     "label": "Natural",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2012 data from <a href=\"http://www.openstreetmap.org\">OpenStreetMap</a>"
                                 },
                                 {
                                     "id" : "osm_4",
@@ -173,7 +178,8 @@
                                     "type": "checkbox",
                                     "label": "Superstructure",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2012 data from <a href=\"http://www.openstreetmap.org\">OpenStreetMap</a>"
                                 },
                                 {
                                     "id" : "osm_0",
@@ -181,7 +187,8 @@
                                     "type": "checkbox",
                                     "label": "Miscellaneous",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2012 data from <a href=\"http://www.openstreetmap.org\">OpenStreetMap</a>"
                                 }
                             ]
                         }
@@ -205,7 +212,8 @@
                                     "type": "checkbox",
                                     "label": "Agriculture",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_2",
@@ -213,7 +221,8 @@
                                     "type": "checkbox",
                                     "label": "Bare",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_3",
@@ -221,7 +230,8 @@
                                     "type": "checkbox",
                                     "label": "Forest",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_4",
@@ -229,7 +239,8 @@
                                     "type": "checkbox",
                                     "label": "Grassland",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_5",
@@ -237,7 +248,8 @@
                                     "type": "checkbox",
                                     "label": "Shrubland",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_6",
@@ -245,7 +257,8 @@
                                     "type": "checkbox",
                                     "label": "Snow and Ice",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_7",
@@ -253,7 +266,8 @@
                                     "type": "checkbox",
                                     "label": "Urban",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 },
                                 {
                                     "id": "lulc_8",
@@ -261,7 +275,8 @@
                                     "type": "checkbox",
                                     "label": "Water",
                                     "defaultValue" : true,
-                                    "required" : false
+                                    "required" : false,
+                                    "helpText": "2008 <a href=\"http://due.esrin.esa.int/globcover\">GlobCover</a> from <a href=\"http://www.esa.int\">ESA</a>"
                                 }
                             ]
                         }
@@ -285,7 +300,8 @@
                                     "type": "checkbox",
                                     "label": "Mangroves",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "1997 <a href=\"http://data.unep-wcmc.org/datasets/6\">global composite</a> dataset from <a href=\"http://www.unep-wcmc.org\">UNEP-WCMC</a>"
                                 },
                                 {
                                     "id" : "reefs",
@@ -293,7 +309,8 @@
                                     "type": "checkbox",
                                     "label": "Coral Reefs",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2010 <a href=\"http://data.unep-wcmc.org/datasets/13\">global composite</a> dataset from <a href=\"http://www.unep-wcmc.org\">UNEP-WCMC</a>"
                                 },
                                 {
                                     "id" : "grass",
@@ -301,7 +318,8 @@
                                     "type": "checkbox",
                                     "label": "Seagrasses",
                                     "defaultValue": true,
-                                    "required": false
+                                    "required": false,
+                                    "helpText": "2005 <a href=\"http://data.unep-wcmc.org/datasets/10\">global composite</a> dataset from <a href=\"http://www.unep-wcmc.org\">UNEP-WCMC</a>"
                                 }
                             ]
                         }
