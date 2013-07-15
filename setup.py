@@ -234,6 +234,9 @@ setup(name='invest_natcap',
                              language="c++"),
                    Extension(name="flood_mitigation_cython_core",
                              sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],
+                             language="c++"),
+                   Extension(name="monthly_water_yield_cython_core",
+                             sources = ['invest_natcap/monthly_water_yield/monthly_water_yield_cython_core.pyx'],
                              language="c++")]),
       **py2exe_args)
 
