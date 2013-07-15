@@ -31,5 +31,10 @@ def calculate_tp(dem_uri, precip_uri, dt_out_uri, tp_out_uri):
 
         returns nothing"""
         
-    pass			     
+    flow_direction_uri = raster_utils.temporary_filename()
+    routing_utils.flow_direction_inf(dem_uri, flow_direction_uri)
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] float_direction_array = (
+        raster_utils.load_memory_mapped_array(
+            flow_direction_uri, outflow_weights_data_file))
 
