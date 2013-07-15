@@ -146,10 +146,10 @@ class DynamicElement(QtGui.QWidget):
 
         if recursive:
             try:
-                state = self.requirementsMet() and not self.has_error()
+                state = state and self.requirementsMet() and not self.has_error()
             except AttributeError:
                 # Thrown when this element does not have self.has_error()
-                state = self.requirementsMet()
+                state = state and self.requirementsMet()
 
             for element in self.enables:
                 element.setState(state)
