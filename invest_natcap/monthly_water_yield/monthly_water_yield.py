@@ -854,6 +854,10 @@ def calculate_direct_flow(
         dem_uri, in_source_uri, in_absorption_uri, temp_uri, dt_out_uri,
         'source_and_flux', watershed_uri)
 
+
+    #Use Dt and precip to calculate tp (Equation 2)
+    monthly_water_yield_cython.calcualte_tp(precip_uri, dt_out_uri, tp_out_uri)
+
     dflow_nodata = raster_utils.get_nodata_from_uri(dt_out_uri)
     no_data_list.append(dflow_nodata)
 
