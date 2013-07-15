@@ -8,7 +8,7 @@
     "width": 700,
     "elements": [
         {
-            "id": "valuation_list",
+            "id": "valuation_list_1",
             "type": "list",
             "elements": [
                 {   "id": "workspace_dir",
@@ -50,27 +50,48 @@
                     "defaultValue": "../Carbon/output/conf_fut.tif",
                     "validateAs": {"type": "GDAL"},
                     "helpText": "This optional file represents the regions where we are confident that carbon storage will either increase or decrease for the baseline scenario, produced by a run of the InVEST Carbon Biophysical model."
-                },
+                }
+            ]
+        },
+        {
+            "id": "redd_container",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "do_redd",
+            "label": "Enable REDD scenario analysis",
+            "elements": [
                 {
-                    "id": "sequest_redd_uri",
-                    "type": "file",
-                    "label": "Sequestration raster (REDD scenario)",
-                    "required": false,
-                    "args_id": "sequest_redd_uri",
-                    "defaultValue": "../Carbon/output/sequest_redd.tif",
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "The per-pixel sequestered carbon. This should be for the REDD policy scenario."
-                },
-                {
-                    "id": "conf_redd_uri",
-                    "type": "file",
-                    "label": "Confidence raster (REDD scenario)",
-                    "required": false,
-                    "args_id": "conf_redd_uri",
-                    "defaultValue": "../Carbon/output/conf_redd.tif",
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "This optional file represents the regions where we are confident that carbon storage will either increase or decrease for the REDD policy scenario, produced by a run of the InVEST Carbon Biophysical model."
-                },
+                    "id": "redd_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id": "sequest_redd_uri",
+                            "type": "file",
+                            "label": "Sequestration raster (REDD scenario)",
+                            "required": false,
+                            "args_id": "sequest_redd_uri",
+                            "defaultValue": "../Carbon/output/sequest_redd.tif",
+                            "validateAs": {"type": "GDAL"},
+                            "helpText": "The per-pixel sequestered carbon. This should be for the REDD policy scenario."
+                        },
+                        {
+                            "id": "conf_redd_uri",
+                            "type": "file",
+                            "label": "Confidence raster (REDD scenario)",
+                            "required": false,
+                            "args_id": "conf_redd_uri",
+                            "defaultValue": "../Carbon/output/conf_redd.tif",
+                            "validateAs": {"type": "GDAL"},
+                            "helpText": "This optional file represents the regions where we are confident that carbon storage will either increase or decrease for the REDD policy scenario, produced by a run of the InVEST Carbon Biophysical model."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "valuation_list_2",
+            "type": "list",
+            "elements": [
 		{
 		    "id": "carbon_price_units",
 		    "args_id": "carbon_price_units",
