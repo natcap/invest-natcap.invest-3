@@ -16,7 +16,6 @@
         },
         {
             "id": "redd",
-            "args_id": "do_redd",
             "type": "checkbox",
             "label": "REDD scenario analysis",
             "enabledBy": "calc_sequestration",

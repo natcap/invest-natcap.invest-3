@@ -53,10 +53,8 @@ def execute_30(**args):
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args contains a 
             'hwp_fut_shape_uri' key)
-        args['do_redd'] - a boolean that indicates whether we should do REDD scenario
-             analysis. Default to False if not present.
-        args['lulc_redd_uri'] - is a uri to a GDAL raster dataset (required if 'do_redd'
-             is True).
+        args['lulc_redd_uri'] - is a uri to a GDAL raster dataset that represents
+            land cover data for the REDD policy scenario (optional).
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
             calculation (optional, include if calculating current lulc hwp) 
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
