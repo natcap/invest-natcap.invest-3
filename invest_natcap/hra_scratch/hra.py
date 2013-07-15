@@ -8,6 +8,7 @@ import fnmatch
 import math
 import numpy as np
 
+from scipy import ndimage
 from osgeo import gdal, ogr, osr
 from invest_natcap.hra_scratch import hra_core
 from invest_natcap.hra_scratch import hra_preprocessor
