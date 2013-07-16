@@ -32,7 +32,8 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
 
         returns nothing"""
         
-    cdef int row_index, col_index, n_cols, n_rows
+    cdef int current_row, current_col, neighbor_row, neighbor_col
+    cdef int n_cols, n_rows
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
@@ -44,6 +45,7 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
 
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
+    cdef float tp_current
 
     flow_direction_uri = raster_utils.temporary_filename()
     routing_utils.flow_direction_inf(dem_uri, flow_direction_uri)
@@ -64,7 +66,11 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
             dt_uri, dt_file))
     dt_nodata = raster_utils.get_nodata_from_uri(dt_uri)
 
+    for current_row in range(1, n_rows-1):
+        for current_col in range(1, n_cols-1):
+            tp_current = 0.0
+            for direction_index in range(8):
+                neighbor_row = current_row + row_offsets[direction_index]
+                neighbor_col = current_col + col_offsets[direction_index]
 
-    for row_index in range(1, n_rows):
-        for col_index in range(1, n_cols):
-            pass
+                dt_current = dt_array[neighbor_row, neighbor_col]
