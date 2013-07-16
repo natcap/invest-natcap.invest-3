@@ -27,6 +27,9 @@ def execute_30(**args):
             amount of carbon sequestered (baseline scenario, if this is REDD)
         args['sequest_redd_uri'] (optional) - uri to the raster dataset for
             sequestration under the REDD policy scenario
+        args['conf_uri'] (optional) - uri to the raster dataset indicating
+            confident pixels for sequestration or emission
+        args['conf_redd_uri'] (optional) - as above, but for the REDD scenario
         args['carbon_price_units'] - a string indicating whether the price is 
             in terms of carbon or carbon dioxide. Can value either as
             'Carbon (C)' or 'Carbon Dioxide (CO2)'.
