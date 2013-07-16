@@ -66,9 +66,17 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
             dt_uri, dt_file))
     dt_nodata = raster_utils.get_nodata_from_uri(dt_uri)
 
+    precip_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] precip_array = (
+        raster_utils.load_memory_mapped_array(
+            precip_uri, precip_file))
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+
     for current_row in range(1, n_rows-1):
         for current_col in range(1, n_cols-1):
-            tp_current = 0.0
+            tp_current = precip_array[current_row, current_col]
+            if tp_current == precip_nodata:
+                tp_current = 0.0
             for direction_index in range(8):
                 neighbor_row = current_row + row_offsets[direction_index]
                 neighbor_col = current_col + col_offsets[direction_index]
