@@ -972,6 +972,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         
         elif risk_eq == 'Euclidean':
             
+            LOGGER.debug("Pair: %s, %s" % (h, s))
             make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
 
         risk_rasters[pair] = risk_uri
@@ -1044,6 +1045,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     e_nodata = raster_utils.get_nodata_from_uri(e_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
 
+    LOGGER.debug("Base Nodata: %s, E_Nodata: %s, Grid_Size: %s" % (base_nodata, e_nodata, grid_size))
+
     #we need to know very explicitly which rasters are being passed in which
     #order. However, since it's all within the make_risk_euc function, should
     #be safe.
@@ -1060,7 +1063,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #Only want to perform these operation if there is data in the cell, else
         #we end up with false positive data when we subtract 1. If we have
         #gotten here, we know that e_pix != 0. Just need to check for c_pix.
-        if not c_pix == 0:
+        if not c_pix == 0.:
             c_val = c_pix - 1
         else:
             c_val = 0.
