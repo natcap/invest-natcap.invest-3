@@ -53,10 +53,8 @@ def execute_30(**args):
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args contains a 
             'hwp_fut_shape_uri' key)
-        args['do_redd'] - a boolean that indicates whether we should do REDD scenario
-             analysis. Default to False if not present.
-        args['lulc_redd_uri'] - is a uri to a GDAL raster dataset (required if 'do_redd'
-             is True).
+        args['lulc_redd_uri'] - is a uri to a GDAL raster dataset that represents
+            land cover data for the REDD policy scenario (optional).
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
             calculation (optional, include if calculating current lulc hwp) 
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
@@ -88,7 +86,7 @@ def execute_30(**args):
 
     #2) map lulc_cur and _fut (if availble) to total carbon
     out_file_names = {}
-    for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri']:
+    for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
             cell_area_ha = (
@@ -203,70 +201,77 @@ def execute_30(**args):
 
 
     #TODO: sequestration
-    if 'lulc_cur_uri' in args and 'lulc_fut_uri' in args:
-        def sub_op(c_cur, c_fut):
-            if nodata_out in [c_cur, c_fut]:
-                return nodata_out
-            return c_fut - c_cur
+    for fut_type in ['fut', 'redd']:
+        fut_type_lulc_uri = 'lulc_%s_uri' % fut_type
+        if 'lulc_cur_uri' in args and fut_type_lulc_uri in args:
+            def sub_op(c_cur, c_fut):
+                if nodata_out in [c_cur, c_fut]:
+                    return nodata_out
+                return c_fut - c_cur
 
-        pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
-        out_file_names['sequest'] = os.path.join(output_dir, 'sequest%s.tif' % file_suffix)
-        raster_utils.vectorize_datasets(
-            [out_file_names['tot_C_cur'], out_file_names['tot_C_fut']], sub_op, out_file_names['sequest'], gdal.GDT_Float32, nodata_out,
-            pixel_size_out, "intersection", dataset_to_align_index=0)
+            pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
+            out_file_names['sequest_%s' % fut_type] = os.path.join(
+                output_dir, 'sequest_%s%s.tif' % (fut_type, file_suffix))
+            raster_utils.vectorize_datasets(
+                [out_file_names['tot_C_cur'], out_file_names['tot_C_%s' % fut_type]], sub_op, 
+                out_file_names['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
+                pixel_size_out, "intersection", dataset_to_align_index=0)
 
-        if use_uncertainty:
-            confidence_threshold = args['confidence_threshold']
+            if use_uncertainty:
+                confidence_threshold = args['confidence_threshold']
 
-            # Returns 1 if we're confident storage will increase,
-            #         -1 if we're confident storage will decrease,
-            #         0 if we're not confident either way.
-            def confidence_op(c_cur, c_fut, var_cur, var_fut):
-                for val in [c_cur, c_fut, var_cur, var_fut]:
-                    if val == nodata_out or val < 0:
-                        return nodata_out
-                if var_cur == 0 and var_fut == 0:
-                    # There's no variance, so we can just compare the mean estimates.
-                    if c_fut > c_cur:
+                # Returns 1 if we're confident storage will increase,
+                #         -1 if we're confident storage will decrease,
+                #         0 if we're not confident either way.
+                def confidence_op(c_cur, c_fut, var_cur, var_fut):
+                    for val in [c_cur, c_fut, var_cur, var_fut]:
+                        if val == nodata_out or val < 0:
+                            return nodata_out
+
+                    if var_cur == 0 and var_fut == 0:
+                        # There's no variance, so we can just compare the mean estimates.
+                        if c_fut > c_cur:
+                            return 1
+                        if c_fut < c_cur:
+                            return -1
+                        return 0
+
+                    # Given two distributions (one for current storage, one for future storage),
+                    # we use the difference distribution (current storage - future storage),
+                    # and calculate the probability that the difference is less than 0.
+                    # This is equal to the probability that the future storage is greater than
+                    # the current storage.
+                    # We calculate the standard score by beginning with 0, subtracting the mean
+                    # of the difference distribution, and dividing by the standard deviation
+                    # of the difference distribution.
+                    # The mean of the difference distribution is the difference of the means of cur and fut.
+                    # The variance of the difference distribution is the sum of the variances of cur and fut.
+                    standard_score = (c_fut - c_cur) / math.sqrt(var_cur + var_fut)
+
+                    # Calculate the cumulative distribution function for the standard normal distribution.
+                    # This gives us the probability that future carbon storage is greater than
+                    # current carbon storage.
+                    # This formula is copied from http://docs.python.org/3.2/library/math.html
+                    probability = (1.0 + math.erf(standard_score / math.sqrt(2.0))) / 2.0
+
+                    # Multiply by 100 so we have probability in the same units as the confidence_threshold.
+                    confidence = 100 * probability
+                    if confidence >= confidence_threshold:
+                        # We're confident carbon storage will increase.
                         return 1
-                    if c_fut < c_cur:
+                    if confidence <= 100 - confidence_threshold:
+                        # We're confident carbon storage will decrease.
                         return -1
+                    # We're not confident about whether storage will increase or decrease.
                     return 0
 
-                # Given two distributions (one for current storage, one for future storage),
-                # we use the difference distribution (current storage - future storage),
-                # and calculate the probability that the difference is less than 0.
-                # This is equal to the probability that the future storage is greater than
-                # the current storage.
-                # We calculate the standard score by beginning with 0, subtracting the mean
-                # of the difference distribution, and dividing by the standard deviation
-                # of the difference distribution.
-                # The mean of the difference distribution is the difference of the means of cur and fut.
-                # The variance of the difference distribution is the sum of the variances of cur and fut.
-                standard_score = (c_fut - c_cur) / math.sqrt(var_cur + var_fut)
-
-                # Calculate the cumulative distribution function for the standard normal distribution.
-                # This gives us the probability that future carbon storage is greater than
-                # current carbon storage.
-                # This formula is copied from http://docs.python.org/3.2/library/math.html
-                probability = (1.0 + math.erf(standard_score / math.sqrt(2.0))) / 2.0
-
-                # Multiply by 100 so we have probability in the same units as the confidence_threshold.
-                confidence = 100 * probability
-                if confidence >= confidence_threshold:
-                    # We're confident carbon storage will increase.
-                    return 1
-                if confidence <= 100 - confidence_threshold:
-                    # We're confident carbon storage will decrease.
-                    return -1
-                # We're not confident about whether storage will increase or decrease.
-                return 0
-
-            out_file_names['conf'] = os.path.join(output_dir, 'conf%s.tif' % file_suffix)
-            raster_utils.vectorize_datasets(
-                [out_file_names[name] for name in ['tot_C_cur', 'tot_C_fut', 'variance_C_cur', 'variance_C_fut']],
-                confidence_op, out_file_names['conf'], gdal.GDT_Float32, nodata_out,
-                pixel_size_out, "intersection", dataset_to_align_index=0)
+                out_file_names['conf_%s' % fut_type] = os.path.join(
+                    output_dir, 'conf_%s%s.tif' % (fut_type, file_suffix))
+                raster_utils.vectorize_datasets(
+                    [out_file_names[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type, 
+                                                       'variance_C_cur', 'variance_C_%s' % fut_type]],
+                    confidence_op, out_file_names['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
+                    pixel_size_out, "intersection", dataset_to_align_index=0)
 
     _calculate_summary(out_file_names)
 
@@ -623,7 +628,9 @@ def _calculate_summary(args):
     LOGGER.debug('calculate summary')
     raster_key_messages = [('tot_C_cur', 'Total current carbon: '),
                            ('tot_C_fut', 'Total scenario carbon: '),
-                           ('sequest', 'Total sequestered carbon: ')]
+                           ('tot_C_redd', 'Total REDD scenario carbon: '),
+                           ('sequest_fut', 'Total sequestered carbon: '),
+                           ('sequest_fut', 'Total sequestered carbon in REDD scenario: ')]
 
     for raster_key, message in raster_key_messages:
         #Make sure we passed in the dictionary, and gracefully continue

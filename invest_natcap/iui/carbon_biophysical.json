@@ -16,7 +16,6 @@
         },
         {
             "id": "redd",
-            "args_id": "do_redd",
             "type": "checkbox",
             "label": "REDD scenario analysis",
             "enabledBy": "calc_sequestration",
@@ -117,7 +116,7 @@
                             "args_id": "lulc_redd_uri",
                             "required": false,
                             "enabledBy": "redd",
-                            "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                            "defaultValue": "../Carbon/Input/lulc_samp_redd.tif",
                             "requiredIf": ["redd"],
                             "validateAs": {"type": "GDAL"},
                             "helpText": "Location of the landcover map for the REDD policy future scenario. This scenario will be compared to the baseline future scenario."
