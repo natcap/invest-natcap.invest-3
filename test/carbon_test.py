@@ -16,74 +16,75 @@ class TestCarbonBiophysical(unittest.TestCase):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
-        def help_test_carbon_biophysical_sequestration_hwp(use_uncertainty=False,
-                                                           do_redd=False):
-            """Helper function that does the real work of the test, and allows us
-            to easily test with different parameters."""
+        workspace_dir = './invest-data/test/data/test_out/carbon_output'
+
+        def execute_model(do_sequest=False, do_redd=False, use_uncertainty=False, do_hwp=False,
+                          suffix=''):
+            """Executes the carbon biophysical model with the appropriate parameters."""
             args = {}
-            args['workspace_dir'] = './invest-data/test/data/test_out/carbon_output'
+            args['workspace_dir'] = workspace_dir
             args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
 
             if use_uncertainty:
-                # Use the file with probability distributions for carbon pools.
+                args['use_uncertainty'] = True
                 args['carbon_pools_uncertain_uri'] = (
                     './invest-data/test/data/carbon/input/carbon_pools_samp_uncertain.csv')
-                args['use_uncertainty'] = True
                 args['confidence_threshold'] = 90
             else:
-                # Use the file with point estimates for the carbon pools.
                 args['carbon_pools_uri'] = './invest-data/test/data/carbon/input/carbon_pools_samp.csv'
-            carbon_biophysical.execute(args)
+
+            if do_sequest:
+                args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
+                args['lulc_cur_year'] = 2000
+                args['lulc_fut_year'] = 2030
 
             if do_redd:
                 args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'                
 
-            args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
-            args['lulc_cur_year'] = 2000
-            args['lulc_fut_year'] = 2030
-            args['hwp_cur_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_cur.shp"
-            args['hwp_fut_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_fut.shp"
+            if do_hwp:
+                args['hwp_cur_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_cur.shp"
+
+                if do_sequest:
+                    args['hwp_fut_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_fut.shp"
+
+            if suffix:
+                args['suffix'] = suffix
 
             carbon_biophysical.execute(args)
 
-            invest_test_core.assertTwoDatasetEqualURI(self,
-                args['workspace_dir'] + "/output/tot_C_cur.tif",
-                './invest-data/test/data/carbon_regression_data/tot_C_cur.tif')
+        def assertDatasetEqual(output_filename, ref_filename=None):
+            """Asserts that the output data set equals the reference data set."""
+            if not ref_filename:
+                ref_filename = output_filename
+            output_uri = os.path.join(workspace_dir, 'output', output_filename)
+            ref_uri = os.path.join('./invest-data/test/data/carbon_regression_data', ref_filename)
+            invest_test_core.assertTwoDatasetEqualURI(self, output_uri, ref_uri)
 
-            invest_test_core.assertTwoDatasetEqualURI(self,
-                args['workspace_dir'] + "/output/tot_C_fut.tif",
-                './invest-data/test/data/carbon_regression_data/tot_C_fut.tif')
+        def assertDatasetsEqual(*files):
+            """Calls assertDatasetEqual for each file in the list of files."""
+            for filename in files:
+                if isinstance(filename, basestring):
+                    assertDatasetEqual(filename)
+                else:
+                    assertDatasetEqual(*filename)
 
-            invest_test_core.assertTwoDatasetEqualURI(self,
-                args['workspace_dir'] + "/output/sequest_fut.tif",
-                './invest-data/test/data/carbon_regression_data/sequest.tif')
+        
+        # Make sure nothing breaks when we run the model with the bare minimum.
+        execute_model()
 
-            if use_uncertainty:
-                invest_test_core.assertTwoDatasetEqualURI(self,
-                    args['workspace_dir'] + "/output/conf_fut.tif",
-                    './invest-data/test/data/carbon_regression_data/conf.tif')
+        execute_model(do_sequest=True, do_hwp=True)
+        assertDatasetsEqual('tot_C_cur.tif', 'tot_C_fut.tif', ('sequest_fut.tif', 'sequest.tif'))
+        
+        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True)
+        assertDatasetsEqual('tot_C_cur.tif', 'tot_C_fut.tif', ('sequest_fut.tif', 'sequest.tif'),
+                            ('conf_fut.tif', 'conf.tif'))
 
-            if do_redd:
-                invest_test_core.assertTwoDatasetEqualURI(self,
-                    args['workspace_dir'] + "/output/sequest_redd.tif",
-                    './invest-data/test/data/carbon_regression_data/sequest_redd.tif')
+        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, do_redd=True)
+        assertDatasetsEqual('tot_C_cur.tif', 'tot_C_fut.tif', ('sequest_fut.tif', 'sequest.tif'),
+                            ('conf_fut.tif', 'conf.tif'), 'sequest_redd.tif', 'conf_redd.tif')
 
-            if use_uncertainty and do_redd:
-                invest_test_core.assertTwoDatasetEqualURI(self,
-                    args['workspace_dir'] + "/output/conf_redd.tif",
-                    './invest-data/test/data/carbon_regression_data/conf_redd.tif')
-                                                          
-
-            args['suffix'] = '_foo_bar'
-            carbon_biophysical.execute(args)
-            invest_test_core.assertTwoDatasetEqualURI(self,
-                args['workspace_dir'] + "/output/tot_C_cur_foo_bar.tif",
-                './invest-data/test/data/carbon_regression_data/tot_C_cur.tif')
-
-        help_test_carbon_biophysical_sequestration_hwp()
-        help_test_carbon_biophysical_sequestration_hwp(use_uncertainty=True)
-        help_test_carbon_biophysical_sequestration_hwp(use_uncertainty=True,
-                                                       do_redd=True)
+        execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
+        assertDatasetEqual('tot_C_cur_foo_bar.tif', 'tot_C_cur.tif')
 
     def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \
