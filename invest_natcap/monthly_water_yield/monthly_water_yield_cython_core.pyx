@@ -41,3 +41,13 @@ def calculate_tp(dem_uri, precip_uri, dt_out_uri, tp_out_uri):
         raster_utils.load_memory_mapped_array(
             flow_direction_uri, flow_direction_file))
 
+    cdef int row_index, col_index, n_cols, n_rows
+
+    n_row, n_cols = float_direction_array.shape
+
+    flow_direction_nodata = raster_utils.get_nodata_from_uri(flow_direction_uri)
+
+
+    for row_index in range(1, n_rows):
+        for col_index in range(1, n_cols):
+            pass
