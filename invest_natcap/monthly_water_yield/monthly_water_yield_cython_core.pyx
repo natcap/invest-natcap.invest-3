@@ -1,4 +1,5 @@
 import logging
+import tempfile
 
 import numpy
 cimport numpy
@@ -31,10 +32,26 @@ def calculate_tp(dem_uri, precip_uri, dt_out_uri, tp_out_uri):
 
         returns nothing"""
         
+    cdef int row_index, col_index, n_cols, n_rows
+
+
+
     flow_direction_uri = raster_utils.temporary_filename()
     routing_utils.flow_direction_inf(dem_uri, flow_direction_uri)
 
+    flow_direction_band, flow_direction_nodata = (
+        raster_utils.extract_band_and_nodata(flow_direction_uri))
+    n_cols = flow_direction_band.XSize
+    n_rows = flow_direction_band.YSize
+
+
+    flow_direction_file = tempfile.TemporaryFile()
+
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] float_direction_array = (
         raster_utils.load_memory_mapped_array(
-            flow_direction_uri, outflow_weights_data_file))
+            flow_direction_uri, flow_direction_file))
 
+
+    for row_index in range(1, n_rows):
+        for col_index in range(1, n_cols):
+            pass

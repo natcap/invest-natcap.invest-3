@@ -931,7 +931,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             ...
             }
     '''
-    
+   
     #Create dictionary that we can pass back to execute to be passed along to
     #make_habitat_rasters
     risk_rasters = {}
@@ -951,7 +951,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #Each of the E/C calculations should take in all of the relevant 
         #subdictionary data, and return a raster to be used in risk calculation. 
         calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['h_s_e'][pair])
+                        denoms['Risk']['h_s_e'][pair])
 
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
@@ -972,6 +972,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         
         elif risk_eq == 'Euclidean':
             
+            LOGGER.debug("Pair: %s, %s" % (h, s))
             make_risk_euc(base_ds_uri, e_out_uri, c_out_uri, risk_uri)
 
         risk_rasters[pair] = risk_uri
@@ -1044,6 +1045,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     e_nodata = raster_utils.get_nodata_from_uri(e_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
 
+    LOGGER.debug("Base Nodata: %s, E_Nodata: %s, Grid_Size: %s" % (base_nodata, e_nodata, grid_size))
+
     #we need to know very explicitly which rasters are being passed in which
     #order. However, since it's all within the make_risk_euc function, should
     #be safe.
@@ -1060,7 +1063,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #Only want to perform these operation if there is data in the cell, else
         #we end up with false positive data when we subtract 1. If we have
         #gotten here, we know that e_pix != 0. Just need to check for c_pix.
-        if not c_pix == 0:
+        if not c_pix == 0.:
             c_val = c_pix - 1
         else:
             c_val = 0.
@@ -1444,6 +1447,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             
             crit_lists['Recovery'][h].append(crit_recov_uri)
 
+    LOGGER.debug("H_S_E: %s" % h_s_e)
     #Hab-Stress for Exposure
     for pair in h_s_e:
         h, s = pair
@@ -1499,7 +1503,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 return crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
-                        single_crit_C_uri, gdal.GDT_Float32, 0., base_pixel_size,
+                        single_crit_E_uri, gdal.GDT_Float32, 0., base_pixel_size,
                         "union", resample_method_list=None, 
                         dataset_to_align_index=None, aoi_uri=None)
 
