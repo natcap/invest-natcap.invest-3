@@ -63,7 +63,7 @@ do sequestration and harvested wood products on lulc maps."""
         def assertDatasetsEqual(*files):
             """Calls assertDatasetEqual for each file in the list of files."""
             for filename in files:
-                if isinstance(filename, basestring):
+                if isinstance(filename, str):
                     assertDatasetEqual(filename)
                 else:
                     assertDatasetEqual(*filename)
