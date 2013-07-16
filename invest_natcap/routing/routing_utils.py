@@ -40,9 +40,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('routing')
 
 
-def route_flux(
-    in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri, flux_uri,
-    absorption_mode, aoi_uri=None):
+def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
+               flux_uri, absorption_mode, aoi_uri=None):
 
     """This function will route flux across a landscape given a dem to
         guide flow from a d-infinty flow algorithm, and a custom function
@@ -59,7 +58,7 @@ def route_flux(
             traveling through each pixel
         absorption_mode - either 'flux_only' or 'source_and_flux'. For
             'flux_only' the outgoing flux is (in_flux * absorption + source).
-            If 'source_and_flux' then the output flux 
+            If 'source_and_flux' then the output flux
             is (in_flux + source) * absorption.
         aoi_uri - an OGR datasource for an area of interest polygon.
             the routing flux calculation will only occur on those pixels
@@ -84,7 +83,8 @@ def route_flux(
 
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri, dem_uri)
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
+        dem_uri)
     routing_cython_core.calculate_transport(
         outflow_direction_uri, outflow_weights_uri, sink_cell_set,
         source_uri, absorption_rate_uri, loss_uri, flux_uri, absorption_mode)
@@ -132,13 +132,13 @@ def make_constant_raster_from_base(base_dataset_uri, constant_value, out_uri):
 
 def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     """Creates a raster of accumulated flow to each cell.
-    
+
         flow_accumulation_data - (input) A flow accumulation dataset of type
             floating point
         flow_threshold - (input) a number indicating the threshold to declare
             a pixel a stream or no
         stream_uri - (input) the uri of the output stream dataset
-        
+
         returns nothing"""
 
     flow_accumulation_dataset = gdal.Open(flow_accumulation_uri)
@@ -156,14 +156,14 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
     flow_accumulation_data_file = tempfile.TemporaryFile()
     flow_accumulation_array = raster_utils.load_memory_mapped_array(
         flow_accumulation_uri, flow_accumulation_data_file)
-    
+
     _, flow_accumulation_nodata = \
         raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
 
-    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array >= float(flow_threshold))] = 1
-    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array < float(flow_threshold))] = 0
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) *
+                 (flow_accumulation_array >= float(flow_threshold))] = 1
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) *
+                 (flow_accumulation_array < float(flow_threshold))] = 0
 
     stream_band.WriteArray(stream_array)
 
@@ -180,7 +180,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
     flow_direction_dataset = gdal.Open(flow_direction_uri)
     _, flow_direction_nodata = raster_utils.extract_band_and_nodata(
         flow_direction_dataset)
-    
+
     flow_length_nodata = -1.0
     flow_length_dataset = raster_utils.new_raster_from_base(
         flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
@@ -194,7 +194,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
             return flow_length_nodata
         sin_val = numpy.abs(numpy.sin(flow_direction))
         cos_val = numpy.abs(numpy.cos(flow_direction))
-        return flow_length_pixel_size/numpy.maximum(sin_val, cos_val)
+        return flow_length_pixel_size / numpy.maximum(sin_val, cos_val)
 
     raster_utils.vectorize_rasters(
         [flow_direction_dataset], flow_length, aoi=None,
@@ -202,17 +202,17 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         nodata=flow_length_nodata)
 
 
-def pixel_amount_exported(
-    in_dem_uri, in_stream_uri, in_retention_rate_uri, in_source_uri,
-    pixel_export_uri, aoi_uri=None):
+def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri, 
+                          in_source_uri, pixel_export_uri, aoi_uri=None):
     """Calculates flow and absorption rates to determine the amount of source
         exported to the stream.  All datasets must be in the same projection.
         Nothing will be retained on stream pixels.
-    
+
         in_dem_uri - a dem dataset used to determine flow directions
-        in_stream_uri - an integer dataset representing stream locations. 
+        in_stream_uri - an integer dataset representing stream locations.
             0 is no stream 1 is a stream
-        in_retention_rate_uri - a dataset representing per pixel retention rates
+        in_retention_rate_uri - a dataset representing per pixel retention
+            rates
         in_source_uri - a dataset representing per pixel export
         pixel_export_uri - the output dataset uri to represent the amount
             of source exported to the stream
@@ -240,7 +240,7 @@ def pixel_amount_exported(
             return nodata_retention
         return 1.0 - retention
     raster_utils.vectorize_datasets(
-        [retention_rate_uri], retention_to_export, export_rate_uri, 
+        [retention_rate_uri], retention_to_export, export_rate_uri,
         gdal.GDT_Float32, nodata_retention, out_pixel_size, "intersection",
         dataset_to_align_index=0)
 
@@ -282,7 +282,7 @@ def calculate_stream(dem_uri, flow_threshold, stream_uri):
         dem_uri - a uri to a gdal dataset describing the dem
         flow_threshold - the value to determine if a flow pixel is a stream
             pixel
-        stream_uri - a uri to an output dataset that will have pixels 
+        stream_uri - a uri to an output dataset that will have pixels
             listed a 0 for no stream or 1 for stream or nodata outside the dem
 
         returns nothing"""
@@ -299,10 +299,10 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         directions and upslope areas in grid digital elevation models," Water
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
-       dem_uri - (input) a uri to a single band GDAL Dataset with elevation 
+       dem_uri - (input) a uri to a single band GDAL Dataset with elevation
            values
        flow_direction_uri - (output) a uri to a single band GDAL dataset
            with d infinity flow directions in it.
-       
+
        returns nothing"""
     routing_cython_core.flow_direction_inf(dem_uri, flow_direction_uri)

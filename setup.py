@@ -137,10 +137,8 @@ if platform.system() == 'Windows':
          'invest_biodiversity_biophysical.py',
          'invest_overlap_analysis.py',
          'invest_overlap_analysis_mz.py',
-         'invest_habitat_risk_assessment.py',
          'invest_coastal_vulnerability.py',
          'invest_sediment.py',
-         'invest_malaria.py',
          'invest_nutrient.py',
          'invest_wind_energy.py',
          'invest_test_all.py']
@@ -234,6 +232,9 @@ setup(name='invest_natcap',
                              language="c++"),
                    Extension(name="flood_mitigation_cython_core",
                              sources = ['invest_natcap/flood_mitigation/flood_mitigation_cython_core.pyx'],
+                             language="c++"),
+                   Extension(name="monthly_water_yield_cython_core",
+                             sources = ['invest_natcap/monthly_water_yield/monthly_water_yield_cython_core.pyx'],
                              language="c++")]),
       **py2exe_args)
 
