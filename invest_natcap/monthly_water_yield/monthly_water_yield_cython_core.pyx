@@ -48,14 +48,24 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
 
     cdef float tp_current
 
+    #Align the input rasters so all the arrays align in the following loop
+    dem_aligned_uri = raster_utils.temporary_filename()
+    precip_aligned_uri = raster_utils.temporary_filename()
+    dt_aligned_uri = raster_utils.temporary_filename()
+    out_pixel_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    raster_utils.align_dataset_list(
+        [dem_uri, precip_uri, dt_uri],
+        [dem_aligned_uri, precip_aligned_uri, dt_aligned_uri], ['nearest'] * 3,
+        out_pixel_size, 'intersection', 0)
+
     flow_direction_uri = raster_utils.temporary_filename()
-    routing_utils.flow_direction_inf(dem_uri, flow_direction_uri)
+    routing_utils.flow_direction_inf(dem_aligned_uri, flow_direction_uri)
 
     outflow_direction_uri = raster_utils.temporary_filename()
     outflow_weights_uri = raster_utils.temporary_filename()
     routing_cython_core.calculate_flow_graph(
         flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
-        dem_uri)
+        dem_aligned_uri)
 
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
     outflow_direction_nodata = raster_utils.get_nodata_from_uri(
@@ -71,14 +81,14 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
     dt_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dt_array = (
         raster_utils.load_memory_mapped_array(
-            dt_uri, dt_file))
-    dt_nodata = raster_utils.get_nodata_from_uri(dt_uri)
+            dt_aligned_uri, dt_file))
+    dt_nodata = raster_utils.get_nodata_from_uri(dt_aligned_uri)
 
     precip_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] precip_array = (
         raster_utils.load_memory_mapped_array(
-            precip_uri, precip_file))
-    precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+            precip_aligned_uri, precip_file))
+    precip_nodata = raster_utils.get_nodata_from_uri(precip_aligned_uri)
 
     for current_row in range(1, n_rows-1):
         for current_col in range(1, n_cols-1):
