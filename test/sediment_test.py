@@ -52,5 +52,6 @@ class TestSediment(unittest.TestCase):
         sediment.execute(args)
 
         output_shape = os.path.join(args['workspace_dir'],'Output', 'watershed_outputs.shp')
-        regression_shape = os.path.join('data', 'sediment_regression_data', 'watershed_outputs.shp')
+        regression_shape = os.path.join(
+                'invest-data/test/data', 'sediment_regression_data', 'watershed_outputs.shp')
         invest_test_core.assertTwoShapesEqualURI(self, output_shape, regression_shape)
