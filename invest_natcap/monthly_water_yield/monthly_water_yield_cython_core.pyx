@@ -8,6 +8,7 @@ from osgeo import gdal
 
 from invest_natcap.routing import routing_utils
 from invest_natcap import raster_utils
+import routing_cython_core
 
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
@@ -50,15 +51,22 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
     flow_direction_uri = raster_utils.temporary_filename()
     routing_utils.flow_direction_inf(dem_uri, flow_direction_uri)
 
-    flow_direction_band, flow_direction_nodata = (
-        raster_utils.extract_band_and_nodata(flow_direction_uri))
-    n_cols = flow_direction_band.XSize
-    n_rows = flow_direction_band.YSize
+    outflow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename()
+    routing_cython_core.calculate_flow_graph(
+        flow_direction_uri, outflow_weights_uri, outflow_direction_uri,
+        dem_uri)
 
-    flow_direction_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = (
+    outflow_direction_dataset = gdal.Open(outflow_direction_uri)
+    outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+        outflow_direction_uri)
+    n_cols = outflow_direction_dataset.RasterXSize
+    n_rows = outflow_direction_dataset.RasterYSize
+
+    outflow_direction_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_byte, ndim=2] outflow_direction_array = (
         raster_utils.load_memory_mapped_array(
-            flow_direction_uri, flow_direction_file))
+            outflow_direction_uri, outflow_direction_file))
 
     dt_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dt_array = (
@@ -80,5 +88,15 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
             for direction_index in range(8):
                 neighbor_row = current_row + row_offsets[direction_index]
                 neighbor_col = current_col + col_offsets[direction_index]
+
+                neighbor_direction = (
+                    outflow_direction_array[neighbor_row, neighbor_col])
+                if neighbor_direction == outflow_direction_nodata:
+                    continue
+
+                if (inflow_offsets[direction_index] != neighbor_direction and 
+                    inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
+                    #then neighbor doesn't inflow into current cell
+                    continue
 
                 dt_current = dt_array[neighbor_row, neighbor_col]
