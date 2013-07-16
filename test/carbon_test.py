@@ -3,6 +3,7 @@
 import os
 import sys
 import unittest
+import logging
 
 from nose.plugins.skip import SkipTest
 
@@ -15,12 +16,14 @@ class TestCarbonBiophysical(unittest.TestCase):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
-        def help_test_carbon_biophysical_sequestration_hwp(use_uncertainty):
+        def help_test_carbon_biophysical_sequestration_hwp(use_uncertainty=False,
+                                                           do_redd=False):
             """Helper function that does the real work of the test, and allows us
-            to easily test both with and without uncertainty."""
+            to easily test with different parameters."""
             args = {}
             args['workspace_dir'] = './invest-data/test/data/test_out/carbon_output'
             args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
+
             if use_uncertainty:
                 # Use the file with probability distributions for carbon pools.
                 args['carbon_pools_uncertain_uri'] = (
@@ -32,7 +35,8 @@ do sequestration and harvested wood products on lulc maps."""
                 args['carbon_pools_uri'] = './invest-data/test/data/carbon/input/carbon_pools_samp.csv'
             carbon_biophysical.execute(args)
 
-        
+            if do_redd:
+                args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'                
 
             args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
             args['lulc_cur_year'] = 2000
@@ -42,8 +46,6 @@ do sequestration and harvested wood products on lulc maps."""
 
             carbon_biophysical.execute(args)
 
-          #assert that './invest-data/test/data/test_data/tot_C_cur.tif' equals
-          #./invest-data/test/data/carbon_output/Output/tot_C_cur.tif
             invest_test_core.assertTwoDatasetEqualURI(self,
                 args['workspace_dir'] + "/output/tot_C_cur.tif",
                 './invest-data/test/data/carbon_regression_data/tot_C_cur.tif')
@@ -58,8 +60,19 @@ do sequestration and harvested wood products on lulc maps."""
 
             if use_uncertainty:
                 invest_test_core.assertTwoDatasetEqualURI(self,
-                    args['workspace_dir'] + "/output/conf.tif",
+                    args['workspace_dir'] + "/output/conf_fut.tif",
                     './invest-data/test/data/carbon_regression_data/conf.tif')
+
+            if do_redd:
+                invest_test_core.assertTwoDatasetEqualURI(self,
+                    args['workspace_dir'] + "/output/sequest_redd.tif",
+                    './invest-data/test/data/carbon_regression_data/sequest_redd.tif')
+
+            if use_uncertainty and do_redd:
+                invest_test_core.assertTwoDatasetEqualURI(self,
+                    args['workspace_dir'] + "/output/conf_redd.tif",
+                    './invest-data/test/data/carbon_regression_data/conf_redd.tif')
+                                                          
 
             args['suffix'] = '_foo_bar'
             carbon_biophysical.execute(args)
@@ -67,8 +80,10 @@ do sequestration and harvested wood products on lulc maps."""
                 args['workspace_dir'] + "/output/tot_C_cur_foo_bar.tif",
                 './invest-data/test/data/carbon_regression_data/tot_C_cur.tif')
 
-        help_test_carbon_biophysical_sequestration_hwp(False) # test without uncertainty
-        help_test_carbon_biophysical_sequestration_hwp(True)  # test with uncertainty
+        help_test_carbon_biophysical_sequestration_hwp()
+        help_test_carbon_biophysical_sequestration_hwp(use_uncertainty=True)
+        help_test_carbon_biophysical_sequestration_hwp(use_uncertainty=True,
+                                                       do_redd=True)
 
     def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \
