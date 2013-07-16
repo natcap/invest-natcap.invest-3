@@ -73,18 +73,27 @@ do sequestration and harvested wood products on lulc maps."""
         execute_model()
 
         execute_model(do_sequest=True, do_hwp=True)
-        assertDatasetsEqual('tot_C_cur.tif', 'tot_C_fut.tif', ('sequest_fut.tif', 'sequest.tif'))
+        assertDatasetsEqual('tot_C_cur.tif', 
+                            'tot_C_fut.tif', 
+                            ('sequest_fut.tif', 'sequest.tif'))
         
         execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True)
-        assertDatasetsEqual('tot_C_cur.tif', 'tot_C_fut.tif', ('sequest_fut.tif', 'sequest.tif'),
+        assertDatasetsEqual('tot_C_cur.tif', 
+                            'tot_C_fut.tif', 
+                            ('sequest_fut.tif', 'sequest.tif'),
                             ('conf_fut.tif', 'conf.tif'))
 
         execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, do_redd=True)
-        assertDatasetsEqual('tot_C_cur.tif', 'tot_C_fut.tif', ('sequest_fut.tif', 'sequest.tif'),
-                            ('conf_fut.tif', 'conf.tif'), 'sequest_redd.tif', 'conf_redd.tif')
+        assertDatasetsEqual('tot_C_cur.tif', 
+                            'tot_C_fut.tif', 
+                            ('sequest_fut.tif', 'sequest.tif'),
+                            ('conf_fut.tif', 'conf.tif'), 
+                            'sequest_redd.tif', 
+                            'conf_redd.tif')
 
         execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
-        assertDatasetEqual('tot_C_cur_foo_bar.tif', 'tot_C_cur.tif')
+        assertDatasetEqual('tot_C_cur_foo_bar.tif', 
+                           'tot_C_cur.tif')
 
     def test_carbon_biophysical_uk(self):
         """Test for carbon_biophysical function running with sample input to \
