@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('monthly water yield cython core')
 
-def calculate_tp(dem_uri, precip_uri, dt_out_uri, tp_out_uri):
+def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
     """Function to calculate the sum of the direct flows onto a pixel
         plus the precipitation on that pixel.
 
@@ -34,6 +34,15 @@ def calculate_tp(dem_uri, precip_uri, dt_out_uri, tp_out_uri):
         
     cdef int row_index, col_index, n_cols, n_rows
 
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
 
     flow_direction_uri = raster_utils.temporary_filename()
@@ -44,12 +53,16 @@ def calculate_tp(dem_uri, precip_uri, dt_out_uri, tp_out_uri):
     n_cols = flow_direction_band.XSize
     n_rows = flow_direction_band.YSize
 
-
     flow_direction_file = tempfile.TemporaryFile()
-
-    cdef numpy.ndarray[numpy.npy_float32, ndim=2] float_direction_array = (
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_direction_array = (
         raster_utils.load_memory_mapped_array(
             flow_direction_uri, flow_direction_file))
+
+    dt_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dt_array = (
+        raster_utils.load_memory_mapped_array(
+            dt_uri, dt_file))
+    dt_nodata = raster_utils.get_nodata_from_uri(dt_uri)
 
 
     for row_index in range(1, n_rows):
