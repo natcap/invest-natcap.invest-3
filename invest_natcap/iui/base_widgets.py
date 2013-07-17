@@ -70,6 +70,7 @@ class DynamicElement(QtGui.QWidget):
         self.disabledBy = None
         self.enables = [] #a list of pointers
         self.disables = [] #a list of pointers
+        self.isDisabled = False #is the object disabled by an object that's 'activated'?
         self.requiredIf = [] #a list of pointers
         self.triggers = {}  # a dictionary of trigger strings -> pointers
 
@@ -136,6 +137,12 @@ class DynamicElement(QtGui.QWidget):
         return False
 
     def setState(self, state, includeSelf=True, recursive=True):
+        # If the object is being disabled by another element,
+        # don't let it get enabled. A 'disabledBy' should override
+        # an 'enabledBy'.
+        if state and self.isDisabled:
+            return
+
         self.LOGGER.debug('Setting state in %s', self.attributes['id'])
         self.LOGGER.debug('state=%s, includeSelf=%s, recursive=%s',
             state, includeSelf, recursive)
@@ -155,6 +162,7 @@ class DynamicElement(QtGui.QWidget):
                 element.setState(state)
 
             for element in self.disables:
+                element.isDisabled = state
                 element.setState(not state)
 
     def getLabel(self):
