@@ -31,7 +31,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             else:
                 self.assertDatasetEqual(workspace_dir, *filename)
 
-    def TODO_REPLACE_WITH_TEST_carbon_biophysical_sequestration_hwp(self):
+    def test_carbon_biophysical_sequestration_hwp(self):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
