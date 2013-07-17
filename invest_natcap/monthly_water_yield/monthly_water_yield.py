@@ -856,28 +856,6 @@ def calculate_direct_flow(
     monthly_water_yield_cython_core.calculate_tp(
         dem_uri, precip_uri, dt_out_uri, tp_out_uri)
 
-    dflow_nodata = raster_utils.get_nodata_from_uri(dt_out_uri)
-    no_data_list.append(dflow_nodata)
-
-    # CALCULATE TOTAL PRECIP
-    def total_precip_op(direct_pix, in_absorption_pix):
-        """Vectorize function for computing the total precipitation value
-       
-           direct_pix - a float value for the direct flow
-           in_absorption_pix - a float value for the in absorption rate
-
-           returns - total precipitation value"""
-        for pix, pix_nodata in zip(
-                [direct_pix, in_absorption_pix], no_data_list):
-            if pix == pix_nodata: 
-                return out_nodata
-        
-        return direct_pix / in_absorption_pix
-    
-    raster_utils.vectorize_datasets(
-            [dt_out_uri, in_absorption_uri], total_precip_op, tp_out_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
-
 def calculate_alphas(
         slope_uri, soil_text_uri, smax_uri, alpha_table, out_nodata, output_uri_list):
     """Calculates and creates gdal datasets for three alpha values used in
