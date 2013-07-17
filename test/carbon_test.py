@@ -91,8 +91,8 @@ do sequestration and harvested wood products on lulc maps."""
         self.assertDatasetsEqual(workspace_dir,
                                  'tot_C_cur.tif', 
                                  'tot_C_fut.tif', 
-                                 ('sequest_fut.tif', 'sequest.tif'),
-                                 ('conf_fut.tif', 'conf.tif'), 
+                                 ('sequest_base.tif', 'sequest.tif'),
+                                 ('conf_base.tif', 'conf.tif'), 
                                  'sequest_redd.tif', 
                                  'conf_redd.tif')
 
@@ -181,8 +181,8 @@ do sequestration and harvested wood products on lulc maps."""
                     # Make sure each cell contains what we expect.
                     self.assertEqual('', cells[0])
                     self.assertEqual(row_title, cells[1])
-                    self.assertAlmostEqual(first_val, float(cells[2]), places=3)
-                    self.assertAlmostEqual(second_val, float(cells[3]), places=3)
+                    self.assertAlmostEqual(first_val, float(cells[2]), places=1)
+                    self.assertAlmostEqual(second_val, float(cells[3]), places=1)
                     return
 
             # If the right row wasn't found in the summary file, then fail.
@@ -201,20 +201,20 @@ do sequestration and harvested wood products on lulc maps."""
                                  ('value_seq.tif', 'value_seq_c.tif'),
                                  'val_mask.tif',
                                  'seq_mask.tif')
-        assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.5283)
-        assertSummaryContainsRow('Baseline (confident cells only)', -4049305.95339, -77063698.7612)
+        assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.53)
+        assertSummaryContainsRow('Baseline (confident cells only)', -4049305.95339, -77063698.76)
 
         execute_model(use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir, 
-                                 ('value_seq.tif', 'value_seq_c.tif'),
-                                 'val_mask.tif',
-                                 'seq_mask.tif',
+                                 ('value_seq_base.tif', 'value_seq_c.tif'),
+                                 ('val_mask_base.tif', 'val_mask.tif'),
+                                 ('seq_mask_base.tif', 'seq_mask.tif'),
                                  'value_seq_redd.tif',
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
-        assertSummaryContainsRow('REDD policy', -848059.364479, -16139728.7175)
+        assertSummaryContainsRow('REDD policy', -848059.364479, -16139728.72)
         assertSummaryContainsRow('REDD policy (confident cells only)',
-                                 98348.6095097, 1871704.36018)
+                                 98348.6095097, 1871704.36)
         assertSummaryContainsRow('REDD policy vs Baseline',
-                                 1774622.81692, 33773376.8108)
+                                 1774622.81692, 33773376.81)
 
