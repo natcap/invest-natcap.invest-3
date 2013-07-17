@@ -49,7 +49,6 @@ def execute_30(**args):
         LOGGER.debug('creating directory %s', output_directory)
         os.makedirs(output_directory)
 
-
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
         #Convert to price per unit of Carbon do this by dividing
         #the atomic mass of CO2 (15.9994*2+12.0107) by the atomic
@@ -122,28 +121,37 @@ def _make_outfile_uris(output_directory, args):
     except KeyError:
         file_suffix = ''
 
+    def outfile_uri(prefix, scenario_type='', filetype='tif'):
+        if not args.get('sequest_redd_uri'):
+            # We're not doing REDD analysis, so don't append anything.
+            scenario_type = ''
+        elif scenario_type:
+            scenario_type = '_' + scenario_type
+        filename = '%s%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
+        return os.path.join(output_directory, filename)
+
     outfile_uris = {}
 
     # Value sequestration for base scenario.
-    outfile_uris['base_val'] = os.path.join(output_directory, 'value_seq%s.tif' % file_suffix)
+    outfile_uris['base_val'] = outfile_uri('value_seq', 'base')
 
     # Confidence-masked rasters for base scenario.
     if args.get('conf_uri'):
-        outfile_uris['base_seq_mask'] = os.path.join(output_directory, 'seq_mask%s.tif' % file_suffix)
-        outfile_uris['base_val_mask'] = os.path.join(output_directory, 'val_mask%s.tif' % file_suffix)
+        outfile_uris['base_seq_mask'] = outfile_uri('seq_mask', 'base')
+        outfile_uris['base_val_mask'] = outfile_uri('val_mask', 'base')
 
     # Outputs for REDD scenario.
     if args.get('sequest_redd_uri'):
         # Value sequestration.
-        outfile_uris['redd_val'] = os.path.join(output_directory, 'value_seq_redd%s.tif' % file_suffix)
+        outfile_uris['redd_val'] = outfile_uri('value_seq', 'redd')
 
         # Confidence-masked rasters for REDD scenario.
         if args.get('conf_redd_uri'):
-            outfile_uris['redd_seq_mask'] = os.path.join(output_directory, 'seq_mask_redd%s.tif' % file_suffix)
-            outfile_uris['redd_val_mask'] = os.path.join(output_directory, 'val_mask_redd%s.tif' % file_suffix)
+            outfile_uris['redd_seq_mask'] = outfile_uri('seq_mask', 'redd')
+            outfile_uris['redd_val_mask'] = outfile_uri('val_mask', 'redd')
 
     # HTML summary file.
-    outfile_uris['html'] = os.path.join(output_directory, 'summary%s.html' % file_suffix)
+    outfile_uris['html'] = outfile_uri('summary', filetype='html')
     
     return outfile_uris
 
