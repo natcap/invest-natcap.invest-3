@@ -46,7 +46,8 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
 
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef float tp_current
+    cdef float tp_current, tp_nodata
+    tp_nodata = -1.0
 
     #Align the input rasters so all the arrays align in the following loop
     dem_aligned_uri = raster_utils.temporary_filename()
@@ -83,7 +84,6 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
         raster_utils.load_memory_mapped_array(
             outflow_weights_uri, outflow_weights_file))
 
-
     dt_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dt_array = (
         raster_utils.load_memory_mapped_array(
@@ -95,6 +95,14 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
         raster_utils.load_memory_mapped_array(
             precip_aligned_uri, precip_file))
     precip_nodata = raster_utils.get_nodata_from_uri(precip_aligned_uri)
+
+
+    tp_data_file = tempfile.TemporaryFile()
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] tp_array = (
+        numpy.memmap(tp_data_file, dtype=numpy.float32, mode='w+',
+                     shape=(n_rows, n_cols)))
+    tp_array[:] = tp_nodata
 
     for current_row in range(1, n_rows-1):
         for current_col in range(1, n_cols-1):
@@ -122,4 +130,14 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
                     (neighbor_direction - 1) % 8):
                     outflow_weight = 1.0 - outflow_weight
 
-                tp_current += dt_current * outflow_weight
+                    tp_current += dt_current * outflow_weight
+
+            tp_array[current_row, current_col] = tp_current
+
+    raster_utils.new_raster_from_base_uri(
+        dem_aligned_uri, tp_out_uri, 'GTiff', tp_nodata,
+        gdal.GDT_Float32)
+
+    tp_dataset = gdal.Open(tp_out_uri, gdal.GA_Update)
+    tp_band = tp_dataset.GetRasterBand(1)
+    tp_band.WriteArray(tp_array)
