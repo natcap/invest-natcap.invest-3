@@ -176,17 +176,18 @@ do sequestration and harvested wood products on lulc maps."""
                     cells = row.split('<td>')
                     
                     # Strip off the '<td>' and '<tr>' artifacts from the strings
-                    cells = map(lambda cell: re.sub(r'</?td>|</?tr>', r'', cell), cells)
+                    cells = map(lambda cell: re.sub(r'<[^>]*>', '', cell), cells)
 
                     # Make sure each cell contains what we expect.
                     self.assertEqual('', cells[0])
                     self.assertEqual(row_title, cells[1])
-                    self.assertAlmostEqual(first_val, float(cells[2]))
-                    self.assertAlmostEqual(second_val, float(cells[3]))
+                    self.assertAlmostEqual(first_val, float(cells[2]), places=3)
+                    self.assertAlmostEqual(second_val, float(cells[3]), places=3)
                     return
 
             # If the right row wasn't found in the summary file, then fail.
-            self.fail()
+            self.fail('Row with title \'%s\' not found in the HTML summary file.' 
+                      % row_title)
 
 
         execute_model()
@@ -200,5 +201,5 @@ do sequestration and harvested wood products on lulc maps."""
                                  ('value_seq.tif', 'value_seq_c.tif'),
                                  'val_mask.tif',
                                  'seq_mask.tif')
-
         assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.5283)
+        assertSummaryContainsRow('Baseline (confident cells only)', -4049305.95339, -77063698.7612)
