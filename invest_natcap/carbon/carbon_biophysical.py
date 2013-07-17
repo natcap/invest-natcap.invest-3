@@ -153,7 +153,7 @@ def execute_30(**args):
                     return pools[lulc]['variance_%s' % lulc_uri]
                 variance_out_uri = outfile_uri(
                     'variance_C', scenario_type, dirtype='intermediate')
-                out_file_names['variance_C_%s' % scenario_type] = variance_out_uri
+                out_file_names['variance_C_%s' % scenario_type] = dataset_out_uri #TODO replace variance_out_uri
                 
                 # Create a raster that models variance in carbon storage per pixel.
                 raster_utils.vectorize_datasets(
