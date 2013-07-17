@@ -187,7 +187,7 @@ def execute(args):
             key=lambda x: datetime.datetime.strptime(x, '%m/%Y'))
 
     precip_uri = os.path.join(intermediate_dir, 'precip.tif')
-   
+    
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
     in_source_uri = os.path.join(intermediate_dir, 'in_source.tif')
@@ -837,8 +837,8 @@ def calculate_direct_flow(
            in_absorption_pix - a float value for the in absorption rate
 
            returns - in source value"""
-        for pix in [precip_pix, in_absorption_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip([precip_pix, in_absorption_pix], no_data_list):
+            if pix == pix_nodata:
                 return out_nodata
         
         return precip_pix * in_absorption_pix
