@@ -33,7 +33,7 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
 
         returns nothing"""
         
-    cdef int current_row, current_col, neighbor_row, neighbor_col
+    cdef int current_row, current_col, neighbor_row, neighbor_col, neighbor_direction
     cdef int n_cols, n_rows
 
     #Diagonal offsets are based off the following index notation for neighbors
@@ -46,8 +46,8 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
 
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef float tp_current, tp_nodata
-    tp_nodata = -1.0
+    cdef float tp_current, precip_nodata, dt_current, outflow_weight
+    cdef float tp_nodata = -1.0
 
     #Align the input rasters so all the arrays align in the following loop
     dem_aligned_uri = raster_utils.temporary_filename()
@@ -69,7 +69,7 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
         dem_aligned_uri)
 
     outflow_direction_dataset = gdal.Open(outflow_direction_uri)
-    outflow_direction_nodata = raster_utils.get_nodata_from_uri(
+    cdef float outflow_direction_nodata = raster_utils.get_nodata_from_uri(
         outflow_direction_uri)
     n_cols = outflow_direction_dataset.RasterXSize
     n_rows = outflow_direction_dataset.RasterYSize
@@ -88,7 +88,7 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dt_array = (
         raster_utils.load_memory_mapped_array(
             dt_aligned_uri, dt_file))
-    dt_nodata = raster_utils.get_nodata_from_uri(dt_aligned_uri)
+    cdef float dt_nodata = raster_utils.get_nodata_from_uri(dt_aligned_uri)
 
     precip_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] precip_array = (
@@ -123,6 +123,8 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
                     continue
 
                 dt_current = dt_array[neighbor_row, neighbor_col]
+                if dt_current == dt_nodata:
+                    continue
 
                 outflow_weight = (
                     outflow_weights_array[neighbor_row, neighbor_col])
@@ -130,7 +132,7 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
                     (neighbor_direction - 1) % 8):
                     outflow_weight = 1.0 - outflow_weight
 
-                    tp_current += dt_current * outflow_weight
+                tp_current += dt_current * outflow_weight
 
             tp_array[current_row, current_col] = tp_current
 
