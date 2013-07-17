@@ -238,8 +238,7 @@ def execute_30(**args):
                 #         -1 if we're confident storage will decrease,
                 #         0 if we're not confident either way.
                 def confidence_op(c_cur, c_fut, var_cur, var_fut):
-                    for val in [c_cur, c_fut, var_cur, var_fut]:
-                        if val == nodata_out or val < 0:
+                    if nodata_out in [c_cur, c_fut, var_cur, var_fut]:
                             return nodata_out
 
                     if var_cur == 0 and var_fut == 0:

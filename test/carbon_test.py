@@ -69,6 +69,9 @@ do sequestration and harvested wood products on lulc maps."""
             if suffix:
                 args['suffix'] = suffix
 
+            if do_redd and do_hwp:
+                self.fail('The model doesn\'t currently support REDD analysis with HWP!')
+
             carbon_biophysical.execute(args)
 
         # Make sure nothing breaks when we run the model with the bare minimum.
@@ -87,7 +90,7 @@ do sequestration and harvested wood products on lulc maps."""
                                  ('sequest_fut.tif', 'sequest.tif'),
                                  ('conf_fut.tif', 'conf.tif'))
 
-        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, do_redd=True)
+        execute_model(do_sequest=True, use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir,
                                  'tot_C_cur.tif', 
                                  'tot_C_fut.tif', 
