@@ -1078,14 +1078,13 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         e_val = b_pix * e_pix
 
         #Only want to perform these operation if there is data in the cell, else
-        #we end up with false positive data when we subtract 1. If we have
-        #gotten here, we know that e_pix != 0. Just need to check for c_pix.
-        if not c_pix == 0.:
-            c_val = c_pix - 1
-        else:
+        #we end up with false positive data when we subtract 1. 
+        if c_pix == 0. and e_pix == 0.:
             c_val = 0.
-
-        e_val -= 1
+            e_val = 0.
+        else:
+            c_val = c_pix - 1
+            e_val -= 1
 
         #Now square both.
         c_val = c_val ** 2
@@ -1097,7 +1096,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         return value
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
-                    combine_risk_euc, risk_uri, gdal.GDT_Float32, base_nodata, grid_size,
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., grid_size,
                     "union", resample_method_list=None, 
                     dataset_to_align_index=None, aoi_uri=None)
 
@@ -1488,7 +1487,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         base_ds_uri = h_s_e[pair]['DS']
         base_nodata = raster_utils.get_nodata_from_uri(base_ds_uri)
         base_pixel_size = raster_utils.get_cell_size_from_uri(base_ds_uri)
-        
+    
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the 
         #spatially explicit criteria later. Should be okay, as long as we keep
@@ -1512,7 +1511,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
             denoms['Risk']['h_s_e'][pair] += 1 / float(dq*w)
-        
+    
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.
         #Instead, want to only have the crit_rate_numerator where data

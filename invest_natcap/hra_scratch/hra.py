@@ -438,7 +438,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
        
         #Right now, our nodata is -1, and data is 1. Need to make it so nodata is
         #0 to be swapped on the next line.
-        swp_array[swp_array == -1.] = 0.
+        base_array[base_array == -1.] = 0.
 
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
