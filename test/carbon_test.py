@@ -4,6 +4,7 @@ import os
 import sys
 import unittest
 import logging
+import re
 
 from nose.plugins.skip import SkipTest
 
@@ -30,7 +31,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             else:
                 self.assertDatasetEqual(workspace_dir, *filename)
 
-    def test_carbon_biophysical_sequestration_hwp(self):
+    def TODO_REPLACE_WITH_TEST_carbon_biophysical_sequestration_hwp(self):
         """Test for carbon_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
@@ -162,8 +163,42 @@ do sequestration and harvested wood products on lulc maps."""
 
             carbon_valuation.execute(args)
 
+        def assertSummaryContainsRow(row_title, first_val, second_val):
+            '''Asserts that the HTML summary file contains the given row.'''
+            filename = os.path.join(workspace_dir, 'output', 'summary.html')
+            summary = open(filename, 'r').read()
+            rows = summary.split('<tr>')
+            row_title_cell = '<td>%s</td>' % row_title
+            for row in rows:
+                # Check if this is the row we're looking for.
+                if row_title_cell in row:
+                    # Split the row into its cells
+                    cells = row.split('<td>')
+                    
+                    # Strip off the '<td>' and '<tr>' artifacts from the strings
+                    cells = map(lambda cell: re.sub(r'</?td>|</?tr>', r'', cell), cells)
+
+                    # Make sure each cell contains what we expect.
+                    self.assertEqual('', cells[0])
+                    self.assertEqual(row_title, cells[1])
+                    self.assertAlmostEqual(first_val, float(cells[2]))
+                    self.assertAlmostEqual(second_val, float(cells[3]))
+                    return
+
+            # If the right row wasn't found in the summary file, then fail.
+            self.fail()
+
+
         execute_model()
         self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c.tif')
 
         execute_model(carbon_units='Carbon Dioxide (CO2)')
-        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c02.tif')
+        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c02.tif')            
+
+        execute_model(use_uncertainty=True)
+        self.assertDatasetsEqual(workspace_dir, 
+                                 ('value_seq.tif', 'value_seq_c.tif'),
+                                 'val_mask.tif',
+                                 'seq_mask.tif')
+
+        assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.5283)
