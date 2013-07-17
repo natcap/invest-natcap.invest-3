@@ -273,6 +273,7 @@ def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri,
         gdal.GDT_Float32, nodata_source, out_pixel_size, "intersection",
         dataset_to_align_index=0)
 
+
 def calculate_stream(dem_uri, flow_threshold, stream_uri):
     """A wrapper to calculate streams given a dem and a flow threshold.
         The function will calcluate the flow accumulation then threshold
