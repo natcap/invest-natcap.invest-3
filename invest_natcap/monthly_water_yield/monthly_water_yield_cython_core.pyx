@@ -78,6 +78,12 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
         raster_utils.load_memory_mapped_array(
             outflow_direction_uri, outflow_direction_file))
 
+    outflow_weights_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] outflow_weights_array = (
+        raster_utils.load_memory_mapped_array(
+            outflow_weights_uri, outflow_weights_file))
+
+
     dt_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dt_array = (
         raster_utils.load_memory_mapped_array(
@@ -103,10 +109,17 @@ def calculate_tp(dem_uri, precip_uri, dt_uri, tp_out_uri):
                     outflow_direction_array[neighbor_row, neighbor_col])
                 if neighbor_direction == outflow_direction_nodata:
                     continue
-
                 if (inflow_offsets[direction_index] != neighbor_direction and 
                     inflow_offsets[direction_index] != (neighbor_direction - 1) % 8):
                     #then neighbor doesn't inflow into current cell
                     continue
 
                 dt_current = dt_array[neighbor_row, neighbor_col]
+
+                outflow_weight = (
+                    outflow_weights_array[neighbor_row, neighbor_col])
+                if (inflow_offsets[direction_index] == 
+                    (neighbor_direction - 1) % 8):
+                    outflow_weight = 1.0 - outflow_weight
+
+                tp_current += dt_current * outflow_weight
