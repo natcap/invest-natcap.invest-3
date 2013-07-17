@@ -395,8 +395,10 @@ def calculate_soil_stoarge(
             streamflow_pix - a float value for the streamflow
             returns - the current soil storage
         """
-        for pix in [prev_soil_pix, water_pix, evap_pix, streamflow_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [prev_soil_pix, water_pix, evap_pix, streamflow_pix],
+                no_data_list):
+            if pix == pix_nodata:
                 return out_nodata
 
         return prev_soil_pix + water_pix - evap_pix - streamflow_pix
@@ -441,8 +443,9 @@ def calculate_streamflow(
 
             returns - the baseflow value
         """
-        for pix in [dflow_pix, interflow_pix, baseflow_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [dflow_pix, interflow_pix, baseflow_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
 
         return dflow_pix + interflow_pix + baseflow_pix 
@@ -479,8 +482,8 @@ def calculate_in_absorption_rate(
             alpha_pix - a float value for the alpha coefficients
 
             returns - in absorption rate value"""
-        for pix in [imperv_pix, alpha_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip([imperv_pix, alpha_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
 
         return imperv_pix + (1.0 - imperv_pix) * alpha_pix
@@ -540,9 +543,10 @@ def calculate_final_interflow(
 
             returns - the interflow value
         """
-        for pix in [dflow_pix, soil_pix, evap_pix, bflow_pix, smax_pix,
-                water_pix, inter_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [dflow_pix, soil_pix, evap_pix, bflow_pix, smax_pix, water_pix,
+                    inter_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
         
         conditional = (
@@ -595,8 +599,8 @@ def calculate_baseflow(
 
             returns - the baseflow value
         """
-        for pix in [alpha_pix, soil_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip([alpha_pix, soil_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
 
         return alpha_pix * soil_pix**beta
@@ -646,8 +650,9 @@ def calculate_intermediate_interflow(
 
             returns - the interflow value
         """
-        for pix in [alpha_pix, soil_pix, water_pix, evap_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [alpha_pix, soil_pix, water_pix, evap_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
        
         try:
@@ -698,8 +703,9 @@ def calculate_water_amt(
             alpha_pix - a float value for the alpha variable
 
             returns - value for water"""
-        for pix in [imperv_pix, alpha_pix, precip_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [imperv_pix, alpha_pix, precip_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
 
         return (1 - imperv_pix) * (1 - alpha_pix) * precip_pix
@@ -751,8 +757,8 @@ def calculate_evaporation(
 
             returns - a float value for ETc"""
 
-        for pix in [pet_pix, etk_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip([pet_pix, etk_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
     
         return pet_pix * etk_pix
@@ -775,8 +781,9 @@ def calculate_evaporation(
 
             returns - the actual evaporation value
         """
-        for pix in [water_pix, soil_pix, etc_pix, pawc_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [water_pix, soil_pix, etc_pix, pawc_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
         
         if water_pix < etc_pix:
@@ -860,8 +867,9 @@ def calculate_direct_flow(
            in_absorption_pix - a float value for the in absorption rate
 
            returns - total precipitation value"""
-        for pix in [direct_pix, in_absorption_pix]:
-            if pix in no_data_list:
+        for pix, pix_nodata in zip(
+                [direct_pix, in_absorption_pix], no_data_list):
+            if pix == pix_nodata: 
                 return out_nodata
         
         return direct_pix / in_absorption_pix
