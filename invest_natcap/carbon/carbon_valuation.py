@@ -187,7 +187,12 @@ def _create_html_summary(outfile_uris, sequest_uris):
     def write_bold_row(cells):
         write_row("<strong>" + str(cell) + "</strong>" for cell in cells)
 
-    write_bold_row(["Scenario", "Change in Carbon Stocks", "Net Present Value"])
+    def format_currency(val):
+        return '%.2f' % val
+
+    write_bold_row(["Scenario", 
+                    "Change in Carbon Stocks (Mg of carbon)",
+                    "Net Present Value (USD)"])
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
@@ -200,7 +205,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
         total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uris[scenario_type])
         total_val = carbon_utils.sum_pixel_values_from_uri(outfile_uris['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        write_row([scenario_name, total_seq, total_val])
+        write_row([scenario_name, total_seq, format_currency(total_val)])
 
         if ('%s_seq_mask' % scenario_type) in outfile_uris:
             # Compute output for confidence-masked data.
@@ -209,18 +214,21 @@ def _create_html_summary(outfile_uris, sequest_uris):
             masked_val = carbon_utils.sum_pixel_values_from_uri(
                 outfile_uris['%s_val_mask' % scenario_type])
             scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
-            write_row(['%s (confident cells only)' % scenario_name, masked_seq, masked_val])
+            write_row(['%s (confident cells only)' % scenario_name, 
+                       masked_seq, 
+                       format_currency(masked_val)])
 
     # Compute comparison data between scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
         write_row([' ', ' ', ' '])
-        write_bold_row(["Scenario Comparison", "Difference in Carbon Stocks",
-                        "Difference in Net Present Value"])
+        write_bold_row(["Scenario Comparison", 
+                        "Difference in Carbon Stocks (Mg of carbon)",
+                        "Difference in Net Present Value (USD)"])
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
         write_row(['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
                    redd_results[0] - base_results[0], # subtract carbon amounts
-                   redd_results[1] - base_results[1]  # subtract value
+                   format_currency(redd_results[1] - base_results[1])  # subtract value
                    ])
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
             base_mask_results = scenario_results['base_mask']
@@ -228,7 +236,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
             write_row(['%s vs %s (confident cells only)'
                            % (scenario_names['redd'], scenario_names['base']),
                        redd_mask_results[0] - base_mask_results[0], # subtract carbon amounts
-                       redd_mask_results[1] - base_mask_results[1]  # subtract value
+                       format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
                        ])
 
 
