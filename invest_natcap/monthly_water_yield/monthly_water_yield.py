@@ -523,7 +523,7 @@ def calculate_final_interflow(
         returns - nothing"""
     
     no_data_list = []
-    for raster_uri in [dflow_uri, soil_storage_uri, evap_uri, baseflow_uri,
+    for raster_uri in [soil_storage_uri, dflow_uri, evap_uri, baseflow_uri,
             smax_uri, water_uri, intermediate_interflow_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
@@ -544,7 +544,7 @@ def calculate_final_interflow(
             returns - the interflow value
         """
         for pix, pix_nodata in zip(
-                [dflow_pix, soil_pix, evap_pix, bflow_pix, smax_pix, water_pix,
+                [soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix, water_pix,
                     inter_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
@@ -691,7 +691,7 @@ def calculate_water_amt(
         returns - nothing
     """
     no_data_list = []
-    for raster_uri in [imperv_area_uri, total_precip_uri, alpha_one_uri]:
+    for raster_uri in [imperv_area_uri, alpha_one_uri, total_precip_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
@@ -743,10 +743,9 @@ def calculate_evaporation(
 
         returns - nothing
     """
-    no_data_list = []
-    for raster_uri in [soil_storage_uri, pawc_uri, water_uri]:
-        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
-        no_data_list.append(uri_nodata)
+
+    pet_nodata = raster_utils.get_nodata_from_uri(pet_uri)
+    etk_nodata = raster_utils.get_nodata_from_uri(etk_uri)
 
     def etc_op(pet_pix, etk_pix):
         """Vectorize operation for calculating the plant potential
@@ -757,9 +756,8 @@ def calculate_evaporation(
 
             returns - a float value for ETc"""
 
-        for pix, pix_nodata in zip([pet_pix, etk_pix], no_data_list):
-            if pix == pix_nodata: 
-                return out_nodata
+        if pet_pix == pet_nodata or etk_pix == etk_nodata:
+            return out_nodata
     
         return pet_pix * etk_pix
 
@@ -791,6 +789,11 @@ def calculate_evaporation(
                     math.expm1(-1 * ((etc_pix - water_pix) / pawc_pix)))
         else:
             return etc_pix
+    
+    no_data_list = []
+    for raster_uri in [water_uri, soil_storage_uri, etc_uri, pawc_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
         
     raster_utils.vectorize_datasets(
             [water_uri, soil_storage_uri, etc_uri, pawc_uri], actual_evap,
@@ -821,7 +824,7 @@ def calculate_direct_flow(
         returns - Nothing
     """
     no_data_list = []
-    for raster_uri in [in_absorption_uri, dem_uri, precip_uri]:
+    for raster_uri in [precip_uri, in_absorption_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
