@@ -49,7 +49,6 @@ def execute_30(**args):
         LOGGER.debug('creating directory %s', output_directory)
         os.makedirs(output_directory)
 
-
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
         #Convert to price per unit of Carbon do this by dividing
         #the atomic mass of CO2 (15.9994*2+12.0107) by the atomic
@@ -122,28 +121,37 @@ def _make_outfile_uris(output_directory, args):
     except KeyError:
         file_suffix = ''
 
+    def outfile_uri(prefix, scenario_type='', filetype='tif'):
+        if not args.get('sequest_redd_uri'):
+            # We're not doing REDD analysis, so don't append anything.
+            scenario_type = ''
+        elif scenario_type:
+            scenario_type = '_' + scenario_type
+        filename = '%s%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
+        return os.path.join(output_directory, filename)
+
     outfile_uris = {}
 
     # Value sequestration for base scenario.
-    outfile_uris['base_val'] = os.path.join(output_directory, 'value_seq%s.tif' % file_suffix)
+    outfile_uris['base_val'] = outfile_uri('value_seq', 'base')
 
     # Confidence-masked rasters for base scenario.
     if args.get('conf_uri'):
-        outfile_uris['base_seq_mask'] = os.path.join(output_directory, 'seq_mask%s.tif' % file_suffix)
-        outfile_uris['base_val_mask'] = os.path.join(output_directory, 'val_mask%s.tif' % file_suffix)
+        outfile_uris['base_seq_mask'] = outfile_uri('seq_mask', 'base')
+        outfile_uris['base_val_mask'] = outfile_uri('val_mask', 'base')
 
     # Outputs for REDD scenario.
     if args.get('sequest_redd_uri'):
         # Value sequestration.
-        outfile_uris['redd_val'] = os.path.join(output_directory, 'value_seq_redd%s.tif' % file_suffix)
+        outfile_uris['redd_val'] = outfile_uri('value_seq', 'redd')
 
         # Confidence-masked rasters for REDD scenario.
         if args.get('conf_redd_uri'):
-            outfile_uris['redd_seq_mask'] = os.path.join(output_directory, 'seq_mask_redd%s.tif' % file_suffix)
-            outfile_uris['redd_val_mask'] = os.path.join(output_directory, 'val_mask_redd%s.tif' % file_suffix)
+            outfile_uris['redd_seq_mask'] = outfile_uri('seq_mask', 'redd')
+            outfile_uris['redd_val_mask'] = outfile_uri('val_mask', 'redd')
 
     # HTML summary file.
-    outfile_uris['html'] = os.path.join(output_directory, 'summary%s.html' % file_suffix)
+    outfile_uris['html'] = outfile_uri('summary', filetype='html')
     
     return outfile_uris
 
@@ -187,7 +195,12 @@ def _create_html_summary(outfile_uris, sequest_uris):
     def write_bold_row(cells):
         write_row("<strong>" + str(cell) + "</strong>" for cell in cells)
 
-    write_bold_row(["Scenario", "Change in Carbon Stocks", "Net Present Value"])
+    def format_currency(val):
+        return '%.2f' % val
+
+    write_bold_row(["Scenario", 
+                    "Change in Carbon Stocks (Mg of carbon)",
+                    "Net Present Value (USD)"])
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
@@ -200,7 +213,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
         total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uris[scenario_type])
         total_val = carbon_utils.sum_pixel_values_from_uri(outfile_uris['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        write_row([scenario_name, total_seq, total_val])
+        write_row([scenario_name, total_seq, format_currency(total_val)])
 
         if ('%s_seq_mask' % scenario_type) in outfile_uris:
             # Compute output for confidence-masked data.
@@ -209,18 +222,21 @@ def _create_html_summary(outfile_uris, sequest_uris):
             masked_val = carbon_utils.sum_pixel_values_from_uri(
                 outfile_uris['%s_val_mask' % scenario_type])
             scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
-            write_row(['%s (confident cells only)' % scenario_name, masked_seq, masked_val])
+            write_row(['%s (confident cells only)' % scenario_name, 
+                       masked_seq, 
+                       format_currency(masked_val)])
 
     # Compute comparison data between scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
         write_row([' ', ' ', ' '])
-        write_bold_row(["Scenario Comparison", "Difference in Carbon Stocks",
-                        "Difference in Net Present Value"])
+        write_bold_row(["Scenario Comparison", 
+                        "Difference in Carbon Stocks (Mg of carbon)",
+                        "Difference in Net Present Value (USD)"])
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
         write_row(['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
                    redd_results[0] - base_results[0], # subtract carbon amounts
-                   redd_results[1] - base_results[1]  # subtract value
+                   format_currency(redd_results[1] - base_results[1])  # subtract value
                    ])
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
             base_mask_results = scenario_results['base_mask']
@@ -228,7 +244,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
             write_row(['%s vs %s (confident cells only)'
                            % (scenario_names['redd'], scenario_names['base']),
                        redd_mask_results[0] - base_mask_results[0], # subtract carbon amounts
-                       redd_mask_results[1] - base_mask_results[1]  # subtract value
+                       format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
                        ])
 
 
