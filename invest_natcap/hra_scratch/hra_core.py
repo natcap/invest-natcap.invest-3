@@ -1528,6 +1528,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 return base_nodata
             else:
                 return crit_rate_numerator
+        LOGGER.debug("BASE DS URI: %s ", base_ds_uri)
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
