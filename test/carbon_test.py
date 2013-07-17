@@ -31,9 +31,8 @@ class TestCarbonBiophysical(unittest.TestCase):
             else:
                 self.assertDatasetEqual(workspace_dir, *filename)
 
-    def test_carbon_biophysical_sequestration_hwp(self):
-        """Test for carbon_biophysical function running with sample input to \
-do sequestration and harvested wood products on lulc maps."""
+    def test_carbon_biophysical_sequestration(self):
+        """Test for carbon_biophysical function with various parameters."""
 
         workspace_dir = './invest-data/test/data/test_out/carbon_output'
 
@@ -69,41 +68,44 @@ do sequestration and harvested wood products on lulc maps."""
             if suffix:
                 args['suffix'] = suffix
 
+            if do_redd and do_hwp:
+                self.fail('The model doesn\'t currently support REDD analysis with HWP!')
+
             carbon_biophysical.execute(args)
 
         # Make sure nothing breaks when we run the model with the bare minimum.
         execute_model()
 
-        execute_model(do_sequest=True, do_hwp=True)
+        execute_model(do_sequest=True, do_hwp=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur.tif', 
-                                 'tot_C_fut.tif', 
-                                 ('sequest_fut.tif', 'sequest.tif'))
+                                 'tot_C_cur_hwp.tif', 
+                                 'tot_C_fut_hwp.tif', 
+                                 'sequest_fut_hwp.tif')
         
-        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True)
+        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur.tif', 
-                                 'tot_C_fut.tif', 
-                                 ('sequest_fut.tif', 'sequest.tif'),
-                                 ('conf_fut.tif', 'conf.tif'))
+                                 'tot_C_cur_hwp.tif', 
+                                 'tot_C_fut_hwp.tif', 
+                                 'sequest_fut_hwp.tif',
+                                 'conf_fut_hwp.tif')
 
-        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, do_redd=True)
+        execute_model(do_sequest=True, use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur.tif', 
-                                 'tot_C_fut.tif', 
-                                 ('sequest_base.tif', 'sequest.tif'),
-                                 ('conf_base.tif', 'conf.tif'), 
-                                 'sequest_redd.tif', 
-                                 'conf_redd.tif')
+                                'tot_C_cur.tif',
+                                'tot_C_base.tif',
+                                'tot_C_redd.tif',
+                                'sequest_base.tif',
+                                'conf_base.tif',
+                                'sequest_redd.tif',
+                                'conf_redd.tif')
 
         execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
         self.assertDatasetEqual(workspace_dir,
                                 'tot_C_cur_foo_bar.tif', 
-                                'tot_C_cur.tif')
+                                'tot_C_cur_hwp.tif')
 
     def test_carbon_biophysical_uk(self):
-        """Test for carbon_biophysical function running with sample input to \
-do sequestration and harvested wood products on lulc maps."""
+        """Test carbon_biophysical function for UK data."""
 
         args = {}
         args['workspace_dir'] = './invest-data/test/data/test_out/carbon_uk_output'
@@ -141,7 +143,7 @@ do sequestration and harvested wood products on lulc maps."""
         def execute_model(carbon_units='Carbon', do_redd=False, use_uncertainty=False):
             args = {}
             args['workspace_dir'] = workspace_dir
-            args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest.tif'
+            args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
             args['V'] = 43.0
             args['r'] = 7.0
             args['c'] = 0.0

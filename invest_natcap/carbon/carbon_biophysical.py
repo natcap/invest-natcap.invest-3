@@ -153,7 +153,7 @@ def execute_30(**args):
                     return pools[lulc]['variance_%s' % lulc_uri]
                 variance_out_uri = outfile_uri(
                     'variance_C', scenario_type, dirtype='intermediate')
-                out_file_names['variance_C_%s' % scenario_type] = dataset_out_uri #TODO replace variance_out_uri
+                out_file_names['variance_C_%s' % scenario_type] = variance_out_uri
                 
                 # Create a raster that models variance in carbon storage per pixel.
                 raster_utils.vectorize_datasets(
@@ -238,8 +238,7 @@ def execute_30(**args):
                 #         -1 if we're confident storage will decrease,
                 #         0 if we're not confident either way.
                 def confidence_op(c_cur, c_fut, var_cur, var_fut):
-                    for val in [c_cur, c_fut, var_cur, var_fut]:
-                        if val == nodata_out or val < 0:
+                    if nodata_out in [c_cur, c_fut, var_cur, var_fut]:
                             return nodata_out
 
                     if var_cur == 0 and var_fut == 0:
