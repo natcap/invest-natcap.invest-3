@@ -203,3 +203,18 @@ do sequestration and harvested wood products on lulc maps."""
                                  'seq_mask.tif')
         assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.5283)
         assertSummaryContainsRow('Baseline (confident cells only)', -4049305.95339, -77063698.7612)
+
+        execute_model(use_uncertainty=True, do_redd=True)
+        self.assertDatasetsEqual(workspace_dir, 
+                                 ('value_seq.tif', 'value_seq_c.tif'),
+                                 'val_mask.tif',
+                                 'seq_mask.tif',
+                                 'value_seq_redd.tif',
+                                 'val_mask_redd.tif',
+                                 'seq_mask_redd.tif')
+        assertSummaryContainsRow('REDD policy', -848059.364479, -16139728.7175)
+        assertSummaryContainsRow('REDD policy (confident cells only)',
+                                 98348.6095097, 1871704.36018)
+        assertSummaryContainsRow('REDD policy vs Baseline',
+                                 1774622.81692, 33773376.8108)
+
