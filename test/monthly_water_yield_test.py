@@ -26,7 +26,7 @@ class TestMonthlyWaterYield(unittest.TestCase):
     def test_monthly_water_yield_construct_step_data(self):
         """A unit test for constructing the dictionary from step data
         """
-        #raise SkipTest
+        raise SkipTest
         test_dir = './invest-data/test/data/monthly_water_yield'
         output_dir = './invest-data/test/data/test_out/monthly_water_yield/construct_step_data'
         raster_utils.create_directories([output_dir])
@@ -67,7 +67,7 @@ class TestMonthlyWaterYield(unittest.TestCase):
         """A regression test for creating the alpha rasters
         """
 
-        #raise SkipTest
+        raise SkipTest
         test_dir = './invest-data/test/data/monthly_water_yield'
         output_dir = './invest-data/test/data/test_out/monthly_water_yield/create_alphas'
         regression_dir = os.path.join(test_dir, 'regression')
