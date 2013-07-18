@@ -42,9 +42,6 @@ def execute(args):
         
         args[soil_max_uri] - a uri to a gdal raster for soil max
         
-        args[pawc_uri] - a uri to a gdal raster for plant available water
-            content
-        
         args[soil_texture_uri] - a uri to a gdal raster for soil texture
 
         args[lulc_uri] - a URI to a gdal raster for the landuse landcover map
@@ -77,7 +74,6 @@ def execute(args):
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
     soil_text_uri = args['soil_texture_uri']
-    pawc_uri = args['pawc_uri']
     lulc_uri = args['lulc_uri']
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
@@ -239,7 +235,7 @@ def execute(args):
         # Calculate Evaopration
         clean_uri([evap_uri, etc_uri])
         calculate_evaporation(
-                soil_storage_uri, pawc_uri, water_uri, eto_uri, etk_uri,
+                soil_storage_uri, smax_uri, water_uri, eto_uri, etk_uri,
                 evap_uri, etc_uri, float_nodata)
         
         # Calculate Intermediate Interflow
@@ -718,14 +714,14 @@ def calculate_water_amt(
             'intersection')
 
 def calculate_evaporation(
-        soil_storage_uri, pawc_uri, water_uri, eto_uri, etk_uri, evap_uri,
+        soil_storage_uri, smax_uri, water_uri, eto_uri, etk_uri, evap_uri,
         etc_uri, out_nodata):
     """This function calculates the actual evaporation
 
         soil_storage_uri - a URI to a gdal dataset for the previous time steps
             soil water content
         
-        pawc_uri - a URI to a gdal dataset for plant available water conent
+        smax_uri - a URI to a gdal dataset for soil maximum water content
         
         water_uri - a URI to a gdal dataset for the W
         
@@ -767,7 +763,7 @@ def calculate_evaporation(
             [eto_uri, etk_uri], etc_op, etc_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
     
-    def actual_evap(water_pix, soil_pix, etc_pix, pawc_pix):
+    def actual_evap(water_pix, soil_pix, etc_pix, smax_pix):
         """Vectorize Operation for computing actual evaporation
 
             water_pix - a float for the water value
@@ -775,28 +771,28 @@ def calculate_evaporation(
                 time step
             etc_pix - a float for the plant potential evapotranspiration rate
                 value
-            pawc_pix - a float value for the plant available water content
+            smax_pix - a float value for the plant available water content
 
             returns - the actual evaporation value
         """
         for pix, pix_nodata in zip(
-                [water_pix, soil_pix, etc_pix, pawc_pix], no_data_list):
+                [water_pix, soil_pix, etc_pix, smax_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
         
         if water_pix < etc_pix:
             return water_pix + soil_pix * math.fabs(
-                    math.expm1(-1 * ((etc_pix - water_pix) / pawc_pix)))
+                    math.expm1(-1 * ((etc_pix - water_pix) / smax_pix)))
         else:
             return etc_pix
     
     no_data_list = []
-    for raster_uri in [water_uri, soil_storage_uri, etc_uri, pawc_uri]:
+    for raster_uri in [water_uri, soil_storage_uri, etc_uri, smax_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
         
     raster_utils.vectorize_datasets(
-            [water_uri, soil_storage_uri, etc_uri, pawc_uri], actual_evap,
+            [water_uri, soil_storage_uri, etc_uri, smax_uri], actual_evap,
             evap_uri, gdal.GDT_Float32, out_nodata, cell_size,
             'intersection')
 
