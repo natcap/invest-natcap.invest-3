@@ -122,8 +122,10 @@ def _make_outfile_uris(output_directory, args):
         file_suffix = ''
 
     def outfile_uri(prefix, scenario_type='', filetype='tif'):
+        '''Create the URI for the appropriate output file.'''
         if not args.get('sequest_redd_uri'):
-            # We're not doing REDD analysis, so don't append anything.
+            # We're not doing REDD analysis, so don't append anything,
+            # since there's only one scenario.
             scenario_type = ''
         elif scenario_type:
             scenario_type = '_' + scenario_type
