@@ -47,15 +47,6 @@
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
-                    "id" : "pawc",
-                    "args_id" : "pawc_uri",
-                    "type": "file",
-                    "label": "Plant Available Water Content (PAWC)",
-                    "defaultValue": "",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"}
-                },
-                {        
                     "id" : "soil_texture",
                     "args_id" : "soil_texture_uri",
                     "type": "file",
