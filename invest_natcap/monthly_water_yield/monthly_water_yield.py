@@ -3,19 +3,14 @@ import math
 import os.path
 import logging
 import csv
-import datetime
 import re
 import shutil
 
-from osgeo import osr
 from osgeo import gdal
-from osgeo import ogr
-import numpy as np
 #required for py2exe to build
 from scipy.sparse.csgraph import _validation
 
 from invest_natcap import raster_utils
-from invest_natcap.invest_core import fileio
 from invest_natcap.routing import routing_utils
 import monthly_water_yield_cython_core
 
@@ -81,8 +76,10 @@ def execute(args):
     
     try:
         sub_shed_uri = args['sub_watersheds_uri']
+        sub_shed_table_uri = os.path.join(
+                intermediate_dir, 'sub_shed_table.csv')
         sub_shed_present = True
-    except:
+    except KeyError:
         LOGGER.info('Sub Watersheds Not Provided')
         sub_shed_present = False
 
@@ -156,7 +153,6 @@ def execute(args):
     # Create individual CSV URIs for each shed / sub-shed based on the water /
     # sub-watershed ID's. Store these URIs in a dictionary mapping to their
     # respective shed / sub-shed ID's
-    csv_shed_dict = {}
     field_list = ['Streamflow', 'Soil Storage']    
     shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
@@ -165,12 +161,17 @@ def execute(args):
     
     LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
 
-    csv_uri = os.path.join(intermediate_dir, 'watershed_table.csv')
-    clean_uri([csv_uri])
+    if sub_shed_present:
+        sub_shed_dict = raster_utils.extract_datasource_table_by_key(
+            sub_shed_uri, 'subws_id')
+        
+        sub_shed_field_list = ['Date']
+        for key in sub_shed_dict.iterkeys():
+            for field in field_list:
+                sub_shed_field_list.append(field + ' ' + str(key))
+        
+        LOGGER.debug('Automatically Gen Sub Field List %s', sub_shed_field_list) 
 
-    # Define the column header for the output CSV files
-    column_header = ['Date', 'Streamflow', 'Soil Storage']
-    
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
     list_of_months = precip_data_dict.keys()
@@ -194,15 +195,13 @@ def execute(args):
     streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
 
     for cur_month in list_of_months:
-        out_dict = {}
-        out_dict['Date'] = cur_month
-
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
         eto_params = (eto_data_dict[cur_month], 'eto', eto_uri)
 
         for data_dict, field, out_uri in [precip_params, eto_params]:
             cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
-            projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
+            projected_point_uri = os.path.join(
+                    intermediate_dir, 'proj_points.shp')
             clean_uri([cur_point_uri, projected_point_uri, out_uri]) 
 
             raster_utils.dictionary_to_point_shapefile(
@@ -212,7 +211,8 @@ def execute(args):
             raster_utils.reproject_datasource_uri(
                     cur_point_uri, dem_wkt, projected_point_uri) 
 
-            # Use vectorize points to construct rasters based on points and fields
+            # Use vectorize points to construct rasters based on points and
+            # fields
             raster_utils.new_raster_from_base_uri(
                     dem_uri, out_uri, 'GTIFF', float_nodata,
                     gdal.GDT_Float32, fill_value=float_nodata)
@@ -263,14 +263,17 @@ def execute(args):
                 dflow_uri, interflow_uri, baseflow_uri, streamflow_uri,
                 float_nodata)
 
-        # Calculate Soil Moisture for current time step, to be used as previous time
-        # step in the next iteration
+        # Calculate Soil Moisture for current time step, to be used as
+        # previous time step in the next iteration
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
         calculate_soil_stoarge(
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
                 soil_storage_uri, float_nodata)
+
+        out_dict = {}
+        out_dict['Date'] = cur_month
 
         # Use Aggregate Raster function to get the max values under the
         # watersheds. For now this is what our outputs will be
@@ -282,13 +285,35 @@ def execute(args):
 
         LOGGER.debug('Max_streamflow dict %s', max_streamflow)
         LOGGER.debug('max_storage dict %s', max_storage)
-
+        
         for result_dict, field in zip(
                 [max_streamflow, max_storage], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
-        add_row_csv_table(csv_uri, shed_field_list, out_dict)
+        add_row_csv_table(watershed_table_uri, shed_field_list, out_dict)
+
+        if sub_shed_present:
+            sub_out_dict = {}
+            sub_out_dict['Date'] = cur_month
+            
+            sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
+                    streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
+            
+            sub_max_storage = raster_utils.aggregate_raster_values_uri(
+                    soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
+
+            LOGGER.debug('Sub Max_streamflow dict %s', sub_max_streamflow)
+            LOGGER.debug('Sub max_storage dict %s', sub_max_storage)
+
+            for result_dict, field in zip(
+                    [sub_max_streamflow, sub_max_storage], field_list):
+                build_csv_dict(
+                        result_dict, sub_shed_field_list, sub_out_dict, field)
+
+            LOGGER.debug('OUTPUT Sub Shed Dict: %s', sub_out_dict)
+            add_row_csv_table(
+                    sub_shed_table_uri, sub_shed_field_list, sub_out_dict)
 
         # Move on to next month
 
@@ -305,7 +330,8 @@ def build_csv_dict(new_dict, columns, out_dict, field):
     for key, value in new_dict.iteritems():
         key_str = str(key)
         for col_name in columns[1:]:
-            if re.search(key_str, col_name) != None and re.match(field, col_name) != None:
+            if (re.search(key_str, col_name) != None and 
+                    re.match(field, col_name) != None):
                 out_dict[col_name] = value
     return out_dict
 
@@ -332,7 +358,7 @@ def add_row_csv_table(csv_uri, column_header, single_dict):
 
         csv_writer = csv.DictWriter(csv_file, column_header)
         # Write the columns as the first row in the table
-        csv_writer.writerow(dict((fn,fn) for fn in column_header))
+        csv_writer.writerow(dict((fn, fn) for fn in column_header))
 
     else:
         # Open the CSV file in append mode 'a'. This will allow us to just tack
@@ -832,7 +858,8 @@ def calculate_direct_flow(
            in_absorption_pix - a float value for the in absorption rate
 
            returns - in source value"""
-        for pix, pix_nodata in zip([precip_pix, in_absorption_pix], no_data_list):
+        for pix, pix_nodata in zip(
+                [precip_pix, in_absorption_pix], no_data_list):
             if pix == pix_nodata:
                 return out_nodata
         
@@ -856,7 +883,8 @@ def calculate_direct_flow(
         dem_uri, precip_uri, dt_out_uri, tp_out_uri)
 
 def calculate_alphas(
-        slope_uri, soil_text_uri, smax_uri, alpha_table, out_nodata, output_uri_list):
+        slope_uri, soil_text_uri, smax_uri, alpha_table, out_nodata, 
+        output_uri_list):
     """Calculates and creates gdal datasets for three alpha values used in
         various equations throughout the monthly water yield model
 
