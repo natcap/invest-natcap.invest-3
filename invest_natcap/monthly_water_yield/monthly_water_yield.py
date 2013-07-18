@@ -74,10 +74,18 @@ def execute(args):
     watershed_uri = args['watersheds_uri']
     model_params_uri = args['model_params_uri']
     
+    # Append a _ to the suffix if it's not empty and doens't already have one
+    try:
+        file_suffix = args['suffix']
+        if file_suffix != "" and not file_suffix.startswith('_'):
+            file_suffix = '_' + file_suffix
+    except KeyError:
+        file_suffix = ''
+    
     try:
         sub_shed_uri = args['sub_watersheds_uri']
         sub_shed_table_uri = os.path.join(
-                intermediate_dir, 'sub_shed_table.csv')
+                intermediate_dir, 'sub_shed_table%s.csv' % file_suffix)
         sub_shed_present = True
     except KeyError:
         LOGGER.info('Sub Watersheds Not Provided')
@@ -86,8 +94,9 @@ def execute(args):
     # Set out_nodata value
     float_nodata = -35432.0
    
-    imperv_area_uri = os.path.join(intermediate_dir, 'imperv_area.tif')
-    etk_uri = os.path.join(intermediate_dir, 'etk.tif')
+    imperv_area_uri = os.path.join(
+            intermediate_dir, 'imperv_area%s.tif' % file_suffix)
+    etk_uri = os.path.join(intermediate_dir, 'etk%s.tif' % file_suffix)
     
     for code_uri, field in zip(
             [imperv_area_uri, etk_uri],['imperv_fract', 'etk']):
@@ -98,8 +107,6 @@ def execute(args):
                 lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
-    etk_nodata = raster_utils.get_nodata_from_uri(etk_uri)
-
     # Get DEM WKT
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
 
@@ -108,21 +115,26 @@ def execute(args):
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
 
     # Create initial S_t-1 for now
-    soil_storage_uri = os.path.join(intermediate_dir, 'soil_storage.tif')
+    soil_storage_uri = os.path.join(
+            intermediate_dir, 'soil_storage%s.tif' % file_suffix)
     _ = raster_utils.new_raster_from_base_uri(
             dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
             gdal.GDT_Float32, fill_value=0.0)
     
-    prev_soil_uri = os.path.join(intermediate_dir, 'soil_storage_prev.tif')
+    prev_soil_uri = os.path.join(
+            intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
 
     # Calculate the slope raster from the DEM
-    slope_uri = os.path.join(intermediate_dir, 'slope.tif')
+    slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(dem_uri, slope_uri)
 
     # Calculate the alpha rasters
-    alpha_one_uri = os.path.join(intermediate_dir, 'alpha_one.tif')
-    alpha_two_uri = os.path.join(intermediate_dir, 'alpha_two.tif')
-    alpha_three_uri = os.path.join(intermediate_dir, 'alpha_three.tif')
+    alpha_one_uri = os.path.join(
+            intermediate_dir, 'alpha_one%s.tif' % file_suffix)
+    alpha_two_uri = os.path.join(
+            intermediate_dir, 'alpha_two%s.tif' % file_suffix)
+    alpha_three_uri = os.path.join(
+            intermediate_dir, 'alpha_three%s.tif' % file_suffix)
     alpha_uri_list = [alpha_one_uri, alpha_two_uri, alpha_three_uri]
     
     model_param_dict = model_parameters_to_dict(model_params_uri)
@@ -133,7 +145,8 @@ def execute(args):
         slope_uri, soil_text_uri, smax_uri, model_param_dict, float_nodata,
         alpha_uri_list)
 
-    absorption_uri = os.path.join(intermediate_dir, 'absorption.tif')
+    absorption_uri = os.path.join(
+            intermediate_dir, 'absorption%s.tif' % file_suffix)
     calculate_in_absorption_rate(
             imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
 
@@ -170,7 +183,7 @@ def execute(args):
             for field in field_list:
                 sub_shed_field_list.append(field + ' ' + str(key))
         
-        LOGGER.debug('Automatically Gen Sub Field List %s', sub_shed_field_list) 
+        LOGGER.debug('Automatically Gen Sub Field List %s', sub_shed_field_list)
 
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
@@ -178,21 +191,27 @@ def execute(args):
     # Sort the list of months taken from the precipitation dictionaries keys
     list_of_months.sort()
 
-    precip_uri = os.path.join(intermediate_dir, 'precip.tif')
-    eto_uri = os.path.join(intermediate_dir, 'eto.tif')
+    precip_uri = os.path.join(intermediate_dir, 'precip%s.tif' % file_suffix)
+    eto_uri = os.path.join(intermediate_dir, 'eto%s.tif' % file_suffix)
     
-    dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
-    total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
-    in_source_uri = os.path.join(intermediate_dir, 'in_source.tif')
-    water_uri = os.path.join(intermediate_dir, 'water_amt.tif')
-    evap_uri = os.path.join(intermediate_dir, 'evaporation.tif')
-    etc_uri = os.path.join(intermediate_dir, 'etc.tif')
+    dflow_uri = os.path.join(intermediate_dir, 'dflow%s.tif' % file_suffix)
+    total_precip_uri = os.path.join(
+            intermediate_dir, 'total_precip%s.tif' % file_suffix)
+    in_source_uri = os.path.join(
+            intermediate_dir, 'in_source%s.tif' % file_suffix)
+    water_uri = os.path.join(intermediate_dir, 'water_amt%s.tif' % file_suffix)
+    evap_uri = os.path.join(intermediate_dir, 'evaporation%s.tif' % file_suffix)
+    etc_uri = os.path.join(intermediate_dir, 'etc%s.tif' % file_suffix)
     intermed_interflow_uri = os.path.join(
-            intermediate_dir, 'intermediate_interflow.tif')
-    baseflow_uri = os.path.join(intermediate_dir, 'baseflow.tif')
-    interflow_uri = os.path.join(intermediate_dir, 'interflow.tif')
-    watershed_table_uri = os.path.join(intermediate_dir, 'wshed_table.csv')
-    streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
+            intermediate_dir, 'intermediate_interflow%s.tif' % file_suffix)
+    baseflow_uri = os.path.join(
+            intermediate_dir, 'baseflow%s.tif' % file_suffix)
+    interflow_uri = os.path.join(
+            intermediate_dir, 'interflow%s.tif' % file_suffix)
+    watershed_table_uri = os.path.join(
+            intermediate_dir, 'wshed_table%s.csv' % file_suffix)
+    streamflow_uri = os.path.join(
+            intermediate_dir, 'streamflow%s.tif' % file_suffix)
 
     for cur_month in list_of_months:
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
@@ -1053,8 +1072,10 @@ def construct_time_step_data(data_uri, key_field):
     data_reader = csv.reader(data_file)
     data_dict = {}
     
-    # The first line in the file will be the stations
-    stations = data_reader.next()
+    # The first line in the file will be the stations. We do not need any of
+    # this information so returning into a throw away variable. Underscore
+    # indicates the variable won't be used
+    _ = data_reader.next()
     # The next line in the file will be the latitudes
     latitudes = data_reader.next()
     # The next line in the file will be the longitudes
