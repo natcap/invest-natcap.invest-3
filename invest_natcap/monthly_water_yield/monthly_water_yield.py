@@ -37,8 +37,8 @@ def execute(args):
         args[precip_data_uri] - a uri to a CSV file that has time step data for
             precipitation
        
-        args[pet_data_uri] - a uri to a CSV file that has time step data for
-            PET
+        args[eto_data_uri] - a uri to a CSV file that has time step data for
+            ETo
         
         args[soil_max_uri] - a uri to a gdal raster for soil max
         
@@ -73,7 +73,7 @@ def execute(args):
     
     # Get input URIS
     precip_data_uri = args['precip_data_uri']
-    pet_data_uri = args['pet_data_uri']
+    eto_data_uri = args['eto_data_uri']
     dem_uri = args['dem_uri']
     smax_uri = args['soil_max_uri']
     soil_text_uri = args['soil_texture_uri']
@@ -149,8 +149,8 @@ def execute(args):
     LOGGER.debug('Constructed PRECIP DATA : %s', precip_data_dict)
     
     # Construct a dictionary from the time step data
-    pet_data_dict = construct_time_step_data(pet_data_uri, 'pet')
-    LOGGER.debug('Constructed PET DATA : %s', pet_data_dict)
+    eto_data_dict = construct_time_step_data(eto_data_uri, 'eto')
+    LOGGER.debug('Constructed ETo DATA : %s', eto_data_dict)
 
     # Get a dictionary from the water / sub-watershed by the id so that we can
     # have a handle on the id values for each shed / sub-shed
@@ -182,7 +182,7 @@ def execute(args):
     list_of_months.sort()
 
     precip_uri = os.path.join(intermediate_dir, 'precip.tif')
-    pet_uri = os.path.join(intermediate_dir, 'pet.tif')
+    eto_uri = os.path.join(intermediate_dir, 'eto.tif')
     
     dflow_uri = os.path.join(intermediate_dir, 'dflow.tif')
     total_precip_uri = os.path.join(intermediate_dir, 'total_precip.tif')
@@ -202,9 +202,9 @@ def execute(args):
         out_dict['Date'] = cur_month
 
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
-        pet_params = (pet_data_dict[cur_month], 'pet', pet_uri)
+        eto_params = (eto_data_dict[cur_month], 'eto', eto_uri)
 
-        for data_dict, field, out_uri in [precip_params, pet_params]:
+        for data_dict, field, out_uri in [precip_params, eto_params]:
             cur_point_uri = os.path.join(intermediate_dir, 'points.shp')
             projected_point_uri = os.path.join(intermediate_dir, 'proj_points.shp')
             clean_uri([cur_point_uri, projected_point_uri, out_uri]) 
@@ -239,7 +239,7 @@ def execute(args):
         # Calculate Evaopration
         clean_uri([evap_uri, etc_uri])
         calculate_evaporation(
-                soil_storage_uri, pawc_uri, water_uri, pet_uri, etk_uri,
+                soil_storage_uri, pawc_uri, water_uri, eto_uri, etk_uri,
                 evap_uri, etc_uri, float_nodata)
         
         # Calculate Intermediate Interflow
@@ -718,7 +718,7 @@ def calculate_water_amt(
             'intersection')
 
 def calculate_evaporation(
-        soil_storage_uri, pawc_uri, water_uri, pet_uri, etk_uri, evap_uri,
+        soil_storage_uri, pawc_uri, water_uri, eto_uri, etk_uri, evap_uri,
         etc_uri, out_nodata):
     """This function calculates the actual evaporation
 
@@ -729,7 +729,7 @@ def calculate_evaporation(
         
         water_uri - a URI to a gdal dataset for the W
         
-        pet_uri - a URI to a gdal dataset for the potential evapotranspiration
+        eto_uri - a URI to a gdal dataset for the potential evapotranspiration
         
         etk_uri - a URI to a gdal dataset for the etk coefficients
         
@@ -744,27 +744,27 @@ def calculate_evaporation(
         returns - nothing
     """
 
-    pet_nodata = raster_utils.get_nodata_from_uri(pet_uri)
+    eto_nodata = raster_utils.get_nodata_from_uri(eto_uri)
     etk_nodata = raster_utils.get_nodata_from_uri(etk_uri)
 
-    def etc_op(pet_pix, etk_pix):
+    def etc_op(eto_pix, etk_pix):
         """Vectorize operation for calculating the plant potential
             evapotranspiration
         
-            pet_pix - a float value for PET
+            eto_pix - a float value for ETo 
             etk_pix - a float value for ETK coefficient
 
             returns - a float value for ETc"""
 
-        if pet_pix == pet_nodata or etk_pix == etk_nodata:
+        if eto_pix == eto_nodata or etk_pix == etk_nodata:
             return out_nodata
     
-        return pet_pix * etk_pix
+        return eto_pix * etk_pix
 
     cell_size = raster_utils.get_cell_size_from_uri(soil_storage_uri)
 
     raster_utils.vectorize_datasets(
-            [pet_uri, etk_uri], etc_op, etc_uri, gdal.GDT_Float32,
+            [eto_uri, etk_uri], etc_op, etc_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
     
     def actual_evap(water_pix, soil_pix, etc_pix, pawc_pix):
@@ -1013,14 +1013,14 @@ def construct_time_step_data(data_uri, key_field):
         returns - a dictionary with the following structure as an example:
             {
                 '01':{
-                    0:{'date':'01','lati':'44.5','long':'-123.3','pet':'10'},
-                    1:{'date':'01','lati':'44.5','long':'-123.5','pet':'5'},
-                    2:{'date':'01','lati':'44.3','long':'-123.3','pet':'0'}
+                    0:{'date':'01','lati':'44.5','long':'-123.3','eto':'10'},
+                    1:{'date':'01','lati':'44.5','long':'-123.5','eto':'5'},
+                    2:{'date':'01','lati':'44.3','long':'-123.3','eto':'0'}
                     },
                 '02':{
-                    0:{'date':'02','lati':'44.5','long':'-123.3','pet':'10'},
-                    1:{'date':'02','lati':'44.5','long':'-123.4','pet':'6'},
-                    2:{'date':'02','lati':'44.6','long':'-123.5','pet':'7'}
+                    0:{'date':'02','lati':'44.5','long':'-123.3','eto':'10'},
+                    1:{'date':'02','lati':'44.5','long':'-123.4','eto':'6'},
+                    2:{'date':'02','lati':'44.6','long':'-123.5','eto':'7'}
                     }...
             }
     """
