@@ -618,17 +618,23 @@ def make_ecosys_risk_raster(dir, h_dict):
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
     def add_e_pixels(*pixels):
-        '''Sum all habitat pixels for ecosystem raster.'''
- 
+        '''Sum all risk pixels to make a single habitat raster out of all the 
+        h-s overlap rasters.'''
+        all_nodata = True
+        for p in pixels:
+            if p != nodata:
+                all_nodata = False
+        if all_nodata:
+            return nodata
+
         pixel_sum = 0.0
-        
+
         for p in pixels:
             
-            if p == nodata:
-                return nodata
+            if p != nodata:
 
-            pixel_sum += p
- 
+                pixel_sum += p
+
         return pixel_sum
      
     raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
@@ -836,14 +842,20 @@ def make_hab_risk_raster(dir, risk_dict):
     def add_risk_pixels(*pixels):
         '''Sum all risk pixels to make a single habitat raster out of all the 
         h-s overlap rasters.'''
+        all_nodata = True
+        for p in pixels:
+            if p != nodata:
+                all_nodata = False
+        if all_nodata:
+            return nodata
+
         pixel_sum = 0.0
 
         for p in pixels:
             
-            if p == nodata:
-                return nodata
+            if p != nodata:
 
-            pixel_sum += p
+                pixel_sum += p
 
         return pixel_sum
 
@@ -1528,7 +1540,6 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 return base_nodata
             else:
                 return crit_rate_numerator
-        LOGGER.debug("BASE DS URI: %s ", base_ds_uri)
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
