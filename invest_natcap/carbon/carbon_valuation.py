@@ -205,10 +205,10 @@ def _create_html_summary(outfile_uris, sequest_uris):
     def format_currency(val):
         return '%.2f' % val
 
-    write_paragraph('Positive values in this table indicate that carbon storage increased. '
+    write_paragraph('<strong>Positive values</strong> in this table indicate that carbon storage increased. '
                     'In this case, the positive Net Present Value represents the value of '
                     'the sequestered carbon.')
-    write_paragraph('Negative values indicate that carbon storage decreased. '
+    write_paragraph('<strong>Negative values</strong> indicate that carbon storage decreased. '
                     'In this case, the negative Net Present Value represents the cost of '
                     'carbon emission.')
 
