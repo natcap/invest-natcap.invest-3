@@ -333,6 +333,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
 
         h, s = pair
         h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
+        s_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
  
         files = [habitats[h]['DS'], stress_dict[s]]
         
@@ -340,10 +341,10 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
 
-            if h_pix != h_nodata:
+            if h_pix != h_nodata and s_pix != s_nodata:
                 return s_pix
             else:
-                return 0.
+                return h_nodata
         
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 

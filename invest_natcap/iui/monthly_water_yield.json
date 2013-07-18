@@ -29,10 +29,10 @@
                     "validateAs": {"type": "CSV"}
                 },
 		        {
-                    "id" : "pet_data",
-                    "args_id": "pet_data_uri",
+                    "id" : "eto_data",
+                    "args_id": "eto_data_uri",
                     "type": "file",
-                    "label": "Monthly Time Step Data For PET",
+                    "label": "Monthly Time Step Data For ETo",
                     "defaultValue": "",
                     "required": true,
                     "validateAs": {"type": "CSV"}
@@ -42,15 +42,6 @@
                     "args_id" : "soil_max_uri",
                     "type": "file",
                     "label": "Soil Max",
-                    "defaultValue": "",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"}
-                },
-                {        
-                    "id" : "pawc",
-                    "args_id" : "pawc_uri",
-                    "type": "file",
-                    "label": "Plant Available Water Content (PAWC)",
                     "defaultValue": "",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
