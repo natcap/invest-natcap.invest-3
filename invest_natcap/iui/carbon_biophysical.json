@@ -107,7 +107,7 @@
                             "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "requiredIf": ["calc_sequestration"],
                             "validateAs": {"type": "GDAL"},
-                            "helpText": "Location of the landcover map for the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, scenario against which to compare the REDD policy scenario."
+                            "helpText": "Location of the landcover map for the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario."
                         },
                         {
                             "id" : "redd_lulc_raster",
