@@ -7,6 +7,7 @@ import collections
 import math
 import datetime
 import matplotlib.pyplot
+import shutil
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -139,10 +140,12 @@ def execute(args):
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
     unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
-    os.removedirs(unecessary_folder)
+    #shutil.rmtree(path, [ignore_errors, [one_error]])
+    shutil.rmtree(unecessary_folder, True)
     #Want to remove that AOI copy that we used for ID number->name translation.
     unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
-    os.remove(unnecessary_file)
+    if os.path.exists(unnecessary_file):
+        os.remove(unnecessary_file)
 
 def rewrite_avgs_dict(avgs_dict, aoi_names):
     '''Aftermarket rejigger of the avgs_dict setup so that everything is AOI
@@ -420,10 +423,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     #Since we know that the AOI will be consistent across all of the rasters,
     #want to create the new int field, and the name mapping dictionary upfront
     
-    driver = ogr.GetDriverByName('Memory')
+    driver = ogr.GetDriverByName('ESRI Shapefile')
     aoi = ogr.Open(aoi_uri)
     cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
     cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)
+
     layer = cp_aoi.GetLayer()
 
     field_defn = ogr.FieldDefn('BURN_ID', ogr.OFTInteger)
@@ -489,7 +493,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
 
         c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
 
-        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
+        c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
+                cp_aoi_uri, 'BURN_ID').pixel_mean)
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
