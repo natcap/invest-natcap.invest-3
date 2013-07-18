@@ -69,12 +69,28 @@ def execute_30(**args):
     except KeyError:
         file_suffix = ''
 
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    for directory in [output_dir, intermediate_dir]:
+    dirs = {}
+    dirs['output'] = os.path.join(args['workspace_dir'], 'output')
+    dirs['intermediate'] = os.path.join(args['workspace_dir'], 'intermediate')
+    for directory in dirs.values():
         if not os.path.exists(directory):
             LOGGER.info('creating directory %s', directory)
             os.makedirs(directory)
+
+    def outfile_uri(prefix, scenario_type, dirtype='output', filetype='tif'):
+        '''Creates the appropriate output file URI.
+        
+           prefix: 'tot_C', 'sequest', or similar
+           scenario type: 'cur', 'fut', or 'redd'
+           dirtype: 'output' or 'intermediate'
+           '''
+        if scenario_type == 'fut' and args.get('lulc_redd_uri'):
+            # We're doing REDD analysis, so call the future scenario 'base',
+            # since it's the baseline scenario.
+            scenario_type = 'base'
+
+        filename = '%s_%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
+        return os.path.join(dirs[dirtype], filename)
 
     #1) load carbon pools into dictionary indexed by LULC
     LOGGER.debug("building carbon pools")
@@ -120,8 +136,7 @@ def execute_30(**args):
                 if lulc == nodata:
                     return nodata_out
                 return pools[lulc]['total_%s' % lulc_uri]
-            dataset_out_uri = os.path.join(
-                output_dir, 'tot_C_%s%s.tif' % (scenario_type, file_suffix))
+            dataset_out_uri = outfile_uri('tot_C', scenario_type)
             out_file_names['tot_C_%s' % scenario_type] = dataset_out_uri
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
@@ -136,9 +151,9 @@ def execute_30(**args):
                     if lulc == nodata:
                         return nodata_out
                     return pools[lulc]['variance_%s' % lulc_uri]
-                variance_out_uri = os.path.join(
-                    intermediate_dir, 'variance_C_%s%s.tif' % (scenario_type, file_suffix))
-                out_file_names['variance_C_%s' % scenario_type] = dataset_out_uri
+                variance_out_uri = outfile_uri(
+                    'variance_C', scenario_type, dirtype='intermediate')
+                out_file_names['variance_C_%s' % scenario_type] = variance_out_uri
                 
                 # Create a raster that models variance in carbon storage per pixel.
                 raster_utils.vectorize_datasets(
@@ -149,9 +164,9 @@ def execute_30(**args):
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
             if hwp_key in args:
-                c_hwp_uri = os.path.join(intermediate_dir, 'c_hwp_%s%s.tif' % (scenario_type, file_suffix))
-                bio_hwp_uri = os.path.join(intermediate_dir, 'bio_hwp_%s%s.tif' % (scenario_type, file_suffix))
-                vol_hwp_uri = os.path.join(intermediate_dir, 'vol_hwp_%s%s.tif' % (scenario_type, file_suffix))
+                c_hwp_uri = outfile_uri('c_hwp', scenario_type, dirtype='intermediate')
+                bio_hwp_uri = outfile_uri('bio_hwp', scenario_type, dirtype='intermediate')
+                vol_hwp_uri = outfile_uri('vol_hwp', scenario_type, dirtype='intermediate')
 
                 if scenario_type == 'cur':
                     calculate_hwp_storage_cur(
@@ -210,8 +225,7 @@ def execute_30(**args):
                 return c_fut - c_cur
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
-            out_file_names['sequest_%s' % fut_type] = os.path.join(
-                output_dir, 'sequest_%s%s.tif' % (fut_type, file_suffix))
+            out_file_names['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
             raster_utils.vectorize_datasets(
                 [out_file_names['tot_C_cur'], out_file_names['tot_C_%s' % fut_type]], sub_op, 
                 out_file_names['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
@@ -224,8 +238,7 @@ def execute_30(**args):
                 #         -1 if we're confident storage will decrease,
                 #         0 if we're not confident either way.
                 def confidence_op(c_cur, c_fut, var_cur, var_fut):
-                    for val in [c_cur, c_fut, var_cur, var_fut]:
-                        if val == nodata_out or val < 0:
+                    if nodata_out in [c_cur, c_fut, var_cur, var_fut]:
                             return nodata_out
 
                     if var_cur == 0 and var_fut == 0:
@@ -265,8 +278,7 @@ def execute_30(**args):
                     # We're not confident about whether storage will increase or decrease.
                     return 0
 
-                out_file_names['conf_%s' % fut_type] = os.path.join(
-                    output_dir, 'conf_%s%s.tif' % (fut_type, file_suffix))
+                out_file_names['conf_%s' % fut_type] = outfile_uri('conf', fut_type)
                 raster_utils.vectorize_datasets(
                     [out_file_names[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type, 
                                                        'variance_C_cur', 'variance_C_%s' % fut_type]],
