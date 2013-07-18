@@ -86,7 +86,7 @@ def execute_30(**args):
            '''
         if scenario_type == 'fut' and args.get('lulc_redd_uri'):
             # We're doing REDD analysis, so call the future scenario 'base',
-            # since it's the baseline scenario.
+            # since it's the 'baseline' scenario.
             scenario_type = 'base'
 
         filename = '%s_%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
