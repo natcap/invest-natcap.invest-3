@@ -76,6 +76,8 @@ def execute(args):
     
     try:
         sub_shed_uri = args['sub_watersheds_uri']
+        sub_shed_table_uri = os.path.join(
+                intermediate_dir, 'sub_shed_table.csv')
         sub_shed_present = True
     except KeyError:
         LOGGER.info('Sub Watersheds Not Provided')
@@ -159,6 +161,17 @@ def execute(args):
     
     LOGGER.debug('Automatically Gen Field List %s', shed_field_list) 
 
+    if sub_shed_present:
+        sub_shed_dict = raster_utils.extract_datasource_table_by_key(
+            sub_shed_uri, 'subws_id')
+        
+        sub_shed_field_list = ['Date']
+        for key in sub_shed_dict.iterkeys():
+            for field in field_list:
+                sub_shed_field_list.append(field + ' ' + str(key))
+        
+        LOGGER.debug('Automatically Gen Sub Field List %s', sub_shed_field_list) 
+
     # Get the keys from the time step dictionary, which will be the month/year
     # signature
     list_of_months = precip_data_dict.keys()
@@ -182,9 +195,6 @@ def execute(args):
     streamflow_uri = os.path.join(intermediate_dir, 'streamflow.tif')
 
     for cur_month in list_of_months:
-        out_dict = {}
-        out_dict['Date'] = cur_month
-
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
         eto_params = (eto_data_dict[cur_month], 'eto', eto_uri)
 
@@ -262,6 +272,9 @@ def execute(args):
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
                 soil_storage_uri, float_nodata)
 
+        out_dict = {}
+        out_dict['Date'] = cur_month
+
         # Use Aggregate Raster function to get the max values under the
         # watersheds. For now this is what our outputs will be
         max_streamflow = raster_utils.aggregate_raster_values_uri(
@@ -272,13 +285,35 @@ def execute(args):
 
         LOGGER.debug('Max_streamflow dict %s', max_streamflow)
         LOGGER.debug('max_storage dict %s', max_storage)
-
+        
         for result_dict, field in zip(
                 [max_streamflow, max_storage], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
         add_row_csv_table(watershed_table_uri, shed_field_list, out_dict)
+
+        if sub_shed_present:
+            sub_out_dict = {}
+            sub_out_dict['Date'] = cur_month
+            
+            sub_max_streamflow = raster_utils.aggregate_raster_values_uri(
+                    streamflow_uri, sub_shed_uri, 'subws_id').pixel_max
+            
+            sub_max_storage = raster_utils.aggregate_raster_values_uri(
+                    soil_storage_uri, sub_shed_uri, 'subws_id').pixel_max
+
+            LOGGER.debug('Sub Max_streamflow dict %s', sub_max_streamflow)
+            LOGGER.debug('Sub max_storage dict %s', sub_max_storage)
+
+            for result_dict, field in zip(
+                    [sub_max_streamflow, sub_max_storage], field_list):
+                build_csv_dict(
+                        result_dict, sub_shed_field_list, sub_out_dict, field)
+
+            LOGGER.debug('OUTPUT Sub Shed Dict: %s', sub_out_dict)
+            add_row_csv_table(
+                    sub_shed_table_uri, sub_shed_field_list, sub_out_dict)
 
         # Move on to next month
 
