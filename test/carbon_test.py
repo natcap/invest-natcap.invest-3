@@ -140,7 +140,10 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         workspace_dir = './invest-data/test/data/test_out/carbon_valuation_output'
 
-        def execute_model(carbon_units='Carbon', do_redd=False, use_uncertainty=False):
+        def execute_model(carbon_units='Carbon', 
+                          do_redd=False, 
+                          use_uncertainty=False,
+                          suffix=''):
             args = {}
             args['workspace_dir'] = workspace_dir
             args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
@@ -150,10 +153,12 @@ class TestCarbonBiophysical(unittest.TestCase):
             args['yr_cur'] = 2000
             args['yr_fut'] = 2030
             args['carbon_price_units'] = carbon_units
+            if suffix:
+                args['suffix'] = suffix
 
             if use_uncertainty:
                 args['conf_uri'] = (
-                    './invest-data/test/data/carbon_regression_data/conf.tif')
+                    './invest-data/test/data/carbon_regression_data/conf_base.tif')
 
             if do_redd:
                 args['sequest_redd_uri'] = (
@@ -193,30 +198,30 @@ class TestCarbonBiophysical(unittest.TestCase):
 
 
         execute_model()
-        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c.tif')
+        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_base.tif')
 
-        execute_model(carbon_units='Carbon Dioxide (CO2)')
-        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c02.tif')            
+        execute_model(carbon_units='Carbon Dioxide (CO2)', suffix='c02')
+        self.assertDatasetEqual(workspace_dir, 'value_seq_c02.tif')
 
         execute_model(use_uncertainty=True)
         self.assertDatasetsEqual(workspace_dir, 
-                                 ('value_seq.tif', 'value_seq_c.tif'),
-                                 'val_mask.tif',
-                                 'seq_mask.tif')
-        assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.53)
-        assertSummaryContainsRow('Baseline (confident cells only)', -4049305.95339, -77063698.76)
+                                 ('value_seq.tif', 'value_seq_base.tif'),
+                                 ('val_mask.tif', 'val_mask_base.tif'),
+                                 ('seq_mask.tif', 'seq_mask_base.tif'))
+        assertSummaryContainsRow('Baseline', -3526095.89057, -67106273.81)
+        assertSummaryContainsRow('Baseline (confident cells only)', -3530157.48653, -67183571.67)
 
         execute_model(use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir, 
-                                 ('value_seq_base.tif', 'value_seq_c.tif'),
-                                 ('val_mask_base.tif', 'val_mask.tif'),
-                                 ('seq_mask_base.tif', 'seq_mask.tif'),
+                                 'value_seq_base.tif',
+                                 'val_mask_base.tif',
+                                 'seq_mask_base.tif',
                                  'value_seq_redd.tif',
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
-        assertSummaryContainsRow('REDD policy', -848059.364479, -16139728.72)
+        assertSummaryContainsRow('REDD policy', 100847.723038, 1919265.76)
         assertSummaryContainsRow('REDD policy (confident cells only)',
-                                 98348.6095097, 1871704.36)
+                                 100847.723038, 1919265.76)
         assertSummaryContainsRow('REDD policy vs Baseline',
-                                 1774622.81692, 33773376.81)
+                                 3626943.61361, 69025539.56)
 
