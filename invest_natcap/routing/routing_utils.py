@@ -27,7 +27,6 @@
 
 import logging
 import tempfile
-import os
 
 from osgeo import gdal
 import numpy
@@ -71,12 +70,9 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
     #this is for debugging the routing issues
     out_dir = os.path.dirname(in_dem_uri)
 
-    dem_uri = os.path.join(out_dir, 'aligned_dem_uri.tif')
-    #dem_uri = raster_utils.temporary_filename()
-#    source_uri = raster_utils.temporary_filename()
-#    absorption_rate_uri = raster_utils.temporary_filename()
-    source_uri = os.path.join(out_dir, 'aligned_source_uri.tif')
-    absorption_rate_uri = os.path.join(out_dir, 'aligned_absorption_uri.tif')
+    dem_uri = raster_utils.temporary_filename()
+    source_uri = raster_utils.temporary_filename()
+    absorption_rate_uri = raster_utils.temporary_filename()
     out_pixel_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
     raster_utils.align_dataset_list(
         [in_dem_uri, in_source_uri, in_absorption_rate_uri],
@@ -84,12 +80,9 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
         ["nearest", "nearest", "nearest"], out_pixel_size,
         "intersection", 0, aoi_uri=aoi_uri)
 
-    flow_direction_uri = os.path.join(out_dir, 'aligned_flow_uri.tif')
-    outflow_weights_uri = os.path.join(out_dir, 'aligned_outflow_weight_uri.tif')
-    outflow_direction_uri = os.path.join(out_dir, 'aligned_outflow_direction_uri.tif')
-#    flow_direction_uri = raster_utils.temporary_filename()
-#    outflow_weights_uri = raster_utils.temporary_filename()
-#    outflow_direction_uri = raster_utils.temporary_filename()
+    flow_direction_uri = raster_utils.temporary_filename()
+    outflow_weights_uri = raster_utils.temporary_filename()
+    outflow_direction_uri = raster_utils.temporary_filename()
 
     routing_cython_core.calculate_flow_direction(dem_uri, flow_direction_uri)
     sink_cell_set, _ = routing_cython_core.calculate_flow_graph(
