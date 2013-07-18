@@ -31,9 +31,8 @@ class TestCarbonBiophysical(unittest.TestCase):
             else:
                 self.assertDatasetEqual(workspace_dir, *filename)
 
-    def test_carbon_biophysical_sequestration_hwp(self):
-        """Test for carbon_biophysical function running with sample input to \
-do sequestration and harvested wood products on lulc maps."""
+    def test_carbon_biophysical_sequestration(self):
+        """Test for carbon_biophysical function with various parameters."""
 
         workspace_dir = './invest-data/test/data/test_out/carbon_output'
 
@@ -69,41 +68,44 @@ do sequestration and harvested wood products on lulc maps."""
             if suffix:
                 args['suffix'] = suffix
 
+            if do_redd and do_hwp:
+                self.fail('The model doesn\'t currently support REDD analysis with HWP!')
+
             carbon_biophysical.execute(args)
 
         # Make sure nothing breaks when we run the model with the bare minimum.
         execute_model()
 
-        execute_model(do_sequest=True, do_hwp=True)
+        execute_model(do_sequest=True, do_hwp=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur.tif', 
-                                 'tot_C_fut.tif', 
-                                 ('sequest_fut.tif', 'sequest.tif'))
+                                 'tot_C_cur_hwp.tif', 
+                                 'tot_C_fut_hwp.tif', 
+                                 'sequest_fut_hwp.tif')
         
-        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True)
+        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur.tif', 
-                                 'tot_C_fut.tif', 
-                                 ('sequest_fut.tif', 'sequest.tif'),
-                                 ('conf_fut.tif', 'conf.tif'))
+                                 'tot_C_cur_hwp.tif', 
+                                 'tot_C_fut_hwp.tif', 
+                                 'sequest_fut_hwp.tif',
+                                 'conf_fut_hwp.tif')
 
-        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, do_redd=True)
+        execute_model(do_sequest=True, use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur.tif', 
-                                 'tot_C_fut.tif', 
-                                 ('sequest_fut.tif', 'sequest.tif'),
-                                 ('conf_fut.tif', 'conf.tif'), 
-                                 'sequest_redd.tif', 
-                                 'conf_redd.tif')
+                                'tot_C_cur.tif',
+                                'tot_C_base.tif',
+                                'tot_C_redd.tif',
+                                'sequest_base.tif',
+                                'conf_base.tif',
+                                'sequest_redd.tif',
+                                'conf_redd.tif')
 
         execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
         self.assertDatasetEqual(workspace_dir,
                                 'tot_C_cur_foo_bar.tif', 
-                                'tot_C_cur.tif')
+                                'tot_C_cur_hwp.tif')
 
     def test_carbon_biophysical_uk(self):
-        """Test for carbon_biophysical function running with sample input to \
-do sequestration and harvested wood products on lulc maps."""
+        """Test carbon_biophysical function for UK data."""
 
         args = {}
         args['workspace_dir'] = './invest-data/test/data/test_out/carbon_uk_output'
@@ -138,20 +140,25 @@ do sequestration and harvested wood products on lulc maps."""
 
         workspace_dir = './invest-data/test/data/test_out/carbon_valuation_output'
 
-        def execute_model(carbon_units='Carbon', do_redd=False, use_uncertainty=False):
+        def execute_model(carbon_units='Carbon', 
+                          do_redd=False, 
+                          use_uncertainty=False,
+                          suffix=''):
             args = {}
             args['workspace_dir'] = workspace_dir
-            args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest.tif'
+            args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
             args['V'] = 43.0
             args['r'] = 7.0
             args['c'] = 0.0
             args['yr_cur'] = 2000
             args['yr_fut'] = 2030
             args['carbon_price_units'] = carbon_units
+            if suffix:
+                args['suffix'] = suffix
 
             if use_uncertainty:
                 args['conf_uri'] = (
-                    './invest-data/test/data/carbon_regression_data/conf.tif')
+                    './invest-data/test/data/carbon_regression_data/conf_base.tif')
 
             if do_redd:
                 args['sequest_redd_uri'] = (
@@ -181,8 +188,8 @@ do sequestration and harvested wood products on lulc maps."""
                     # Make sure each cell contains what we expect.
                     self.assertEqual('', cells[0])
                     self.assertEqual(row_title, cells[1])
-                    self.assertAlmostEqual(first_val, float(cells[2]), places=3)
-                    self.assertAlmostEqual(second_val, float(cells[3]), places=3)
+                    self.assertAlmostEqual(first_val, float(cells[2]), places=1)
+                    self.assertAlmostEqual(second_val, float(cells[3]), places=1)
                     return
 
             # If the right row wasn't found in the summary file, then fail.
@@ -191,30 +198,30 @@ do sequestration and harvested wood products on lulc maps."""
 
 
         execute_model()
-        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c.tif')
+        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_base.tif')
 
-        execute_model(carbon_units='Carbon Dioxide (CO2)')
-        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_c02.tif')            
+        execute_model(carbon_units='Carbon Dioxide (CO2)', suffix='c02')
+        self.assertDatasetEqual(workspace_dir, 'value_seq_c02.tif')
 
         execute_model(use_uncertainty=True)
         self.assertDatasetsEqual(workspace_dir, 
-                                 ('value_seq.tif', 'value_seq_c.tif'),
-                                 'val_mask.tif',
-                                 'seq_mask.tif')
-        assertSummaryContainsRow('Baseline', -2622682.18139, -49913105.5283)
-        assertSummaryContainsRow('Baseline (confident cells only)', -4049305.95339, -77063698.7612)
+                                 ('value_seq.tif', 'value_seq_base.tif'),
+                                 ('val_mask.tif', 'val_mask_base.tif'),
+                                 ('seq_mask.tif', 'seq_mask_base.tif'))
+        assertSummaryContainsRow('Baseline', -3526095.89057, -67106273.81)
+        assertSummaryContainsRow('Baseline (confident cells only)', -3530157.48653, -67183571.67)
 
         execute_model(use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir, 
-                                 ('value_seq.tif', 'value_seq_c.tif'),
-                                 'val_mask.tif',
-                                 'seq_mask.tif',
+                                 'value_seq_base.tif',
+                                 'val_mask_base.tif',
+                                 'seq_mask_base.tif',
                                  'value_seq_redd.tif',
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
-        assertSummaryContainsRow('REDD policy', -848059.364479, -16139728.7175)
+        assertSummaryContainsRow('REDD policy', 100847.723038, 1919265.76)
         assertSummaryContainsRow('REDD policy (confident cells only)',
-                                 98348.6095097, 1871704.36018)
+                                 100847.723038, 1919265.76)
         assertSummaryContainsRow('REDD policy vs Baseline',
-                                 1774622.81692, 33773376.8108)
+                                 3626943.61361, 69025539.56)
 

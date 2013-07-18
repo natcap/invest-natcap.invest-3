@@ -150,7 +150,7 @@ def execute(args):
     stress_list = fnmatch.filter(names, '*.shp')
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
-
+    
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['exposure_crits'])
@@ -273,6 +273,7 @@ def execute(args):
     #Making stressor specific tables. 
     for stressor_name in stress_list:
 
+
         csv_filename = os.path.join(output_dir, stressor_name + \
                         '_stressor_ratings.csv')
     
@@ -388,14 +389,13 @@ def parse_hra_tables(workspace_uri):
     #Now we can compile and add the other dictionaries
     dir_names = listdir(workspace_uri)
     
-    all_csvs = [f for f in l if f.endswith('_ratings.csv')]
+    all_csvs = [f for f in dir_names if f.endswith('_ratings.csv')]
     stressor_csvs = fnmatch.filter(dir_names, '*_stressor_ratings.csv')
     habitat_csvs = set(all_csvs) - set(stressor_csvs)
-    
+
     stressor_dict = {}
     for stressor_uri in stressor_csvs:
       
-        LOGGER.debug("Stressor_URI: %s" % stressor_uri)
         stressor_name = re.search('(.*)_stressor_ratings\.csv', 
                                 os.path.basename(stressor_uri)).group(1)
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
@@ -405,8 +405,8 @@ def parse_hra_tables(workspace_uri):
 
     for habitat_uri in habitat_csvs:
         
-        habitat_name = re.search('_ratings\.csv', 
-                                os.path.basename(habitat_uri)).group(1)
+        base_hab_name = os.path.basename(habitat_uri)
+        habitat_name = re.search('(.*)_ratings\.csv', base_hab_name).group(1)
 
         #Since each habitat CSV has both habitat individual ratings and habitat
         #overlap ratings, need to subdivide them within the return dictionary
@@ -560,8 +560,6 @@ def parse_stressor(uri):
            }
     """
     stressor_dict = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
-    LOGGER.debug("cwd: %s", os.getcwd())
-    LOGGER.debug("URI: %s", uri)
     with open(uri,'rU') as stressor_file:
         csv_reader = csv.reader(stressor_file)
       

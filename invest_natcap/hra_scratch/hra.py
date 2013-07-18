@@ -333,6 +333,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
 
         h, s = pair
         h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
+        s_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
  
         files = [habitats[h]['DS'], stress_dict[s]]
         
@@ -340,15 +341,15 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
             '''Since the stressor is buffered, we actually want to make sure to
             preserve that value. If there is an overlap, return s value.'''
 
-            if h_pix != h_nodata:
+            if h_pix != h_nodata and s_pix != s_nodata:
                 return s_pix
             else:
-                return 0.
+                return h_nodata
         
         out_uri = os.path.join(dir, 'H[' + h + ']_S[' + s + '].tif')
 
         raster_utils.vectorize_datasets(files, add_h_s_pixels, out_uri, 
-                        gdal.GDT_Float32, 0, grid_size, "union", 
+                        gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=None,
                         aoi_uri=None)
         
@@ -401,7 +402,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         buff = buffer_dict[name]
        
         #Want to set this specifically to make later overlap easier.
-        nodata = 0.
+        nodata = -1.
 
         #Need to create a larger base than the envelope that would normally
         #surround the raster, since we know that we can be expanding by at
@@ -435,7 +436,11 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         #Now, want to take that raster, and make it into a buffered version of
         #itself.
         base_array = band.ReadAsArray()
-        
+       
+        #Right now, our nodata is -1, and data is 1. Need to make it so nodata is
+        #0 to be swapped on the next line.
+        base_array[base_array == -1.] = 0.
+
         #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (base_array + 1) % 2
 
@@ -459,7 +464,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         
         new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
-                            'GTiff', 0, gdal.GDT_Float32)
+                            'GTiff', -1., gdal.GDT_Float32)
         
         n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
         n_band.Fill(n_nodata)
@@ -589,8 +594,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
             rasterized version of the habitat shapefile. It will be placed at
             habitats[habitatName]['DS'].
    '''
-    
-    LOGGER.debug(habitats)
 
     for shape in hab_list:
         
@@ -609,7 +612,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         #layers later.
         r_dataset = \
             raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Float32, 0., out_uri, datasource)
+                    gdal.GDT_Float32, -1., out_uri, datasource)
 
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
@@ -755,7 +758,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             r_dataset = \
                 raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
@@ -807,7 +810,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             r_dataset = \
                 raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
@@ -855,7 +858,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             r_dataset = \
                 raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, 0, out_uri, shape)
+                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
