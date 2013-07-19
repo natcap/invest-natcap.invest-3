@@ -859,8 +859,10 @@ def calculate_evaporation(
         
         if water_pix < etc_pix:
             # NOTE: I think this is wrong, should be 1 - e^x. Check with Rich
-            return water_pix + soil_pix * math.fabs(
-                    math.expm1(-1 * ((etc_pix - water_pix) / smax_pix)))
+            #return water_pix + soil_pix * math.fabs(
+            #        math.expm1(-1 * ((etc_pix - water_pix) / smax_pix)))
+            return water_pix + soil_pix * (
+                    1.0 - math.exp((etc_pix - water_pix) / smax_pix))
         else:
             return etc_pix
     
