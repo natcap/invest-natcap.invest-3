@@ -188,6 +188,11 @@ def _create_html_summary(outfile_uris, sequest_uris):
     html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
     html.write("<table border='1', cellpadding='5'>")
 
+    def write_paragraph(text):
+        html.write("<p>")
+        html.write(text)
+        html.write("</p>")
+
     def write_row(cells):
         html.write("<tr>")
         for cell in cells:
@@ -199,6 +204,14 @@ def _create_html_summary(outfile_uris, sequest_uris):
 
     def format_currency(val):
         return '%.2f' % val
+
+    write_paragraph('<strong>Positive values</strong> in this table indicate that carbon storage increased. '
+                    'In this case, the positive Net Present Value represents the value of '
+                    'the sequestered carbon.')
+    write_paragraph('<strong>Negative values</strong> indicate that carbon storage decreased. '
+                    'In this case, the negative Net Present Value represents the cost of '
+                    'carbon emission.')
+
 
     write_bold_row(["Scenario", 
                     "Change in Carbon Stocks (Mg of carbon)",

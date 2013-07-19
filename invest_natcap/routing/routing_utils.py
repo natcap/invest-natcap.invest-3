@@ -67,6 +67,9 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
 
         returns nothing"""
 
+    #this is for debugging the routing issues
+    out_dir = os.path.dirname(in_dem_uri)
+
     dem_uri = raster_utils.temporary_filename()
     source_uri = raster_utils.temporary_filename()
     absorption_rate_uri = raster_utils.temporary_filename()

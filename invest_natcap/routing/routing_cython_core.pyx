@@ -143,9 +143,16 @@ def calculate_transport(
         current_col = current_index % n_cols
 
         #Ensure we are working on a valid pixel
-        if source_array[current_row, current_col] == source_nodata:
+        if (source_array[current_row, current_col] == source_nodata):
             flux_array[current_row, current_col] = 0.0
             loss_array[current_row, current_col] = 0.0
+
+        #We have real data that make the absorption array nodata sometimes
+        #right now the best thing to do is treat it as 0.0 so everything else
+        #routes
+        if (absorption_rate_array[current_row, current_col] == 
+            absorption_nodata):
+            absorption_rate_array[current_row, current_col] = 0.0
 
         if flux_array[current_row, current_col] == transport_nodata:
             flux_array[current_row, current_col] = source_array[
