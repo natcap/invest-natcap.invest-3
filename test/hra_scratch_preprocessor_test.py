@@ -29,3 +29,20 @@ class TestHRAPreprocessor(unittest.TestCase):
     
         self.args = args
 
+    def test_HabsOnly_NoShapes_smoke(self):
+        '''This will use only the habitats directory as an input to overlap
+        stressors, and won't attempt to pull in shapefile criteria.'''
+
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
+
+        hra_preprocessor.execute(self.args)
+    
+    def test_HabsOnlyShape_smoke(self):
+        '''This will use only the habitats directory as an input to overlap
+        stressors, and will atempt to use a single shapefile criteria with
+        eelgrass and recruitment rate.'''
+
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
+        self.args['criteria_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria'
+
+        hra_preprocessor.execute(self.args)
