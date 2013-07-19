@@ -20,7 +20,7 @@ class TestHRAPreprocessor(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA' 
+        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA_Scratch' 
         args['stressors_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/StressorLayers'
         args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
         args['sensitivity_crits'] = ['temporal overlap', \
@@ -86,7 +86,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         explicit form, want to check that it will error if given an incorrect
         folder setup.'''
 
-        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Struct'
+        crit_uri = 'home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria_Bad_Struct'
 
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
