@@ -62,3 +62,21 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.assertRaises(hra_preprocessor.MissingHabitatsOrSpecies,
                         hra_preprocessor.execute, self.args)
+    
+    def test_NotEnoughCriteria_exception(self):
+        '''Want to make sure that if we have at least 4 or more criteria passed
+        within our 3 criteria type lists. Should raise a NotEnoughCriteria 
+        exception.'''
+
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
+
+        #Since we had 6 crits to begin with, remove one from each should leave
+        #us with 3, want to make sure this causes to error.
+        for c_list in (self.args['resilience_crits'], 
+                    self.args['sensitivity_crits'],
+                    self.args['exposure_crits']):
+
+            c_list.remove(c_list[0])
+
+        self.assertRaises(hra_preprocessor.NotEnoughCriteria,
+                        hra_preprocessor.execute, self.args)
