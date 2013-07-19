@@ -14,11 +14,9 @@ from invest_natcap import raster_utils
 from invest_natcap.routing import routing_utils
 import monthly_water_yield_cython_core
 
-
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('monthly_water_yield')
-
 
 def execute(args):
     """Executes the Monthly Water Yield Model given the arguments in 'args'
@@ -61,7 +59,7 @@ def execute(args):
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
-    raster_utils.create_directories([intermediate_dir, output_dir])
+    raster_utils.create_directories([workspace, intermediate_dir, output_dir])
     
     # Get input URIS
     precip_data_uri = args['precip_data_uri']
@@ -81,7 +79,8 @@ def execute(args):
             file_suffix = '_' + file_suffix
     except KeyError:
         file_suffix = ''
-    
+   
+    # Set a flag to True if sub watersheds was provided as an input
     try:
         sub_shed_uri = args['sub_watersheds_uri']
         sub_shed_table_uri = os.path.join(
@@ -94,6 +93,8 @@ def execute(args):
     # Set out_nodata value
     float_nodata = -35432.0
    
+    # URIs for the impervious raster and etk raster, both based mapping lulc
+    # codes to values
     imperv_area_uri = os.path.join(
             intermediate_dir, 'imperv_area%s.tif' % file_suffix)
     etk_uri = os.path.join(intermediate_dir, 'etk%s.tif' % file_suffix)
@@ -107,20 +108,20 @@ def execute(args):
                 lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
-    # Get DEM WKT
+    # Get DEM WKT, Nodata, and Cell size
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
-
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
 
-    # Create initial S_t-1 for now
+    # Create initial S_t-1 for now. Set all values to 0.0
     soil_storage_uri = os.path.join(
             intermediate_dir, 'soil_storage%s.tif' % file_suffix)
     _ = raster_utils.new_raster_from_base_uri(
             dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
             gdal.GDT_Float32, fill_value=0.0)
-    
+   
+    # Create a URI to hold the previous months soil storage
     prev_soil_uri = os.path.join(
             intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
 
@@ -128,7 +129,7 @@ def execute(args):
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(dem_uri, slope_uri)
 
-    # Calculate the alpha rasters
+    # Set up the URIs for the alpha rasters
     alpha_one_uri = os.path.join(
             intermediate_dir, 'alpha_one%s.tif' % file_suffix)
     alpha_two_uri = os.path.join(
@@ -137,16 +138,20 @@ def execute(args):
             intermediate_dir, 'alpha_three%s.tif' % file_suffix)
     alpha_uri_list = [alpha_one_uri, alpha_two_uri, alpha_three_uri]
     
+    # Get the parameters and coefficients to calculate the alpha rasters
     model_param_dict = model_parameters_to_dict(model_params_uri)
     LOGGER.debug('MODEL PARAMETERS: %s', model_param_dict)
     beta = model_param_dict['beta']['beta']
 
+    # Calculate the Alpha Rasters
     calculate_alphas(
         slope_uri, soil_text_uri, smax_uri, model_param_dict, float_nodata,
         alpha_uri_list)
 
+    # URI for the absorption raster
     absorption_uri = os.path.join(
             intermediate_dir, 'absorption%s.tif' % file_suffix)
+    # Calculate the absorption raster
     calculate_in_absorption_rate(
             imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
 
