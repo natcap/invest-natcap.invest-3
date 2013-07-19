@@ -16,12 +16,26 @@ from invest_natcap.monthly_water_yield import monthly_water_yield
 import invest_test_core
 from invest_natcap import raster_utils
 from nose.plugins.skip import SkipTest
+from invest_natcap.routing import routing_utils
 
 LOGGER = logging.getLogger('monthly_water_yield_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestMonthlyWaterYield(unittest.TestCase):
+
+    def test_monthly_water_yield_dflow_routing(self):
+        dem_uri = 'invest-data/test/data/monthly_water_yield/routing_test/dem'
+        precip_uri = 'invest-data/test/data/monthly_water_yield/routing_test/precip.tif'
+        in_absorption_uri = 'invest-data/test/data/monthly_water_yield/routing_test/absorption.tif'
+        watersheds_uri = 'invest-data/test/data/monthly_water_yield/routing_test/watersheds.shp'
+        internal_abs_uri = raster_utils.temporary_filename()
+        dt_out_uri = 'invest-data/test/data/monthly_water_yield/routing_test/dt_out.tif'
+
+        routing_utils.route_flux(
+            dem_uri, precip_uri, in_absorption_uri, internal_abs_uri, dt_out_uri,
+            'source_and_flux', watersheds_uri)
+
 
     def test_monthly_water_yield_construct_step_data(self):
         """A unit test for constructing the dictionary from step data

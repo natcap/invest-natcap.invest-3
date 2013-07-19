@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.carbon.carbon_biophysical",
     "modelName" : "carbon_biophysical",
     "localDocURI": "../documentation/carbonstorage.html",
-    "height": 600,
+    "height": 800,
     "width" : 700,
     "elements": [
         {
