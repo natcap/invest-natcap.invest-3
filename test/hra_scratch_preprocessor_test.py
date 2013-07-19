@@ -46,3 +46,19 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.args['criteria_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria'
 
         hra_preprocessor.execute(self.args)
+
+    @unittest.skip("For later testing.")
+    def test_HabsSpecies_NoShapes_smoke(self):
+
+        self.args['species_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA/Input/SpeciesLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
+
+        hra_preprocessor.execute(self.args)
+
+    def test_Missing_HabsSpecies_exception(self):
+        '''Want to make sure that if neither a habitat or species is selected for
+        use in overlap, that it throws an error. Should raise a 
+        MissingHabitatOrSpecies exception.'''
+
+        self.assertRaises(hra_preprocessor.MissingHabitatsOrSpecies,
+                        hra_preprocessor.execute, self.args)
