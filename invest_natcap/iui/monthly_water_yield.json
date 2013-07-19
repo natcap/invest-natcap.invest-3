@@ -118,7 +118,8 @@
                     "validText": "[a-zA-Z0-9]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
-                    "required": false
+                    "required": false,
+                    "returns": {"ifEmpty": "pass"}
                 }     
                 
             ]
