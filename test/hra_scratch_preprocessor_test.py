@@ -80,3 +80,13 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.assertRaises(hra_preprocessor.NotEnoughCriteria,
                         hra_preprocessor.execute, self.args)
+    
+    def test_Improper_Crit_FileStruct(self):
+        '''Since the folder structure for the criteria shapefiles must be in an
+        explicit form, want to check that it will error if given an incorrect
+        folder setup.'''
+
+        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Struct'
+
+        self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
+                    crit_uri)
