@@ -182,28 +182,30 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
 
 def _create_html_summary(outfile_uris, sequest_uris):
     html = open(outfile_uris['html'], 'w')
-    
-    html.write("<html>")
-    html.write("<title>InVEST Carbon Model</title>")
-    html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
-    html.write("<table border='1', cellpadding='5'>")
 
     def write_paragraph(text):
         html.write("<p>")
         html.write(text)
         html.write("</p>")
 
-    def write_row(cells):
+    def write_row(cells, is_header=False):
         html.write("<tr>")
+        cell_tag = "th" if is_header else "td"
         for cell in cells:
-            html.write("<td>" + str(cell) + "</td>")
+            html.write("<%s>%s</%s>" % (cell_tag, str(cell), cell_tag))
         html.write("</tr>")
-
-    def write_bold_row(cells):
-        write_row("<strong>" + str(cell) + "</strong>" for cell in cells)
 
     def format_currency(val):
         return '%.2f' % val
+    
+    html.write("<html>")
+    html.write("<head>")
+    html.write("<title>InVEST Carbon Model</title>")
+    html.write(_css_style())
+    html.write("</head>")
+    html.write("<body>")
+    html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
+
 
     write_paragraph('<strong>Positive values</strong> in this table indicate that carbon storage increased. '
                     'In this case, the positive Net Present Value represents the value of '
@@ -212,10 +214,11 @@ def _create_html_summary(outfile_uris, sequest_uris):
                     'In this case, the negative Net Present Value represents the cost of '
                     'carbon emission.')
 
-
-    write_bold_row(["Scenario", 
-                    "Change in Carbon Stocks (Mg of carbon)",
-                    "Net Present Value (USD)"])
+    html.write("<table>")
+    write_row(["Scenario", 
+               "Change in Carbon Stocks<br>(Mg of carbon)",
+               "Net Present Value<br>(USD)"],
+              is_header=True)
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
@@ -240,13 +243,15 @@ def _create_html_summary(outfile_uris, sequest_uris):
             write_row(['%s (confident cells only)' % scenario_name, 
                        masked_seq, 
                        format_currency(masked_val)])
+    html.write("</table>")
 
     # Compute comparison data between scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
-        write_row([' ', ' ', ' '])
-        write_bold_row(["Scenario Comparison", 
-                        "Difference in Carbon Stocks (Mg of carbon)",
-                        "Difference in Net Present Value (USD)"])
+        html.write("<table>")
+        write_row(["Scenario Comparison", 
+                   "Difference in Carbon Stocks<br>(Mg of carbon)",
+                   "Difference in Net Present Value<br>(USD)"],
+                  is_header=True)
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
         write_row(['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
@@ -264,6 +269,36 @@ def _create_html_summary(outfile_uris, sequest_uris):
 
 
     html.write("</table>")
+    html.write("</body>")
     html.write("</html>")
 
     html.close()
+
+def _css_style():
+    return '''<style type="text/css">
+      body {
+          background-color: #EFECCA;
+          color: #002F2F
+      }
+      h1, strong, th {
+          color: #046380;
+      }
+      table {
+          border: 5px solid #A7A37E;
+          margin-bottom: 50px; 
+          background-color: #E6E2AF;
+      }
+      td, th { 
+          margin-left: 0px;
+          margin-right: 0px;
+          padding-left: 8px;
+          padding-right: 8px;
+          padding-bottom: 2px;
+          padding-top: 2px;
+          text-align:left
+      }
+      td { 
+          border-top: 5px solid #EFECCA;
+      }
+      </style>
+      '''
