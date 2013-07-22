@@ -90,3 +90,27 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
+    
+    def test_make_crit_dict_regression(self):
+        '''This should specifically test the make_crit_shape_dict function in
+        hra_preprocessor. This will get called by both preprocessor and
+        non-core. Want to check against the dictionary of what we think it
+        should be.'''
+
+        shp_crit_dir = './invest-data/test/data/hra_regression_data/Shape_Criteria'
+
+        expected_dict = \
+            {'h_s_e': {},
+             'h': {'kelp':
+                    {'recruitment rate': 
+                        'home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria/Resilience/kelp_recruitment_rate.shp'
+                    }
+                  },
+             'h_s_c': {}
+            }
+
+        produced_dict = hra_preprocessor.make_crit_shape_dict(shp_crit_dir)
+
+        self.maxDiff = None
+        self.assertEqual(expected_dict, produced_dict)
+
