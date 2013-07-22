@@ -114,3 +114,12 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(expected_dict, produced_dict)
 
+    def test_UnexpectedString_exception(self):
+        '''Want to make sure that preproc will throw an exception if a CSV is
+        passed which contains strings or null values where there should be
+        floats for use in calculation'''
+
+        test_CSV = 'home/kathryn/workspace/invest_natcap.invest-3/test/invest-data/test/data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_overlap_ratings.csv'
+
+        self.assertRaises(hra_preprocessor.UnexpectedString,
+                        hra_preprocessor.parse_habitat_overlap, test_CSV)
