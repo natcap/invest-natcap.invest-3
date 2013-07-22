@@ -323,10 +323,13 @@ def _create_html_summary(outfile_uris, sequest_uris):
     html.write("</table>")
 
     # Write a list of the output files produced by the model.
-    write_section_header('Ouput Files')
+    write_section_header('Output Files')
     outfile_descriptions = _make_outfile_descriptions(outfile_uris)
+    html.write("<table>")
+    write_row(["Filename", "Description"], is_header=True)
     for filename, description in outfile_descriptions.items():
-        write_paragraph('<strong>%s: </strong>%s' % (filename, description))
+        write_row([('%s' % filename), description])
+    html.write("</table>")
 
     html.write("</body>")
     html.write("</html>")
