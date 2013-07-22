@@ -8,7 +8,7 @@ import shutil
 import glob
 import json
 
-from invest_natcap.habitat_risk_assessment import hra_preprocessor
+from invest_natcap.hra_scratch import hra_preprocessor
 from osgeo import gdal, ogr
 
 LOGGER = logging.getLogger('HRA_PREPROCESSOR_TEST')
@@ -86,7 +86,42 @@ class TestHRAPreprocessor(unittest.TestCase):
         explicit form, want to check that it will error if given an incorrect
         folder setup.'''
 
-        crit_uri = 'home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria_Bad_Struct'
+        crit_uri = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria_Bad_Struct'
 
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
+    
+    def test_make_crit_dict_regression(self):
+        '''This should specifically test the make_crit_shape_dict function in
+        hra_preprocessor. This will get called by both preprocessor and
+        non-core. Want to check against the dictionary of what we think it
+        should be.'''
+
+        shp_crit_dir = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria'
+
+        expected_dict = \
+            {'h_s_e': {},
+             'h': {'kelp':
+                    {'recruitment rate': 
+                        '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria/Resilience/kelp_recruitment_rate.shp'
+                    }
+                  },
+             'h_s_c': {}
+            }
+
+        produced_dict = hra_preprocessor.make_crit_shape_dict(shp_crit_dir)
+
+        self.maxDiff = None
+        self.assertEqual(expected_dict, produced_dict)
+
+    def test_UnexpectedString_exception(self):
+        '''Want to make sure that preproc will throw an exception if a CSV is
+        passed which contains strings or null values where there should be
+        floats for use in calculation'''
+
+        test_CSV = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_ratings.csv'
+        empty_dict = {}
+
+        self.assertRaises(hra_preprocessor.UnexpectedString,
+                        hra_preprocessor.parse_overlaps, test_CSV, empty_dict, 
+                                                                    empty_dict, empty_dict)
