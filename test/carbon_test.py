@@ -174,7 +174,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             '''Asserts that the HTML summary file contains the given row.'''
             filename = os.path.join(workspace_dir, 'output', 'summary.html')
             summary = open(filename, 'r').read()
-            rows = summary.split('<tr>')
+            rows = re.split(r'<tr>|</tr>', summary)
             row_title_cell = '<td>%s</td>' % row_title
             for row in rows:
                 # Check if this is the row we're looking for.
