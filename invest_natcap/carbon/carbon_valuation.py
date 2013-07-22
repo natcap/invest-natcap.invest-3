@@ -1,5 +1,6 @@
 """InVEST valuation interface module.  Informally known as the URI level."""
 
+import collections
 import os
 import logging
 
@@ -132,7 +133,7 @@ def _make_outfile_uris(output_directory, args):
         filename = '%s%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
         return os.path.join(output_directory, filename)
 
-    outfile_uris = {}
+    outfile_uris = collections.OrderedDict()
 
     # Value sequestration for base scenario.
     outfile_uris['base_val'] = outfile_uri('value_seq', 'base')
@@ -157,6 +158,54 @@ def _make_outfile_uris(output_directory, args):
     
     return outfile_uris
 
+def _make_outfile_descriptions(outfile_uris):
+    '''Returns a dict with descriptions of each outfile, keyed by filename.'''
+
+    def value_file_description(scenario_name):
+        return ('Maps the economic value of carbon sequestered between the '
+                'current and %s scenarios, with values in dollars per grid '
+                'cell.') % scenario_name
+
+    def value_mask_file_description(scenario_name):
+        return ('Maps the economic value of carbon sequestered between the '
+                'current and %s scenarios, but only for cells where we are '
+                'confident that carbon storage will either increase or '
+                'decrease.') % scenario_name
+
+    def carbon_mask_file_description(scenario_name):
+        return ('Maps the increase in carbon stored between the current and '
+                '%s scenarios, in Mg per grid cell, but only for cells where '
+                ' we are confident that carbon storage will either increase or '
+                'decrease.') % scenario_name
+
+    # Adjust the name of the baseline future scenario based on whether
+    # REDD analysis is enabled or not.
+    if 'redd_val' in outfile_uris:
+        base_name = 'baseline'
+    else:
+        base_name = 'future'
+
+    redd_name = 'REDD policy'
+
+    description_dict = {
+        'base_val': value_file_description(base_name),
+        'base_seq_mask': carbon_mask_file_description(base_name),
+        'base_val_mask': value_mask_file_description(base_name),
+        'redd_val': value_file_description(redd_name),
+        'redd_seq_mask': carbon_mask_file_description(redd_name),
+        'redd_val_mask': value_mask_file_description(redd_name)
+        }
+
+    descriptions = collections.OrderedDict()
+    for key, uri in outfile_uris.items():
+        if key == 'html':
+            # Don't need a description for this summary file.
+            continue
+        filename = os.path.basename(uri)
+        descriptions[filename] = description_dict[key]
+
+    return descriptions
+    
 def _create_masked_raster(orig_uri, mask_uri, result_uri):
     '''Creates a raster at result_uri with some areas masked out.
 
@@ -184,9 +233,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
     html = open(outfile_uris['html'], 'w')
 
     def write_paragraph(text):
-        html.write("<p>")
-        html.write(text)
-        html.write("</p>")
+        html.write('<p>%s</p>' % text)
 
     def write_row(cells, is_header=False):
         html.write("<tr>")
@@ -194,6 +241,9 @@ def _create_html_summary(outfile_uris, sequest_uris):
         for cell in cells:
             html.write("<%s>%s</%s>" % (cell_tag, str(cell), cell_tag))
         html.write("</tr>")
+
+    def write_section_header(text):
+        html.write("<h2>%s</h2>" % text)
 
     def format_currency(val):
         return '%.2f' % val
@@ -206,7 +256,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
     html.write("<body>")
     html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
 
-
+    write_section_header('Results Summary')
     write_paragraph('<strong>Positive values</strong> in this table indicate that carbon storage increased. '
                     'In this case, the positive Net Present Value represents the value of '
                     'the sequestered carbon.')
@@ -214,6 +264,8 @@ def _create_html_summary(outfile_uris, sequest_uris):
                     'In this case, the negative Net Present Value represents the cost of '
                     'carbon emission.')
 
+    # Write the table that summarizes change in carbon stocks and
+    # net present value.
     html.write("<table>")
     write_row(["Scenario", 
                "Change in Carbon Stocks<br>(Mg of carbon)",
@@ -245,7 +297,8 @@ def _create_html_summary(outfile_uris, sequest_uris):
                        format_currency(masked_val)])
     html.write("</table>")
 
-    # Compute comparison data between scenarios.
+    # If REDD scenario analysis is enabled, write the table
+    # comparing the baseline and REDD scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
         html.write("<table>")
         write_row(["Scenario Comparison", 
@@ -267,8 +320,14 @@ def _create_html_summary(outfile_uris, sequest_uris):
                        format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
                        ])
 
-
     html.write("</table>")
+
+    # Write a list of the output files produced by the model.
+    write_section_header('Ouput Files')
+    outfile_descriptions = _make_outfile_descriptions(outfile_uris)
+    for filename, description in outfile_descriptions.items():
+        write_paragraph('<strong>%s: </strong>%s' % (filename, description))
+
     html.write("</body>")
     html.write("</html>")
 
@@ -280,8 +339,11 @@ def _css_style():
           background-color: #EFECCA;
           color: #002F2F
       }
-      h1, strong, th {
+      h1, h2, strong, th {
           color: #046380;
+      }
+      h2 {
+          border-bottom: 1px solid #A7A37E;
       }
       table {
           border: 5px solid #A7A37E;
@@ -295,7 +357,7 @@ def _css_style():
           padding-right: 8px;
           padding-bottom: 2px;
           padding-top: 2px;
-          text-align:left
+          text-align:left;
       }
       td { 
           border-top: 5px solid #EFECCA;
