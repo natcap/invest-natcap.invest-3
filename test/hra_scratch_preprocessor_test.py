@@ -8,7 +8,7 @@ import shutil
 import glob
 import json
 
-from invest_natcap.habitat_risk_assessment import hra_preprocessor
+from invest_natcap.hra_scratch import hra_preprocessor
 from osgeo import gdal, ogr
 
 LOGGER = logging.getLogger('HRA_PREPROCESSOR_TEST')
