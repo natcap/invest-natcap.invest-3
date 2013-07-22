@@ -86,7 +86,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         explicit form, want to check that it will error if given an incorrect
         folder setup.'''
 
-        crit_uri = 'home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria_Bad_Struct'
+        crit_uri = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria_Bad_Struct'
 
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
@@ -97,13 +97,13 @@ class TestHRAPreprocessor(unittest.TestCase):
         non-core. Want to check against the dictionary of what we think it
         should be.'''
 
-        shp_crit_dir = './invest-data/test/data/hra_regression_data/Shape_Criteria'
+        shp_crit_dir = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria'
 
         expected_dict = \
             {'h_s_e': {},
              'h': {'kelp':
                     {'recruitment rate': 
-                        'home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria/Resilience/kelp_recruitment_rate.shp'
+                        '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria/Resilience/kelp_recruitment_rate.shp'
                     }
                   },
              'h_s_c': {}
@@ -119,7 +119,9 @@ class TestHRAPreprocessor(unittest.TestCase):
         passed which contains strings or null values where there should be
         floats for use in calculation'''
 
-        test_CSV = 'home/kathryn/workspace/invest_natcap.invest-3/test/invest-data/test/data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_overlap_ratings.csv'
+        test_CSV = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_ratings.csv'
+        empty_dict = {}
 
         self.assertRaises(hra_preprocessor.UnexpectedString,
-                        hra_preprocessor.parse_habitat_overlap, test_CSV)
+                        hra_preprocessor.parse_overlaps, test_CSV, empty_dict, 
+                                                                    empty_dict, empty_dict)
