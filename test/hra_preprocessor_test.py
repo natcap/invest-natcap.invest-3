@@ -19,8 +19,8 @@ class TestHRAPreprocessor(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA' 
-        args['stressors_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/StressorLayers'
+        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA' 
+        args['stressors_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/StressorLayers'
         args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
         args['sensitivity_crits'] = ['temporal overlap', \
                     'frequency of disturbance']
@@ -32,7 +32,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         '''This will use only the habitats directory as an input to overlap
         stressors, and won't attempt to pull in shapefile criteria.'''
 
-        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
 
@@ -41,16 +41,16 @@ class TestHRAPreprocessor(unittest.TestCase):
         stressors, and will atempt to use a single shapefile criteria with
         eelgrass and recruitment rate.'''
 
-        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
-        self.args['criteria_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Shape_Criteria'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Input/HabitatLayers'
+        self.args['criteria_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/hra_regression_data/Shape_Criteria'
 
         hra_preprocessor.execute(self.args)
 
     @unittest.skip("For later testing.")
     def test_HabsSpecies_NoShapes_smoke(self):
 
-        self.args['species_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA/Input/SpeciesLayers'
-        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA/Input/HabitatLayers'
+        self.args['species_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/SpeciesLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
 
@@ -67,7 +67,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         within our 3 criteria type lists. Should raise a NotEnoughCriteria 
         exception.'''
 
-        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA/Input/HabitatLayers'
+        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Input/HabitatLayers'
 
         #Since we had 6 crits to begin with, remove one from each should leave
         #us with 3, want to make sure this causes to error.
@@ -336,7 +336,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         passed which contains strings or null values where there should be
         floats for use in calculation'''
 
-        test_CSV = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_overlap_ratings.csv'
+        test_CSV = './data/hra_regression_data/habitat_stressor_ratings_null_vals/kelp_overlap_ratings.csv'
 
         self.assertRaises(hra_preprocessor.UnexpectedString,
                         hra_preprocessor.parse_habitat_overlap, test_CSV)
@@ -346,7 +346,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         explicit form, want to check that it will error if given an incorrect
         folder setup.'''
 
-        crit_uri = './invest-data/test/data/hra_regression_data/Shape_Criteria_Bad_Struct'
+        crit_uri = './data/hra_regression_data/Shape_Criteria_Bad_Struct'
 
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
@@ -357,8 +357,8 @@ class TestHRAPreprocessor(unittest.TestCase):
         up and compare it to the "cealn run" folder that it the output just
         after those inputs have been used.'''
 
-        self.args['habitats_dir'] = './invest-data/test/data/hra_regression_data/Input/HabitatLayers'
-        self.args['criteria_dir'] = './invest-data/test/data/hra_regression_data/Shape_Criteria'
+        self.args['habitats_dir'] = './data/hra_regression_data/Input/HabitatLayers'
+        self.args['criteria_dir'] = './data/hra_regression_data/Shape_Criteria'
 
         #Run to create the outputs.
         hra_preprocessor.execute(self.args)
@@ -370,7 +370,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         #Know the location of our clean run directory, get the files within,
         #and check that they exist, and are correct within result_dir
-        clean_dir = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings_clean'
+        clean_dir = './data/hra_regression_data/habitat_stressor_ratings_clean'
 
         c_file_list = glob.glob(os.path.join(clean_dir, '*.csv'))
 
@@ -391,7 +391,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         
         #At this point, we should just have the dir_names.txt file left in the
         #file list of the created dictionary.
-        c_json_uri = os.path.join('./invest-data/test/data/hra_regression_data/habitat_stressor_ratings_clean/dir_names.txt')
+        c_json_uri = os.path.join('./data/hra_regression_data/habitat_stressor_ratings_clean/dir_names.txt')
         c_dict = json.load(open(c_json_uri))
 
         r_expected_uri = os.path.join(result_dir, 'dir_names.txt')

@@ -370,7 +370,7 @@ def make_crit_shape_dict(crit_uri):
  
     for folder in [res_dir, exps_dir, sens_dir]:
         if not os.path.isdir(folder):
-    
+            LOGGER.debug("The missing folder is %s" % folder) 
             raise IOError("Using spatically explicit critiera requires you to \
                     have subfolders named \"Resilience\", \"Exposure\", and \
                     \"Sensitivity\". Check that all these folders exist, and \

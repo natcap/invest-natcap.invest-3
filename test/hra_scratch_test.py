@@ -32,10 +32,10 @@ class TestHRA(unittest.TestCase):
     def test_standard_config(self):
         '''Simplistic mock up stored in personal test_out so that we can start to debug
         pre_proc/hra/core.'''
-        self.args['csv_uri'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Scratch/habitat_stressor_ratings'
+        self.args['csv_uri'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/habitat_stressor_ratings'
         self.args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/data/test_out/HRA/Scratch'
 
-        self.args['risk_eq'] = 'Euclidean'
-        self.args['decay_eq'] = 'None'
+        self.args['risk_eq'] = 'Multiplicative'
+        self.args['decay_eq'] = 'Linear'
 
         hra.execute(self.args)
