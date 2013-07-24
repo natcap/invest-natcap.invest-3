@@ -274,12 +274,12 @@ class TestHRAPreprocessor(unittest.TestCase):
         hab = 'kelp'
         stress = 'FFA'
 
-        good_line = ['Criteria', 'SHAPE', '1.0', '1.0', 'E']
+        good_line = ['Criteria', 'SHAPE', '1', '1', 'E']
 
-        line_bad_rating = ['Criteria', 'BADWOLF', '1.0', '1.0', 'E']
-        line_bad_weight = ['Criteria', 'SHAPE', '0.0', '1.0', 'E']
-        line_bad_dq = ['Criteria', 'SHAPE', '1.0', 'DoodleBug', 'E']
-        line_bad_ec = ['Criteria', 'SHAPE', '0.0', '1.0', 'Jeepers']
+        line_bad_rating = ['Criteria', 'BADWOLF', '1', '1', 'E']
+        line_bad_weight = ['Criteria', 'SHAPE', '0', '1', 'E']
+        line_bad_dq = ['Criteria', 'SHAPE', '1', 'DoodleBug', 'E']
+        line_bad_ec = ['Criteria', 'SHAPE', '0', '1', 'Jeepers']
 
         hra_preprocessor.error_check(good_line, hab, stress)
 
