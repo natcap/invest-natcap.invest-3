@@ -269,4 +269,28 @@ class TestHRAPreprocessor(unittest.TestCase):
                 ERROR: ImproperECSelection- if string that isn't one of the 
                 acceptable ones, or ANYTHING else.
         '''
-        pass
+        #Takes name parameters in order to throw an informative error. Not essential
+        #for the inner workings of the function.
+        hab = 'kelp'
+        stress = 'FFA'
+
+        good_line = ['Criteria', 'SHAPE', '1.0', '1.0', 'E']
+
+        line_bad_rating = ['Criteria', 'BADWOLF', '1.0', '1.0', 'E']
+        line_bad_weight = ['Criteria', 'SHAPE', '0.0', '1.0', 'E']
+        line_bad_dq = ['Criteria', 'SHAPE', '1.0', 'DoodleBug', 'E']
+        line_bad_ec = ['Criteria', 'SHAPE', '0.0', '1.0', 'Jeepers']
+
+        hra_preprocessor.error_check(good_line, hab, stress)
+
+        self.assertRaises(hra_preprocessor.UnexpectedString,
+                        hra_preprocessor.error_check, line_bad_rating, hab, stress)
+
+        self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
+                        hra_preprocessor.error_check, line_bad_weight, hab, stress)
+
+        self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
+                        hra_preprocessor.error_check, line_bad_dq, hab, stress)
+                        
+        self.assertRaises(hra_preprocessor.ImproperECSelection,
+                        hra_preprocessor.error_check, line_bad_ec, hab, stress)
