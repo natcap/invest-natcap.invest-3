@@ -7,13 +7,17 @@ import datetime
 import logging
 
 from osgeo import ogr
+import matplotlib
+matplotlib.use('AGG')  # Use the Anti-Grain Geometry back-end (for PNG files)
+import matplotlib.pyplot as plt
 import numpy as np
 
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-NUM_MONTE_CARLO_RUNS = 100
+NUM_MONTE_CARLO_RUNS = 200  # TODO set this to 1000 for production
+NUM_HISTOGRAM_BINS = 30
 
 def execute(args):
     ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
@@ -164,8 +168,12 @@ def execute(args):
         # Compile the results into a dictionary mapping farm ID to
         # a list of the harvested weights (one weight for each run).
         hrv_weight_results = {}
-        LOGGER.info('Beginning Monte Carlo simulation.')
-        for _ in range(NUM_MONTE_CARLO_RUNS):
+        LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
+                    % NUM_MONTE_CARLO_RUNS)
+        for i in range(NUM_MONTE_CARLO_RUNS):
+            if i > 0 and i % 100 == 0:
+                LOGGER.info('Done with %d runs.' % i)
+
             sample_cycle_history = calc_farm_cycles_with_params(sample_param('a'),
                                                        sample_param('b'))
             sample_sum_hrv_weight, _ = calc_hrv_weight(args['farm_op_dict'], 
@@ -179,7 +187,18 @@ def execute(args):
                     hrv_weight_results[farm] = [sample_hrv_weight]
 
         LOGGER.info('Monte Carlo simulation complete.')
-        # TODO: make histograms for each farm for total harvested weight output.
+        plot_dir = os.path.join(output_dir, 'images')
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+
+        def make_plot_name(farm_id):
+            return os.path.join(plot_dir, 'farm_%s_plot.png' % str(farm_id))
+
+        # Make a histogram for each farm.
+        for farm_id, sample_hrv_weights in hrv_weight_results.items():
+            plt.hist(sample_hrv_weights, bins=NUM_HISTOGRAM_BINS)
+            plt.savefig(make_plot_name(farm_id))
+            plt.close()
         
     create_HTML_table(output_dir, args['farm_op_dict'], 
                       cycle_history, sum_hrv_weight, hrv_weight, 
