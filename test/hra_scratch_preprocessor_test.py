@@ -169,7 +169,7 @@ class TestHRAPreprocessor(unittest.TestCase):
                  'Crit_Rasters':{}
                 }
             }
-        habs = \ 
+        habs = \
             {('kelp'):
                 {'Crit_Ratings':
                     {'natural mortality':
@@ -191,7 +191,7 @@ class TestHRAPreprocessor(unittest.TestCase):
                     }
                 }
             }
-       h_s_e = \ 
+        h_s_e = \
             {('kelp', 'FinfishAquacultureComm'):
                 {'Crit_Ratings':
                     {'intensity rating':
@@ -240,12 +240,12 @@ class TestHRAPreprocessor(unittest.TestCase):
         #function.
         del exp_dict_h['kelp']['Crit_Ratings']['natural mortality']
         del exp_dict_h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']['intensity rating']
-        del exp_dict_h_s_e[('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
+        del exp_dict_h_s_c[('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
 
         #If function works correctly, should edit our versions of the three dicts.
         hra_preprocessor.zero_check(h_s_c, h_s_e, habs)
 
-        sel.maxDiff = None
+        self.maxDiff = None
         self.assertEqual(exp_dict_h, habs)
         self.assertEqual(exp_dict_h_s_e, h_s_e)
         self.assertEqual(exp_dict_h_s_c, h_s_c)
@@ -269,3 +269,4 @@ class TestHRAPreprocessor(unittest.TestCase):
                 ERROR: ImproperECSelection- if string that isn't one of the 
                 acceptable ones, or ANYTHING else.
         '''
+        pass

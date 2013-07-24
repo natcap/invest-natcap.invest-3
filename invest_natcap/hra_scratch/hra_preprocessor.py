@@ -601,16 +601,20 @@ def zero_check(h_s_c, h_s_e, habs):
 
             #These are the subdictionaries mapped to the keys of 'Crit_Ratings'
             #'Crit_Rasters'.
-            for subdict_lvl_2 in subdict_lvl_1.values():
+            for key_2, subdict_lvl_2 in subdict_lvl_1.items():
 
-                #These are key, value pairs of crit_name, dict containing
-                #rating/dq/weight info.
-                for key_3, subdict_lvl_3 in subdict_lvl_2.items():
+                #Only want to check for 0 ratings if they're giving a single
+                #xplicit rating. If they gave a shapefile, they're on their own.
+                if key_2 == 'Crit_Ratings':
 
-                    #Want to make sure that the Rating key isn't 0.
-                    if subdict_lvl_3['Rating'] == 0.0:
-                        
-                        del subdict_lvl_2[key_3]
+                    #These are key, value pairs of crit_name, dict containing
+                    #rating/dq/weight info.
+                    for key_3, subdict_lvl_3 in subdict_lvl_2.items():
+
+                        #Want to make sure that the Rating key isn't 0.
+                        if subdict_lvl_3['Rating'] == 0.0:
+                            
+                            del subdict_lvl_2[key_3]
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
@@ -800,10 +804,9 @@ def error_check(line, hab_name, stress_name):
 
     #They may not be 0.
     if line[2] == 0 or line[3] == 0:
-        except ValueError:
-            raise ZeroDQWeightValue("Individual criteria data qualities and weights \
-                may not be 0. Check your %s CSV table in the %s section to \
-                correct this." % (hab_name, stress_name))
+        raise ZeroDQWeightValue("Individual criteria data qualities and weights \
+            may not be 0. Check your %s CSV table in the %s section to \
+            correct this." % (hab_name, stress_name))
 
     #Assuming neither is 0, they also must be floats.
     try:
@@ -817,10 +820,10 @@ def error_check(line, hab_name, stress_name):
 
     #Exposure vs Consequence
     if line[4] != 'E' and line[4] != 'C':
-        except ValueError:
-            raise ImproperECSelection("Entries in the E/C column of a CSV table may \
-                only be \"E\" or \"C\". Please select one of those options for the \
-                criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
+
+        raise ImproperECSelection("Entries in the E/C column of a CSV table may \
+            only be \"E\" or \"C\". Please select one of those options for the \
+            criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
 
 def parse_stress_buffer(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
