@@ -260,11 +260,11 @@ class TestHRAPreprocessor(unittest.TestCase):
                 be placed automatically by HRA_Preprocessor, or a float.
                 ERROR: UnexpectedString- for string != 'SHAPE'
             Weight- Must be a float (or an int), but cannot be 0.
-                ERROR: ZeroDQWeightValue- if string, or anything not castable 
-                to float, or 0.
+                ERROR: ZeroDQWeightValue or UnexpectedString- if string, or an
+                ything not castable to float, or 0.
             DataQuality- Most be a float (or an int), but cannot be 0.
-                ERROR: ZeroDQWeightValue- if string, or anything not castable
-                to float, or 0.
+                ERROR: ZeroDQWeightValue or UnexpectedString- if string, or 
+                anything not castable to float, or 0.
             Exp/Cons- Most be the string 'E' or 'C'.
                 ERROR: ImproperECSelection- if string that isn't one of the 
                 acceptable ones, or ANYTHING else.
@@ -277,9 +277,9 @@ class TestHRAPreprocessor(unittest.TestCase):
         good_line = ['Criteria', 'SHAPE', '1', '1', 'E']
 
         line_bad_rating = ['Criteria', 'BADWOLF', '1', '1', 'E']
-        line_bad_weight = ['Criteria', 'SHAPE', '0', '1', 'E']
-        line_bad_dq = ['Criteria', 'SHAPE', '1', 'DoodleBug', 'E']
-        line_bad_ec = ['Criteria', 'SHAPE', '0.0', '1', 'Jeepers']
+        line_zero_weight = ['Criteria', 'SHAPE', '0', '1', 'E']
+        line_string_dq = ['Criteria', 'SHAPE', '1', 'DoodleBug', 'E']
+        line_bad_ec = ['Criteria', 'SHAPE', '1.0', '1', 'Jeepers']
 
         hra_preprocessor.error_check(good_line, hab, stress)
 
@@ -287,10 +287,10 @@ class TestHRAPreprocessor(unittest.TestCase):
                         hra_preprocessor.error_check, line_bad_rating, hab, stress)
 
         self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
-                        hra_preprocessor.error_check, line_bad_weight, hab, stress)
+                        hra_preprocessor.error_check, line_zero_weight, hab, stress)
 
-        self.assertRaises(hra_preprocessor.ZeroDQWeightValue,
-                        hra_preprocessor.error_check, line_bad_dq, hab, stress)
+        self.assertRaises(hra_preprocessor.UnexpectedString,
+                        hra_preprocessor.error_check, line_string_dq, hab, stress)
                         
         self.assertRaises(hra_preprocessor.ImproperECSelection,
                         hra_preprocessor.error_check, line_bad_ec, hab, stress)
