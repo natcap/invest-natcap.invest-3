@@ -7,10 +7,13 @@ import datetime
 import logging
 
 from osgeo import ogr
+import numpy as np
 
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+NUM_MONTE_CARLO_RUNS = 100
 
 def execute(args):
     ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
@@ -73,18 +76,19 @@ def execute(args):
     
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     
-    #using a tuple to get data back from function, then update the shape files 
-    #to reflect these new attributes
-    cycle_history = calc_farm_cycles(args['outplant_buffer'], args['g_param_a'], 
-                                          args['g_param_b'], args['water_temp_dict'], 
-                                          args['farm_op_dict'], float(args['duration']))
+    def calc_farm_cycles_with_params(a, b):
+        '''Wrapper around calc_farm_cycles that just takes the growth parameters.'''
+        return calc_farm_cycles(args['outplant_buffer'], a, b, 
+                                args['water_temp_dict'], args['farm_op_dict'], 
+                                float(args['duration']))
 
+    cycle_history = calc_farm_cycles_with_params(args['g_param_a'], args['g_param_b'])
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
     curr_shp_file = args['ff_farm_file']
     
-    #If already exists, remove so we can re-create
-    if (os.path.isfile(out_path)):
+    if os.path.isfile(out_path):
+        # Remove so we can re-create.
         os.remove(out_path)
 
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
@@ -95,7 +99,6 @@ def execute(args):
     layer.CreateField(cycle_field)
     
     for feature in layer:
-        
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
         num_cycles = len(cycle_history[feature_ID])
@@ -119,16 +122,14 @@ def execute(args):
     layer.CreateField(hrv_field)
         
     for feature in layer:
-
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
         feature.SetField('Hrvwght_kg', sum_hrv_weight[feature_ID])
-        
         layer.SetFeature(feature)
 
     #This will complete the valuation portion of the finfish aquaculture 
     #model, dependent on whether or not valuation is desired.
-    if (args['do_valuation'] == True):
+    if args['do_valuation']:
         value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
                 hrv_weight, cycle_history)
    
@@ -139,17 +140,47 @@ def execute(args):
         layer.CreateField(npv_field)
         
         for feature in layer:
-    
             accessor = args['farm_ID']
             feature_ID = feature.items()[accessor]
-            feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
-            
+            feature.SetField('NVP_USD_1k', farms_npv[feature_ID])     
             layer.SetFeature(feature)
     else:
         value_history = None
         farms_npv = None
+
+    # If uncertainty analysis is enabled, run a Monte Carlo simulation.
+    if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
+        def sample_param(param):
+            '''Samples the normal distribution for the given growth parameter.
+
+            Only returns positive values.'''
+            while True:
+                sample = np.random.normal(args['g_param_%s' % param],
+                                          args['g_param_%s_sd' % param])
+                if sample > 0:
+                    return sample
+
+        # Do a bunch of runs as part of a Monte Carlo simulation.
+        # Compile the results into a dictionary mapping farm ID to
+        # a list of the harvested weights (one weight for each run).
+        hrv_weight_results = {}
+        LOGGER.info('Beginning Monte Carlo simulation.')
+        for _ in range(NUM_MONTE_CARLO_RUNS):
+            sample_cycle_history = calc_farm_cycles_with_params(sample_param('a'),
+                                                       sample_param('b'))
+            sample_sum_hrv_weight, _ = calc_hrv_weight(args['farm_op_dict'], 
+                            args['frac_post_process'], args['mort_rate_daily'], 
+                            sample_cycle_history)
+
+            for farm, sample_hrv_weight in sample_sum_hrv_weight.items():
+                try:
+                    hrv_weight_results[farm].append(sample_hrv_weight)
+                except KeyError:
+                    hrv_weight_results[farm] = [sample_hrv_weight]
+
+        LOGGER.info('Monte Carlo simulation complete.')
+        # TODO: make histograms for each farm for total harvested weight output.
         
-    #Now, want to build the HTML table of everything we have calculated to this point
     create_HTML_table(output_dir, args['farm_op_dict'], 
                       cycle_history, sum_hrv_weight, hrv_weight, 
                       args['do_valuation'], farms_npv, value_history)
