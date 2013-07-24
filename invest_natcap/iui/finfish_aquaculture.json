@@ -42,6 +42,13 @@
                     "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
                 },
                 {
+                    "id": "use_uncertainty",
+                    "type": "checkbox",
+                    "label": "Enable uncertainty analysis",
+                    "defaultValue": false,
+                    "required": false
+                },
+                {
                     "id" : "param_a",
                     "args_id" : "g_param_a",
                     "type": "text",
@@ -51,6 +58,16 @@
                     "validateAs": {"type": "number"},
                     "dataType": "float",
                     "helpText": "Default a  = (0.038 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
+                },
+                {
+                    "id" : "param_a_sd",
+                    "args_id" : "g_param_a_sd",
+                    "type": "text",
+                    "label": "Standard Deviation for Parameter (a)",
+                    "enabledBy": "use_uncertainty",
+                    "validateAs": {"type": "number"},
+                    "dataType": "float",
+                    "helpText": "TODO TODO TODO TODO."
                 },
 		{
                     "id" : "param_b",
@@ -62,6 +79,16 @@
                     "validateAs": {"type": "number"},
                     "dataType": "float",
                     "helpText": "Default b  = (0.6667 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
+                },
+                {
+                    "id" : "param_b_sd",
+                    "args_id" : "g_param_b_sd",
+                    "type": "text",
+                    "label": "Standard Deviation for Parameter (b)",
+                    "enabledBy": "use_uncertainty",
+                    "validateAs": {"type": "number"},
+                    "dataType": "float",
+                    "helpText": "TODO TODO TODO TODO."
                 },
                 {
                     "id" : "water_temperature",
