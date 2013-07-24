@@ -131,6 +131,125 @@ class TestHRAPreprocessor(unittest.TestCase):
         subdictionaries that have 0 rating values. We have already raised exceptions
         elsewhere for zero dq's or weights.'''
 
+        h_s_c = \
+            {('kelp', 'FinfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'temporal overlap':
+                        {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'frequency of disturbance':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': {}
+                },
+            ('kelp', 'ShellfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'temporal overlap':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'frequency of disturbance':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':{}
+                },
+            ('eelgrass', 'FinfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'temporal overlap':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'frequency of disturbance':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':{}
+                },
+            ('eelgrass', 'ShellfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'temporal overlap':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'frequency of disturbance':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':{}
+                }
+            }
+        habs = \ 
+            {('kelp'):
+                {'Crit_Ratings':
+                    {'natural mortality':
+                        {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
+                    },
+                 'Crit_Rasters':
+                    {'recruitment rate':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    }
+                },
+            ('eelgrass'):
+                {'Crit_Ratings':
+                    {'natural mortality':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                    },
+                 'Crit_Rasters':
+                    {'recruitment rate':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    }
+                }
+            }
+       h_s_e = \ 
+            {('kelp', 'FinfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'intensity rating':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'management effectiveness':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':{}
+                },
+            ('kelp', 'ShellfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'intensity rating':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'management effectiveness':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters':{}
+                },
+            ('eelgrass', 'FinfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'intensity rating':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'management effectiveness':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                 'Crit_Rasters':{}
+                },
+            ('eelgrass', 'ShellfishAquacultureComm'):
+                {'Crit_Ratings':
+                    {'intensity rating':
+                        {'Rating': 0.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'management effectiveness':
+                        {'Rating': 1.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters':{}
+                }
+            }
+        
+        #Anything that has a 0 in the ratings score should have the entire criteria
+        #removed from the dictionary.
+        exp_dict_h = habs.copy()
+        exp_dict_h_s_e = h_s_e.copy()
+        exp_dict_h_s_c = h_s_c.copy()
+
+        #The criteria which should be removed automagically when run through the
+        #function.
+        del exp_dict_h['kelp']['Crit_Ratings']['natural mortality']
+        del exp_dict_h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']['intensity rating']
+        del exp_dict_h_s_e[('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
+
+        #If function works correctly, should edit our versions of the three dicts.
+        hra_preprocessor.zero_check(h_s_c, h_s_e, habs)
+
+        sel.maxDiff = None
+        self.assertEqual(exp_dict_h, habs)
+        self.assertEqual(exp_dict_h_s_e, h_s_e)
+        self.assertEqual(exp_dict_h_s_c, h_s_c)
+
     def test_error_checking_reg(self):
         '''Want to test the error_checking functionality that exists for individual
         lines of preprocessor's parse.
