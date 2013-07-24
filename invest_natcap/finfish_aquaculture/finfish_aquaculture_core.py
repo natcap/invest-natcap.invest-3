@@ -80,21 +80,17 @@ def execute(args):
     
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     
-    def calc_farm_cycles_with_params(a, b):
-        '''Wrapper around calc_farm_cycles that just takes the growth parameters.'''
-        return calc_farm_cycles(args['outplant_buffer'], a, b, 
-                                args['water_temp_dict'], args['farm_op_dict'], 
-                                float(args['duration']))
+    cycle_history = calc_farm_cycles(
+        args['outplant_buffer'], args['g_param_a'], args['g_param_b'], 
+        args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
 
-    cycle_history = calc_farm_cycles_with_params(args['g_param_a'], args['g_param_b'])
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
-    curr_shp_file = args['ff_farm_file']
-    
+    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'    
     if os.path.isfile(out_path):
         # Remove so we can re-create.
         os.remove(out_path)
 
+    curr_shp_file = args['ff_farm_file']
+    driver = ogr.GetDriverByName('ESRI Shapefile')
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()
     
@@ -131,15 +127,13 @@ def execute(args):
         feature.SetField('Hrvwght_kg', sum_hrv_weight[feature_ID])
         layer.SetFeature(feature)
 
-    #This will complete the valuation portion of the finfish aquaculture 
-    #model, dependent on whether or not valuation is desired.
+    # Do valuation if requested.
     if args['do_valuation']:
         value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
                 hrv_weight, cycle_history)
    
         #And add it into the shape file
         layer.ResetReading()
-        
         npv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
         layer.CreateField(npv_field)
         
@@ -152,53 +146,9 @@ def execute(args):
         value_history = None
         farms_npv = None
 
-    # If uncertainty analysis is enabled, run a Monte Carlo simulation.
+    # Do uncertainty analysis if it's enabled.
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
-        def sample_param(param):
-            '''Samples the normal distribution for the given growth parameter.
-
-            Only returns positive values.'''
-            while True:
-                sample = np.random.normal(args['g_param_%s' % param],
-                                          args['g_param_%s_sd' % param])
-                if sample > 0:
-                    return sample
-
-        # Do a bunch of runs as part of a Monte Carlo simulation.
-        # Compile the results into a dictionary mapping farm ID to
-        # a list of the harvested weights (one weight for each run).
-        hrv_weight_results = {}
-        LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
-                    % NUM_MONTE_CARLO_RUNS)
-        for i in range(NUM_MONTE_CARLO_RUNS):
-            if i > 0 and i % 100 == 0:
-                LOGGER.info('Done with %d runs.' % i)
-
-            sample_cycle_history = calc_farm_cycles_with_params(sample_param('a'),
-                                                       sample_param('b'))
-            sample_sum_hrv_weight, _ = calc_hrv_weight(args['farm_op_dict'], 
-                            args['frac_post_process'], args['mort_rate_daily'], 
-                            sample_cycle_history)
-
-            for farm, sample_hrv_weight in sample_sum_hrv_weight.items():
-                try:
-                    hrv_weight_results[farm].append(sample_hrv_weight)
-                except KeyError:
-                    hrv_weight_results[farm] = [sample_hrv_weight]
-
-        LOGGER.info('Monte Carlo simulation complete.')
-        plot_dir = os.path.join(output_dir, 'images')
-        if not os.path.exists(plot_dir):
-            os.makedirs(plot_dir)
-
-        def make_plot_name(farm_id):
-            return os.path.join(plot_dir, 'farm_%s_plot.png' % str(farm_id))
-
-        # Make a histogram for each farm.
-        for farm_id, sample_hrv_weights in hrv_weight_results.items():
-            plt.hist(sample_hrv_weights, bins=NUM_HISTOGRAM_BINS)
-            plt.savefig(make_plot_name(farm_id))
-            plt.close()
+        compute_uncertainty_data(args, output_dir)
         
     create_HTML_table(output_dir, args['farm_op_dict'], 
                       cycle_history, sum_hrv_weight, hrv_weight, 
@@ -405,6 +355,70 @@ def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_histor
             valuations[f] += npv / 1000
 
     return val_history, valuations
+
+def compute_uncertainty_data(args, output_dir):
+    '''Computes uncertainty data and produces outputs.
+
+    args - should contain data on the mean and standard deviation for a and b
+
+    Produces a series of histograms to visualize uncertainty for outputs.
+    '''
+    def sample_param(param):
+        '''Samples the normal distribution for the given growth parameter.
+        
+        Only returns positive values.'''
+        while True:
+            sample = np.random.normal(args['g_param_%s' % param],
+                                      args['g_param_%s_sd' % param])
+            if sample > 0:
+                return sample
+
+    # Do a bunch of runs as part of a Monte Carlo simulation.
+    # Compile the results into a dictionary mapping farm ID to
+    # a list of the harvested weights (one weight for each run).
+    hrv_weight_results = {}
+    LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
+                % NUM_MONTE_CARLO_RUNS)
+    for i in range(NUM_MONTE_CARLO_RUNS):
+        if i > 0 and i % 100 == 0:
+            LOGGER.info('Done with %d runs.' % i)
+
+        # Compute the cycle history given samples for a and b.
+        sample_cycle_history = calc_farm_cycles(
+            args['outplant_buffer'], sample_param('a'), sample_param('b'),
+            args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
+
+        # Compute the total harvested weight.
+        sample_sum_hrv_weight, _ = calc_hrv_weight(
+            args['farm_op_dict'], args['frac_post_process'], args['mort_rate_daily'], 
+            sample_cycle_history)
+
+        # Append the harvested weight to the per-farm list of weights.
+        for farm, sample_hrv_weight in sample_sum_hrv_weight.items():
+            try:
+                hrv_weight_results[farm].append(sample_hrv_weight)
+            except KeyError:
+                hrv_weight_results[farm] = [sample_hrv_weight]
+
+    LOGGER.info('Monte Carlo simulation complete.')
+
+    make_histograms(hrv_weight_results, output_dir)
+
+
+def make_histograms(farm_to_data_dict, output_dir):
+    plot_dir = os.path.join(output_dir, 'images')
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
+
+    def make_plot_name(farm_id):
+        return os.path.join(plot_dir, 'farm_%s_plot.png' % str(farm_id))
+
+    # Make a histogram for each farm.
+    for farm_id, farm_data in farm_to_data_dict.items():
+        plt.hist(farm_data, bins=NUM_HISTOGRAM_BINS)
+        plt.savefig(make_plot_name(farm_id))
+        plt.close()    
+
 
 def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
                        hrv_weight, do_valuation, farms_npv, value_history):
