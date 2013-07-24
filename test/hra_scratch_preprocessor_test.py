@@ -125,3 +125,28 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertRaises(hra_preprocessor.UnexpectedString,
                         hra_preprocessor.parse_overlaps, test_CSV, empty_dict, 
                                                                     empty_dict, empty_dict)
+
+    def test_remove_zero_reg(self):
+        '''We want to test the preprocessor functionality to properly remove any
+        subdictionaries that have 0 rating values. We have already raised exceptions
+        elsewhere for zero dq's or weights.'''
+
+    def test_error_checking_reg(self):
+        '''Want to test the error_checking functionality that exists for individual
+        lines of preprocessor's parse.
+
+        There should be an error thrown for each of the following:
+        
+            Rating- Can either be the explicit string 'SHAPE', which would
+                be placed automatically by HRA_Preprocessor, or a float.
+                ERROR: UnexpectedString- for string != 'SHAPE'
+            Weight- Must be a float (or an int), but cannot be 0.
+                ERROR: ZeroDQWeightValue- if string, or anything not castable 
+                to float, or 0.
+            DataQuality- Most be a float (or an int), but cannot be 0.
+                ERROR: ZeroDQWeightValue- if string, or anything not castable
+                to float, or 0.
+            Exp/Cons- Most be the string 'E' or 'C'.
+                ERROR: ImproperECSelection- if string that isn't one of the 
+                acceptable ones, or ANYTHING else.
+        '''

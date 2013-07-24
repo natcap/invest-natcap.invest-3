@@ -800,9 +800,10 @@ def error_check(line, hab_name, stress_name):
 
     #They may not be 0.
     if line[2] == 0 or line[3] == 0:
-        raise ZeroDQWeightValue("Individual criteria data qualities and weights \
-            may not be 0. Check your %s CSV table in the %s section to \
-            correct this." % (hab_name, stress_name))
+        except ValueError:
+            raise ZeroDQWeightValue("Individual criteria data qualities and weights \
+                may not be 0. Check your %s CSV table in the %s section to \
+                correct this." % (hab_name, stress_name))
 
     #Assuming neither is 0, they also must be floats.
     try:
@@ -816,10 +817,10 @@ def error_check(line, hab_name, stress_name):
 
     #Exposure vs Consequence
     if line[4] != 'E' and line[4] != 'C':
-
-        raise ImproperECSelection("Entries in the E/C column of a CSV table may \
-            only be \"E\" or \"C\". Please select one of those options for the \
-            criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
+        except ValueError:
+            raise ImproperECSelection("Entries in the E/C column of a CSV table may \
+                only be \"E\" or \"C\". Please select one of those options for the \
+                criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
 
 def parse_stress_buffer(uri):
     '''This will take the stressor buffer CSV and parse it into a dictionary
