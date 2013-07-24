@@ -63,9 +63,13 @@ def execute(args):
     ff_aqua_args['workspace_dir'] = args['workspace_dir']
     ff_aqua_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc'])
     ff_aqua_args['farm_ID'] = args['farm_ID']
+    ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
     ff_aqua_args['g_param_a'] = args['g_param_a']
     ff_aqua_args['g_param_b'] = args['g_param_b']
-    ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
+    if args.get('g_param_a_sd'):
+        ff_aqua_args['g_param_a_sd'] = args['g_param_a_sd']
+    if args.get('g_param_b_sd'):
+        ff_aqua_args['g_param_b_sd'] = args['g_param_b_sd']
     
     #Both CSVs are being pulled in, but need to do some maintenance to remove undesirable
     #information before they can be passed into core
