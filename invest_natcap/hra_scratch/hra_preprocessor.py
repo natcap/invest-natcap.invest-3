@@ -546,7 +546,8 @@ def parse_hra_tables(folder_uri):
         #the global dictionaries while the function is running. 
         parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
 
-    
+    zero_check(h_s_c_dict, h_s_e_dict, habitat_dict)
+
     #Add everything to the parse dictionary
     parse_dictionary['buffer_dict'] = stress_dict
     parse_dictionary['habitats'] = habitat_dict
@@ -554,6 +555,62 @@ def parse_hra_tables(folder_uri):
     parse_dictionary['h_s_c'] = h_s_c_dict
 
     return parse_dictionary
+
+def zero_check(h_s_c, h_s_e, habs):
+    '''Any criteria that have a rating of 0 mean that they are not a desired input
+    to the assessment. We should delete the criteria's entire subdictionary out of
+    the dictionary.
+
+    Input:
+        habs- A dictionary which contains all resilience specific criteria info.
+            The key for these will be the habitat name. It will map to a
+            subdictionary containing criteria information. The whole dictionary will
+            look like the following:
+            
+            {Habitat A: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            }
+            
+        h_s_e- A dictionary containing all information applicable to exposure
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+        h_s_c- A dictionary containing all information applicable to sensitivity
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+
+    Output:
+        Will update each of the three dictionaries by deleting any criteria where
+        the rating aspect is 0.
+
+    Returns nothing.
+    '''
+
+    #Want to do zero checks for each of the criteria dictionaries.
+    for dictionary in [h_s_c, h_s_e, habs]:
+        
+        #These are the subdictionaries mapped to the habitat, h-s tuple key.
+        for subdict_lvl_1 in dictionary.values():
+
+            #These are the subdictionaries mapped to the keys of 'Crit_Ratings'
+            #'Crit_Rasters'.
+            for subdict_lvl_2 in subdict_lvl_1.values():
+
+                #These are key, value pairs of crit_name, dict containing
+                #rating/dq/weight info.
+                for key_3, subdict_lvl_3 in subdict_lvl_2.items():
+
+                    #Want to make sure that the Rating key isn't 0.
+                    if subdict_lvl_3['Rating'] == 0.0:
+                        
+                        del subdict_lvl_2[key_3]
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
