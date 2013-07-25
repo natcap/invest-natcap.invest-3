@@ -14,10 +14,15 @@ class TestFinfishAquaculture(unittest.TestCase):
         self.workspace_dir = './invest-data/test/data/test_out/Aquaculture'
         self.output_dir = os.path.join(self.workspace_dir, 'Output')
 
+        # Get rid of old output files before each test run.
+        if os.path.exists(self.output_dir):
+            for out_file in os.listdir(self.output_dir):
+                os.remove(os.path.join(self.output_dir, out_file))
+
     def get_args(self):
         args = {}
 
-        #Biophysical
+        # Biophysical
         args['workspace_dir'] = self.workspace_dir
         args['ff_farm_loc'] = './invest-data/test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         args['farm_ID'] = 'FarmID'
@@ -27,7 +32,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['farm_op_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         args['outplant_buffer'] = 3
         
-        #Valuation
+        # Valuation
         args['do_valuation'] = True
         args['p_per_kg']= 2.25
         args['frac_p'] = .3
