@@ -11,15 +11,18 @@ import invest_test_core
 from osgeo import ogr
 
 class TestFinfishAquaculture(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = './invest-data/test/data/test_out/Aquaculture'
+
     def get_args(self):
         args = {}
 
         #Biophysical
-        args['workspace_dir'] = './invest-data/test/data/test_out/Aquaculture/Re_Testing'
+        args['workspace_dir'] = self.workspace_dir
         args['ff_farm_loc'] = './invest-data/test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         args['farm_ID'] = 'FarmID'
         args['g_param_a'] = 0.038
-        args['g_param_b'] = 2.0
+        args['g_param_b'] = 0.6667
         args['water_temp_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
         args['farm_op_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         args['outplant_buffer'] = 3
@@ -57,7 +60,12 @@ class TestFinfishAquaculture(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(_get_expected_temp_table(), norm_temp_table)
 
-    # TODO: implement a full regression test
+    def test_finfish_model(self):
+        finfish_aquaculture.execute(self.get_args())
+        invest_test_core.assertTwoShapesEqualURI(
+            self,
+            './invest-data/test/data/aquaculture_data/Expected_Output/Finfish_Harvest.shp',
+            os.path.join(self.workspace_dir, 'Output', 'Finfish_Harvest.shp'))
 
 def _get_expected_temp_table():
     '''Return a formatted temperature table to compare against for testing.'''
