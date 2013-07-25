@@ -2,9 +2,8 @@
 
 import os, sys
 import unittest
-import shutil
-import re
 import filecmp
+import re
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture
 import invest_test_core
@@ -13,6 +12,7 @@ from osgeo import ogr
 class TestFinfishAquaculture(unittest.TestCase):
     def setUp(self):
         self.workspace_dir = './invest-data/test/data/test_out/Aquaculture'
+        self.output_dir = os.path.join(self.workspace_dir, 'Output')
 
     def get_args(self):
         args = {}
@@ -60,17 +60,38 @@ class TestFinfishAquaculture(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(_get_expected_temp_table(), norm_temp_table)
 
-    def assertShapesEqual(self, ref_filename, output_filename=None):
-        ref_uri = os.path.join('./invest-data/test/data/aquaculture_data/Expected_Output',
-                               ref_filename)
+    def assertFilesEqual(self, ref_filename, output_filename=None, comp_type='shape'):
         if not output_filename:
             output_filename = ref_filename
-        output_uri = os.path.join(self.workspace_dir, 'Output', output_filename)
-        invest_test_core.assertTwoShapesEqualURI(self, ref_uri, output_uri)
+
+        output_uri = os.path.join(self.output_dir, output_filename)
+        ref_uri = os.path.join('./invest-data/test/data/aquaculture_data/Expected_Output',
+                               ref_filename)
+
+        if comp_type == 'shape':
+            invest_test_core.assertTwoShapesEqualURI(self, ref_uri, output_uri)
+        elif comp_type == 'file':
+            self.assertTrue(filecmp.cmp(ref_uri, output_uri, shallow=False))
+        else:
+            raise Exception("This method doesn't support file comparison type '%s'"  %
+                            comp_type)
 
     def test_finfish_model(self):
         finfish_aquaculture.execute(self.get_args())
-        self.assertShapesEqual('Finfish_Harvest.shp')
+
+        # Compare the shape file.
+        self.assertFilesEqual('Finfish_Harvest.shp')
+
+        # Compare the output HTML file.
+        for fname in os.listdir(self.output_dir):
+            if re.match(r'Harvest_Results[_0-9\[\]\-]+\.html', fname):
+                self.assertFilesEqual('Harvest_Results.html', 
+                                      output_filename=fname,
+                                      comp_type='file')
+                break
+        else:
+            # If we didn't break out of the for loop, then the HTML file wasn't found.
+            self.fail("Didn't find a Harvest Results HTML file in the output folder.")
 
 def _get_expected_temp_table():
     '''Return a formatted temperature table to compare against for testing.'''
