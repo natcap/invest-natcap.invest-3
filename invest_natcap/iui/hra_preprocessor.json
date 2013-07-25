@@ -1,7 +1,7 @@
 {
     "id": "window",
     "label": "Habitat Risk Assessment Preprocessor",
-    "targetScript": "invest_natcap.hra_scratch.hra_preprocessor",
+    "targetScript": "invest_natcap.habitat_risk_assessment.hra_preprocessor",
     "modelName": "hra_preprocess",
     "localDocURI": "../documentation/habitat_risk_assessment.html",
     "height": 700,
