@@ -16,7 +16,7 @@ LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-NUM_MONTE_CARLO_RUNS = 200  # TODO set this to 1000 for production
+NUM_MONTE_CARLO_RUNS = 100  # TODO set this to 1000 for production
 NUM_HISTOGRAM_BINS = 30
 
 def execute(args):
@@ -377,6 +377,7 @@ def compute_uncertainty_data(args, output_dir):
     # Compile the results into a dictionary mapping farm ID to
     # a list of the harvested weights (one weight for each run).
     hrv_weight_results = {}
+    num_cycle_results = {}
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
                 % NUM_MONTE_CARLO_RUNS)
     for i in range(NUM_MONTE_CARLO_RUNS):
@@ -397,27 +398,34 @@ def compute_uncertainty_data(args, output_dir):
         for farm, sample_hrv_weight in sample_sum_hrv_weight.items():
             try:
                 hrv_weight_results[farm].append(sample_hrv_weight)
+                num_cycle_results[farm].append(len(sample_cycle_history[farm]))
             except KeyError:
                 hrv_weight_results[farm] = [sample_hrv_weight]
+                num_cycle_results[farm] = [len(sample_cycle_history[farm])]
 
     LOGGER.info('Monte Carlo simulation complete.')
 
-    make_histograms(hrv_weight_results, output_dir)
+    make_histograms(hrv_weight_results, output_dir, suffix='weight')
+    make_histograms(num_cycle_results, output_dir, suffix='num_cycles')
 
 
-def make_histograms(farm_to_data_dict, output_dir):
+def make_histograms(farm_to_data_dict, output_dir, suffix=''):
     plot_dir = os.path.join(output_dir, 'images')
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
+    if suffix:
+        suffix = '_' + suffix
+
     def make_plot_name(farm_id):
-        return os.path.join(plot_dir, 'farm_%s_plot.png' % str(farm_id))
+        return os.path.join(plot_dir,
+                            'farm_%s_plot%s.png' % (str(farm_id), suffix))
 
     # Make a histogram for each farm.
     for farm_id, farm_data in farm_to_data_dict.items():
         plt.hist(farm_data, bins=NUM_HISTOGRAM_BINS)
         plt.savefig(make_plot_name(farm_id))
-        plt.close()    
+        plt.close()
 
 
 def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
