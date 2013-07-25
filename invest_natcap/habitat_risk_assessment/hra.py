@@ -10,8 +10,8 @@ import numpy as np
 
 from scipy import ndimage
 from osgeo import gdal, ogr, osr
-from invest_natcap.hra_scratch import hra_core
-from invest_natcap.hra_scratch import hra_preprocessor
+from invest_natcap.habitat_risk_assessment import hra_core
+from invest_natcap.habitat_risk_assessment import hra_preprocessor
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA')

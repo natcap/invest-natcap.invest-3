@@ -9,7 +9,7 @@ import shutil
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('hra_preprocessor')
+LOGGER = logging.getLogger('HRA_PREPROCESSOR')
 
 class MissingHabitatsOrSpecies(Exception):
     '''An exception to pass if the hra_preprocessor args dictionary being
