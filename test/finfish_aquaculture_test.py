@@ -60,7 +60,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(_get_expected_temp_table(), norm_temp_table)
 
-    def assertFilesEqual(self, ref_filename, output_filename=None, comp_type='shape'):
+    def assert_files_equal(self, ref_filename, output_filename=None, comp_type='shape'):
         if not output_filename:
             output_filename = ref_filename
 
@@ -80,12 +80,12 @@ class TestFinfishAquaculture(unittest.TestCase):
         finfish_aquaculture.execute(self.get_args())
 
         # Compare the shape file.
-        self.assertFilesEqual('Finfish_Harvest.shp')
+        self.assert_files_equal('Finfish_Harvest.shp')
 
         # Compare the output HTML file.
         for fname in os.listdir(self.output_dir):
             if re.match(r'Harvest_Results[_0-9\[\]\-]+\.html', fname):
-                self.assertFilesEqual('Harvest_Results.html', 
+                self.assert_files_equal('Harvest_Results.html', 
                                       output_filename=fname,
                                       comp_type='file')
                 break
