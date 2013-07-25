@@ -162,7 +162,6 @@ if platform.system() == 'Windows':
               'invest_natcap/iui/overlap_analysis.json',
               'invest_natcap/iui/hra.json',
               'invest_natcap/iui/hra_preprocessor.json',
-              'invest_natcap/iui/hra_scratch_preprocessor.json',
               'invest_natcap/iui/overlap_analysis_mz.json',
               'invest_natcap/iui/sediment.json',
               'invest_natcap/iui/malaria.json',
