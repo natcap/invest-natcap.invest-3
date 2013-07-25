@@ -426,10 +426,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     #Since we know that the AOI will be consistent across all of the rasters,
     #want to create the new int field, and the name mapping dictionary upfront
     
-    driver = ogr.GetDriverByName('Memory')
+    driver = ogr.GetDriverByName('ESRI Shapefile')
     aoi = ogr.Open(aoi_uri)
     cp_aoi_uri = os.path.join(inter_dir, 'temp_aoi_copy.shp')
     cp_aoi = driver.CopyDataSource(aoi, cp_aoi_uri)
+
     layer = cp_aoi.GetLayer()
 
     field_defn = ogr.FieldDefn('BURN_ID', ogr.OFTInteger)
