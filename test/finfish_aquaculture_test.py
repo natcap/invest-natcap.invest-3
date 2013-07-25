@@ -60,12 +60,17 @@ class TestFinfishAquaculture(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(_get_expected_temp_table(), norm_temp_table)
 
+    def assertShapesEqual(self, ref_filename, output_filename=None):
+        ref_uri = os.path.join('./invest-data/test/data/aquaculture_data/Expected_Output',
+                               ref_filename)
+        if not output_filename:
+            output_filename = ref_filename
+        output_uri = os.path.join(self.workspace_dir, 'Output', output_filename)
+        invest_test_core.assertTwoShapesEqualURI(self, ref_uri, output_uri)
+
     def test_finfish_model(self):
         finfish_aquaculture.execute(self.get_args())
-        invest_test_core.assertTwoShapesEqualURI(
-            self,
-            './invest-data/test/data/aquaculture_data/Expected_Output/Finfish_Harvest.shp',
-            os.path.join(self.workspace_dir, 'Output', 'Finfish_Harvest.shp'))
+        self.assertShapesEqual('Finfish_Harvest.shp')
 
 def _get_expected_temp_table():
     '''Return a formatted temperature table to compare against for testing.'''
