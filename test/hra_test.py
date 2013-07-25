@@ -10,8 +10,8 @@ import filecmp
 
 import invest_test_core
 
-from invest_natcap.hra_scratch import hra
-from invest_natcap.hra_scratch import hra_core
+from invest_natcap.habitat_risk_assessment import hra
+from invest_natcap.habitat_risk_assessment import hra_core
 
 LOGGER = logging.getLogger('hra_scratch_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
