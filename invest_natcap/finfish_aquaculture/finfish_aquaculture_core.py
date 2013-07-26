@@ -487,23 +487,23 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     '''
     filename = os.path.join(output_dir, "Harvest_Results_[%s].html" % \
         datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
-    file = open(filename, "w")
+    html = open(filename, "w")
     
-    file.write("<html>")
-    file.write("<title>" + "Marine InVEST" + "</title>")
-    file.write("<CENTER><H1>" + "Aquaculture Model (Finfish Harvest)" + "</H1></CENTER>")
-    file.write("<br>")
-    file.write("This page contains results from running the Marine InVEST Finfish \
+    html.write("<html>")
+    html.write("<title>" + "Marine InVEST" + "</title>")
+    html.write("<CENTER><H1>" + "Aquaculture Model (Finfish Harvest)" + "</H1></CENTER>")
+    html.write("<br>")
+    html.write("This page contains results from running the Marine InVEST Finfish \
     Aquaculture model." + "<p>" + "Cells highlighted in yellow are values that were \
     also populated in the attribute table of the netpens feature class.  Cells \
     highlighted in red should be interpreted as null values since valuation was not \
     selected.")
-    file.write("<br><br>")
-    file.write("<HR>")
+    html.write("<br><br>")
+    html.write("<HR>")
     
     #Here starts the information being put into the first table
-    file.write("<H2>" + "Farm Operations (input)" + "</H2>")
-    file.write('<table border="1", cellpadding="5">')
+    html.write("<H2>" + "Farm Operations (input)" + "</H2>")
+    html.write('<table border="1", cellpadding="5">')
     
     #This gets the "first" key out of the dictionary so we can get at one of the 
     #lower dictionaries.  It doesn't matter that it's at 0, but we are guaranteed
@@ -545,15 +545,15 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         inner_strings.append(str_line)
         
     
-    file.write("<tr>")
+    html.write("<tr>")
     for element in str_headers:
-        file.write("<td><center><b>%s</b></center></td>" % element)
-    file.write("</tr>")
+        html.write("<td><center><b>%s</b></center></td>" % element)
+    html.write("</tr>")
     
     for element in inner_strings:
-        file.write("<tr>%s</tr>" % element)
+        html.write("<tr>%s</tr>" % element)
             
-    file.write("</table>")
+    html.write("</table>")
     
     #Here starts the second table. For ease, am preloading a list with the headers 
     #for this table, since they aren't necessarily already input.
@@ -614,18 +614,18 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             inner_strings.append(str_line)
     
     #Write the second table itself
-    file.write("<br><HR><H2>Farm Harvesting (output)</H2>")
-    file.write("<table border='1', cellpadding='5'>")
-    file.write("<tr>")
+    html.write("<br><HR><H2>Farm Harvesting (output)</H2>")
+    html.write("<table border='1', cellpadding='5'>")
+    html.write("<tr>")
     for element in str_headers:
-        file.write("<td><b><center>%s</center></b></td>" % element)
-    file.write("</tr>")
+        html.write("<td><b><center>%s</center></b></td>" % element)
+    html.write("</tr>")
     
     for element in inner_strings:
-        file.write("<tr>")
-        file.write(element)
-        file.write("</tr>")
-    file.write("</table>")
+        html.write("<tr>")
+        html.write(element)
+        html.write("</tr>")
+    html.write("</table>")
     
     #Here starts the creation of the third table. Like the last one, I am pre-loading
     #the headers, since they aren't actually input anywhere
@@ -665,18 +665,18 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
         
     #Write the third table itself
-    file.write("<br><HR><H2>Farm Result Totals (output)</H2>")
-    file.write("<table border='1', cellpadding='5'>")
-    file.write("<tr>")
+    html.write("<br><HR><H2>Farm Result Totals (output)</H2>")
+    html.write("<table border='1', cellpadding='5'>")
+    html.write("<tr>")
     for element in str_headers:
-        file.write("<td><b><center>%s</center></b></td>" % element)
-    file.write("</tr>")
+        html.write("<td><b><center>%s</center></b></td>" % element)
+    html.write("</tr>")
     
     for element in inner_strings:
 
-        file.write("<tr>%s</tr>" % element)
-    file.write("</table>")
+        html.write("<tr>%s</tr>" % element)
+    html.write("</table>")
     
     #end page
-    file.write("</html>")
-    file.close()   
+    html.write("</html>")
+    html.close()   
