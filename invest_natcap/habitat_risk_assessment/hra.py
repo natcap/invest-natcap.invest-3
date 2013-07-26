@@ -327,13 +327,13 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
         corresponding raster DS.
     
     Returns nothing.
-'''
+    '''
 
     for pair in h_s_c:
 
         h, s = pair
         h_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
-        s_nodata = raster_utils.get_nodata_from_uri(habitats[h]['DS'])
+        s_nodata = raster_utils.get_nodata_from_uri(stress_dict[s])
  
         files = [habitats[h]['DS'], stress_dict[s]]
         
@@ -474,7 +474,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         #Now, write the buffered version of the stressor to the stressors
         #dictionary
         stress_dict[name] = new_buff_uri
-        
+    
     return stress_dict
 
 def make_zero_buff_decay_array(dist_array, nodata):

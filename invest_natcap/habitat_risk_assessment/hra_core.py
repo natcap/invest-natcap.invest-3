@@ -711,9 +711,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
         percent = float(pixel)/ curr_top_risk
 
-        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
-        #areas are.
-        if percent > 66.6:
+        #high risk is classified as the top third of risk
+        if percent > .666:
             return 1
         else:
             return -1.
@@ -722,9 +721,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
         percent = float(pixel)/ curr_top_risk
 
-        #Will need to be specified what percentage the cutoff for 'HIGH RISK'
-        #areas are.
-        if 0 < percent <= 66.6:
+        #low risk is classified as the bottom two thirds of risk
+        if 0 < percent <= .666:
             return 1
         else:
             return -1.
