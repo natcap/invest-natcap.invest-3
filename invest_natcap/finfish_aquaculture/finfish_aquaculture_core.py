@@ -131,8 +131,9 @@ def execute(args):
 
     # Do valuation if requested.
     if args['do_valuation']:
-        value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
-                hrv_weight, cycle_history)
+        value_history, farms_npv = valuation(
+            args['p_per_kg'], args['frac_p'], args['discount'],
+            hrv_weight, cycle_history)
    
         #And add it into the shape file
         layer.ResetReading()
@@ -452,8 +453,8 @@ def make_histograms(data_collection, output_dir, name, xlabel):
         make_histogram(make_plot_name(), data_collection)
 
 
-def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
-                       hrv_weight, do_valuation, farms_npv, value_history):
+def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
+                      hrv_weight, do_valuation, farms_npv, value_history):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
@@ -473,8 +474,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     
        Output:
         HTML file: contains 3 tables that summarize inputs and outputs for the duration
-            of the model. If valuation is not desired, then those cells designated for
-            valuation will be highlighted in red.
+            of the model. 
             - Input Table: Farm Operations provided data, including Farm ID #, Cycle
                     Number, weight of fish at start, weight of fish at harvest, number 
                     of fish in farm, start day for growing, and length of fallowing period
@@ -497,13 +497,6 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     writer.write_paragraph(
         'This page contains results from running the Marine InVEST Finfish '
         'Aquaculture model.')
-
-    # TODO: fix red cells (do they really need to be red?)
-    writer.write_paragraph(
-        'Cells highlighted in yellow are values that were '
-        'also populated in the attribute table of the netpens feature class. Cells '
-        'highlighted in red should be interpreted as null values since valuation was not '
-        'selected.')
 
     writer.write_section_header('Farm Operations (input)')
 
@@ -572,6 +565,11 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     writer.end_table()
 
     writer.write_section_header('Farm Result Totals (output)')
+
+    writer.write_paragraph(
+        'All values in the following table were also populated in the attribute '
+        'table of the netpens feature class.')
+
     writer.start_table()
     
     str_headers = ['Farm ID Number', 
@@ -582,7 +580,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     writer.write_row(str_headers, is_header=True)
 
     for farm_id in cycle_history:
-        npv = ''
+        npv = '(no valuation)'
         if do_valuation: 
             npv = round(farms_npv[farm_id], 4)
             
@@ -593,18 +591,5 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         writer.write_row(cells)        
 
     writer.end_table()
-    '''
-    TODO: make some cells yellow?
-    
-    old behavior used the following code...
-    
-    for element in vars:
-        if not do_valuation and element == npv:
-            str_line += "<td BGCOLOR='#ff0000'>"
-        else:
-            str_line += "<td BGCOLOR='#ffff00'>"
-        str_line += str(element)
-        str_line += "</td>"
-    '''
 
     writer.flush()
