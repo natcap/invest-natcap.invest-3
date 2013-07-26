@@ -12,6 +12,8 @@ matplotlib.use('AGG')  # Use the Anti-Grain Geometry back-end (for PNG files)
 import matplotlib.pyplot as plt
 import numpy as np
 
+from invest_natcap.report_generation import html
+
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -485,29 +487,27 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                     
         Returns nothing.
     '''
-    filename = os.path.join(output_dir, "Harvest_Results_[%s].html" % \
-        datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
-    html = open(filename, "w")
-    
-    html.write("<html>")
-    html.write("<title>" + "Marine InVEST" + "</title>")
-    html.write("<CENTER><H1>" + "Aquaculture Model (Finfish Harvest)" + "</H1></CENTER>")
-    html.write("<br>")
-    html.write("This page contains results from running the Marine InVEST Finfish \
-    Aquaculture model." + "<p>" + "Cells highlighted in yellow are values that were \
-    also populated in the attribute table of the netpens feature class.  Cells \
-    highlighted in red should be interpreted as null values since valuation was not \
-    selected.")
-    html.write("<br><br>")
-    html.write("<HR>")
-    
-    #Here starts the information being put into the first table
-    html.write("<H2>" + "Farm Operations (input)" + "</H2>")
-    html.write('<table border="1", cellpadding="5">')
-    
-    #This gets the "first" key out of the dictionary so we can get at one of the 
-    #lower dictionaries.  It doesn't matter that it's at 0, but we are guaranteed
-    #it exists
+    html_uri = os.path.join(output_dir, 
+                            ("Harvest_Results_[%s].html" % 
+                             datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")))
+    writer = html.HTMLWriter(html_uri, 'Marine InVEST', 
+                             'Aquaculture Model (Finfish Harvest)')
+    writer.set_style(html.BEACH_STYLE)
+
+    writer.write_paragraph(
+        'This page contains results from running the Marine InVEST Finfish '
+        'Aquaculture model.')
+
+    # TODO: fix red cells (do they really need to be red?)
+    writer.write_paragraph(
+        'Cells highlighted in yellow are values that were '
+        'also populated in the attribute table of the netpens feature class. Cells '
+        'highlighted in red should be interpreted as null values since valuation was not '
+        'selected.')
+
+    writer.write_section_header('Farm Operations (input)')
+
+    writer.start_table()    
     str_headers = ['Farm ID Number',
                    'Weight of Fish at Start<br></b>(kg)<b>',
                    'Weight of Fish at Harvest<br></b>(kg)<b>',
@@ -515,48 +515,23 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                    'Start Day for Growing<br></b>(1-365)<b>',
                    'Length of Fallowing Period<br></b>(days)<b>'
                    ]
+    writer.write_row(str_headers, is_header=True)
 
-    inner_strings = []
-    
-    vars = []
-    for id in cycle_history:
-        
-        id = str(id)
-        
-        init_weight = farm_op_dict[id]['weight of fish at start (kg)']
-        
-        end_weight = farm_op_dict[id]['target weight of fish at harvest (kg)']
-        
-        num_fish = farm_op_dict[id]['number of fish in farm']
-        
-        start_day = farm_op_dict[id]['start day for growing']
-        
-        fallow_len = farm_op_dict[id]['Length of Fallowing period']
-        
-        vars = [id, init_weight, end_weight, num_fish, start_day, fallow_len]
-        
-        str_line = ""
-        
-        for element in vars:
-            str_line += "<td>"
-            str_line += str(element)
-            str_line += "</td>"
-        
-        inner_strings.append(str_line)
-        
-    
-    html.write("<tr>")
-    for element in str_headers:
-        html.write("<td><center><b>%s</b></center></td>" % element)
-    html.write("</tr>")
-    
-    for element in inner_strings:
-        html.write("<tr>%s</tr>" % element)
-            
-    html.write("</table>")
-    
-    #Here starts the second table. For ease, am preloading a list with the headers 
-    #for this table, since they aren't necessarily already input.
+    for farm_id in cycle_history:
+        farm_id = str(farm_id)
+        cells = [farm_id]
+        for column_key in ['weight of fish at start (kg)',
+                           'target weight of fish at harvest (kg)',
+                           'number of fish in farm',
+                           'start day for growing',
+                           'Length of Fallowing period']:
+            cells.append(farm_op_dict[farm_id][column_key])
+        writer.write_row(cells)
+
+    writer.end_table()
+
+    writer.write_section_header('Farm Harvesting (output)')
+    writer.start_table()                         
     str_headers = ['Farm ID Number', 'Cycle Number', 
                    'Days Since Outplanting Date<br></b>(Including Fallowing Period)<b>', 
                    'Length of Given Cycle',
@@ -565,118 +540,71 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                     'Net Present Value<br></b>(Thousands of $)<b>', 
                     'Outplant Day<br></b>(Julian Day)<b>',
                    'Outplant Year']
-    
-    inner_strings = []
-    
-    for id in cycle_history:
-        
-        vars = []
-        for cycle in range(0, len(cycle_history[id])):
-        
-            #pre-load all values
+    writer.write_row(str_headers, is_header=True)
+
+    for farm_id in cycle_history:
+        for cycle in range(0, len(cycle_history[farm_id])):        
             cycle_num = cycle + 1
             
-            curr_cycle = cycle_history[id][cycle]
+            curr_cycle = cycle_history[farm_id][cycle]
             outplant_date, harvest_date, harvest_weight = curr_cycle
             cycle_length = harvest_date - outplant_date
 
-            #Want to get the processed weight on a farm for a given cycle. All
-            #of the PW for all cycles should add to the third table's TPW.
-            harvest_weight = hrv_weight[id][cycle]
+            # Want to get the processed weight on a farm for a given cycle. All
+            # of the PW for all cycles should add to the third table's TPW.
+            harvest_weight = hrv_weight[farm_id][cycle]
 
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
             
-            str_line = ""
-            #Need to make it so if we don't have valuation, those cells just show up red
             if do_valuation:
-                indiv_rev, indiv_npv = value_history[id][cycle]
-    
-                #revenue and net present value should be in thousands of dollars
-                vars = [id, cycle_num, harvest_date, cycle_length, harvest_weight, 
-                        indiv_rev / 1000, indiv_npv/1000, out_day, out_year]
+                # Revenue and NPV should be in thousands of dollars.
+                indiv_rev, indiv_npv = value_history[farm_id][cycle]
+                indiv_rev /= 1000.0
+                indiv_npv /= 1000.0
             else:
-                
-                indiv_rev = ""
-                indiv_npv = ""
-                
-                vars = [id, cycle_num, harvest_date, cycle_length, harvest_weight, 
-                        indiv_rev, indiv_npv, out_day, out_year]
-            
-            for element in vars:
-                if not do_valuation and (element == indiv_rev or element == indiv_npv):
-                    str_line += "<td bgcolor= '#FF0000'>"
-                else :
-                    str_line += "<td>"
-                str_line += str(element)
-                str_line += "</td>"
-        
-            inner_strings.append(str_line)
+                indiv_rev, indiv_npv = '(no valuation)', '(no valuation)'
     
-    #Write the second table itself
-    html.write("<br><HR><H2>Farm Harvesting (output)</H2>")
-    html.write("<table border='1', cellpadding='5'>")
-    html.write("<tr>")
-    for element in str_headers:
-        html.write("<td><b><center>%s</center></b></td>" % element)
-    html.write("</tr>")
+            cells = [farm_id, cycle_num, harvest_date, cycle_length, harvest_weight, 
+                     indiv_rev, indiv_npv, out_day, out_year]
+            writer.write_row(cells)
+
+    writer.end_table()
+
+    writer.write_section_header('Farm Result Totals (output)')
+    writer.start_table()
     
-    for element in inner_strings:
-        html.write("<tr>")
-        html.write(element)
-        html.write("</tr>")
-    html.write("</table>")
-    
-    #Here starts the creation of the third table. Like the last one, I am pre-loading
-    #the headers, since they aren't actually input anywhere
     str_headers = ['Farm ID Number', 
                    'Net Present Value<br>(Thousands of $)<br></b>\
                    (For Duration of Model Run)<b>', 
                    'Number of Completed Harvest Cycles', 
                    'Total Volume Harvested<br></b>(kg)(After Processing Occurs)<b>']
-    
-    inner_strings = []
+    writer.write_row(str_headers, is_header=True)
 
-    for id in cycle_history.keys():
-        
-        #pre-load variables
-        npv = ""
+    for farm_id in cycle_history:
+        npv = ''
         if do_valuation: 
-            npv = round(farms_npv[id], 4)
+            npv = round(farms_npv[farm_id], 4)
             
-        num_cy_complete = len(cycle_history[id])
-        total_harvested = round(sum_hrv_weight[id], 4)
-        
-        vars = [npv, num_cy_complete, total_harvested]
-        
-        str_line = ""
-        str_line += "<td>" + str(id) + "</td>"
-        
-        for element in vars:
-            if not do_valuation and element == npv:
-                str_line += "<td BGCOLOR='#ff0000'>"
-            else:
-                str_line += "<td BGCOLOR='#ffff00'>"
-            str_line += str(element)
-            str_line += "</td>"
-                
-   
-        inner_strings.append(str_line)
+        num_cy_complete = len(cycle_history[farm_id])
+        total_harvested = round(sum_hrv_weight[farm_id], 4)
 
-        
-    #Write the third table itself
-    html.write("<br><HR><H2>Farm Result Totals (output)</H2>")
-    html.write("<table border='1', cellpadding='5'>")
-    html.write("<tr>")
-    for element in str_headers:
-        html.write("<td><b><center>%s</center></b></td>" % element)
-    html.write("</tr>")
-    
-    for element in inner_strings:
+        cells = [farm_id, npv, num_cy_complete, total_harvested]
+        writer.write_row(cells)        
 
-        html.write("<tr>%s</tr>" % element)
-    html.write("</table>")
+    writer.end_table()
+    '''
+    TODO: make some cells yellow?
     
-    #end page
-    html.write("</html>")
-    html.close()   
+    old behavior used the following code...
+    
+    for element in vars:
+        if not do_valuation and element == npv:
+            str_line += "<td BGCOLOR='#ff0000'>"
+        else:
+            str_line += "<td BGCOLOR='#ffff00'>"
+        str_line += str(element)
+        str_line += "</td>"
+    '''
+
+    writer.flush()
