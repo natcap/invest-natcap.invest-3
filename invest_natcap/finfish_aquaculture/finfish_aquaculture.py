@@ -66,9 +66,9 @@ def execute(args):
     ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
     ff_aqua_args['g_param_a'] = args['g_param_a']
     ff_aqua_args['g_param_b'] = args['g_param_b']
-    if args.get('g_param_a_sd'):
+    if 'g_param_a_sd' in args:
         ff_aqua_args['g_param_a_sd'] = args['g_param_a_sd']
-    if args.get('g_param_b_sd'):
+    if 'g_param_b_sd' in args args:
         ff_aqua_args['g_param_b_sd'] = args['g_param_b_sd']
     
     #Both CSVs are being pulled in, but need to do some maintenance to remove undesirable
