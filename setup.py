@@ -95,6 +95,7 @@ packages = ['invest_natcap',
             'invest_natcap.wind_energy',
             'invest_natcap.aesthetic_quality',
             'invest_natcap.habitat_risk_assessment',
+            'invest_natcap.report_generation',
             'invest_natcap.routing',
             'invest_natcap.flood_mitigation',
             'invest_natcap.hra_scratch'
