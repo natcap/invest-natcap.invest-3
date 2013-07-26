@@ -652,5 +652,5 @@ def _calculate_summary(args):
         if raster_key not in args:
             continue
         total_sum = carbon_utils.sum_pixel_values_from_uri(args[raster_key])
-        output_csv_file.write('%s, %f' % (raster_key, total_sum))
+        output_csv_file.write('%s, %f\n' % (raster_key, total_sum))
         LOGGER.info("%s %s Mg" % (message, total_sum))
