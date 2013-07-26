@@ -502,11 +502,11 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     writer.start_table()    
     str_headers = ['Farm ID Number',
-                   'Weight of Fish at Start (kg)<b>',
+                   'Weight of Fish at Start (kg)',
                    'Weight of Fish at Harvest (kg)',
                    'Number of Fish in Farm',
                    'Start Day for Growing (1-365)',
-                   'Length of Fallowing Period (days)<b>'
+                   'Length of Fallowing Period (days)'
                    ]
     writer.write_row(str_headers, is_header=True)
 
@@ -526,12 +526,12 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     writer.write_section_header('Farm Harvesting (output)')
     writer.start_table()                         
     str_headers = ['Farm ID Number', 'Cycle Number', 
-                   'Days Since Outplanting Date<br></b>(Including Fallowing Period)<b>', 
+                   'Days Since Outplanting Date (Including Fallowing Period)', 
                    'Length of Given Cycle',
-                   'Harvested Weight After Processing<br></b>(kg/cycle)<b>', 
-                   'Net Revenue<br></b>(Thousands of $)<b>',
-                    'Net Present Value<br></b>(Thousands of $)<b>', 
-                    'Outplant Day<br></b>(Julian Day)<b>',
+                   'Harvested Weight After Processing (kg/cycle)', 
+                   'Net Revenue (Thousands of $)',
+                   'Net Present Value (Thousands of $)', 
+                   'Outplant Day (Julian Day)',
                    'Outplant Year']
     writer.write_row(str_headers, is_header=True)
 
@@ -573,17 +573,17 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     writer.start_table()
     
     str_headers = ['Farm ID Number', 
-                   'Net Present Value<br>(Thousands of $)<br></b>\
-                   (For Duration of Model Run)<b>', 
+                   'Net Present Value (Thousands of $) (For Duration of Model Run)', 
                    'Number of Completed Harvest Cycles', 
-                   'Total Volume Harvested<br></b>(kg)(After Processing Occurs)<b>']
+                   'Total Volume Harvested (kg)(After Processing Occurs)']
     writer.write_row(str_headers, is_header=True)
 
     for farm_id in cycle_history:
-        npv = '(no valuation)'
         if do_valuation: 
             npv = round(farms_npv[farm_id], 4)
-            
+        else:
+            npv = '(no valuation)'
+
         num_cy_complete = len(cycle_history[farm_id])
         total_harvested = round(sum_hrv_weight[farm_id], 4)
 
