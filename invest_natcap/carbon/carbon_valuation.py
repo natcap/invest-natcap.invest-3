@@ -8,6 +8,7 @@ from osgeo import gdal
 
 from invest_natcap.carbon import carbon_utils
 from invest_natcap import raster_utils
+from invest_natcap.report_generation import html
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -230,47 +231,32 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
         pixel_size, 'intersection', dataset_to_align_index=0)
 
 def _create_html_summary(outfile_uris, sequest_uris):
-    html = open(outfile_uris['html'], 'w')
+    writer = html.HTMLWriter(outfile_uris['html'],
+                             'Carbon Model Results',
+                             'InVEST Carbon Storage and Sequestration Model Results')
 
-    def write_paragraph(text):
-        html.write('<p>%s</p>' % text)
-
-    def write_row(cells, is_header=False):
-        html.write("<tr>")
-        cell_tag = "th" if is_header else "td"
-        for cell in cells:
-            html.write("<%s>%s</%s>" % (cell_tag, str(cell), cell_tag))
-        html.write("</tr>")
-
-    def write_section_header(text):
-        html.write("<h2>%s</h2>" % text)
+    writer.set_style(html.BEACH_STYLE)
 
     def format_currency(val):
         return '%.2f' % val
     
-    html.write("<html>")
-    html.write("<head>")
-    html.write("<title>InVEST Carbon Model</title>")
-    html.write(_css_style())
-    html.write("</head>")
-    html.write("<body>")
-    html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
-
-    write_section_header('Results Summary')
-    write_paragraph('<strong>Positive values</strong> in this table indicate that carbon storage increased. '
-                    'In this case, the positive Net Present Value represents the value of '
-                    'the sequestered carbon.')
-    write_paragraph('<strong>Negative values</strong> indicate that carbon storage decreased. '
-                    'In this case, the negative Net Present Value represents the cost of '
-                    'carbon emission.')
+    writer.write_section_header('Results Summary')
+    writer.write_paragraph(
+        '<strong>Positive values</strong> in this table indicate that carbon storage increased. '
+        'In this case, the positive Net Present Value represents the value of '
+        'the sequestered carbon.')
+    writer.write_paragraph(
+        '<strong>Negative values</strong> indicate that carbon storage decreased. '
+        'In this case, the negative Net Present Value represents the cost of '
+        'carbon emission.')
 
     # Write the table that summarizes change in carbon stocks and
     # net present value.
-    html.write("<table>")
-    write_row(["Scenario", 
-               "Change in Carbon Stocks<br>(Mg of carbon)",
-               "Net Present Value<br>(USD)"],
-              is_header=True)
+    writer.start_table()
+    writer.write_row(["Scenario", 
+                      "Change in Carbon Stocks<br>(Mg of carbon)",
+                      "Net Present Value<br>(USD)"],
+                     is_header=True)
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
@@ -283,7 +269,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
         total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uris[scenario_type])
         total_val = carbon_utils.sum_pixel_values_from_uri(outfile_uris['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        write_row([scenario_name, total_seq, format_currency(total_val)])
+        writer.write_row([scenario_name, total_seq, format_currency(total_val)])
 
         if ('%s_seq_mask' % scenario_type) in outfile_uris:
             # Compute output for confidence-masked data.
@@ -292,49 +278,49 @@ def _create_html_summary(outfile_uris, sequest_uris):
             masked_val = carbon_utils.sum_pixel_values_from_uri(
                 outfile_uris['%s_val_mask' % scenario_type])
             scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
-            write_row(['%s (confident cells only)' % scenario_name, 
-                       masked_seq, 
-                       format_currency(masked_val)])
-    html.write("</table>")
+            writer.write_row(['%s (confident cells only)' % scenario_name, 
+                              masked_seq, 
+                              format_currency(masked_val)])
+    writer.end_table()
 
     # If REDD scenario analysis is enabled, write the table
     # comparing the baseline and REDD scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
-        html.write("<table>")
-        write_row(["Scenario Comparison", 
-                   "Difference in Carbon Stocks<br>(Mg of carbon)",
-                   "Difference in Net Present Value<br>(USD)"],
-                  is_header=True)
+        writer.start_table()
+        writer.write_row(["Scenario Comparison", 
+                          "Difference in Carbon Stocks<br>(Mg of carbon)",
+                          "Difference in Net Present Value<br>(USD)"],
+                         is_header=True)
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
-        write_row(['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
-                   redd_results[0] - base_results[0], # subtract carbon amounts
-                   format_currency(redd_results[1] - base_results[1])  # subtract value
-                   ])
+        writer.write_row(
+            ['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
+             redd_results[0] - base_results[0], # subtract carbon amounts
+             format_currency(redd_results[1] - base_results[1])  # subtract value
+             ])
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
             base_mask_results = scenario_results['base_mask']
             redd_mask_results = scenario_results['redd_mask']
-            write_row(['%s vs %s (confident cells only)'
-                           % (scenario_names['redd'], scenario_names['base']),
-                       redd_mask_results[0] - base_mask_results[0], # subtract carbon amounts
-                       format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
-                       ])
+            writer.write_row(
+                ['%s vs %s (confident cells only)'
+                 % (scenario_names['redd'], scenario_names['base']),
+                 redd_mask_results[0] - base_mask_results[0], # subtract carbon amounts
+                 format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
+                 ])
 
-    html.write("</table>")
+        writer.end_table()
 
     # Write a list of the output files produced by the model.
-    write_section_header('Output Files')
+    writer.write_section_header('Output Files')
     outfile_descriptions = _make_outfile_descriptions(outfile_uris)
-    html.write("<table>")
-    write_row(["Filename", "Description"], is_header=True)
+
+    writer.start_table()
+    writer.write_row(["Filename", "Description"], is_header=True)
     for filename, description in outfile_descriptions.items():
-        write_row([('%s' % filename), description])
-    html.write("</table>")
+        writer.write_row([('%s' % filename), description])
+    writer.end_table()
 
-    html.write("</body>")
-    html.write("</html>")
-
-    html.close()
+    writer.flush()
 
 def _css_style():
     return '''<style type="text/css">

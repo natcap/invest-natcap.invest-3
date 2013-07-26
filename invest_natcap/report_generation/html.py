@@ -1,5 +1,4 @@
-DEFAULT_PALETTE = 0
-BEACH_PALETTE = 1
+BEACH_STYLE = 0
 
 class HTMLWriter(object):
     def __init__(self, uri, title, header):
@@ -8,6 +7,28 @@ class HTMLWriter(object):
         self.header = header
         self.body = ''
         self.style = ''
+
+    def set_style(self, style_const):
+        self.style = _get_style_css(style_const)
+
+    def write_section_header(self, text):
+        self.body += _elem('h2', text)
+
+    def write_paragraph(self, text):
+        self.body += _elem('p', text)
+
+    def start_table(self):
+        self.body += '<table>'
+
+    def end_table(self):
+        self.body += '</table>'
+
+    def write_row(self, cells, is_header=False):
+        self.body += '<tr>'
+        cell_tag = 'th' if is_header else 'td'
+        for cell in cells:
+            self.body += '<%s>%s</%s>' % (cell_tag, str(cell), cell_tag)
+        self.body += '</tr>'
 
     def flush(self):
         '''Creates and writes to an HTML file.'''
@@ -33,3 +54,43 @@ class HTMLWriter(object):
         f.write('</html>')
 
         f.close()
+
+def _elem(tag, content, attr=''):
+    if attr:
+        attr = ' ' + attr
+    return ('<%s%s>%s</%s>' % (tag, attr, content, tag))
+
+
+def _get_style_css(style_const):
+    if style_const == BEACH_STYLE:
+        return '''
+      body {
+          background-color: #EFECCA;
+          color: #002F2F
+      }
+      h1, h2, strong, th {
+          color: #046380;
+      }
+      h2 {
+          border-bottom: 1px solid #A7A37E;
+      }
+      table {
+          border: 5px solid #A7A37E;
+          margin-bottom: 50px; 
+          background-color: #E6E2AF;
+      }
+      td, th { 
+          margin-left: 0px;
+          margin-right: 0px;
+          padding-left: 8px;
+          padding-right: 8px;
+          padding-bottom: 2px;
+          padding-top: 2px;
+          text-align:left;
+      }
+      td { 
+          border-top: 5px solid #EFECCA;
+      }
+      '''
+    else:
+        raise Exception('Unsupported style constant %d' % style_const)
