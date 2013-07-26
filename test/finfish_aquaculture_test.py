@@ -87,12 +87,9 @@ class TestFinfishAquaculture(unittest.TestCase):
         # Compare the shape file.
         self.assert_files_equal('Finfish_Harvest.shp')
 
-        # Compare the output HTML file.
+        # Make sure there's an output HTML file.
         for fname in os.listdir(self.output_dir):
             if re.match(r'Harvest_Results[_0-9\[\]\-]+\.html', fname):
-                self.assert_files_equal('Harvest_Results.html', 
-                                      output_filename=fname,
-                                      comp_type='file')
                 break
         else:
             # If we didn't break out of the for loop, then the HTML file wasn't found.
