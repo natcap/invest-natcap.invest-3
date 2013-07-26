@@ -1,5 +1,6 @@
 """InVEST valuation interface module.  Informally known as the URI level."""
 
+import collections
 import os
 import logging
 
@@ -122,15 +123,17 @@ def _make_outfile_uris(output_directory, args):
         file_suffix = ''
 
     def outfile_uri(prefix, scenario_type='', filetype='tif'):
+        '''Create the URI for the appropriate output file.'''
         if not args.get('sequest_redd_uri'):
-            # We're not doing REDD analysis, so don't append anything.
+            # We're not doing REDD analysis, so don't append anything,
+            # since there's only one scenario.
             scenario_type = ''
         elif scenario_type:
             scenario_type = '_' + scenario_type
         filename = '%s%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
         return os.path.join(output_directory, filename)
 
-    outfile_uris = {}
+    outfile_uris = collections.OrderedDict()
 
     # Value sequestration for base scenario.
     outfile_uris['base_val'] = outfile_uri('value_seq', 'base')
@@ -155,6 +158,54 @@ def _make_outfile_uris(output_directory, args):
     
     return outfile_uris
 
+def _make_outfile_descriptions(outfile_uris):
+    '''Returns a dict with descriptions of each outfile, keyed by filename.'''
+
+    def value_file_description(scenario_name):
+        return ('Maps the economic value of carbon sequestered between the '
+                'current and %s scenarios, with values in dollars per grid '
+                'cell.') % scenario_name
+
+    def value_mask_file_description(scenario_name):
+        return ('Maps the economic value of carbon sequestered between the '
+                'current and %s scenarios, but only for cells where we are '
+                'confident that carbon storage will either increase or '
+                'decrease.') % scenario_name
+
+    def carbon_mask_file_description(scenario_name):
+        return ('Maps the increase in carbon stored between the current and '
+                '%s scenarios, in Mg per grid cell, but only for cells where '
+                ' we are confident that carbon storage will either increase or '
+                'decrease.') % scenario_name
+
+    # Adjust the name of the baseline future scenario based on whether
+    # REDD analysis is enabled or not.
+    if 'redd_val' in outfile_uris:
+        base_name = 'baseline'
+    else:
+        base_name = 'future'
+
+    redd_name = 'REDD policy'
+
+    description_dict = {
+        'base_val': value_file_description(base_name),
+        'base_seq_mask': carbon_mask_file_description(base_name),
+        'base_val_mask': value_mask_file_description(base_name),
+        'redd_val': value_file_description(redd_name),
+        'redd_seq_mask': carbon_mask_file_description(redd_name),
+        'redd_val_mask': value_mask_file_description(redd_name)
+        }
+
+    descriptions = collections.OrderedDict()
+    for key, uri in outfile_uris.items():
+        if key == 'html':
+            # Don't need a description for this summary file.
+            continue
+        filename = os.path.basename(uri)
+        descriptions[filename] = description_dict[key]
+
+    return descriptions
+    
 def _create_masked_raster(orig_uri, mask_uri, result_uri):
     '''Creates a raster at result_uri with some areas masked out.
 
@@ -180,27 +231,46 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
 
 def _create_html_summary(outfile_uris, sequest_uris):
     html = open(outfile_uris['html'], 'w')
-    
-    html.write("<html>")
-    html.write("<title>InVEST Carbon Model</title>")
-    html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
-    html.write("<table border='1', cellpadding='5'>")
 
-    def write_row(cells):
+    def write_paragraph(text):
+        html.write('<p>%s</p>' % text)
+
+    def write_row(cells, is_header=False):
         html.write("<tr>")
+        cell_tag = "th" if is_header else "td"
         for cell in cells:
-            html.write("<td>" + str(cell) + "</td>")
+            html.write("<%s>%s</%s>" % (cell_tag, str(cell), cell_tag))
         html.write("</tr>")
 
-    def write_bold_row(cells):
-        write_row("<strong>" + str(cell) + "</strong>" for cell in cells)
+    def write_section_header(text):
+        html.write("<h2>%s</h2>" % text)
 
     def format_currency(val):
         return '%.2f' % val
+    
+    html.write("<html>")
+    html.write("<head>")
+    html.write("<title>InVEST Carbon Model</title>")
+    html.write(_css_style())
+    html.write("</head>")
+    html.write("<body>")
+    html.write("<CENTER><H1>Carbon Storage and Sequestration Model Results</H1></CENTER>")
 
-    write_bold_row(["Scenario", 
-                    "Change in Carbon Stocks (Mg of carbon)",
-                    "Net Present Value (USD)"])
+    write_section_header('Results Summary')
+    write_paragraph('<strong>Positive values</strong> in this table indicate that carbon storage increased. '
+                    'In this case, the positive Net Present Value represents the value of '
+                    'the sequestered carbon.')
+    write_paragraph('<strong>Negative values</strong> indicate that carbon storage decreased. '
+                    'In this case, the negative Net Present Value represents the cost of '
+                    'carbon emission.')
+
+    # Write the table that summarizes change in carbon stocks and
+    # net present value.
+    html.write("<table>")
+    write_row(["Scenario", 
+               "Change in Carbon Stocks<br>(Mg of carbon)",
+               "Net Present Value<br>(USD)"],
+              is_header=True)
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
@@ -225,13 +295,16 @@ def _create_html_summary(outfile_uris, sequest_uris):
             write_row(['%s (confident cells only)' % scenario_name, 
                        masked_seq, 
                        format_currency(masked_val)])
+    html.write("</table>")
 
-    # Compute comparison data between scenarios.
+    # If REDD scenario analysis is enabled, write the table
+    # comparing the baseline and REDD scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
-        write_row([' ', ' ', ' '])
-        write_bold_row(["Scenario Comparison", 
-                        "Difference in Carbon Stocks (Mg of carbon)",
-                        "Difference in Net Present Value (USD)"])
+        html.write("<table>")
+        write_row(["Scenario Comparison", 
+                   "Difference in Carbon Stocks<br>(Mg of carbon)",
+                   "Difference in Net Present Value<br>(USD)"],
+                  is_header=True)
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
         write_row(['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
@@ -247,8 +320,50 @@ def _create_html_summary(outfile_uris, sequest_uris):
                        format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
                        ])
 
-
     html.write("</table>")
+
+    # Write a list of the output files produced by the model.
+    write_section_header('Output Files')
+    outfile_descriptions = _make_outfile_descriptions(outfile_uris)
+    html.write("<table>")
+    write_row(["Filename", "Description"], is_header=True)
+    for filename, description in outfile_descriptions.items():
+        write_row([('%s' % filename), description])
+    html.write("</table>")
+
+    html.write("</body>")
     html.write("</html>")
 
     html.close()
+
+def _css_style():
+    return '''<style type="text/css">
+      body {
+          background-color: #EFECCA;
+          color: #002F2F
+      }
+      h1, h2, strong, th {
+          color: #046380;
+      }
+      h2 {
+          border-bottom: 1px solid #A7A37E;
+      }
+      table {
+          border: 5px solid #A7A37E;
+          margin-bottom: 50px; 
+          background-color: #E6E2AF;
+      }
+      td, th { 
+          margin-left: 0px;
+          margin-right: 0px;
+          padding-left: 8px;
+          padding-right: 8px;
+          padding-bottom: 2px;
+          padding-top: 2px;
+          text-align:left;
+      }
+      td { 
+          border-top: 5px solid #EFECCA;
+      }
+      </style>
+      '''

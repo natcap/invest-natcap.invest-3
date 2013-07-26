@@ -74,9 +74,9 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Management Effectiveness", "Intensity Rating"],
+                    "defaultValue": ["Temporal Overlap Rating", "Management Effectiveness", "Intensity Rating"],
                     "linkText": "Add Another",
-                    "helpText": "Exposure criteria apply ONLY to the stressors being used within this model run."
+                    "helpText": "Exposure criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run. These criteria will be applied to the exposure portion of habitat risk."
                 },  
                 {
                     "id": "sens_crit",
@@ -87,9 +87,9 @@
                                       "type": "text",
                                       "label": "Input Criteria",
                                       "validateAs": {"type": "text"}},
-                    "defaultValue": ["Temporal Overlap Rating", "Frequency of Disturbance", "Change in Area Rating", "Change in Structure Rating"],
+                    "defaultValue": ["Frequency of Disturbance", "Change in Area Rating", "Change in Structure Rating"],
                     "linkText": "Add Another",
-                    "helpText": "Sensitivity criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run."
+                    "helpText": "Sensitivity criteria apply to the overlap between provided habitats and stressors, or species and stressors being used within this model run. These criteria will be applied to the consequence portion of habitat risk."
                 
                 },  
                 {
@@ -104,7 +104,7 @@
                     "defaultValue": ["Recruitment Rate", "Natural Mortality Rate", 
                                     "Connectivity Rate", "Recovery Time"],
                     "linkText": "Add Another",
-                    "helpText": "Resilience criteria apply ONLY to the habitats or species being used within this model run."
+                    "helpText": "Resilience criteria apply ONLY to the habitats or species being used within this model run. These criteria will be applied to the consequence portion of habitat risk."
                 }  
             ]
         },
