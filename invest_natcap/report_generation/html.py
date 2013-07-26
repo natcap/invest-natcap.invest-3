@@ -1,6 +1,21 @@
 BEACH_STYLE = 0
 
 class HTMLWriter(object):
+    '''Utility class for creating simple HTML files.
+
+    Usage:
+        writer = html.HTMLWriter('myfile.html', 'My Page', 'A Page About Me')
+        writer.set_style(html.BEACH_STYLE)
+        writer.write_section_header('My Early Life')
+        writer.write_paragraph('I lived in a small barn.')
+        writer.write_section_header('My Later Life')
+        writer.write_paragraph('I lived in a bigger barn.')
+        writer.flush()
+
+    Once writing is complete, flush() must be called in order to
+    actually create the file.
+    '''
+        
     def __init__(self, uri, title, header):
         self.uri = uri
         self.title = title
