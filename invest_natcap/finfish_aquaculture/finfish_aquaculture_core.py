@@ -502,11 +502,11 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     writer.start_table()    
     str_headers = ['Farm ID Number',
-                   'Weight of Fish at Start<br></b>(kg)<b>',
-                   'Weight of Fish at Harvest<br></b>(kg)<b>',
+                   'Weight of Fish at Start (kg)<b>',
+                   'Weight of Fish at Harvest (kg)',
                    'Number of Fish in Farm',
-                   'Start Day for Growing<br></b>(1-365)<b>',
-                   'Length of Fallowing Period<br></b>(days)<b>'
+                   'Start Day for Growing (1-365)',
+                   'Length of Fallowing Period (days)<b>'
                    ]
     writer.write_row(str_headers, is_header=True)
 
