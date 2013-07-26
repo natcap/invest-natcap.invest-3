@@ -699,7 +699,7 @@ def create_raster_from_vector_extents(
                         #and we can't assign to a tuple's index, also need to 
                         #define this as the initial state
                         shp_extent = list(feature_extent)
-            except AttributeError:
+            except AttributeError as e:
                 #For some valid OGR objects the geometry can be undefined because
                 #it's valid ot have a NULL entry in the attribute table
                 #this is expressed in ogr as a None value in the geometry reference
