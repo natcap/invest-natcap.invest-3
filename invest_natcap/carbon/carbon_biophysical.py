@@ -98,7 +98,8 @@ def execute_30(**args):
 
     #2) map lulc_cur and _fut (if availble) to total carbon
     out_file_names = {
-        'output_csv_uri': os.path.join(dirs['output'], 'summary_table.csv')
+        #This it the csv table that summarizes the total carbon storage, sequestration, etc.
+        'output_csv_uri': os.path.join(dirs['output'], 'summary_table%s.csv' % file_suffix)
         }
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
