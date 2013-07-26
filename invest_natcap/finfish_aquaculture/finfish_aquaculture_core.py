@@ -406,12 +406,15 @@ def compute_uncertainty_data(args, output_dir):
     LOGGER.info('Monte Carlo simulation complete.')
 
     LOGGER.info('Creating histograms.')
-    make_histograms(hrv_weight_results, output_dir, 'weight')
-    make_histograms(num_cycle_results, output_dir, 'num_cycles')
-    make_histograms(total_weight_results, output_dir, 'weight')
+    make_histograms(hrv_weight_results, output_dir, 'weight',
+                    'Total harvested weight')
+    make_histograms(num_cycle_results, output_dir, 'num_cycles',
+                    'Number of cycles')
+    make_histograms(total_weight_results, output_dir, 'weight',
+                    'Total harvested weight')
     LOGGER.info('Done creating histograms.')
 
-def make_histograms(data_collection, output_dir, name):
+def make_histograms(data_collection, output_dir, name, xlabel):
     '''Makes a histogram for the given data.
 
     data_collection - either a dictionary of [farm ID] => [data],
@@ -429,7 +432,12 @@ def make_histograms(data_collection, output_dir, name):
         return os.path.join(plot_dir, filename)
 
     def make_histogram(name, data):
-        plt.hist(data, bins=NUM_HISTOGRAM_BINS)
+        # Set the weight so that each column represents a percent probability.
+        weight = 100.0 / len(data)
+        plt.hist(data, bins=NUM_HISTOGRAM_BINS, 
+                 weights=np.tile(weight, len(data)))
+        plt.ylabel('Percent probability')
+        plt.xlabel(xlabel)
         plt.savefig(name)
         plt.close()
 
