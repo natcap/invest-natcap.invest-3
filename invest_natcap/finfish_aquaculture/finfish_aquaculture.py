@@ -68,7 +68,7 @@ def execute(args):
     ff_aqua_args['g_param_b'] = args['g_param_b']
     if 'g_param_a_sd' in args:
         ff_aqua_args['g_param_a_sd'] = args['g_param_a_sd']
-    if 'g_param_b_sd' in args args:
+    if 'g_param_b_sd' in args:
         ff_aqua_args['g_param_b_sd'] = args['g_param_b_sd']
     
     #Both CSVs are being pulled in, but need to do some maintenance to remove undesirable
