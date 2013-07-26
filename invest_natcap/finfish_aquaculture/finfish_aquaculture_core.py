@@ -16,7 +16,7 @@ LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-NUM_MONTE_CARLO_RUNS = 100  # TODO set this to 1000 for production
+NUM_MONTE_CARLO_RUNS = 200  # TODO set this to 1000 for production
 NUM_HISTOGRAM_BINS = 30
 
 def execute(args):
@@ -374,10 +374,9 @@ def compute_uncertainty_data(args, output_dir):
                 return sample
 
     # Do a bunch of runs as part of a Monte Carlo simulation.
-    # Compile the results into a dictionary mapping farm ID to
-    # a list of the harvested weights (one weight for each run).
-    hrv_weight_results = {}
-    num_cycle_results = {}
+    hrv_weight_results = {}  # dict from farm ID to a list of harvested weights
+    num_cycle_results = {}  # dict from farm ID to a list of number of cycles
+    total_weight_results = [] # list of total weight (one entry per run)
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
                 % NUM_MONTE_CARLO_RUNS)
     for i in range(NUM_MONTE_CARLO_RUNS):
@@ -394,7 +393,8 @@ def compute_uncertainty_data(args, output_dir):
             args['farm_op_dict'], args['frac_post_process'], args['mort_rate_daily'], 
             sample_cycle_history)
 
-        # Append the harvested weight to the per-farm list of weights.
+        # Update our collections of results.
+        total_weight_results.append(sum(sample_sum_hrv_weight.values()))
         for farm, sample_hrv_weight in sample_sum_hrv_weight.items():
             try:
                 hrv_weight_results[farm].append(sample_hrv_weight)
@@ -405,27 +405,41 @@ def compute_uncertainty_data(args, output_dir):
 
     LOGGER.info('Monte Carlo simulation complete.')
 
-    make_histograms(hrv_weight_results, output_dir, suffix='weight')
-    make_histograms(num_cycle_results, output_dir, suffix='num_cycles')
+    LOGGER.info('Creating histograms.')
+    make_histograms(hrv_weight_results, output_dir, 'weight')
+    make_histograms(num_cycle_results, output_dir, 'num_cycles')
+    make_histograms(total_weight_results, output_dir, 'weight')
+    LOGGER.info('Done creating histograms.')
 
+def make_histograms(data_collection, output_dir, name):
+    '''Makes a histogram for the given data.
 
-def make_histograms(farm_to_data_dict, output_dir, suffix=''):
+    data_collection - either a dictionary of [farm ID] => [data],
+        or a list of aggregate data.
+    '''
     plot_dir = os.path.join(output_dir, 'images')
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
-    if suffix:
-        suffix = '_' + suffix
+    def make_plot_name(farm_id=None):
+        if farm_id is not None:
+            filename = 'farm_%s_%s.png' % (str(farm_id), name)
+        else:
+            filename = 'total_%s.png' % name
+        return os.path.join(plot_dir, filename)
 
-    def make_plot_name(farm_id):
-        return os.path.join(plot_dir,
-                            'farm_%s_plot%s.png' % (str(farm_id), suffix))
-
-    # Make a histogram for each farm.
-    for farm_id, farm_data in farm_to_data_dict.items():
-        plt.hist(farm_data, bins=NUM_HISTOGRAM_BINS)
-        plt.savefig(make_plot_name(farm_id))
+    def make_histogram(name, data):
+        plt.hist(data, bins=NUM_HISTOGRAM_BINS)
+        plt.savefig(name)
         plt.close()
+
+    if isinstance(data_collection, dict):
+        # Make a histogram for each farm.
+        for farm_id, farm_data in data_collection.items():
+            make_histogram(make_plot_name(farm_id), farm_data)
+    else:
+        # It's aggregate data, not per-farm data.
+        make_histogram(make_plot_name(), data_collection)
 
 
 def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
