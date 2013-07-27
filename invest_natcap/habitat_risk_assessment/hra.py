@@ -607,7 +607,10 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
-        
+      
+        LOGGER.debug("Is there a source? %s" % datasource)
+        LOGGER.debug("Sources uri: %s" % shape)
+
         #Making the nodata value 0 so that it's easier to combine the 
         #layers later.
         r_dataset = \
