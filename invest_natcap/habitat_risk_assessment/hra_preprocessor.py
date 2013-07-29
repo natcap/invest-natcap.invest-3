@@ -597,7 +597,7 @@ def zero_check(h_s_c, h_s_e, habs):
     for dictionary in [h_s_c, h_s_e, habs]:
         
         #These are the subdictionaries mapped to the habitat, h-s tuple key.
-        for subdict_lvl_1 in dictionary.values():
+        for key_1, subdict_lvl_1 in dictionary.items():
 
             #These are the subdictionaries mapped to the keys of 'Crit_Ratings'
             #'Crit_Rasters'.
@@ -615,6 +615,13 @@ def zero_check(h_s_c, h_s_e, habs):
                         if subdict_lvl_3['Rating'] == 0.0:
                             
                             del subdict_lvl_2[key_3]
+
+                #Now that we have removed that, check the dictionary isn't
+                #now empty
+                if len(subdict_lvl_2['Crit_Ratings']) == 0 and \
+                            len(subdict_lvl_2['Crit_Rasters'] == 0):
+
+                    del dictionary[key_1]
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
@@ -666,36 +673,38 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
-       
+      
+        LOGGER.debug("Before the loop the line is: %s" % line)
         #Drain the habitat-specific dictionary
-        while line[0] != '':
-            
-            key = line[0]
+        if line != '':
+            while line[0] != '':
+                LOGGER.debug("Inside the loop the line is: %s" % line)
+                key = line[0]
 
-            #If we are dealing with a shapefile criteria, we only want  to
-            #add the DQ and the W, and we will add a rasterized version of
-            #the shapefile later.
-            if line[1] == 'SHAPE':
-                try:
-                    habs[hab_name]['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(float, line[2:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Rating, \
-                        Data Quality or Weight columns.", hab_name)
-            #Should catch any leftovers from the autopopulation of the helptext        
-            else:
-                try:
-                    habs[hab_name]['Crit_Ratings'][key] = \
-                        dict(zip(headers, map(float,line[1:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Rating, \
-                        Data Quality or Weight columns.", hab_name)
-            
-            line = csv_reader.next()
+                #If we are dealing with a shapefile criteria, we only want  to
+                #add the DQ and the W, and we will add a rasterized version of
+                #the shapefile later.
+                if line[1] == 'SHAPE':
+                    try:
+                        habs[hab_name]['Crit_Rasters'][key] = \
+                            dict(zip(headers[1:3], map(float, line[2:4])))
+                    except ValueError:
+                        raise UnexpectedString("Entries in CSV table may not be \
+                            strings, and may not be left blank. Check your %s CSV \
+                            for any leftover strings or spaces within Rating, \
+                            Data Quality or Weight columns.", hab_name)
+                #Should catch any leftovers from the autopopulation of the helptext        
+                else:
+                    try:
+                        habs[hab_name]['Crit_Ratings'][key] = \
+                            dict(zip(headers, map(float,line[1:4])))
+                    except ValueError:
+                        raise UnexpectedString("Entries in CSV table may not be \
+                            strings, and may not be left blank. Check your %s CSV \
+                            for any leftover strings or spaces within Rating, \
+                            Data Quality or Weight columns.", hab_name)
+                
+                line = csv_reader.next()
 
         #We will have just loaded in a null line from under the hab-specific
         #criteria, now drainthe next two, since they're just headers for users.
@@ -707,10 +716,11 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         #specific habitat.
         #Drain the overlap dictionaries
         #This is the overlap header
-        while True:
+        while line != '':
             try:
                 line = csv_reader.next()
-
+                LOGGER.debug("Line now is: %s" % line)
+                LOGGER.debug("Hab name is: %s" % hab_name)
                 stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
                 headers = csv_reader.next()[1:]
                 
