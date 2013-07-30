@@ -1,4 +1,9 @@
+import collections
+import re
+
 BEACH_STYLE = 0
+
+_TOC_MARKER = '<---TOC MARKER--->'
 
 class HTMLWriter(object):
     '''Utility class for creating simple HTML files.
@@ -22,12 +27,24 @@ class HTMLWriter(object):
         self.header = header
         self.body = ''
         self.style = ''
+        self.id_counter = 0
+        self.has_toc = False
+        self.toc = collections.OrderedDict()
 
     def set_style(self, style_const):
         self.style = _get_style_css(style_const)
 
+    def insert_table_of_contents(self):
+        if self.has_toc:
+            raise Exception('This page already has a table of contents.')
+        self.body += _TOC_MARKER
+        self.has_toc = True
+
     def write_header(self, text, level=2):
-        self.body += _elem(('h%d' % level), text)
+        elem_id = 'id_%d' % self.id_counter
+        self.id_counter += 1
+        self.body += _elem(('h%d' % level), text, 'id="%s"' % elem_id)
+        self.toc[elem_id] = text
 
     def write_paragraph(self, text):
         self.body += _elem('p', text)
@@ -48,6 +65,14 @@ class HTMLWriter(object):
     def add_image(self, src):
         self.body += ('<img src="%s">' % src)
 
+    def start_collapsible_element(self, summary_content=None):
+        self.body += '<details>'
+        if summary_content:
+            self.body += _elem('summary', summary_content)
+
+    def end_collapsible_element(self):
+        self.body += '</details>'
+
     def flush(self):
         '''Creates and writes to an HTML file.'''
         f = open(self.uri, 'w')
@@ -67,11 +92,23 @@ class HTMLWriter(object):
 
         f.write('<body>')
         f.write('<center><h1>%s</h1></center>' % self.header)
+        if self.has_toc:
+            self.body = re.sub(_TOC_MARKER, self._make_toc(), self.body)
         f.write(self.body)
         f.write('</body>')
         f.write('</html>')
 
         f.close()
+
+    def _make_toc(self):
+        '''Returns the HTML to generate the Table of Contents for the page.'''
+        toc_html = ''
+        toc_html += _elem('h2', 'Table of Contents')
+        for elem_id, text in self.toc.items():
+            toc_html += '<p>'
+            toc_html += _elem('a', text, 'href="#%s"' % elem_id)
+            toc_html += '</p>'
+        return toc_html
 
 def _elem(tag, content, attr=''):
     if attr:

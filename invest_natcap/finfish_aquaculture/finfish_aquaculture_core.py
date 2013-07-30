@@ -522,6 +522,8 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         'This page contains results from running the Marine InVEST Finfish '
         'Aquaculture model.')
 
+    writer.insert_table_of_contents()
+
     writer.write_header('Farm Operations (input)')
 
     writer.start_table()    
@@ -623,8 +625,9 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                 title = 'Aggregate results for all farms'
             else:
                 title = 'Results for farm %s' % str(key)
-            writer.write_header(title, level=3)
+            writer.start_collapsible_element(title)
             for path in paths:
                 writer.add_image(path)
+            writer.end_collapsible_element()
 
     writer.flush()
