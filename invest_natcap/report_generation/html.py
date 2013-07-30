@@ -104,10 +104,12 @@ class HTMLWriter(object):
         '''Returns the HTML to generate the Table of Contents for the page.'''
         toc_html = ''
         toc_html += _elem('h2', 'Table of Contents')
+        toc_html += '<ul>'
         for elem_id, text in self.toc.items():
-            toc_html += '<p>'
+            toc_html += '<li>'
             toc_html += _elem('a', text, 'href="#%s"' % elem_id)
-            toc_html += '</p>'
+            toc_html += '</li>'
+        toc_html += '</ul>'
         return toc_html
 
 def _elem(tag, content, attr=''):
