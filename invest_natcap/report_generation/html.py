@@ -63,7 +63,7 @@ class HTMLWriter(object):
         write_elem('title', self.title)
         if self.style:
             write_elem('style', self.style, 'type="text/css"')
-        f.write('<head>')
+        f.write('</head>')
 
         f.write('<body>')
         f.write('<center><h1>%s</h1></center>' % self.header)
