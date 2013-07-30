@@ -616,12 +616,15 @@ def zero_check(h_s_c, h_s_e, habs):
                             
                             del subdict_lvl_2[key_3]
 
-                #Now that we have removed that, check the dictionary isn't
-                #now empty
-                if len(subdict_lvl_2['Crit_Ratings']) == 0 and \
-                            len(subdict_lvl_2['Crit_Rasters'] == 0):
+            #Now that we have removed that, check the dictionary isn't
+            #now empty
+            if len(subdict_lvl_1['Crit_Ratings']) == 0 and \
+                        len(subdict_lvl_1['Crit_Rasters']) == 0:
 
-                    del dictionary[key_1]
+                del dictionary[key_1]
+
+    LOGGER.debug(h_s_e)
+
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
@@ -674,10 +677,12 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
       
-        LOGGER.debug("Before the loop the line is: %s" % line)
         #Drain the habitat-specific dictionary
-        if line != '':
-            while line[0] != '':
+        #Since line is an array, want to check that it's not all null,
+        #but need to do that by checking array length.
+        while len(line) != 0:
+            
+            if line[0] != '':
                 LOGGER.debug("Inside the loop the line is: %s" % line)
                 key = line[0]
 
@@ -703,8 +708,8 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                             strings, and may not be left blank. Check your %s CSV \
                             for any leftover strings or spaces within Rating, \
                             Data Quality or Weight columns.", hab_name)
-                
-                line = csv_reader.next()
+            
+            line = csv_reader.next()
 
         #We will have just loaded in a null line from under the hab-specific
         #criteria, now drainthe next two, since they're just headers for users.
@@ -716,7 +721,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         #specific habitat.
         #Drain the overlap dictionaries
         #This is the overlap header
-        while line != '':
+        while len(line) != 0:
             try:
                 line = csv_reader.next()
                 LOGGER.debug("Line now is: %s" % line)
