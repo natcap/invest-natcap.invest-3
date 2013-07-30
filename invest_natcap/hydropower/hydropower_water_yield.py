@@ -299,17 +299,8 @@ def execute(args):
     
         # Create a dictionary that maps watersheds to sub-watersheds given the
         # watershed and sub-watershed shapefiles
-        sub_sheds_map_sheds_dict = sheds_map_subsheds(sheds_uri, sub_sheds_uri)
-        LOGGER.debug('sub_sheds_map_sheds_dict : %s', sub_sheds_map_sheds_dict)
-   
-        # Add the corresponding watershed ids to the sub-watershed shapefile as a
-        # new field
-        add_dict_to_shape(
-                wyield_sub_sheds_uri, sub_sheds_map_sheds_dict, 'ws_id', 'subws_id')
-    
-        # List of wanted fields to output in the sub-watershed CSV table
         field_list_sws = [
-                'ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                 'wyield_mn', 'wyield_vol']
     
         # Get a dictionary from the sub-watershed shapefiles attributes based on the
@@ -382,9 +373,6 @@ def execute(args):
     # Paths for watershed and sub watershed scarcity tables
     scarcity_table_ws_uri = os.path.join(
             output_dir, 'water_scarcity_watershed%s.csv' % file_suffix) 
-    if sub_sheds_uri is not None:
-        scarcity_table_sws_uri = os.path.join(
-            output_dir, 'water_scarcity_subwatershed%s.csv' % file_suffix) 
     
     # Open/read in the demand csv file into a dictionary
     demand_dict = {}
@@ -410,16 +398,9 @@ def execute(args):
     # to
     scarcity_sheds_uri = os.path.join(output_dir, 'scarcity_sheds%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sheds_uri, scarcity_sheds_uri)
-
-    if sub_sheds_uri is not None:
-        scarcity_sub_sheds_uri = os.path.join(output_dir, 'scarcity_sub_sheds%s.shp' % file_suffix)
-        raster_utils.copy_datasource_uri(sub_sheds_uri, scarcity_sub_sheds_uri)
    
     # Calculate the calibrated water yield for sheds and sub-sheds
     LOGGER.debug('Calculating CYIELD')
-    if sub_sheds_uri is not None:
-        calculate_cyield_vol(
-            wyield_sub_sheds_uri, calib_dict, scarcity_sub_sheds_uri)
     calculate_cyield_vol(wyield_sheds_uri, calib_dict, scarcity_sheds_uri)
     
     # Create demand raster from table values to use in future calculations
@@ -432,11 +413,6 @@ def execute(args):
     # Aggregate the consumption volume over sheds and sub-sheds using the
     # reclassfied demand raster
     LOGGER.info('Aggregating Consumption Volume and Mean')
-    if sub_sheds_uri is not None:
-        consump_sws = raster_utils.aggregate_raster_values_uri(
-            tmp_demand_uri, sub_sheds_uri, 'subws_id', ignore_nodata=False)
-        consump_vol_dict_sws = consump_sws.total
-        consump_mn_dict_sws = consump_sws.pixel_mean
 
     consump_ws = raster_utils.aggregate_raster_values_uri(
         tmp_demand_uri, sheds_uri, 'ws_id', ignore_nodata=False)
@@ -444,58 +420,16 @@ def execute(args):
     consump_mn_dict_ws = consump_ws.pixel_mean
     
     # Add aggregated consumption to sheds and sub-sheds shapefiles
-    if sub_sheds_uri is not None:
-        add_dict_to_shape(
-            scarcity_sub_sheds_uri, consump_vol_dict_sws, 'consum_vol',
-            'subws_id')
-        LOGGER.debug('Demand_Sum_Dict : %s', consump_vol_dict_sws)
-
     add_dict_to_shape(
             scarcity_sheds_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
     
     # Add aggregated consumption means to sheds and sub-sheds shapefiles
-    if sub_sheds_uri is not None:
-        add_dict_to_shape(
-            scarcity_sub_sheds_uri, consump_mn_dict_sws, 'consum_mn',
-            'subws_id')
-        LOGGER.debug('mean_dict : %s', consump_mn_dict_sws)
     add_dict_to_shape(
             scarcity_sheds_uri, consump_mn_dict_ws, 'consum_mn', 'ws_id')
     
     # Calculate the realised water supply after consumption
     LOGGER.info('Calculating RSUPPLY')
     compute_rsupply_volume(scarcity_sheds_uri, wyield_sheds_uri)
-    if sub_sheds_uri is not None:
-        compute_rsupply_volume(scarcity_sub_sheds_uri, wyield_sub_sheds_uri)
-        # Add the corresponding watershed ids to the sub-watershed shapefile as a
-        # new field
-        add_dict_to_shape(
-                scarcity_sub_sheds_uri, sub_sheds_map_sheds_dict, 'ws_id',
-                'subws_id')
-    
-        scarcity_field_list_sws = [
-                'ws_id', 'subws_id', 'cyield_vol', 'consum_vol', 'consum_mn', 
-                'rsupply_vl', 'rsupply_mn']
-
-        # Aggregate water yield and water scarcity fields, where we exclude the
-        # first two fields in the scarcity list because they are duplicates already
-        # in the water yield list
-        field_list_sws = field_list_sws + scarcity_field_list_sws[2:]
-
-        # Get a dictionary from the sub-watershed shapefiles attributes based on the
-        # fields to be outputted to the CSV table
-        scarcity_sub_value_dict = extract_datasource_table_by_key(
-                scarcity_sub_sheds_uri, 'subws_id', scarcity_field_list_sws)
-
-        # Since we want the scarcity output to have both water yield and scarcity
-        # values, combine the scarcity and water yield dictionaries 
-        scarcity_dict_sws = combine_dictionaries(
-                wyield_value_dict_sws, scarcity_sub_value_dict)
-
-        LOGGER.debug('Scarcity_dict_sws : %s', scarcity_dict_sws)
-
-        # Write sub-watershed CSV table for water scarcity
-        write_new_table(scarcity_table_sws_uri, field_list_sws, scarcity_dict_sws)
     
     # List of wanted fields to output in the watershed CSV table
     scarcity_field_list_ws = [
@@ -536,9 +470,6 @@ def execute(args):
     # Paths for the watershed and subwatershed tables
     valuation_table_ws_uri = os.path.join(
             service_dir, 'hydropower_value_watershed%s.csv' % file_suffix)
-    if sub_sheds_uri is not None:
-        valuation_table_sws_uri = os.path.join(
-            service_dir, 'hydropower_value_subwatershed%s.csv' % file_suffix) 
     
     # Open/read in valuation parameters from CSV file
     valuation_params = {}
@@ -558,11 +489,6 @@ def execute(args):
     # Making a copy of watershed and sub-watershed to add valuation results to
     valuation_sheds_uri = os.path.join(service_dir, 'valuation_sheds%s.shp' % file_suffix)
     raster_utils.copy_datasource_uri(sheds_uri, valuation_sheds_uri)
-
-    if sub_sheds_uri is not None:
-        valuation_sub_sheds_uri = os.path.join(
-            service_dir, 'valuation_sub_sheds%s.shp' % file_suffix)
-        raster_utils.copy_datasource_uri(sub_sheds_uri, valuation_sub_sheds_uri)
    
     # Compute NPV and Energy for the watersheds
     LOGGER.info('Calculating NPV/ENERGY for Sheds')
@@ -571,7 +497,6 @@ def execute(args):
     
     # List of fields for the valuation run   
     val_field_list_ws = ['ws_id', 'hp_energy', 'hp_npv']
-    val_field_list_sws = ['subws_id', 'ws_id', 'hp_energy', 'hp_npv']
     
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
@@ -584,35 +509,13 @@ def execute(args):
             scarcity_dict_ws, valuation_dict_ws)
 
     LOGGER.debug('Hydro WS Dict: %s', hydropower_dict_ws)
-
     
     # Get a dictionary from the sub-watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    if sub_sheds_uri is not None:
-        # Compute NPV and Energy for the sub-watersheds
-        LOGGER.info('Calculating NPV/ENERGY for Sub-Sheds')
-        compute_subshed_valuation(
-            valuation_sub_sheds_uri, scarcity_sub_sheds_uri, hydropower_dict_ws)
-
-        valuation_dict_sws = extract_datasource_table_by_key(
-            valuation_sub_sheds_uri, 'subws_id', val_field_list_sws)
-    
-        # Since we want the valuation output to have water yield and scarcity
-        # values also, combine the dictionaries
-        hydropower_dict_sws = combine_dictionaries(
-                scarcity_dict_sws, valuation_dict_sws)
-    
-        # Aggregate all fields together, where we exclude the first field in the
-        # valuation list because they are duplicates
-        field_list_sws = field_list_sws + val_field_list_sws[2:]
     field_list_ws = field_list_ws + val_field_list_ws[1:]
    
-    # Generate the final CSV files
-    if sub_sheds_uri is not None:
-        write_new_table(
-            valuation_table_sws_uri, field_list_sws, hydropower_dict_sws)
+    # Generate the final CSV file
     write_new_table(valuation_table_ws_uri, field_list_ws, hydropower_dict_ws)
-
 
 def compute_subshed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
     """Computes and adds the net present value and energy for the sub-sheds to
