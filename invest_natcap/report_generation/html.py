@@ -26,8 +26,8 @@ class HTMLWriter(object):
     def set_style(self, style_const):
         self.style = _get_style_css(style_const)
 
-    def write_section_header(self, text):
-        self.body += _elem('h2', text)
+    def write_header(self, text, level=2):
+        self.body += _elem(('h%d' % level), text)
 
     def write_paragraph(self, text):
         self.body += _elem('p', text)
@@ -86,7 +86,7 @@ def _get_style_css(style_const):
           background-color: #EFECCA;
           color: #002F2F
       }
-      h1, h2, strong, th {
+      h1, h2, h3, strong, th {
           color: #046380;
       }
       h2 {

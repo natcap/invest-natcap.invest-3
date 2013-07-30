@@ -522,7 +522,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         'This page contains results from running the Marine InVEST Finfish '
         'Aquaculture model.')
 
-    writer.write_section_header('Farm Operations (input)')
+    writer.write_header('Farm Operations (input)')
 
     writer.start_table()    
     str_headers = ['Farm ID Number',
@@ -547,7 +547,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     writer.end_table()
 
-    writer.write_section_header('Farm Harvesting (output)')
+    writer.write_header('Farm Harvesting (output)')
     writer.start_table()                         
     str_headers = ['Farm ID Number', 'Cycle Number', 
                    'Days Since Outplanting Date (Including Fallowing Period)', 
@@ -588,7 +588,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     writer.end_table()
 
-    writer.write_section_header('Farm Result Totals (output)')
+    writer.write_header('Farm Result Totals (output)')
 
     writer.write_paragraph(
         'All values in the following table were also populated in the attribute '
@@ -616,13 +616,15 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     writer.end_table()
 
-    for key, paths in histogram_paths.items():
-        if key == 'aggregate':
-            title = 'Aggregate results for all farms'
-        else:
-            title = 'Results for farm %s' % str(key)
-        writer.write_paragraph(title)
-        for path in paths:
-            writer.add_image(path)
+    if histogram_paths:
+        writer.write_header('Uncertainty Analysis Results')
+        for key, paths in histogram_paths.items():
+            if key == 'aggregate':
+                title = 'Aggregate results for all farms'
+            else:
+                title = 'Results for farm %s' % str(key)
+            writer.write_header(title, level=3)
+            for path in paths:
+                writer.add_image(path)
 
     writer.flush()

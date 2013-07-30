@@ -240,7 +240,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
     def format_currency(val):
         return '%.2f' % val
     
-    writer.write_section_header('Results Summary')
+    writer.write_header('Results Summary')
     writer.write_paragraph(
         '<strong>Positive values</strong> in this table indicate that carbon storage increased. '
         'In this case, the positive Net Present Value represents the value of '
@@ -311,7 +311,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
         writer.end_table()
 
     # Write a list of the output files produced by the model.
-    writer.write_section_header('Output Files')
+    writer.write_header('Output Files')
     outfile_descriptions = _make_outfile_descriptions(outfile_uris)
 
     writer.start_table()
