@@ -1,6 +1,5 @@
 """Entry point for the Habitat Risk Assessment module"""
 
-import re
 import csv
 import os
 import logging
@@ -10,8 +9,7 @@ import shutil
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
-LOGGER = logging.getLogger('hra_preprocessor')
+LOGGER = logging.getLogger('HRA_PREPROCESSOR')
 
 class MissingHabitatsOrSpecies(Exception):
     '''An exception to pass if the hra_preprocessor args dictionary being
@@ -32,7 +30,7 @@ class ImproperCriteriaSpread(Exception):
 
 class ZeroDQWeightValue(Exception):
     '''An exception specifically for the parsing of the preprocessor tables in
-    which the model shoudl break loudly if a user tries to enter a zero value
+    which the model should break loudly if a user tries to enter a zero value
     for either a data quality or a weight. However, we should confirm that it
     will only break if the rating is not also zero. If they're removing the
     criteria entirely from that H-S overlap, it should be allowed.'''
@@ -43,6 +41,13 @@ class UnexpectedString(Exception):
     left over in the CSVs. Since everything from the CSV's are being cast to
     floats, this will be a hook off of python's ValueError, which will re-raise 
     our exception with a more accurate message. '''
+    pass
+
+class ImproperECSelection(Exception):
+    '''An exception for hra_preprocessor that should catch selections for
+    exposure vs consequence scoring that are not either E or C. The user must
+    decide in this column which the criteria applies to, and my only designate
+    this with an 'E' or 'C'. '''
     pass
 
 def execute(args):
@@ -57,12 +62,14 @@ def execute(args):
         args['species_dir']- Directory which holds all species shapefiles, but
             may or may not exist if there is a habitats layer directory.
         args['stressors_dir'] - A directory of ArcGIS shapefiles that are stressors
-        args['exposure_crits']- List containing string names of exposure
-            (stressor-specific) criteria.
+        args['exposure_crits']- list containing string names of exposure
+            criteria (hab-stress) which should be applied to the exposure score.
         args['sensitivity-crits']- List containing string names of sensitivity
-            (habitat-stressor overlap specific) criteria.
+            (habitat-stressor overlap specific) criteria which should be applied 
+            to the consequence score.
         args['resilience_crits']- List containing string names of resilience
-            (habitat or species-specific) criteria.
+            (habitat or species-specific) criteria which should be applied to the
+            consequence score.
         args['criteria_dir']- Directory which holds the criteria shapefiles.
             May not exist if the user does not desire criteria shapefiles. This
             needs to be in a VERY specific format, which shall be described in
@@ -70,10 +77,10 @@ def execute(args):
 
     Output:
         Creation of a series of CSVs within workspace_dir. There will be one CSV
-            for every stressor, and one for every habitat/species. These files
-            will contain information relevant to each stresor or habitat, 
-            including a stressor buffer, as well as criteria names that apply to
-            each overlap or individual.
+            for every habitat/species. These files will contain information 
+            relevant to each habitat or species, including all criteria. The
+            criteria will be broken up into those which apply to only the habitat,
+            and those which apply to the overlap of that habitat, and each stressor.
 
         JSON file containing vars that need to be passed on to hra non-core
           when that gets run. Should live inside the preprocessor folder which
@@ -94,22 +101,22 @@ def execute(args):
         raise MissingHabitatsOrSpecies("This model requires you to provide \
                 either habitat or species information for comparison against \
                 potential stressors.")
-
+    
     #2. There should be criteria of each type (exposure, sensitivity,
-    # resilience).
-    if len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
-            or len(args['sensitivity_crits']) == 0:
+    # resilience). Exposure can be either a C applied criteria or an E applied
+    #criteria.
+    if (len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
+            or len(args['sensitivity_crits']) == 0):
 
         raise ImproperCriteriaSpread("This model requires there to be one \
                 criteria in each of the following catagories: Exposure, \
                 Sensitivity, and Resilience.")
     
     #3. There should be > 4 criteria total.
-    total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) \
-                + len(args['sensitivity_crits'])
+    total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) + \
+                len(args['sensitivity_crits'])
    
     if total_crits < 4:
-        
         raise NotEnoughCriteria("This model requires you to use at least 4 \
                 criteria in order to display an accurate picture of habitat \
                 risk.")
@@ -118,7 +125,7 @@ def execute(args):
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if os.path.exists(output_dir):
-       shutil.rmtree(output_dir)
+        shutil.rmtree(output_dir)
  
     os.makedirs(output_dir)
    
@@ -151,6 +158,21 @@ def execute(args):
     stress_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0], 
                         stress_list)
     
+    
+    #Now that we know the stressor names, let's create the simple CSV file to
+    #track the stressor buffers for each stressor.
+    s_buff_uri = os.path.join(output_dir, 'stressor_buffers.csv')
+        
+    with open(s_buff_uri, 'wb') as s_file:
+        s_writer = csv.writer(s_file)
+    
+        s_writer.writerow(['STRESSOR NAME', 'STRESSOR BUFFER (meters)'])
+        s_writer.writerow([])
+        
+        for s_name in stress_list:
+
+            s_writer.writerow([s_name, '<enter a buffer region in meters>'])
+
     #Clean up the incoming criteria name strings coming in from the IUI
     exposure_crits = map(lambda name: name.replace('_', ' ').lower(), \
                     args['exposure_crits'])
@@ -162,11 +184,11 @@ def execute(args):
     '''If shapefile criteria are desired, want to pull the shapefile criteria 
     from the folder structure specified. This function will return a dictionary
     with the following form:
-        {'h-s':
+        {'h_s_e':
             {('HabA', 'Stress1'):
                 {'CritName': "Shapefile URI", ...}
             },
-         's':
+         'h_s_c':
             {'Stress1':
                 {'CritName': "Shapefile URI", ...}
             },
@@ -177,7 +199,7 @@ def execute(args):
     '''
     if 'criteria_dir' in args:
         crit_shapes = make_crit_shape_dict(args['criteria_dir'])
-    
+
     crit_descriptions = {
         'change in area rating': '<enter (3) 50-100% loss, ' + 
             '(2) 20-50% loss, (1) 0-20% loss, (0) no score>',
@@ -205,11 +227,12 @@ def execute(args):
     default_dq_message = '<enter (3) best, (2) adequate, (1) limited>'
     default_weight_message = '<enter (3) more important, ' + \
         '(2) equal importance, (1) less important>'
-    default_table_headers = ['', 'Rating', 'DQ', 'Weight']
+    default_table_headers = ['', 'Rating', 'DQ', 'Weight', 'E/C']
     default_row = [default_dq_message, default_weight_message]
     default_rating = ['<enter (3) high, (2) medium, (1) low, (0) no score>']
 
-    #Create habitat-centric output csv's.
+
+    #Create habitat-specific CSV's
     for habitat_name in hab_list:
 
         csv_filename = os.path.join(output_dir, habitat_name + \
@@ -224,7 +247,8 @@ def execute(args):
 
             habitat_csv_writer.writerow(default_table_headers)
 
-            ##### HERE WILL BE WHERE USER INPUT HABITAT CRITERIA GO.####
+            ##### HERE WILL BE WHERE USER INPUT HABITAT-SPECIFIC (Resilience) 
+            #####CRITERIA GO.####
             for c_name in resilience_crits:
 
                 curr_row = default_row
@@ -234,15 +258,17 @@ def execute(args):
                 if 'crit_shapes' in locals() and \
                                 (habitat_name in crit_shapes['h'] and \
                                 c_name in crit_shapes['h'][habitat_name]):
-                    curr_row = [c_name] + ['SHAPE'] + curr_row
+                    curr_row = [c_name] + ['SHAPE'] + curr_row + ['C']
                 elif c_name in crit_descriptions:
-                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
+                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row + ['C']
                 else:
-                    curr_row = [c_name] + default_rating + curr_row
+                    curr_row = [c_name] + default_rating + curr_row + ['C']
 
                 habitat_csv_writer.writerow(curr_row)
 
-            ##### HERE WILL BE WHERE ALL THE H-S USER INPUT CRITERIA GO.####
+    
+            ##### HERE WILL BE WHERE ALL THE H-S INPUT CRITERIA GO.####
+            ##### THIS WILL ENCOMPASS BOTH THE SENSITIVITY AND EXPOSURE CRITS ###
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT STRESSOR OVERLAP PROPERTIES'])
             
@@ -253,55 +279,42 @@ def execute(args):
                         stressor_name + ' OVERLAP'])
                 habitat_csv_writer.writerow(default_table_headers)
 
+                ##SENSITIVITY##
                 for c_name in sensitivity_crits:
                 
                     curr_row = default_row
 
                     if 'crit_shapes' in locals() and \
-                            ((habitat_name, stressor_name) in crit_shapes['h-s'] and \
-                            c_name in crit_shapes['h-s'][(habitat_name, stressor_name)]):
+                            ((habitat_name, stressor_name) in crit_shapes['h_s_c'] and \
+                            c_name in crit_shapes['h_s_c'][(habitat_name, stressor_name)]):
 
-                        curr_row = [c_name] + ['SHAPE'] + curr_row
+                        curr_row = [c_name] + ['SHAPE'] + curr_row + ['C']
                     elif c_name in crit_descriptions:
 
-                        curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
+                        curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row + ['C']
                     else:
-                        curr_row = [c_name] + default_rating + curr_row
+                        curr_row = [c_name] + default_rating + curr_row + ['C']
 
                     habitat_csv_writer.writerow(curr_row)
-    
-    #Making stressor specific tables. 
-    for stressor_name in stress_list:
 
+                ##EXPOSURE ###
 
-        csv_filename = os.path.join(output_dir, stressor_name + \
-                        '_stressor_ratings.csv')
-    
-        with open(csv_filename, 'wb') as stressor_csv_file:
-            stressor_csv_writer = csv.writer(stressor_csv_file)
-            stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
-            stressor_csv_writer.writerow([])
-            stressor_csv_writer.writerow(['Stressor Buffer (m):', \
-                    '<enter a buffer region in meters>'])
-            stressor_csv_writer.writerow([])
-            stressor_csv_writer.writerow(default_table_headers)
+                for c_name in exposure_crits:
+                    
+                    curr_row = default_row
 
-            #### HERE IS WHERE STRESSOR SPECIFIC USER INPUT CRITERIA GO. ####
-            for c_name in exposure_crits:
-            
-                curr_row = default_row
+                    if 'crit_shapes' in locals() and \
+                            ((habitat_name, stressor_name) in crit_shapes['h_s_e'] and \
+                            c_name in crit_shapes['h_s_e'][(habitat_name, stressor_name)]):
 
-                if 'crit_shapes' in locals() and \
-                            (stressor_name in crit_shapes['s'] and \
-                            c_name in crit_shapes['s'][stressor_name]):
+                        curr_row = [c_name] + ['SHAPE'] + curr_row + ['E']
+                    elif c_name in crit_descriptions:
 
-                    curr_row = [c_name] + ['SHAPE'] + curr_row
-                elif c_name in crit_descriptions:
-                    curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row
-                else:
-                    curr_row = [c_name] + default_rating + curr_row
+                        curr_row = [c_name] + [crit_descriptions[c_name]] + curr_row + ['E']
+                    else:
+                        curr_row = [c_name] + default_rating + curr_row + ['E']
 
-                stressor_csv_writer.writerow(curr_row)
+                    habitat_csv_writer.writerow(curr_row)
 
 def listdir(path):
     '''A replacement for the standar os.listdir which, instead of returning
@@ -319,444 +332,6 @@ def listdir(path):
 
     return uris
 
-def parse_hra_tables(workspace_uri):
-    #It should be noted here that workspace_uri isn't actually the workspace
-    #URI, but is actually the location of the CSV and JSON files that we need
-    #to parse through.
-    '''This takes in the directory containing the criteria rating csv's, 
-    and returns a coherent set of dictionaries that can be used to do EVERYTHING
-    in non-core and core.
-
-    It will return a massive dictionary containing all of the subdictionaries
-    needed by non core, as well as directory URI's. It will be of the following 
-    form:
-
-    {'habitats_dir': 'Habitat Directory URI',
-    'species_dir': 'Species Directory URI',
-    'stressors_dir': 'Stressors Directory URI',
-    'criteria_dir': 'Criteria Directory URI',
-    'buffer_dict':
-        {'Stressor 1': 50,
-        'Stressor 2': ...,
-        },
-    'h-s':
-        {(Habitat A, Stressor 1): 
-            {'Crit_Ratings': 
-                {'CritName': 
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                },
-            'Crit_Rasters': 
-                {'CritName':
-                    {'Weight': 1.0, 'DQ': 1.0}
-                },
-            }
-        },
-     'stressors':
-        {Stressor 1: 
-            {'Crit_Ratings': 
-                {'CritName': 
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                },
-            'Crit_Rasters': 
-                {'CritName':
-                    {'Weight': 1.0, 'DQ': 1.0}
-                },
-            }
-        },
-     'habitats':
-        {Habitat A: 
-            {'Crit_Ratings': 
-                {'CritName': 
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                },
-            'Crit_Rasters': 
-                {'CritName':
-                    {'Weight': 1.0, 'DQ': 1.0}
-                },
-            }
-        }
-    }
-    '''
-    #Create the dictionary in which everything will be stored.
-    parse_dictionary = {}
-
-    #Get the arguments out of the json file.
-    json_uri = os.path.join(workspace_uri, 'dir_names.txt')
-
-    with open(json_uri, 'rb') as infile:
-        parse_dictionary = json.load(infile)
-    
-    #Now we can compile and add the other dictionaries
-    dir_names = listdir(workspace_uri)
-    
-    all_csvs = [f for f in dir_names if f.endswith('_ratings.csv')]
-    stressor_csvs = fnmatch.filter(dir_names, '*_stressor_ratings.csv')
-    habitat_csvs = set(all_csvs) - set(stressor_csvs)
-
-    stressor_dict = {}
-    for stressor_uri in stressor_csvs:
-      
-        stressor_name = re.search('(.*)_stressor_ratings\.csv', 
-                                os.path.basename(stressor_uri)).group(1)
-        stressor_dict[stressor_name] = parse_stressor(stressor_uri)
-
-    habitat_dict = {}
-    h_s_dict = {}
-
-    for habitat_uri in habitat_csvs:
-        
-        base_hab_name = os.path.basename(habitat_uri)
-        habitat_name = re.search('(.*)_ratings\.csv', base_hab_name).group(1)
-
-        #Since each habitat CSV has both habitat individual ratings and habitat
-        #overlap ratings, need to subdivide them within the return dictionary
-        habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
-        habitat_dict[habitat_name] = habitat_parse_dictionary['hab_only']
-    
-        #For all of the overlaps pertaining to this particular habitat,
-        #hab_stress_overlap is a stressor name which overlaps our habitat
-        for hab_stress_overlap in habitat_parse_dictionary['overlap']:
-            h_s_dict[(habitat_name, hab_stress_overlap)] = \
-                        habitat_parse_dictionary['overlap'][hab_stress_overlap]
-
-    #Should note: these are references to the dictionaries. If we change the
-    #properties of them, they will change within parse_dictionary.
-    parse_dictionary['habitats'] = habitat_dict
-    parse_dictionary['h-s'] = h_s_dict
-    parse_dictionary['stressors'] = stressor_dict
-       
-    #Add the stressors in after to make the dictionary traversal easier before
-    #this. We already know that the values in here are floats, since we checked 
-    #them as they were placed in there.
-    stressor_buf_dict = {}
-    for stressor, stressor_properties in stressor_dict.iteritems():
-        stressor_buf_dict[stressor] = stressor_properties['buffer']
-        del(stressor_properties['buffer'])
-
-    parse_dictionary['buffer_dict'] = stressor_buf_dict
-
-    #At this point, we want to check for 0 or null values in any of the
-    #subdictionaries subpieces, and if we find any, remove that whole criteria
-    #from the assessment for that subdictionary. Abstracting this to a new function.
-    zero_null_val_check(parse_dictionary)
-
-    return parse_dictionary
-
-def zero_null_val_check(parse_dictionary):
-    '''Helper function to remove criteria whose ratings is a 0, or raise an
-    exception if the DQ or Weight is 0.
-
-        {'habitats_dir': 'Habitat Directory URI',
-        'species_dir': 'Species Directory URI',
-        'stressors_dir': 'Stressors Directory URI',
-        'criteria_dir': 'Criteria Directory URI',
-        'buffer_dict':
-            {'Stressor 1': 50,
-            'Stressor 2': ...,
-            },
-        'h-s':
-            {(Habitat A, Stressor 1): 
-                {'Crit_Ratings': 
-                    {'CritName': 
-                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                    },
-                'Crit_Rasters': 
-                    {'CritName':
-                        {'Weight': 1.0, 'DQ': 1.0}
-                    },
-                }
-            },
-         'stressors':
-            {Stressor 1: 
-                {'Crit_Ratings': 
-                    {'CritName': 
-                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                    },
-                'Crit_Rasters': 
-                    {'CritName':
-                        {'Weight': 1.0, 'DQ': 1.0}
-                    },
-                }
-            },
-         'habitats':
-            {Habitat A: 
-                {'Crit_Ratings': 
-                    {'CritName': 
-                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                    },
-                'Crit_Rasters': 
-                    {'CritName':
-                        {'Weight': 1.0, 'DQ': 1.0}
-                    },
-                }
-            }
-        }
-    '''
-    for subdict_lvl1 in parse_dictionary.values():
-        
-        #Sometimes will find strings here that are coming from the JSON object
-        #URIs being passed in. Just skip them.
-        try:
-            for subdict_lvl2 in subdict_lvl1.values():
-                #Sometimes will find floats here that are coming from the buffer
-                #subdictionary. Skip them.
-                try:
-                    for subdict_lvl3 in subdict_lvl2.values():
-
-                        #This is an actual list copy of the resulting dictionary.
-                        for key4, subdict_lvl4 in subdict_lvl3.items():
-                            
-                            #If they have listed the rating as 0, they do not
-                            #want that to be an applicable criteria. Need to first
-                            #check that it has a 'Rating' spot, instead of nothing
-                            #if it was listed as SHAPE
-                            if 'Rating' in subdict_lvl4 and subdict_lvl4['Rating'] in [0, 0.0]:
-                                
-                                del subdict_lvl3[key4]
-                            
-                            else:
-                                #Now that we know that they want this criteria, we
-                                #need to make sure their DQ and W have been entered
-                                #properly
-                                for val in subdict_lvl4['DQ'], subdict_lvl4['Weight']:
-                                    #We already know that it's not null, since that
-                                    #was checked as it was added to the dictionary,
-                                    #so we can just check for 0's.
-                                    if val in [0, 0.0]:
-                                        
-                                        raise ZeroDQWeightValue("Individual criteria \
-                                            data qualities and weights may not be 0.")
-
-                except AttributeError:
-                    #If we can't iterrate into it, it's not a subdictionary,
-                    #can skip.
-                    pass
-
-        except AttributeError:
-            #If we can't iterrate into it, it's not a subdictionary, and we're
-            #safe to ignore it.
-            pass
-
-def parse_stressor(uri):
-    """Helper function to parse out a stressor csv file
-
-        uri - path to the csv file
-
-        returns a dictionary with the stressor information in it as:
-           {'Crit_Ratings':
-                {
-                  'Intensity Rating:':
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                  'Management Effectiveness:':
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                }
-            'Crit_Rasters':
-                {'Intensity Rating:':
-                    {'DQ': 1.0, 'Weight': 1.0},
-                  'Management Effectiveness:':
-                    {'DQ': 1.0, 'Weight': 1.0}
-                },
-           'buffer': StressBuffNum
-           }
-    """
-    stressor_dict = {'Crit_Ratings': {}, 'Crit_Rasters': {}}
-    with open(uri,'rU') as stressor_file:
-        csv_reader = csv.reader(stressor_file)
-      
-        s_name = csv_reader.next()[1]
-
-        #Skip the blank line
-        csv_reader.next()
-
-        #pull the stressor buffer from the second part of the third line
-        try:
-            stressor_buffer = float(csv_reader.next()[1])
-        except ValueError:
-            raise UnexpectedString("Entries in CSV table may not be \
-                strings, and may not be left blank. Check your " + s_name + " CSV \
-                for any leftover strings or spaces within Buffer, Rating, \
-                Data Quality or Weight columns.")
-        
-        stressor_dict['buffer'] = stressor_buffer
-
-        #Ignore the next blank line
-        csv_reader.next()
-        #Get the headers
-        headers = csv_reader.next()[1:]
-        
-        #Drain the rest of the table
-        for row in csv_reader:
-            key = row[0]
-            
-            if row[1] == 'SHAPE':
-                #Guarding against strings or null values being passed.
-                try:
-                    stressor_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3],map(float,row[2:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Buffer, Rating, \
-                        Data Quality or Weight columns.", s_name)
-            #This should catch any instances where the rating is a string, but
-            #is not SHAPE (aka- is leftover from the user's guide population)
-            else:
-                try:
-                    stressor_dict['Crit_Ratings'][key] = \
-                        dict(zip(headers,map(float,row[1:])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Buffer, Rating, \
-                        Data Quality or Weight columns.", s_name)
-    return stressor_dict
-
-def parse_habitat_overlap(uri):
-    """Helper function to parse out the habitat stressor table
-        
-    Input:
-        uri - path to the habitat stressor overlap csv table.
-
-    Returns a dictionary of the following form, where any individually named
-        stressors actually represent the overlap between the overarching habitat
-        and that particular stressor:
-        
-        {'hab_only':
-           {'Crit_Ratings':
-                {'Intensity Rating:':
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                  'Management Effectiveness:':
-                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                }
-            'Crit_Rasters':
-                {'Intensity Rating:':
-                    {'DQ': 1.0, 'Weight': 1.0},
-                  'Management Effectiveness:':
-                    {'DQ': 1.0, 'Weight': 1.0}
-                }
-           },
-       'overlap':
-            {'stressorName':
-               {'Crit_Ratings':
-                    {'Intensity Rating:':
-                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                    }
-                'Crit_Rasters':
-                    {'Intensity Rating:':
-                        {'DQ': 1.0, 'Weight': 1.0}
-                    }
-               },
-            'stressorName2':
-               {'Crit_Ratings':
-                    {'Intensity Rating:':
-                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                    }
-                'Crit_Rasters':
-                    {'Intensity Rating:':
-                        {'DQ': 1.0, 'Weight': 1.0}
-                    }
-               }
-            }
-        }
-    """
-
-    habitat_overlap_dict = {}
-    habitat_dict = {'Crit_Rasters': {}, 'Crit_Ratings':{}}
-    with open(uri,'rU') as habitat_file:
-        csv_reader = csv.reader(habitat_file)
-        hab_name = csv_reader.next()[1]
-
-        #Drain the next two lines
-        for _ in range(2): 
-            csv_reader.next()
-        
-        #Get the headers
-        headers = csv_reader.next()[1:]
-        line = csv_reader.next()
-
-        #Drain the habitat dictionary
-        while line[0] != '':
-            
-            key = line[0]
-
-            #If we are dealing with a shapefile criteria, we only want  to
-            #add the DQ and the W, and we will add a rasterized version of
-            #the shapefile later.
-            if line[1] == 'SHAPE':
-                try:
-                    habitat_dict['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(float, line[2:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Rating, \
-                        Data Quality or Weight columns.", hab_name)
-            #Should catch any leftovers from the autopopulation of the helptext        
-            else:
-                try:
-                    habitat_dict['Crit_Ratings'][key] = \
-                        dict(zip(headers, map(float,line[1:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Rating, \
-                        Data Quality or Weight columns.", hab_name)
-            
-            line = csv_reader.next()
-
-        #Drain the next two lines
-        for _ in range(2): 
-            csv_reader.next()
-        
-        #Drain the overlap dictionaries
-        #This is the overlap header
-        while True:
-            try:
-                line = csv_reader.next()
-                stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
-                headers = csv_reader.next()[1:]
-                
-                #Drain the overlap table
-                line = csv_reader.next()
-                
-                #Drain the habitat dictionary is the first character of the
-                #type field
-                habitat_overlap_dict[stressor] = {'Crit_Ratings': {}, \
-                        'Crit_Rasters': {}}
-                while line[0] != '':
-                    if line[1] == 'SHAPE':
-                        #Going to do some custom error checking for null values or strings.
-                        try:                    
-                        #Only include DQ and W headers, since 'rating' will come
-                        #in the form of a shapefile.
-                            habitat_overlap_dict[stressor]['Crit_Rasters'][line[0]] = \
-                                dict(zip(headers[1:3], map(float,line[2:4])))
-                        except ValueError:
-                            raise UnexpectedString("Entries in CSV table may not be \
-                                strings, and may not be left blank. Check your %s CSV \
-                                for any leftover strings or spaces within Rating, \
-                                Data Quality or Weight columns." % hab_name)
-                    else:
-                        #Going to do some custom error checking for null values or strings.
-                        try:
-                            habitat_overlap_dict[stressor]['Crit_Ratings'][line[0]] = \
-                                dict(zip(headers, map(float,line[1:4])))
-                        except ValueError:
-                            raise UnexpectedString("Entries in CSV table may not be \
-                                strings, and may not be left blank. Check your %s CSV \
-                                for any leftover strings or spaces within Rating, \
-                                Data Quality or Weight columns." % hab_name)
-
-                    line = csv_reader.next()
-
-            except StopIteration:
-                break
-
-    return {
-        'hab_only': habitat_dict,
-        'overlap': habitat_overlap_dict
-        }
-
 def make_crit_shape_dict(crit_uri):
     '''This will take in the location of the file structure, and will return
     a dictionary containing all the shapefiles that we find. Hypothetically, we
@@ -773,21 +348,21 @@ def make_crit_shape_dict(crit_uri):
         in addition to which dictionaries and h-s pairs they apply to. The
         structure will be as follows:
         
-        {'h-s':
-            {('HabA', 'Stress1'):
-                {'CriteriaName': "Shapefile Datasource URI", ...}, ...
-            },
-         'h':
+        {'h':
             {'HabA':
                 {'CriteriaName: "Shapefile Datasource URI"...}, ...
             },
-         's':
-            {'Stress1':
+         'h_s_c':
+            {('HabA', 'Stress1'):
+                {'CriteriaName: "Shapefile Datasource URI", ...}, ...
+            },
+         'h_s_e'
+            {('HabA', 'Stress1'):
                 {'CriteriaName: "Shapefile Datasource URI", ...}, ...
             }
         }
     '''
-    c_shape_dict = {'h-s':{}, 'h': {}, 's':{}}
+    c_shape_dict = {'h_s_e':{}, 'h': {}, 'h_s_c':{}}
     
     res_dir = os.path.join(crit_uri, 'Resilience')
     exps_dir = os.path.join(crit_uri, 'Exposure')
@@ -795,7 +370,7 @@ def make_crit_shape_dict(crit_uri):
  
     for folder in [res_dir, exps_dir, sens_dir]:
         if not os.path.isdir(folder):
-    
+            LOGGER.debug("The missing folder is %s" % folder) 
             raise IOError("Using spatically explicit critiera requires you to \
                     have subfolders named \"Resilience\", \"Exposure\", and \
                     \"Sensitivity\". Check that all these folders exist, and \
@@ -826,14 +401,12 @@ def make_crit_shape_dict(crit_uri):
             c_shape_dict['h'][hab_name] = {}
         
         c_shape_dict['h'][hab_name][crit_name] = path
-                   
     
-    #Now, want to move on to stressor-centric criteria, but will do much the
-    #same thing. 
+    #Next, get all of our pair-centric, exposure applicable criteria. 
     exps_names = listdir(os.path.join(crit_uri, 'Exposure'))
     exps_shps = fnmatch.filter(exps_names, '*.shp')   
    
-    #Now we have a list of all stressor specific shapefile criteria. 
+    #Now we have a list of all pair specific shapefile criteria. 
     #Now we need to parse them out.
     for path in exps_shps:
 
@@ -843,17 +416,21 @@ def make_crit_shape_dict(crit_uri):
         #before the file extension, and the second is the extension itself 
         filename =  os.path.splitext(os.path.split(path)[1])[0]
 
-        #want the second part to all be one piece
-        parts = filename.split('_', 1)
-        stress_name = parts[0]
-        crit_name = parts[1].replace('_', ' ')
+        #want the first and second part to be separate, since they are the
+        #habitatName and the stressorName, but want the criteria name to be
+        #self contained.
+        parts = filename.split('_', 2)
+        hab_name = parts[0]
+        stress_name = parts[1]
+        crit_name = parts[2].replace('_', ' ')
 
-        if stress_name not in c_shape_dict['s']:
-            c_shape_dict['s'][stress_name] = {}
+        if (hab_name, stress_name) not in c_shape_dict['h_s_e']:
+            c_shape_dict['h_s_e'][(hab_name, stress_name)] = {}
         
-        c_shape_dict['s'][stress_name][crit_name] = path
+        c_shape_dict['h_s_e'][(hab_name, stress_name)][crit_name] = path
     
-    #Finally, want to get all of our pair-centric shape criteria. 
+    #Finally, want to get all of our pair-centric, but consequence 
+    #applicable criteria. 
     sens_names = listdir(os.path.join(crit_uri, 'Sensitivity'))
     sens_shps = fnmatch.filter(sens_names, '*.shp')   
    
@@ -875,10 +452,420 @@ def make_crit_shape_dict(crit_uri):
         stress_name = parts[1]
         crit_name = parts[2].replace('_', ' ')
 
-        if (hab_name, stress_name) not in c_shape_dict['h-s']:
+        if (hab_name, stress_name) not in c_shape_dict['h_s_c']:
             c_shape_dict['h-s'][(hab_name, stress_name)] = {}
         
-        c_shape_dict['h-s'][(hab_name, stress_name)][crit_name] = path
+        c_shape_dict['h_s_c'][(hab_name, stress_name)][crit_name] = path
 
     #Et, voila! C'est parfait.
     return c_shape_dict
+
+def parse_hra_tables(folder_uri):
+    '''This takes in the directory containing the criteria rating csv's, 
+    and returns a coherent set of dictionaries that can be used to do EVERYTHING
+    in non-core and core.
+
+    It will return a massive dictionary containing all of the subdictionaries
+    needed by non core, as well as directory URI's. It will be of the following 
+    form:
+
+    {'habitats_dir': 'Habitat Directory URI',
+    'species_dir': 'Species Directory URI',
+    'stressors_dir': 'Stressors Directory URI',
+    'criteria_dir': 'Criteria Directory URI',
+    'buffer_dict':
+        {'Stressor 1': 50,
+        'Stressor 2': ...,
+        },
+    'h_s_c':
+        {(Habitat A, Stressor 1): 
+            {'Crit_Ratings': 
+                {'CritName': 
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                },
+            'Crit_Rasters': 
+                {'CritName':
+                    {'Weight': 1.0, 'DQ': 1.0}
+                },
+            }
+        },
+    'h_s_c':
+        {(Habitat A, Stressor 1): 
+            {'Crit_Ratings': 
+                {'CritName': 
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                },
+            'Crit_Rasters': 
+                {'CritName':
+                    {'Weight': 1.0, 'DQ': 1.0}
+                },
+            }
+        },
+     'habitats':
+        {Habitat A: 
+            {'Crit_Ratings': 
+                {'CritName': 
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                },
+            'Crit_Rasters': 
+                {'CritName':
+                    {'Weight': 1.0, 'DQ': 1.0}
+                },
+            }
+        }
+    }
+    '''
+    #Create the dictionary in which everything will be stored.
+    parse_dictionary = {}
+
+    #Get the arguments out of the json file.
+    json_uri = os.path.join(folder_uri, 'dir_names.txt')
+
+    with open(json_uri, 'rb') as infile:
+        parse_dictionary = json.load(infile)
+  
+    #This is the file name in which we will store all buffer information. This
+    #file will be explicitly created when preprocessor is run. Want to parse and
+    #pull into it's own dictionary do that it can be placed in mega-dictionary.
+
+    s_buff_uri = os.path.join(folder_uri, 'stressor_buffers.csv')
+    stress_dict = parse_stress_buffer(s_buff_uri)
+
+    #Now we can compile the information from habitat csv's into other dictionaries
+    file_names = listdir(folder_uri)
+    csv_uris = fnmatch.filter(file_names, '*_ratings.csv')
+
+    #Initialize the three dictionaries that we will use to store criteria info
+    habitat_dict = {}
+    h_s_e_dict = {}
+    h_s_c_dict = {}
+
+    for habitat_uri in csv_uris:
+        
+        #Instead of having to know what came from where, let's just have it update
+        #the global dictionaries while the function is running. 
+        parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
+
+    zero_check(h_s_c_dict, h_s_e_dict, habitat_dict)
+
+    #Add everything to the parse dictionary
+    parse_dictionary['buffer_dict'] = stress_dict
+    parse_dictionary['habitats'] = habitat_dict
+    parse_dictionary['h_s_e'] = h_s_e_dict
+    parse_dictionary['h_s_c'] = h_s_c_dict
+
+    return parse_dictionary
+
+def zero_check(h_s_c, h_s_e, habs):
+    '''Any criteria that have a rating of 0 mean that they are not a desired input
+    to the assessment. We should delete the criteria's entire subdictionary out of
+    the dictionary.
+
+    Input:
+        habs- A dictionary which contains all resilience specific criteria info.
+            The key for these will be the habitat name. It will map to a
+            subdictionary containing criteria information. The whole dictionary will
+            look like the following:
+            
+            {Habitat A: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            }
+            
+        h_s_e- A dictionary containing all information applicable to exposure
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+        h_s_c- A dictionary containing all information applicable to sensitivity
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+
+    Output:
+        Will update each of the three dictionaries by deleting any criteria where
+        the rating aspect is 0.
+
+    Returns nothing.
+    '''
+
+    #Want to do zero checks for each of the criteria dictionaries.
+    for dictionary in [h_s_c, h_s_e, habs]:
+        
+        #These are the subdictionaries mapped to the habitat, h-s tuple key.
+        for subdict_lvl_1 in dictionary.values():
+
+            #These are the subdictionaries mapped to the keys of 'Crit_Ratings'
+            #'Crit_Rasters'.
+            for key_2, subdict_lvl_2 in subdict_lvl_1.items():
+
+                #Only want to check for 0 ratings if they're giving a single
+                #xplicit rating. If they gave a shapefile, they're on their own.
+                if key_2 == 'Crit_Ratings':
+
+                    #These are key, value pairs of crit_name, dict containing
+                    #rating/dq/weight info.
+                    for key_3, subdict_lvl_3 in subdict_lvl_2.items():
+
+                        #Want to make sure that the Rating key isn't 0.
+                        if subdict_lvl_3['Rating'] == 0.0:
+                            
+                            del subdict_lvl_2[key_3]
+
+def parse_overlaps(uri, habs, h_s_e, h_s_c):
+    '''This function will take in a location, and update the dictionaries being 
+    passed with the new Hab/Stress subdictionary info that we're getting from 
+    the CSV at URI.
+
+    Input:
+        uri- The location of the CSV that we want to get ratings info from. This
+            will contain information for a given habitat's individual criteria
+            ratings, as well as criteria ratings for the overlap of every
+            stressor.
+        habs- A dictionary which contains all resilience specific criteria info.
+            The key for these will be the habitat name. It will map to a
+            subdictionary containing criteria information. The whole dictionary will
+            look like the following:
+            
+            {Habitat A: 
+                {'Crit_Ratings': 
+                    {'CritName': 
+                        {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    },
+                'Crit_Rasters': 
+                    {'CritName':
+                        {'Weight': 1.0, 'DQ': 1.0}
+                    },
+                }
+            }
+            
+        h_s_e- A dictionary containing all information applicable to exposure
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+        h_s_c- A dictionary containing all information applicable to sensitivity
+            criteria. The dictionary will look identical to the 'habs' dictionary,
+            but each key will be a tuple of two strings- (HabName, StressName).
+    '''
+    
+    with open(uri, 'rU') as hab_file:
+        
+        csv_reader = csv.reader(hab_file)
+        hab_name = csv_reader.next()[1]
+        
+        #Can at least initialized the habs dictionary part.
+        habs[hab_name] = {'Crit_Rasters':{}, 'Crit_Ratings':{}}
+
+        #Drain the next two lines
+        for _ in range(2): 
+            csv_reader.next()
+        
+        #Get the headers
+        headers = csv_reader.next()[1:]
+        line = csv_reader.next()
+       
+        #Drain the habitat-specific dictionary
+        while line[0] != '':
+            
+            key = line[0]
+
+            #If we are dealing with a shapefile criteria, we only want  to
+            #add the DQ and the W, and we will add a rasterized version of
+            #the shapefile later.
+            if line[1] == 'SHAPE':
+                try:
+                    habs[hab_name]['Crit_Rasters'][key] = \
+                        dict(zip(headers[1:3], map(float, line[2:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            #Should catch any leftovers from the autopopulation of the helptext        
+            else:
+                try:
+                    habs[hab_name]['Crit_Ratings'][key] = \
+                        dict(zip(headers, map(float,line[1:4])))
+                except ValueError:
+                    raise UnexpectedString("Entries in CSV table may not be \
+                        strings, and may not be left blank. Check your %s CSV \
+                        for any leftover strings or spaces within Rating, \
+                        Data Quality or Weight columns.", hab_name)
+            
+            line = csv_reader.next()
+
+        #We will have just loaded in a null line from under the hab-specific
+        #criteria, now drainthe next two, since they're just headers for users.
+        #Drain the next two lines
+        for _ in range(2): 
+            csv_reader.next()
+
+        #Now we will pick up all the E/C habitat-stressor information fore this
+        #specific habitat.
+        #Drain the overlap dictionaries
+        #This is the overlap header
+        while True:
+            try:
+                line = csv_reader.next()
+
+                stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
+                headers = csv_reader.next()[1:]
+                
+                #Drain the overlap table
+                line = csv_reader.next()
+       
+                #Create empty entries for this overlap in both the _e and _c
+                #dictionaries.
+                h_s_e[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
+                        'Crit_Rasters': {}}
+                h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
+                        'Crit_Rasters': {}}
+                
+                while line[0] != '':
+                    
+                    #Just abstract all of the erroring out, so that we know if
+                    #we're below here, it should all work perfectly. LOL
+                    error_check(line, hab_name, stress_name)
+
+                    #Exposure criteria.
+                    if line[4] == 'E':
+
+                        #If criteria rasters are desired for that criteria.
+                        if line[1] == 'SHAPE':
+                            
+                            h_s_e[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
+                                dict(zip(headers[1:3], map(float,line[2:4])))
+                        #Have already error checked, so this must be a float.
+                        else:
+                            h_s_e[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
+                                dict(zip(headers, map(float,line[1:4])))
+                            
+                    #We have already checked, so this must be a 'C'    
+                    else:      
+                        
+                        #If criteria rasters are desired for that criteria.
+                        if line[1] == 'SHAPE':
+                            
+                            h_s_c[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
+                                dict(zip(headers[1:3], map(float,line[2:4])))
+                        #Have already error checked, so this must be a float.
+                        else:
+                            h_s_c[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
+                                dict(zip(headers, map(float,line[1:4])))
+
+                    line = csv_reader.next()
+
+            except StopIteration:
+                break
+
+def error_check(line, hab_name, stress_name):
+    '''Throwing together a simple error checking function for all of the inputs
+    coming from the CSV file. Want to do checks for strings vs floats, as well
+    as some explicit string checking for 'E'/'C'.
+
+    Input:
+        line- An array containing a line of H-S overlap data. The format of a
+            line would look like the following:
+
+            ['CritName', 'Rating', 'Weight', 'DataQuality', 'Exp/Cons']
+
+            The following restrictions should be placed on the data:
+            
+                CritName- This will be propogated by default by
+                    HRA_Preprocessor. Since it's coming in as a string, we 
+                    shouldn't need to check anything.
+                Rating- Can either be the explicit string 'SHAPE', which would
+                    be placed automatically by HRA_Preprocessor, or a float.
+                    ERROR: if string that isn't 'SHAPE'.
+                Weight- Must be a float (or an int), but cannot be 0.
+                    ERROR: if string, or anything not castable to float, or 0.
+                DataQuality- Most be a float (or an int), but cannot be 0.
+                    ERROR: if string, or anything not castable to float, or 0.
+                Exp/Cons- Most be the string 'E' or 'C'.
+                    ERROR: if string that isn't one of the acceptable ones,
+                    or ANYTHING else.
+
+    Returns nothing, should raise exception if there's an issue.
+    '''
+    #Rating
+    if line[1] != 'SHAPE':
+        try:
+            float(line[1])
+        except ValueError:
+            raise UnexpectedString("Entries in CSV table may not be strings, \
+                and may not be left blank. Check your %s CSV in %s section for \
+                any leftover strings or spaces within Rating, Data Quality or \
+                Weight columns." % (hab_name, stress_name))
+    
+    #Weight and DQ
+
+    #They may not be 0.
+    if line[2] in ['0', '0.0'] or line[3] in ['0', '0.0']:
+        raise ZeroDQWeightValue("Individual criteria data qualities and weights \
+            may not be 0. Check your %s CSV table in the %s section to \
+            correct this." % (hab_name, stress_name))
+
+    #Assuming neither is 0, they also must be floats.
+    try:
+        float(line[2])
+        float(line[3])
+    except ValueError:
+        raise UnexpectedString("Entries in CSV table may not be strings, \
+            and may not be left blank. Check your %s CSV in %s section for \
+            any leftover strings or spaces within Rating, Data Quality or \
+            Weight columns." % (hab_name, stress_name))
+
+    #Exposure vs Consequence
+    if line[4] != 'E' and line[4] != 'C':
+
+        raise ImproperECSelection("Entries in the E/C column of a CSV table may \
+            only be \"E\" or \"C\". Please select one of those options for the \
+            criteria in the %s section of the %s CSV table." % (stress_name, hab_name))
+
+def parse_stress_buffer(uri):
+    '''This will take the stressor buffer CSV and parse it into a dictionary
+    where the stressor name maps to a float of the about by which it should be buffered.
+
+    Input:
+        uri- The location of the CSV file from which we should pull the buffer
+            amounts.
+
+    Returns:
+        A dictionary containing stressor names mapped to their corresponding buffer
+            amounts. The float may be 0, but may not be a string. The form will 
+            be the following:
+
+            {'Stress 1': 2000, 'Stress 2': 1500, 'Stress 3': 0, ...}
+    '''
+
+    buff_dict = {}
+
+    with open(uri, 'rU') as buff_file:
+
+        csv_reader = csv.reader(buff_file)
+
+        #Drain the first two lines, since just headers and blank
+        for _ in range(2): 
+            csv_reader.next()
+
+        #We know that the rest of the table will just be stressor names and their
+        #mappings, so we are clear to just drain the table.
+        for row in csv_reader:
+            
+            s_name = row[0]
+            
+            try:
+                #Make sure that what they're passing in as a buffer is a number,
+                #not the leftover help string.
+                buff_dict[s_name] = float(row[1])
+
+            except ValueError:
+                raise UnexpectedString("Entries in CSV table may not be \
+                    strings, and may not be left blank. Check your Stressor Buffer \
+                    CSV for any leftover strings or spaces within the buffer amount. \
+                    Entries must be a number, and may not be left blank.")
+
+    return buff_dict

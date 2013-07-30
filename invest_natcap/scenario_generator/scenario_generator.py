@@ -4,12 +4,37 @@ from osgeo import gdal, ogr
 
 from invest_natcap import raster_utils
 
+from scipy import stats
+
 import logging
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('scenario_generator')
+
+def unique_raster_values_count(dataset):
+    """Returns a list of the unique integer values on the given dataset
+
+        dataset - a gdal dataset of some integer type
+
+        returns a list of dataset's unique non-nodata values"""
+
+    band = dataset.GetRasterBand(1)
+    n_rows = band.YSize
+
+    itemfreq = {}
+
+    for row_index in xrange(n_rows):
+        array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
+        #numpy.bincount(array) would be better if all non-negative ints
+        for v,n in stats.itemfreq(array):
+            if v in itemfreq:
+                itemfreq[int(v)]+=int(n)
+            else:
+                itemfreq[int(v)]=int(n)
+        
+    return itemfreq
 
 def execute(args):
     pass
@@ -21,9 +46,9 @@ def execute(args):
     landcover_uri = args["landcover"]
     override_uri = args["override"]
     
-    #intermediate data
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
     override_dataset_uri = os.path.join(workspace,"override.tif")
+    landcover_htm_uri = os.path.join(workspace,"landcover.htm")
 
     raster_utils.create_directories([workspace])
     ###
@@ -94,3 +119,38 @@ def execute(args):
     ###
     #tabulate coverages
     ###
+    htm = open(landcover_htm_uri,'w')
+    htm.write("<html>")
+    
+    src_ds = gdal.Open(landcover_uri)
+    LOGGER.debug("Tabulating %s.", landcover_transition_uri)
+    landcover_counts = unique_raster_values_count(src_ds)
+    dst_ds = None
+    src_ds = None
+
+    src_ds = gdal.Open(landcover_transition_uri)
+    LOGGER.debug("Tabulating %s.", landcover_transition_uri)
+    landcover_transition_counts = unique_raster_values_count(src_ds)
+    dst_ds = None
+    src_ds = None
+
+    for k in landcover_transition_counts:
+        if k not in landcover_counts:
+            landcover_counts[k]=0
+
+    for k in landcover_counts:
+        if k not in landcover_transition_counts:
+            landcover_transition_counts[k]=0
+    
+    landcover_keys = landcover_counts.keys()
+    landcover_keys.sort()
+
+    htm.write("Land Use Land Cover")
+    htm.write("<table border = \"1\">")
+    htm.write("<tr><td>Type</td><td>Initial Count</td><td>Final Count</td><td>Difference</td></tr>")
+    for k in landcover_keys:
+        htm.write("<tr><td>%i</td><td>%i</td><td>%i</td><td>%i</td></tr>" % (k, landcover_counts[k], landcover_transition_counts[k], landcover_transition_counts[k] - landcover_counts[k]))
+    htm.write("</table>")
+    
+    htm.write("</html>")
+    htm.close()

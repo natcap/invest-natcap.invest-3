@@ -659,8 +659,8 @@ def create_raster_from_vector_extents_uri(shapefile_uri, pixel_size, gdal_format
         pixel_size, pixel_size, gdal_format, nodata_out_value, output_uri,
         datasource)
 
-def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, 
-                                      shp):
+def create_raster_from_vector_extents(
+    xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
         adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
     
@@ -682,21 +682,29 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     for layer_index in range(shp.GetLayerCount()):
         shp_layer = shp.GetLayer(layer_index)
         for feature_index in range(shp_layer.GetFeatureCount()):
-            feature = shp_layer.GetFeature(feature_index)
-            geometry = feature.GetGeometryRef()
-            #feature_extent = [xmin, xmax, ymin, ymax]
-            feature_extent = geometry.GetEnvelope()
-            #This is an array based way of mapping the right funciton
-            #to the right index.
-            functions = [min, max, min, max]
-            for i in range(len(functions)):
-                try:
-                    shp_extent[i] = functions[i](shp_extent[i],feature_extent[i])
-                except TypeError:
-                    #need to cast to list becuase it gets returned as a tuple 
-                    #and we can't assign to a tuple's index, also need to 
-                    #define this as the initial state
-                    shp_extent = list(feature_extent)
+            try:
+                feature = shp_layer.GetFeature(feature_index)
+                geometry = feature.GetGeometryRef()
+
+                #feature_extent = [xmin, xmax, ymin, ymax]
+                feature_extent = geometry.GetEnvelope()
+                #This is an array based way of mapping the right funciton
+                #to the right index.
+                functions = [min, max, min, max]
+                for i in range(len(functions)):
+                    try:
+                        shp_extent[i] = functions[i](shp_extent[i],feature_extent[i])
+                    except TypeError:
+                        #need to cast to list becuase it gets returned as a tuple 
+                        #and we can't assign to a tuple's index, also need to 
+                        #define this as the initial state
+                        shp_extent = list(feature_extent)
+            except AttributeError as e:
+                #For some valid OGR objects the geometry can be undefined because
+                #it's valid ot have a NULL entry in the attribute table
+                #this is expressed in ogr as a None value in the geometry reference
+                #this feature won't contribute
+                LOGGER.warn(e)
 
     #shp_extent = [xmin, xmax, ymin, ymax]
     tiff_width = int(numpy.ceil(abs(shp_extent[1] - shp_extent[0]) / xRes))

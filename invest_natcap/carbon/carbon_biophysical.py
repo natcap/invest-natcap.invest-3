@@ -1,16 +1,12 @@
 """InVEST Carbon biophysical module at the "uri" level"""
 
-import sys
 import os
 import math
-import json
 import logging
 import shutil
 
 from osgeo import gdal
 from osgeo import ogr
-import numpy
-from scipy.stats import norm
 
 from invest_natcap import raster_utils
 from invest_natcap.carbon import carbon_utils
@@ -101,7 +97,10 @@ def execute_30(**args):
         pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
-    out_file_names = {}
+    out_file_names = {
+        #This it the csv table that summarizes the total carbon storage, sequestration, etc.
+        'output_csv_uri': os.path.join(dirs['output'], 'summary_table%s.csv' % file_suffix)
+        }
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
@@ -634,6 +633,8 @@ def _calculate_summary(args):
             total Mg of carbon per cell on future landscape (optional)
         args['sequest'] - a gdal dataset uri that contains pixels with
             total Mg of carbon sequestered per cell (optional)
+        args['output_csv_uri'] - uri to an output table csv format to summarize
+            the carbon stats
 
         returns nothing
         """
@@ -644,10 +645,13 @@ def _calculate_summary(args):
                            ('sequest_fut', 'Total sequestered carbon: '),
                            ('sequest_fut', 'Total sequestered carbon in REDD scenario: ')]
 
+    output_csv_file = open(args['output_csv_uri'], 'wb')
+
     for raster_key, message in raster_key_messages:
         #Make sure we passed in the dictionary, and gracefully continue
         #if we didn't.
         if raster_key not in args:
             continue
         total_sum = carbon_utils.sum_pixel_values_from_uri(args[raster_key])
+        output_csv_file.write('%s, %f\n' % (raster_key, total_sum))
         LOGGER.info("%s %s Mg" % (message, total_sum))
