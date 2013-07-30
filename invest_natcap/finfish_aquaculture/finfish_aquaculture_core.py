@@ -427,7 +427,7 @@ def make_histograms(data_collection, output_dir, name, xlabel):
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
-    def make_plot_name(farm_id=None):
+    def make_plot_uri(farm_id=None):
         if farm_id is not None:
             filename = 'farm_%s_%s.png' % (str(farm_id), name)
         else:
@@ -447,10 +447,10 @@ def make_histograms(data_collection, output_dir, name, xlabel):
     if isinstance(data_collection, dict):
         # Make a histogram for each farm.
         for farm_id, farm_data in data_collection.items():
-            make_histogram(make_plot_name(farm_id), farm_data)
+            make_histogram(make_plot_uri(farm_id), farm_data)
     else:
         # It's aggregate data, not per-farm data.
-        make_histogram(make_plot_name(), data_collection)
+        make_histogram(make_plot_uri(), data_collection)
 
 
 def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 

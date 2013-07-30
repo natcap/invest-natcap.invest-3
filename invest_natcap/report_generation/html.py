@@ -45,6 +45,9 @@ class HTMLWriter(object):
             self.body += '<%s>%s</%s>' % (cell_tag, str(cell), cell_tag)
         self.body += '</tr>'
 
+    def add_image(self, src):
+        self.body += ('<img src="%s">' % src)
+
     def flush(self):
         '''Creates and writes to an HTML file.'''
         f = open(self.uri, 'w')
