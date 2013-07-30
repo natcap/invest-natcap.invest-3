@@ -150,12 +150,14 @@ def execute(args):
         farms_npv = None
 
     # Do uncertainty analysis if it's enabled.
+    histogram_paths = {}
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
-        compute_uncertainty_data(args, output_dir)
+        histogram_paths = compute_uncertainty_data(args, output_dir)
         
     create_HTML_table(output_dir, args['farm_op_dict'], 
                       cycle_history, sum_hrv_weight, hrv_weight, 
-                      args['do_valuation'], farms_npv, value_history)
+                      args['do_valuation'], farms_npv, value_history,
+                      histogram_paths)
     
 def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
@@ -409,52 +411,74 @@ def compute_uncertainty_data(args, output_dir):
     LOGGER.info('Monte Carlo simulation complete.')
 
     LOGGER.info('Creating histograms.')
-    make_histograms(hrv_weight_results, output_dir, 'weight',
-                    'Total harvested weight')
-    make_histograms(num_cycle_results, output_dir, 'num_cycles',
-                    'Number of cycles')
-    make_histograms(total_weight_results, output_dir, 'weight',
-                    'Total harvested weight')
-    LOGGER.info('Done creating histograms.')
+    # Make per-farm histograms.
+    weight_histogram_paths = make_histograms(hrv_weight_results, output_dir, 'weight',
+                                             'Total harvested weight')
+    cycle_histogram_paths = make_histograms(num_cycle_results, output_dir, 'num_cycles',
+                                            'Number of cycles')
 
-def make_histograms(data_collection, output_dir, name, xlabel):
+    histogram_paths = {}
+    for farm_id in weight_histogram_paths:
+        histogram_paths[farm_id] = [weight_histogram_paths[farm_id],
+                                    cycle_histogram_paths[farm_id]]
+
+    # Make an aggregate histogram for total weight.
+    histogram_paths['aggregate'] = [make_histograms(
+        total_weight_results, output_dir, 'weight',
+        'Total harvested weight', per_farm=False)]
+
+    LOGGER.info('Done creating histograms.')
+    return histogram_paths
+
+def make_histograms(data_collection, output_dir, name, xlabel, per_farm=True):
     '''Makes a histogram for the given data.
 
     data_collection - either a dictionary of [farm ID] => [data],
         or a list of aggregate data.
+
+    Returns:
+        -a dict mapping farm ID => relative histogram path if per_farm is True
+        -a relative path to a single histogram is per_farm is False
     '''
     plot_dir = os.path.join(output_dir, 'images')
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
-    def make_plot_uri(farm_id=None):
-        if farm_id is not None:
+    def make_plot_relpath(farm_id=None):
+        if per_farm:
+            assert farm_id is not None
             filename = 'farm_%s_%s.png' % (str(farm_id), name)
         else:
             filename = 'total_%s.png' % name
-        return os.path.join(plot_dir, filename)
+        return os.path.join('images', filename)
 
-    def make_histogram(name, data):
+    def make_histogram(relpath, data):
         # Set the weight so that each column represents a percent probability.
         weight = 100.0 / len(data)
         plt.hist(data, bins=NUM_HISTOGRAM_BINS, 
                  weights=np.tile(weight, len(data)))
         plt.ylabel('Percent probability')
         plt.xlabel(xlabel)
-        plt.savefig(name)
+        plt.savefig(os.path.join(output_dir, relpath))
         plt.close()
 
-    if isinstance(data_collection, dict):
+    if per_farm:
         # Make a histogram for each farm.
+        histogram_paths = {}
         for farm_id, farm_data in data_collection.items():
-            make_histogram(make_plot_uri(farm_id), farm_data)
+            relpath = make_plot_relpath(farm_id)
+            histogram_paths[farm_id] = relpath
+            make_histogram(relpath, farm_data)
+        return histogram_paths
     else:
         # It's aggregate data, not per-farm data.
-        make_histogram(make_plot_uri(), data_collection)
-
+        relpath = make_plot_relpath()
+        make_histogram(relpath, data_collection)
+        return relpath
 
 def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
-                      hrv_weight, do_valuation, farms_npv, value_history):
+                      hrv_weight, do_valuation, farms_npv, value_history,
+                      histogram_paths):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
@@ -591,5 +615,14 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         writer.write_row(cells)        
 
     writer.end_table()
+
+    for key, paths in histogram_paths.items():
+        if key == 'aggregate':
+            title = 'Aggregate results for all farms'
+        else:
+            title = 'Results for farm %s' % str(key)
+        writer.write_paragraph(title)
+        for path in paths:
+            writer.add_image(path)
 
     writer.flush()
