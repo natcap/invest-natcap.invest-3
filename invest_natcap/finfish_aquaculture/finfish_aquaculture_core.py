@@ -135,7 +135,7 @@ def execute(args):
         value_history, farms_npv = valuation(
             args['p_per_kg'], args['frac_p'], args['discount'],
             hrv_weight, cycle_history)
-   
+
         #And add it into the shape file
         layer.ResetReading()
         npv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
@@ -380,9 +380,14 @@ def compute_uncertainty_data(args, output_dir):
                 return sample
 
     # Do a bunch of runs as part of a Monte Carlo simulation.
+    # Per-farm data to collect.
     hrv_weight_results = {}  # dict from farm ID to a list of harvested weights
     num_cycle_results = {}  # dict from farm ID to a list of number of cycles
+    valuation_results = {} # dict from farm ID to a list of net present values
+
+    # Aggregate data (across all farms) to collect.
     total_weight_results = [] # list of total weight (one entry per run)
+    total_value_results = [] # list of net present values (one entry per run)
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
                 % NUM_MONTE_CARLO_RUNS)
     for i in range(NUM_MONTE_CARLO_RUNS):
@@ -390,45 +395,70 @@ def compute_uncertainty_data(args, output_dir):
             LOGGER.info('Done with %d runs.' % i)
 
         # Compute the cycle history given samples for a and b.
-        sample_cycle_history = calc_farm_cycles(
+        cycle_history = calc_farm_cycles(
             args['outplant_buffer'], sample_param('a'), sample_param('b'),
             args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
 
         # Compute the total harvested weight.
-        sample_sum_hrv_weight, _ = calc_hrv_weight(
+        sum_hrv_weight, hrv_weight_per_cycle = calc_hrv_weight(
             args['farm_op_dict'], args['frac_post_process'], args['mort_rate_daily'], 
-            sample_cycle_history)
+            cycle_history)
+
+        # Compute valuation data.
+        _, farms_npv = valuation(
+            args['p_per_kg'], args['frac_p'], args['discount'],
+            hrv_weight_per_cycle, cycle_history)
 
         # Update our collections of results.
-        total_weight_results.append(sum(sample_sum_hrv_weight.values()))
-        for farm, sample_hrv_weight in sample_sum_hrv_weight.items():
+        total_weight_results.append(sum(sum_hrv_weight.values()))
+        total_value_results.append(sum(farms_npv.values()))
+        for farm, hrv_weight in sum_hrv_weight.items():
             try:
-                hrv_weight_results[farm].append(sample_hrv_weight)
-                num_cycle_results[farm].append(len(sample_cycle_history[farm]))
+                hrv_weight_results[farm].append(hrv_weight)
+                num_cycle_results[farm].append(len(cycle_history[farm]))
+                valuation_results[farm].append(farms_npv[farm])
             except KeyError:
-                hrv_weight_results[farm] = [sample_hrv_weight]
-                num_cycle_results[farm] = [len(sample_cycle_history[farm])]
+                hrv_weight_results[farm] = [hrv_weight]
+                num_cycle_results[farm] = [len(cycle_history[farm])]
+                valuation_results[farm] = [farms_npv[farm]]
 
     LOGGER.info('Monte Carlo simulation complete.')
 
     LOGGER.info('Creating histograms.')
     histogram_paths = collections.OrderedDict()
 
-    # Make an aggregate histogram for total weight.
-    histogram_paths['aggregate'] = [make_histograms(
+    # Make aggregate histograms and store the paths.
+    total_value_histogram_path = make_histograms(
+        total_value_results, output_dir, 'value',
+        'Total net present value (in thousands of USD)',
+        'Total net present value', per_farm=False)
+
+    total_weight_histogram_path = make_histograms(
         total_weight_results, output_dir, 'weight',
         'Total harvested weight after processing (kg)',
-        'Total harvested weight', per_farm=False)]
+        'Total harvested weight', per_farm=False)
 
-    # Make per-farm histograms.
-    weight_histogram_paths = make_histograms(hrv_weight_results, output_dir, 'weight',
-                                             'Total harvested weight after processing (kg)',
-                                             'Total harvested weight')
-    cycle_histogram_paths = make_histograms(num_cycle_results, output_dir, 'num_cycles',
-                                            'Number of cycles')
+    histogram_paths['aggregate'] = [total_weight_histogram_path, 
+                                    total_value_histogram_path]
+
+    # Make per-farm histograms and store the paths.
+    weight_histogram_paths = make_histograms(
+        hrv_weight_results, output_dir, 'weight',
+        'Total harvested weight after processing (kg)',
+        'Total harvested weight')
+
+    value_histogram_paths = make_histograms(
+        valuation_results, output_dir, 'value',
+        'Total net present value (in thousands of USD)',
+        'Total net present value')
+
+    cycle_histogram_paths = make_histograms(
+        num_cycle_results, output_dir, 'num_cycles',
+        'Number of cycles')
 
     for farm_id in weight_histogram_paths:
         histogram_paths[farm_id] = [weight_histogram_paths[farm_id],
+                                    value_histogram_paths[farm_id],
                                     cycle_histogram_paths[farm_id]]
 
     LOGGER.info('Done creating histograms.')
