@@ -417,11 +417,13 @@ def compute_uncertainty_data(args, output_dir):
     # Make an aggregate histogram for total weight.
     histogram_paths['aggregate'] = [make_histograms(
         total_weight_results, output_dir, 'weight',
-        'Total harvested weight after processing (kg)', per_farm=False)]
+        'Total harvested weight after processing (kg)',
+        'Total harvested weight', per_farm=False)]
 
     # Make per-farm histograms.
     weight_histogram_paths = make_histograms(hrv_weight_results, output_dir, 'weight',
-                                             'Total harvested weight after processing (kg)')
+                                             'Total harvested weight after processing (kg)',
+                                             'Total harvested weight')
     cycle_histogram_paths = make_histograms(num_cycle_results, output_dir, 'num_cycles',
                                             'Number of cycles')
 
@@ -432,7 +434,8 @@ def compute_uncertainty_data(args, output_dir):
     LOGGER.info('Done creating histograms.')
     return histogram_paths
 
-def make_histograms(data_collection, output_dir, name, xlabel, per_farm=True):
+def make_histograms(data_collection, output_dir, name, xlabel, 
+                    title=None, per_farm=True):
     '''Makes a histogram for the given data.
 
     data_collection - either a dictionary of [farm ID] => [data],
@@ -446,6 +449,9 @@ def make_histograms(data_collection, output_dir, name, xlabel, per_farm=True):
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
+    if title is None:
+        title = xlabel
+
     def make_plot_relpath(farm_id=None):
         if per_farm:
             assert farm_id is not None
@@ -454,13 +460,21 @@ def make_histograms(data_collection, output_dir, name, xlabel, per_farm=True):
             filename = 'total_%s.png' % name
         return os.path.join('images', filename)
 
-    def make_histogram(relpath, data):
+    def make_plot_title(farm_id=None):
+        if per_farm:
+            assert farm_id is not None
+            return '%s for farm %s' % (title, str(farm_id))
+        else:
+            return '%s for all farms' % title
+
+    def make_histogram(relpath, data, title):
         # Set the weight so that each column represents a percent probability.
         weight = 100.0 / len(data)
         plt.hist(data, bins=NUM_HISTOGRAM_BINS, 
                  weights=np.tile(weight, len(data)))
         plt.ylabel('Percent probability')
         plt.xlabel(xlabel)
+        plt.title(title)
         plt.savefig(os.path.join(output_dir, relpath))
         plt.close()
 
@@ -470,12 +484,12 @@ def make_histograms(data_collection, output_dir, name, xlabel, per_farm=True):
         for farm_id, farm_data in data_collection.items():
             relpath = make_plot_relpath(farm_id)
             histogram_paths[farm_id] = relpath
-            make_histogram(relpath, farm_data)
+            make_histogram(relpath, farm_data, make_plot_title(farm_id))
         return histogram_paths
     else:
         # It's aggregate data, not per-farm data.
         relpath = make_plot_relpath()
-        make_histogram(relpath, data_collection)
+        make_histogram(relpath, data_collection, make_plot_title())
         return relpath
 
 def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
