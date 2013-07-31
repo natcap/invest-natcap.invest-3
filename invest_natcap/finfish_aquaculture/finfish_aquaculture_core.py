@@ -1,6 +1,7 @@
 '''Implementation of the aquaculture calculations, and subsequent outputs. This will
 pull from data passed in by finfish_aquaculture'''
 
+import collections
 import os
 import math
 import datetime
@@ -411,21 +412,22 @@ def compute_uncertainty_data(args, output_dir):
     LOGGER.info('Monte Carlo simulation complete.')
 
     LOGGER.info('Creating histograms.')
-    # Make per-farm histograms.
-    weight_histogram_paths = make_histograms(hrv_weight_results, output_dir, 'weight',
-                                             'Total harvested weight')
-    cycle_histogram_paths = make_histograms(num_cycle_results, output_dir, 'num_cycles',
-                                            'Number of cycles')
-
-    histogram_paths = {}
-    for farm_id in weight_histogram_paths:
-        histogram_paths[farm_id] = [weight_histogram_paths[farm_id],
-                                    cycle_histogram_paths[farm_id]]
+    histogram_paths = collections.OrderedDict()
 
     # Make an aggregate histogram for total weight.
     histogram_paths['aggregate'] = [make_histograms(
         total_weight_results, output_dir, 'weight',
-        'Total harvested weight', per_farm=False)]
+        'Total harvested weight after processing (kg)', per_farm=False)]
+
+    # Make per-farm histograms.
+    weight_histogram_paths = make_histograms(hrv_weight_results, output_dir, 'weight',
+                                             'Total harvested weight after processing (kg)')
+    cycle_histogram_paths = make_histograms(num_cycle_results, output_dir, 'num_cycles',
+                                            'Number of cycles')
+
+    for farm_id in weight_histogram_paths:
+        histogram_paths[farm_id] = [weight_histogram_paths[farm_id],
+                                    cycle_histogram_paths[farm_id]]
 
     LOGGER.info('Done creating histograms.')
     return histogram_paths
@@ -620,6 +622,18 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     if histogram_paths:
         writer.write_header('Uncertainty Analysis Results')
+        writer.write_paragraph(
+            'The following histograms display the probability of different outcomes. '
+            'The height of each vertical bar in the histograms represents the '
+            'probability of the outcome marked by the position of the bar on '
+            'the horizontal axis of the histogram.')
+        writer.write_paragraph(
+            'Included are histograms for total results across all farms, as well as '
+            'results for each individual farm.')
+        writer.write_paragraph(
+            'These results were obtained by running a Monte Carlo simulation with '
+            'different growth parameters obtained by sampling the provided '
+            'normal distribution for each growth parameter.')
         for key, paths in histogram_paths.items():
             if key == 'aggregate':
                 title = 'Aggregate results for all farms'

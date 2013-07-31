@@ -148,6 +148,9 @@ def _get_style_css(style_const):
       td { 
           border-top: 5px solid #EFECCA;
       }
+      img {
+          margin: 20px;
+      }
       '''
     else:
         raise Exception('Unsupported style constant %d' % style_const)
