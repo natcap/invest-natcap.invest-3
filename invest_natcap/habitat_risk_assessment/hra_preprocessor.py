@@ -682,12 +682,13 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         line = csv_reader.next()
       
         #Drain the habitat-specific dictionary
-        #Since line is an array, want to check that it's not all null,
-        #but need to do that by checking array length.
-        while len(line) != 0:
+        #Since line is an array, try to join to an empty list. Either an empty
+        #array or an array of '' will return ''. Anything else will have stuff in
+        #the string.
+        while ''.join(line) != '':
             
+            LOGGER.debug("Inside the loop the line is: %s" % line)
             if line[0] != '':
-                LOGGER.debug("Inside the loop the line is: %s" % line)
                 key = line[0]
 
                 #If we are dealing with a shapefile criteria, we only want  to
@@ -708,10 +709,11 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                         habs[hab_name]['Crit_Ratings'][key] = \
                             dict(zip(headers, map(float,line[1:4])))
                     except ValueError:
+                        LOGGER.debug("The line with a string is: %s" % line)
                         raise UnexpectedString("Entries in CSV table may not be \
                             strings, and may not be left blank. Check your %s CSV \
                             for any leftover strings or spaces within Rating, \
-                            Data Quality or Weight columns.", hab_name)
+                            Data Quality or Weight columns." % hab_name)
             
             line = csv_reader.next()
 
@@ -763,7 +765,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                     'Crit_Rasters': {}}
            
             #Draining the ratings scores.
-            while len(line) != 0 and line[0] != '':
+            while ''.join(line) != '':
                 
                 #Just abstract all of the erroring out, so that we know if
                 #we're below here, it should all work perfectly. LOL

@@ -1500,6 +1500,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
+        LOGGER.debug("The current pair is: %s, %s" % (h, s))
         base_ds_uri = h_s_e[pair]['DS']
         base_nodata = raster_utils.get_nodata_from_uri(base_ds_uri)
         base_pixel_size = raster_utils.get_cell_size_from_uri(base_ds_uri)
