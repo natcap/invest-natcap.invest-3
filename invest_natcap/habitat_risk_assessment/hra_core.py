@@ -834,7 +834,8 @@ def make_hab_risk_raster(dir, risk_dict):
              ...
             }
     '''
-
+    LOGGER.debug("Risk_Dict: %s" % risk_dict)
+    
     #Use arbitrary element to get the nodata for habs
     nodata = raster_utils.get_nodata_from_uri(risk_dict.values()[0])
 
@@ -1256,6 +1257,10 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             as crit_lists, but the innermost values will be floats instead of
             lists.
     '''
+    LOGGER.debug("h_s_c: %s" % h_s_c)
+    LOGGER.debug("h_s_e: %s" % h_s_e)
+    LOGGER.debug("habs: %s" % hab)
+
 
     pre_raster_dir = os.path.join(dir, 'ReBurned_Crit_Rasters')
 
@@ -1495,6 +1500,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
+        LOGGER.debug("The current pair is: %s, %s" % (h, s))
         base_ds_uri = h_s_e[pair]['DS']
         base_nodata = raster_utils.get_nodata_from_uri(base_ds_uri)
         base_pixel_size = raster_utils.get_cell_size_from_uri(base_ds_uri)

@@ -328,7 +328,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     
     Returns nothing.
     '''
-
+    LOGGER.debug('h_s_c from parse?: %s' % h_s_c)
     for pair in h_s_c:
 
         h, s = pair
