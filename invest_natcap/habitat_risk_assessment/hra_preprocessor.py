@@ -546,6 +546,10 @@ def parse_hra_tables(folder_uri):
         #the global dictionaries while the function is running. 
         parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
 
+    LOGGER.debug("h_s_c: %s" % h_s_c_dict)
+    LOGGER.debug("h_s_e: %s" % h_s_e_dict)
+    LOGGER.debug("habs: %s" % habitat_dict)
+    
     zero_check(h_s_c_dict, h_s_e_dict, habitat_dict)
 
     #Add everything to the parse dictionary
@@ -597,7 +601,7 @@ def zero_check(h_s_c, h_s_e, habs):
     for dictionary in [h_s_c, h_s_e, habs]:
         
         #These are the subdictionaries mapped to the habitat, h-s tuple key.
-        for subdict_lvl_1 in dictionary.values():
+        for key_1, subdict_lvl_1 in dictionary.items():
 
             #These are the subdictionaries mapped to the keys of 'Crit_Ratings'
             #'Crit_Rasters'.
@@ -615,6 +619,16 @@ def zero_check(h_s_c, h_s_e, habs):
                         if subdict_lvl_3['Rating'] == 0.0:
                             
                             del subdict_lvl_2[key_3]
+
+            #Now that we have removed that, check the dictionary isn't
+            #now empty
+            if len(subdict_lvl_1['Crit_Ratings']) == 0 and \
+                        len(subdict_lvl_1['Crit_Rasters']) == 0:
+
+                del dictionary[key_1]
+
+    LOGGER.debug(h_s_e)
+
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
@@ -666,100 +680,132 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         #Get the headers
         headers = csv_reader.next()[1:]
         line = csv_reader.next()
-       
+      
         #Drain the habitat-specific dictionary
-        while line[0] != '':
+        #Since line is an array, try to join to an empty list. Either an empty
+        #array or an array of '' will return ''. Anything else will have stuff in
+        #the string.
+        while ''.join(line) != '':
             
-            key = line[0]
+            LOGGER.debug("Inside the loop the line is: %s" % line)
+            if line[0] != '':
+                key = line[0]
 
-            #If we are dealing with a shapefile criteria, we only want  to
-            #add the DQ and the W, and we will add a rasterized version of
-            #the shapefile later.
-            if line[1] == 'SHAPE':
-                try:
-                    habs[hab_name]['Crit_Rasters'][key] = \
-                        dict(zip(headers[1:3], map(float, line[2:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Rating, \
-                        Data Quality or Weight columns.", hab_name)
-            #Should catch any leftovers from the autopopulation of the helptext        
-            else:
-                try:
-                    habs[hab_name]['Crit_Ratings'][key] = \
-                        dict(zip(headers, map(float,line[1:4])))
-                except ValueError:
-                    raise UnexpectedString("Entries in CSV table may not be \
-                        strings, and may not be left blank. Check your %s CSV \
-                        for any leftover strings or spaces within Rating, \
-                        Data Quality or Weight columns.", hab_name)
+                #If we are dealing with a shapefile criteria, we only want  to
+                #add the DQ and the W, and we will add a rasterized version of
+                #the shapefile later.
+                if line[1] == 'SHAPE':
+                    try:
+                        habs[hab_name]['Crit_Rasters'][key] = \
+                            dict(zip(headers[1:3], map(float, line[2:4])))
+                    except ValueError:
+                        raise UnexpectedString("Entries in CSV table may not be \
+                            strings, and may not be left blank. Check your %s CSV \
+                            for any leftover strings or spaces within Rating, \
+                            Data Quality or Weight columns.", hab_name)
+                #Should catch any leftovers from the autopopulation of the helptext        
+                else:
+                    try:
+                        habs[hab_name]['Crit_Ratings'][key] = \
+                            dict(zip(headers, map(float,line[1:4])))
+                    except ValueError:
+                        LOGGER.debug("The line with a string is: %s" % line)
+                        raise UnexpectedString("Entries in CSV table may not be \
+                            strings, and may not be left blank. Check your %s CSV \
+                            for any leftover strings or spaces within Rating, \
+                            Data Quality or Weight columns." % hab_name)
             
             line = csv_reader.next()
 
+        LOGGER.debug("Line after the loop is: %s" % line)
+
         #We will have just loaded in a null line from under the hab-specific
         #criteria, now drainthe next two, since they're just headers for users.
-        #Drain the next two lines
+        #Drain the next two lines, and load in the third.
         for _ in range(2): 
-            csv_reader.next()
+            a = csv_reader.next()
+            LOGGER.debug("Lines we're discarding are : %s" % a)
 
-        #Now we will pick up all the E/C habitat-stressor information fore this
+        #Now we will pick up all the E/C habitat-stressor information for this
         #specific habitat.
-        #Drain the overlap dictionaries
-        #This is the overlap header
+
+        counter = 0
+
+        #Want to do this for all pairings of h-s  within the habitat.
         while True:
+            
             try:
-                line = csv_reader.next()
-
-                stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
-                headers = csv_reader.next()[1:]
-                
-                #Drain the overlap table
-                line = csv_reader.next()
-       
-                #Create empty entries for this overlap in both the _e and _c
-                #dictionaries.
-                h_s_e[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
-                        'Crit_Rasters': {}}
-                h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
-                        'Crit_Rasters': {}}
-                
-                while line[0] != '':
-                    
-                    #Just abstract all of the erroring out, so that we know if
-                    #we're below here, it should all work perfectly. LOL
-                    error_check(line, hab_name, stress_name)
-
-                    #Exposure criteria.
-                    if line[4] == 'E':
-
-                        #If criteria rasters are desired for that criteria.
-                        if line[1] == 'SHAPE':
-                            
-                            h_s_e[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
-                                dict(zip(headers[1:3], map(float,line[2:4])))
-                        #Have already error checked, so this must be a float.
-                        else:
-                            h_s_e[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
-                                dict(zip(headers, map(float,line[1:4])))
-                            
-                    #We have already checked, so this must be a 'C'    
-                    else:      
-                        
-                        #If criteria rasters are desired for that criteria.
-                        if line[1] == 'SHAPE':
-                            
-                            h_s_c[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
-                                dict(zip(headers[1:3], map(float,line[2:4])))
-                        #Have already error checked, so this must be a float.
-                        else:
-                            h_s_c[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
-                                dict(zip(headers, map(float,line[1:4])))
-
-                    line = csv_reader.next()
-
+                line = csv_reader.next() 
             except StopIteration:
                 break
+
+            if len(line) == 0:
+                counter += 1
+            #If there's something in here, we have another set of h-s to go.
+            else:
+                counter = 0
+            
+            #If our current line is blank, we're at the end of the file.
+            if counter > 1:
+                break
+
+            LOGGER.debug("Line now is: %s" % line)
+            LOGGER.debug("Hab name is: %s" % hab_name)
+            stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
+            headers = csv_reader.next()[1:]
+            
+            #Drain the overlap table
+            line = csv_reader.next()
+
+            #Create empty entries for this overlap in both the _e and _c
+            #dictionaries.
+            h_s_e[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
+                    'Crit_Rasters': {}}
+            h_s_c[(hab_name, stress_name)] = {'Crit_Ratings': {}, \
+                    'Crit_Rasters': {}}
+           
+            #Draining the ratings scores.
+            while ''.join(line) != '':
+                
+                #Just abstract all of the erroring out, so that we know if
+                #we're below here, it should all work perfectly. LOL
+                error_check(line, hab_name, stress_name)
+
+                #Exposure criteria.
+                if line[4] == 'E':
+
+                    #If criteria rasters are desired for that criteria.
+                    if line[1] == 'SHAPE':
+                        
+                        h_s_e[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
+                            dict(zip(headers[1:3], map(float,line[2:4])))
+                    #Have already error checked, so this must be a float.
+                    else:
+                        h_s_e[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
+                            dict(zip(headers, map(float,line[1:4])))
+                        
+                #We have already checked, so this must be a 'C'    
+                else:      
+                    
+                    #If criteria rasters are desired for that criteria.
+                    if line[1] == 'SHAPE':
+                        
+                        h_s_c[(hab_name, stress_name)]['Crit_Rasters'][line[0]] = \
+                            dict(zip(headers[1:3], map(float,line[2:4])))
+                    #Have already error checked, so this must be a float.
+                    else:
+                        h_s_c[(hab_name, stress_name)]['Crit_Ratings'][line[0]] = \
+                            dict(zip(headers, map(float,line[1:4])))
+                
+                try:
+                    line = csv_reader.next()
+                except StopIteration:
+                    break
+    
+            #Assume if we've gotten here, we're at the end of a block. Iterate counter
+            #by one, since we know it's A whitespace line. If there is a second after,
+            #the while loop will jump to here.
+            counter += 1
 
 def error_check(line, hab_name, stress_name):
     '''Throwing together a simple error checking function for all of the inputs
