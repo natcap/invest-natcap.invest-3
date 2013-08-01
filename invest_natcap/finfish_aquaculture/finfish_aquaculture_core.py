@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('AGG')  # Use the Anti-Grain Geometry back-end (for PNG files)
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import norm
 
 from invest_natcap.report_generation import html
 
@@ -151,14 +152,15 @@ def execute(args):
         farms_npv = None
 
     # Do uncertainty analysis if it's enabled.
-    histogram_paths = {}
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
-        histogram_paths = compute_uncertainty_data(args, output_dir)
+        histogram_paths, uncertainty_stats = compute_uncertainty_data(args, output_dir)
+    else:
+        histogram_paths, uncertainty_stats = {}, {}
         
     create_HTML_table(output_dir, args['farm_op_dict'], 
                       cycle_history, sum_hrv_weight, hrv_weight, 
                       args['do_valuation'], farms_npv, value_history,
-                      histogram_paths)
+                      histogram_paths, uncertainty_stats)
     
 def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
@@ -362,7 +364,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_histor
 
     return val_history, valuations
 
-def compute_uncertainty_data(args, output_dir):
+def compute_uncertainty_data(args, output_dir, confidence=0.8):
     '''Computes uncertainty data and produces outputs.
 
     args - should contain data on the mean and standard deviation for a and b
@@ -424,22 +426,30 @@ def compute_uncertainty_data(args, output_dir):
 
     LOGGER.info('Monte Carlo simulation complete.')
 
+    LOGGER.info('Computing confidence statistics.')
+    uncertainty_stats = collections.OrderedDict()
+    uncertainty_stats['aggregate'] = {}
+    uncertainty_stats['aggregate']['weight'] = norm.fit(total_weight_results)
+    uncertainty_stats['aggregate']['value'] = norm.fit(total_value_results)
+    for farm in hrv_weight_results:
+        uncertainty_stats[farm] = {}
+        uncertainty_stats[farm]['weight'] = norm.fit(hrv_weight_results[farm])
+        uncertainty_stats[farm]['value'] = norm.fit(valuation_results[farm])
+
     LOGGER.info('Creating histograms.')
     histogram_paths = collections.OrderedDict()
 
     # Make aggregate histograms and store the paths.
-    total_value_histogram_path = make_histograms(
-        total_value_results, output_dir, 'value',
-        'Total net present value (in thousands of USD)',
-        'Total net present value', per_farm=False)
-
-    total_weight_histogram_path = make_histograms(
+    histogram_paths['aggregate'] = {}
+    histogram_paths['aggregate']['weight'] = make_histograms(
         total_weight_results, output_dir, 'weight',
         'Total harvested weight after processing (kg)',
         'Total harvested weight', per_farm=False)
 
-    histogram_paths['aggregate'] = [total_weight_histogram_path, 
-                                    total_value_histogram_path]
+    histogram_paths['aggregate']['value'] = make_histograms(
+        total_value_results, output_dir, 'value',
+        'Total net present value (in thousands of USD)',
+        'Total net present value', per_farm=False)
 
     # Make per-farm histograms and store the paths.
     weight_histogram_paths = make_histograms(
@@ -457,12 +467,14 @@ def compute_uncertainty_data(args, output_dir):
         'Number of cycles')
 
     for farm_id in weight_histogram_paths:
-        histogram_paths[farm_id] = [weight_histogram_paths[farm_id],
-                                    value_histogram_paths[farm_id],
-                                    cycle_histogram_paths[farm_id]]
+        histogram_paths[farm_id] = {
+            'weight': weight_histogram_paths[farm_id],
+            'value': value_histogram_paths[farm_id],
+            'cycles': cycle_histogram_paths[farm_id]
+            }
 
-    LOGGER.info('Done creating histograms.')
-    return histogram_paths
+    LOGGER.info('Done with uncertainty analysis.')
+    return histogram_paths, uncertainty_stats
 
 def make_histograms(data_collection, output_dir, name, xlabel, 
                     title=None, per_farm=True):
@@ -524,7 +536,7 @@ def make_histograms(data_collection, output_dir, name, xlabel,
 
 def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
                       hrv_weight, do_valuation, farms_npv, value_history,
-                      histogram_paths):
+                      histogram_paths, uncertainty_stats):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
@@ -666,6 +678,48 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     if histogram_paths:
         writer.write_header('Uncertainty Analysis Results')
+
+        writer.write_paragraph(
+            'These results were obtained by running a Monte Carlo simulation. '
+            'For each run of the simulation, each growth parameter was randomly '
+            'sampled according to the provided normal distribution. '
+            'The simulation involved %d runs of the model, each with different '
+            'values for the growth parameters.' % NUM_MONTE_CARLO_RUNS)
+
+        # Write a table with numerical results.
+        writer.write_header('Numerical Results', level=3)
+        writer.write_paragraph(
+            'This table summarizes the mean and standard deviation for '
+            'total harvested weight (after processing) and for total '
+            'net present value. The mean and standard deviation were '
+            'computed for results across all runs of the Monte Carlo '
+            'simulation.')
+
+        writer.start_table()
+        writer.write_row(['', 'Harvested weight after processing (kg)',
+                          'Net present value (thousands of USD)'],
+                         is_header=True,
+                         cell_attr=[{}, {'colspan': 2}, {'colspan': 2}])
+        writer.write_row(['Farm ID', 'Mean', 'Standard Deviation', 
+                          'Mean', 'Standard Deviation'], is_header=True)
+
+        for key in uncertainty_stats:
+            if key == 'aggregate':
+                farm_title = 'Total (all farms)'
+            else:
+                farm_title = 'Farm %s' % str(key)
+            writer.write_row([
+                    farm_title,
+                    uncertainty_stats[key]['weight'][0],
+                    uncertainty_stats[key]['weight'][1],
+                    uncertainty_stats[key]['value'][0],
+                    uncertainty_stats[key]['value'][1]
+                    ])
+
+        writer.end_table()
+
+        # Display a bunch of histograms.
+        writer.write_header('Histograms', level=3)
         writer.write_paragraph(
             'The following histograms display the probability of different outcomes. '
             'The height of each vertical bar in the histograms represents the '
@@ -674,18 +728,19 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         writer.write_paragraph(
             'Included are histograms for total results across all farms, as well as '
             'results for each individual farm.')
-        writer.write_paragraph(
-            'These results were obtained by running a Monte Carlo simulation with '
-            'different growth parameters obtained by sampling the provided '
-            'normal distribution for each growth parameter.')
         for key, paths in histogram_paths.items():
             if key == 'aggregate':
-                title = 'Aggregate results for all farms'
+                title = 'Histograms for total results (all farms)'
             else:
-                title = 'Results for farm %s' % str(key)
-            writer.start_collapsible_element(title)
-            for path in paths:
+                title = 'Histograms for farm %s' % str(key)
+            writer.write_header(title, level=4)
+            writer.start_collapsible_element()                
+
+            # Display the histogram.
+            for histogram_type, path in paths.items():
                 writer.add_image(path)
             writer.end_collapsible_element()
+
+        
 
     writer.flush()

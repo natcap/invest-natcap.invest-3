@@ -34,17 +34,18 @@ class HTMLWriter(object):
     def set_style(self, style_const):
         self.style = _get_style_css(style_const)
 
-    def insert_table_of_contents(self):
+    def insert_table_of_contents(self, max_header_level=2):
         if self.has_toc:
             raise Exception('This page already has a table of contents.')
         self.body += _TOC_MARKER
         self.has_toc = True
+        self.toc_max_header_level = max_header_level
 
     def write_header(self, text, level=2):
         elem_id = 'id_%d' % self.id_counter
         self.id_counter += 1
-        self.body += _elem(('h%d' % level), text, 'id="%s"' % elem_id)
-        self.toc[elem_id] = text
+        self.body += _elem(('h%d' % level), text, id=elem_id)
+        self.toc[elem_id] = (level, text)
 
     def write_paragraph(self, text):
         self.body += _elem('p', text)
@@ -55,11 +56,18 @@ class HTMLWriter(object):
     def end_table(self):
         self.body += '</table>'
 
-    def write_row(self, cells, is_header=False):
+    def write_row(self, cells, is_header=False, cell_attr=[]):
+        '''Writes a table row with the given cell data.
+
+        cell_attr - attributes for each cell. If provided, it must be the 
+            same length as cells. Each entry should be a dictionary mapping
+            attribute key to value.
+        '''
         self.body += '<tr>'
         cell_tag = 'th' if is_header else 'td'
-        for cell in cells:
-            self.body += '<%s>%s</%s>' % (cell_tag, str(cell), cell_tag)
+        for i, cell in enumerate(cells):
+            attr = cell_attr[i] if cell_attr else {}
+            self.body += _elem(cell_tag, str(cell), **attr)
         self.body += '</tr>'
 
     def add_image(self, src):
@@ -77,17 +85,12 @@ class HTMLWriter(object):
         '''Creates and writes to an HTML file.'''
         f = open(self.uri, 'w')
 
-        def write_elem(tag, text, attr=''):
-            if attr:
-                attr = ' ' + attr
-            f.write('<%s%s>%s</%s>' % (tag, attr, text, tag))
-
         f.write('<html>')
 
         f.write('<head>')
-        write_elem('title', self.title)
+        f.write(_elem('title', self.title))
         if self.style:
-            write_elem('style', self.style, 'type="text/css"')
+            f.write(_elem('style', self.style, type="text/css"))
         f.write('</head>')
 
         f.write('<body>')
@@ -105,17 +108,22 @@ class HTMLWriter(object):
         toc_html = ''
         toc_html += _elem('h2', 'Table of Contents')
         toc_html += '<ul>'
-        for elem_id, text in self.toc.items():
+        for elem_id, (level, text) in self.toc.items():
+            if level > self.toc_max_header_level:
+                continue
             toc_html += '<li>'
-            toc_html += _elem('a', text, 'href="#%s"' % elem_id)
+            toc_html += _elem('a', text, href=('#%s' % elem_id))
             toc_html += '</li>'
         toc_html += '</ul>'
         return toc_html
 
-def _elem(tag, content, attr=''):
+def _elem(tag, content, **attr):
     if attr:
-        attr = ' ' + attr
-    return ('<%s%s>%s</%s>' % (tag, attr, content, tag))
+        attr_str = ' ' + ' '.join(
+            '%s="%s"' % (key, val) for key, val in attr.items())
+    else:
+        attr_str = ''
+    return ('<%s%s>%s</%s>' % (tag, attr_str, content, tag))
 
 
 def _get_style_css(style_const):
@@ -125,7 +133,7 @@ def _get_style_css(style_const):
           background-color: #EFECCA;
           color: #002F2F
       }
-      h1, h2, h3, strong, th {
+      h1, h2, h3, h4, strong, th {
           color: #046380;
       }
       h2 {
