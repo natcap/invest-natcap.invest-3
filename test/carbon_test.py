@@ -197,6 +197,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  'value_seq_redd.tif',
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
+
         html_utils.assert_table_contains_rows_uri(
             self, summary_uri, 'change_table',
             [['Baseline', -3526095.89057, -67106273.81],
