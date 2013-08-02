@@ -114,8 +114,8 @@ class Element(object):
 class Table(object):
     '''Represents and renders HTML tables.'''
 
-    def __init__(self):
-        self.table_elem = Element('table')
+    def __init__(self, **attr):
+        self.table_elem = Element('table', **attr)
 
     def add_row(self, cells, is_header=False, cell_attr=[]):
         '''Writes a table row with the given cell data.
