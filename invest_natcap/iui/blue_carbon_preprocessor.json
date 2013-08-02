@@ -1,0 +1,39 @@
+{
+    "id" : "window",
+    "label": "Blue Carbon Preprocessor",
+    "targetScript" : "invest_natcap.blue_carbon.blue_carbon_preprocessor",
+    "modelName" : "blue_carbon_preprocessor",
+    "localDocURI": "../documentation/blue_carbon_preprocessor.html",
+    "height": 600,
+    "width" : 700,
+    "elements": [
+                    {
+                    "id" : "workspace_list",
+                    "type": "list",	        
+                            "elements": [
+                                            {
+                                                "id": "workspace_dir",
+                                                "args_id": "workspace_dir",
+                                                "type": "folder",
+                                                "label": "Workspace",
+                                                "defaultValue": "../BlueCarbon/output",
+                                                "helpText": "The directory to hold output from a particular model run. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "required": true
+                                            }
+                                        ]
+                    },
+                    {
+                        "id": "lulc",
+                        "type": "multi",
+                        "args_id": "lulc",
+                        "label": "LULC",
+                        "sampleElement": {"id": "sample_id",
+                                          "type": "file",
+                                          "label": "Input",
+                                          "validateAs": {"type": "GDAL"}},
+                        "defaultValue": ["../BlueCarbon/input/GBJC_2004_mean.tif", "../BlueCarbon/input/GBJC_2050_mean.tif", "../BlueCarbon/input/GBJC_2100_mean.tif"],
+                        "linkText": "Add Another",
+                        "helpText": ""
+                    }                                            
+                ]
+}
