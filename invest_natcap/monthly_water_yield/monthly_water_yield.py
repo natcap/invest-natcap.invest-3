@@ -288,7 +288,7 @@ def execute(args):
         # Calculate Final Interflow
         clean_uri([interflow_uri])
         calculate_final_interflow(
-                dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
+                soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
 
@@ -565,11 +565,9 @@ def calculate_in_absorption_rate(
             out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
 def calculate_final_interflow(
-        dflow_uri, soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
+        soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
         water_uri, intermediate_interflow_uri, interflow_out_uri, out_nodata):
     """This function calculates the final interflow
-
-        dflow_uri - a URI to a gdal dataset of the direct flow
 
         soil_storage_uri - a URI to a gdal datasaet for the soil water content
             from the previous time step
@@ -594,18 +592,17 @@ def calculate_final_interflow(
     
     no_data_list = []
     # Build up a list of nodata values to check against
-    for raster_uri in [soil_storage_uri, dflow_uri, evap_uri, baseflow_uri,
+    for raster_uri in [soil_storage_uri, evap_uri, baseflow_uri,
             smax_uri, water_uri, intermediate_interflow_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
     def interflow_op(
-            soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix,
+            soil_pix, evap_pix, bflow_pix, smax_pix,
             water_pix, inter_pix):
         """A vectorize operation for calculating the baseflow value
 
             soil_pix - a float value for the soil water content
-            dflow_pix - a float value for the direct flow
             evap_pix - a float value for the actual evaporation
             bflow_pix - a float value for the baseflow
             smax_pix - a float value for the soil water content max
@@ -615,7 +612,7 @@ def calculate_final_interflow(
             returns - the interflow value
         """
         for pix, pix_nodata in zip(
-                [soil_pix, dflow_pix, evap_pix, bflow_pix, smax_pix, water_pix,
+                [soil_pix, evap_pix, bflow_pix, smax_pix, water_pix,
                     inter_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
@@ -632,7 +629,7 @@ def calculate_final_interflow(
     cell_size = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
 
     raster_utils.vectorize_datasets(
-            [soil_storage_uri, dflow_uri, evap_uri, baseflow_uri, smax_uri,
+            [soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
                 water_uri, intermediate_interflow_uri], interflow_op,
             interflow_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
             'intersection')
