@@ -59,12 +59,14 @@ class HTMLDocument(object):
         self.body.add(Element('p', text))
 
     def flush(self):
-        '''Creates and writes to an HTML file.'''
+        '''Creates a file with the contents of this document.'''
         f = open(self.uri, 'w')
         f.write(self.html_elem.html())
         f.close()
 
+
 class Element(object):
+    '''Represents a generic HTML element.'''
     def __init__(self, tag, content='', end_tag=True, **attr):
         self.tag = tag
         self.content = content
@@ -87,6 +89,7 @@ class Element(object):
         if self.end_tag:
             html_str += ('</%s>' % self.tag)
         return html_str
+
 
 class Table(object):
     '''Represents and renders HTML tables.'''
