@@ -230,33 +230,32 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
         [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32, nodata_orig,
         pixel_size, 'intersection', dataset_to_align_index=0)
 
-def _create_html_summary(outfile_uris, sequest_uris):
-    writer = html.HTMLWriter(outfile_uris['html'],
-                             'Carbon Model Results',
-                             'InVEST Carbon Storage and Sequestration Model Results')
 
-    writer.set_style(html.BEACH_STYLE)
+def _create_html_summary(outfile_uris, sequest_uris):
+    doc = html.HTMLDocument(outfile_uris['html'],
+                            'Carbon Model Results',
+                            'InVEST Carbon Storage and Sequestration Model Results')
 
     def format_currency(val):
         return '%.2f' % val
     
-    writer.write_header('Results Summary')
-    writer.write_paragraph(
+    doc.write_header('Results Summary')
+    doc.write_paragraph(
         '<strong>Positive values</strong> in this table indicate that carbon storage increased. '
         'In this case, the positive Net Present Value represents the value of '
         'the sequestered carbon.')
-    writer.write_paragraph(
+    doc.write_paragraph(
         '<strong>Negative values</strong> indicate that carbon storage decreased. '
         'In this case, the negative Net Present Value represents the cost of '
         'carbon emission.')
 
     # Write the table that summarizes change in carbon stocks and
     # net present value.
-    writer.start_table()
-    writer.write_row(["Scenario", 
-                      "Change in Carbon Stocks<br>(Mg of carbon)",
-                      "Net Present Value<br>(USD)"],
-                     is_header=True)
+    change_table = doc.add(html.Table(id='change_table'))
+    change_table.add_row(["Scenario", 
+                          "Change in Carbon Stocks<br>(Mg of carbon)",
+                          "Net Present Value<br>(USD)"],
+                         is_header=True)
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
@@ -269,7 +268,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
         total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uris[scenario_type])
         total_val = carbon_utils.sum_pixel_values_from_uri(outfile_uris['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        writer.write_row([scenario_name, total_seq, format_currency(total_val)])
+        change_table.add_row([scenario_name, total_seq, format_currency(total_val)])
 
         if ('%s_seq_mask' % scenario_type) in outfile_uris:
             # Compute output for confidence-masked data.
@@ -278,22 +277,21 @@ def _create_html_summary(outfile_uris, sequest_uris):
             masked_val = carbon_utils.sum_pixel_values_from_uri(
                 outfile_uris['%s_val_mask' % scenario_type])
             scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
-            writer.write_row(['%s (confident cells only)' % scenario_name, 
-                              masked_seq, 
-                              format_currency(masked_val)])
-    writer.end_table()
+            change_table.add_row(['%s (confident cells only)' % scenario_name, 
+                                  masked_seq, 
+                                  format_currency(masked_val)])
 
     # If REDD scenario analysis is enabled, write the table
     # comparing the baseline and REDD scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
-        writer.start_table()
-        writer.write_row(["Scenario Comparison", 
+        comparison_table = doc.add(html.Table(id='comparison_table'))
+        comparison_table.add_row(["Scenario Comparison", 
                           "Difference in Carbon Stocks<br>(Mg of carbon)",
                           "Difference in Net Present Value<br>(USD)"],
                          is_header=True)
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
-        writer.write_row(
+        comparison_table.add_row(
             ['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
              redd_results[0] - base_results[0], # subtract carbon amounts
              format_currency(redd_results[1] - base_results[1])  # subtract value
@@ -301,55 +299,20 @@ def _create_html_summary(outfile_uris, sequest_uris):
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
             base_mask_results = scenario_results['base_mask']
             redd_mask_results = scenario_results['redd_mask']
-            writer.write_row(
+            comparison_table.add_row(
                 ['%s vs %s (confident cells only)'
                  % (scenario_names['redd'], scenario_names['base']),
                  redd_mask_results[0] - base_mask_results[0], # subtract carbon amounts
                  format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
                  ])
 
-        writer.end_table()
-
     # Write a list of the output files produced by the model.
-    writer.write_header('Output Files')
+    doc.write_header('Output Files')
     outfile_descriptions = _make_outfile_descriptions(outfile_uris)
 
-    writer.start_table()
-    writer.write_row(["Filename", "Description"], is_header=True)
+    outfile_table = doc.add(html.Table(id='outfile_table'))
+    outfile_table.add_row(["Filename", "Description"], is_header=True)
     for filename, description in outfile_descriptions.items():
-        writer.write_row([('%s' % filename), description])
-    writer.end_table()
+        outfile_table.add_row([('%s' % filename), description])
 
-    writer.flush()
-
-def _css_style():
-    return '''<style type="text/css">
-      body {
-          background-color: #EFECCA;
-          color: #002F2F
-      }
-      h1, h2, strong, th {
-          color: #046380;
-      }
-      h2 {
-          border-bottom: 1px solid #A7A37E;
-      }
-      table {
-          border: 5px solid #A7A37E;
-          margin-bottom: 50px; 
-          background-color: #E6E2AF;
-      }
-      td, th { 
-          margin-left: 0px;
-          margin-right: 0px;
-          padding-left: 8px;
-          padding-right: 8px;
-          padding-bottom: 2px;
-          padding-top: 2px;
-          text-align:left;
-      }
-      td { 
-          border-top: 5px solid #EFECCA;
-      }
-      </style>
-      '''
+    doc.flush()

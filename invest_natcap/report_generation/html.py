@@ -1,122 +1,160 @@
 import collections
-import re
 
-BEACH_STYLE = 0
+BEACH_STYLE = 0  # constant to select a nice beach (tan and blue) palette
 
-_TOC_MARKER = '<---TOC MARKER--->'
-
-class HTMLWriter(object):
+class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
 
-    Usage:
-        writer = html.HTMLWriter('myfile.html', 'My Page', 'A Page About Me')
-        writer.set_style(html.BEACH_STYLE)
-        writer.write_section_header('My Early Life')
-        writer.write_paragraph('I lived in a small barn.')
-        writer.write_section_header('My Later Life')
-        writer.write_paragraph('I lived in a bigger barn.')
-        writer.flush()
+    Example usage:
+        # Create the document object.
+        doc = html.HTMLDocument('myfile.html', 'My Page', 'A Page About Me')
 
-    Once writing is complete, flush() must be called in order to
-    actually create the file.
+        # Add some text.
+        doc.write_header('My Early Life')
+        doc.write_paragraph('I lived in a small barn.')
+
+        # Add a table.
+        table = doc.add(html.Table())
+        table.add_row(['Age', 'Weight'], is_header=True)
+        table.add_row(['1 year', '20 pounds'])
+        table.add_row(['2 years', '40 pounds'])
+
+        # Add an arbitrary HTML element. 
+        # Note that the HTML 'img' element doesn't have an end tag.
+        doc.add(html.Element('img', src='images/my_pic.png', end_tag=False))
+
+        # Create the file.
+        doc.flush()
     '''
         
-    def __init__(self, uri, title, header):
+    def __init__(self, uri, title, header, style_const=BEACH_STYLE):
         self.uri = uri
-        self.title = title
-        self.header = header
-        self.body = ''
-        self.style = ''
-        self.id_counter = 0
-        self.has_toc = False
-        self.toc = collections.OrderedDict()
 
-    def set_style(self, style_const):
-        self.style = _get_style_css(style_const)
+        self.html_elem = Element('html')
 
-    def insert_table_of_contents(self):
-        if self.has_toc:
-            raise Exception('This page already has a table of contents.')
-        self.body += _TOC_MARKER
-        self.has_toc = True
+        head = self.html_elem.add(Element('head'))
+        head.add(Element('title', title))
+        head.add(Element('style', _get_style_css(style_const), type='text/css'))
+
+        self.body = self.html_elem.add(Element('body'))
+        self.body.add(Element('h1', ('<center>%s</center>' % header)))
+
+        self.id_counter = 0  # keep track of allocated IDs
+        self.headers = collections.OrderedDict()
+
+    def add(self, elem):
+        '''Add an arbitrary element to the body of the document.
+
+        elem - any object that has a method html() to output HTML markup
+
+        Return the added element for convenience.
+        '''
+        return self.body.add(elem)
+
+    def insert_table_of_contents(self, max_header_level=2):
+        '''Insert an auto-generated table of contents.
+
+        The table of contents is based on the headers in the document.
+        '''
+        self.body.add(_TableOfContents(self.headers, max_header_level))
 
     def write_header(self, text, level=2):
+        '''Convenience method to write a header.'''
         elem_id = 'id_%d' % self.id_counter
         self.id_counter += 1
-        self.body += _elem(('h%d' % level), text, 'id="%s"' % elem_id)
-        self.toc[elem_id] = text
+        self.body.add(Element(('h%d' % level), text, id=elem_id))
+        self.headers[elem_id] = (level, text)
 
     def write_paragraph(self, text):
-        self.body += _elem('p', text)
-
-    def start_table(self):
-        self.body += '<table>'
-
-    def end_table(self):
-        self.body += '</table>'
-
-    def write_row(self, cells, is_header=False):
-        self.body += '<tr>'
-        cell_tag = 'th' if is_header else 'td'
-        for cell in cells:
-            self.body += '<%s>%s</%s>' % (cell_tag, str(cell), cell_tag)
-        self.body += '</tr>'
-
-    def add_image(self, src):
-        self.body += ('<img src="%s">' % src)
-
-    def start_collapsible_element(self, summary_content=None):
-        self.body += '<details>'
-        if summary_content:
-            self.body += _elem('summary', summary_content)
-
-    def end_collapsible_element(self):
-        self.body += '</details>'
+        '''Convenience method to write a paragraph.'''
+        self.body.add(Element('p', text))
 
     def flush(self):
-        '''Creates and writes to an HTML file.'''
+        '''Create a file with the contents of this document.'''
         f = open(self.uri, 'w')
-
-        def write_elem(tag, text, attr=''):
-            if attr:
-                attr = ' ' + attr
-            f.write('<%s%s>%s</%s>' % (tag, attr, text, tag))
-
-        f.write('<html>')
-
-        f.write('<head>')
-        write_elem('title', self.title)
-        if self.style:
-            write_elem('style', self.style, 'type="text/css"')
-        f.write('</head>')
-
-        f.write('<body>')
-        f.write('<center><h1>%s</h1></center>' % self.header)
-        if self.has_toc:
-            self.body = re.sub(_TOC_MARKER, self._make_toc(), self.body)
-        f.write(self.body)
-        f.write('</body>')
-        f.write('</html>')
-
+        f.write(self.html_elem.html())
         f.close()
 
-    def _make_toc(self):
-        '''Returns the HTML to generate the Table of Contents for the page.'''
-        toc_html = ''
-        toc_html += _elem('h2', 'Table of Contents')
-        toc_html += '<ul>'
-        for elem_id, text in self.toc.items():
-            toc_html += '<li>'
-            toc_html += _elem('a', text, 'href="#%s"' % elem_id)
-            toc_html += '</li>'
-        toc_html += '</ul>'
-        return toc_html
 
-def _elem(tag, content, attr=''):
-    if attr:
-        attr = ' ' + attr
-    return ('<%s%s>%s</%s>' % (tag, attr, content, tag))
+class Element(object):
+    '''Represents a generic HTML element.
 
+    Any Element object can be passed to HTMLDocument.add()
+
+    Example:
+        doc = html.HTMLDocument(...)
+        details_elem = doc.add(html.Element('details'))
+        details_elem.add(
+            html.Element('img', src='images/my_pic.png', end_tag=False))
+    '''
+    def __init__(self, tag, content='', end_tag=True, **attr):
+        self.tag = tag
+        self.content = content
+        self.end_tag = end_tag
+        if attr:
+            self.attr_str = ' ' + ' '.join(
+                '%s="%s"' % (key, val) for key, val in attr.items())
+        else:
+            self.attr_str = ''
+        self.elems = []
+
+    def add(self, elem):
+        self.elems.append(elem)
+        return elem
+
+    def html(self):
+        html_str = '<%s%s>%s' % (self.tag, self.attr_str, self.content)
+        for elem in self.elems:
+            html_str += elem.html()
+        if self.end_tag:
+            html_str += ('</%s>' % self.tag)
+        return html_str
+
+
+class Table(object):
+    '''Represents and renders HTML tables.'''
+
+    def __init__(self, **attr):
+        self.table_elem = Element('table', **attr)
+
+    def add_row(self, cells, is_header=False, cell_attr=[]):
+        '''Writes a table row with the given cell data.
+
+        cell_attr - attributes for each cell. If provided, it must be the 
+            same length as cells. Each entry should be a dictionary mapping
+            attribute key to value.
+        '''
+        row = Element('tr')
+        cell_tag = 'th' if is_header else 'td'
+        for i, cell in enumerate(cells):
+            attr = cell_attr[i] if cell_attr else {}
+            row.add(Element(cell_tag, str(cell), **attr))
+        self.table_elem.add(row)
+
+    def html(self):
+        return self.table_elem.html()
+
+class _TableOfContents(object):
+    '''Represents a Table of Contents for the document.'''
+
+    def __init__(self, headers, max_header_level):
+        self.headers = headers
+        self.max_header_level = max_header_level
+
+    def html(self):
+        # Generate a header.
+        header = Element('h2', 'Table of Contents')
+
+        # Generate a list with links to each major header.
+        link_list = Element('ul')
+        for elem_id, (level, text) in self.headers.items():
+            if level > self.max_header_level:
+                continue
+            list_elem = Element('li')
+            list_elem.add(Element('a', text, href=('#%s' % elem_id)))
+            link_list.add(list_elem)
+
+        return header.html() + link_list.html()
 
 def _get_style_css(style_const):
     if style_const == BEACH_STYLE:
@@ -125,7 +163,7 @@ def _get_style_css(style_const):
           background-color: #EFECCA;
           color: #002F2F
       }
-      h1, h2, h3, strong, th {
+      h1, h2, h3, h4, strong, th {
           color: #046380;
       }
       h2 {

@@ -11,6 +11,7 @@ from nose.plugins.skip import SkipTest
 from invest_natcap.carbon import carbon_biophysical
 from invest_natcap.carbon import carbon_valuation
 import invest_test_core
+import html_utils
 
 
 class TestCarbonBiophysical(unittest.TestCase):
@@ -170,33 +171,6 @@ class TestCarbonBiophysical(unittest.TestCase):
 
             carbon_valuation.execute(args)
 
-        def assertSummaryContainsRow(row_title, first_val, second_val):
-            '''Asserts that the HTML summary file contains the given row.'''
-            filename = os.path.join(workspace_dir, 'output', 'summary.html')
-            summary = open(filename, 'r').read()
-            rows = re.split(r'<tr>|</tr>', summary)
-            row_title_cell = '<td>%s</td>' % row_title
-            for row in rows:
-                # Check if this is the row we're looking for.
-                if row_title_cell in row:
-                    # Split the row into its cells
-                    cells = row.split('<td>')
-                    
-                    # Strip off the '<td>' and '<tr>' artifacts from the strings
-                    cells = map(lambda cell: re.sub(r'<[^>]*>', '', cell), cells)
-
-                    # Make sure each cell contains what we expect.
-                    self.assertEqual('', cells[0])
-                    self.assertEqual(row_title, cells[1])
-                    self.assertAlmostEqual(first_val, float(cells[2]), places=1)
-                    self.assertAlmostEqual(second_val, float(cells[3]), places=1)
-                    return
-
-            # If the right row wasn't found in the summary file, then fail.
-            self.fail('Row with title \'%s\' not found in the HTML summary file.' 
-                      % row_title)
-
-
         execute_model()
         self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_base.tif')
 
@@ -208,8 +182,12 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  ('value_seq.tif', 'value_seq_base.tif'),
                                  ('val_mask.tif', 'val_mask_base.tif'),
                                  ('seq_mask.tif', 'seq_mask_base.tif'))
-        assertSummaryContainsRow('Baseline', -3526095.89057, -67106273.81)
-        assertSummaryContainsRow('Baseline (confident cells only)', -3530157.48653, -67183571.67)
+
+        summary_uri = os.path.join(workspace_dir, 'output', 'summary.html')
+        html_utils.assert_table_contains_rows_uri(
+            self, summary_uri, 'change_table',
+            [['Baseline', -3526095.89057, -67106273.81],
+             ['Baseline (confident cells only)', -3530157.48653, -67183571.67]])
 
         execute_model(use_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir, 
@@ -219,9 +197,18 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  'value_seq_redd.tif',
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
-        assertSummaryContainsRow('REDD policy', 100847.723038, 1919265.76)
-        assertSummaryContainsRow('REDD policy (confident cells only)',
-                                 100847.723038, 1919265.76)
-        assertSummaryContainsRow('REDD policy vs Baseline',
-                                 3626943.61361, 69025539.56)
+
+        html_utils.assert_table_contains_rows_uri(
+            self, summary_uri, 'change_table',
+            [['Baseline', -3526095.89057, -67106273.81],
+             ['Baseline (confident cells only)', -3530157.48653, -67183571.67],
+             ['REDD policy', 100847.723038, 1919265.76],
+             ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
+
+        html_utils.assert_table_contains_rows_uri(
+            self, summary_uri, 'comparison_table',
+            [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
+             ['REDD policy vs Baseline (confident cells only)',
+              3631005.20957, 69102837.43]])
+
 
