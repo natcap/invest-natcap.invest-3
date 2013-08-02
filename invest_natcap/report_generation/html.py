@@ -1,19 +1,26 @@
 import collections
-import re
 
-BEACH_STYLE = 0
+BEACH_STYLE = 0  # constant to select a nice beach (tan and blue) palette
 
 class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
 
-    Usage:
-        writer = html.HTMLWriter('myfile.html', 'My Page', 'A Page About Me')
-        writer.set_style(html.BEACH_STYLE)
-        writer.write_section_header('My Early Life')
-        writer.write_paragraph('I lived in a small barn.')
-        writer.write_section_header('My Later Life')
-        writer.write_paragraph('I lived in a bigger barn.')
-        writer.flush()
+    Basic usage:
+        doc = html.HTMLDocument('myfile.html', 'My Page', 'A Page About Me')
+        doc.write_header('My Early Life')
+        doc.write_paragraph('I lived in a small barn.')
+        doc.write_header('My Later Life')
+        doc.write_paragraph('I lived in a bigger barn.')
+        doc.flush()
+
+    To add a table:
+        table = doc.add(html.Table())
+        table.add_row(['Velocity', 'Height'], is_header=True)
+        table.add_row([0.4, 0.3])
+
+    To add an arbitrary HTML element:
+        doc.add(html.Element('img', src='images/my_pic.jpg', end_tag=False))
+    (Note that the HTML 'img' element doesn't have an end tag)
 
     Once writing is complete, flush() must be called in order to
     actually create the file.
@@ -24,32 +31,31 @@ class HTMLDocument(object):
 
         self.html_elem = Element('html')
 
-        head = Element('head')
+        head = self.html_elem.add(Element('head'))
         head.add(Element('title', title))
         head.add(Element('style', _get_style_css(style_const), type='text/css'))
-        self.html_elem.add(head)
 
-        self.body = Element('body')
+        self.body = self.html_elem.add(Element('body'))
         self.body.add(Element('h1', ('<center>%s</center>' % header)))
-        self.html_elem.add(self.body)
 
         self.id_counter = 0
-        self.toc = collections.OrderedDict()
+        self.headers = collections.OrderedDict()
 
     def add(self, elem):
-        self.body.add(elem)
-        return elem
+        return self.body.add(elem)
 
     def insert_table_of_contents(self, max_header_level=2):
-        self.body.add(TableOfContents(self.toc, max_header_level))
+        self.body.add(_TableOfContents(self.headers, max_header_level))
 
     def write_header(self, text, level=2):
+        '''Convenience method to write a header.'''
         elem_id = 'id_%d' % self.id_counter
         self.id_counter += 1
         self.body.add(Element(('h%d' % level), text, id=elem_id))
-        self.toc[elem_id] = (level, text)
+        self.headers[elem_id] = (level, text)
 
     def write_paragraph(self, text):
+        '''Convenience method to write a paragraph.'''
         self.body.add(Element('p', text))
 
     def flush(self):
@@ -57,24 +63,6 @@ class HTMLDocument(object):
         f = open(self.uri, 'w')
         f.write(self.html_elem.html())
         f.close()
-
-class TableOfContents(object):
-    def __init__(self, toc, max_header_level):
-        self.toc = toc
-        self.max_header_level = max_header_level
-
-    def html(self):
-        header = Element('h2', 'Table of Contents')
-
-        link_list = Element('ul')
-        for elem_id, (level, text) in self.toc.items():
-            if level > self.max_header_level:
-                continue
-            list_elem = Element('li')
-            list_elem.add(Element('a', text, href=('#%s' % elem_id)))
-            link_list.add(list_elem)
-
-        return header.html() + link_list.html()
 
 class Element(object):
     def __init__(self, tag, content='', end_tag=True, **attr):
@@ -101,6 +89,8 @@ class Element(object):
         return html_str
 
 class Table(object):
+    '''Represents and renders HTML tables.'''
+
     def __init__(self):
         self.table_elem = Element('table')
 
@@ -120,6 +110,26 @@ class Table(object):
 
     def html(self):
         return self.table_elem.html()
+
+class _TableOfContents(object):
+    '''Represents a Table of Contents for the document.'''
+
+    def __init__(self, headers, max_header_level):
+        self.headers = headers
+        self.max_header_level = max_header_level
+
+    def html(self):
+        header = Element('h2', 'Table of Contents')
+
+        link_list = Element('ul')
+        for elem_id, (level, text) in self.headers.items():
+            if level > self.max_header_level:
+                continue
+            list_elem = Element('li')
+            list_elem.add(Element('a', text, href=('#%s' % elem_id)))
+            link_list.add(list_elem)
+
+        return header.html() + link_list.html()
 
 def _get_style_css(style_const):
     if style_const == BEACH_STYLE:
