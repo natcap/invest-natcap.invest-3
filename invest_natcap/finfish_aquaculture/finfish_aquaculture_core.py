@@ -572,27 +572,26 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     html_uri = os.path.join(output_dir, 
                             ("Harvest_Results_[%s].html" % 
                              datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")))
-    writer = html.HTMLWriter(html_uri, 'Marine InVEST', 
-                             'Aquaculture Model (Finfish Harvest)')
-    writer.set_style(html.BEACH_STYLE)
+    doc = html.HTMLDocument(html_uri, 'Marine InVEST', 
+                            'Aquaculture Model (Finfish Harvest)')
 
-    writer.write_paragraph(
+    doc.write_paragraph(
         'This page contains results from running the Marine InVEST Finfish '
         'Aquaculture model.')
 
-    writer.insert_table_of_contents()
+    doc.insert_table_of_contents()
 
-    writer.write_header('Farm Operations (input)')
+    doc.write_header('Farm Operations (input)')
 
-    writer.start_table()    
-    str_headers = ['Farm ID Number',
-                   'Weight of Fish at Start (kg)',
-                   'Weight of Fish at Harvest (kg)',
-                   'Number of Fish in Farm',
-                   'Start Day for Growing (1-365)',
-                   'Length of Fallowing Period (days)'
-                   ]
-    writer.write_row(str_headers, is_header=True)
+    ops_table = doc.add(html.Table())
+    ops_table.add_row(['Farm ID Number',
+                       'Weight of Fish at Start (kg)',
+                       'Weight of Fish at Harvest (kg)',
+                       'Number of Fish in Farm',
+                       'Start Day for Growing (1-365)',
+                       'Length of Fallowing Period (days)'
+                       ],
+                      is_header=True)
 
     for farm_id in cycle_history:
         farm_id = str(farm_id)
@@ -603,21 +602,20 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                            'start day for growing',
                            'Length of Fallowing period']:
             cells.append(farm_op_dict[farm_id][column_key])
-        writer.write_row(cells)
+        ops_table.add_row(cells)
 
-    writer.end_table()
+    doc.write_header('Farm Harvesting (output)')
+    harvest_table = doc.add(html.Table())
 
-    writer.write_header('Farm Harvesting (output)')
-    writer.start_table()                         
-    str_headers = ['Farm ID Number', 'Cycle Number', 
-                   'Days Since Outplanting Date (Including Fallowing Period)', 
-                   'Length of Given Cycle',
-                   'Harvested Weight After Processing (kg/cycle)', 
-                   'Net Revenue (Thousands of $)',
-                   'Net Present Value (Thousands of $)', 
-                   'Outplant Day (Julian Day)',
-                   'Outplant Year']
-    writer.write_row(str_headers, is_header=True)
+    harvest_table.add_row(['Farm ID Number', 'Cycle Number', 
+                 'Days Since Outplanting Date (Including Fallowing Period)', 
+                 'Length of Given Cycle',
+                 'Harvested Weight After Processing (kg/cycle)', 
+                 'Net Revenue (Thousands of $)',
+                 'Net Present Value (Thousands of $)', 
+                 'Outplant Day (Julian Day)',
+                 'Outplant Year'],
+                is_header=True)
 
     for farm_id in cycle_history:
         for cycle in range(0, len(cycle_history[farm_id])):        
@@ -644,23 +642,20 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     
             cells = [farm_id, cycle_num, harvest_date, cycle_length, harvest_weight, 
                      indiv_rev, indiv_npv, out_day, out_year]
-            writer.write_row(cells)
+            harvest_table.add_row(cells)
 
-    writer.end_table()
+    doc.write_header('Farm Result Totals (output)')
 
-    writer.write_header('Farm Result Totals (output)')
-
-    writer.write_paragraph(
+    doc.write_paragraph(
         'All values in the following table were also populated in the attribute '
         'table of the netpens feature class.')
 
-    writer.start_table()
-    
-    str_headers = ['Farm ID Number', 
-                   'Net Present Value (Thousands of $) (For Duration of Model Run)', 
-                   'Number of Completed Harvest Cycles', 
-                   'Total Volume Harvested (kg)(After Processing Occurs)']
-    writer.write_row(str_headers, is_header=True)
+    totals_table = doc.add(html.Table())
+    totals_table.add_row(['Farm ID Number', 
+                          'Net Present Value (Thousands of $) (For Duration of Model Run)', 
+                          'Number of Completed Harvest Cycles', 
+                          'Total Volume Harvested (kg)(After Processing Occurs)'],
+                         is_header=True)
 
     for farm_id in cycle_history:
         if do_valuation: 
@@ -672,14 +667,12 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         total_harvested = round(sum_hrv_weight[farm_id], 4)
 
         cells = [farm_id, npv, num_cy_complete, total_harvested]
-        writer.write_row(cells)        
-
-    writer.end_table()
+        totals_table.add_row(cells)        
 
     if histogram_paths:
-        writer.write_header('Uncertainty Analysis Results')
+        doc.write_header('Uncertainty Analysis Results')
 
-        writer.write_paragraph(
+        doc.write_paragraph(
             'These results were obtained by running a Monte Carlo simulation. '
             'For each run of the simulation, each growth parameter was randomly '
             'sampled according to the provided normal distribution. '
@@ -687,28 +680,28 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             'values for the growth parameters.' % NUM_MONTE_CARLO_RUNS)
 
         # Write a table with numerical results.
-        writer.write_header('Numerical Results', level=3)
-        writer.write_paragraph(
+        doc.write_header('Numerical Results', level=3)
+        doc.write_paragraph(
             'This table summarizes the mean and standard deviation for '
             'total harvested weight (after processing) and for total '
             'net present value. The mean and standard deviation were '
             'computed for results across all runs of the Monte Carlo '
             'simulation.')
 
-        writer.start_table()
-        writer.write_row(['', 'Harvested weight after processing (kg)',
-                          'Net present value (thousands of USD)'],
-                         is_header=True,
-                         cell_attr=[{}, {'colspan': 2}, {'colspan': 2}])
-        writer.write_row(['Farm ID', 'Mean', 'Standard Deviation', 
-                          'Mean', 'Standard Deviation'], is_header=True)
+        uncertainty_table = doc.add(html.Table())
+        uncertainty_table.add_row(['', 'Harvested weight after processing (kg)',
+                                   'Net present value (thousands of USD)'],
+                                  is_header=True,
+                                  cell_attr=[{}, {'colspan': 2}, {'colspan': 2}])
+        uncertainty_table.add_row(['Farm ID', 'Mean', 'Standard Deviation', 
+                                   'Mean', 'Standard Deviation'], is_header=True)
 
         for key in uncertainty_stats:
             if key == 'aggregate':
                 farm_title = 'Total (all farms)'
             else:
                 farm_title = 'Farm %s' % str(key)
-            writer.write_row([
+            uncertainty_table.add_row([
                     farm_title,
                     uncertainty_stats[key]['weight'][0],
                     uncertainty_stats[key]['weight'][1],
@@ -716,16 +709,14 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                     uncertainty_stats[key]['value'][1]
                     ])
 
-        writer.end_table()
-
         # Display a bunch of histograms.
-        writer.write_header('Histograms', level=3)
-        writer.write_paragraph(
+        doc.write_header('Histograms', level=3)
+        doc.write_paragraph(
             'The following histograms display the probability of different outcomes. '
             'The height of each vertical bar in the histograms represents the '
             'probability of the outcome marked by the position of the bar on '
             'the horizontal axis of the histogram.')
-        writer.write_paragraph(
+        doc.write_paragraph(
             'Included are histograms for total results across all farms, as well as '
             'results for each individual farm.')
         for key, paths in histogram_paths.items():
@@ -733,14 +724,9 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                 title = 'Histograms for total results (all farms)'
             else:
                 title = 'Histograms for farm %s' % str(key)
-            writer.write_header(title, level=4)
-            writer.start_collapsible_element()                
-
-            # Display the histogram.
+            doc.write_header(title, level=4)
+            collapsible_elem = doc.add(html.Element('details'))
             for histogram_type, path in paths.items():
-                writer.add_image(path)
-            writer.end_collapsible_element()
+                collapsible_elem.add(html.Element('img', src=path, end_tag=False))
 
-        
-
-    writer.flush()
+    doc.flush()

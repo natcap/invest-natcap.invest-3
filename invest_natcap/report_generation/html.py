@@ -3,9 +3,7 @@ import re
 
 BEACH_STYLE = 0
 
-_TOC_MARKER = '<---TOC MARKER--->'
-
-class HTMLWriter(object):
+class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
 
     Usage:
@@ -21,110 +19,107 @@ class HTMLWriter(object):
     actually create the file.
     '''
         
-    def __init__(self, uri, title, header):
+    def __init__(self, uri, title, header, style_const=BEACH_STYLE):
         self.uri = uri
-        self.title = title
-        self.header = header
-        self.body = ''
-        self.style = ''
+
+        self.html_elem = Element('html')
+
+        head = Element('head')
+        head.add(Element('title', title))
+        head.add(Element('style', _get_style_css(style_const), type='text/css'))
+        self.html_elem.add(head)
+
+        self.body = Element('body')
+        self.body.add(Element('h1', ('<center>%s</center>' % header)))
+        self.html_elem.add(self.body)
+
         self.id_counter = 0
-        self.has_toc = False
         self.toc = collections.OrderedDict()
 
-    def set_style(self, style_const):
-        self.style = _get_style_css(style_const)
+    def add(self, elem):
+        self.body.add(elem)
+        return elem
 
     def insert_table_of_contents(self, max_header_level=2):
-        if self.has_toc:
-            raise Exception('This page already has a table of contents.')
-        self.body += _TOC_MARKER
-        self.has_toc = True
-        self.toc_max_header_level = max_header_level
+        self.body.add(TableOfContents(self.toc, max_header_level))
 
     def write_header(self, text, level=2):
         elem_id = 'id_%d' % self.id_counter
         self.id_counter += 1
-        self.body += _elem(('h%d' % level), text, id=elem_id)
+        self.body.add(Element(('h%d' % level), text, id=elem_id))
         self.toc[elem_id] = (level, text)
 
     def write_paragraph(self, text):
-        self.body += _elem('p', text)
+        self.body.add(Element('p', text))
 
-    def start_table(self):
-        self.body += '<table>'
+    def flush(self):
+        '''Creates and writes to an HTML file.'''
+        f = open(self.uri, 'w')
+        f.write(self.html_elem.html())
+        f.close()
 
-    def end_table(self):
-        self.body += '</table>'
+class TableOfContents(object):
+    def __init__(self, toc, max_header_level):
+        self.toc = toc
+        self.max_header_level = max_header_level
 
-    def write_row(self, cells, is_header=False, cell_attr=[]):
+    def html(self):
+        header = Element('h2', 'Table of Contents')
+
+        link_list = Element('ul')
+        for elem_id, (level, text) in self.toc.items():
+            if level > self.max_header_level:
+                continue
+            list_elem = Element('li')
+            list_elem.add(Element('a', text, href=('#%s' % elem_id)))
+            link_list.add(list_elem)
+
+        return header.html() + link_list.html()
+
+class Element(object):
+    def __init__(self, tag, content='', end_tag=True, **attr):
+        self.tag = tag
+        self.content = content
+        self.end_tag = end_tag
+        if attr:
+            self.attr_str = ' ' + ' '.join(
+                '%s="%s"' % (key, val) for key, val in attr.items())
+        else:
+            self.attr_str = ''
+        self.elems = []
+
+    def add(self, elem):
+        self.elems.append(elem)
+        return elem
+
+    def html(self):
+        html_str = '<%s%s>%s' % (self.tag, self.attr_str, self.content)
+        for elem in self.elems:
+            html_str += elem.html()
+        if self.end_tag:
+            html_str += ('</%s>' % self.tag)
+        return html_str
+
+class Table(object):
+    def __init__(self):
+        self.table_elem = Element('table')
+
+    def add_row(self, cells, is_header=False, cell_attr=[]):
         '''Writes a table row with the given cell data.
 
         cell_attr - attributes for each cell. If provided, it must be the 
             same length as cells. Each entry should be a dictionary mapping
             attribute key to value.
         '''
-        self.body += '<tr>'
+        row = Element('tr')
         cell_tag = 'th' if is_header else 'td'
         for i, cell in enumerate(cells):
             attr = cell_attr[i] if cell_attr else {}
-            self.body += _elem(cell_tag, str(cell), **attr)
-        self.body += '</tr>'
+            row.add(Element(cell_tag, str(cell), **attr))
+        self.table_elem.add(row)
 
-    def add_image(self, src):
-        self.body += ('<img src="%s">' % src)
-
-    def start_collapsible_element(self, summary_content=None):
-        self.body += '<details>'
-        if summary_content:
-            self.body += _elem('summary', summary_content)
-
-    def end_collapsible_element(self):
-        self.body += '</details>'
-
-    def flush(self):
-        '''Creates and writes to an HTML file.'''
-        f = open(self.uri, 'w')
-
-        f.write('<html>')
-
-        f.write('<head>')
-        f.write(_elem('title', self.title))
-        if self.style:
-            f.write(_elem('style', self.style, type="text/css"))
-        f.write('</head>')
-
-        f.write('<body>')
-        f.write('<center><h1>%s</h1></center>' % self.header)
-        if self.has_toc:
-            self.body = re.sub(_TOC_MARKER, self._make_toc(), self.body)
-        f.write(self.body)
-        f.write('</body>')
-        f.write('</html>')
-
-        f.close()
-
-    def _make_toc(self):
-        '''Returns the HTML to generate the Table of Contents for the page.'''
-        toc_html = ''
-        toc_html += _elem('h2', 'Table of Contents')
-        toc_html += '<ul>'
-        for elem_id, (level, text) in self.toc.items():
-            if level > self.toc_max_header_level:
-                continue
-            toc_html += '<li>'
-            toc_html += _elem('a', text, href=('#%s' % elem_id))
-            toc_html += '</li>'
-        toc_html += '</ul>'
-        return toc_html
-
-def _elem(tag, content, **attr):
-    if attr:
-        attr_str = ' ' + ' '.join(
-            '%s="%s"' % (key, val) for key, val in attr.items())
-    else:
-        attr_str = ''
-    return ('<%s%s>%s</%s>' % (tag, attr_str, content, tag))
-
+    def html(self):
+        return self.table_elem.html()
 
 def _get_style_css(style_const):
     if style_const == BEACH_STYLE:
