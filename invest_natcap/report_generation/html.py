@@ -42,6 +42,15 @@ class HTMLDocument(object):
         self.headers = collections.OrderedDict()
 
     def add(self, elem):
+        '''Add an arbitrary element to the body of the document.
+
+        Example usage:
+            table = doc.add(html.Table())
+
+        elem - should support the method html() to output HTML markup
+
+        Returns the element for convenience.
+        '''
         return self.body.add(elem)
 
     def insert_table_of_contents(self, max_header_level=2):
