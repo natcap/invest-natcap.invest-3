@@ -8,9 +8,9 @@
     "width" : 700,
     "elements": [
         {
-            "id" : "workspace_list",
+            "id" : "list_1",
             "type": "list",
-            "elements":[
+            "elements": [
                 {
                     "id" : "workspace",
                     "args_id" : "workspace_dir",
@@ -42,13 +42,6 @@
                     "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
                 },
                 {
-                    "id": "use_uncertainty",
-                    "type": "checkbox",
-                    "label": "Enable uncertainty analysis",
-                    "defaultValue": false,
-                    "required": false
-                },
-                {
                     "id" : "param_a",
                     "args_id" : "g_param_a",
                     "type": "text",
@@ -58,16 +51,6 @@
                     "validateAs": {"type": "number"},
                     "dataType": "float",
                     "helpText": "Default a  = (0.038 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
-                },
-                {
-                    "id" : "param_a_sd",
-                    "args_id" : "g_param_a_sd",
-                    "type": "text",
-                    "label": "Standard Deviation for Parameter (a)",
-                    "enabledBy": "use_uncertainty",
-                    "validateAs": {"type": "number"},
-                    "dataType": "float",
-                    "helpText": "TODO TODO TODO TODO."
                 },
 		{
                     "id" : "param_b",
@@ -79,17 +62,48 @@
                     "validateAs": {"type": "number"},
                     "dataType": "float",
                     "helpText": "Default b  = (0.6667 g/day). If the user chooses to adjust these parameters, we recommend using them in the simple growth model to determine if the time taken for a fish to reach a target harvest weight typical for the region of interest is accurate."
-                },
+                }
+            ]
+        },
+        {
+            "id": "uncertainty_data_container",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "use_uncertainty",
+            "label": "Enable uncertainty analysis",
+            "elements": [
                 {
-                    "id" : "param_b_sd",
-                    "args_id" : "g_param_b_sd",
-                    "type": "text",
-                    "label": "Standard Deviation for Parameter (b)",
-                    "enabledBy": "use_uncertainty",
-                    "validateAs": {"type": "number"},
-                    "dataType": "float",
-                    "helpText": "TODO TODO TODO TODO."
-                },
+                    "id": "uncertainty_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id" : "param_a_sd",
+                            "args_id" : "g_param_a_sd",
+                            "type": "text",
+                            "label": "Standard Deviation for Parameter (a)",
+                            "validateAs": {"type": "number"},
+                            "defaultValue": "0.005",
+                            "dataType": "float",
+                            "helpText": "Standard deviation for growth parameter a. This indicates the level of uncertainty in the estimate for parameter a."
+                        },
+                        {
+                            "id" : "param_b_sd",
+                            "args_id" : "g_param_b_sd",
+                            "type": "text",
+                            "label": "Standard Deviation for Parameter (b)",
+                            "defaultValue": "0.05",
+                            "validateAs": {"type": "number"},
+                            "dataType": "float",
+                            "helpText": "Standard deviation for growth parameter b. This indicates the level of uncertainty in the estimate for parameter b."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id" : "list_2",
+            "type": "list",
+            "elements": [
                 {
                     "id" : "water_temperature",
                     "args_id" : "water_temp_tbl",
