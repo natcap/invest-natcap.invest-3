@@ -19,7 +19,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             for out_file in os.listdir(self.output_dir):
                 os.remove(os.path.join(self.output_dir, out_file))
 
-    def get_args(self):
+    def get_args(self, use_uncertainty=False):
         args = {}
 
         # Biophysical
@@ -31,7 +31,14 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['water_temp_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
         args['farm_op_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         args['outplant_buffer'] = 3
-        args['use_uncertainty'] = False
+
+        if use_uncertainty:
+            args['use_uncertainty'] = True
+            args['g_param_a_sd'] = 0.005
+            args['g_param_b_sd'] = 0.05
+            args['num_monte_carlo_runs'] = 100
+        else:
+            args['use_uncertainty'] = False
         
         # Valuation
         args['do_valuation'] = True
@@ -85,7 +92,6 @@ class TestFinfishAquaculture(unittest.TestCase):
     def test_finfish_model(self):
         finfish_aquaculture.execute(self.get_args())
 
-        # Compare the shape file.
         self.assert_files_equal('Finfish_Harvest.shp')
 
         # Make sure there's an output HTML file.
@@ -95,6 +101,14 @@ class TestFinfishAquaculture(unittest.TestCase):
         else:
             # If we didn't break out of the for loop, then the HTML file wasn't found.
             self.fail("Didn't find a Harvest Results HTML file in the output folder.")
+
+    def test_finfish_model_with_uncertainty(self):
+        # TODO(adamperelman): seed the numpy random number generator so we 
+        # get the same results every time and can test!
+        finfish_aquaculture.execute(self.get_args(use_uncertainty=True))
+
+        self.assert_files_equal('Finfish_Harvest.shp')
+
 
 def _get_expected_temp_table():
     '''Return a formatted temperature table to compare against for testing.'''
