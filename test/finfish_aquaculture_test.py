@@ -31,6 +31,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['water_temp_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
         args['farm_op_tbl'] = './invest-data/test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         args['outplant_buffer'] = 3
+        args['use_uncertainty'] = False
         
         # Valuation
         args['do_valuation'] = True

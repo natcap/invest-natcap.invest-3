@@ -20,7 +20,6 @@ LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-NUM_MONTE_CARLO_RUNS = 200  # TODO set this to 1000 for production
 NUM_HISTOGRAM_BINS = 30
 
 def execute(args):
@@ -157,10 +156,9 @@ def execute(args):
     else:
         histogram_paths, uncertainty_stats = {}, {}
         
-    create_HTML_table(output_dir, args['farm_op_dict'], 
-                      cycle_history, sum_hrv_weight, hrv_weight, 
-                      args['do_valuation'], farms_npv, value_history,
-                      histogram_paths, uncertainty_stats)
+    create_HTML_table(
+        output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
+        value_history, histogram_paths, uncertainty_stats)
     
 def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
@@ -391,8 +389,8 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     total_weight_results = [] # list of total weight (one entry per run)
     total_value_results = [] # list of net present values (one entry per run)
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
-                % NUM_MONTE_CARLO_RUNS)
-    for i in range(NUM_MONTE_CARLO_RUNS):
+                % args['num_monte_carlo_runs'])
+    for i in range(args['num_monte_carlo_runs']):
         if i > 0 and i % 100 == 0:
             LOGGER.info('Done with %d runs.' % i)
 
@@ -534,9 +532,9 @@ def make_histograms(data_collection, output_dir, name, xlabel,
         make_histogram(relpath, data_collection, make_plot_title())
         return relpath
 
-def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
-                      hrv_weight, do_valuation, farms_npv, value_history,
-                      histogram_paths, uncertainty_stats):
+def create_HTML_table(
+    output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, 
+    farms_npv, value_history, histogram_paths, uncertainty_stats):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
@@ -601,7 +599,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                            'number of fish in farm',
                            'start day for growing',
                            'Length of Fallowing period']:
-            cells.append(farm_op_dict[farm_id][column_key])
+            cells.append(args['farm_op_dict'][farm_id][column_key])
         ops_table.add_row(cells)
 
     doc.write_header('Farm Harvesting (output)')
@@ -632,7 +630,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
             
-            if do_valuation:
+            if args['do_valuation']:
                 # Revenue and NPV should be in thousands of dollars.
                 indiv_rev, indiv_npv = value_history[farm_id][cycle]
                 indiv_rev /= 1000.0
@@ -658,7 +656,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                          is_header=True)
 
     for farm_id in cycle_history:
-        if do_valuation: 
+        if args['do_valuation']: 
             npv = round(farms_npv[farm_id], 4)
         else:
             npv = '(no valuation)'
@@ -677,7 +675,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             'For each run of the simulation, each growth parameter was randomly '
             'sampled according to the provided normal distribution. '
             'The simulation involved %d runs of the model, each with different '
-            'values for the growth parameters.' % NUM_MONTE_CARLO_RUNS)
+            'values for the growth parameters.' % args['num_monte_carlo_runs'])
 
         # Write a table with numerical results.
         doc.write_header('Numerical Results', level=3)

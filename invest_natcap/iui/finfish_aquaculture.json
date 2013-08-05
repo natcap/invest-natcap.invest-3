@@ -95,6 +95,16 @@
                             "validateAs": {"type": "number"},
                             "dataType": "float",
                             "helpText": "Standard deviation for growth parameter b. This indicates the level of uncertainty in the estimate for parameter b."
+                        },
+                        {
+                            "id": "num_monte_carlo_runs",
+                            "args_id": "num_monte_carlo_runs",
+                            "type": "text",
+                            "label": "Number of Monte Carlo simulation runs",
+                            "validateAs": {"type": "number"},
+                            "defaultValue": "1000",
+                            "dataType": "int",
+                            "helpText": "Number of runs of the model to perform as part of a Monte Carlo simulation. A larger number will tend to produce more consistent and reliable output, but will also take longer to run."
                         }
                     ]
                 }
