@@ -387,7 +387,9 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
 
     # Aggregate data (across all farms) to collect.
     total_weight_results = [] # list of total weight (one entry per run)
-    total_value_results = [] # list of net present values (one entry per run)
+
+    if args['do_valuation']:
+        total_value_results = [] # list of net present values (one entry per run)
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
                 % args['num_monte_carlo_runs'])
     for i in range(args['num_monte_carlo_runs']):
@@ -405,22 +407,27 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
             cycle_history)
 
         # Compute valuation data.
-        _, farms_npv = valuation(
-            args['p_per_kg'], args['frac_p'], args['discount'],
-            hrv_weight_per_cycle, cycle_history)
+        if args['do_valuation']:
+            _, farms_npv = valuation(
+                args['p_per_kg'], args['frac_p'], args['discount'],
+                hrv_weight_per_cycle, cycle_history)
 
         # Update our collections of results.
         total_weight_results.append(sum(sum_hrv_weight.values()))
-        total_value_results.append(sum(farms_npv.values()))
+        if args['do_valuation']:
+            total_value_results.append(sum(farms_npv.values()))
+
         for farm, hrv_weight in sum_hrv_weight.items():
             try:
                 hrv_weight_results[farm].append(hrv_weight)
                 num_cycle_results[farm].append(len(cycle_history[farm]))
-                valuation_results[farm].append(farms_npv[farm])
+                if args['do_valuation']:
+                    valuation_results[farm].append(farms_npv[farm])
             except KeyError:
                 hrv_weight_results[farm] = [hrv_weight]
                 num_cycle_results[farm] = [len(cycle_history[farm])]
-                valuation_results[farm] = [farms_npv[farm]]
+                if args['do_valuation']:
+                    valuation_results[farm] = [farms_npv[farm]]
 
     LOGGER.info('Monte Carlo simulation complete.')
 
@@ -428,11 +435,20 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     uncertainty_stats = collections.OrderedDict()
     uncertainty_stats['aggregate'] = {}
     uncertainty_stats['aggregate']['weight'] = norm.fit(total_weight_results)
-    uncertainty_stats['aggregate']['value'] = norm.fit(total_value_results)
+
+    if args['do_valuation']:
+        uncertainty_stats['aggregate']['value'] = norm.fit(total_value_results)
+    else:
+        uncertainty_stats['aggregate']['value'] = ('(no valuation)', '(no valuation)')
+
     for farm in hrv_weight_results:
         uncertainty_stats[farm] = {}
         uncertainty_stats[farm]['weight'] = norm.fit(hrv_weight_results[farm])
-        uncertainty_stats[farm]['value'] = norm.fit(valuation_results[farm])
+        if args['do_valuation']:
+            uncertainty_stats[farm]['value'] = norm.fit(valuation_results[farm])
+        else:
+            uncertainty_stats[farm]['value'] = ('(no valuation)', '(no valuation)')
+            
 
     LOGGER.info('Creating histograms.')
     histogram_paths = collections.OrderedDict()
@@ -444,10 +460,11 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
         'Total harvested weight after processing (kg)',
         'Total harvested weight', per_farm=False)
 
-    histogram_paths['aggregate']['value'] = make_histograms(
-        total_value_results, output_dir, 'value',
-        'Total net present value (in thousands of USD)',
-        'Total net present value', per_farm=False)
+    if args['do_valuation']:
+        histogram_paths['aggregate']['value'] = make_histograms(
+            total_value_results, output_dir, 'value',
+            'Total net present value (in thousands of USD)',
+            'Total net present value', per_farm=False)
 
     # Make per-farm histograms and store the paths.
     weight_histogram_paths = make_histograms(
@@ -455,10 +472,11 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
         'Total harvested weight after processing (kg)',
         'Total harvested weight')
 
-    value_histogram_paths = make_histograms(
-        valuation_results, output_dir, 'value',
-        'Total net present value (in thousands of USD)',
-        'Total net present value')
+    if args['do_valuation']:
+        value_histogram_paths = make_histograms(
+            valuation_results, output_dir, 'value',
+            'Total net present value (in thousands of USD)',
+            'Total net present value')
 
     cycle_histogram_paths = make_histograms(
         num_cycle_results, output_dir, 'num_cycles',
@@ -467,9 +485,10 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     for farm_id in weight_histogram_paths:
         histogram_paths[farm_id] = {
             'weight': weight_histogram_paths[farm_id],
-            'value': value_histogram_paths[farm_id],
             'cycles': cycle_histogram_paths[farm_id]
             }
+        if args['do_valuation']:
+            histogram_paths[farm_id]['value'] = value_histogram_paths[farm_id]
 
     LOGGER.info('Done with uncertainty analysis.')
     return histogram_paths, uncertainty_stats
