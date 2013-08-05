@@ -600,7 +600,7 @@ def create_HTML_table(
 
     doc.write_header('Farm Operations (input)')
 
-    ops_table = doc.add(html.Table())
+    ops_table = doc.add(html.Table(id='farm_ops_table'))
     ops_table.add_row(['Farm ID Number',
                        'Weight of Fish at Start (kg)',
                        'Weight of Fish at Harvest (kg)',
@@ -622,7 +622,7 @@ def create_HTML_table(
         ops_table.add_row(cells)
 
     doc.write_header('Farm Harvesting (output)')
-    harvest_table = doc.add(html.Table())
+    harvest_table = doc.add(html.Table(id='harvest_table'))
 
     harvest_table.add_row(['Farm ID Number', 'Cycle Number', 
                  'Days Since Outplanting Date (Including Fallowing Period)', 
@@ -667,7 +667,7 @@ def create_HTML_table(
         'All values in the following table were also populated in the attribute '
         'table of the netpens feature class.')
 
-    totals_table = doc.add(html.Table())
+    totals_table = doc.add(html.Table(id='totals_table'))
     totals_table.add_row(['Farm ID Number', 
                           'Net Present Value (Thousands of $) (For Duration of Model Run)', 
                           'Number of Completed Harvest Cycles', 
@@ -705,7 +705,7 @@ def create_HTML_table(
             'computed for results across all runs of the Monte Carlo '
             'simulation.')
 
-        uncertainty_table = doc.add(html.Table())
+        uncertainty_table = doc.add(html.Table(id='uncertainty_table'))
         uncertainty_table.add_row(['', 'Harvested weight after processing (kg)',
                                    'Net present value (thousands of USD)'],
                                   is_header=True,
