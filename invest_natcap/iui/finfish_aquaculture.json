@@ -25,7 +25,7 @@
                     "id" : "farm_location",
                     "args_id" : "ff_farm_loc",
                     "type": "file",
-                    "label": "Finfish Farm Location",
+                    "label": "Finfish farm location",
                     "defaultValue": "../Aquaculture/Input/Finfish_Netpens.shp",
                     "required": true,
                     "validateAs": {"type": "OGR"},
@@ -36,7 +36,7 @@
                     "args_id" : "farm_ID",
                     "type": "OGRFieldDropdown",
                     "enabledBy": "farm_location",
-                    "label": "Farm Identifier Name",
+                    "label": "Farm identifier name",
                     "defaultValue": "FarmID",
                     "required": true,
                     "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
@@ -45,7 +45,7 @@
                     "id" : "param_a",
                     "args_id" : "g_param_a",
                     "type": "text",
-                    "label": "Fish Growth Parameter (a)",
+                    "label": "Fish growth parameter (a)",
                     "defaultValue": "0.038",
                     "required": true,
                     "validateAs": {"type": "number"},
@@ -56,7 +56,7 @@
                     "id" : "param_b",
                     "args_id" : "g_param_b",
                     "type": "text",
-                    "label": "Fish Growth Parameter (b)",
+                    "label": "Fish growth parameter (b)",
                     "defaultValue": "0.6667",
                     "required": true,
                     "validateAs": {"type": "number"},
@@ -80,21 +80,21 @@
                             "id" : "param_a_sd",
                             "args_id" : "g_param_a_sd",
                             "type": "text",
-                            "label": "Standard Deviation for Parameter (a)",
+                            "label": "Standard deviation for parameter (a)",
                             "validateAs": {"type": "number"},
                             "defaultValue": "0.005",
                             "dataType": "float",
-                            "helpText": "Standard deviation for growth parameter a. This indicates the level of uncertainty in the estimate for parameter a."
+                            "helpText": "Standard deviation for fish growth parameter a. This indicates the level of uncertainty in the estimate for parameter a."
                         },
                         {
                             "id" : "param_b_sd",
                             "args_id" : "g_param_b_sd",
                             "type": "text",
-                            "label": "Standard Deviation for Parameter (b)",
+                            "label": "Standard deviation for parameter (b)",
                             "defaultValue": "0.05",
                             "validateAs": {"type": "number"},
                             "dataType": "float",
-                            "helpText": "Standard deviation for growth parameter b. This indicates the level of uncertainty in the estimate for parameter b."
+                            "helpText": "Standard deviation for fish growth parameter b. This indicates the level of uncertainty in the estimate for parameter b."
                         },
                         {
                             "id": "num_monte_carlo_runs",
@@ -118,7 +118,7 @@
                     "id" : "water_temperature",
                     "args_id" : "water_temp_tbl",
                     "type": "file",
-                    "label": "Daily Water Temperature at Farm Table",
+                    "label": "Table of daily water temperature at farm",
                     "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
                     "required": true,
                     "validateAs": { "type": "CSV"},
@@ -128,7 +128,7 @@
                     "id" : "farm_operations",
                     "args_id" : "farm_op_tbl",
                     "type": "file",
-                    "label": "Farm Operations Table",
+                    "label": "Farm operations table",
                     "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
                     "required": true,
                     "validateAs": {"type": "CSV"},
@@ -138,7 +138,7 @@
                     "id" : "outplant_buffer",
                     "args_id" : "outplant_buffer",
                     "type": "text",
-                    "label": "Outplant Date Buffer",
+                    "label": "Outplant date buffer",
                     "defaultValue": "3",
                     "required": true,
                     "validateAs": {"type": "number"},
@@ -149,7 +149,7 @@
                     "id": "valuation",
                     "args_id" : "do_valuation",
                     "type": "checkbox",
-                    "label": "Run Valuation? (optional)",
+                    "label": "Run valuation? (optional)",
                     "required": true,
                     "defaultValue": false,
                     "helpText": "By checking this box, you are requesting valuation analysis."
@@ -157,7 +157,7 @@
                 {
                     "id" : "market_price",
                     "type": "text",
-                    "label": "Market Price per Kilogram of Processed Fish",
+                    "label": "Market price per kilogram of processed fish",
                     "args_id": "p_per_kg",
                     "required": false,
                     "enabledBy": "valuation",
@@ -166,11 +166,11 @@
                     "dataType": "float",
                     "validateAs": {"type": "number"},
                     "helpText": "Default value comes from Urner-Berry monthly fresh sheet reports on price of farmed Atlantic salmon."
-				},
-				{
+		},
+		{
                     "id" : "fraction_price",
                     "type": "text",
-                    "label": "Fraction of Price that Accounts to Costs",
+                    "label": "Fraction of price that accounts to costs",
                     "args_id": "frac_p",
                     "required": false,
                     "enabledBy": "valuation",
@@ -179,11 +179,11 @@
                     "dataType": "float",
                     "validateAs": {"type": "number"},
                     "helpText": "Fraction of market price that accounts for costs rather than profit. Default value is 0.3 (30%)."
-				},
-				{
+		},
+		{
                     "id" : "discount_rate",
                     "type": "text",
-                    "label": "Daily Market Discount Rate",
+                    "label": "Daily market discount rate",
                     "args_id": "discount",
                     "required": false,
                     "enabledBy": "valuation",
@@ -192,7 +192,7 @@
                     "dataType": "float",
                     "validateAs": {"type": "number"},
                     "helpText": "We use a 7% annual discount rate, adjusted to a daily rate of 0.000192 for 0.0192% (7%/365 days)."
-				}
+		}
             ]
         }
     ]
