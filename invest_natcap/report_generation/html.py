@@ -5,25 +5,26 @@ BEACH_STYLE = 0  # constant to select a nice beach (tan and blue) palette
 class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
 
-    Basic usage:
+    Example usage:
+        # Create the document object.
         doc = html.HTMLDocument('myfile.html', 'My Page', 'A Page About Me')
+
+        # Add some text.
         doc.write_header('My Early Life')
         doc.write_paragraph('I lived in a small barn.')
-        doc.write_header('My Later Life')
-        doc.write_paragraph('I lived in a bigger barn.')
-        doc.flush()
 
-    To add a table:
+        # Add a table.
         table = doc.add(html.Table())
-        table.add_row(['Velocity', 'Height'], is_header=True)
-        table.add_row([0.4, 0.3])
+        table.add_row(['Age', 'Weight'], is_header=True)
+        table.add_row(['1 year', '20 pounds'])
+        table.add_row(['2 years', '40 pounds'])
 
-    To add an arbitrary HTML element:
-        doc.add(html.Element('img', src='images/my_pic.jpg', end_tag=False))
-    (Note that the HTML 'img' element doesn't have an end tag)
+        # Add an arbitrary HTML element. 
+        # Note that the HTML 'img' element doesn't have an end tag.
+        doc.add(html.Element('img', src='images/my_pic.png', end_tag=False))
 
-    Once writing is complete, flush() must be called in order to
-    actually create the file.
+        # Create the file.
+        doc.flush()
     '''
         
     def __init__(self, uri, title, header, style_const=BEACH_STYLE):
@@ -38,22 +39,23 @@ class HTMLDocument(object):
         self.body = self.html_elem.add(Element('body'))
         self.body.add(Element('h1', ('<center>%s</center>' % header)))
 
-        self.id_counter = 0
+        self.id_counter = 0  # keep track of allocated IDs
         self.headers = collections.OrderedDict()
 
     def add(self, elem):
         '''Add an arbitrary element to the body of the document.
 
-        Example usage:
-            table = doc.add(html.Table())
+        elem - any object that has a method html() to output HTML markup
 
-        elem - should support the method html() to output HTML markup
-
-        Returns the element for convenience.
+        Return the added element for convenience.
         '''
         return self.body.add(elem)
 
     def insert_table_of_contents(self, max_header_level=2):
+        '''Insert an auto-generated table of contents.
+
+        The table of contents is based on the headers in the document.
+        '''
         self.body.add(_TableOfContents(self.headers, max_header_level))
 
     def write_header(self, text, level=2):
@@ -68,14 +70,23 @@ class HTMLDocument(object):
         self.body.add(Element('p', text))
 
     def flush(self):
-        '''Creates a file with the contents of this document.'''
+        '''Create a file with the contents of this document.'''
         f = open(self.uri, 'w')
         f.write(self.html_elem.html())
         f.close()
 
 
 class Element(object):
-    '''Represents a generic HTML element.'''
+    '''Represents a generic HTML element.
+
+    Any Element object can be passed to HTMLDocument.add()
+
+    Example:
+        doc = html.HTMLDocument(...)
+        details_elem = doc.add(html.Element('details'))
+        details_elem.add(
+            html.Element('img', src='images/my_pic.png', end_tag=False))
+    '''
     def __init__(self, tag, content='', end_tag=True, **attr):
         self.tag = tag
         self.content = content
@@ -103,8 +114,8 @@ class Element(object):
 class Table(object):
     '''Represents and renders HTML tables.'''
 
-    def __init__(self):
-        self.table_elem = Element('table')
+    def __init__(self, **attr):
+        self.table_elem = Element('table', **attr)
 
     def add_row(self, cells, is_header=False, cell_attr=[]):
         '''Writes a table row with the given cell data.
@@ -131,8 +142,10 @@ class _TableOfContents(object):
         self.max_header_level = max_header_level
 
     def html(self):
+        # Generate a header.
         header = Element('h2', 'Table of Contents')
 
+        # Generate a list with links to each major header.
         link_list = Element('ul')
         for elem_id, (level, text) in self.headers.items():
             if level > self.max_header_level:

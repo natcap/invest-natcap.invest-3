@@ -12,29 +12,72 @@ LOGGER = logging.getLogger('blue_carbon_preprocessor')
 
 def get_transition_set_from_uri(dataset_uri_list):
     transitions = set([])
-    dataset_list = []
-    for dataset in dataset_uri_list:
-        LOGGER.info("Opening: %s.", dataset)
-        dataset_list.append(gdal.Open(dataset))
 
-    n_rows = dataset_list[0].RasterYSize
-    n_cols = dataset_list[0].RasterXSize
+    def unique_pair_op(*pixel_list):
+        transitions.update(zip(pixel_list, pixel_list[1:]))
+        return 0
 
-    dataset_rows = [numpy.zeros((1, n_cols)) for _ in dataset_list]
-    for row_index in range(n_rows):
-        for dataset_index in range(len(dataset_list)):
-            dataset_list[dataset_index].ReadAsArray(
-                0, row_index, n_cols, 1, buf_obj=dataset_rows[dataset_index])
-        for pixel in dataset_rows:
-            transitions = transitions.union(zip(pixel,pixel[1:]))
-
-    dataset_list = None
-
-    LOGGER.debug("Transitions: %s.", transitions)
-
+    pixel_size = raster_utils.get_cell_size_from_uri(dataset_uri_list[0])
+    dataset_garbage_out_uri = raster_utils.temporary_filename()
+    raster_utils.vectorize_datasets(
+        dataset_uri_list, unique_pair_op, dataset_garbage_out_uri,
+        gdal.GDT_Byte, 0, pixel_size, 'intersection')
+    
     return transitions
 
 def execute(args):
-    transitions = get_transition_set_from_uri(args["lulc"])
+    transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
+    nodata = set([raster_utils.get_nodata_from_uri(uri) for uri in args["lulc"]])
 
-    LOGGER.debug("Transitions: %s.", transitions)
+    LOGGER.debug("Validating LULCs.")
+    if len(nodata) > 1:
+        msg = "The LULCs contain more than one no data value."
+        LOGGER.error(msg)
+        raise ValueError, msg
+    nodata = list(nodata)[0]
+    LOGGER.debug("No data value is %i.", nodata)
+
+    transitions = get_transition_set_from_uri(args["lulc"])
+    if (nodata, nodata) in transitions:
+        transitions.remove((nodata, nodata))
+
+    LOGGER.debug("Validating transitions.")
+    from_no_data_msg = "Transition from no data to LULC unsupported."
+    to_no_data_msg = "Transition from LULC unsupported to no data."
+    original_values = set([])
+    final_values = set([])
+    for transition in transitions:
+        original, final = transition
+
+        original_values.add(int(original))
+        final_values.add(int(final))
+        
+        if original == nodata:
+            if not final == nodata:
+                LOGGER.error(from_no_data_msg)
+                raise ValueError, from_no_data_msg
+        elif final == nodata:
+            LOGGER.error(to_no_data_msg)
+            raise ValueError, to_no_data_msg
+    transitions = set(transitions)
+
+    LOGGER.info("Creating transition matrix.")
+    original_values = list(original_values)
+    final_values = list(final_values)
+    original_values.sort()
+    final_values.sort()
+    transition_matrix = open(transition_matrix_uri, 'w')
+    transition_matrix.write(",")
+    transition_matrix.write(",".join([str(value) for value in final_values]))
+    for original in original_values:
+        transition_matrix.write("\n%i" % original)
+        for final in final_values:
+            if original == final:
+                transition_matrix.write(",1")
+            elif (original, final) in transitions:
+                transition_matrix.write(",")
+            else:
+                transition_matrix.write(",0")
+    transition_matrix.close()
+
+    LOGGER.debug("Transitions: %s" % str(transitions))
