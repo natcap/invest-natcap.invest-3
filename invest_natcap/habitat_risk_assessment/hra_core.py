@@ -1151,7 +1151,7 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
             if p != nodata:
                 value += p
     
-        return value / tot_denom
+        return value / h_s_denom
 
     raster_utils.vectorize_datasets(h_s_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
