@@ -1,7 +1,7 @@
 '''Core module for both overlap analysis and management zones. This function
 can be used by either of the secondary modules within the OA model.'''
-import glob
 import os
+import fnmatch
 
 from osgeo import ogr
 
@@ -24,7 +24,7 @@ def get_files_dict(folder):
     #them into a list. Then, each item in the list is added to a dictionary as
     #an open file with the key of it's filename without the extension, and that
     #whole dictionary is made an argument of the mz_args dictionary
-    dir_list = listdir(hra_args[ele])
+    dir_list = listdir(folder)
     file_names = []
     file_names += fnmatch.filter(dir_list, '*.shp')
     file_dict = {}
@@ -40,3 +40,18 @@ def get_files_dict(folder):
    
     return file_dict
 
+def listdir(path):
+    '''A replacement for the standar os.listdir which, instead of returning
+    only the filename, will include the entire path. This will use os as a
+    base, then just lambda transform the whole list.
+
+    Input:
+        path- The location container from which we want to gather all files.
+
+    Returns:
+        A list of full URIs contained within 'path'.
+    '''
+    file_names = os.listdir(path)
+    uris = map(lambda x: os.path.join(path, x), file_names)
+
+    return uris
