@@ -19,14 +19,14 @@ class HTMLDocument(object):
         table.add_row(['1 year', '20 pounds'])
         table.add_row(['2 years', '40 pounds'])
 
-        # Add an arbitrary HTML element. 
+        # Add an arbitrary HTML element.
         # Note that the HTML 'img' element doesn't have an end tag.
         doc.add(html.Element('img', src='images/my_pic.png', end_tag=False))
 
         # Create the file.
         doc.flush()
     '''
-        
+
     def __init__(self, uri, title, header, style_const=BEACH_STYLE):
         self.uri = uri
 
@@ -120,7 +120,7 @@ class Table(object):
     def add_row(self, cells, is_header=False, cell_attr=[]):
         '''Writes a table row with the given cell data.
 
-        cell_attr - attributes for each cell. If provided, it must be the 
+        cell_attr - attributes for each cell. If provided, it must be the
             same length as cells. Each entry should be a dictionary mapping
             attribute key to value.
         '''
@@ -171,10 +171,10 @@ def _get_style_css(style_const):
       }
       table {
           border: 5px solid #A7A37E;
-          margin-bottom: 50px; 
+          margin-bottom: 50px;
           background-color: #E6E2AF;
       }
-      td, th { 
+      td, th {
           margin-left: 0px;
           margin-right: 0px;
           padding-left: 8px;
@@ -183,7 +183,7 @@ def _get_style_css(style_const):
           padding-top: 2px;
           text-align:left;
       }
-      td { 
+      td {
           border-top: 5px solid #EFECCA;
       }
       img {

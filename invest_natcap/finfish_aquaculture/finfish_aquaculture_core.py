@@ -23,16 +23,16 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 NUM_HISTOGRAM_BINS = 30
 
 def execute(args):
-    ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
+    ''''Runs the biophysical and valuation parts of the finfish aquaculture model.
     This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles, total
-        processed weight at that farm, and if valuation is true, total discounted net 
+        processed weight at that farm, and if valuation is true, total discounted net
         revenue at each farm location.
     2. Three HTML tables summarizing all model I/O- summary of user-provided data,
         summary of each harvest cycle, and summary of the outputs/farm
     3. A .txt file that is named according to the date and time the model is run, which
         lists the values used during that run
-    
+
     Data in args should include the following:
     --Biophysical Arguments--
     args: a python dictionary containing the following data:
@@ -41,15 +41,15 @@ def execute(args):
                         fisheries
     args['farm_ID']- column heading used to describe individual farms. Used to link
                             GIS location data to later inputs.
-    args['g_param_a']- Growth parameter alpha, used in modeling fish growth, 
+    args['g_param_a']- Growth parameter alpha, used in modeling fish growth,
                             should be int or a float.
-    args['g_param_b']- Growth parameter beta, used in modeling fish growth, 
+    args['g_param_b']- Growth parameter beta, used in modeling fish growth,
                             should be int or a float.
     args['water_temp_dict']- A dictionary which links a specific date to the farm numbers,
                         and their temperature values on that day. (Note: in this case, the
-                        outer keys 1 and 2 are calendar days out of 365, starting 
+                        outer keys 1 and 2 are calendar days out of 365, starting
                         with January 1 (day 0), and the inner 1, 2, and 3 are farm numbers.)
-                           
+
                         Format: {'0': '{'1': '8.447, '2': '8.447', '3':'8.947', ...}' ,
                                  '1': '{'1': '8.406, '2': '8.406', '3':'8.906', ...}' ,
                                 .                        .                    .
@@ -59,7 +59,7 @@ def execute(args):
                         dictionary containing operating parameters mapped to their value
                         for that particular farm (Note: in this case, the 1 and 2
                         are farm ID's, not dates out of 365.)
-                        
+
                         Format: {'1': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
                                 '2': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
                                 .                        .                    .
@@ -71,23 +71,23 @@ def execute(args):
     args['duration']- duration of the simulation, in years
     args['outplant_buffer'] - This value will allow the outplant start day to be flexible
        plus or minus the number of days specified here.
-    
+
     --Valuation arguments--
     args['do_valuation']- boolean indicating whether or not to run the valuation process
     args['p_per_kg']: Market price per kilogram of processed fish
     args['frac_p']: Fraction of market price that accounts for costs rather than profit
     args['discount']: Daily market discount rate
-    
+
     returns nothing
     '''
-    
+
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-    
+
     cycle_history = calc_farm_cycles(
-        args['outplant_buffer'], args['g_param_a'], args['g_param_b'], 
+        args['outplant_buffer'], args['g_param_a'], args['g_param_b'],
         args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
 
-    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'    
+    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
     if os.path.isfile(out_path):
         # Remove so we can re-create.
         os.remove(out_path)
@@ -96,34 +96,34 @@ def execute(args):
     driver = ogr.GetDriverByName('ESRI Shapefile')
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()
-    
+
     #This adds the number of cycles completed by each farm to their shapefile feature
     cycle_field = ogr.FieldDefn('Tot_Cycles', ogr.OFTReal)
     layer.CreateField(cycle_field)
-    
+
     for feature in layer:
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
-        
+
         layer.SetFeature(feature)
-        
+
     #Now want to add the total processed weight of each farm as a second feature on the
     #outgoing shapefile- abstracting the calculation of this to a separate function,
-    #but it will return a dictionary with a int->float mapping for 
+    #but it will return a dictionary with a int->float mapping for
     #farm_ID->processed weight
-    sum_hrv_weight, hrv_weight = calc_hrv_weight(args['farm_op_dict'], 
-                            args['frac_post_process'], args['mort_rate_daily'], 
+    sum_hrv_weight, hrv_weight = calc_hrv_weight(args['farm_op_dict'],
+                            args['frac_post_process'], args['mort_rate_daily'],
                             cycle_history)
-    
+
     #have to start at the beginning of the layer to access the attributes
     layer.ResetReading()
-    
+
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
     layer.CreateField(hrv_field)
-        
+
     for feature in layer:
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
@@ -140,11 +140,11 @@ def execute(args):
         layer.ResetReading()
         npv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
         layer.CreateField(npv_field)
-        
+
         for feature in layer:
             accessor = args['farm_ID']
             feature_ID = feature.items()[accessor]
-            feature.SetField('NVP_USD_1k', farms_npv[feature_ID])     
+            feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
             layer.SetFeature(feature)
     else:
         value_history = None
@@ -155,11 +155,11 @@ def execute(args):
         histogram_paths, uncertainty_stats = compute_uncertainty_data(args, output_dir)
     else:
         histogram_paths, uncertainty_stats = None, None
-        
+
     create_HTML_table(
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
         value_history, histogram_paths, uncertainty_stats)
-    
+
 def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
     Input:
@@ -175,16 +175,16 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
             each farm. The outer key is farm number as a stting, and the inner is string
             descriptors of each parameter.
         dur: Float which describes the length for the growth simulation to run in years.
-        
+
      Returns cycle_history where:
-     
+
          cycle_history: Dictionary which contains mappings from farms to a history of
              growth for each cycle completed on that farm. These entries are formatted
              as follows...
-             
+
             Farm->List of Type (day of outplanting,day of harvest, fish weight (grams))
     '''
-    
+
     cycle_history = {}
     tau = 0.08
 
@@ -197,14 +197,14 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
         fallow_per = int(farm_op_dict[f]['Length of Fallowing period'])
         start_weight = 1000 * float(farm_op_dict[f]['weight of fish at start (kg)'])
         tar_weight = 1000 * float(farm_op_dict[f]['target weight of fish at harvest (kg)'])
-        
+
         fallow_days_left = start_day
         farm_history = []
         fish_weight = 0
         outplant_date = None
         #Have changed the water temp table to be accessed by keys 0 to 364, so now can just
         #grab straight from the table without having to deal with change in day
-        
+
         #However, it should be kept in mind that when doing calculations for a given day,
         #you are using YESTRDAY'S temperatures and weights to get the value for today.
 
@@ -214,7 +214,7 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
         #records, because the fish would be reaching the end growth weight today, not
         #yesterday.
         for day in range (0, int((365*dur)) + 1):
-         
+
             if fallow_days_left > 0:
                 fallow_days_left -= 1
 
@@ -225,53 +225,53 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
                 fish_weight = 0
 
             elif fish_weight != 0:
-                #Grow 'dem fishies!                   
+                #Grow 'dem fishies!
                 exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][f]) * tau)
-              
+
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
                                 fish_weight
-                                    
+
                 fish_weight = fish_weight
-            
+
             #function that maps an incoming day to the same day % 365, then creates a
             #list to check against +/- buffer days from the start day
-            
-            elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer, 
+
+            elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer,
                                                     start_day + outplant_buffer + 1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
-    
+
         cycle_history[int(f)] = farm_history
 
     return cycle_history
 
 def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
-    '''   
+    '''
     Input:
         farm_op_dict: 2D dictionary which contains individual operating parameters for
-            each farm. The outer key is farm number as a string, and the inner is string 
+            each farm. The outer key is farm number as a string, and the inner is string
             descriptors of each parameter.
         frac: A float representing the fraction of the fish that remains after processing.
         mort: A float referring to the daily mortality rate of fishes on an aquaculture farm.
-        cycle_history: Farm->List of Type (day of outplanting, 
-                                      day of harvest, fish weight (grams))                            
-    
+        cycle_history: Farm->List of Type (day of outplanting,
+                                      day of harvest, fish weight (grams))
+
     Returns a tuple (curr_cycle_totals,indiv_tpw_totals) where:
         curr_cycle_totals_: dictionary which will hold a mapping from every farm
                 (as identified by farm_ID) to the total processed weight of each farm
-        indiv_tpw_totals: dictionary which will hold a farm->list mapping, where the list 
+        indiv_tpw_totals: dictionary which will hold a farm->list mapping, where the list
                 holds the individual tpw for all cycles that the farm completed
     '''
-        
+
     curr_cycle_totals = {}
     indiv_tpw_totals = {}
-        
+
     for f in farm_op_dict:
-        
+
         #They keys from farm_op_dict are strings, sicne they came from a CSV. So, have to
         #cast to strings in order to make them usable for refrencing everything else.
         f = int(f)
-        
+
         #pre-load farm specific vars, have to cast some because they come out of
         # a CSV all as strings
         curr_cycle_totals[f] = 0
@@ -280,83 +280,83 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
         farm_history = cycle_history[f]
         mort = float(mort)
         indiv_tpw_totals[f] = []
-        
+
         #We are starting this range at 0, and going to one less than the number of
         #cycles, since the list of cycles from the cycle calcs will start at index 0
         for c in range (0, cycles_comp):
-            
+
             #this will get the tuple referring to the current cycle
             #the information will be inside the tuple as:
             # (day of outplanting, day of harvest, harvest weight)
             current_cycle_info = farm_history[c]
             outplant_date, harvest_date, fish_weight = current_cycle_info
-         
+
             #Now do the computation for each cycle individually, then add it to the total
             #within the dictionary
             #Note that we divide by 1000 to make sure the output in in kg
             cycle_length = harvest_date - outplant_date
             e_exponent =  -mort * cycle_length
-            
-            #This equation comes from total weight of fish produced per farm 
+
+            #This equation comes from total weight of fish produced per farm
             #from the user's guide
             curr_cy_tpw = (fish_weight / 1000) * frac * f_num_fish * \
                             math.exp(e_exponent)
             curr_cy_tpw = curr_cy_tpw
-            
+
             indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
 
     return (curr_cycle_totals, indiv_tpw_totals)
 
 def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_history):
-    
-    '''This performs the valuation calculations, and returns tuple containing a 
-    dictionary with a farm-> float mapping, where each float is the net processed 
+
+    '''This performs the valuation calculations, and returns tuple containing a
+    dictionary with a farm-> float mapping, where each float is the net processed
     value of the fish processed on that farm, in $1000s of dollars, and a dictionary
-    containing a farm-> list mapping, where each entry in the list is a tuple of 
+    containing a farm-> list mapping, where each entry in the list is a tuple of
     (Net Revenue, Net Present Value) for every cycle on that farm.
-    
+
     Inputs:
-        price_per_kg: Float representing the price per kilogram of finfish for 
+        price_per_kg: Float representing the price per kilogram of finfish for
                 valuation purposes.
         frac_mrkt_price: Float that represents the fraction of market price that
                 is attributable to costs.
         discount: Float that is the daily market discount rate.
-        cycle_hisory: Farm->List of Type (day of outplanting, 
+        cycle_hisory: Farm->List of Type (day of outplanting,
                                           day of harvest, fish weight (grams))
         hrv_weight: Farm->List of TPW for each cycle (kilograms)
-        
-        
-                
+
+
+
     Returns a tuple (val_history, valuations):
-        val_history: dictionary which will hold a farm->list mapping, where the 
+        val_history: dictionary which will hold a farm->list mapping, where the
                 list holds tuples containing (Net Revenue, Net Present Value) for
                 each cycle completed by that farm
-        valuations: dictionary with a farm-> float mapping, where each float is the 
+        valuations: dictionary with a farm-> float mapping, where each float is the
                 net processed value of the fish processed on that farm
         '''
     val_history = {}
     valuations = {}
-    
+
     for f in cycle_history:
-        
+
         val_history[f] = []
         valuations[f] = 0.0
-        
+
         #running from 0 to 1 less than the number of cycles that farm completed,
         #since the list that each farm ID is mapped to starts at index 0
         for c in range (0, len(cycle_history[f])):
-            
+
             tpw = hrv_weight[f][c]
 
             #the 1 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
-            
+
             net_rev = tpw * (price_per_kg *(1 - frac_mrkt_price))
             npv = net_rev * (1 / (1 + discount) ** t)
 
             val_history[f].append((net_rev, npv))
-            
+
             #divide by 1000, because the number we want to return is in thousands of dollars
             valuations[f] += npv / 1000
 
@@ -380,7 +380,7 @@ def compute_uncertainty_data(args, output_dir):
         if not args['do_valuation']:
             uncertainty_stats[farm]['value'] = (
                 '(no valuation)', '(no valuation)')
-            
+
     LOGGER.info('Creating histograms.')
     histogram_paths = collections.OrderedDict()
     for farm, farm_results in results.items():
@@ -394,7 +394,7 @@ def do_monte_carlo_simulation(args):
     '''Performs a Monte Carlo simulation and returns the results.'''
     def sample_param(param):
         '''Samples the normal distribution for the given growth parameter.
-        
+
         Only returns positive values.'''
         while True:
             sample = np.random.normal(args['g_param_%s' % param],
@@ -419,7 +419,7 @@ def do_monte_carlo_simulation(args):
             if not (farm == 'aggregate' and field == 'cycles'):
                 results[farm][field] = []
 
-    LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
+    LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.'
                 % args['num_monte_carlo_runs'])
 
     for i in range(args['num_monte_carlo_runs']):
@@ -433,7 +433,7 @@ def do_monte_carlo_simulation(args):
 
         # Compute the total harvested weight.
         sum_hrv_weight, hrv_weight_per_cycle = calc_hrv_weight(
-            args['farm_op_dict'], args['frac_post_process'], args['mort_rate_daily'], 
+            args['farm_op_dict'], args['frac_post_process'], args['mort_rate_daily'],
             cycle_history)
 
         # Compute valuation data.
@@ -509,44 +509,44 @@ def make_histograms(farm, results, output_dir, total_num_runs):
     return histogram_paths
 
 def create_HTML_table(
-    output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, 
+    output_dir, args, cycle_history, sum_hrv_weight, hrv_weight,
     farms_npv, value_history, histogram_paths, uncertainty_stats):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
-        cycle_history: dictionary mapping farm ID->list of tuples, each of which 
-                contains 3 things- (day of outplanting, day of harvest, harvest weight of 
+        cycle_history: dictionary mapping farm ID->list of tuples, each of which
+                contains 3 things- (day of outplanting, day of harvest, harvest weight of
                 a single fish in grams)
-        sum_hrv_weight: dictionary which holds a mapping from farm ID->total processed 
-                weight of each farm 
-        hrv_weight: dictionary which holds a farm->list mapping, where the list holds 
+        sum_hrv_weight: dictionary which holds a mapping from farm ID->total processed
+                weight of each farm
+        hrv_weight: dictionary which holds a farm->list mapping, where the list holds
                 the individual tpw for all cycles that the farm completed
         do_valuation: boolean variable that says whether or not valuation is desired
-        farms_npv: dictionary with a farm-> float mapping, where each float is the 
-                net processed value of the fish processed on that farm, in $1000s 
+        farms_npv: dictionary with a farm-> float mapping, where each float is the
+                net processed value of the fish processed on that farm, in $1000s
                 of dollars.
-        value_history: dictionary which holds a farm->list mapping, where the 
+        value_history: dictionary which holds a farm->list mapping, where the
                 list holds tuples containing (Net Revenue, Net Present Value) for
                 each cycle completed by that farm
-    
+
        Output:
         HTML file: contains 3 tables that summarize inputs and outputs for the duration
-            of the model. 
+            of the model.
             - Input Table: Farm Operations provided data, including Farm ID #, Cycle
-                    Number, weight of fish at start, weight of fish at harvest, number 
+                    Number, weight of fish at start, weight of fish at harvest, number
                     of fish in farm, start day for growing, and length of fallowing period
-            - Output Table 1: Farm Harvesting data, including a summary table for each 
+            - Output Table 1: Farm Harvesting data, including a summary table for each
                     harvest cycle of each farm. Will show Farm ID, cycle number, days
                     since outplanting date, harvested weight, net revenue, outplant day,
                     and year.
             - Output Table 2: Model outputs for each farm, including Farm ID, net present
                     value, number of completed harvest cycles, and total volume harvested.
-                    
+
         Returns nothing.
     '''
-    html_uri = os.path.join(output_dir, 
-                            ("Harvest_Results_[%s].html" % 
+    html_uri = os.path.join(output_dir,
+                            ("Harvest_Results_[%s].html" %
                              datetime.datetime.now().strftime("%Y-%m-%d_%H_%M")))
-    doc = html.HTMLDocument(html_uri, 'Marine InVEST', 
+    doc = html.HTMLDocument(html_uri, 'Marine InVEST',
                             'Aquaculture Model (Finfish Harvest)')
 
     doc.write_paragraph(
@@ -581,20 +581,20 @@ def create_HTML_table(
     doc.write_header('Farm Harvesting (output)')
     harvest_table = doc.add(html.Table(id='harvest_table'))
 
-    harvest_table.add_row(['Farm ID Number', 'Cycle Number', 
-                 'Days Since Outplanting Date (Including Fallowing Period)', 
+    harvest_table.add_row(['Farm ID Number', 'Cycle Number',
+                 'Days Since Outplanting Date (Including Fallowing Period)',
                  'Length of Given Cycle',
-                 'Harvested Weight After Processing (kg/cycle)', 
+                 'Harvested Weight After Processing (kg/cycle)',
                  'Net Revenue (Thousands of $)',
-                 'Net Present Value (Thousands of $)', 
+                 'Net Present Value (Thousands of $)',
                  'Outplant Day (Julian Day)',
                  'Outplant Year'],
                 is_header=True)
 
     for farm_id in cycle_history:
-        for cycle in range(0, len(cycle_history[farm_id])):        
+        for cycle in range(0, len(cycle_history[farm_id])):
             cycle_num = cycle + 1
-            
+
             curr_cycle = cycle_history[farm_id][cycle]
             outplant_date, harvest_date, harvest_weight = curr_cycle
             cycle_length = harvest_date - outplant_date
@@ -605,7 +605,7 @@ def create_HTML_table(
 
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
-            
+
             if args['do_valuation']:
                 # Revenue and NPV should be in thousands of dollars.
                 indiv_rev, indiv_npv = value_history[farm_id][cycle]
@@ -613,8 +613,8 @@ def create_HTML_table(
                 indiv_npv /= 1000.0
             else:
                 indiv_rev, indiv_npv = '(no valuation)', '(no valuation)'
-    
-            cells = [farm_id, cycle_num, harvest_date, cycle_length, harvest_weight, 
+
+            cells = [farm_id, cycle_num, harvest_date, cycle_length, harvest_weight,
                      indiv_rev, indiv_npv, out_day, out_year]
             harvest_table.add_row(cells)
 
@@ -625,14 +625,14 @@ def create_HTML_table(
         'table of the netpens feature class.')
 
     totals_table = doc.add(html.Table(id='totals_table'))
-    totals_table.add_row(['Farm ID Number', 
-                          'Net Present Value (Thousands of $) (For Duration of Model Run)', 
-                          'Number of Completed Harvest Cycles', 
+    totals_table.add_row(['Farm ID Number',
+                          'Net Present Value (Thousands of $) (For Duration of Model Run)',
+                          'Number of Completed Harvest Cycles',
                           'Total Volume Harvested (kg)(After Processing Occurs)'],
                          is_header=True)
 
     for farm_id in cycle_history:
-        if args['do_valuation']: 
+        if args['do_valuation']:
             npv = round(farms_npv[farm_id], 4)
         else:
             npv = '(no valuation)'
@@ -673,7 +673,7 @@ def create_HTML_table(
                                    'Net present value (thousands of USD)'],
                                   is_header=True,
                                   cell_attr=[{}, {'colspan': 2}, {'colspan': 2}])
-        uncertainty_table.add_row(['Farm ID', 'Mean', 'Standard Deviation', 
+        uncertainty_table.add_row(['Farm ID', 'Mean', 'Standard Deviation',
                                    'Mean', 'Standard Deviation'], is_header=True)
 
         for farm in uncertainty_stats:
