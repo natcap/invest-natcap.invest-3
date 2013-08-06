@@ -87,7 +87,7 @@ def execute(args):
         args['outplant_buffer'], args['g_param_a'], args['g_param_b'],
         args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
 
-    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
+    out_path = os.path.join(output_dir, 'Finfish_Harvest.shp')
     if os.path.isfile(out_path):
         # Remove so we can re-create.
         os.remove(out_path)
@@ -113,9 +113,9 @@ def execute(args):
     #outgoing shapefile- abstracting the calculation of this to a separate function,
     #but it will return a dictionary with a int->float mapping for
     #farm_ID->processed weight
-    sum_hrv_weight, hrv_weight = calc_hrv_weight(args['farm_op_dict'],
-                            args['frac_post_process'], args['mort_rate_daily'],
-                            cycle_history)
+    sum_hrv_weight, hrv_weight = calc_hrv_weight(
+        args['farm_op_dict'], args['frac_post_process'],
+        args['mort_rate_daily'], cycle_history)
 
     #have to start at the beginning of the layer to access the attributes
     layer.ResetReading()
@@ -147,8 +147,7 @@ def execute(args):
             feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
             layer.SetFeature(feature)
     else:
-        value_history = None
-        farms_npv = None
+        value_history, farms_npv = None, None
 
     # Do uncertainty analysis if it's enabled.
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
@@ -365,9 +364,11 @@ def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_histor
 def compute_uncertainty_data(args, output_dir):
     '''Does uncertainty analysis via a Monte Carlo simulation.
 
-    Returns a tuple with:
-    -a dict mapping farm ID to relative file paths of produced histograms
-    -a dict mapping farm ID to statistical results (mean and std deviation)
+    Returns a tuple with two 2D dicts.
+    -a dict containing relative file paths to produced histograms
+    -a dict containining statistical results (mean and std deviation)
+    Each dict has farm IDs as outer keys, and result types (e.g. 'value',
+    'weight', and 'cycles') as inner keys.
     '''
     results = do_monte_carlo_simulation(args)
 
@@ -395,7 +396,7 @@ def do_monte_carlo_simulation(args):
     def sample_param(param):
         '''Samples the normal distribution for the given growth parameter.
 
-        Only returns positive values.'''
+        Returns only positive values, discarding the rest.'''
         while True:
             sample = np.random.normal(args['g_param_%s' % param],
                                       args['g_param_%s_sd' % param])
@@ -403,7 +404,7 @@ def do_monte_carlo_simulation(args):
                 return sample
 
     # Set up a dict to contain the results of the simulation.
-    farms = [str(farm) for farm in args['farm_op_dict'].keys()]
+    farms = map(str, args['farm_op_dict'].keys())
     farms.insert(0, 'total')
 
     fields = ['cycles', 'weight']
@@ -429,12 +430,13 @@ def do_monte_carlo_simulation(args):
         # Compute the cycle history given samples for parameters a and b.
         cycle_history = calc_farm_cycles(
             args['outplant_buffer'], sample_param('a'), sample_param('b'),
-            args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
+            args['water_temp_dict'], args['farm_op_dict'],
+            float(args['duration']))
 
         # Compute the total harvested weight.
         sum_hrv_weight, hrv_weight_per_cycle = calc_hrv_weight(
-            args['farm_op_dict'], args['frac_post_process'], args['mort_rate_daily'],
-            cycle_history)
+            args['farm_op_dict'], args['frac_post_process'],
+            args['mort_rate_daily'], cycle_history)
 
         # Compute valuation data.
         if args['do_valuation']:
@@ -492,20 +494,20 @@ def make_histograms(farm, results, output_dir, total_num_runs):
                    'cycles': 'Number of cycles'}
         return xlabels[result_type]
 
-    def make_histogram(relpath, result_type, data):
+    def make_histogram(result_type, data):
+        relpath = make_plot_relpath(result_type)
         plt.hist(data, bins=NUM_HISTOGRAM_BINS)
         plt.ylabel('Number of runs (out of %d total runs)' % total_num_runs)
         plt.xlabel(make_xlabel(result_type))
         plt.title(make_plot_title(result_type))
         plt.savefig(os.path.join(output_dir, relpath))
         plt.close()
+        return relpath
 
     histogram_paths = {}
     for result_type in results:
-        relpath = make_plot_relpath(result_type)
-        histogram_paths[result_type] = relpath
-        make_histogram(relpath, result_type, results[result_type])
-
+        histogram_paths[result_type] = make_histogram(result_type,
+                                                      results[result_type])
     return histogram_paths
 
 def create_HTML_table(
@@ -580,7 +582,6 @@ def create_HTML_table(
 
     doc.write_header('Farm Harvesting (output)')
     harvest_table = doc.add(html.Table(id='harvest_table'))
-
     harvest_table.add_row(['Farm ID Number', 'Cycle Number',
                  'Days Since Outplanting Date (Including Fallowing Period)',
                  'Length of Given Cycle',
@@ -678,11 +679,11 @@ def create_HTML_table(
 
         for farm in uncertainty_stats:
             if farm == 'total':
-                farm_title = 'Total (all farms)'
+                farm_name = 'Total (all farms)'
             else:
-                farm_title = 'Farm %s' % farm
+                farm_name = 'Farm %s' % farm
             uncertainty_table.add_row([
-                    farm_title,
+                    farm_name,
                     uncertainty_stats[farm]['weight'][0],
                     uncertainty_stats[farm]['weight'][1],
                     uncertainty_stats[farm]['value'][0],
@@ -708,7 +709,7 @@ def create_HTML_table(
 
             # Put the histograms in a collapsible element that defaults to open.
             collapsible_elem = doc.add(html.Element('details', open=''))
-            for histogram_type, path in paths.items():
+            for path in paths.values():
                 collapsible_elem.add(html.Element('img', src=path, end_tag=False))
 
     doc.flush()
