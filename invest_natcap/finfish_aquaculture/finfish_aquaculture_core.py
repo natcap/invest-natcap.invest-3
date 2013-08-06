@@ -693,6 +693,11 @@ def create_HTML_table(
             'The simulation involved %d runs of the model, each with different '
             'values for the growth parameters.' % args['num_monte_carlo_runs'])
 
+        doc.write_paragraph(
+            'Results labeled as <i>total results (all farms)</i> '
+            'were calculated by, for each run, summing the harvested weights '
+            'and the net present values of all farms for that run.')
+
         # Write a table with numerical results.
         doc.write_header('Numerical Results', level=3)
         doc.write_paragraph(
