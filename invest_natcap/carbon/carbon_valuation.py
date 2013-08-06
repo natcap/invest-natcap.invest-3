@@ -251,7 +251,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
 
     # Write the table that summarizes change in carbon stocks and
     # net present value.
-    change_table = doc.add(html.Table())
+    change_table = doc.add(html.Table(id='change_table'))
     change_table.add_row(["Scenario", 
                           "Change in Carbon Stocks<br>(Mg of carbon)",
                           "Net Present Value<br>(USD)"],
@@ -284,7 +284,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
     # If REDD scenario analysis is enabled, write the table
     # comparing the baseline and REDD scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
-        comparison_table = doc.add(html.Table())
+        comparison_table = doc.add(html.Table(id='comparison_table'))
         comparison_table.add_row(["Scenario Comparison", 
                           "Difference in Carbon Stocks<br>(Mg of carbon)",
                           "Difference in Net Present Value<br>(USD)"],
@@ -310,7 +310,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
     doc.write_header('Output Files')
     outfile_descriptions = _make_outfile_descriptions(outfile_uris)
 
-    outfile_table = doc.add(html.Table())
+    outfile_table = doc.add(html.Table(id='outfile_table'))
     outfile_table.add_row(["Filename", "Description"], is_header=True)
     for filename, description in outfile_descriptions.items():
         outfile_table.add_row([('%s' % filename), description])
