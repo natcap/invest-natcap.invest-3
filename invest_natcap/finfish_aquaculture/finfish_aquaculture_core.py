@@ -739,7 +739,10 @@ def create_HTML_table(
             else:
                 title = 'Histograms for farm %s' % str(key)
             doc.write_header(title, level=4)
+
+            # Put the histograms in a collapsible element that defaults to open.
+            collapsible_elem = doc.add(html.Element('details', open=''))
             for histogram_type, path in paths.items():
-                doc.add(html.Element('img', src=path, end_tag=False))
+                collapsible_elem.add(html.Element('img', src=path, end_tag=False))
 
     doc.flush()
