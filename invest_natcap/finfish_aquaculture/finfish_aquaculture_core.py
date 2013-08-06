@@ -154,7 +154,7 @@ def execute(args):
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
         histogram_paths, uncertainty_stats = compute_uncertainty_data(args, output_dir)
     else:
-        histogram_paths, uncertainty_stats = {}, {}
+        histogram_paths, uncertainty_stats = None, None
         
     create_HTML_table(
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
@@ -362,13 +362,36 @@ def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_histor
 
     return val_history, valuations
 
-def compute_uncertainty_data(args, output_dir, confidence=0.8):
-    '''Computes uncertainty data and produces outputs.
+def compute_uncertainty_data(args, output_dir):
+    '''Does uncertainty analysis via a Monte Carlo simulation.
 
-    args - should contain data on the mean and standard deviation for a and b
-
-    Produces a series of histograms to visualize uncertainty for outputs.
+    Returns a tuple with:
+    -a dict mapping farm ID to relative file paths of produced histograms
+    -a dict mapping farm ID to statistical results (mean and std deviation)
     '''
+    results = do_monte_carlo_simulation(args)
+
+    LOGGER.info('Computing confidence statistics.')
+    uncertainty_stats = collections.OrderedDict()
+    for farm, farm_results in results.items():
+        uncertainty_stats[farm] = {}
+        for result_type, result_list in farm_results.items():
+            uncertainty_stats[farm][result_type] = norm.fit(result_list)
+        if not args['do_valuation']:
+            uncertainty_stats[farm]['value'] = (
+                '(no valuation)', '(no valuation)')
+            
+    LOGGER.info('Creating histograms.')
+    histogram_paths = collections.OrderedDict()
+    for farm, farm_results in results.items():
+        histogram_paths[farm] = make_histograms(
+            farm, farm_results, output_dir, args['num_monte_carlo_runs'])
+
+    LOGGER.info('Done with uncertainty analysis.')
+    return histogram_paths, uncertainty_stats
+
+def do_monte_carlo_simulation(args):
+    '''Performs a Monte Carlo simulation and returns the results.'''
     def sample_param(param):
         '''Samples the normal distribution for the given growth parameter.
         
@@ -379,24 +402,31 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
             if sample > 0:
                 return sample
 
-    # Do a bunch of runs as part of a Monte Carlo simulation.
-    # Per-farm data to collect.
-    hrv_weight_results = {}  # dict from farm ID to a list of harvested weights
-    num_cycle_results = {}  # dict from farm ID to a list of number of cycles
-    valuation_results = {} # dict from farm ID to a list of net present values
+    # Set up a dict to contain the results of the simulation.
+    farms = [str(farm) for farm in args['farm_op_dict'].keys()]
+    farms.insert(0, 'aggregate')
 
-    # Aggregate data (across all farms) to collect.
-    total_weight_results = [] # list of total weight (one entry per run)
-
+    fields = ['cycles', 'weight']
     if args['do_valuation']:
-        total_value_results = [] # list of net present values (one entry per run)
+        fields.append('value')
+
+    results = collections.OrderedDict()
+    for farm in farms:
+        results[farm] = {}
+        for field in fields:
+            # We don't log total cycles across all farms,
+            # since it's not particularly meaningful.
+            if not (farm == 'aggregate' and field == 'cycles'):
+                results[farm][field] = []
+
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
                 % args['num_monte_carlo_runs'])
+
     for i in range(args['num_monte_carlo_runs']):
         if i > 0 and i % 100 == 0:
             LOGGER.info('Done with %d runs.' % i)
 
-        # Compute the cycle history given samples for a and b.
+        # Compute the cycle history given samples for parameters a and b.
         cycle_history = calc_farm_cycles(
             args['outplant_buffer'], sample_param('a'), sample_param('b'),
             args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
@@ -412,141 +442,71 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
                 args['p_per_kg'], args['frac_p'], args['discount'],
                 hrv_weight_per_cycle, cycle_history)
 
-        # Update our collections of results.
-        total_weight_results.append(sum(sum_hrv_weight.values()))
+        # Update our total results.
+        results['aggregate']['weight'].append(sum(sum_hrv_weight.values()))
         if args['do_valuation']:
-            total_value_results.append(sum(farms_npv.values()))
+            results['aggregate']['value'].append(sum(farms_npv.values()))
 
+        # Update our per-farm results.
         for farm, hrv_weight in sum_hrv_weight.items():
-            try:
-                hrv_weight_results[farm].append(hrv_weight)
-                num_cycle_results[farm].append(len(cycle_history[farm]))
-                if args['do_valuation']:
-                    valuation_results[farm].append(farms_npv[farm])
-            except KeyError:
-                hrv_weight_results[farm] = [hrv_weight]
-                num_cycle_results[farm] = [len(cycle_history[farm])]
-                if args['do_valuation']:
-                    valuation_results[farm] = [farms_npv[farm]]
+            results[str(farm)]['weight'].append(hrv_weight)
+            results[str(farm)]['cycles'].append(len(cycle_history[farm]))
+            if args['do_valuation']:
+                results[str(farm)]['value'].append(farms_npv[farm])
 
     LOGGER.info('Monte Carlo simulation complete.')
+    return results
 
-    LOGGER.info('Computing confidence statistics.')
-    uncertainty_stats = collections.OrderedDict()
-    uncertainty_stats['aggregate'] = {}
-    uncertainty_stats['aggregate']['weight'] = norm.fit(total_weight_results)
 
-    if args['do_valuation']:
-        uncertainty_stats['aggregate']['value'] = norm.fit(total_value_results)
-    else:
-        uncertainty_stats['aggregate']['value'] = ('(no valuation)', '(no valuation)')
+def make_histograms(farm, results, output_dir, total_num_runs):
+    '''Makes a histogram for the given farm and data.
 
-    for farm in hrv_weight_results:
-        uncertainty_stats[farm] = {}
-        uncertainty_stats[farm]['weight'] = norm.fit(hrv_weight_results[farm])
-        if args['do_valuation']:
-            uncertainty_stats[farm]['value'] = norm.fit(valuation_results[farm])
-        else:
-            uncertainty_stats[farm]['value'] = ('(no valuation)', '(no valuation)')
-            
-
-    LOGGER.info('Creating histograms.')
-    histogram_paths = collections.OrderedDict()
-
-    # Make aggregate histograms and store the paths.
-    histogram_paths['aggregate'] = {}
-    histogram_paths['aggregate']['weight'] = make_histograms(
-        total_weight_results, args['num_monte_carlo_runs'], output_dir,
-        'weight', 'Total harvested weight after processing (kg)',
-        'Total harvested weight', per_farm=False)
-
-    if args['do_valuation']:
-        histogram_paths['aggregate']['value'] = make_histograms(
-            total_value_results, args['num_monte_carlo_runs'], output_dir,
-            'value', 'Total net present value (in thousands of USD)',
-            'Total net present value', per_farm=False)
-
-    # Make per-farm histograms and store the paths.
-    weight_histogram_paths = make_histograms(
-        hrv_weight_results, args['num_monte_carlo_runs'], output_dir, 
-        'weight', 'Total harvested weight after processing (kg)',
-        'Total harvested weight')
-
-    if args['do_valuation']:
-        value_histogram_paths = make_histograms(
-            valuation_results, args['num_monte_carlo_runs'], output_dir,
-            'value', 'Total net present value (in thousands of USD)',
-            'Total net present value')
-
-    cycle_histogram_paths = make_histograms(
-        num_cycle_results, args['num_monte_carlo_runs'], output_dir, 
-        'num_cycles', 'Number of cycles')
-
-    for farm_id in weight_histogram_paths:
-        histogram_paths[farm_id] = {
-            'weight': weight_histogram_paths[farm_id],
-            'cycles': cycle_histogram_paths[farm_id]
-            }
-        if args['do_valuation']:
-            histogram_paths[farm_id]['value'] = value_histogram_paths[farm_id]
-
-    LOGGER.info('Done with uncertainty analysis.')
-    return histogram_paths, uncertainty_stats
-
-def make_histograms(data_collection, total_num_runs, output_dir, name, xlabel,
-                    title=None, per_farm=True):
-    '''Makes a histogram for the given data.
-
-    data_collection - either a dictionary of [farm ID] => [data],
-        or a list of aggregate data.
-
-    Returns:
-        -a dict mapping farm ID => relative histogram path if per_farm is True
-        -a relative path to a single histogram is per_farm is False
+    Returns a dict mapping type (e.g. 'value', 'weight') to the relative
+    file path for the respective histogram.
     '''
     plot_dir = os.path.join(output_dir, 'images')
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
-    if title is None:
-        title = xlabel
-
-    def make_plot_relpath(farm_id=None):
-        if per_farm:
-            assert farm_id is not None
-            filename = 'farm_%s_%s.png' % (str(farm_id), name)
+    def make_plot_relpath(result_type):
+        '''Return a relative path to a histogram.'''
+        if farm == 'aggregate':
+            filename = 'total_%s.png' % result_type
         else:
-            filename = 'total_%s.png' % name
+            filename = 'farm_%s_%s.png' % (str(farm), result_type)
         return os.path.join('images', filename)
 
-    def make_plot_title(farm_id=None):
-        if per_farm:
-            assert farm_id is not None
-            return '%s for farm %s' % (title, str(farm_id))
-        else:
+    def make_plot_title(result_type):
+        titles = {'weight': 'Total harvested weight',
+                  'value': 'Total net present value',
+                  'cycles': 'Number of completed cycles'}
+        title = titles[result_type]
+        if farm == 'aggregate':
             return '%s for all farms' % title
+        else:
+            return '%s for farm %s' % (title, str(farm))
 
-    def make_histogram(relpath, data, title):
+    def make_xlabel(result_type):
+        xlabels = {'weight': 'Total harvested weight after processing (kg)',
+                   'value': 'Total net present value (in thousands of USD)',
+                   'cycles': 'Number of cycles'}
+        return xlabels[result_type]
+
+    def make_histogram(relpath, result_type, data):
         plt.hist(data, bins=NUM_HISTOGRAM_BINS)
         plt.ylabel('Number of runs (out of %d total runs)' % total_num_runs)
-        plt.xlabel(xlabel)
-        plt.title(title)
+        plt.xlabel(make_xlabel(result_type))
+        plt.title(make_plot_title(result_type))
         plt.savefig(os.path.join(output_dir, relpath))
         plt.close()
 
-    if per_farm:
-        # Make a histogram for each farm.
-        histogram_paths = {}
-        for farm_id, farm_data in data_collection.items():
-            relpath = make_plot_relpath(farm_id)
-            histogram_paths[farm_id] = relpath
-            make_histogram(relpath, farm_data, make_plot_title(farm_id))
-        return histogram_paths
-    else:
-        # It's aggregate data, not per-farm data.
-        relpath = make_plot_relpath()
-        make_histogram(relpath, data_collection, make_plot_title())
-        return relpath
+    histogram_paths = {}
+    for result_type in results:
+        relpath = make_plot_relpath(result_type)
+        histogram_paths[result_type] = relpath
+        make_histogram(relpath, result_type, results[result_type])
+
+    return histogram_paths
 
 def create_HTML_table(
     output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, 
@@ -681,7 +641,7 @@ def create_HTML_table(
         total_harvested = round(sum_hrv_weight[farm_id], 4)
 
         cells = [farm_id, npv, num_cy_complete, total_harvested]
-        totals_table.add_row(cells)        
+        totals_table.add_row(cells)
 
     if histogram_paths:
         doc.write_header('Uncertainty Analysis Results')
@@ -707,6 +667,7 @@ def create_HTML_table(
             'computed for results across all runs of the Monte Carlo '
             'simulation.')
 
+        # Add a table with uncertainty stats (mean and standard deviation).
         uncertainty_table = doc.add(html.Table(id='uncertainty_table'))
         uncertainty_table.add_row(['', 'Harvested weight after processing (kg)',
                                    'Net present value (thousands of USD)'],
@@ -715,26 +676,26 @@ def create_HTML_table(
         uncertainty_table.add_row(['Farm ID', 'Mean', 'Standard Deviation', 
                                    'Mean', 'Standard Deviation'], is_header=True)
 
-        for key in uncertainty_stats:
-            if key == 'aggregate':
+        for farm in uncertainty_stats:
+            if farm == 'aggregate':
                 farm_title = 'Total (all farms)'
             else:
-                farm_title = 'Farm %s' % str(key)
+                farm_title = 'Farm %s' % farm
             uncertainty_table.add_row([
                     farm_title,
-                    uncertainty_stats[key]['weight'][0],
-                    uncertainty_stats[key]['weight'][1],
-                    uncertainty_stats[key]['value'][0],
-                    uncertainty_stats[key]['value'][1]
+                    uncertainty_stats[farm]['weight'][0],
+                    uncertainty_stats[farm]['weight'][1],
+                    uncertainty_stats[farm]['value'][0],
+                    uncertainty_stats[farm]['value'][1]
                     ])
 
-        # Display a bunch of histograms.
+        # Add histograms.
         doc.write_header('Histograms', level=3)
         doc.write_paragraph(
-            'The following histograms display the probability of different outcomes. '
-            'The height of each vertical bar in the histograms represents the '
-            'probability of the outcome marked by the position of the bar on '
-            'the horizontal axis of the histogram.')
+            'The following histograms display the probability of different '
+            'outcomes. The height of each vertical bar in the histograms '
+            'represents the probability of the outcome marked by the position'
+            'of the bar on the horizontal axis of the histogram.')
         doc.write_paragraph(
             'Included are histograms for total results across all farms, as well as '
             'results for each individual farm.')
