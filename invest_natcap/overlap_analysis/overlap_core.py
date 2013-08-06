@@ -24,7 +24,9 @@ def get_files_dict(folder):
     #them into a list. Then, each item in the list is added to a dictionary as
     #an open file with the key of it's filename without the extension, and that
     #whole dictionary is made an argument of the mz_args dictionary
-    file_names = glob.glob(os.path.join(folder, '*.shp'))
+    dir_list = listdir(hra_args[ele])
+    file_names = []
+    file_names += fnmatch.filter(dir_list, '*.shp')
     file_dict = {}
     
     for file in file_names:

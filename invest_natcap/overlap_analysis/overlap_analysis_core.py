@@ -608,5 +608,6 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         
         raster_files.append(dataset)
         raster_names.append(element)
-    
+   
+    LOGGER.debug(raster_files)
     return raster_files, raster_names
