@@ -473,7 +473,7 @@ def make_histograms(farm, results, output_dir, total_num_runs):
         if farm == 'total':
             filename = 'total_%s.png' % result_type
         else:
-            filename = 'farm_%s_%s.png' % (str(farm), result_type)
+            filename = 'farm_%s_%s.png' % (farm, result_type)
         return os.path.join('images', filename)
 
     def make_plot_title(result_type):
@@ -484,7 +484,7 @@ def make_histograms(farm, results, output_dir, total_num_runs):
         if farm == 'total':
             return '%s for all farms' % title
         else:
-            return '%s for farm %s' % (title, str(farm))
+            return '%s for farm %s' % (title, farm)
 
     def make_xlabel(result_type):
         xlabels = {'weight': 'Total harvested weight after processing (kg)',
@@ -699,11 +699,11 @@ def create_HTML_table(
         doc.write_paragraph(
             'Included are histograms for total results across all farms, as well as '
             'results for each individual farm.')
-        for key, paths in histogram_paths.items():
-            if key == 'total':
+        for farm, paths in histogram_paths.items():
+            if farm == 'total':
                 title = 'Histograms for total results (all farms)'
             else:
-                title = 'Histograms for farm %s' % str(key)
+                title = 'Histograms for farm %s' % farm
             doc.write_header(title, level=4)
 
             # Put the histograms in a collapsible element that defaults to open.
