@@ -13,7 +13,7 @@ import numpy as np
 from invest_natcap.finfish_aquaculture import finfish_aquaculture
 from invest_natcap.report_generation import html
 import invest_test_core
-import html_utils
+import html_test_utils
 
 class TestFinfishAquaculture(unittest.TestCase):
     def setUp(self):
@@ -132,7 +132,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             self.fail("Didn't find a Harvest Results HTML file in the output folder.")
 
         # Check the farm operations table.
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, html_uri, 'farm_ops_table',
             [[1, 0.06, 5.4, 600000, 1, 30],
              [4, 0.08, 6, 500000, 20, 0]])
@@ -146,7 +146,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             harvest_rows = [
                 [1, 1, 617, 616, 2531362.01225, '(no valuation)', '(no valuation)', 1, 1],
                 [1, 2, 1344, 616, 2531362.01225, '(no valuation)', '(no valuation)', 363, 2]]
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, html_uri, 'harvest_table', harvest_rows)
 
         # Check the farm result totals table.
@@ -158,7 +158,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             totals_rows = [
                 [1, '(no valuation)', 2, 5062724.0245],
                 [4, '(no valuation)', 2, 4722863.6745]]
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, html_uri, 'totals_table', totals_rows)
 
         if not use_uncertainty:
@@ -174,7 +174,7 @@ class TestFinfishAquaculture(unittest.TestCase):
             for row in range(2):
                 for col in range(3, 5):
                     uncertainty_rows[row][col] = '(no valuation)'
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, html_uri, 'uncertainty_table', uncertainty_rows)
 
         # Check the histogram images.
@@ -187,7 +187,7 @@ class TestFinfishAquaculture(unittest.TestCase):
 
         # Make sure the image files are embedded in the HTML report.
         image_elems = [html.Element('img', src=path) for path in image_paths]
-        html_utils.assert_contains_matching_elems(self, html_uri, image_elems)
+        html_test_utils.assert_contains_matching_elems(self, html_uri, image_elems)
 
     def expected_image_paths(self, do_valuation):
         plot_types = ['weight', 'cycles']
