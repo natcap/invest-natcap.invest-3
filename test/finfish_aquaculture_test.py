@@ -11,6 +11,7 @@ from osgeo import ogr
 import numpy as np
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture
+from invest_natcap.report_generation import html
 import invest_test_core
 import html_utils
 
@@ -160,19 +161,47 @@ class TestFinfishAquaculture(unittest.TestCase):
         html_utils.assert_table_contains_rows_uri(
             self, html_uri, 'totals_table', totals_rows)
 
-        # Check the uncertainty results table.
-        if use_uncertainty:
-            uncertainty_rows = [
-                ['Total (all farms)', 9407678.16305, 4360554.97538,
-                 12430.5918386, 5696.36013219],
-                ['Farm 1', 4698976.86064, 2163202.13865,
-                 6215.76470719, 2824.16194289]]
-            if not do_valuation:
-                for row in range(2):
-                    for col in range(3, 5):
-                        uncertainty_rows[row][col] = '(no valuation)'
-            html_utils.assert_table_contains_rows_uri(
-                self, html_uri, 'uncertainty_table', uncertainty_rows)
+        if not use_uncertainty:
+            return
+
+        # Check the uncertainty table.
+        uncertainty_rows = [
+            ['Total (all farms)', 9407678.16305, 4360554.97538,
+             12430.5918386, 5696.36013219],
+            ['Farm 1', 4698976.86064, 2163202.13865,
+             6215.76470719, 2824.16194289]]
+        if not do_valuation:
+            for row in range(2):
+                for col in range(3, 5):
+                    uncertainty_rows[row][col] = '(no valuation)'
+        html_utils.assert_table_contains_rows_uri(
+            self, html_uri, 'uncertainty_table', uncertainty_rows)
+
+        # Check the histogram images.
+        image_paths = self.expected_image_paths(do_valuation)
+
+        # Make sure the image files exist.
+        for image_path in image_paths:
+            self.assertTrue(os.path.isfile(
+                    os.path.join(self.output_dir, image_path)))
+
+        # Make sure the image files are embedded in the HTML report.
+        image_elems = [html.Element('img', src=path) for path in image_paths]
+        html_utils.assert_contains_matching_elems(self, html_uri, image_elems)
+
+    def expected_image_paths(self, do_valuation):
+        plot_types = ['weight', 'cycles']
+        if do_valuation:
+            plot_types.append('value')
+
+        filenames = []
+        for plot_type in plot_types:
+            for farm in ['1', '4']:
+                filenames.append('farm_%s_%s.png' % (farm, plot_type))
+            if plot_type != 'cycles':
+                filenames.append('total_%s.png' % plot_type)
+
+        return [os.path.join('images', name) for name in filenames]
 
 def _get_expected_temp_table():
     '''Return a formatted temperature table to compare against for testing.'''

@@ -87,15 +87,11 @@ class Element(object):
         details_elem.add(
             html.Element('img', src='images/my_pic.png', end_tag=False))
     '''
-    def __init__(self, tag, content='', end_tag=True, **attr):
+    def __init__(self, tag, content='', end_tag=True, **attrs):
         self.tag = tag
         self.content = content
         self.end_tag = end_tag
-        if attr:
-            self.attr_str = ' ' + ' '.join(
-                '%s="%s"' % (key, val) for key, val in attr.items())
-        else:
-            self.attr_str = ''
+        self.attrs = attrs
         self.elems = []
 
     def add(self, elem):
@@ -103,7 +99,13 @@ class Element(object):
         return elem
 
     def html(self):
-        html_str = '<%s%s>%s' % (self.tag, self.attr_str, self.content)
+        if self.attrs:
+            attr_str = ' ' + ' '.join(
+                '%s="%s"' % (key, val) for key, val in self.attrs.items())
+        else:
+            attr_str = ''
+
+        html_str = '<%s%s>%s' % (self.tag, attr_str, self.content)
         for elem in self.elems:
             html_str += elem.html()
         if self.end_tag:
