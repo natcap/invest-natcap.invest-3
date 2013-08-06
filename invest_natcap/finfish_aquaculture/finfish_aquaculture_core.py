@@ -456,31 +456,31 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     # Make aggregate histograms and store the paths.
     histogram_paths['aggregate'] = {}
     histogram_paths['aggregate']['weight'] = make_histograms(
-        total_weight_results, output_dir, 'weight',
-        'Total harvested weight after processing (kg)',
+        total_weight_results, args['num_monte_carlo_runs'], output_dir,
+        'weight', 'Total harvested weight after processing (kg)',
         'Total harvested weight', per_farm=False)
 
     if args['do_valuation']:
         histogram_paths['aggregate']['value'] = make_histograms(
-            total_value_results, output_dir, 'value',
-            'Total net present value (in thousands of USD)',
+            total_value_results, args['num_monte_carlo_runs'], output_dir,
+            'value', 'Total net present value (in thousands of USD)',
             'Total net present value', per_farm=False)
 
     # Make per-farm histograms and store the paths.
     weight_histogram_paths = make_histograms(
-        hrv_weight_results, output_dir, 'weight',
-        'Total harvested weight after processing (kg)',
+        hrv_weight_results, args['num_monte_carlo_runs'], output_dir, 
+        'weight', 'Total harvested weight after processing (kg)',
         'Total harvested weight')
 
     if args['do_valuation']:
         value_histogram_paths = make_histograms(
-            valuation_results, output_dir, 'value',
-            'Total net present value (in thousands of USD)',
+            valuation_results, args['num_monte_carlo_runs'], output_dir,
+            'value', 'Total net present value (in thousands of USD)',
             'Total net present value')
 
     cycle_histogram_paths = make_histograms(
-        num_cycle_results, output_dir, 'num_cycles',
-        'Number of cycles')
+        num_cycle_results, args['num_monte_carlo_runs'], output_dir, 
+        'num_cycles', 'Number of cycles')
 
     for farm_id in weight_histogram_paths:
         histogram_paths[farm_id] = {
@@ -493,7 +493,7 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     LOGGER.info('Done with uncertainty analysis.')
     return histogram_paths, uncertainty_stats
 
-def make_histograms(data_collection, output_dir, name, xlabel, 
+def make_histograms(data_collection, total_num_runs, output_dir, name, xlabel,
                     title=None, per_farm=True):
     '''Makes a histogram for the given data.
 
@@ -527,11 +527,8 @@ def make_histograms(data_collection, output_dir, name, xlabel,
             return '%s for all farms' % title
 
     def make_histogram(relpath, data, title):
-        # Set the weight so that each column represents a percent probability.
-        weight = 100.0 / len(data)
-        plt.hist(data, bins=NUM_HISTOGRAM_BINS, 
-                 weights=np.tile(weight, len(data)))
-        plt.ylabel('Percent probability')
+        plt.hist(data, bins=NUM_HISTOGRAM_BINS)
+        plt.ylabel('Number of runs (out of %d total runs)' % total_num_runs)
         plt.xlabel(xlabel)
         plt.title(title)
         plt.savefig(os.path.join(output_dir, relpath))
@@ -696,6 +693,11 @@ def create_HTML_table(
             'The simulation involved %d runs of the model, each with different '
             'values for the growth parameters.' % args['num_monte_carlo_runs'])
 
+        doc.write_paragraph(
+            'Results labeled as <i>total results (all farms)</i> '
+            'were calculated by, for each run, summing the harvested weights '
+            'and the net present values of all farms for that run.')
+
         # Write a table with numerical results.
         doc.write_header('Numerical Results', level=3)
         doc.write_paragraph(
@@ -742,7 +744,9 @@ def create_HTML_table(
             else:
                 title = 'Histograms for farm %s' % str(key)
             doc.write_header(title, level=4)
-            collapsible_elem = doc.add(html.Element('details'))
+
+            # Put the histograms in a collapsible element that defaults to open.
+            collapsible_elem = doc.add(html.Element('details', open=''))
             for histogram_type, path in paths.items():
                 collapsible_elem.add(html.Element('img', src=path, end_tag=False))
 
