@@ -20,7 +20,6 @@ LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-NUM_MONTE_CARLO_RUNS = 200  # TODO set this to 1000 for production
 NUM_HISTOGRAM_BINS = 30
 
 def execute(args):
@@ -157,10 +156,9 @@ def execute(args):
     else:
         histogram_paths, uncertainty_stats = {}, {}
         
-    create_HTML_table(output_dir, args['farm_op_dict'], 
-                      cycle_history, sum_hrv_weight, hrv_weight, 
-                      args['do_valuation'], farms_npv, value_history,
-                      histogram_paths, uncertainty_stats)
+    create_HTML_table(
+        output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
+        value_history, histogram_paths, uncertainty_stats)
     
 def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
@@ -389,10 +387,12 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
 
     # Aggregate data (across all farms) to collect.
     total_weight_results = [] # list of total weight (one entry per run)
-    total_value_results = [] # list of net present values (one entry per run)
+
+    if args['do_valuation']:
+        total_value_results = [] # list of net present values (one entry per run)
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.' 
-                % NUM_MONTE_CARLO_RUNS)
-    for i in range(NUM_MONTE_CARLO_RUNS):
+                % args['num_monte_carlo_runs'])
+    for i in range(args['num_monte_carlo_runs']):
         if i > 0 and i % 100 == 0:
             LOGGER.info('Done with %d runs.' % i)
 
@@ -407,22 +407,27 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
             cycle_history)
 
         # Compute valuation data.
-        _, farms_npv = valuation(
-            args['p_per_kg'], args['frac_p'], args['discount'],
-            hrv_weight_per_cycle, cycle_history)
+        if args['do_valuation']:
+            _, farms_npv = valuation(
+                args['p_per_kg'], args['frac_p'], args['discount'],
+                hrv_weight_per_cycle, cycle_history)
 
         # Update our collections of results.
         total_weight_results.append(sum(sum_hrv_weight.values()))
-        total_value_results.append(sum(farms_npv.values()))
+        if args['do_valuation']:
+            total_value_results.append(sum(farms_npv.values()))
+
         for farm, hrv_weight in sum_hrv_weight.items():
             try:
                 hrv_weight_results[farm].append(hrv_weight)
                 num_cycle_results[farm].append(len(cycle_history[farm]))
-                valuation_results[farm].append(farms_npv[farm])
+                if args['do_valuation']:
+                    valuation_results[farm].append(farms_npv[farm])
             except KeyError:
                 hrv_weight_results[farm] = [hrv_weight]
                 num_cycle_results[farm] = [len(cycle_history[farm])]
-                valuation_results[farm] = [farms_npv[farm]]
+                if args['do_valuation']:
+                    valuation_results[farm] = [farms_npv[farm]]
 
     LOGGER.info('Monte Carlo simulation complete.')
 
@@ -430,11 +435,20 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     uncertainty_stats = collections.OrderedDict()
     uncertainty_stats['aggregate'] = {}
     uncertainty_stats['aggregate']['weight'] = norm.fit(total_weight_results)
-    uncertainty_stats['aggregate']['value'] = norm.fit(total_value_results)
+
+    if args['do_valuation']:
+        uncertainty_stats['aggregate']['value'] = norm.fit(total_value_results)
+    else:
+        uncertainty_stats['aggregate']['value'] = ('(no valuation)', '(no valuation)')
+
     for farm in hrv_weight_results:
         uncertainty_stats[farm] = {}
         uncertainty_stats[farm]['weight'] = norm.fit(hrv_weight_results[farm])
-        uncertainty_stats[farm]['value'] = norm.fit(valuation_results[farm])
+        if args['do_valuation']:
+            uncertainty_stats[farm]['value'] = norm.fit(valuation_results[farm])
+        else:
+            uncertainty_stats[farm]['value'] = ('(no valuation)', '(no valuation)')
+            
 
     LOGGER.info('Creating histograms.')
     histogram_paths = collections.OrderedDict()
@@ -446,10 +460,11 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
         'Total harvested weight after processing (kg)',
         'Total harvested weight', per_farm=False)
 
-    histogram_paths['aggregate']['value'] = make_histograms(
-        total_value_results, output_dir, 'value',
-        'Total net present value (in thousands of USD)',
-        'Total net present value', per_farm=False)
+    if args['do_valuation']:
+        histogram_paths['aggregate']['value'] = make_histograms(
+            total_value_results, output_dir, 'value',
+            'Total net present value (in thousands of USD)',
+            'Total net present value', per_farm=False)
 
     # Make per-farm histograms and store the paths.
     weight_histogram_paths = make_histograms(
@@ -457,10 +472,11 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
         'Total harvested weight after processing (kg)',
         'Total harvested weight')
 
-    value_histogram_paths = make_histograms(
-        valuation_results, output_dir, 'value',
-        'Total net present value (in thousands of USD)',
-        'Total net present value')
+    if args['do_valuation']:
+        value_histogram_paths = make_histograms(
+            valuation_results, output_dir, 'value',
+            'Total net present value (in thousands of USD)',
+            'Total net present value')
 
     cycle_histogram_paths = make_histograms(
         num_cycle_results, output_dir, 'num_cycles',
@@ -469,9 +485,10 @@ def compute_uncertainty_data(args, output_dir, confidence=0.8):
     for farm_id in weight_histogram_paths:
         histogram_paths[farm_id] = {
             'weight': weight_histogram_paths[farm_id],
-            'value': value_histogram_paths[farm_id],
             'cycles': cycle_histogram_paths[farm_id]
             }
+        if args['do_valuation']:
+            histogram_paths[farm_id]['value'] = value_histogram_paths[farm_id]
 
     LOGGER.info('Done with uncertainty analysis.')
     return histogram_paths, uncertainty_stats
@@ -534,9 +551,9 @@ def make_histograms(data_collection, output_dir, name, xlabel,
         make_histogram(relpath, data_collection, make_plot_title())
         return relpath
 
-def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
-                      hrv_weight, do_valuation, farms_npv, value_history,
-                      histogram_paths, uncertainty_stats):
+def create_HTML_table(
+    output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, 
+    farms_npv, value_history, histogram_paths, uncertainty_stats):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
@@ -583,7 +600,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
     doc.write_header('Farm Operations (input)')
 
-    ops_table = doc.add(html.Table())
+    ops_table = doc.add(html.Table(id='farm_ops_table'))
     ops_table.add_row(['Farm ID Number',
                        'Weight of Fish at Start (kg)',
                        'Weight of Fish at Harvest (kg)',
@@ -601,11 +618,11 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                            'number of fish in farm',
                            'start day for growing',
                            'Length of Fallowing period']:
-            cells.append(farm_op_dict[farm_id][column_key])
+            cells.append(args['farm_op_dict'][farm_id][column_key])
         ops_table.add_row(cells)
 
     doc.write_header('Farm Harvesting (output)')
-    harvest_table = doc.add(html.Table())
+    harvest_table = doc.add(html.Table(id='harvest_table'))
 
     harvest_table.add_row(['Farm ID Number', 'Cycle Number', 
                  'Days Since Outplanting Date (Including Fallowing Period)', 
@@ -632,7 +649,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
             
-            if do_valuation:
+            if args['do_valuation']:
                 # Revenue and NPV should be in thousands of dollars.
                 indiv_rev, indiv_npv = value_history[farm_id][cycle]
                 indiv_rev /= 1000.0
@@ -650,7 +667,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
         'All values in the following table were also populated in the attribute '
         'table of the netpens feature class.')
 
-    totals_table = doc.add(html.Table())
+    totals_table = doc.add(html.Table(id='totals_table'))
     totals_table.add_row(['Farm ID Number', 
                           'Net Present Value (Thousands of $) (For Duration of Model Run)', 
                           'Number of Completed Harvest Cycles', 
@@ -658,7 +675,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                          is_header=True)
 
     for farm_id in cycle_history:
-        if do_valuation: 
+        if args['do_valuation']: 
             npv = round(farms_npv[farm_id], 4)
         else:
             npv = '(no valuation)'
@@ -677,7 +694,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             'For each run of the simulation, each growth parameter was randomly '
             'sampled according to the provided normal distribution. '
             'The simulation involved %d runs of the model, each with different '
-            'values for the growth parameters.' % NUM_MONTE_CARLO_RUNS)
+            'values for the growth parameters.' % args['num_monte_carlo_runs'])
 
         # Write a table with numerical results.
         doc.write_header('Numerical Results', level=3)
@@ -688,7 +705,7 @@ def create_HTML_table(output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             'computed for results across all runs of the Monte Carlo '
             'simulation.')
 
-        uncertainty_table = doc.add(html.Table())
+        uncertainty_table = doc.add(html.Table(id='uncertainty_table'))
         uncertainty_table.add_row(['', 'Harvested weight after processing (kg)',
                                    'Net present value (thousands of USD)'],
                                   is_header=True,

@@ -37,6 +37,19 @@ def execute(args):
     nodata = list(nodata)[0]
     LOGGER.debug("No data value is %i.", nodata)
 
+
+    #It might be handy allow for a SetCategoryNames
+    dataset = gdal.Open(args["lulc"][0])
+    band = dataset.GetRasterBand(1)
+    names = band.GetCategoryNames()
+    band = None
+    dataset = None
+
+    if not names == None:
+        LOGGER.debug("Found category names: %s.", names)
+    else:
+        LOGGER.debug("Category names not found.")
+
     transitions = get_transition_set_from_uri(args["lulc"])
     if (nodata, nodata) in transitions:
         transitions.remove((nodata, nodata))
@@ -73,7 +86,7 @@ def execute(args):
         transition_matrix.write("\n%i" % original)
         for final in final_values:
             if original == final:
-                transition_matrix.write(",1")
+                transition_matrix.write(",0")
             elif (original, final) in transitions:
                 transition_matrix.write(",")
             else:
