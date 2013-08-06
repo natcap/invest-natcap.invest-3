@@ -222,7 +222,7 @@ def execute(args):
     # Output URI for the watershed table 
     watershed_table_uri = os.path.join(
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
-    count = 0
+    
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
         # Create a tuple for precip and eto of the current months values
@@ -355,9 +355,7 @@ def execute(args):
             # Write results to the CSV
             add_row_csv_table(
                     sub_shed_table_uri, sub_shed_field_list, sub_out_dict)
-        count = count + 1
-        if count == 1:
-            break
+        
         # Move on to next month
 
 def build_csv_dict(new_dict, columns, out_dict, field):
@@ -1119,7 +1117,7 @@ def construct_time_step_data(data_uri, key_field):
     for line in data_reader:
         month = line[0]
         data_dict[month] = {}
-        for index in xrange(1, len(month)):
+        for index in xrange(1, len(line)):
             data_dict[month][index] = {
                     'date':month, 'lati':latitudes[index], 
                     'long': longitudes[index], key_field:line[index]}

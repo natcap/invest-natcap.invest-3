@@ -2,13 +2,17 @@
 
 import os
 import sys
+import shutil
 import unittest
 import filecmp
 import re
 
+from osgeo import ogr
+import numpy as np
+
 from invest_natcap.finfish_aquaculture import finfish_aquaculture
 import invest_test_core
-from osgeo import ogr
+import html_utils
 
 class TestFinfishAquaculture(unittest.TestCase):
     def setUp(self):
@@ -18,12 +22,16 @@ class TestFinfishAquaculture(unittest.TestCase):
         # Get rid of old output files before each test run.
         if os.path.exists(self.output_dir):
             for out_file in os.listdir(self.output_dir):
-                os.remove(os.path.join(self.output_dir, out_file))
+                uri = os.path.join(self.output_dir, out_file)
+                try:
+                    # Try removing it as a file.
+                    os.remove(uri)
+                except OSError:
+                    # Try removing it as a directory (e.g. the 'images' dir).
+                    shutil.rmtree(uri)
 
-    def get_args(self, use_uncertainty=False):
+    def get_args(self, do_valuation=False, use_uncertainty=False):
         args = {}
-
-        # Biophysical
         args['workspace_dir'] = self.workspace_dir
         args['ff_farm_loc'] = './invest-data/test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         args['farm_ID'] = 'FarmID'
@@ -38,14 +46,19 @@ class TestFinfishAquaculture(unittest.TestCase):
             args['g_param_a_sd'] = 0.005
             args['g_param_b_sd'] = 0.05
             args['num_monte_carlo_runs'] = 100
+
+            # Seed the numpy random number generator for predictable results.
+            np.random.seed(1)
         else:
             args['use_uncertainty'] = False
         
-        # Valuation
-        args['do_valuation'] = True
-        args['p_per_kg']= 2.25
-        args['frac_p'] = .3
-        args['discount'] = 0.000192
+        if do_valuation:
+            args['do_valuation'] = True
+            args['p_per_kg']= 2.25
+            args['frac_p'] = .3
+            args['discount'] = 0.000192
+        else:
+            args['do_valuation'] = False
 
         return args
                     
@@ -92,24 +105,74 @@ class TestFinfishAquaculture(unittest.TestCase):
 
     def test_finfish_model(self):
         finfish_aquaculture.execute(self.get_args())
+        self.check_html_report()
 
+        finfish_aquaculture.execute(self.get_args(do_valuation=True))
         self.assert_files_equal('Finfish_Harvest.shp')
-
-        # Make sure there's an output HTML file.
-        for fname in os.listdir(self.output_dir):
-            if re.match(r'Harvest_Results[_0-9\[\]\-]+\.html', fname):
-                break
-        else:
-            # If we didn't break out of the for loop, then the HTML file wasn't found.
-            self.fail("Didn't find a Harvest Results HTML file in the output folder.")
+        self.check_html_report(do_valuation=True)
 
     def test_finfish_model_with_uncertainty(self):
-        # TODO(adamperelman): seed the numpy random number generator so we 
-        # get the same results every time and can test!
         finfish_aquaculture.execute(self.get_args(use_uncertainty=True))
+        self.check_html_report(use_uncertainty=True)
 
+        finfish_aquaculture.execute(self.get_args(do_valuation=True,
+                                                  use_uncertainty=True))
         self.assert_files_equal('Finfish_Harvest.shp')
+        self.check_html_report(do_valuation=True, use_uncertainty=True)
 
+    def check_html_report(self, do_valuation=False, use_uncertainty=False):
+        '''Tests a few rows in the HTML report for the expected values.'''
+        # Find the file.
+        for filename in os.listdir(self.output_dir):
+            if re.match(r'Harvest_Results[_0-9\[\]\-]+\.html', filename):
+                html_uri = os.path.join(self.output_dir, filename)
+                break
+        else:
+            self.fail("Didn't find a Harvest Results HTML file in the output folder.")
+
+        # Check the farm operations table.
+        html_utils.assert_table_contains_rows_uri(
+            self, html_uri, 'farm_ops_table',
+            [[1, 0.06, 5.4, 600000, 1, 30],
+             [4, 0.08, 6, 500000, 20, 0]])
+
+        # Check the farm harvesting table.
+        if do_valuation:
+            harvest_rows = [
+                [1, 1, 617, 616, 2531362.01225, 3986.89516929, 3541.53463533, 1, 1],
+                [1, 2, 1344, 616, 2531362.01225, 3986.89516929, 3080.18464345, 363, 2]]
+        else:
+            harvest_rows = [
+                [1, 1, 617, 616, 2531362.01225, '(no valuation)', '(no valuation)', 1, 1],
+                [1, 2, 1344, 616, 2531362.01225, '(no valuation)', '(no valuation)', 363, 2]]
+        html_utils.assert_table_contains_rows_uri(
+            self, html_uri, 'harvest_table', harvest_rows)
+
+        # Check the farm result totals table.
+        if do_valuation:
+            totals_rows = [
+                [1, 6621.7193, 2, 5062724.0245],
+                [4, 6198.587, 2, 4722863.6745]]
+        else:
+            totals_rows = [
+                [1, '(no valuation)', 2, 5062724.0245],
+                [4, '(no valuation)', 2, 4722863.6745]]
+        html_utils.assert_table_contains_rows_uri(
+            self, html_uri, 'totals_table', totals_rows)
+
+        # Check the uncertainty results table.
+        if use_uncertainty:
+            uncertainty_rows = [
+                ['Total (all farms)', 9407678.16305, 4360554.97538, 
+                 12430.5918386, 5696.36013219],
+                ['Farm 1', 4698976.86064, 2163202.13865, 
+                 6215.76470719, 2824.16194289]]
+            if not do_valuation:
+                for row in range(2):
+                    for col in range(3, 5):
+                        uncertainty_rows[row][col] = '(no valuation)'
+            html_utils.assert_table_contains_rows_uri(
+                self, html_uri, 'uncertainty_table', uncertainty_rows)
 
 def _get_expected_temp_table():
     '''Return a formatted temperature table to compare against for testing.'''
