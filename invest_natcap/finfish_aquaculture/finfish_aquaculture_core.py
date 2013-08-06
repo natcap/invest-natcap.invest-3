@@ -404,7 +404,7 @@ def do_monte_carlo_simulation(args):
 
     # Set up a dict to contain the results of the simulation.
     farms = [str(farm) for farm in args['farm_op_dict'].keys()]
-    farms.insert(0, 'aggregate')
+    farms.insert(0, 'total')
 
     fields = ['cycles', 'weight']
     if args['do_valuation']:
@@ -416,7 +416,7 @@ def do_monte_carlo_simulation(args):
         for field in fields:
             # We don't log total cycles across all farms,
             # since it's not particularly meaningful.
-            if not (farm == 'aggregate' and field == 'cycles'):
+            if not (farm == 'total' and field == 'cycles'):
                 results[farm][field] = []
 
     LOGGER.info('Beginning Monte Carlo simulation. Doing %d runs.'
@@ -443,9 +443,9 @@ def do_monte_carlo_simulation(args):
                 hrv_weight_per_cycle, cycle_history)
 
         # Update our total results.
-        results['aggregate']['weight'].append(sum(sum_hrv_weight.values()))
+        results['total']['weight'].append(sum(sum_hrv_weight.values()))
         if args['do_valuation']:
-            results['aggregate']['value'].append(sum(farms_npv.values()))
+            results['total']['value'].append(sum(farms_npv.values()))
 
         # Update our per-farm results.
         for farm, hrv_weight in sum_hrv_weight.items():
@@ -470,7 +470,7 @@ def make_histograms(farm, results, output_dir, total_num_runs):
 
     def make_plot_relpath(result_type):
         '''Return a relative path to a histogram.'''
-        if farm == 'aggregate':
+        if farm == 'total':
             filename = 'total_%s.png' % result_type
         else:
             filename = 'farm_%s_%s.png' % (str(farm), result_type)
@@ -481,7 +481,7 @@ def make_histograms(farm, results, output_dir, total_num_runs):
                   'value': 'Total net present value',
                   'cycles': 'Number of completed cycles'}
         title = titles[result_type]
-        if farm == 'aggregate':
+        if farm == 'total':
             return '%s for all farms' % title
         else:
             return '%s for farm %s' % (title, str(farm))
@@ -677,7 +677,7 @@ def create_HTML_table(
                                    'Mean', 'Standard Deviation'], is_header=True)
 
         for farm in uncertainty_stats:
-            if farm == 'aggregate':
+            if farm == 'total':
                 farm_title = 'Total (all farms)'
             else:
                 farm_title = 'Farm %s' % farm
@@ -700,7 +700,7 @@ def create_HTML_table(
             'Included are histograms for total results across all farms, as well as '
             'results for each individual farm.')
         for key, paths in histogram_paths.items():
-            if key == 'aggregate':
+            if key == 'total':
                 title = 'Histograms for total results (all farms)'
             else:
                 title = 'Histograms for farm %s' % str(key)
