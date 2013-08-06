@@ -176,6 +176,20 @@ def pixel_size(dataset):
         linear_units
     return size_meters
 
+def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
+    """A wrapper for pixel_size_based_on_coordinate_transform
+        that takes a dataset uri as an input and opens it before sending it
+        along
+
+        dataset_uri - a URI to a gdal dataset
+
+        All other parameters pass along
+
+       returns a tuple containing (pixel width in meters, pixel height in 
+           meters)"""
+    dataset = gdal.Open(dataset_uri)
+    return pixel_size_based_on_coordinate_transform(dataset, *args, **kwargs)
+
 def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     """Calculates the pixel width and height in meters given a coordinate 
         transform and reference point on the dataset that's close to the 

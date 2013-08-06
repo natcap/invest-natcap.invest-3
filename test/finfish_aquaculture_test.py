@@ -1,6 +1,7 @@
 """URI level tests for the aquaculture biophysical and valuation module"""
 
-import os, sys
+import os
+import sys
 import shutil
 import unittest
 import filecmp
