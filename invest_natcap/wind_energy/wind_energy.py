@@ -4,10 +4,23 @@ import os
 import csv
 import json
 import struct
+import math
+import tempfile
+import shutil
 
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+
+import numpy as np
+import scipy.ndimage as ndimage
+from scipy import integrate
+from scipy import spatial
+#required for py2exe to build
+from scipy.sparse.csgraph import _validation
+import shapely.wkt
+import shapely.ops
+from shapely import speedups
 
 from invest_natcap import raster_utils
 
@@ -15,6 +28,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('wind_energy')
+
+speedups.enable()
 
 # A custom error message for a hub height that is not supported in
 # the current wind data
@@ -255,7 +270,9 @@ def execute(args):
     #biophysical_args['min_depth'] = abs(float(args['min_depth'])) * -1.0
     #biophysical_args['max_depth'] = abs(float(args['max_depth'])) * -1.0
     #biophysical_args['suffix'] = suffix
-   
+
+
+
 
 
 def read_binary_wind_data(wind_data_uri, field_list):
