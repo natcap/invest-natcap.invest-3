@@ -56,18 +56,20 @@ def execute(args):
     
     workspace = args['workspace_dir']
     output_dir = workspace + os.sep + 'Output'
-        
+
     if not (os.path.exists(output_dir)):
+        LOGGER.debug('Creating output directory')
         os.makedirs(output_dir)
         
     ff_aqua_args['workspace_dir'] = args['workspace_dir']
-    ff_aqua_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc'])
+    ff_aqua_args['ff_farm_file'] = args['ff_farm_loc']
     ff_aqua_args['farm_ID'] = args['farm_ID']
     ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
     ff_aqua_args['g_param_a'] = args['g_param_a']
     ff_aqua_args['g_param_b'] = args['g_param_b']
 
     if args['use_uncertainty']:
+        LOGGER.debug('Adding uncertainty parameters')
         for key in ['g_param_a_sd', 'g_param_b_sd', 'num_monte_carlo_runs']:
             ff_aqua_args[key] = args[key]    
     
@@ -83,6 +85,7 @@ def execute(args):
     key = 'do_valuation'
     
     if ff_aqua_args['do_valuation'] == True:
+        LOGGER.debug('Yes, we want to do valuation')
 
         ff_aqua_args['p_per_kg'] = args['p_per_kg']
         ff_aqua_args['frac_p'] = args['frac_p']
@@ -90,6 +93,7 @@ def execute(args):
 
     #Fire up the biophysical function in finfish_aquaculture_core with the 
     #gathered arguments
+    LOGGER.debug('Starting finfish model')
     finfish_aquaculture_core.execute(ff_aqua_args)
 
 def format_ops_table(op_path, farm_ID, ff_aqua_args):

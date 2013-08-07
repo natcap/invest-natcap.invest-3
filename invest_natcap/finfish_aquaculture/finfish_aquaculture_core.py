@@ -15,6 +15,7 @@ import numpy as np
 from scipy.stats import norm
 
 from invest_natcap.report_generation import html
+from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -82,37 +83,38 @@ def execute(args):
     '''
     
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-    
+    LOGGER.info('Output folder: %s', output_dir)
+
     cycle_history = calc_farm_cycles(
         args['outplant_buffer'], args['g_param_a'], args['g_param_b'], 
         args['water_temp_dict'], args['farm_op_dict'], float(args['duration']))
 
-    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'    
-    if os.path.isfile(out_path):
-        # Remove so we can re-create.
-        os.remove(out_path)
+    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
+    raster_utils.copy_datasource_uri(args['ff_farm_file'], out_path)
+    LOGGER.debug('Finished copying harvest shapefile')
 
-    curr_shp_file = args['ff_farm_file']
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
+    sf_copy = ogr.Open(out_path)
     layer = sf_copy.GetLayer()
-    
+    LOGGER.debug('Re-opened the shapefile')
+
     #This adds the number of cycles completed by each farm to their shapefile feature
     cycle_field = ogr.FieldDefn('Tot_Cycles', ogr.OFTReal)
     layer.CreateField(cycle_field)
-    
+   
+    LOGGER.debug('Starting to loop through features in the layer')
     for feature in layer:
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
-        
+
         layer.SetFeature(feature)
-        
+
     #Now want to add the total processed weight of each farm as a second feature on the
     #outgoing shapefile- abstracting the calculation of this to a separate function,
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
+    LOGGER.info('Calculating the harvest weight for each farm')
     sum_hrv_weight, hrv_weight = calc_hrv_weight(args['farm_op_dict'], 
                             args['frac_post_process'], args['mort_rate_daily'], 
                             cycle_history)
@@ -123,7 +125,9 @@ def execute(args):
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
     layer.CreateField(hrv_field)
-        
+    LOGGER.debug('Created new field for harvest weight')
+       
+    LOGGER.debug('Saving the farms harvest weight to the vector')
     for feature in layer:
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
@@ -132,6 +136,7 @@ def execute(args):
 
     # Do valuation if requested.
     if args['do_valuation']:
+        LOGGER.debug('Starting valuation')
         value_history, farms_npv = valuation(
             args['p_per_kg'], args['frac_p'], args['discount'],
             hrv_weight, cycle_history)
@@ -141,21 +146,26 @@ def execute(args):
         npv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
         layer.CreateField(npv_field)
         
+        LOGGER.debug('Starting to save NVP')
         for feature in layer:
             accessor = args['farm_ID']
             feature_ID = feature.items()[accessor]
             feature.SetField('NVP_USD_1k', farms_npv[feature_ID])     
             layer.SetFeature(feature)
     else:
+        LOGGER.debug('Skipping valuation')
         value_history = None
         farms_npv = None
 
     # Do uncertainty analysis if it's enabled.
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
+        LOGGER.debug('Starting uncertainty analysis')
         histogram_paths, uncertainty_stats = compute_uncertainty_data(args, output_dir)
     else:
+        LOGGER.debug('Skipping uncertainty')
         histogram_paths, uncertainty_stats = {}, {}
-        
+
+    LOGGER.debug('writing the HTML table')
     create_HTML_table(
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
         value_history, histogram_paths, uncertainty_stats)
@@ -184,11 +194,14 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
              
             Farm->List of Type (day of outplanting,day of harvest, fish weight (grams))
     '''
-    
+
+    LOGGER.debug('Starting to calculate farm cycles')
+    LOGGER.debug('Duration: %s', dur)
     cycle_history = {}
     tau = 0.08
 
     for f in farm_op_dict.keys():
+        LOGGER.debug('Farm %s', f)
 
         #Are multiplying by 1000, because a and b are in grams, so need to do the whole
         #equation in grams. Have to explicit cast to get things in a format that will be
@@ -243,6 +256,7 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     
         cycle_history[int(f)] = farm_history
 
+    LOGGER.debug('Finished calculating the farm cycles')
     return cycle_history
 
 def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
