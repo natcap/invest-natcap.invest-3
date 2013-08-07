@@ -381,6 +381,7 @@ def compute_uncertainty_data(args, output_dir):
         if not args['do_valuation']:
             uncertainty_stats[farm]['value'] = (
                 '(no valuation)', '(no valuation)')
+    uncertainty_stats['total']['cycles'] = ('n/a', 'n/a')
 
     LOGGER.info('Creating histograms.')
     histogram_paths = collections.OrderedDict()
@@ -670,25 +671,27 @@ def create_HTML_table(
 
         # Add a table with uncertainty stats (mean and standard deviation).
         uncertainty_table = doc.add(html.Table(id='uncertainty_table'))
-        uncertainty_table.add_row(['', 'Harvested weight after processing (kg)',
-                                   'Net present value (thousands of USD)'],
-                                  is_header=True,
-                                  cell_attr=[{}, {'colspan': 2}, {'colspan': 2}])
-        uncertainty_table.add_row(['Farm ID', 'Mean', 'Standard Deviation',
-                                   'Mean', 'Standard Deviation'], is_header=True)
+        result_titles = ['Harvested weight after processing (kg)',
+                         'Net present value (thousands of USD)',
+                         'Number of cycles']
+        header_row = [''] + result_titles
+        header_attr = [{}] + ([{'colspan': 2}] * len(result_titles))
+
+        uncertainty_table.add_row(
+            header_row, is_header=True, cell_attr=header_attr)
+        uncertainty_table.add_row(
+            ['Farm ID'] + (['Mean', 'Standard Deviation'] * len(result_titles)),
+            is_header=True)
 
         for farm in uncertainty_stats:
+            row = []
             if farm == 'total':
-                farm_name = 'Total (all farms)'
+                row.append('Total (all farms)')
             else:
-                farm_name = 'Farm %s' % farm
-            uncertainty_table.add_row([
-                    farm_name,
-                    uncertainty_stats[farm]['weight'][0],
-                    uncertainty_stats[farm]['weight'][1],
-                    uncertainty_stats[farm]['value'][0],
-                    uncertainty_stats[farm]['value'][1]
-                    ])
+                row.append('Farm %s' % farm)
+            for result_type in ['weight', 'value', 'cycles']:
+                row += uncertainty_stats[farm][result_type]
+            uncertainty_table.add_row(row)
 
         # Add histograms.
         doc.write_header('Histograms', level=3)
