@@ -167,9 +167,9 @@ class TestFinfishAquaculture(unittest.TestCase):
         # Check the uncertainty table.
         uncertainty_rows = [
             ['Total (all farms)', 9407678.16305, 4360554.97538,
-             12430.5918386, 5696.36013219],
+             12430.5918386, 5696.36013219, 'n/a', 'n/a'],
             ['Farm 1', 4698976.86064, 2163202.13865,
-             6215.76470719, 2824.16194289]]
+             6215.76470719, 2824.16194289, 1.84, 0.79649231007]]
         if not do_valuation:
             for row in range(2):
                 for col in range(3, 5):

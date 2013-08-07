@@ -1498,6 +1498,20 @@ def create_rat(dataset, attr_dict, column_name):
     return dataset
 
 
+def get_raster_properties_uri(dataset_uri):
+    """Wrapper function for get_raster_properties() that passes in the dataset
+        URI instead of the datasets itself
+        
+        dataset_uri - a URI to a GDAL raster dataset
+        
+       returns - a dictionary with the properties stored under relevant keys.
+           The current list of things returned is:
+           width (w-e pixel resolution), height (n-s pixel resolution), 
+           XSize, YSize
+    """
+    dataset = gdal.Open(dataset_uri)
+    return get_raster_properties(dataset)
+
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the
         values in a dictionary. 
