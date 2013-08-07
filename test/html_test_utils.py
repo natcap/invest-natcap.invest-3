@@ -10,7 +10,8 @@ def assert_contains_matching_elems(test_case, uri, elems):
     for elem in elems:
         test_case.assertIsNotNone(soup.find(elem.tag, attrs=elem.attrs))
 
-def assert_table_contains_rows_uri(test_case, uri, table_id, rows, num_header_rows=0):
+def assert_table_contains_rows_uri(test_case, uri, table_id, rows,
+                                   num_header_rows=0):
     '''Assert that the table in the file contains the given rows.
 
     rows - a list of rows, each of which is represented as a list
@@ -25,6 +26,7 @@ def assert_table_contains_rows_uri(test_case, uri, table_id, rows, num_header_ro
         _assert_table_contains_row(test_case, table, row, is_header)
 
 def _make_soup(uri):
+    '''Returns a BeautifulSoup object from the given HTML file.'''
     return BeautifulSoup(open(uri, 'r').read())
 
 def _assert_table_contains_row(test_case, table, row, is_header):
