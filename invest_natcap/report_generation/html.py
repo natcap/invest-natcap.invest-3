@@ -19,14 +19,14 @@ class HTMLDocument(object):
         table.add_row(['1 year', '20 pounds'])
         table.add_row(['2 years', '40 pounds'])
 
-        # Add an arbitrary HTML element. 
+        # Add an arbitrary HTML element.
         # Note that the HTML 'img' element doesn't have an end tag.
         doc.add(html.Element('img', src='images/my_pic.png', end_tag=False))
 
         # Create the file.
         doc.flush()
     '''
-        
+
     def __init__(self, uri, title, header, style_const=BEACH_STYLE):
         self.uri = uri
 
@@ -87,15 +87,11 @@ class Element(object):
         details_elem.add(
             html.Element('img', src='images/my_pic.png', end_tag=False))
     '''
-    def __init__(self, tag, content='', end_tag=True, **attr):
+    def __init__(self, tag, content='', end_tag=True, **attrs):
         self.tag = tag
         self.content = content
         self.end_tag = end_tag
-        if attr:
-            self.attr_str = ' ' + ' '.join(
-                '%s="%s"' % (key, val) for key, val in attr.items())
-        else:
-            self.attr_str = ''
+        self.attrs = attrs
         self.elems = []
 
     def add(self, elem):
@@ -103,7 +99,13 @@ class Element(object):
         return elem
 
     def html(self):
-        html_str = '<%s%s>%s' % (self.tag, self.attr_str, self.content)
+        if self.attrs:
+            attr_str = ' ' + ' '.join(
+                '%s="%s"' % (key, val) for key, val in self.attrs.items())
+        else:
+            attr_str = ''
+
+        html_str = '<%s%s>%s' % (self.tag, attr_str, self.content)
         for elem in self.elems:
             html_str += elem.html()
         if self.end_tag:
@@ -120,7 +122,7 @@ class Table(object):
     def add_row(self, cells, is_header=False, cell_attr=[]):
         '''Writes a table row with the given cell data.
 
-        cell_attr - attributes for each cell. If provided, it must be the 
+        cell_attr - attributes for each cell. If provided, it must be the
             same length as cells. Each entry should be a dictionary mapping
             attribute key to value.
         '''
@@ -171,10 +173,10 @@ def _get_style_css(style_const):
       }
       table {
           border: 5px solid #A7A37E;
-          margin-bottom: 50px; 
+          margin-bottom: 50px;
           background-color: #E6E2AF;
       }
-      td, th { 
+      td, th {
           margin-left: 0px;
           margin-right: 0px;
           padding-left: 8px;
@@ -183,7 +185,7 @@ def _get_style_css(style_const):
           padding-top: 2px;
           text-align:left;
       }
-      td { 
+      td {
           border-top: 5px solid #EFECCA;
       }
       img {

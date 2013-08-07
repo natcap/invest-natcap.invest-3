@@ -19,9 +19,9 @@ def execute(args):
 
 def execute_30(**args):
     """This function calculates carbon sequestration valuation.
-        
+
         args - a python dictionary with at the following *required* entries:
-        
+
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
         args['suffix'] - a string to append to any output file name (optional)
@@ -32,17 +32,17 @@ def execute_30(**args):
         args['conf_uri'] (optional) - uri to the raster dataset indicating
             confident pixels for sequestration or emission
         args['conf_redd_uri'] (optional) - as above, but for the REDD scenario
-        args['carbon_price_units'] - a string indicating whether the price is 
+        args['carbon_price_units'] - a string indicating whether the price is
             in terms of carbon or carbon dioxide. Can value either as
             'Carbon (C)' or 'Carbon Dioxide (CO2)'.
-        args['V'] - value of a sequestered ton of carbon or carbon dioxide in 
+        args['V'] - value of a sequestered ton of carbon or carbon dioxide in
             dollars per metric ton
         args['r'] - the market discount rate in terms of a percentage
         args['c'] - the annual rate of change in the price of carbon
-        args['yr_cur'] - the year at which the sequestration measurement 
+        args['yr_cur'] - the year at which the sequestration measurement
             started
         args['yr_fut'] - the year at which the sequestration measurement ended
-        
+
         returns nothing."""
 
     # Set up the output directory structure for the workspace.
@@ -88,7 +88,7 @@ def execute_30(**args):
             return sequest * valuation_constant
 
         LOGGER.debug('finished constructing valuation formula for %s scenario' % scenario_type)
-        
+
         LOGGER.info('starting valuation of each pixel')
 
         pixel_size_out = raster_utils.get_cell_size_from_uri(sequest_uri)
@@ -101,12 +101,14 @@ def execute_30(**args):
 
         if scenario_type in conf_uris:
             # Produce a raster for sequestration with uncertain areas masked out.
-            _create_masked_raster(sequest_uri, conf_uris[scenario_type], 
+            _create_masked_raster(sequest_uri, conf_uris[scenario_type],
                                   outfile_uris['%s_seq_mask' % scenario_type])
 
             # Produce a raster for value sequestration with uncertain areas masked out.
-            _create_masked_raster(outfile_uris['%s_val' % scenario_type], conf_uris[scenario_type],
-                                  outfile_uris['%s_val_mask' % scenario_type])
+            _create_masked_raster(
+                outfile_uris['%s_val' % scenario_type],
+                conf_uris[scenario_type],
+                outfile_uris['%s_val_mask' % scenario_type])
 
     _create_html_summary(outfile_uris, sequest_uris)
 
@@ -156,7 +158,7 @@ def _make_outfile_uris(output_directory, args):
 
     # HTML summary file.
     outfile_uris['html'] = outfile_uri('summary', filetype='html')
-    
+
     return outfile_uris
 
 def _make_outfile_descriptions(outfile_uris):
@@ -206,7 +208,7 @@ def _make_outfile_descriptions(outfile_uris):
         descriptions[filename] = description_dict[key]
 
     return descriptions
-    
+
 def _create_masked_raster(orig_uri, mask_uri, result_uri):
     '''Creates a raster at result_uri with some areas masked out.
 
@@ -224,7 +226,7 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
         if mask_val == 0 or mask_val == nodata_mask:
             return nodata_orig
         return orig_val
-            
+
     pixel_size = raster_utils.get_cell_size_from_uri(orig_uri)
     raster_utils.vectorize_datasets(
         [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32, nodata_orig,
@@ -238,7 +240,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
 
     def format_currency(val):
         return '%.2f' % val
-    
+
     doc.write_header('Results Summary')
     doc.write_paragraph(
         '<strong>Positive values</strong> in this table indicate that carbon storage increased. '
@@ -252,7 +254,7 @@ def _create_html_summary(outfile_uris, sequest_uris):
     # Write the table that summarizes change in carbon stocks and
     # net present value.
     change_table = doc.add(html.Table(id='change_table'))
-    change_table.add_row(["Scenario", 
+    change_table.add_row(["Scenario",
                           "Change in Carbon Stocks<br>(Mg of carbon)",
                           "Net Present Value<br>(USD)"],
                          is_header=True)
@@ -277,15 +279,15 @@ def _create_html_summary(outfile_uris, sequest_uris):
             masked_val = carbon_utils.sum_pixel_values_from_uri(
                 outfile_uris['%s_val_mask' % scenario_type])
             scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
-            change_table.add_row(['%s (confident cells only)' % scenario_name, 
-                                  masked_seq, 
+            change_table.add_row(['%s (confident cells only)' % scenario_name,
+                                  masked_seq,
                                   format_currency(masked_val)])
 
     # If REDD scenario analysis is enabled, write the table
     # comparing the baseline and REDD scenarios.
     if 'base' in scenario_results and 'redd' in scenario_results:
         comparison_table = doc.add(html.Table(id='comparison_table'))
-        comparison_table.add_row(["Scenario Comparison", 
+        comparison_table.add_row(["Scenario Comparison",
                           "Difference in Carbon Stocks<br>(Mg of carbon)",
                           "Difference in Net Present Value<br>(USD)"],
                          is_header=True)
