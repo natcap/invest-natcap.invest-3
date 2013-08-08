@@ -1097,6 +1097,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #Only want to perform these operation if there is data in the cell, else
         #we end up with false positive data when we subtract 1. 
         if c_pix == 0. and e_pix == 0.:
+            LOGGER.debug("There's a 0 in the cell. How did you get that?")
             c_val = 0.
             e_val = 0.
         else:
@@ -1134,6 +1135,8 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
     #Use arbitrary raster layers to get the grid size and the nodata values.
     grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
+
+    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
 
     def add_e_pix(*pixels):
         
@@ -1175,6 +1178,9 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
 
     Returns nothing.
     '''
+    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
+    LOGGER.debug("The h denom is: %s" % h_denom)
+
     tot_crit_list = h_s_list + h_list
     tot_denom = h_s_denom + h_denom
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
@@ -1194,6 +1200,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         for p in pixels:
             
             if p != nodata:
+                
                 value += p
     
         return value / tot_denom
