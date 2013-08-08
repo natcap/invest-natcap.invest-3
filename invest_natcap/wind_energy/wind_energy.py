@@ -588,6 +588,515 @@ def execute(args):
     
     LOGGER.info('Leaving Wind Energy Biophysical Core')
 
+### Valuation
+    valuation_checked = args.pop('valuation_container', False)
+    if not valuation_checked:
+        LOGGER.debug('Valuation Not Selected')
+        return
+
+    LOGGER.info('Entering Wind Energy Valuation')
+
+    # Dollar per kiloWatt hour
+    #valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
+    dollar_per_kWh = float(args['dollar_per_kWh'])
+
+    # Create a list of the valuation parameters we are looking for from the
+    # input files 
+    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+
+    valuation_global_params = [
+            'carbon_coefficient', 'time_period', 'infield_cable_cost', 
+            'infield_cable_length', 'installation_cost',
+            'miscellaneous_capex_cost', 'operation_maintenance_cost',
+            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc']
+
+    # Get the valuation turbine parameters from the CSV file
+    LOGGER.info('Read in turbine information from CSV')
+    val_turbine_param_file = open(args['turbine_parameters_uri'])
+    val_turbine_reader = csv.reader(val_turbine_param_file)
+    val_turbine_dict = {}
+
+    # Get the valuation turbine parameters from the CSV file
+    for field_value_row in val_turbine_reader:
+        # Only get the valuation parameters and leave out the biophysical ones
+        if field_value_row[0].lower() in valuation_turbine_params:
+            val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+    
+    # Get the global parameters for valuation from the CSV file
+    global_val_param_file = open(args['global_wind_parameters_uri'])
+    global_val_reader = csv.reader(global_val_param_file)
+    for field_value_row in global_val_reader:
+        # Only get the valuation parameters and leave out the biophysical ones
+        if field_value_row[0].lower() in valuation_global_params:
+            val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+
+    LOGGER.debug('Valuation Turbine Parameters: %s', val_turbine_dict)
+    val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
+    if len(val_turbine_dict.keys()) != val_param_len:
+        class FieldError(Exception):
+            """A custom error message for fields that are missing"""
+            pass
+        raise FieldError('An Error occured from reading in a field value from '
+                'either the turbine CSV file or the global parameters JSON '
+                'file. Please make sure all the necessary fields are present '
+                'and spelled correctly.')
+    
+    LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
+    #valuation_args['turbine_dict'] = val_turbine_dict
+    #valuation_args['number_of_turbines'] = int(args['number_of_machines'])
+
+    # Handle Grid Points
+    if 'grid_points_uri' in args:
+        grid_file = open(str(args['grid_points_uri']))
+        LOGGER.info('Reading in the grid points')
+        reader = csv.DictReader(grid_file)
+
+        grid_dict = {}
+        land_dict = {}
+        # Making a shallow copy of the attribute 'fieldnames' explicitly to
+        # edit to all the fields to lowercase because it is more readable 
+        # and easier than editing the attribute itself
+        field_names = reader.fieldnames
+
+        for index in range(len(field_names)):
+            field_names[index] = field_names[index].lower()
+        # Iterate through the CSV file and construct two different dictionaries
+        # for grid and land points. 
+        for row in reader:
+            if row['type'].lower() == 'grid':
+                grid_dict[row['id']] = row
+            else:
+                land_dict[row['id']] = row
+        grid_file.close()
+        LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
+        LOGGER.debug('Land_Points_Dict : %s', land_dict)
+
+        grid_ds_uri = os.path.join(inter_dir, 'val_grid_points' + suffix + '.shp')
+        land_ds_uri = os.path.join(inter_dir, 'val_land_points' + suffix + '.shp')
+        
+        # Create a point shapefile from the grid and land point dictionaries.
+        # This makes it easier for future distance calculations and provides a
+        # nice intermediate output for users
+        raster_utils.dictionary_to_point_shapefile(
+                grid_dict, 'grid_points', grid_ds_uri) 
+        raster_utils.dictionary_to_point_shapefile(
+                land_dict, 'land_points', land_ds_uri) 
+        # In case any of the above points lie outside the AOI, clip the
+        # shapefiles and then project them to the AOI as well.
+        # NOTE: There could be an error here where NO points lie within the AOI,
+        # what then????????
+        grid_projected_uri = os.path.join(
+                inter_dir, 'grid_point_projected' + suffix + '.shp')
+        land_projected_uri = os.path.join(
+                inter_dir, 'land_point_projected' + suffix + '.shp')
+
+        clip_and_project_shapefile(grid_ds_uri, aoi, grid_projected_uri)
+        clip_and_project_shapefile(land_ds_uri, aoi, land_projected_uri)
+        LOGGER.info('Calculating distances using grid points')
+        # Get the shortest distances from each grid point to the land points
+        grid_to_land_dist_local = point_to_polygon_distance(
+                grid_points_ds, land_shape_ds)
+         
+        # Add the distances for land to grid points as a new field  onto the 
+        # land points datasource
+        LOGGER.info('Adding land to grid distances to land point datasource')
+        land_to_grid_field = 'L2G'
+        land_shape_ds = add_field_to_shape_given_list(
+                land_shape_ds, grid_to_land_dist_local, land_to_grid_field)
+  
+        # In order to get the proper land to grid distances that each ocean
+        # point corresponds to, we need to build up a KDTree from the land
+        # points geometries and then iterate through each wind energy point
+        # seeing which land point it is closest to. Knowing which land point is
+        # closest allows us to add the proper land to grid distance to the wind
+        # energy point ocean points.
+
+        # Get the land points geometries
+        land_geoms = get_points_geometries(land_shape_ds)
+        
+        # Build a dictionary from the land points datasource so that we can
+        # have access to what land point has what land to grid distance
+        land_dict = get_dictionary_from_shape(land_shape_ds)
+        LOGGER.debug('land_dict : %s', land_dict)
+        
+        # Build up the KDTree for land points geometries
+        kd_tree = spatial.KDTree(land_geoms)
+        
+        # Initialize a list to store all the proper grid to land distances to
+        # add to the wind energy point datasource later
+        grid_to_land_dist = []
+
+        wind_energy_layer = wind_energy_points.GetLayer()
+        for feat in wind_energy_layer:
+            geom = feat.GetGeometryRef()
+            x_loc = geom.GetX()
+            y_loc = geom.GetY()
+            
+            # Create a point from the geometry
+            point = np.array([x_loc, y_loc])
+            
+            # Get the shortest distance and closest index from the land points
+            dist, closest_index = kd_tree.query(point)
+            
+            # Knowing the closest index we can look into the land geoms lists,
+            # pull that lat/long key, and then use that to index into the
+            # dictionary to get the proper distance
+            l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
+            grid_to_land_dist.append(l2g_dist)
+
+        wind_energy_layer.ResetReading()
+        wind_energy_layer = None
+    else:
+        LOGGER.info('Grid points not provided')
+        # I THINK SOMETHING WILL GO HERE
+        LOGGER.info('No grid points, calculating distances using land polygon')
+        # Since the grid points were not provided use the land polygon to get
+        # near shore distances
+        land_shape_ds = args['land_polygon']
+    
+        # The average land cable distance in km
+        avg_grid_distance = float(args['avg_grid_distance'])
+        
+        # When using the land polygon to conduct distances there is a set
+        # constant distance for land point to grid points. The following lines
+        # add a new field to each point with that distance
+        wind_energy_layer = wind_energy_points.GetLayer()
+        feat_count = wind_energy_layer.GetFeatureCount()
+        
+        # Build up an array the same size as how many features (points) there
+        # are. This is constructed so we can call the
+        # 'add_field_to_shape_given_list' function. 
+        grid_to_land_dist = np.ones(feat_count)
+        
+        # Set each value in the array to the constant distance for land to grid
+        # points
+        grid_to_land_dist = grid_to_land_dist * avg_grid_distance
+        
+        wind_energy_layer = None     
+
+    # call on the core module
+    # Get constants from turbine_dict
+    turbine_dict = args['turbine_dict']
+    # The length of infield cable in km
+    infield_length = float(turbine_dict['infield_cable_length'])
+    # The cost of infield cable in millions of dollars per km
+    infield_cost = float(turbine_dict['infield_cable_cost'])
+    # The cost of the foundation in millions of dollars 
+    foundation_cost = float(args['foundation_cost'])
+    # The cost of each turbine unit in millions of dollars
+    unit_cost = float(turbine_dict['turbine_cost'])
+    # The installation cost as a decimal
+    install_cost = float(turbine_dict['installation_cost'])
+    # The miscellaneous costs as a decimal factore of CAPEX
+    misc_capex_cost = float(turbine_dict['miscellaneous_capex_cost'])
+    # The operations and maintenance costs as a decimal factor of CAPEX
+    op_maint_cost = float(turbine_dict['operation_maintenance_cost'])
+    # The distcount rate as a decimal
+    discount_rate = float(args['discount_rate'])
+    # The cost to decommission the farm as a decmial factor of CAPEX
+    decom = float(turbine_dict['decommission_cost'])
+    # The mega watt value for the turbines in MW
+    mega_watt = float(turbine_dict['turbine_rated_pwr'])
+    # The distance at which AC switches over to DC power
+    circuit_break = float(turbine_dict['ac_dc_distance_break'])
+    # The coefficients for the AC/DC megawatt and cable cost from the CAP
+    # function
+    mw_coef_ac = float(turbine_dict['mw_coef_ac'])
+    mw_coef_dc = float(turbine_dict['mw_coef_dc'])
+    cable_coef_ac = float(turbine_dict['cable_coef_ac'])
+    cable_coef_dc = float(turbine_dict['cable_coef_dc'])
+
+    time = int(turbine_dict['time_period'])
+
+    number_turbines = args['number_of_turbines']
+    
+    # The total mega watt compacity of the wind farm where mega watt is the
+    # turbines rated power
+    total_mega_watt = mega_watt * number_turbines
+    
+    # The price per kWh for energy converted to units of millions of dollars to
+    # correspond to the units for valuation costs
+    mill_dollar_per_kwh = args['dollar_per_kWh'] / 1000000
+    
+    wind_energy_points = args['biophysical_data']
+   
+#   try:
+#       # Try using the grid points to calculate distances
+#       grid_points_ds = args['grid_points']
+#       land_shape_ds = args['land_points']
+#   except KeyError:
+#       LOGGER.info('No grid points, calculating distances using land polygon')
+#       # Since the grid points were not provided use the land polygon to get
+#       # near shore distances
+#       land_shape_ds = args['land_polygon']
+#   
+#       # The average land cable distance in km
+#       avg_grid_distance = float(args['avg_grid_distance'])
+#       
+#       # When using the land polygon to conduct distances there is a set
+#       # constant distance for land point to grid points. The following lines
+#       # add a new field to each point with that distance
+#       wind_energy_layer = wind_energy_points.GetLayer()
+#       feat_count = wind_energy_layer.GetFeatureCount()
+#       
+#       # Build up an array the same size as how many features (points) there
+#       # are. This is constructed so we can call the
+#       # 'add_field_to_shape_given_list' function. 
+#       grid_to_land_dist = np.ones(feat_count)
+#       
+#       # Set each value in the array to the constant distance for land to grid
+#       # points
+#       grid_to_land_dist = grid_to_land_dist * avg_grid_distance
+#       
+#       wind_energy_layer = None     
+#   else:
+#       LOGGER.info('Calculating distances using grid points')
+#       # Get the shortest distances from each grid point to the land points
+#       grid_to_land_dist_local = point_to_polygon_distance(
+#               grid_points_ds, land_shape_ds)
+#        
+#       # Add the distances for land to grid points as a new field  onto the 
+#       # land points datasource
+#       LOGGER.info('Adding land to grid distances to land point datasource')
+#       land_to_grid_field = 'L2G'
+#       land_shape_ds = add_field_to_shape_given_list(
+#               land_shape_ds, grid_to_land_dist_local, land_to_grid_field)
+# 
+#       # In order to get the proper land to grid distances that each ocean
+#       # point corresponds to, we need to build up a KDTree from the land
+#       # points geometries and then iterate through each wind energy point
+#       # seeing which land point it is closest to. Knowing which land point is
+#       # closest allows us to add the proper land to grid distance to the wind
+#       # energy point ocean points.
+
+#       # Get the land points geometries
+#       land_geoms = get_points_geometries(land_shape_ds)
+#       
+#       # Build a dictionary from the land points datasource so that we can
+#       # have access to what land point has what land to grid distance
+#       land_dict = get_dictionary_from_shape(land_shape_ds)
+#       LOGGER.debug('land_dict : %s', land_dict)
+#       
+#       # Build up the KDTree for land points geometries
+#       kd_tree = spatial.KDTree(land_geoms)
+#       
+#       # Initialize a list to store all the proper grid to land distances to
+#       # add to the wind energy point datasource later
+#       grid_to_land_dist = []
+
+#       wind_energy_layer = wind_energy_points.GetLayer()
+#       for feat in wind_energy_layer:
+#           geom = feat.GetGeometryRef()
+#           x_loc = geom.GetX()
+#           y_loc = geom.GetY()
+#           
+#           # Create a point from the geometry
+#           point = np.array([x_loc, y_loc])
+#           
+#           # Get the shortest distance and closest index from the land points
+#           dist, closest_index = kd_tree.query(point)
+#           
+#           # Knowing the closest index we can look into the land geoms lists,
+#           # pull that lat/long key, and then use that to index into the
+#           # dictionary to get the proper distance
+#           l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
+#           grid_to_land_dist.append(l2g_dist)
+
+#       wind_energy_layer.ResetReading()
+#       wind_energy_layer = None
+    
+    # Get the shortest distances from each ocean point to the land points
+    land_to_ocean_dist = point_to_polygon_distance(
+            land_shape_ds, wind_energy_points)
+    
+    # Add the ocean to land distance value for each point as a new field
+    ocean_to_land_field = 'O2L_km'
+    LOGGER.info('Adding ocean to land distances')
+    wind_energy_points = add_field_to_shape_given_list(
+            wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
+        
+    # Add the grid to land distance value for each point as a new field
+    land_to_grid_field = 'L2G_km'
+    LOGGER.info('Adding land to grid distances')
+    wind_energy_points = add_field_to_shape_given_list(
+            wind_energy_points, grid_to_land_dist, land_to_grid_field)
+   
+    # Total infield cable cost
+    infield_cable_cost = infield_length * infield_cost * number_turbines
+    LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
+    
+    # Total foundation cost
+    total_foundation_cost = (foundation_cost + unit_cost) * number_turbines
+    LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
+    
+    # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
+    cap_less_dist = infield_cable_cost + total_foundation_cost
+    LOGGER.debug('cap_less_dist : %s', cap_less_dist)
+    
+    # Discount rate plus one to get that constant
+    disc_const = discount_rate + 1.0
+    LOGGER.debug('discount_rate : %s', disc_const)
+    
+    # Discount constant raised to the total time, a constant found in the NPV
+    # calculation (1+i)^T
+    disc_time = disc_const**time
+    LOGGER.debug('disc_time : %s', disc_time)
+    
+    # Create 3 new fields based on the 3 outputs
+    npv_field = 'NPV_$mill'
+    levelized_cost_field = 'Lev_$/kWh'
+    carbon_field = 'CO2_tons'
+    val_field_list = [npv_field, levelized_cost_field, carbon_field]
+    wind_energy_layer = wind_energy_points.GetLayer()
+    LOGGER.info('Creating new NPV, Levelized Cost and CO2 field')
+    for new_field in val_field_list:
+        field = ogr.FieldDefn(new_field, ogr.OFTReal)
+        wind_energy_layer.CreateField(field)
+    
+    LOGGER.info('Calculating the NPV for each wind farm')
+    # Iterate over each point calculating the NPV
+    for feat in wind_energy_layer:
+        npv_index = feat.GetFieldIndex(npv_field)
+        levelized_index = feat.GetFieldIndex(levelized_cost_field)
+        co2_index = feat.GetFieldIndex(carbon_field)
+        energy_index = feat.GetFieldIndex('Harv_MWhr')
+        o2l_index = feat.GetFieldIndex(ocean_to_land_field)
+        l2g_index = feat.GetFieldIndex(land_to_grid_field)
+        
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr for the
+        # valuation model
+        energy_val = feat.GetField(energy_index) * 1000.0
+        o2l_val = feat.GetField(o2l_index)
+        l2g_val = feat.GetField(l2g_index)
+
+        # Get the total cable distance
+        total_cable_dist = o2l_val + l2g_val
+        # Initialize cable cost variable
+        cable_cost = 0
+
+        # The break at 'circuit_break' indicates the difference in using AC and
+        # DC current systems
+        if total_cable_dist <= circuit_break:
+            cable_cost = (mw_coef_ac * total_mega_watt) + \
+                            (cable_coef_ac * total_cable_dist)
+        else:
+            cable_cost = (mw_coef_dc * total_mega_watt) + \
+                            (cable_coef_dc * total_cable_dist)
+        
+        # Compute the total CAP
+        cap = cap_less_dist + cable_cost
+        
+        # Nominal total capital costs including installation and miscellaneous
+        # costs (capex)
+        capex = cap / (1.0 - install_cost - misc_capex_cost) 
+
+        # The ongoing cost of the farm
+        ongoing_capex = op_maint_cost * capex
+        
+        # The cost to decommission the farm
+        decommish_capex = decom * capex / disc_time
+        
+        # The revenue in millions of dollars for the wind farm. The energy_val
+        # is in kWh the farm.
+        rev = energy_val * mill_dollar_per_kwh
+        comp_one_sum = 0
+        levelized_cost_sum = 0
+        levelized_cost_denom = 0
+        
+        # Calculate the total NPV summation over the lifespan of the wind farm
+        # as well as the levelized cost
+        for year in range(1, time + 1):
+            # Calcuate the first component summation of the NPV equation
+            comp_one_sum = \
+                    comp_one_sum + (rev - ongoing_capex) / disc_const**year
+            
+            # Calculate the numerator summation value for levelized
+            # cost of energy
+            levelized_cost_sum = levelized_cost_sum + (
+                    (ongoing_capex / disc_const**year))
+            
+            # Calculate the denominator summation value for levelized
+            # cost of energy
+            levelized_cost_denom = levelized_cost_denom + (
+                    energy_val / disc_const**year) 
+        
+        # Add this years NPV value to the running total
+        npv = comp_one_sum - decommish_capex - capex
+        
+        # Calculate the levelized cost of energy
+        levelized_cost = ((levelized_cost_sum + decommish_capex + capex) /
+                levelized_cost_denom)
+        
+        # Levelized cost of energy converted from millions of dollars to dollars
+        levelized_cost = levelized_cost * 1000000
+        
+        # The amount of CO2 not released into the atmosphere, with the constant
+        # conversion factor provided in the users guide by Rob Griffin
+        carbon_coef = float(turbine_dict['carbon_coefficient']) 
+        carbon_emissions = carbon_coef * energy_val 
+        
+        feat.SetField(npv_index, npv)
+        feat.SetField(levelized_index, levelized_cost)
+        feat.SetField(co2_index, carbon_emissions)
+        
+        wind_energy_layer.SetFeature(feat)
+
+    wind_energy_layer.SyncToDisk()
+
+    # Open the density raster, which is an output of the biophyiscal portion, so
+    # that we can properly mask the valuation outputs
+    density_uri = os.path.join(output_dir, 'density_W_per_m2' + suffix + '.tif')
+    density_ds = gdal.Open(density_uri)
+    _, density_nodata = raster_utils.extract_band_and_nodata(density_ds)
+
+    npv_uri = os.path.join(output_dir, 'npv_US_millions' + suffix + '.tif')
+    levelized_uri = os.path.join(output_dir, 'levelized_cost_price_per_kWh' + suffix + '.tif')
+    carbon_uri = os.path.join(output_dir, 'carbon_emissions_tons' + suffix + '.tif')
+   
+    uri_list = [npv_uri, levelized_uri, carbon_uri]
+    out_nodata = float(np.finfo(np.float).tiny)
+    
+    for uri, field in zip(uri_list, val_field_list):
+        # Create a raster for the points to be vectorized to 
+        LOGGER.info('Creating Output raster : %s', uri)
+        # Creating a temperary uri here because new_raster_from_base requires
+        # one, even if the format is 'MEM'
+        tmp_uri = os.path.join(intermediate_dir, 'tmp_val_out.tif')
+        output_tmp_ds = raster_utils.new_raster_from_base(
+                density_ds, tmp_uri, 'MEM', out_nodata, gdal.GDT_Float32)
+
+        # Interpolate and vectorize the points field onto a gdal dataset
+        LOGGER.info('Vectorizing the points from the %s field', field)
+        raster_utils.vectorize_points(
+                wind_energy_points, field, output_tmp_ds)
+        
+        def mask_nodata(masker, masky):
+            """A vectorize rasters function that uses the first raster as a
+                nodata mask
+
+                masker - a float to compare against the nodata value 
+                masky - a float of the relevant data to return if 'masker' is
+                    not a nodata value
+
+                returns - nodata or the masky value"""
+            
+            if masker == density_nodata:
+                return out_nodata
+            else:
+                return masky
+        # Mask out the valuation rasters based on the output from the
+        # biophysical run. This ensures that the distances and depths we are not
+        # interested in are not shown.
+        output_ds = raster_utils.vectorize_rasters(
+                [density_ds, output_tmp_ds], mask_nodata, raster_out_uri = uri,
+                nodata = out_nodata)
+
+        output_ds = None
+
+    LOGGER.info('Leaving Wind Energy Valuation Core')
+
 def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
     """Create an OGR shapefile where the geometry is a set of lines 
 
