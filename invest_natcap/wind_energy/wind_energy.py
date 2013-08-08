@@ -336,33 +336,47 @@ def execute(args):
 
             LOGGER.info('Create Raster From AOI')
             # Make a raster from the AOI using the bathymetry rasters pixel size 
-            aoi_raster = raster_utils.create_raster_from_vector_extents(
-                    bath_prop['width'], abs(bath_prop['height']), 
-                    gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
+            #aoi_raster = raster_utils.create_raster_from_vector_extents(
+            #        bath_prop['width'], abs(bath_prop['height']), 
+            #        gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
+            
+            raster_utils.create_raster_from_vector_extents_uri(
+                aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
+                aoi_raster_uri) 
             
             LOGGER.info('Rasterize AOI onto raster')
+
             # Burn the area of interest onto the raster 
-            gdal.RasterizeLayer(
-                    aoi_raster, [1], aoi.GetLayer(), burn_values = [1], 
-                    options = ['ALL_TOUCHED=TRUE'])
+            #gdal.RasterizeLayer(
+            #        aoi_raster, [1], aoi.GetLayer(), burn_values = [1], 
+            #        options = ['ALL_TOUCHED=TRUE'])
+            rasterize_layer_uri(
+                aoi_raster_uri, aoi_uri, 1, field=None,
+                option_list="ALL_TOUCHED=TRUE")
 
             LOGGER.info('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
-            gdal.RasterizeLayer(
-                    aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
-                    options = ['ALL_TOUCHED=TRUE'])
+            #gdal.RasterizeLayer(
+            #        aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
+            #        options = ['ALL_TOUCHED=TRUE'])
+            rasterize_layer_uri(
+                aoi_raster_uri, land_polygon_uri, 0, field=None,
+                option_list="ALL_TOUCHED=TRUE")
 
             dist_mask_uri = os.path.join(
                     intermediate_dir, 'distance_mask' + tif_suffix)
             
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            distance_mask = distance_transform_dataset(
-                    aoi_raster, min_distance, max_distance, 
+            #distance_mask = distance_transform_dataset(
+            #        aoi_raster, min_distance, max_distance, 
+            #        out_nodata, dist_mask_uri)
+            distance_transform_dataset(
+                    aoi_raster_uri, min_distance, max_distance, 
                     out_nodata, dist_mask_uri)
 
-            distance_mask.FlushCache()
+#            distance_mask.FlushCache()
 
         except KeyError:
             # Looks like distances weren't provided, too bad!
@@ -644,6 +658,112 @@ def execute(args):
     LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Biophysical Core')
 
+def distance_transform_dataset(
+        dataset_uri, min_dist, max_dist, out_nodata, out_uri):
+    """A memory efficient distance transform function that operates on 
+       the dataset level and creates a new dataset that's transformed.
+       It will treat any nodata value in dataset as 0, and re-nodata
+       that area after the filter.
+
+       dataset - a gdal dataset
+       min_dist - an integer of the minimum distance allowed in meters
+       max_dist - an integer of the maximum distance allowed in meters
+       out_uri - the uri output of the transformed dataset
+       out_nodata - the nodata value of dataset
+
+       returns the transformed dataset created at out_uri"""
+    
+    dataset = gdal.Open(dataset_uri)
+    # Define URI paths for the numpy arrays on disk
+    temp_dir = tempfile.mkdtemp()
+    source_filename = os.path.join(temp_dir, 'source.dat')
+    nodata_mask_filename = os.path.join(temp_dir, 'nodata_mask.dat')
+    dest_filename = os.path.join(temp_dir, 'dest.dat')
+
+    mask_leq_min_dist_filename = os.path.join(temp_dir, 'mask_leq_min_dist.dat')
+    mask_geq_max_dist_filename = os.path.join(temp_dir, 'mask_geq_max_dist.dat')
+    dest_mask_filename = os.path.join(temp_dir, 'dest_mask.dat')
+
+    source_band, source_nodata = raster_utils.extract_band_and_nodata(dataset)
+    pixel_size = raster_utils.pixel_size(dataset)
+    LOGGER.debug('Pixel Size : %s', pixel_size)
+
+    out_dataset = raster_utils.new_raster_from_base(
+        dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+    out_band, out_nodata = raster_utils.extract_band_and_nodata(out_dataset)
+
+    shape = (source_band.YSize, source_band.XSize)
+    LOGGER.debug('shape %s' % str(shape))
+
+    LOGGER.debug('make the source memmap at %s' % source_filename)
+    # Create the numpy memory maps
+    source_array = np.memmap(
+        source_filename, dtype='float32', mode='w+', shape = shape)
+    nodata_mask_array = np.memmap(
+        nodata_mask_filename, dtype='bool', mode='w+', shape = shape)
+    dest_array = np.memmap(
+        dest_filename, dtype='float32', mode='w+', shape = shape)
+    mask_leq_min_dist_array = np.memmap(
+        mask_leq_min_dist_filename, dtype='bool', mode='w+', shape = shape)
+    mask_geq_max_dist_array = np.memmap(
+        mask_geq_max_dist_filename, dtype='bool', mode='w+', shape = shape)
+    dest_mask_array = np.memmap(
+        dest_mask_filename, dtype='bool', mode='w+', shape = shape)
+
+    LOGGER.debug('load dataset into source array')
+    # Load the dataset into the first memory map
+    for row_index in xrange(source_band.YSize):
+        #Load a row so we can mask
+        row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
+        #Just the mask for this row
+        mask_row = row_array == source_nodata
+        row_array[mask_row] = 1.0
+        source_array[row_index, :] = row_array
+
+        #remember the mask in the memory mapped array
+        nodata_mask_array[row_index, :] = mask_row
+    
+    LOGGER.info('distance transform operation')
+    # Calculate distances using distance transform and multiply by the pixel
+    # size to get the proper distances in meters
+    dest_array = ndimage.distance_transform_edt(source_array) * pixel_size
+    
+    # Use conditional operations to properly get masks based on distance values
+    np.less_equal(dest_array, min_dist, out = mask_leq_min_dist_array)
+    np.greater_equal(dest_array, max_dist, out = mask_geq_max_dist_array)
+    
+    # Take the logical OR of the above masks to get the proper values that fall
+    # between the min and max distances
+    np.logical_or(
+            mask_leq_min_dist_array, mask_geq_max_dist_array,
+            out = dest_mask_array)
+    
+    dest_array[dest_mask_array] = out_nodata
+
+    LOGGER.debug('mask the result back to nodata where originally nodata')
+    dest_array[nodata_mask_array] = out_nodata
+    
+    LOGGER.debug('write to gdal object')
+    out_band.WriteArray(dest_array)
+    out_dataset.FlushCache()
+    raster_utils.calculate_raster_stats(out_dataset)
+
+    LOGGER.debug('deleting %s' % temp_dir)
+    dest_array = None
+    nodata_mask_array = None
+    source_array = None
+    out_band = None
+    mask_leq_min_dist_array = None
+    mask_geq_max_dist_array = None
+    dest_mask_array = None
+    
+    #Turning on ignore_errors = True in case we can't remove the 
+    #the temporary directory
+    shutil.rmtree(temp_dir, ignore_errors = True)
+
+    out_dataset.FlushCache()
+    return out_dataset
+
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_value, field=None, option_list=None):
     """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
@@ -656,7 +776,7 @@ def rasterize_layer_uri(
         field - the name of a field from 'shapefile_uri' to use as the burn
             value (optional)
         option_list - a Python list of options for the operation. Example:
-            ["ATTRIBUTE=NPV", "ALLTOUCHED=TRUE"]
+            ["ATTRIBUTE=NPV", "ALL_TOUCHED=TRUE"]
 
         returns - Nothing
 
@@ -671,7 +791,7 @@ def rasterize_layer_uri(
         gdal.RasterizeLayer(raster, [1], layer, options = option_list)
     else:
         gdal.RasterizeLayer(
-                raster, [1], layer, burn_values = [1], options = option_list)
+                raster, [1], layer, burn_values = [burn_value], options = option_list)
 
     raster = None
     shapefile = None
