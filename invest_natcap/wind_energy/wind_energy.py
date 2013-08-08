@@ -696,14 +696,14 @@ def execute(args):
         LOGGER.info('Calculating distances using grid points')
         # Get the shortest distances from each grid point to the land points
         grid_to_land_dist_local = point_to_polygon_distance(
-                grid_points_ds, land_shape_ds)
+                grid_projected_uri, land_projected_uri)
          
         # Add the distances for land to grid points as a new field  onto the 
         # land points datasource
         LOGGER.info('Adding land to grid distances to land point datasource')
         land_to_grid_field = 'L2G'
-        land_shape_ds = add_field_to_shape_given_list(
-                land_shape_ds, grid_to_land_dist_local, land_to_grid_field)
+        add_field_to_shape_given_list(
+                land_projected_uri, grid_to_land_dist_local, land_to_grid_field)
   
         # In order to get the proper land to grid distances that each ocean
         # point corresponds to, we need to build up a KDTree from the land
@@ -713,11 +713,11 @@ def execute(args):
         # energy point ocean points.
 
         # Get the land points geometries
-        land_geoms = get_points_geometries(land_shape_ds)
+        land_geoms = get_points_geometries(land_projected_uri)
         
         # Build a dictionary from the land points datasource so that we can
         # have access to what land point has what land to grid distance
-        land_dict = get_dictionary_from_shape(land_shape_ds)
+        land_dict = get_dictionary_from_shape(land_projected_uri)
         LOGGER.debug('land_dict : %s', land_dict)
         
         # Build up the KDTree for land points geometries
