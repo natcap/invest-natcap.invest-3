@@ -142,6 +142,7 @@ if platform.system() == 'Windows':
          'invest_sediment.py',
          'invest_nutrient.py',
          'invest_wind_energy.py',
+         'invest_ntfp.py',
          'invest_test_all.py']
 
     #Need to manually bring along the json configuration files to
@@ -169,6 +170,7 @@ if platform.system() == 'Windows':
               'invest_natcap/iui/nutrient.json',
               'invest_natcap/iui/wind_energy.json',
               'invest_natcap/iui/coastal_vulnerability.json',
+              'invest_natcap/iui/ntfp.json',
               'geos_c.dll',
               'libgcc_s_dw2-1.dll',
               'libstdc++-6.dll',
