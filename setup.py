@@ -98,6 +98,7 @@ packages = ['invest_natcap',
             'invest_natcap.report_generation',
             'invest_natcap.routing',
             'invest_natcap.flood_mitigation',
+            'invest_natcap.ntfp',
             ]
 
 #If it's windows assume we're going the py2exe route.
