@@ -176,6 +176,20 @@ def pixel_size(dataset):
         linear_units
     return size_meters
 
+def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
+    """A wrapper for pixel_size_based_on_coordinate_transform
+        that takes a dataset uri as an input and opens it before sending it
+        along
+
+        dataset_uri - a URI to a gdal dataset
+
+        All other parameters pass along
+
+       returns a tuple containing (pixel width in meters, pixel height in 
+           meters)"""
+    dataset = gdal.Open(dataset_uri)
+    return pixel_size_based_on_coordinate_transform(dataset, *args, **kwargs)
+
 def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     """Calculates the pixel width and height in meters given a coordinate 
         transform and reference point on the dataset that's close to the 
@@ -1483,6 +1497,20 @@ def create_rat(dataset, attr_dict, column_name):
     band.SetDefaultRAT(rat)
     return dataset
 
+
+def get_raster_properties_uri(dataset_uri):
+    """Wrapper function for get_raster_properties() that passes in the dataset
+        URI instead of the datasets itself
+        
+        dataset_uri - a URI to a GDAL raster dataset
+        
+       returns - a dictionary with the properties stored under relevant keys.
+           The current list of things returned is:
+           width (w-e pixel resolution), height (n-s pixel resolution), 
+           XSize, YSize
+    """
+    dataset = gdal.Open(dataset_uri)
+    return get_raster_properties(dataset)
 
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the

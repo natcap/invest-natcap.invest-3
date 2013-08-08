@@ -11,7 +11,7 @@ from nose.plugins.skip import SkipTest
 from invest_natcap.carbon import carbon_biophysical
 from invest_natcap.carbon import carbon_valuation
 import invest_test_core
-import html_utils
+import html_test_utils
 
 
 class TestCarbonBiophysical(unittest.TestCase):
@@ -58,7 +58,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                 args['lulc_fut_year'] = 2030
 
             if do_redd:
-                args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'                
+                args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'
 
             if do_hwp:
                 args['hwp_cur_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_cur.shp"
@@ -79,14 +79,14 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         execute_model(do_sequest=True, do_hwp=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur_hwp.tif', 
-                                 'tot_C_fut_hwp.tif', 
+                                 'tot_C_cur_hwp.tif',
+                                 'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif')
-        
+
         execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur_hwp.tif', 
-                                 'tot_C_fut_hwp.tif', 
+                                 'tot_C_cur_hwp.tif',
+                                 'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif',
                                  'conf_fut_hwp.tif')
 
@@ -102,7 +102,7 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
         self.assertDatasetEqual(workspace_dir,
-                                'tot_C_cur_foo_bar.tif', 
+                                'tot_C_cur_foo_bar.tif',
                                 'tot_C_cur_hwp.tif')
 
     def test_carbon_biophysical_uk(self):
@@ -121,15 +121,15 @@ class TestCarbonBiophysical(unittest.TestCase):
         carbon_biophysical.execute(args)
 
     def test_carbon_valuation_regression(self):
-        """Regression test for carbon_valuation function.  A few pixels have 
+        """Regression test for carbon_valuation function.  A few pixels have
             been tested by hand against the following python snippet:
-            
+
         >>> def f(V,sequest,yr_fut,yr_cur,r,c):
         ...     sum = 0
         ...     for t in range(yr_fut-yr_cur):
         ...             sum += 1/((1+(r/100.0))**t*(1+c/100.0)**t)
         ...     return sum*V*sequest/(yr_fut-yr_cur)
-        ... 
+        ...
         >>> V=43.0
         >>> yr_cur=2000
         >>> yr_fut=2030
@@ -141,8 +141,8 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         workspace_dir = './invest-data/test/data/test_out/carbon_valuation_output'
 
-        def execute_model(carbon_units='Carbon', 
-                          do_redd=False, 
+        def execute_model(carbon_units='Carbon',
+                          do_redd=False,
                           use_uncertainty=False,
                           suffix=''):
             args = {}
@@ -178,19 +178,19 @@ class TestCarbonBiophysical(unittest.TestCase):
         self.assertDatasetEqual(workspace_dir, 'value_seq_c02.tif')
 
         execute_model(use_uncertainty=True)
-        self.assertDatasetsEqual(workspace_dir, 
+        self.assertDatasetsEqual(workspace_dir,
                                  ('value_seq.tif', 'value_seq_base.tif'),
                                  ('val_mask.tif', 'val_mask_base.tif'),
                                  ('seq_mask.tif', 'seq_mask_base.tif'))
 
         summary_uri = os.path.join(workspace_dir, 'output', 'summary.html')
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, summary_uri, 'change_table',
             [['Baseline', -3526095.89057, -67106273.81],
              ['Baseline (confident cells only)', -3530157.48653, -67183571.67]])
 
         execute_model(use_uncertainty=True, do_redd=True)
-        self.assertDatasetsEqual(workspace_dir, 
+        self.assertDatasetsEqual(workspace_dir,
                                  'value_seq_base.tif',
                                  'val_mask_base.tif',
                                  'seq_mask_base.tif',
@@ -198,14 +198,14 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
 
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, summary_uri, 'change_table',
             [['Baseline', -3526095.89057, -67106273.81],
              ['Baseline (confident cells only)', -3530157.48653, -67183571.67],
              ['REDD policy', 100847.723038, 1919265.76],
              ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
 
-        html_utils.assert_table_contains_rows_uri(
+        html_test_utils.assert_table_contains_rows_uri(
             self, summary_uri, 'comparison_table',
             [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
              ['REDD policy vs Baseline (confident cells only)',
