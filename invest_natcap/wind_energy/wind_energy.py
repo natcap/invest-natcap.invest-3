@@ -31,9 +31,11 @@ LOGGER = logging.getLogger('wind_energy')
 
 speedups.enable()
 
-# A custom error message for a hub height that is not supported in
-# the current wind data
-class HubHeightError(Exception): pass
+class HubHeightError(Exception):
+    """A custom error message for a hub height that is not supported in
+        the current wind data
+    """
+    pass
 
 def execute(args):
     """This module handles the execution of the wind energy model
@@ -96,8 +98,6 @@ def execute(args):
     
     LOGGER.debug('Starting the Wind Energy Model')
 
-    LOGGER.debug('Leaving wind_energy_uri_handler')
-
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate') 
     output_dir = os.path.join(workspace, 'output') 
@@ -155,9 +155,6 @@ def execute(args):
     hub_height = int(bio_turbine_dict['hub_height'])
 
     if hub_height % 10 != 0:
-        class HubHeightError(Exception):
-            """A custom error message for invalid hub heights"""
-            pass
         raise HubHeightError('An Error occurred processing the Hub Height. '
                 'Please make sure the Hub Height is between the ranges of 10 '
                 'and 150 meters and is a multiple of 10. ex: 10,20,...70,80...')
@@ -175,42 +172,18 @@ def execute(args):
     LOGGER.info('Read wind data from text file')
     wind_data = read_binary_wind_data(args['wind_data_uri'], wind_data_field_list)
    
-    # Open the bathymetry DEM to projected and clipped depending on the below
-    # conditions
-#    bathymetry = gdal.Open(args['bathymetry_uri'])
-    bathymetry_uri = args['bathymetry_uri']
     aoi_uri = None
-    try:
-        LOGGER.debug('Trying to open the AOI')
-        #aoi = ogr.Open(args['aoi_uri'])
+    if 'aoi_uri' in args:
         aoi_uri = args['aoi_uri']
-    except KeyError:
-        LOGGER.info("AOI argument was not selected")
-        
-        # Since no AOI was provided the wind energy points shapefile that is
-        # created directly from dictionary will be the final output, so set the
-        # uri to point to the output folder
-        wind_point_shape_uri = os.path.join(
-                out_dir, 'wind_energy_points' + suffix + '.shp')
-        
-        LOGGER.info('Create point shapefile from wind data')
-        
-        #wind_data_points = 
-        wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_uri)
-        
-        #bathymetry = bathymetry_uri
-        #biophysical_args['wind_data_points'] = wind_data_points
-        wind_data_points = wind_point_shape_uri
-    else:
+        LOGGER.info('AOI Provided')
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
         # shapefile from dictionary in the intermediate directory
         wind_point_shape_uri = os.path.join(
-                inter_dir, 'wind_energy_points_from_dat' + suffix + '.shp')
+                inter_dir, 'wind_energy_points_from_data' + suffix + '.shp')
         
         LOGGER.info('Create point shapefile from wind data')
         
-        #wind_data_points = 
         wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_uri)
         
         # Define the uri for projecting the wind energy data points
@@ -219,7 +192,6 @@ def execute(args):
 
         # Clip and project the wind energy points datasource
         LOGGER.debug('Clip and project wind points to AOI')
-        #wind_pts_prj = 
         clip_and_reproject_shapefile(
                 wind_data_points, aoi_uri, wind_points_proj_uri) 
     
@@ -230,60 +202,58 @@ def execute(args):
         # Clip and project the bathymetry dataset
         LOGGER.debug('Clip and project bathymetry to AOI')
         #clip_and_proj_bath =
-        clip_and_reproject_raster(
-                bathymetry, aoi, bathymetry_proj_uri, args['bathymetry_uri'])
+        clip_and_reproject_raster(bathymetry_uri, aoi_uri, bathymetry_proj_uri)
 
-        #biophysical_args['bathymetry'] = clip_and_proj_bath
-        #biophysical_args['wind_data_points'] = wind_pts_prj
-        #biophysical_args['aoi'] = aoi 
-        #aoi = aoi 
-        bathymetry = bathymetry_proj_uri
-        wind_data_points = wind_points_proj_uri
+        bathymetry_uri = bathymetry_proj_uri
+        wind_data_points_uri = wind_points_proj_uri
         
         # Try to handle the distance inputs and land datasource if they 
         # are present
         try:
-            #biophysical_args['min_distance'] = float(args['min_distance'])
-            #biophysical_args['max_distance'] = float(args['max_distance'])
             min_distance = float(args['min_distance'])
             max_distance = float(args['max_distance'])
-            #land_polygon = ogr.Open(args['land_polygon_uri'])
             land_polygon_uri = args['land_polygon_uri']
         except KeyError:
             LOGGER.info('Distance information not provided')
+            dist_data_provided = False 
         else: 
             LOGGER.info('Handling distance parameters')
+            dist_data_provided = True
 
             # Define the uri for reprojecting the land polygon datasource
             land_poly_proj_uri = os.path.join(
                     inter_dir, 'land_poly_projected' + suffix + '.shp')
             # Clip and project the land polygon datasource 
             LOGGER.debug('Clip and project land poly to AOI')
-            #projected_land =
             clip_and_reproject_shapefile(
                     land_polygon_uri, aoi_uri, land_poly_proj_uri)
 
-            #biophysical_args['land_polygon'] = projected_land
             land_polygon_uri = land_poly_proj_uri
+    else:
+        LOGGER.info("AOI argument was not selected")
+        
+        # Since no AOI was provided the wind energy points shapefile that is
+        # created directly from dictionary will be the final output, so set the
+        # uri to point to the output folder
+        wind_point_shape_uri = os.path.join(
+                out_dir, 'wind_energy_points' + suffix + '.shp')
+        
+        LOGGER.debug('Create point shapefile from wind data')
+        
+        wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_uri)
+        
+        wind_data_points_uri = wind_point_shape_uri
+        bathymetry_uri = args['bathymetry_uri']
     
-    # Add biophysical inputs to the dictionary
-    #biophysical_args['workspace_dir'] = workspace
-    #biophysical_args['hub_height'] = hub_height
-    #biophysical_args['scale_key'] = scale_key
-    #biophysical_args['number_of_turbines'] = int(args['number_of_machines'])
-
-    # Pass in the depth values as negative, since it should be a negative
-    # elevation
-    #biophysical_args['min_depth'] = abs(float(args['min_depth'])) * -1.0
-    #biophysical_args['max_depth'] = abs(float(args['max_depth'])) * -1.0
-    #biophysical_args['suffix'] = suffix
+    # Get the min and max depth values from the arguments and set to a negative
+    # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1.0
     max_depth = abs(float(args['max_depth'])) * -1.0
+    # Get the number of turbines from the arguments
     number_of_turbines = int(args['number_of_machines'])
 
     #STARTTING BIOPHYSICAL CORE 
     out_nodata = raster_utils.get_nodata_from_uri(bathymetry_uri)
-    bath_prop = raster_utils.get_raster_properties_uri(bathymetry_uri)
     
     def depth_op(bath):
         """A vectorized function that takes one argument and uses a range to
@@ -307,14 +277,10 @@ def execute(args):
     
     LOGGER.info('Creating Depth Mask')
     # Create a mask for any values that are out of the range of the depth values
-    #depth_mask = raster_utils.vectorize_rasters(
-    #        [bathymetry], depth_op, raster_out_uri = depth_mask_uri, 
-    #        nodata = out_nodata)
-    
     cell_size = raster_utils.get_cell_size_from_uri(bathymetry_uri)
     
     raster_utils.vectorize_datasets(
-            [bathymetry_uri], depth_op, depth_maske_uri, gdal.GDT_Float32,
+            [bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
 
     # Handle the AOI if it was passed in with the dictionary
@@ -324,32 +290,18 @@ def execute(args):
         # If the distance inputs are present create a mask for the output
         # area that restricts where the wind energy farms can be based
         # on distance
-        try:
-            min_distance = args['min_distance']
-            max_distance = args['max_distance']
-            land_polygon = args['land_polygon']
-            
-            LOGGER.info('Distance Parameters Provided')
-            
+        if dist_data_provided:
             aoi_raster_uri = os.path.join(
                     intermediate_dir, 'aoi_raster' + tif_suffix)
 
             LOGGER.info('Create Raster From AOI')
             # Make a raster from the AOI using the bathymetry rasters pixel size 
-            #aoi_raster = raster_utils.create_raster_from_vector_extents(
-            #        bath_prop['width'], abs(bath_prop['height']), 
-            #        gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
-            
             raster_utils.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri) 
             
             LOGGER.info('Rasterize AOI onto raster')
-
             # Burn the area of interest onto the raster 
-            #gdal.RasterizeLayer(
-            #        aoi_raster, [1], aoi.GetLayer(), burn_values = [1], 
-            #        options = ['ALL_TOUCHED=TRUE'])
             rasterize_layer_uri(
                 aoi_raster_uri, aoi_uri, 1, field=None,
                 option_list="ALL_TOUCHED=TRUE")
@@ -357,9 +309,6 @@ def execute(args):
             LOGGER.info('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
-            #gdal.RasterizeLayer(
-            #        aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
-            #        options = ['ALL_TOUCHED=TRUE'])
             rasterize_layer_uri(
                 aoi_raster_uri, land_polygon_uri, 0, field=None,
                 option_list="ALL_TOUCHED=TRUE")
@@ -369,19 +318,12 @@ def execute(args):
             
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            #distance_mask = distance_transform_dataset(
-            #        aoi_raster, min_distance, max_distance, 
-            #        out_nodata, dist_mask_uri)
             distance_transform_dataset(
                     aoi_raster_uri, min_distance, max_distance, 
                     out_nodata, dist_mask_uri)
-
-#            distance_mask.FlushCache()
-
-        except KeyError:
+        else:
             # Looks like distances weren't provided, too bad!
             LOGGER.info('Distance parameters not provided')
-
     else:
         LOGGER.info('AOI not provided')
 
@@ -431,22 +373,7 @@ def execute(args):
    
         return fract * weibull_probability(v_speed, k_shape, l_scale) 
 
-    # Get the wind points shapefile and layer
-    #wind_points = args['wind_data_points']
-    wind_points = wind_data_points
-    wind_points_layer = wind_points.GetLayer(0)
-   
-    density_field_name = 'Dens_W/m2'
-    harvest_field_name = 'Harv_MWhr'
-
-    LOGGER.info('Creating Harvest and Density Fields')
-    # Create new fields for the density and harvested values
-    for new_field_name in [density_field_name, harvest_field_name]:
-        new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
-        wind_points_layer.CreateField(new_field)
-    
     # Get the inputs needed to compute harvested wind energy
-    bio_turbine_dict = args['biophysical_turbine_dict']
     exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
     
     # The harvested energy is on a per year basis
@@ -475,90 +402,105 @@ def execute(args):
     # The coefficient that is multiplied by the integration portion of the
     # harvested wind energy equation
     scalar = num_days * 24 * fract_coef
+    density_field_name = 'Dens_W/m2'
+    harvest_field_name = 'Harv_MWhr'
 
-    # Get the indexes for the scale and shape parameters
-    feature = wind_points_layer.GetFeature(0)
-    scale_index = feature.GetFieldIndex(scale_key)
-    shape_index = feature.GetFieldIndex(shape_key)
-    LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
-    wind_points_layer.ResetReading()
-
-    LOGGER.info('Entering Density and Harvest Calculations for each point')
-    # For all the locations compute the weibull density and 
-    # harvested wind energy. Save in a field of the feature
-    for feat in wind_points_layer:
-        # Get the scale and shape values
-        scale_value = feat.GetField(scale_index)
-        shape_value = feat.GetField(shape_index)
+    def compute_density_harvested_uri(wind_pts_uri):
+        wind_points = ogr.Open(wind_pts_uri, 1)
+        wind_points_layer = wind_points.GetLayer()
+        feature = wind_points_layer.GetFeature(0)
         
-        # Integrate over the probability density function. 0 and 50 are hard
-        # coded values set in CKs documentation
-        density_results = integrate.quad(
-                density_wind_energy_fun, 0, 50, (shape_value, scale_value))
+        # Get the indexes for the scale and shape parameters
+        scale_index = feature.GetFieldIndex(scale_key)
+        shape_index = feature.GetFieldIndex(shape_key)
+        LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
+        wind_points_layer.ResetReading()
 
-        # Compute the final wind power density value
-        density_results = 0.5 * mean_air_density * density_results[0]
+        LOGGER.info('Creating Harvest and Density Fields')
+        # Create new fields for the density and harvested values
+        for new_field_name in [density_field_name, harvest_field_name]:
+            new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
+            wind_points_layer.CreateField(new_field)
 
-        # Integrate over the harvested wind energy function
-        harv_results = integrate.quad(
-                harvested_wind_energy_fun, v_in, v_rate, 
-                (shape_value, scale_value))
-        
-        # Integrate over the weibull probability function
-        weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
-                (shape_value, scale_value))
-        
-        # Compute the final harvested wind energy value
-        harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
-       
-        # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
-        # 1,000,000
-        harvested_wind_energy = harvested_wind_energy / 1000000.00
+        LOGGER.info('Entering Density and Harvest Calculations for each point')
+        # For all the locations compute the weibull density and 
+        # harvested wind energy. Save in a field of the feature
+        for feat in wind_points_layer:
+            # Get the scale and shape values
+            scale_value = feat.GetField(scale_index)
+            shape_value = feat.GetField(shape_index)
+            
+            # Integrate over the probability density function. 0 and 50 are hard
+            # coded values set in CKs documentation
+            density_results = integrate.quad(
+                    density_wind_energy_fun, 0, 50, (shape_value, scale_value))
 
-        # Now factor in the percent losses due to turbine
-        # downtime (mechanical failure, storm damage, etc.)
-        # and due to electrical resistance in the cables 
-        harvested_wind_energy = (1 - losses) * harvested_wind_energy
+            # Compute the final wind power density value
+            density_results = 0.5 * mean_air_density * density_results[0]
 
-        # Finally, multiply the harvested wind energy by the number of turbines
-        # to get the amount of energy generated for the entire farm
-        harvested_wind_energy = harvested_wind_energy * number_of_turbines
+            # Integrate over the harvested wind energy function
+            harv_results = integrate.quad(
+                    harvested_wind_energy_fun, v_in, v_rate, 
+                    (shape_value, scale_value))
+            
+            # Integrate over the weibull probability function
+            weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
+                    (shape_value, scale_value))
+            
+            # Compute the final harvested wind energy value
+            harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
+           
+            # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
+            # 1,000,000
+            harvested_wind_energy = harvested_wind_energy / 1000000.00
 
-        # Save the results to their respective fields 
-        for field_name, result_value in [(density_field_name, density_results),
-                (harvest_field_name, harvested_wind_energy)]:
-            out_index = feat.GetFieldIndex(field_name)
-            feat.SetField(out_index, result_value)
+            # Now factor in the percent losses due to turbine
+            # downtime (mechanical failure, storm damage, etc.)
+            # and due to electrical resistance in the cables 
+            harvested_wind_energy = (1 - losses) * harvested_wind_energy
 
-        # Save the feature and set to None to clean up
-        wind_points_layer.SetFeature(feat)
-        feat = None
+            # Finally, multiply the harvested wind energy by the number of turbines
+            # to get the amount of energy generated for the entire farm
+            harvested_wind_energy = harvested_wind_energy * number_of_turbines
 
-    wind_points_layer.ResetReading()
+            # Save the results to their respective fields 
+            for field_name, result_value in [(density_field_name, density_results),
+                    (harvest_field_name, harvested_wind_energy)]:
+                out_index = feat.GetFieldIndex(field_name)
+                feat.SetField(out_index, result_value)
+
+            # Save the feature and set to None to clean up
+            wind_points_layer.SetFeature(feat)
+            feat = None
+
+        wind_points = None
+    
+    compute_density_harvested_uri(wind_data_points_uri)
 
     # Create rasters for density and harvested values
-    density_temp_uri = os.path.join(
-            intermediate_dir, 'density_temp' + tif_suffix)
-    harvested_temp_uri = os.path.join(
-            intermediate_dir, 'harvested_temp' + tif_suffix)
+    density_temp_uri = raster_utils.temporary_filename() 
+    harvested_temp_uri = raster_utils.temporary_filename() 
     
     LOGGER.info('Create Density Raster')
-    density_temp = raster_utils.create_raster_from_vector_extents(
-            bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            out_nodata, density_temp_uri, wind_points)
+    raster_utils.create_raster_from_vector_extents_uri(
+            wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
+            density_temp_uri)
     
     LOGGER.info('Create Harvested Raster')
-    harvested_temp = raster_utils.create_raster_from_vector_extents(
-            bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            out_nodata, harvested_temp_uri, wind_points)
+    raster_utils.create_raster_from_vector_extents_uri(
+            wind_points_uri, cell_size, gdal.GDT_Float32, out_nodata,
+            harvested_temp_uri)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    raster_utils.vectorize_points(wind_points, density_field_name, density_temp)
+    raster_utils.vectorize_points_uri(
+            wind_points_uri, density_field_name, density_temp_uri,
+            interpolation = 'linear')
     
     LOGGER.info('Vectorize Harvested Points')
-    raster_utils.vectorize_points(
-            wind_points, harvest_field_name, harvested_temp)
+    raster_utils.vectorize_points_uri(
+            wind_points_uri, harvest_field_name, harvested_temp_uri,
+            interpolation = 'linear')
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
@@ -594,14 +536,14 @@ def execute(args):
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Vectorize Rasters on Density using depth and distance mask')
-    _ = raster_utils.vectorize_rasters(
-            density_mask_list, mask_out_depth_dist, 
-            raster_out_uri = density_masked_uri, nodata = out_nodata)
+    raster_utils.vectorize_datasets(
+            [density_mask_uri], mask_out_depth_dist, density_masked_uri,
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
     LOGGER.info('Vectorize Rasters on Harvested using depth and distance mask')
-    _ = raster_utils.vectorize_rasters(
-            harvest_mask_list, mask_out_depth_dist, 
-            raster_out_uri = harvested_masked_uri, nodata = out_nodata)
+    raster_utils.vectorize_datasets(
+            [harvest_mask_uri], mask_out_depth_dist, harvested_masked_uri,
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
     # Create the farm polygon shapefile, which is an example of how big the farm
     # will be with a rough representation of its dimensions. 
@@ -627,24 +569,14 @@ def execute(args):
     # Calculate the length 
     length = (turbines_per_circuit - 1) * spacing_dist
     
-    # Use the wind energy points datasource to determine the wind farms spatial
-    # reference and location. This is in hopes that the farm will thus be
-    # located over ocean, although this is not guaranteed
-    wind_points_layer.ResetReading()
-    # Get the feature count or how many points exist
-    feature_count = int(wind_points_layer.GetFeatureCount())
-    # Select the feature from which to get the location for the wind farm by
-    # indexing into the features by the half the feature count. OGR requires
-    # this index to be of type LONG
-    feature = wind_points_layer.GetFeature(
-                long(math.ceil(feature_count / 2)))
-    pt_geometry = feature.GetGeometryRef()
+    pt_geometry = get_highest_harvested_geom(wind_points_uri)
     # Get the X and Y location for the selected wind farm point. These
     # coordinates will be the starting point of which to create the farm lines
     center_x = pt_geometry.GetX()
     center_y = pt_geometry.GetY()
     start_point = (center_x, center_y)
-    spat_ref = wind_points_layer.GetSpatialRef()
+    #spat_ref = wind_points_layer.GetSpatialRef()
+    spat_ref = raster_utils.get_spatial_ref_uri(wind_points_uri)
     
     farm_poly_uri = os.path.join(output_dir,
             'example_size_and_orientation_of_a_possible_wind_farm' + shp_suffix)
@@ -652,11 +584,95 @@ def execute(args):
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
 
-    _ = create_wind_farm_box(
-            spat_ref, start_point, width, length, farm_poly_uri)
+    create_wind_farm_box(spat_ref, start_point, width, length, farm_poly_uri)
     
-    LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Biophysical Core')
+
+def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
+    """Create an OGR shapefile where the geometry is a set of lines 
+
+        spat_ref - a SpatialReference to use in creating the output shapefile
+            (required)
+        start_point - a tuple of floats indicating the first vertice of the 
+            line (required)
+        x_len - an integer value for the length of the line segment in
+            the X direction (required)
+        y_len - an integer value for the length of the line segment in
+            the Y direction (required)
+        out_uri - a string representing the file path to disk for the new
+            shapefile (required)
+    
+        return - an OGR shapefile"""
+    LOGGER.info('Entering create_wind_farm_box')
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    datasource = driver.CreateDataSource(out_uri)
+  
+    # Create the layer name from the uri paths basename without the extension
+    uri_basename = os.path.basename(out_uri)
+    layer_name = os.path.splitext(uri_basename)[0]
+    
+    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbLineString)
+
+    # Add a single ID field
+    field = ogr.FieldDefn('id', ogr.OFTReal)
+    layer.CreateField(field)
+
+    # Create the 3 other points that will make up the vertices for the lines 
+    top_left = (start_point[0], start_point[1] + y_len)
+    top_right = (start_point[0] + x_len, start_point[1] + y_len)
+    bottom_right = (start_point[0] + x_len, start_point[1])
+
+    # Create a new feature, setting the field and geometry
+    line = ogr.Geometry(ogr.wkbLineString)
+    line.AddPoint(start_point[0], start_point[1])
+    line.AddPoint(top_left[0], top_left[1])
+    line.AddPoint(top_right[0], top_right[1])
+    line.AddPoint(bottom_right[0], bottom_right[1])
+    line.AddPoint(start_point[0], start_point[1])
+    
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(line)
+    feature.SetField(0, 1)
+    layer.CreateFeature(feature)
+
+    feature = None
+    layer = None
+
+    datasource.SyncToDisk()
+    datasource = None
+    LOGGER.info('Leaving create_wind_farm_box')
+
+def get_highest_harvested_geom(wind_points_uri):
+    """Find the point with the highest harvested value for wind energy and
+        return its geometry
+
+        wind_points_uri - a URI to an OGR Datasource of a point geometry
+            shapefile for wind energy
+
+        returns - the geometry of the point with the highest harvested value
+        """
+
+        wind_points = ogr.Open(wind_points_uri)
+        layer = wind_points.GetLayer()
+    
+        geom = None
+        harv_value = None
+        high_harv_value = 0.0
+
+        feature = layer.GetNextFeature()
+        harv_index = feature.GetFieldIndex('Harv_MWhr')
+        high_harv_value = feature.GetField(harv_index)
+        geom = feature.GetGeometryRef()
+
+        for feat in layer:
+            harv_value = feat.GetField(harv_index)
+            if harv_value > high_harv_value:
+                high_harv_value = harv_value
+                geom = feat.GetGeometryRef()
+        
+        wind_points = None
+        return geom
 
 def distance_transform_dataset(
         dataset_uri, min_dist, max_dist, out_nodata, out_uri):
