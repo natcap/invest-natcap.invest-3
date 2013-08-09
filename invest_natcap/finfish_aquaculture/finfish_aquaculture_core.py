@@ -675,6 +675,9 @@ def create_HTML_table(
                          'Net present value (thousands of USD)',
                          'Number of cycles']
         header_row = [''] + result_titles
+
+        # Make the top headers each take up two columns, since they each
+        # have two subheaders ('mean' and 'standard deviation')
         header_attr = [{}] + ([{'colspan': 2}] * len(result_titles))
 
         uncertainty_table.add_row(
@@ -690,6 +693,7 @@ def create_HTML_table(
             else:
                 row.append('Farm %s' % farm)
             for result_type in ['weight', 'value', 'cycles']:
+                # Append the mean and the standard deviation to the row.
                 row += uncertainty_stats[farm][result_type]
             uncertainty_table.add_row(row)
 
