@@ -1160,28 +1160,28 @@ def get_highest_harvested_geom(wind_points_uri):
             shapefile for wind energy
 
         returns - the geometry of the point with the highest harvested value
-        """
+    """
 
-        wind_points = ogr.Open(wind_points_uri)
-        layer = wind_points.GetLayer()
+    wind_points = ogr.Open(wind_points_uri)
+    layer = wind_points.GetLayer()
+
+    geom = None
+    harv_value = None
+    high_harv_value = 0.0
+
+    feature = layer.GetNextFeature()
+    harv_index = feature.GetFieldIndex('Harv_MWhr')
+    high_harv_value = feature.GetField(harv_index)
+    geom = feature.GetGeometryRef()
+
+    for feat in layer:
+        harv_value = feat.GetField(harv_index)
+        if harv_value > high_harv_value:
+            high_harv_value = harv_value
+            geom = feat.GetGeometryRef()
     
-        geom = None
-        harv_value = None
-        high_harv_value = 0.0
-
-        feature = layer.GetNextFeature()
-        harv_index = feature.GetFieldIndex('Harv_MWhr')
-        high_harv_value = feature.GetField(harv_index)
-        geom = feature.GetGeometryRef()
-
-        for feat in layer:
-            harv_value = feat.GetField(harv_index)
-            if harv_value > high_harv_value:
-                high_harv_value = harv_value
-                geom = feat.GetGeometryRef()
-        
-        wind_points = None
-        return geom
+    wind_points = None
+    return geom
 
 def distance_transform_dataset(
         dataset_uri, min_dist, max_dist, out_nodata, out_uri):
