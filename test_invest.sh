@@ -42,11 +42,11 @@ elif [ $1 == 'release' ]
 then
 # If the first argument is 'release', run the specified tests for released models.
     test_files=(
+        finfish_aquaculture_test.py  # see issue 1848.  Quincy times out if this isn't first.
         biodiversity_biophysical_test.py
         biodiversity_core_test.py
         carbon_test.py
         fileio_test.py
-#        finfish_aquaculture_test.py  # see issue 1848.  Causes Quincy to time out.
         finfish_aquaculture_core_test.py
         invest_core_fileio_test.py
         invest_core_test.py

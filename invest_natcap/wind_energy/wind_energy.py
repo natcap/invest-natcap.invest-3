@@ -691,8 +691,8 @@ def execute(args):
         land_projected_uri = os.path.join(
                 inter_dir, 'land_point_projected' + suffix + '.shp')
 
-        clip_and_project_shapefile(grid_ds_uri, aoi, grid_projected_uri)
-        clip_and_project_shapefile(land_ds_uri, aoi, land_projected_uri)
+        clip_and_project_shapefile(grid_ds_uri, aoi_uri, grid_projected_uri)
+        clip_and_project_shapefile(land_ds_uri, aoi_uri, land_projected_uri)
         LOGGER.info('Calculating distances using grid points')
         # Get the shortest distances from each grid point to the land points
         grid_to_land_dist_local = point_to_polygon_distance(
@@ -727,33 +727,34 @@ def execute(args):
         # add to the wind energy point datasource later
         grid_to_land_dist = []
 
-        wind_energy_layer = wind_energy_points.GetLayer()
-        for feat in wind_energy_layer:
-            geom = feat.GetGeometryRef()
-            x_loc = geom.GetX()
-            y_loc = geom.GetY()
-            
-            # Create a point from the geometry
-            point = np.array([x_loc, y_loc])
-            
-            # Get the shortest distance and closest index from the land points
-            dist, closest_index = kd_tree.query(point)
-            
-            # Knowing the closest index we can look into the land geoms lists,
-            # pull that lat/long key, and then use that to index into the
-            # dictionary to get the proper distance
-            l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
-            grid_to_land_dist.append(l2g_dist)
+        def get_grid_land_dist(wind_points_data_uri):
+            wind_energy_points = ogr.Open(wind_points_data_uri)
+            wind_energy_layer = wind_energy_points.GetLayer()
+            for feat in wind_energy_layer:
+                geom = feat.GetGeometryRef()
+                x_loc = geom.GetX()
+                y_loc = geom.GetY()
+                
+                # Create a point from the geometry
+                point = np.array([x_loc, y_loc])
+                
+                # Get the shortest distance and closest index from the land points
+                dist, closest_index = kd_tree.query(point)
+                
+                # Knowing the closest index we can look into the land geoms lists,
+                # pull that lat/long key, and then use that to index into the
+                # dictionary to get the proper distance
+                l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
+                grid_to_land_dist.append(l2g_dist)
 
-        wind_energy_layer.ResetReading()
-        wind_energy_layer = None
+            wind_energy_points= None
+        get_grid_land_dist(wind_data_points_uri)
     else:
         LOGGER.info('Grid points not provided')
-        # I THINK SOMETHING WILL GO HERE
-        LOGGER.info('No grid points, calculating distances using land polygon')
+        LOGGER.debug('No grid points, calculating distances using land polygon')
         # Since the grid points were not provided use the land polygon to get
         # near shore distances
-        land_shape_ds = args['land_polygon']
+        land_shape_ds = land_polygon_uri
     
         # The average land cable distance in km
         avg_grid_distance = float(args['avg_grid_distance'])
@@ -763,7 +764,13 @@ def execute(args):
         # add a new field to each point with that distance
         wind_energy_layer = wind_energy_points.GetLayer()
         feat_count = wind_energy_layer.GetFeatureCount()
-        
+       
+        def get_shapefile_feature_count(shape_uri):
+            shape_ds = ogr.Open(shape_uri)
+            layer = shape_ds.GetLayer()
+            feat_count = layer.GetFeatureCount()
+            return feat_count
+
         # Build up an array the same size as how many features (points) there
         # are. This is constructed so we can call the
         # 'add_field_to_shape_given_list' function. 
@@ -821,90 +828,6 @@ def execute(args):
     
     wind_energy_points = args['biophysical_data']
    
-#   try:
-#       # Try using the grid points to calculate distances
-#       grid_points_ds = args['grid_points']
-#       land_shape_ds = args['land_points']
-#   except KeyError:
-#       LOGGER.info('No grid points, calculating distances using land polygon')
-#       # Since the grid points were not provided use the land polygon to get
-#       # near shore distances
-#       land_shape_ds = args['land_polygon']
-#   
-#       # The average land cable distance in km
-#       avg_grid_distance = float(args['avg_grid_distance'])
-#       
-#       # When using the land polygon to conduct distances there is a set
-#       # constant distance for land point to grid points. The following lines
-#       # add a new field to each point with that distance
-#       wind_energy_layer = wind_energy_points.GetLayer()
-#       feat_count = wind_energy_layer.GetFeatureCount()
-#       
-#       # Build up an array the same size as how many features (points) there
-#       # are. This is constructed so we can call the
-#       # 'add_field_to_shape_given_list' function. 
-#       grid_to_land_dist = np.ones(feat_count)
-#       
-#       # Set each value in the array to the constant distance for land to grid
-#       # points
-#       grid_to_land_dist = grid_to_land_dist * avg_grid_distance
-#       
-#       wind_energy_layer = None     
-#   else:
-#       LOGGER.info('Calculating distances using grid points')
-#       # Get the shortest distances from each grid point to the land points
-#       grid_to_land_dist_local = point_to_polygon_distance(
-#               grid_points_ds, land_shape_ds)
-#        
-#       # Add the distances for land to grid points as a new field  onto the 
-#       # land points datasource
-#       LOGGER.info('Adding land to grid distances to land point datasource')
-#       land_to_grid_field = 'L2G'
-#       land_shape_ds = add_field_to_shape_given_list(
-#               land_shape_ds, grid_to_land_dist_local, land_to_grid_field)
-# 
-#       # In order to get the proper land to grid distances that each ocean
-#       # point corresponds to, we need to build up a KDTree from the land
-#       # points geometries and then iterate through each wind energy point
-#       # seeing which land point it is closest to. Knowing which land point is
-#       # closest allows us to add the proper land to grid distance to the wind
-#       # energy point ocean points.
-
-#       # Get the land points geometries
-#       land_geoms = get_points_geometries(land_shape_ds)
-#       
-#       # Build a dictionary from the land points datasource so that we can
-#       # have access to what land point has what land to grid distance
-#       land_dict = get_dictionary_from_shape(land_shape_ds)
-#       LOGGER.debug('land_dict : %s', land_dict)
-#       
-#       # Build up the KDTree for land points geometries
-#       kd_tree = spatial.KDTree(land_geoms)
-#       
-#       # Initialize a list to store all the proper grid to land distances to
-#       # add to the wind energy point datasource later
-#       grid_to_land_dist = []
-
-#       wind_energy_layer = wind_energy_points.GetLayer()
-#       for feat in wind_energy_layer:
-#           geom = feat.GetGeometryRef()
-#           x_loc = geom.GetX()
-#           y_loc = geom.GetY()
-#           
-#           # Create a point from the geometry
-#           point = np.array([x_loc, y_loc])
-#           
-#           # Get the shortest distance and closest index from the land points
-#           dist, closest_index = kd_tree.query(point)
-#           
-#           # Knowing the closest index we can look into the land geoms lists,
-#           # pull that lat/long key, and then use that to index into the
-#           # dictionary to get the proper distance
-#           l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
-#           grid_to_land_dist.append(l2g_dist)
-
-#       wind_energy_layer.ResetReading()
-#       wind_energy_layer = None
     
     # Get the shortest distances from each ocean point to the land points
     land_to_ocean_dist = point_to_polygon_distance(
@@ -1160,28 +1083,28 @@ def get_highest_harvested_geom(wind_points_uri):
             shapefile for wind energy
 
         returns - the geometry of the point with the highest harvested value
-        """
+    """
 
-        wind_points = ogr.Open(wind_points_uri)
-        layer = wind_points.GetLayer()
+    wind_points = ogr.Open(wind_points_uri)
+    layer = wind_points.GetLayer()
+
+    geom = None
+    harv_value = None
+    high_harv_value = 0.0
+
+    feature = layer.GetNextFeature()
+    harv_index = feature.GetFieldIndex('Harv_MWhr')
+    high_harv_value = feature.GetField(harv_index)
+    geom = feature.GetGeometryRef()
+
+    for feat in layer:
+        harv_value = feat.GetField(harv_index)
+        if harv_value > high_harv_value:
+            high_harv_value = harv_value
+            geom = feat.GetGeometryRef()
     
-        geom = None
-        harv_value = None
-        high_harv_value = 0.0
-
-        feature = layer.GetNextFeature()
-        harv_index = feature.GetFieldIndex('Harv_MWhr')
-        high_harv_value = feature.GetField(harv_index)
-        geom = feature.GetGeometryRef()
-
-        for feat in layer:
-            harv_value = feat.GetField(harv_index)
-            if harv_value > high_harv_value:
-                high_harv_value = harv_value
-                geom = feat.GetGeometryRef()
-        
-        wind_points = None
-        return geom
+    wind_points = None
+    return geom
 
 def distance_transform_dataset(
         dataset_uri, min_dist, max_dist, out_nodata, out_uri):
