@@ -748,7 +748,7 @@ def execute(args):
                 grid_to_land_dist.append(l2g_dist)
 
             wind_energy_points= None
-        get_grid_land_dist(wind_data_points_uri))
+        get_grid_land_dist(wind_data_points_uri)
     else:
         LOGGER.info('Grid points not provided')
         LOGGER.debug('No grid points, calculating distances using land polygon')
