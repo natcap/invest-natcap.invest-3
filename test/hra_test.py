@@ -8,7 +8,7 @@ import logging
 import glob
 import filecmp
 
-import invest_test_core
+import invest_natcap.testing
 
 from invest_natcap.habitat_risk_assessment import hra
 from invest_natcap.habitat_risk_assessment import hra_core
@@ -17,7 +17,7 @@ LOGGER = logging.getLogger('hra_scratch_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class TestHRA(unittest.TestCase):
+class TestHRA(invest_natcap.testing.GISTest):
 
     def setUp(self):
 
@@ -72,3 +72,7 @@ class TestHRA(unittest.TestCase):
         self.args['aoi_tables'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/subregions.shp'
 
         hra.execute(self.args)
+        
+        res_inter = os.path.join(self.args['workspace_dir'], 'Intermediate')
+        res_output = os.path.join(self.args['workspace_dir'], 'Output')
+
