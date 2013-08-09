@@ -8,9 +8,6 @@ import numpy
 
 from invest_natcap import raster_utils
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('carbon_utils')
 
 def make_suffix(model_args):

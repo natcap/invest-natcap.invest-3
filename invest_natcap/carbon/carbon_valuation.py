@@ -83,12 +83,13 @@ def execute_30(**args):
                 return nodata_out
             return sequest * valuation_constant
 
-        LOGGER.debug('finished constructing valuation formula for %s scenario', scenario_type)
+        LOGGER.debug('finished constructing valuation formula for %s scenario',
+                     scenario_type)
 
         LOGGER.info('starting valuation of each pixel')
 
         pixel_size_out = raster_utils.get_cell_size_from_uri(sequest_uri)
-        LOGGER.debug("pixel_size_out %s" % pixel_size_out)
+        LOGGER.debug("pixel_size_out %s", pixel_size_out)
         raster_utils.vectorize_datasets(
             [sequest_uri], value_op, outfile_uris['%s_val' % scenario_type],
             gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
@@ -96,11 +97,12 @@ def execute_30(**args):
         LOGGER.info('finished valuation of each pixel')
 
         if scenario_type in conf_uris:
-            # Produce a raster for sequestration with uncertain areas masked out.
+            # Produce a raster for sequestration, masking out uncertain areas.
             _create_masked_raster(sequest_uri, conf_uris[scenario_type],
                                   outfile_uris['%s_seq_mask' % scenario_type])
 
-            # Produce a raster for value sequestration with uncertain areas masked out.
+            # Produce a raster for value sequestration,
+            # again masking out uncertain areas.
             _create_masked_raster(
                 outfile_uris['%s_val' % scenario_type],
                 conf_uris[scenario_type],
@@ -214,33 +216,35 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
     nodata_orig = raster_utils.get_nodata_from_uri(orig_uri)
     nodata_mask = raster_utils.get_nodata_from_uri(mask_uri)
     def mask_op(orig_val, mask_val):
+        '''Return orig_val unless mask_val indicates uncertainty.'''
         if mask_val == 0 or mask_val == nodata_mask:
             return nodata_orig
         return orig_val
 
     pixel_size = raster_utils.get_cell_size_from_uri(orig_uri)
     raster_utils.vectorize_datasets(
-        [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32, nodata_orig,
-        pixel_size, 'intersection', dataset_to_align_index=0)
+        [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32,
+        nodata_orig, pixel_size, 'intersection', dataset_to_align_index=0)
 
 
 def _create_html_summary(outfile_uris, sequest_uris):
-    doc = html.HTMLDocument(outfile_uris['html'],
-                            'Carbon Model Results',
-                            'InVEST Carbon Storage and Sequestration Model Results')
+    doc = html.HTMLDocument(
+        outfile_uris['html'],
+        'Carbon Model Results',
+        'InVEST Carbon Storage and Sequestration Model Results')
 
     def format_currency(val):
         return '%.2f' % val
 
     doc.write_header('Results Summary')
     doc.write_paragraph(
-        '<strong>Positive values</strong> in this table indicate that carbon storage increased. '
-        'In this case, the positive Net Present Value represents the value of '
-        'the sequestered carbon.')
+        '<strong>Positive values</strong> in this table indicate that '
+        'carbon storage increased. In this case, the positive Net Present '
+        'Value represents the value of the sequestered carbon.')
     doc.write_paragraph(
-        '<strong>Negative values</strong> indicate that carbon storage decreased. '
-        'In this case, the negative Net Present Value represents the cost of '
-        'carbon emission.')
+        '<strong>Negative values</strong> indicate that carbon storage '
+        'decreased. In this case, the negative Net Present Value represents '
+        'the cost of carbon emission.')
 
     # Write the table that summarizes change in carbon stocks and
     # net present value.
@@ -257,10 +261,13 @@ def _create_html_summary(outfile_uris, sequest_uris):
             # REDD scenario might not exist, so skip it.
             continue
 
-        total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uris[scenario_type])
-        total_val = carbon_utils.sum_pixel_values_from_uri(outfile_uris['%s_val' % scenario_type])
+        total_seq = carbon_utils.sum_pixel_values_from_uri(
+            sequest_uris[scenario_type])
+        total_val = carbon_utils.sum_pixel_values_from_uri(
+            outfile_uris['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        change_table.add_row([scenario_name, total_seq, format_currency(total_val)])
+        change_table.add_row(
+            [scenario_name, total_seq, format_currency(total_val)])
 
         if ('%s_seq_mask' % scenario_type) in outfile_uris:
             # Compute output for confidence-masked data.
@@ -268,7 +275,8 @@ def _create_html_summary(outfile_uris, sequest_uris):
                 outfile_uris['%s_seq_mask' % scenario_type])
             masked_val = carbon_utils.sum_pixel_values_from_uri(
                 outfile_uris['%s_val_mask' % scenario_type])
-            scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
+            scenario_results['%s_mask' % scenario_type] = (masked_seq,
+                                                           masked_val)
             change_table.add_row(['%s (confident cells only)' % scenario_name,
                                   masked_seq,
                                   format_currency(masked_val)])
@@ -283,19 +291,22 @@ def _create_html_summary(outfile_uris, sequest_uris):
                          is_header=True)
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
+        # Add a row with the difference in carbon and in value.
         comparison_table.add_row(
             ['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
-             redd_results[0] - base_results[0], # subtract carbon amounts
-             format_currency(redd_results[1] - base_results[1])  # subtract value
+             redd_results[0] - base_results[0],
+             format_currency(redd_results[1] - base_results[1])
              ])
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
             base_mask_results = scenario_results['base_mask']
             redd_mask_results = scenario_results['redd_mask']
+            # Add a row with the difference in carbon and in value for the
+            # uncertainty-masked scenario.
             comparison_table.add_row(
                 ['%s vs %s (confident cells only)'
                  % (scenario_names['redd'], scenario_names['base']),
-                 redd_mask_results[0] - base_mask_results[0], # subtract carbon amounts
-                 format_currency(redd_mask_results[1] - base_mask_results[1])  # subtract value
+                 redd_mask_results[0] - base_mask_results[0],
+                 format_currency(redd_mask_results[1] - base_mask_results[1])
                  ])
 
     # Write a list of the output files produced by the model.
