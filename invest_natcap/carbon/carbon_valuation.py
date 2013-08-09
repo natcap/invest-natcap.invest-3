@@ -45,11 +45,7 @@ def execute_30(**args):
 
         returns nothing."""
 
-    # Set up the output directory structure for the workspace.
-    output_directory = os.path.join(args['workspace_dir'],'output')
-    if not os.path.exists(output_directory):
-        LOGGER.debug('creating directory %s', output_directory)
-        os.makedirs(output_directory)
+    output_directory = carbon_utils.setup_dirs(args['workspace_dir'], 'output')
 
     if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
         #Convert to price per unit of Carbon do this by dividing
@@ -118,12 +114,7 @@ def _make_outfile_uris(output_directory, args):
     Outfiles include rasters for value sequestration, confidence-masked carbon sequestration,
     confidence-masked value sequestration, and an HTML summary file.
     '''
-    try:
-        file_suffix = args['suffix']
-        if not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    file_suffix = carbon_utils.make_suffix(args)
 
     def outfile_uri(prefix, scenario_type='', filetype='tif'):
         '''Create the URI for the appropriate output file.'''
