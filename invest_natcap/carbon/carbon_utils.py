@@ -1,13 +1,20 @@
 """Useful functions for the carbon biophysical and valuation models."""
 
 import os
+import logging
 
 from osgeo import gdal
 import numpy
 
 from invest_natcap import raster_utils
 
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('carbon_utils')
+
 def make_suffix(model_args):
+    '''Return the suffix from the args (prepending '_' if necessary).'''
     try:
         file_suffix = model_args['suffix']
         if not file_suffix.startswith('_'):
@@ -18,10 +25,11 @@ def make_suffix(model_args):
 
 
 def setup_dirs(workspace_dir, *dirnames):
+    '''Create the requested directories, and return the pathnames.'''
     dirs = {name: os.path.join(workspace_dir, name) for name in dirnames}
     for new_dir in dirs.values():
         if not os.path.exists(new_dir):
-            LOGGER.debug('Creating directory %s', output_directory)
+            LOGGER.debug('Creating directory %s', new_dir)
             os.makedirs(new_dir)
     if len(dirs) == 1:
         return dirs.values()[0]
@@ -29,6 +37,7 @@ def setup_dirs(workspace_dir, *dirnames):
 
 
 def sum_pixel_values_from_uri(uri):
+    '''Return the sum of the values of all pixels in the given file.'''
     dataset = gdal.Open(uri)
     band, nodata = raster_utils.extract_band_and_nodata(dataset)
     total_sum = 0.0

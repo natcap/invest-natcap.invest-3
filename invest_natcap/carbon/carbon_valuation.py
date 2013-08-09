@@ -83,7 +83,7 @@ def execute_30(**args):
                 return nodata_out
             return sequest * valuation_constant
 
-        LOGGER.debug('finished constructing valuation formula for %s scenario' % scenario_type)
+        LOGGER.debug('finished constructing valuation formula for %s scenario', scenario_type)
 
         LOGGER.info('starting valuation of each pixel')
 
@@ -252,7 +252,6 @@ def _create_html_summary(outfile_uris, sequest_uris):
 
     scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
     scenario_results = {}
-    masked_scenario_results = {}
     for scenario_type, scenario_name in scenario_names.items():
         if scenario_type not in sequest_uris:
             # REDD scenario might not exist, so skip it.
