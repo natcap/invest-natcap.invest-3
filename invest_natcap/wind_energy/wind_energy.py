@@ -119,29 +119,21 @@ def execute(args):
                           'loss_parameter', 'turbines_per_circuit', 
                           'rotor_diameter', 'rotor_diameter_factor']
 
-    # Get the biophysical turbine parameters from the CSV file
-    bio_turbine_param_file = open(args['turbine_parameters_uri'])
-    bio_turbine_reader = csv.reader(bio_turbine_param_file)
-    bio_turbine_dict = {}
-    for field_value_row in bio_turbine_reader:
-        # Only get the biophysical parameters and leave out the valuation ones
-        if field_value_row[0].lower() in biophysical_params:
-            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+    bio_turbine_dict = read_csv_wind_parameters(
+            args['turbine_parameters_uri'], biophysical_params)
 
-    # Get the global parameters for biophysical from the CSV file
-    global_bio_param_file = open(args['global_wind_parameters_uri'])
-    global_bio_reader = csv.reader(global_bio_param_file)
-    for field_value_row in global_bio_reader:
-        # Only get the biophysical parameters and leave out the valuation ones
-        if field_value_row[0].lower() in biophysical_params:
-            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+    bio_global_param_dict = read_csv_wind_parameters(
+            args['global_wind_parameters_uri'], biophysical_params)
+    
+    bio_parameters_dict = combine_dictionaries(
+            bio_turbine_dict, bio_global_param_dict)
 
-    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
+    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_parameters_dict)
     
     # Check that all the necessary input fields from the CSV files have been
     # collected by comparing the number of dictionary keys to the number of
     # elements in our known list
-    if len(bio_turbine_dict.keys()) != len(biophysical_params):
+    if len(bio_parameters_dict.keys()) != len(biophysical_params):
         class FieldError(Exception):
             """A custom error message for fields that are missing"""
             pass
@@ -152,7 +144,7 @@ def execute(args):
     
     # Using the hub height to generate the proper field name for the scale 
     # value that is found in the wind data file
-    hub_height = int(bio_turbine_dict['hub_height'])
+    hub_height = int(bio_parameters_dict['hub_height'])
 
     if hub_height % 10 != 0:
         raise HubHeightError('An Error occurred processing the Hub Height. '
@@ -374,7 +366,7 @@ def execute(args):
         return fract * weibull_probability(v_speed, k_shape, l_scale) 
 
     # Get the inputs needed to compute harvested wind energy
-    exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
+    exp_pwr_curve = int(bio_parameters_dict['exponent_power_curve'])
     
     # The harvested energy is on a per year basis
     num_days = 365 
@@ -382,14 +374,14 @@ def execute(args):
     # The rated power is expressed in units of MW but the harvested energy
     # equation calls for it in terms of Wh. Thus we multiply by a million to get
     # to Wh.
-    rated_power = float(bio_turbine_dict['turbine_rated_pwr']) * 1000000
+    rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
 
-    air_density_standard = float(bio_turbine_dict['air_density'])
-    v_rate = float(bio_turbine_dict['rated_wspd'])
-    v_out = float(bio_turbine_dict['cut_out_wspd'])
-    v_in = float(bio_turbine_dict['cut_in_wspd'])
-    air_density_coef = float(bio_turbine_dict['air_density_coefficient'])
-    losses = float(bio_turbine_dict['loss_parameter'])
+    air_density_standard = float(bio_parameters_dict['air_density'])
+    v_rate = float(bio_parameters_dict['rated_wspd'])
+    v_out = float(bio_parameters_dict['cut_out_wspd'])
+    v_in = float(bio_parameters_dict['cut_in_wspd'])
+    air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
+    losses = float(bio_parameters_dict['loss_parameter'])
     number_of_turbines = args['number_of_turbines']
 
     # Compute the mean air density, given by CKs formulas
@@ -549,12 +541,12 @@ def execute(args):
     # will be with a rough representation of its dimensions. 
     LOGGER.info('Creating Farm Polygon')
     # The number of turbines allowed per circuit for infield cabling
-    turbines_per_circuit = int(bio_turbine_dict['turbines_per_circuit'])
+    turbines_per_circuit = int(bio_parameters_dict['turbines_per_circuit'])
     # The rotor diameter of the turbines
-    rotor_diameter = int(bio_turbine_dict['rotor_diameter'])
+    rotor_diameter = int(bio_parameters_dict['rotor_diameter'])
     # The rotor diameter factor is a rule by which to use in deciding how far
     # apart the turbines should be spaced
-    rotor_diameter_factor = int(bio_turbine_dict['rotor_diameter_factor'])
+    rotor_diameter_factor = int(bio_parameters_dict['rotor_diameter_factor'])
 
     # Calculate the number of circuits there will be based on the number of
     # turbines and the number of turbines per circuit. If a fractional value is
@@ -1019,6 +1011,59 @@ def execute(args):
         output_ds = None
 
     LOGGER.info('Leaving Wind Energy Valuation Core')
+
+def read_csv_wind_parameters(csv_uri, parameter_list):
+    """Construct a dictionary from a csv file given a list of keys in
+        'parameter_list'. The list of keys corresponds to the parameters names
+        in 'csv_uri' which are represented in the first column of the file.
+
+        csv_uri - a URI to a CSV file where every row is a parameter with the
+            parameter name in the first column followed by the value in the
+            second column
+
+        parameter_list - a List of Strings that represent the parameter names to
+            be found in 'csv_uri'. These Strings will be the keys in the
+            returned dictionary
+
+        returns - a Dictionary where the the 'parameter_list' Strings are the
+            keys that have values pulled from 'csv_uri'
+    """
+    csv_file = open(csv_uri)
+    csv_reader = csv.reader(csv_file)
+    output_dict = {}
+    
+    for csv_row in csv_reader:
+        # Only get the biophysical parameters and leave out the valuation ones
+        if csv_row[0].lower() in parameter_list:
+            output_dict[csv_row[0].lower()] = csv_row[1]
+
+    return output_dict
+
+def combine_dictionaries(dict_1, dict_2):
+    """Add dict_2 to dict_1 and return in a new dictionary. Both dictionaries
+        should be single level with a key that points to a value. If there is a
+        key in 'dict_2' that already exists in 'dict_1' it will be ignored.
+
+        dict_1 - a python dictionary 
+            ex: {'ws_id':1, 'vol':65}
+        
+        dict_2 - a python dictionary
+            ex: {'size':11, 'area':5}
+
+        returns - a python dictionary that is the combination of 'dict_1' and
+        'dict_2' ex:
+            ex: {'ws_id':1, 'vol':65, 'area':5, 'size':11}
+    """
+    # Make a copy of dict_1 the dictionary we want to add on to
+    dict_3 = dict_1.copy()
+    # Iterate through dict_2, the dictionary we want to get new fields/values
+    # from
+    for key, value in dict_2.iteritems():
+        # Ignore fields that already exist in dictionary we are adding to
+        if not key in dict_3.keys():
+            dict_3[key] = value
+
+    return dict_3
 
 def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri): 
     """Create an OGR shapefile where the geometry is a set of lines 
