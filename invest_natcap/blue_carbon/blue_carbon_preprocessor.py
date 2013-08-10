@@ -80,17 +80,33 @@ def execute(args):
     original_values.sort()
     final_values.sort()
     transition_matrix = open(transition_matrix_uri, 'w')
-    transition_matrix.write(",")
+    transition_matrix.write(",ID,")
     transition_matrix.write(",".join([str(value) for value in final_values]))
+
+    transition_matrix.write("\nName,")
+    labels_dict = {}
+    #This will cause problems if the carbon table is missing more than one labels.
+    if args["labels"] != "":
+        labels_dict = raster_utils.get_lookup_from_csv(args["labels"], args["lulc_id"])
+        for lulc_id in final_values:
+            transition_matrix.write(",%s" % labels_dict[lulc_id][args["lulc_name"]])
+    else:
+        transition_matrix.write(",".join([""] * len(final_values)))
+    
     for original in original_values:
         transition_matrix.write("\n%i" % original)
+        if original in labels_dict:
+            transition_matrix.write(",%s" % labels_dict[original][args["lulc_name"]])
+        else:
+            transition_matrix.write(",")
+            
         for final in final_values:
             if original == final:
-                transition_matrix.write(",0")
+                transition_matrix.write(",%i" % 0)
             elif (original, final) in transitions:
                 transition_matrix.write(",")
             else:
-                transition_matrix.write(",0")
+                transition_matrix.write(",%i" % 0)
     transition_matrix.close()
 
     LOGGER.debug("Transitions: %s" % str(transitions))
