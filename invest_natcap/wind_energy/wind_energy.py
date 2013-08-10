@@ -105,11 +105,11 @@ def execute(args):
             
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
-        file_suffix = args['suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
+        suffix = args['suffix']
+        if suffix != "" and not suffix.startswith('_'):
+            suffix = '_' + suffix
     except KeyError:
-        file_suffix = ''
+        suffix = ''
 
     # Create a list of the biophysical parameters we are looking for from the
     # input files
