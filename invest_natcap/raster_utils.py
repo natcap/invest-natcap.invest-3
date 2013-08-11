@@ -2777,7 +2777,8 @@ def vectorize_points_uri(
 
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
-    vectorize_points(datasource, field, output_raster, interpolation)
+    vectorize_points(
+            datasource, field, output_raster, interpolation=interpolation)
 
 def create_directories(directory_list):
     """This function is inspired from this thread 
