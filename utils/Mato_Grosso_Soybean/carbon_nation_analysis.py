@@ -8,7 +8,7 @@ import glob
 
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
-FOREST_LANDCOVER_TYPES = set([1, 2, 3, 4, 5])
+FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
 
 #Load the base biomass and landcover datasets
 biomass_dataset = gdal.Open(BASE_BIOMASS_FILENAME)
@@ -30,30 +30,36 @@ edge_distance = scipy.ndimage.morphology.distance_transform_edt(
 	forest_existance)
 		
 N_POINTS = 500000
-#For each forest type, build a regression
+#For each forest type, build a regression of biomass based 
+#on the distance from the edge of the forest
 landcover_regression = {}
-for landcover_type in FOREST_LANDCOVER_TYPES:
+for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	print landcover_type
-	landcover_mask = numpy.where((landcover_array == landcover_type) * (biomass_array != biomass_nodata))
+	landcover_mask = numpy.where(
+		(landcover_array == landcover_type) * 
+		(biomass_array != biomass_nodata))
 	
 	landcover_biomass = biomass_array[landcover_mask]
-	#print landcover_biomass
 	landcover_edge_distance = edge_distance[landcover_mask]
-	#print landcover_edge_distance
 	
+	#Fit a log function of edge distance to biomass for 
+	#landcover_type
 	(a_biomass, b_biomass) = scipy.polyfit(
 		numpy.log(landcover_edge_distance), landcover_biomass, 1)
 	
 	landcover_regression[landcover_type] = (a_biomass, b_biomass)
+	
+	#Plot the original data points
+	pylab.subplot(len(FOREST_LANDCOVER_TYPES), 1, plot_id + 1)
 	pylab.plot(landcover_edge_distance, landcover_biomass, '.')
 	
-	regression_distance = numpy.arange(numpy.max(landcover_edge_distance))
-	print regression_distance
+	#Plot the regression function
+	regression_distance = numpy.arange(
+		numpy.max(landcover_edge_distance))
 	f = lambda(d): a_biomass * numpy.log(d) + b_biomass
 	regression_biomass = f(regression_distance)
-
 	pylab.plot(regression_distance, regression_biomass, '-')
-	break
+
 	
 
 print landcover_regression
