@@ -5,6 +5,7 @@ import scipy
 import pylab
 import matplotlib.pyplot
 import glob
+import scipy.stats
 
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
@@ -44,22 +45,31 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	
 	#Fit a log function of edge distance to biomass for 
 	#landcover_type
-	(a_biomass, b_biomass) = scipy.polyfit(
-		numpy.log(landcover_edge_distance), landcover_biomass, 1)
+	#(a_biomass, b_biomass) = scipy.polyfit(
+	#	numpy.log(landcover_edge_distance), landcover_biomass, 1)
 	
-	landcover_regression[landcover_type] = (a_biomass, b_biomass)
+	slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(numpy.log(landcover_edge_distance), landcover_biomass)
+	
+	landcover_regression[landcover_type] = (slope, intercept, r_value, p_value, std_err)
+	
+	print slope, intercept, r_value, p_value, std_err
 	
 	#Plot the original data points
-	pylab.subplot(len(FOREST_LANDCOVER_TYPES), 1, plot_id + 1)
+	pylab.subplot(1, len(FOREST_LANDCOVER_TYPES), plot_id + 1)
+	
 	pylab.plot(landcover_edge_distance, landcover_biomass, '.')
 	
 	#Plot the regression function
 	regression_distance = numpy.arange(
 		numpy.max(landcover_edge_distance))
-	f = lambda(d): a_biomass * numpy.log(d) + b_biomass
+	f = lambda(d): slope * numpy.log(d) + intercept
 	regression_biomass = f(regression_distance)
 	pylab.plot(regression_distance, regression_biomass, '-')
 
+	#calculate R^2
+	predicted_biomass = f(landcover_edge_distance)
+	error = numpy.sqrt((numpy.sum(predicted_biomass - landcover_biomass)**2) / landcover_edge_distance.size)
+	pylab.title('Landcover %s, R^2 = %s' % (landcover_type, r_value))
 	
 
 print landcover_regression
