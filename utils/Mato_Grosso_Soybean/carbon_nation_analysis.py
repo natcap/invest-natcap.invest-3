@@ -43,6 +43,10 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	
 	landcover_biomass = biomass_array[landcover_mask]
 	landcover_edge_distance = edge_distance[landcover_mask] * cell_size
+
+	pylab.subplot(3, len(FOREST_LANDCOVER_TYPES), 2*len(FOREST_LANDCOVER_TYPES) + (plot_id + 1))
+	#pylab.plot(landcover_edge_distance, landcover_biomass, '.k', markersize=1)
+	#pylab.imshow(landcover_array[0:-1:15,0:-1:15])
 	
 	#Fit a log function of edge distance to biomass for 
 	#landcover_type
@@ -62,7 +66,7 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	landcover_regression[landcover_type] = (slope, intercept, r_value, p_value, std_err)
 	
 	#Plot the original data points
-	pylab.subplot(2, len(FOREST_LANDCOVER_TYPES), plot_id + 1)
+	pylab.subplot(3, len(FOREST_LANDCOVER_TYPES), plot_id + 1)
 	pylab.plot(landcover_edge_distance, landcover_biomass, '.k', markersize=1)
 	
 	#Plot the regression function
@@ -117,7 +121,6 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	pylab.title('Landcover %s\nR^2 = %.4f' % (
 	landcover_type, r_value))
 	
-
 print landcover_regression
 pylab.show()
 
