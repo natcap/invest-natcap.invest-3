@@ -20,6 +20,8 @@ landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
 print 'biomass size %s' % (str(biomass_array.shape))
 print 'landcover size %s' % (str(biomass_array.shape))
 
+cell_size = landcover_dataset.GetGeoTransform()[1]
+
 #Create a mask of 0 and 1s for all the forest landcover types
 #This will be used to calculate edge effects
 forest_existance = numpy.zeros(landcover_array.shape)
@@ -40,12 +42,22 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 		(biomass_array != biomass_nodata))
 	
 	landcover_biomass = biomass_array[landcover_mask]
-	landcover_edge_distance = edge_distance[landcover_mask]
+	landcover_edge_distance = edge_distance[landcover_mask] * cell_size
 	
 	#Fit a log function of edge distance to biomass for 
 	#landcover_type
 
 	slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(numpy.log(landcover_edge_distance), landcover_biomass)
+	
+	f = lambda(d): slope * numpy.log(d) + intercept
+	
+	landcover_biomass_mean = numpy.average(landcover_biomass)
+	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
+	
+	ss_res = numpy.sum((landcover_biomass - f(landcover_edge_distance)) ** 2)
+	
+	r_value = 1 - ss_res / ss_tot
+	
 	
 	landcover_regression[landcover_type] = (slope, intercept, r_value, p_value, std_err)
 	
@@ -56,15 +68,16 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	#Plot the regression function
 	regression_distance = numpy.arange(
 		0.0, numpy.max(landcover_edge_distance), 0.05)
-	f = lambda(d): slope * numpy.log(d) + intercept
+	
 	regression_biomass = f(regression_distance)
 	pylab.plot(regression_distance, regression_biomass, '-r', linewidth=2)
 	pylab.axis('tight')
 	pylab.ylabel('Biomass (units?)')
 	pylab.xlabel('Distance from patch edge (m)')
-	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (
-	landcover_type, r_value, p_value, std_err))
+	pylab.title('Landcover %s\nR^2 = %.4f' % (
+	landcover_type, r_value))
 
+#Linear regression follows
 for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	print landcover_type
 	landcover_mask = numpy.where(
@@ -72,12 +85,19 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 		(biomass_array != biomass_nodata))
 	
 	landcover_biomass = biomass_array[landcover_mask]
-	landcover_edge_distance = edge_distance[landcover_mask]
+	landcover_edge_distance = edge_distance[landcover_mask] * cell_size
 	
 	#Fit a log function of edge distance to biomass for 
 	#landcover_type
 
 	slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(landcover_edge_distance, landcover_biomass)
+	
+	landcover_biomass_mean = numpy.average(landcover_biomass)
+	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean)**2)
+	f = lambda(d): slope * d + intercept
+	ss_res = numpy.sum((landcover_biomass - f(landcover_edge_distance))**2)
+	
+	r_value = 1 - ss_res / ss_tot
 	
 	landcover_regression[landcover_type] = (slope, intercept, r_value, p_value, std_err)
 	
@@ -94,8 +114,8 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	pylab.axis('tight')
 	pylab.ylabel('Biomass (units?)')
 	pylab.xlabel('Distance from patch edge (m)')
-	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (
-	landcover_type, r_value, p_value, std_err))
+	pylab.title('Landcover %s\nR^2 = %.4f' % (
+	landcover_type, r_value))
 	
 
 print landcover_regression
