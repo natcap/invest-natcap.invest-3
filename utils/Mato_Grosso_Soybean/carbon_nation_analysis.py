@@ -30,7 +30,6 @@ forest_existance[biomass_array == biomass_nodata] = 0.0
 edge_distance = scipy.ndimage.morphology.distance_transform_edt(
 	forest_existance)
 		
-N_POINTS = 500000
 #For each forest type, build a regression of biomass based 
 #on the distance from the edge of the forest
 landcover_regression = {}
@@ -45,31 +44,26 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	
 	#Fit a log function of edge distance to biomass for 
 	#landcover_type
-	#(a_biomass, b_biomass) = scipy.polyfit(
-	#	numpy.log(landcover_edge_distance), landcover_biomass, 1)
-	
+
 	slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(numpy.log(landcover_edge_distance), landcover_biomass)
 	
 	landcover_regression[landcover_type] = (slope, intercept, r_value, p_value, std_err)
 	
-	print slope, intercept, r_value, p_value, std_err
-	
 	#Plot the original data points
-	pylab.subplot(1, len(FOREST_LANDCOVER_TYPES), plot_id + 1)
-	
-	pylab.plot(landcover_edge_distance, landcover_biomass, '.')
+	pylab.subplot(2, len(FOREST_LANDCOVER_TYPES), plot_id + 1)
+	pylab.plot(landcover_edge_distance, landcover_biomass, '.k', markersize=1)
 	
 	#Plot the regression function
 	regression_distance = numpy.arange(
-		numpy.max(landcover_edge_distance))
+		0.0, numpy.max(landcover_edge_distance), 0.05)
 	f = lambda(d): slope * numpy.log(d) + intercept
 	regression_biomass = f(regression_distance)
-	pylab.plot(regression_distance, regression_biomass, '-')
-
-	#calculate R^2
-	predicted_biomass = f(landcover_edge_distance)
-	error = numpy.sqrt((numpy.sum(predicted_biomass - landcover_biomass)**2) / landcover_edge_distance.size)
-	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (landcover_type, r_value, p_value, std_err))
+	pylab.plot(regression_distance, regression_biomass, '-r', linewidth=2)
+	pylab.axis('tight')
+	pylab.ylabel('Biomass (units?)')
+	pylab.xlabel('Distance from patch edge (m)')
+	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (
+	landcover_type, r_value, p_value, std_err))
 	
 
 print landcover_regression
