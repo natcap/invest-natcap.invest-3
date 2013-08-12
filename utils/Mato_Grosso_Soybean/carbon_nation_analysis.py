@@ -69,7 +69,7 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	#calculate R^2
 	predicted_biomass = f(landcover_edge_distance)
 	error = numpy.sqrt((numpy.sum(predicted_biomass - landcover_biomass)**2) / landcover_edge_distance.size)
-	pylab.title('Landcover %s, R^2 = %s' % (landcover_type, r_value))
+	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (landcover_type, r_value, p_value, std_err))
 	
 
 print landcover_regression
