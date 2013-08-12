@@ -64,6 +64,38 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	pylab.xlabel('Distance from patch edge (m)')
 	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (
 	landcover_type, r_value, p_value, std_err))
+
+for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
+	print landcover_type
+	landcover_mask = numpy.where(
+		(landcover_array == landcover_type) * 
+		(biomass_array != biomass_nodata))
+	
+	landcover_biomass = biomass_array[landcover_mask]
+	landcover_edge_distance = edge_distance[landcover_mask]
+	
+	#Fit a log function of edge distance to biomass for 
+	#landcover_type
+
+	slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(landcover_edge_distance, landcover_biomass)
+	
+	landcover_regression[landcover_type] = (slope, intercept, r_value, p_value, std_err)
+	
+	#Plot the original data points
+	pylab.subplot(3, len(FOREST_LANDCOVER_TYPES), plot_id + 1 + 2*len(FOREST_LANDCOVER_TYPES))
+	pylab.plot(landcover_edge_distance, landcover_biomass, '.k', markersize=1)
+	
+	#Plot the regression function
+	regression_distance = numpy.arange(
+		0.0, numpy.max(landcover_edge_distance), 0.05)
+	f = lambda(d): slope * d + intercept
+	regression_biomass = f(regression_distance)
+	pylab.plot(regression_distance, regression_biomass, '-r', linewidth=2)
+	pylab.axis('tight')
+	pylab.ylabel('Biomass (units?)')
+	pylab.xlabel('Distance from patch edge (m)')
+	pylab.title('Landcover %s\nR^2 = %s\np = %s\nstd err = %s' % (
+	landcover_type, r_value, p_value, std_err))
 	
 
 print landcover_regression
