@@ -249,6 +249,42 @@ def execute(args):
     args["user_predictors"] = len(predictors)
     args["user_tables"] = len(user_categorization)
 
+    #count up standard predictors
+    args["global_predictors"] = 0    
+    if args["mode"] == "initial" and args["global_data"]:
+        args["global_predictors"] += args["landscan"]
+        args["global_predictors"] += args["protected"]
+
+        if args["osm"]:
+            args["global_predictors"] += args["osm_0"]
+            args["global_predictors"] += args["osm_1"]
+            args["global_predictors"] += args["osm_2"]
+            args["global_predictors"] += args["osm_3"]
+            args["global_predictors"] += args["osm_4"]
+
+        if args["lulc"]:
+            args["global_predictors"] += args["lulc_1"]
+            args["global_predictors"] += args["lulc_2"]
+            args["global_predictors"] += args["lulc_3"]
+            args["global_predictors"] += args["lulc_4"]
+            args["global_predictors"] += args["lulc_5"]
+            args["global_predictors"] += args["lulc_6"]
+            args["global_predictors"] += args["lulc_7"]
+            args["global_predictors"] += args["lulc_8"]
+
+        if args["ouoc"]:
+            args["global_predictors"] += args["mangroves"]
+            args["global_predictors"] += args["reefs"]
+            args["global_predictors"] += args["grass"]
+
+    #raise error if no predictors
+    LOGGER.debug("There are %i global predictors.", args["global_predictors"])
+    LOGGER.debug("There are %i user predictors.", args["user_predictors"])
+    if args["user_predictors"] + args["global_predictors"] == 0:
+        msg = "You must include predictors for the analysis."
+        LOGGER.error(msg)
+        raise ValueError, msg
+
     #constructing upload predictors request
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)

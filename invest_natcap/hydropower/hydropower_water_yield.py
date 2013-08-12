@@ -271,7 +271,6 @@ def execute(args):
         for key_name, rast_uri in sws_tuple_names_uris:
             # Aggregrate mean over the sub-watersheds for each uri listed in
             # 'sws_tuple_names_uri'
-            LOGGER.debug('AGGREGATE OVER %s', key_name)
             key_dict = raster_utils.aggregate_raster_values_uri(
                 rast_uri, sub_sheds_uri, 'subws_id',
                 ignore_nodata=False).pixel_mean

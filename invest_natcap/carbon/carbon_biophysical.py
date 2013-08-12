@@ -21,16 +21,16 @@ def execute(args):
 
 def execute_30(**args):
     """This function invokes the carbon model given URI inputs of files.
-        It will do filehandling and open/create appropriate objects to 
+        It will do filehandling and open/create appropriate objects to
         pass to the core carbon biophysical processing function.  It may write
         log, warning, or error messages to stdout.
-        
+
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
         args['suffix'] - a string to append to any output file name (optional)
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
-        args['carbon_pools_uri'] - is a uri to a CSV or DBF dataset mapping carbon 
+        args['carbon_pools_uri'] - is a uri to a CSV or DBF dataset mapping carbon
             storage density to the lulc classifications specified in the
             lulc rasters. (required if 'use_uncertainty' is false)
         args['carbon_pools_uncertain_uri'] - as above, but has probability distribution
@@ -43,39 +43,28 @@ def execute_30(**args):
             raster. (required if 'use_uncertainty' is True)
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
-        args['lulc_cur_year'] - An integer representing the year of lulc_cur 
-            used in HWP calculation (required if args contains a 
+        args['lulc_cur_year'] - An integer representing the year of lulc_cur
+            used in HWP calculation (required if args contains a
             'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
-            used in HWP calculation (required if args contains a 
+            used in HWP calculation (required if args contains a
             'hwp_fut_shape_uri' key)
         args['lulc_redd_uri'] - is a uri to a GDAL raster dataset that represents
             land cover data for the REDD policy scenario (optional).
-        args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
-            calculation (optional, include if calculating current lulc hwp) 
-        args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
+        args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood
+            calculation (optional, include if calculating current lulc hwp)
+        args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood
             calculation (optional, include if calculating future lulc hwp)
-        
+
         returns nothing."""
 
-    try:
-        file_suffix = args['suffix']
-        if not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-
-    dirs = {}
-    dirs['output'] = os.path.join(args['workspace_dir'], 'output')
-    dirs['intermediate'] = os.path.join(args['workspace_dir'], 'intermediate')
-    for directory in dirs.values():
-        if not os.path.exists(directory):
-            LOGGER.info('creating directory %s', directory)
-            os.makedirs(directory)
+    file_suffix = carbon_utils.make_suffix(args)
+    dirs = carbon_utils.setup_dirs(args['workspace_dir'],
+                                   'output', 'intermediate')
 
     def outfile_uri(prefix, scenario_type, dirtype='output', filetype='tif'):
         '''Creates the appropriate output file URI.
-        
+
            prefix: 'tot_C', 'sequest', or similar
            scenario type: 'cur', 'fut', or 'redd'
            dirtype: 'output' or 'intermediate'
@@ -108,7 +97,7 @@ def execute_30(**args):
                 raster_utils.get_cell_area_from_uri(args[lulc_uri]) /
                 10000.0)
 
-            for lulc_id, lookup_dict in pools.iteritems():
+            for lulc_id in pools:
                 pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
 
                 if use_uncertainty:
@@ -124,7 +113,7 @@ def execute_30(**args):
                     # Note that we scale by the area squared.
                     pools[lulc_id]['variance_%s' % lulc_uri] = (cell_area_ha ** 2) * sum(
                         [pools[lulc_id][pool_type_sd] ** 2 for pool_type_sd in pool_estimate_sds])
-                    
+
                 # Compute the total carbon per pixel for each lulc type
                 pools[lulc_id]['total_%s' % lulc_uri] = cell_area_ha * sum(
                     [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
@@ -153,7 +142,7 @@ def execute_30(**args):
                 variance_out_uri = outfile_uri(
                     'variance_C', scenario_type, dirtype='intermediate')
                 out_file_names['variance_C_%s' % scenario_type] = variance_out_uri
-                
+
                 # Create a raster that models variance in carbon storage per pixel.
                 raster_utils.vectorize_datasets(
                     [args[lulc_uri]], map_carbon_pool_variance, variance_out_uri,
@@ -175,7 +164,7 @@ def execute_30(**args):
                     temp_c_cur_uri = raster_utils.temporary_filename()
                     LOGGER.debug(out_file_names)
                     shutil.copyfile(out_file_names['tot_C_cur'], temp_c_cur_uri)
-                    
+
                     hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_cur, hwp_cur):
                         if hwp_cur == hwp_cur_nodata:
@@ -202,7 +191,7 @@ def execute_30(**args):
                     temp_c_fut_uri = raster_utils.temporary_filename()
                     LOGGER.debug(out_file_names)
                     shutil.copyfile(out_file_names['tot_C_fut'], temp_c_fut_uri)
-                    
+
                     hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_fut, hwp_fut):
                         if hwp_fut == hwp_fut_nodata:
@@ -226,7 +215,7 @@ def execute_30(**args):
             pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
             out_file_names['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
             raster_utils.vectorize_datasets(
-                [out_file_names['tot_C_cur'], out_file_names['tot_C_%s' % fut_type]], sub_op, 
+                [out_file_names['tot_C_cur'], out_file_names['tot_C_%s' % fut_type]], sub_op,
                 out_file_names['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                 pixel_size_out, "intersection", dataset_to_align_index=0)
 
@@ -238,7 +227,7 @@ def execute_30(**args):
                 #         0 if we're not confident either way.
                 def confidence_op(c_cur, c_fut, var_cur, var_fut):
                     if nodata_out in [c_cur, c_fut, var_cur, var_fut]:
-                            return nodata_out
+                        return nodata_out
 
                     if var_cur == 0 and var_fut == 0:
                         # There's no variance, so we can just compare the mean estimates.
@@ -279,7 +268,7 @@ def execute_30(**args):
 
                 out_file_names['conf_%s' % fut_type] = outfile_uri('conf', fut_type)
                 raster_utils.vectorize_datasets(
-                    [out_file_names[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type, 
+                    [out_file_names[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type,
                                                        'variance_C_cur', 'variance_C_%s' % fut_type]],
                     confidence_op, out_file_names['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                     pixel_size_out, "intersection", dataset_to_align_index=0)
@@ -291,19 +280,19 @@ def execute_30(**args):
 def calculate_hwp_storage_cur(
     hwp_shape_uri, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
     yr_cur):
-    """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due 
+    """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due
         to harvested wood products in parcels on current landscape.
-        
+
         hwp_shape - oal shapefile indicating harvest map of interest
         base_dataset_uri - a gdal dataset to create the output rasters from
-        c_hwp - an output GDAL rasterband representing  carbon stored in 
-            harvested wood products for current calculation 
-        bio_hwp - an output GDAL rasterband representing carbon stored in 
+        c_hwp - an output GDAL rasterband representing  carbon stored in
+            harvested wood products for current calculation
+        bio_hwp - an output GDAL rasterband representing carbon stored in
             harvested wood products for land cover under interest
         vol_hwp - an output GDAL rasterband representing carbon stored in
              harvested wood products for land cover under interest
         yr_cur - year of the current landcover map
-        
+
         No return value"""
 
     ############### Start
@@ -313,19 +302,19 @@ def calculate_hwp_storage_cur(
     nodata = -5.0
 
     #Create a temporary shapefile to hold values of per feature carbon pools
-    #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
+    #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize
     #those values to output rasters
     hwp_shape_copy = ogr.GetDriverByName('Memory').CopyDataSource(hwp_shape, '')
     hwp_shape_layer_copy = hwp_shape_copy.GetLayer()
 
-    #Create fields in the layers to hold hardwood product pools, 
+    #Create fields in the layers to hold hardwood product pools,
     #biomassPerPixel and volumePerPixel
     calculated_attribute_names = ['c_hwp_pool', 'bio_hwp', 'vol_hwp']
     for x in calculated_attribute_names:
         field_def = ogr.FieldDefn(x, ogr.OFTReal)
         hwp_shape_layer_copy.CreateField(field_def)
 
-    #Visit each feature and calculate the carbon pool, biomassPerPixel, and 
+    #Visit each feature and calculate the carbon pool, biomassPerPixel, and
     #volumePerPixel of that parcel
     for feature in hwp_shape_layer_copy:
         #This makes a helpful dictionary to access fields in the feature
@@ -333,7 +322,7 @@ def calculate_hwp_storage_cur(
         field_args = _get_fields(feature)
 
         #If start date and/or the amount of carbon per cut is zero, it doesn't
-        #make sense to do any calculation on carbon pools or 
+        #make sense to do any calculation on carbon pools or
         #biomassPerPixel/volumePerPixel
         if field_args['start_date'] != 0 and field_args['cut_cur'] != 0:
 
@@ -346,7 +335,7 @@ def calculate_hwp_storage_cur(
                     field_args['cut_cur'], time_span, start_years,
                     field_args['freq_cur'], field_args['decay_cur']))
 
-            #Next lines caculate biomassPerPixel and volumePerPixel of 
+            #Next lines caculate biomassPerPixel and volumePerPixel of
             #harvested wood
             number_of_harvests = \
                 math.ceil(time_span / float(field_args['freq_cur']))
@@ -358,7 +347,7 @@ def calculate_hwp_storage_cur(
 
             volume_per_pixel = biomass_per_pixel / field_args['bcef_cur']
 
-            #Copy biomass_per_pixel and carbon pools to the temporary feature 
+            #Copy biomass_per_pixel and carbon pools to the temporary feature
             #for rasterization of the entire layer later
             for field, value in zip(calculated_attribute_names,
                                     [feature_carbon_storage_per_pixel,
@@ -371,7 +360,7 @@ def calculate_hwp_storage_cur(
     #burn all the attribute values to a raster
     for attribute_name, raster_uri in zip(
         calculated_attribute_names, [c_hwp_uri, bio_hwp_uri, vol_hwp_uri]):
-        
+
         raster = raster_utils.new_raster_from_base(
             base_dataset, raster_uri, 'GTiff', nodata, gdal.GDT_Float32,
             fill_value=nodata)
@@ -384,24 +373,24 @@ def calculate_hwp_storage_cur(
 def calculate_hwp_storage_fut(
     hwp_shapes, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
     yr_cur, yr_fut):
-    """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to 
+    """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to
         harvested wood products in parcels on current landscape.
-        
+
         hwp_shapes - a dictionary containing the current and/or future harvest
             maps (or nothing)
             hwp_shapes['cur'] - oal shapefile indicating harvest map from the
                 current landscape
             hwp_shapes['fut'] - oal shapefile indicating harvest map from the
                 future landscape
-        c_hwp - an output GDAL rasterband representing  carbon stored in 
-            harvested wood products for current calculation 
-        bio_hwp - an output GDAL rasterband representing carbon stored in 
+        c_hwp - an output GDAL rasterband representing  carbon stored in
+            harvested wood products for current calculation
+        bio_hwp - an output GDAL rasterband representing carbon stored in
             harvested wood products for land cover under interest
         vol_hwp - an output GDAL rasterband representing carbon stored in
              harvested wood products for land cover under interest
         yr_cur - year of the current landcover map
         yr_fut - year of the current landcover map
-        
+
         No return value"""
 
     ############### Start
@@ -417,7 +406,7 @@ def calculate_hwp_storage_fut(
     raster_utils.new_raster_from_base_uri(base_dataset_uri, vol_hwp_uri, 'GTiff', nodata, gdal.GDT_Float32, fill_value=nodata)
 
     #Create a temporary shapefile to hold values of per feature carbon pools
-    #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
+    #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize
     #those values to output rasters
 
     calculatedAttributeNames = ['c_hwp_pool', 'bio_hwp', 'vol_hwp']
@@ -428,28 +417,28 @@ def calculate_hwp_storage_fut(
         hwp_shape_layer_copy = \
             hwp_shape_copy.GetLayer()
 
-        #Create fields in the layers to hold hardwood product pools, 
+        #Create fields in the layers to hold hardwood product pools,
         #biomassPerPixel and volumePerPixel
         for fieldName in calculatedAttributeNames:
             field_def = ogr.FieldDefn(fieldName, ogr.OFTReal)
             hwp_shape_layer_copy.CreateField(field_def)
 
-        #Visit each feature and calculate the carbon pool, biomassPerPixel, 
+        #Visit each feature and calculate the carbon pool, biomassPerPixel,
         #and volumePerPixel of that parcel
         for feature in hwp_shape_layer_copy:
             #This makes a helpful dictionary to access fields in the feature
             #later in the code
             field_args = _get_fields(feature)
 
-            #If start date and/or the amount of carbon per cut is zero, it 
-            #doesn't make sense to do any calculation on carbon pools or 
+            #If start date and/or the amount of carbon per cut is zero, it
+            #doesn't make sense to do any calculation on carbon pools or
             #biomassPerPixel/volumePerPixel
             if field_args['start_date'] != 0 and field_args['cut_cur'] != 0:
 
                 time_span = (yr_fut + yr_cur) / 2.0 - field_args['start_date']
                 start_years = yr_fut - field_args['start_date']
 
-                #Calculate the carbon pool due to decaying HWP over the 
+                #Calculate the carbon pool due to decaying HWP over the
                 #time_span
                 feature_carbon_storage_per_pixel = (
                     pixel_area * _carbon_pool_in_hwp_from_parcel(
@@ -467,7 +456,7 @@ def calculate_hwp_storage_fut(
                 biomassPerPixel = biomassInFeaturePerArea * pixel_area
                 volumePerPixel = biomassPerPixel / field_args['bcef_cur']
 
-                #Copy biomassPerPixel and carbon pools to the temporary 
+                #Copy biomassPerPixel and carbon pools to the temporary
                 #feature for rasterization of the entire layer later
                 for field, value in zip(calculatedAttributeNames,
                                         [feature_carbon_storage_per_pixel,
@@ -487,7 +476,7 @@ def calculate_hwp_storage_fut(
             raster.FlushCache()
             raster = None
 
-    #handle the future term 
+    #handle the future term
     if 'fut' in hwp_shapes:
         hwp_shape = ogr.Open(hwp_shapes['fut'])
         hwp_shape_copy = \
@@ -495,28 +484,28 @@ def calculate_hwp_storage_fut(
         hwp_shape_layer_copy = \
             hwp_shape_copy.GetLayer()
 
-        #Create fields in the layers to hold hardwood product pools, 
+        #Create fields in the layers to hold hardwood product pools,
         #biomassPerPixel and volumePerPixel
         for fieldName in calculatedAttributeNames:
             field_def = ogr.FieldDefn(fieldName, ogr.OFTReal)
             hwp_shape_layer_copy.CreateField(field_def)
 
-        #Visit each feature and calculate the carbon pool, biomassPerPixel, 
+        #Visit each feature and calculate the carbon pool, biomassPerPixel,
         #and volumePerPixel of that parcel
         for feature in hwp_shape_layer_copy:
             #This makes a helpful dictionary to access fields in the feature
             #later in the code
             field_args = _get_fields(feature)
 
-            #If start date and/or the amount of carbon per cut is zero, it 
-            #doesn't make sense to do any calculation on carbon pools or 
+            #If start date and/or the amount of carbon per cut is zero, it
+            #doesn't make sense to do any calculation on carbon pools or
             #biomassPerPixel/volumePerPixel
             if field_args['cut_fut'] != 0:
 
                 time_span = yr_fut - (yr_fut + yr_cur) / 2.0
                 start_years = time_span
 
-                #Calculate the carbon pool due to decaying HWP over the 
+                #Calculate the carbon pool due to decaying HWP over the
                 #time_span
                 feature_carbon_storage_per_pixel = pixel_area * \
                     _carbon_pool_in_hwp_from_parcel(
@@ -534,7 +523,7 @@ def calculate_hwp_storage_fut(
 
                 volumePerPixel = biomassPerPixel / field_args['bcef_fut']
 
-                #Copy biomassPerPixel and carbon pools to the temporary 
+                #Copy biomassPerPixel and carbon pools to the temporary
                 #feature for rasterization of the entire layer later
                 for field, value in zip(calculatedAttributeNames,
                                         [feature_carbon_storage_per_pixel,
@@ -557,7 +546,6 @@ def calculate_hwp_storage_fut(
                                 options=['ATTRIBUTE=' + attributeName])
             temp_raster.FlushCache()
             temp_raster = None
-            cur_raster = None
 
             #add temp_raster and raster cur raster into the output raster
             nodata = -1.0
@@ -579,7 +567,7 @@ def _get_fields(feature):
 
         feature - an OGR feature.
 
-        Returns an assembled python dict with a mapping of 
+        Returns an assembled python dict with a mapping of
         fieldname -> fieldvalue"""
 
     fields = {}
@@ -654,4 +642,4 @@ def _calculate_summary(args):
             continue
         total_sum = carbon_utils.sum_pixel_values_from_uri(args[raster_key])
         output_csv_file.write('%s, %f\n' % (raster_key, total_sum))
-        LOGGER.info("%s %s Mg" % (message, total_sum))
+        LOGGER.info("%s %s Mg", message, total_sum)

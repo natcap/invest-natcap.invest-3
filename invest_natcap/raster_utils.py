@@ -176,6 +176,20 @@ def pixel_size(dataset):
         linear_units
     return size_meters
 
+def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
+    """A wrapper for pixel_size_based_on_coordinate_transform
+        that takes a dataset uri as an input and opens it before sending it
+        along
+
+        dataset_uri - a URI to a gdal dataset
+
+        All other parameters pass along
+
+       returns a tuple containing (pixel width in meters, pixel height in 
+           meters)"""
+    dataset = gdal.Open(dataset_uri)
+    return pixel_size_based_on_coordinate_transform(dataset, *args, **kwargs)
+
 def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     """Calculates the pixel width and height in meters given a coordinate 
         transform and reference point on the dataset that's close to the 
@@ -735,14 +749,18 @@ def create_raster_from_vector_extents(
 
     return raster
 
-def vectorize_points(shapefile, datasource_field, raster, randomize_points=False, mask_convex_hull=False):
+def vectorize_points(
+        shapefile, datasource_field, raster, randomize_points=False,
+        mask_convex_hull=False, interpolation='nearest'):
     """Takes a shapefile of points and a field defined in that shapefile
        and interpolates the values in the points onto the given raster
 
        shapefile - ogr datasource of points
        datasource_field - a field in shapefile
        raster - a gdal raster must be in the same projection as shapefile
-
+       interpolation - the interpolation method to use for
+            scipy.interpolate.griddata(). Default is 'nearest'
+       
        returns nothing
        """
 
@@ -803,7 +821,7 @@ def vectorize_points(shapefile, datasource_field, raster, randomize_points=False
     nodata = band.GetNoDataValue()
 
     raster_out_array = scipy.interpolate.griddata(point_array,
-        value_array, (grid_y, grid_x), 'nearest', nodata)
+        value_array, (grid_y, grid_x), interpolation, nodata)
     band.WriteArray(raster_out_array,0,0)
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
@@ -1483,6 +1501,20 @@ def create_rat(dataset, attr_dict, column_name):
     band.SetDefaultRAT(rat)
     return dataset
 
+
+def get_raster_properties_uri(dataset_uri):
+    """Wrapper function for get_raster_properties() that passes in the dataset
+        URI instead of the datasets itself
+        
+        dataset_uri - a URI to a GDAL raster dataset
+        
+       returns - a dictionary with the properties stored under relevant keys.
+           The current list of things returned is:
+           width (w-e pixel resolution), height (n-s pixel resolution), 
+           XSize, YSize
+    """
+    dataset = gdal.Open(dataset_uri)
+    return get_raster_properties(dataset)
 
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the
@@ -2730,19 +2762,23 @@ def copy_datasource_uri(shape_uri, copy_uri):
     drv = ogr.GetDriverByName('ESRI Shapefile')
     drv.CopyDataSource(shape, copy_uri)
     
-def vectorize_points_uri(shapefile_uri, field, output_uri):
+def vectorize_points_uri(
+        shapefile_uri, field, output_uri, interpolation='nearest'):
     """A wrapper function for raster_utils.vectorize_points, that allows for uri
         passing
 
         shapefile_uri - a uri path to an ogr shapefile
         field - a String for the field name
         output_uri - a uri path for the output raster
+        interpolation - interpolation method to use on points, default is
+            nearest
 
         returns - Nothing"""
 
     datasource = ogr.Open(shapefile_uri)
     output_raster = gdal.Open(output_uri, 1)
-    vectorize_points(datasource, field, output_raster)
+    vectorize_points(
+            datasource, field, output_raster, interpolation=interpolation)
 
 def create_directories(directory_list):
     """This function is inspired from this thread 

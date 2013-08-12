@@ -1,3 +1,5 @@
+'''Utilities for creating simple HTML report files.'''
+
 import collections
 
 BEACH_STYLE = 0  # constant to select a nice beach (tan and blue) palette
@@ -19,14 +21,14 @@ class HTMLDocument(object):
         table.add_row(['1 year', '20 pounds'])
         table.add_row(['2 years', '40 pounds'])
 
-        # Add an arbitrary HTML element. 
+        # Add an arbitrary HTML element.
         # Note that the HTML 'img' element doesn't have an end tag.
         doc.add(html.Element('img', src='images/my_pic.png', end_tag=False))
 
         # Create the file.
         doc.flush()
     '''
-        
+
     def __init__(self, uri, title, header, style_const=BEACH_STYLE):
         self.uri = uri
 
@@ -71,9 +73,9 @@ class HTMLDocument(object):
 
     def flush(self):
         '''Create a file with the contents of this document.'''
-        f = open(self.uri, 'w')
-        f.write(self.html_elem.html())
-        f.close()
+        outfile = open(self.uri, 'w')
+        outfile.write(self.html_elem.html())
+        outfile.close()
 
 
 class Element(object):
@@ -87,23 +89,27 @@ class Element(object):
         details_elem.add(
             html.Element('img', src='images/my_pic.png', end_tag=False))
     '''
-    def __init__(self, tag, content='', end_tag=True, **attr):
+    def __init__(self, tag, content='', end_tag=True, **attrs):
         self.tag = tag
         self.content = content
         self.end_tag = end_tag
-        if attr:
-            self.attr_str = ' ' + ' '.join(
-                '%s="%s"' % (key, val) for key, val in attr.items())
-        else:
-            self.attr_str = ''
+        self.attrs = attrs
         self.elems = []
 
     def add(self, elem):
+        '''Add a child element (which is returned for convenience).'''
         self.elems.append(elem)
         return elem
 
     def html(self):
-        html_str = '<%s%s>%s' % (self.tag, self.attr_str, self.content)
+        '''Returns an HTML string for this element (and its children).'''
+        if self.attrs:
+            attr_str = ' ' + ' '.join(
+                '%s="%s"' % (key, val) for key, val in self.attrs.items())
+        else:
+            attr_str = ''
+
+        html_str = '<%s%s>%s' % (self.tag, attr_str, self.content)
         for elem in self.elems:
             html_str += elem.html()
         if self.end_tag:
@@ -117,10 +123,10 @@ class Table(object):
     def __init__(self, **attr):
         self.table_elem = Element('table', **attr)
 
-    def add_row(self, cells, is_header=False, cell_attr=[]):
+    def add_row(self, cells, is_header=False, cell_attr=None):
         '''Writes a table row with the given cell data.
 
-        cell_attr - attributes for each cell. If provided, it must be the 
+        cell_attr - attributes for each cell. If provided, it must be the
             same length as cells. Each entry should be a dictionary mapping
             attribute key to value.
         '''
@@ -132,6 +138,7 @@ class Table(object):
         self.table_elem.add(row)
 
     def html(self):
+        '''Return the HTML string for the table.'''
         return self.table_elem.html()
 
 class _TableOfContents(object):
@@ -142,6 +149,7 @@ class _TableOfContents(object):
         self.max_header_level = max_header_level
 
     def html(self):
+        '''Return the HTML string for the Table of Contents.'''
         # Generate a header.
         header = Element('h2', 'Table of Contents')
 
@@ -157,6 +165,7 @@ class _TableOfContents(object):
         return header.html() + link_list.html()
 
 def _get_style_css(style_const):
+    '''Return a string with the given CSS styling rules.'''
     if style_const == BEACH_STYLE:
         return '''
       body {
@@ -171,10 +180,10 @@ def _get_style_css(style_const):
       }
       table {
           border: 5px solid #A7A37E;
-          margin-bottom: 50px; 
+          margin-bottom: 50px;
           background-color: #E6E2AF;
       }
-      td, th { 
+      td, th {
           margin-left: 0px;
           margin-right: 0px;
           padding-left: 8px;
@@ -183,7 +192,7 @@ def _get_style_css(style_const):
           padding-top: 2px;
           text-align:left;
       }
-      td { 
+      td {
           border-top: 5px solid #EFECCA;
       }
       img {

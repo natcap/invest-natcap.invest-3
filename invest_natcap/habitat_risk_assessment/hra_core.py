@@ -562,14 +562,19 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             equation. Want to add all of the numerators (r/dq), then divide by
             the denoms added together (1/dq).'''
 
+            all_nodata = True
+            for p in pixels:
+                if p not in [-1., -1]:
+                    all_nodata = False
+            if all_nodata:
+                return -1.
+        
             value = 0.
-
+            
             for p in pixels:
                 
-                if p == -1.:
-                    return -1.
-  
-                value += p
+                if p not in [-1., -1]:
+                    value += p
   
             value = value / denoms['Recovery'][h]
 
@@ -1092,6 +1097,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #Only want to perform these operation if there is data in the cell, else
         #we end up with false positive data when we subtract 1. 
         if c_pix == 0. and e_pix == 0.:
+            LOGGER.debug("There's a 0 in the cell. How did you get that?")
             c_val = 0.
             e_val = 0.
         else:
@@ -1130,16 +1136,23 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
     grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
+    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
+
     def add_e_pix(*pixels):
+        
+        all_nodata = True
+        for p in pixels:
+            if p != nodata:
+                all_nodata = False
+        if all_nodata:
+            return nodata
         
         value = 0.
         
         for p in pixels:
-
-            if p == nodata:
-                return nodata
             
-            value += p
+            if p != nodata:
+                value += p
     
         return value / h_s_denom
 
@@ -1158,13 +1171,16 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
             criteria applicable for that h, s pair.
         h_s_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
-        s_list- A list of rasters burned with the equation r/dq*w for every
+        h_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that s.
-        s_denom- A double representing the sum total of all applicable criteria
+        h_denom- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
 
     Returns nothing.
     '''
+    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
+    LOGGER.debug("The h denom is: %s" % h_denom)
+
     tot_crit_list = h_s_list + h_list
     tot_denom = h_s_denom + h_denom
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
@@ -1172,14 +1188,20 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
 
     def add_c_pix(*pixels):
         
+        all_nodata = True
+        for p in pixels:
+            if p != nodata:
+                all_nodata = False
+        if all_nodata:
+            return nodata
+        
         value = 0.
         
         for p in pixels:
             
-            if p == nodata:
-                return nodata
-
-            value += p
+            if p != nodata:
+                
+                value += p
     
         return value / tot_denom
 
