@@ -1,5 +1,6 @@
 '''Unit test for the HTML generation utils in report_generation.html'''
 
+import os
 import unittest
 
 from bs4 import BeautifulSoup
@@ -11,15 +12,14 @@ TITLE = 'My Test Page'
 HEADER = 'This page is a test of HTML generation.'
 
 class TestHTMLGeneration(unittest.TestCase):
-
     def setUp(self):
         self.doc = html.HTMLDocument(FILE_PATH, TITLE, HEADER)
 
     def tearDown(self):
         try:
             os.remove(FILE_PATH)
-        except:
-            pass
+        except OSError:
+            self.fail("HTML output file can't be deleted; it doesn't exist.")
 
     def check_soup(self):
         '''Check some basic properties, and return the BeautifulSoup object.'''
@@ -70,6 +70,7 @@ class TestHTMLGeneration(unittest.TestCase):
             self.assert_contains(link_list, 1, 'li', text=header)
 
     def test_table(self):
+        '''Test writing a table.'''
         table = self.doc.add(html.Table(id='test_table'))
         header_row = ['TV Show', 'Quality']
         data_rows = [['Breaking Bad', 'Good'],
