@@ -104,6 +104,7 @@ def execute(args):
     raster_utils.create_directories([workspace, inter_dir, out_dir])
             
     bathymetry_uri = args['bathymetry_uri']
+    number_of_turbines = int(args['number_of_turbines'])
     
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -114,7 +115,7 @@ def execute(args):
         suffix = ''
 
     # Create a list of the biophysical parameters we are looking for from the
-    # input files
+    # input csv files
     biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
                           'hub_height', 'turbine_rated_pwr', 'air_density',
                           'exponent_power_curve', 'air_density_coefficient',
@@ -172,10 +173,9 @@ def execute(args):
     wind_data_field_list = ['LATI', 'LONG', scale_key, 'K-010m']
 
     # Read the wind energy data into a dictionary
-    LOGGER.info('Read wind data from text file')
+    LOGGER.info('Reading in Wind Data')
     wind_data = read_binary_wind_data(args['wind_data_uri'], wind_data_field_list)
    
-    aoi_uri = None
     if 'aoi_uri' in args:
         LOGGER.info('AOI Provided')
         
@@ -188,11 +188,12 @@ def execute(args):
         wind_point_shape_uri = os.path.join(
                 inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
         
+        # Create point shapefile from wind data
         LOGGER.info('Create point shapefile from wind data')
-        
         wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_uri)
         
-        # Define the uri for projecting the wind energy data points
+        # Define the uri for projecting the wind energy data points to that of
+        # the AOI
         wind_points_proj_uri = os.path.join(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
 
@@ -201,7 +202,7 @@ def execute(args):
         clip_and_reproject_shapefile(
                 wind_point_shape_uri, aoi_uri, wind_points_proj_uri) 
     
-        # Define the uri for projecting the bathymetry
+        # Define the uri for projecting the bathymetry to AOI
         bathymetry_proj_uri = os.path.join(
                 inter_dir, 'bathymetry_projected%s.tif' % suffix)
         
@@ -209,6 +210,9 @@ def execute(args):
         LOGGER.debug('Clip and project bathymetry to AOI')
         clip_and_reproject_raster(bathymetry_uri, aoi_uri, bathymetry_proj_uri)
 
+        # Set the bathymetry and points URI to use in the rest of the model. In
+        # this case these URIs refer to the projected files. This may not be the
+        # case if an AOI is not provided
         final_bathymetry_uri = bathymetry_proj_uri
         final_wind_points_uri = wind_points_proj_uri
 
@@ -220,9 +224,13 @@ def execute(args):
             land_polygon_uri = args['land_polygon_uri']
         except KeyError:
             LOGGER.info('Distance information not provided')
+            # A variable to use later on to check model functionality that is
+            # dependent on whether distance information was provided
             dist_data_provided = False 
         else: 
             LOGGER.info('Handling distance parameters')
+            # A variable to use later on to check model functionality that is
+            # dependent on whether distance information was provided
             dist_data_provided = True
 
             # Define the uri for reprojecting the land polygon datasource
@@ -241,20 +249,20 @@ def execute(args):
         wind_point_shape_uri = os.path.joi(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
         
+        # Create point shapefile from wind data dictionary
         LOGGER.debug('Create point shapefile from wind data')
-        
         wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_uri)
         
+        # Set the bathymetry and points URI to use in the rest of the model. In
+        # this case these URIs refer to the unprojected files. This may not be
+        # the case if an AOI is provided
         final_wind_points_uri = wind_point_shape_uri
-        final_bathymetry_uri = args['bathymetry_uri']
+        final_bathymetry_uri = bathymetry_uri
     
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1.0
     max_depth = abs(float(args['max_depth'])) * -1.0
-
-    # Get the number of turbines from the arguments
-    number_of_turbines = int(args['number_of_turbines'])
 
     # The general out nodata value for the rasters will be from the bathymetry
     # raster
@@ -280,8 +288,8 @@ def execute(args):
 
     depth_mask_uri = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
     
-    LOGGER.info('Creating Depth Mask')
     # Create a mask for any values that are out of the range of the depth values
+    LOGGER.info('Creating Depth Mask')
     cell_size = raster_utils.get_cell_size_from_uri(final_bathymetry_uri)
     
     raster_utils.vectorize_datasets(
@@ -289,7 +297,7 @@ def execute(args):
             out_nodata, cell_size, 'intersection')
 
     # Handle the AOI if it was passed in with the dictionary
-    if aoi_uri != None:    
+    if 'aoi_uri' in args:    
         # If the distance inputs are present create a mask for the output
         # area that restricts where the wind energy farms can be based
         # on distance
