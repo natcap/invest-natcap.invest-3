@@ -113,6 +113,7 @@ for landcover_type in numpy.unique(landcover_array):
 		(biomass_array != biomass_nodata))
 	
 	landcover_biomass = biomass_array[landcover_mask]
+	
 	landcover_edge_distance = edge_distance[landcover_mask] * cell_size
 	
 	#Fit a log function of edge distance to biomass for 
@@ -133,9 +134,11 @@ for landcover_type in numpy.unique(landcover_array):
 	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
 	ss_res = numpy.sum((landcover_biomass - f(landcover_edge_distance)) ** 2)
 	r_value = 1 - ss_res / ss_tot
-	print ' R^2: %.2f' % r_value
+	std_dev = numpy.std(landcover_biomass)
+	n_count = landcover_biomass.size
+	print ' R^2: %.2f stddev: %.2f, n: %s' % (r_value, std_dev, n_count)
 	
-	landcover_regression[landcover_type] = f
+	landcover_regression[landcover_type] = numpy.vectorize(f)
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
 #	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4)
@@ -154,11 +157,30 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 		continue
 	print lulc_path
 	lulc_dataset = gdal.Open(lulc_path)
+	
+	landcover_mask = numpy.where(
+		(landcover_array == landcover_type) * 
+		(biomass_array != biomass_nodata))
+	
 #	result = calculate_carbon_stocks(lulc_dataset)
 	lulc_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 	
-	carbon_stocks = numpy.zero(lulc_array.shape)
 	
+	for landcover_type in FOREST_LANDCOVER_TYPES:
+		forest_existance = forest_existance + (landcover_array == landcover_type)
+	forest_existance[biomass_array == biomass_nodata] = 0.0
+
+#This calculates an edge distance for the clusters of forest
+	edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+		forest_existance)
+	carbon_stocks = numpy.zeros(lulc_array.shape)
+	
+	print 'mapping forest carbon stocks with regression function'
+	for landcover_type in REGRESSION_TYPES:
+		landcover_mask = numpy.where(landcover_array == landcover_type)
+		carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
+	
+
 
 #loop over each LULC, calculate carbon
 	#calc above forest carbon w/ regression
