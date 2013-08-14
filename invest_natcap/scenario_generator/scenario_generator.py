@@ -5,6 +5,12 @@ from osgeo import gdal, ogr
 from invest_natcap import raster_utils
 
 from scipy import stats
+from scipy.linalg import eig
+
+from decimal import Decimal
+from fractions import Fraction
+
+import numpy
 
 import logging
 
@@ -36,8 +42,44 @@ def unique_raster_values_count(dataset):
         
     return itemfreq
 
+def calculate_weights(arr, rounding=4):
+   places = Decimal(10) ** -(rounding)
+   
+   # get eigenvalues and vectors
+   eigenvalues, eigenvectors = eig(arr)
+
+   # get primary eigenvalue and vector
+   primary_eigenvalue = max(eigenvalues)
+   primary_eigenvalue_index = eigenvalues.tolist().index(primary_eigenvalue)
+   primary_eigenvector = eigenvalues.take((primary_eigenvalue_index,), axis=1)
+
+   # priority vector = normalized primary eigenvector
+
+   normalized = eigenvector / sum(eigenvector)
+
+   # turn into list of real part values
+   vector = [abs(e[0]) for e in normalized]
+
+   # return nice rounded Decimal values with labels
+   return [ Decimal( str(v) ).quantize(places) for v in vector ]
+
+def calulcate_priority(table_uri, attributes_uri=None):
+    table_file = open(table_uri,'r')
+    table_file.readline()
+    table = []
+    for line in table_file:
+        row = []
+        for value in line.split(",")[1:]:
+            try:
+                row.append(float(1/Fraction(value)))
+            except ValueError
+                row.append(0.0)
+         table.append(row)   
+    matrix = numpy.array(table)
+
+    priority_values = calculate_weights(matrix, 4)
+
 def execute(args):
-    pass
 
     ###
     #get parameters, set outputs
