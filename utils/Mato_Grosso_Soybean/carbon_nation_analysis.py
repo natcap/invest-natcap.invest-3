@@ -6,6 +6,46 @@ import pylab
 import matplotlib.pyplot
 import glob
 import scipy.stats
+import csv
+
+def get_lookup_from_csv(csv_table_uri, key_field):
+    """Creates a python dictionary to look up the rest of the fields in a
+        csv table indexed by the given key_field
+
+        csv_table_uri - a URI to a csv file containing at
+            least the header key_field
+
+        returns a dictionary of the form {key_field_0: 
+            {header_1: val_1_0, header_2: val_2_0, etc.}
+            depending on the values of those fields"""
+
+    def smart_cast(value):
+        """Attempts to cat value to a float, int, or leave it as string"""
+        cast_functions = [int, float]
+        for fn in cast_functions:
+            try:
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
+    with open(csv_table_uri, 'rU') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        header_row = csv_reader.next()
+        key_index = header_row.index(key_field)
+        #This makes a dictionary that maps the headers to the indexes they
+        #represent in the soon to be read lines
+        index_to_field = dict(zip(range(len(header_row)), header_row))
+
+        lookup_dict = {}
+        for line in csv_reader:
+            key_value = smart_cast(line[key_index])
+            #Map an entire row to its lookup values
+            lookup_dict[key_value] = (
+                dict([(index_to_field[index], smart_cast(value)) 
+                      for index, value in zip(range(len(line)), line)]))
+        return lookup_dict
+
 
 def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot_cols):
 	pylab.subplot(plot_rows, plot_cols, plot_id + 1)
@@ -26,6 +66,8 @@ def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot
 #Units of base biomass in the raster pixels are are Mg/Ha
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
+CARBON_POOL_TABLE_FILENAME = './mato_grosso_carbon.csv'
+
 
 #These are the landcover types that define clusters of forest for the distance from edge calculation
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
@@ -102,7 +144,9 @@ for landcover_type in numpy.unique(landcover_array):
 #pylab.show()
 
 #Parse out the landcover pool table
+carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
 
+print carbon_pool_table
 
 LAND_USE_DIRECTORY = 'MG_Soy_Exp_07122013'
 for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
