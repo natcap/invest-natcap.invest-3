@@ -73,8 +73,9 @@ CARBON_POOL_TABLE_FILENAME = './mato_grosso_carbon.csv'
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
 #These are the landcover types that should use the log regression
 REGRESSION_TYPES = [2]
-#These are the landcover types that should use the mean from the biophysical raster
-MEAN_TYPES = [1, 3, 4, 5]
+#These are the LULCs to take directly from table, everything else is mean from regression
+FROM_TABLE = [10, 12, 120, 0]
+
 #All other land cover pool types will come from the data table, units are Mg/Ha
 
 #Load the base biomass and landcover datasets
@@ -142,8 +143,8 @@ for landcover_type in numpy.unique(landcover_array):
 	landcover_regression[landcover_type] = numpy.vectorize(f)
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
-#	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4)
-#	plot_id += 1
+	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4)
+	plot_id += 1
 	
 #pylab.show()
 
@@ -181,7 +182,28 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 		landcover_mask = numpy.where(landcover_array == landcover_type)
 		carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
 	
-	lancover_id_set = numpy.unique(landcover_array)
+	landcover_id_set = numpy.unique(landcover_array)
+	
+	for landcover_type in landcover_id_set:
+		print 'mapping landcover type %s from table' % landcover_type
+		if landcover_type in REGRESSION_TYPES:
+			continue
+		
+		if landcover_type in FROM_TABLE:
+			carbon_per_pixel = carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * cell_size ** 2 / 10000
+		else:
+			#look it up in the mean table
+			carbon_per_pixel = landcover_mean[landcover_type] * cell_size ** 2 / 10000
+		
+		landcover_mask = numpy.where(landcover_array == landcover_type)
+		
+			
+		try:
+			carbon_stocks[landcover_mask] = carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * cell_size ** 2
+		except TypeError:
+			print 'can\'t map value of landcover type %s, table entry as %s' % (landcover_type, carbon_pool_table[landcover_type]['C_ABOVE_MEAN'])
+		except KeyError:
+			print 'can\'t find an entry for landcover type %s' % landcover_type
 	
 	
 
