@@ -332,11 +332,13 @@ def biophysical(args):
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    raster_utils.vectorize_points(wind_points, density_field_name, density_temp)
+    raster_utils.vectorize_points(wind_points, density_field_name, density_temp,
+            interpolation='linear')
     
     LOGGER.info('Vectorize Harvested Points')
     raster_utils.vectorize_points(
-            wind_points, harvest_field_name, harvested_temp)
+            wind_points, harvest_field_name, harvested_temp,
+            interpolation='linear')
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
@@ -925,7 +927,8 @@ def valuation(args):
         # Interpolate and vectorize the points field onto a gdal dataset
         LOGGER.info('Vectorizing the points from the %s field', field)
         raster_utils.vectorize_points(
-                wind_energy_points, field, output_tmp_ds)
+                wind_energy_points, field, output_tmp_ds, interpolation =
+                'linear')
         
         def mask_nodata(masker, masky):
             """A vectorize rasters function that uses the first raster as a

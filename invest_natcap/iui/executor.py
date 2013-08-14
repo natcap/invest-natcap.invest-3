@@ -429,6 +429,7 @@ class Executor(threading.Thread):
 
         try:
             LOGGER.info('Running InVEST version "%s"', invest_natcap.__version__)
+            LOGGER.info('Python architecture: %s', platform.architecture())
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev

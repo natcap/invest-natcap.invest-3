@@ -702,7 +702,7 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                         raise UnexpectedString("Entries in CSV table may not be \
                             strings, and may not be left blank. Check your %s CSV \
                             for any leftover strings or spaces within Rating, \
-                            Data Quality or Weight columns.", hab_name)
+                            Data Quality or Weight columns." % hab_name)
                 #Should catch any leftovers from the autopopulation of the helptext        
                 else:
                     try:

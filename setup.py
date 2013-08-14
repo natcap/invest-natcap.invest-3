@@ -98,6 +98,7 @@ packages = ['invest_natcap',
             'invest_natcap.report_generation',
             'invest_natcap.routing',
             'invest_natcap.flood_mitigation',
+            'invest_natcap.ntfp',
             ]
 
 #If it's windows assume we're going the py2exe route.
@@ -116,7 +117,7 @@ if platform.system() == 'Windows':
             'packages': packages,
             'skip_archive': True,
             'dll_excludes': ['POWRPROF.dll', 'Secur32.dll', 'SHFOLDER.dll',
-                'msvcp90.dll', 'msvcr90.dll']
+                'msvcp90.dll']
             }
          }
 
@@ -141,6 +142,7 @@ if platform.system() == 'Windows':
          'invest_sediment.py',
          'invest_nutrient.py',
          'invest_wind_energy.py',
+         'invest_ntfp.py',
          'invest_test_all.py']
 
     #Need to manually bring along the json configuration files to
@@ -168,6 +170,7 @@ if platform.system() == 'Windows':
               'invest_natcap/iui/nutrient.json',
               'invest_natcap/iui/wind_energy.json',
               'invest_natcap/iui/coastal_vulnerability.json',
+              'invest_natcap/iui/ntfp.json',
               'geos_c.dll',
               'libgcc_s_dw2-1.dll',
               'libstdc++-6.dll',
@@ -213,7 +216,7 @@ setup(name='invest_natcap',
       packages=packages,
       cmdclass={'build_ext': build_ext,
                 'zip': ZipCommand},
-      requires=['cython (>=0.17.1)', 'scipy (>=0.11.0)', 'nose (>=1.2.1)', 'osgeo (>=1.9.2)'],
+      requires=['cython (>=0.17.1)', 'scipy (>=0.12.0)', 'nose (>=1.2.1)', 'osgeo (>=1.9.2)'],
       include_dirs = [np.get_include()],
       data_files=data_files,
       ext_modules=cythonize([Extension(name="invest_cython_core",

@@ -92,7 +92,7 @@ def execute(args):
         # Remove so we can re-create.
         os.remove(out_path)
 
-    curr_shp_file = args['ff_farm_file']
+    curr_shp_file = ogr.Open(args['ff_farm_file'])
     driver = ogr.GetDriverByName('ESRI Shapefile')
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()
@@ -405,7 +405,7 @@ def do_monte_carlo_simulation(args):
                 return sample
 
     # Set up a dict to contain the results of the simulation.
-    farms = map(str, args['farm_op_dict'].keys())
+    farms = sorted(int(f) for f in args['farm_op_dict'])
     farms.insert(0, 'total')
 
     fields = ['cycles', 'weight']
@@ -452,10 +452,10 @@ def do_monte_carlo_simulation(args):
 
         # Update our per-farm results.
         for farm, hrv_weight in sum_hrv_weight.items():
-            results[str(farm)]['weight'].append(hrv_weight)
-            results[str(farm)]['cycles'].append(len(cycle_history[farm]))
+            results[farm]['weight'].append(hrv_weight)
+            results[farm]['cycles'].append(len(cycle_history[farm]))
             if args['do_valuation']:
-                results[str(farm)]['value'].append(farms_npv[farm])
+                results[farm]['value'].append(farms_npv[farm])
 
     LOGGER.info('Monte Carlo simulation complete.')
     return results
@@ -675,6 +675,9 @@ def create_HTML_table(
                          'Net present value (thousands of USD)',
                          'Number of cycles']
         header_row = [''] + result_titles
+
+        # Make the top headers each take up two columns, since they each
+        # have two subheaders ('mean' and 'standard deviation')
         header_attr = [{}] + ([{'colspan': 2}] * len(result_titles))
 
         uncertainty_table.add_row(
@@ -690,6 +693,7 @@ def create_HTML_table(
             else:
                 row.append('Farm %s' % farm)
             for result_type in ['weight', 'value', 'cycles']:
+                # Append the mean and the standard deviation to the row.
                 row += uncertainty_stats[farm][result_type]
             uncertainty_table.add_row(row)
 

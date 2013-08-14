@@ -58,20 +58,9 @@ def execute_30(**args):
 
         returns nothing."""
 
-    try:
-        file_suffix = args['suffix']
-        if not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
-
-    dirs = {}
-    dirs['output'] = os.path.join(args['workspace_dir'], 'output')
-    dirs['intermediate'] = os.path.join(args['workspace_dir'], 'intermediate')
-    for directory in dirs.values():
-        if not os.path.exists(directory):
-            LOGGER.info('creating directory %s', directory)
-            os.makedirs(directory)
+    file_suffix = carbon_utils.make_suffix(args)
+    dirs = carbon_utils.setup_dirs(args['workspace_dir'],
+                                   'output', 'intermediate')
 
     def outfile_uri(prefix, scenario_type, dirtype='output', filetype='tif'):
         '''Creates the appropriate output file URI.
@@ -108,7 +97,7 @@ def execute_30(**args):
                 raster_utils.get_cell_area_from_uri(args[lulc_uri]) /
                 10000.0)
 
-            for lulc_id, lookup_dict in pools.iteritems():
+            for lulc_id in pools:
                 pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
 
                 if use_uncertainty:
@@ -238,7 +227,7 @@ def execute_30(**args):
                 #         0 if we're not confident either way.
                 def confidence_op(c_cur, c_fut, var_cur, var_fut):
                     if nodata_out in [c_cur, c_fut, var_cur, var_fut]:
-                            return nodata_out
+                        return nodata_out
 
                     if var_cur == 0 and var_fut == 0:
                         # There's no variance, so we can just compare the mean estimates.
@@ -557,7 +546,6 @@ def calculate_hwp_storage_fut(
                                 options=['ATTRIBUTE=' + attributeName])
             temp_raster.FlushCache()
             temp_raster = None
-            cur_raster = None
 
             #add temp_raster and raster cur raster into the output raster
             nodata = -1.0
@@ -654,4 +642,4 @@ def _calculate_summary(args):
             continue
         total_sum = carbon_utils.sum_pixel_values_from_uri(args[raster_key])
         output_csv_file.write('%s, %f\n' % (raster_key, total_sum))
-        LOGGER.info("%s %s Mg" % (message, total_sum))
+        LOGGER.info("%s %s Mg", message, total_sum)

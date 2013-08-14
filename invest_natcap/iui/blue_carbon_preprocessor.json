@@ -9,7 +9,7 @@
     "elements": [
                     {
                     "id" : "workspace_list",
-                    "type": "list",	        
+                    "type": "list",
                             "elements": [
                                             {
                                                 "id": "workspace_dir",
@@ -34,6 +34,54 @@
                         "defaultValue": ["../BlueCarbon/input/GBJC_2004_mean.tif", "../BlueCarbon/input/GBJC_2050_mean.tif", "../BlueCarbon/input/GBJC_2100_mean.tif"],
                         "linkText": "Add Another",
                         "helpText": ""
-                    }                                            
+                    },
+                    {
+                        "id": "labels_list",
+                        "type": "list",
+                        "elements": [
+                            {
+                                "id": "labels",
+                                "type": "file",
+                                "args_id": "labels",
+                                "label": "Labels",
+                                "defaultValue": "../BlueCarbon/input/carbon.csv",
+                                "helpText": "",
+                                "required": false
+                            },
+                            {
+                                "id": "lulc_id",
+                                "args_id": "lulc_id",
+                                "type": "OGRFieldDropdown",
+                                "label": "LULC ID",
+                                "enabledBy": "labels",
+                                "defaultValue": 1,
+                                "helpText": "",
+                                "returns": "strings",
+                                "required": true
+                            },
+                            {
+                                "id": "lulc_name",
+                                "args_id": "lulc_name",
+                                "type": "OGRFieldDropdown",
+                                "label": "LULC Name",
+                                "enabledBy": "labels",
+                                "defaultValue": 2,
+                                "helpText": "",
+                                "returns": "strings",
+                                "required": true
+                            },
+                            {
+                                "id": "lulc_type",
+                                "args_id": "lulc_type",
+                                "type": "OGRFieldDropdown",
+                                "label": "LULC Type",
+                                "enabledBy": "labels",
+                                "defaultValue": 3,
+                                "helpText": "",
+                                "returns": "strings",
+                                "required": true
+                            }                            
+                        ]
+                    }
                 ]
 }

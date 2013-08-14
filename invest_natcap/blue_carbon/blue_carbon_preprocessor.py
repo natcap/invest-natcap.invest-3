@@ -38,20 +38,22 @@ def execute(args):
     LOGGER.debug("No data value is %i.", nodata)
 
 
-    #It might be handy allow for a SetCategoryNames
-    dataset = gdal.Open(args["lulc"][0])
-    band = dataset.GetRasterBand(1)
-    names = band.GetCategoryNames()
-    band = None
-    dataset = None
+##    #It might be handy allow for a SetCategoryNames
+##    dataset = gdal.Open(args["lulc"][0])
+##    band = dataset.GetRasterBand(1)
+##    names = band.GetCategoryNames()
+##    band = None
+##    dataset = None
+##
+##    if not names == None:
+##        LOGGER.debug("Found category names: %s.", names)
+##    else:
+##        LOGGER.debug("No imbedded category names found.")
 
-    if not names == None:
-        LOGGER.debug("Found category names: %s.", names)
-    else:
-        LOGGER.debug("Category names not found.")
-
+    LOGGER.info("Reading all transitions.")
     transitions = get_transition_set_from_uri(args["lulc"])
     if (nodata, nodata) in transitions:
+        LOGGER.debug("Removing nodata transitions.")
         transitions.remove((nodata, nodata))
 
     LOGGER.debug("Validating transitions.")
@@ -80,17 +82,44 @@ def execute(args):
     original_values.sort()
     final_values.sort()
     transition_matrix = open(transition_matrix_uri, 'w')
-    transition_matrix.write(",")
+    transition_matrix.write("ID,,")
     transition_matrix.write(",".join([str(value) for value in final_values]))
+
+    transition_matrix.write("\n,Name")
+    labels_dict = {}
+    #This will cause problems if the carbon table is missing more than one label.
+    if args["labels"] != "":
+        LOGGER.info("Reading category names from table.")
+        labels_dict = raster_utils.get_lookup_from_csv(args["labels"], args["lulc_id"])
+        for lulc_id in final_values:
+            transition_matrix.write(",%s" % labels_dict[lulc_id][args["lulc_name"]])
+    else:
+        transition_matrix.write(",".join([""] * (len(final_values)+1)))
+    
     for original in original_values:
         transition_matrix.write("\n%i" % original)
+        if original in labels_dict:
+            transition_matrix.write(",%s" % labels_dict[original][args["lulc_name"]])
+        else:
+            transition_matrix.write(",")
+            
         for final in final_values:
+            #if no change then 0
             if original == final:
-                transition_matrix.write(",0")
+                transition_matrix.write(",%i" % 0)
+            #if transition apply criteria
             elif (original, final) in transitions:
-                transition_matrix.write(",")
+                #if labels provided use vegetation criteria
+                if args["labels"] != "":
+                    if labels_dict[original][args["lulc_type"]] == 0:
+                        transition_matrix.write(",%i" % 0)
+                    elif labels_dict[final][args["lulc_type"]] == 0:
+                        transition_matrix.write(",")
+                    else:
+                        transition_matrix.write(",%i" % 0)
+                else:
+                    transition_matrix.write(",")
+            #if non-existant transition then 0
             else:
-                transition_matrix.write(",0")
+                transition_matrix.write(",%i" % 0)
     transition_matrix.close()
-
-    LOGGER.debug("Transitions: %s" % str(transitions))
