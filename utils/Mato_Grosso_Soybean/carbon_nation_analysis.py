@@ -9,6 +9,9 @@ import scipy.stats
 import csv
 import re
 
+def regression_builder(slope, intercept):
+	return lambda(d): slope * d + intercept
+
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
         csv table indexed by the given key_field
@@ -48,7 +51,7 @@ def get_lookup_from_csv(csv_table_uri, key_field):
         return lookup_dict
 
 
-def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot_cols):
+def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot_cols, regression_fn):
 	pylab.subplot(plot_rows, plot_cols, plot_id + 1)
 	pylab.plot(landcover_edge_distance, landcover_biomass, '.k', markersize=1)
 	
@@ -56,7 +59,7 @@ def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot
 	regression_distance = numpy.arange(
 		0.0, numpy.max(landcover_edge_distance), 0.05)
 	
-	regression_biomass = f(regression_distance)
+	regression_biomass = regression_fn(regression_distance)
 	pylab.plot(regression_distance, regression_biomass, '-r', linewidth=2)
 	pylab.axis('tight')
 	pylab.ylabel('Biomass (units?)')
@@ -128,33 +131,36 @@ for landcover_type in numpy.unique(landcover_array):
 		print "probably didn't have good data for the regression, just skip it"
 		continue
 	
-	f = lambda(d): slope * numpy.log(d) + intercept
-	
+	landcover_regression[landcover_type] = regression_builder(slope, intercept)
 	landcover_biomass_mean = numpy.average(landcover_biomass)
 	print '%.2f,' % landcover_biomass_mean,
 
 	#calcualte R^2
 	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
-	ss_res = numpy.sum((landcover_biomass - f(landcover_edge_distance)) ** 2)
+	ss_res = numpy.sum((landcover_biomass - landcover_regression[landcover_type](landcover_edge_distance)) ** 2)
 	r_value = 1 - ss_res / ss_tot
 	std_dev = numpy.std(landcover_biomass)
 	n_count = landcover_biomass.size
-	print '%.2f, %.2f, %s' % (r_value, std_dev, n_count)
+	print '%.2f, %.2f, %s, %s' % (r_value, std_dev, n_count, landcover_regression[landcover_type](1))
 	
-	landcover_regression[landcover_type] = numpy.vectorize(f)
+	
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
-	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4)
-	plot_id += 1
+	#plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4, landcover_regression[landcover_type])
+	#plot_id += 1
 	
 #pylab.show()
 
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
-
-print carbon_pool_table
+print landcover_regression
+for landcover_type, f in landcover_regression.iteritems():
+	print landcover_type, f(1)
 
 LAND_USE_DIRECTORY = 'MG_Soy_Exp_07122013'
+
+output_table = open('carbon_stock_change.csv', 'wb')
+output_table.write('Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
 for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	if '.' in lulc_path:
 		continue
@@ -175,6 +181,7 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	print 'mapping forest carbon stocks with regression function'
 	for landcover_type in REGRESSION_TYPES:
 		landcover_mask = numpy.where((landcover_array == landcover_type) * (edge_distance > 0))
+		print landcover_regression[landcover_type](numpy.sort(numpy.unique(edge_distance[landcover_mask])))
 		carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
 	
 	landcover_id_set = numpy.unique(landcover_array)
@@ -208,4 +215,4 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	
 	total_stocks = numpy.sum(carbon_stocks)
 	percent = re.search('[0-9]+$', lulc_path).group(0)
-	print percent, total_stocks
+	output_table.write('%s,%.2f\n' % (percent, total_stocks))
