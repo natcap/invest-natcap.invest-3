@@ -240,6 +240,40 @@ def execute(args):
             LOGGER.debug('Clip and project land poly to AOI')
             clip_and_reproject_shapefile(
                     land_polygon_uri, aoi_uri, land_poly_proj_uri)
+            
+            # If the distance inputs are present create a mask for the output
+            # area that restricts where the wind energy farms can be based
+            # on distance
+            aoi_raster_uri = os.path.join(
+                    inter_dir, 'aoi_raster%s.tif' % suffix) 
+
+            LOGGER.info('Create Raster From AOI')
+            # Make a raster from the AOI using the bathymetry rasters pixel size 
+            raster_utils.create_raster_from_vector_extents_uri(
+                aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
+                aoi_raster_uri) 
+            
+            LOGGER.info('Rasterize AOI onto raster')
+            # Burn the area of interest onto the raster 
+            rasterize_layer_uri(
+                aoi_raster_uri, aoi_uri, 1, field=None,
+                option_list="ALL_TOUCHED=TRUE")
+
+            LOGGER.info('Rasterize Land Polygon onto raster')
+            # Burn the land polygon onto the raster, covering up the AOI values
+            # where they overlap
+            rasterize_layer_uri(
+                aoi_raster_uri, land_poly_proj_uri, 0, field=None,
+                option_list="ALL_TOUCHED=TRUE")
+
+            dist_mask_uri = os.path.join(
+                    inter_dir, 'distance_mask%s.tif' % suffix) 
+            
+            LOGGER.info('Generate Distance Mask')
+            # Create a distance mask
+            distance_transform_dataset(
+                    aoi_raster_uri, min_distance, max_distance, 
+                    out_nodata, dist_mask_uri)
     else:
         LOGGER.info("AOI argument was not selected")
         
@@ -295,48 +329,6 @@ def execute(args):
     raster_utils.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
-
-    # Handle the AOI if it was passed in with the dictionary
-    if 'aoi_uri' in args:    
-        # If the distance inputs are present create a mask for the output
-        # area that restricts where the wind energy farms can be based
-        # on distance
-        if dist_data_provided:
-            aoi_raster_uri = os.path.join(
-                    inter_dir, 'aoi_raster%s.tif' % suffix) 
-
-            LOGGER.info('Create Raster From AOI')
-            # Make a raster from the AOI using the bathymetry rasters pixel size 
-            raster_utils.create_raster_from_vector_extents_uri(
-                aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
-                aoi_raster_uri) 
-            
-            LOGGER.info('Rasterize AOI onto raster')
-            # Burn the area of interest onto the raster 
-            rasterize_layer_uri(
-                aoi_raster_uri, aoi_uri, 1, field=None,
-                option_list="ALL_TOUCHED=TRUE")
-
-            LOGGER.info('Rasterize Land Polygon onto raster')
-            # Burn the land polygon onto the raster, covering up the AOI values
-            # where they overlap
-            rasterize_layer_uri(
-                aoi_raster_uri, land_poly_proj_uri, 0, field=None,
-                option_list="ALL_TOUCHED=TRUE")
-
-            dist_mask_uri = os.path.join(
-                    inter_dir, 'distance_mask%s.tif' % suffix) 
-            
-            LOGGER.info('Generate Distance Mask')
-            # Create a distance mask
-            distance_transform_dataset(
-                    aoi_raster_uri, min_distance, max_distance, 
-                    out_nodata, dist_mask_uri)
-        else:
-            # Looks like distances weren't provided, too bad!
-            LOGGER.debug('No Distances to create mask from')
-    else:
-        LOGGER.debug('AOI not present to use for distance masking')
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
