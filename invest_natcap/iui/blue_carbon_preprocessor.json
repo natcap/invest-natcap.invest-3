@@ -65,11 +65,22 @@
                                 "type": "OGRFieldDropdown",
                                 "label": "LULC Name",
                                 "enabledBy": "labels",
-                                "defaultValue": 1,
+                                "defaultValue": 2,
                                 "helpText": "",
                                 "returns": "strings",
                                 "required": true
-                            }
+                            },
+                            {
+                                "id": "lulc_type",
+                                "args_id": "lulc_type",
+                                "type": "OGRFieldDropdown",
+                                "label": "LULC Type",
+                                "enabledBy": "labels",
+                                "defaultValue": 3,
+                                "helpText": "",
+                                "returns": "strings",
+                                "required": true
+                            }                            
                         ]
                     }
                 ]
