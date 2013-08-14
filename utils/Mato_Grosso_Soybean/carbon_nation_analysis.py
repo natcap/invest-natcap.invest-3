@@ -106,8 +106,9 @@ landcover_regression = {}
 landcover_mean = {}
 
 plot_id = 1
+print 'landcover type, biomass mean, r^2, stddev, pixel count'
 for landcover_type in numpy.unique(landcover_array):
-	print "landcover type: %s " % landcover_type,
+	print "%s," % landcover_type,
 	landcover_mask = numpy.where(
 		(landcover_array == landcover_type) * 
 		(biomass_array != biomass_nodata))
@@ -128,7 +129,7 @@ for landcover_type in numpy.unique(landcover_array):
 	f = lambda(d): slope * numpy.log(d) + intercept
 	
 	landcover_biomass_mean = numpy.average(landcover_biomass)
-	print ' biomass mean: %.2f' % landcover_biomass_mean,
+	print '%.2f,' % landcover_biomass_mean,
 
 	#calcualte R^2
 	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
@@ -136,7 +137,7 @@ for landcover_type in numpy.unique(landcover_array):
 	r_value = 1 - ss_res / ss_tot
 	std_dev = numpy.std(landcover_biomass)
 	n_count = landcover_biomass.size
-	print ' R^2: %.2f stddev: %.2f, n: %s' % (r_value, std_dev, n_count)
+	print '%.2f, %.2f, %s' % (r_value, std_dev, n_count)
 	
 	landcover_regression[landcover_type] = numpy.vectorize(f)
 	landcover_mean[landcover_type] = landcover_biomass_mean
@@ -179,6 +180,9 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	for landcover_type in REGRESSION_TYPES:
 		landcover_mask = numpy.where(landcover_array == landcover_type)
 		carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
+	
+	lancover_id_set = numpy.unique(landcover_array)
+	
 	
 
 
