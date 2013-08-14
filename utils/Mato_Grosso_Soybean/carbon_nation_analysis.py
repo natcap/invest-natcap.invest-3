@@ -7,6 +7,7 @@ import matplotlib.pyplot
 import glob
 import scipy.stats
 import csv
+import re
 
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
@@ -159,27 +160,21 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 		continue
 	print lulc_path
 	lulc_dataset = gdal.Open(lulc_path)
+	landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 	
-	landcover_mask = numpy.where(
-		(landcover_array == landcover_type) * 
-		(biomass_array != biomass_nodata))
-	
-#	result = calculate_carbon_stocks(lulc_dataset)
-	lulc_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
-	
-	
+	landcover_mask = numpy.where(landcover_array == landcover_type)
+	forest_existance = numpy.zeros(landcover_array.shape)
 	for landcover_type in FOREST_LANDCOVER_TYPES:
 		forest_existance = forest_existance + (landcover_array == landcover_type)
-	forest_existance[biomass_array == biomass_nodata] = 0.0
 
 #This calculates an edge distance for the clusters of forest
 	edge_distance = scipy.ndimage.morphology.distance_transform_edt(
 		forest_existance)
-	carbon_stocks = numpy.zeros(lulc_array.shape)
+	carbon_stocks = numpy.zeros(landcover_array.shape)
 	
 	print 'mapping forest carbon stocks with regression function'
 	for landcover_type in REGRESSION_TYPES:
-		landcover_mask = numpy.where(landcover_array == landcover_type)
+		landcover_mask = numpy.where((landcover_array == landcover_type) * (edge_distance > 0))
 		carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
 	
 	landcover_id_set = numpy.unique(landcover_array)
@@ -190,24 +185,27 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 			continue
 		
 		if landcover_type in FROM_TABLE:
+			#convert from Mg/Ha to Mg/Pixel
 			carbon_per_pixel = carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * cell_size ** 2 / 10000
 		else:
 			#look it up in the mean table
-			carbon_per_pixel = landcover_mean[landcover_type] * cell_size ** 2 / 10000
+			try:
+				carbon_per_pixel = landcover_mean[landcover_type] * cell_size ** 2 / 10000
+			except KeyError:
+				print 'can\'t find a data entry for landcover type %s' % landcover_type
 		
 		landcover_mask = numpy.where(landcover_array == landcover_type)
 		
-			
+		if numpy.isnan(carbon_per_pixel):
+			print 'landcover_type %s is NaN' % landcover_type
+			continue
 		try:
-			carbon_stocks[landcover_mask] = carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * cell_size ** 2
+			carbon_stocks[landcover_mask] = carbon_per_pixel
 		except TypeError:
 			print 'can\'t map value of landcover type %s, table entry as %s' % (landcover_type, carbon_pool_table[landcover_type]['C_ABOVE_MEAN'])
 		except KeyError:
 			print 'can\'t find an entry for landcover type %s' % landcover_type
 	
-	
-
-
-#loop over each LULC, calculate carbon
-	#calc above forest carbon w/ regression
-	#calc other carbon w/ table
+	total_stocks = numpy.sum(carbon_stocks)
+	percent = re.search('[0-9]+$', lulc_path).group(0)
+	print percent, total_stocks
