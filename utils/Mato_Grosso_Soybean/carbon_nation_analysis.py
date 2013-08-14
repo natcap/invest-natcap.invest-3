@@ -84,23 +84,25 @@ for landcover_type in numpy.unique(landcover_array):
 	
 	f = lambda(d): slope * numpy.log(d) + intercept
 	
-	#Convert landcover biomass mean to Mg/Ha
 	landcover_biomass_mean = numpy.average(landcover_biomass)
-	print ' biomass mean: %.2f' % (landcover_biomass_mean)
+	print ' biomass mean: %.2f' % landcover_biomass_mean,
 
 	#calcualte R^2
 	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
 	ss_res = numpy.sum((landcover_biomass - f(landcover_edge_distance)) ** 2)
 	r_value = 1 - ss_res / ss_tot
+	print ' R^2: %.2f' % r_value
 	
 	landcover_regression[landcover_type] = f
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
-	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4)
-	plot_id += 1
+#	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4)
+#	plot_id += 1
 	
-pylab.show()
-foob
+#pylab.show()
+
+#Parse out the landcover pool table
+
 
 LAND_USE_DIRECTORY = 'MG_Soy_Exp_07122013'
 for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
