@@ -405,7 +405,7 @@ def do_monte_carlo_simulation(args):
                 return sample
 
     # Set up a dict to contain the results of the simulation.
-    farms = map(str, args['farm_op_dict'].keys())
+    farms = sorted(int(f) for f in args['farm_op_dict'])
     farms.insert(0, 'total')
 
     fields = ['cycles', 'weight']
@@ -452,10 +452,10 @@ def do_monte_carlo_simulation(args):
 
         # Update our per-farm results.
         for farm, hrv_weight in sum_hrv_weight.items():
-            results[str(farm)]['weight'].append(hrv_weight)
-            results[str(farm)]['cycles'].append(len(cycle_history[farm]))
+            results[farm]['weight'].append(hrv_weight)
+            results[farm]['cycles'].append(len(cycle_history[farm]))
             if args['do_valuation']:
-                results[str(farm)]['value'].append(farms_npv[farm])
+                results[farm]['value'].append(farms_npv[farm])
 
     LOGGER.info('Monte Carlo simulation complete.')
     return results
