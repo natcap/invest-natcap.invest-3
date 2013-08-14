@@ -9,7 +9,17 @@ import scipy.stats
 
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
+
+#These are the landcover types that define clusters of forest for the distance from edge calculation
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
+#These are the landcover types that should use the log regression
+REGRESSION_TYPES = [2]
+#These are the landcover types that should use the mean from the biophysical table
+MEAN_TYPES = [1, 3, 4, 5]
+
+#All other land cover pool types will come from the data table, units are Mg/Ha
+
+#Only consider above ground carbon
 
 #Load the base biomass and landcover datasets
 biomass_dataset = gdal.Open(BASE_BIOMASS_FILENAME)
@@ -122,7 +132,7 @@ for plot_id, landcover_type in enumerate(FOREST_LANDCOVER_TYPES):
 	landcover_type, r_value))
 	
 print landcover_regression
-pylab.show()
+#pylab.show()
 
 LAND_USE_DIRECTORY = 'MG_Soy_Exp_07122013'
 for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
@@ -130,7 +140,7 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 		continue
 	print lulc_path
 	lulc_dataset = gdal.Open(lulc_path)
-	result = calculate_carbon_stocks(lulc_dataset)
+#	result = calculate_carbon_stocks(lulc_dataset)
 	lulc_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 	
 	carbon_stocks = numpy.zero(lulc_array.shape)
