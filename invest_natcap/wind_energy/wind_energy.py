@@ -2,7 +2,6 @@
 import logging
 import os
 import csv
-import json
 import struct
 import math
 import tempfile
@@ -35,6 +34,9 @@ class HubHeightError(Exception):
     """A custom error message for a hub height that is not supported in
         the current wind data
     """
+    pass
+class FieldError(Exception):
+    """A custom error message for fields that are missing"""
     pass
 
 def execute(args):
@@ -140,9 +142,6 @@ def execute(args):
     # collected by comparing the number of dictionary keys to the number of
     # elements in our known list
     if len(bio_parameters_dict.keys()) != len(biophysical_params):
-        class FieldError(Exception):
-            """A custom error message for fields that are missing"""
-            pass
         raise FieldError('An Error occured from reading in a field value from '
         'either the turbine CSV file or the global parameters JSON file. ' 
         'Please make sure all the necessary fields are present and spelled '
@@ -174,7 +173,8 @@ def execute(args):
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data')
-    wind_data = read_binary_wind_data(args['wind_data_uri'], wind_data_field_list)
+    wind_data = read_binary_wind_data(
+            args['wind_data_uri'], wind_data_field_list)
    
     if 'aoi_uri' in args:
         LOGGER.info('AOI Provided')
@@ -235,9 +235,12 @@ def execute(args):
             clip_and_reproject_shapefile(
                     land_polygon_uri, aoi_uri, land_poly_proj_uri)
             
-            # The general out nodata value for the rasters will be from the bathymetry
-            # raster
+            # The general out nodata value for the rasters will be from the
+            # bathymetry raster
             out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
+            # Get the cell size to use in new raster outputs from the DEM
+            cell_size = raster_utils.get_cell_size_from_uri(
+                    final_bathymetry_uri)
             
             # If the distance inputs are present create a mask for the output
             # area that restricts where the wind energy farms can be based
@@ -246,7 +249,7 @@ def execute(args):
                     inter_dir, 'aoi_raster%s.tif' % suffix) 
 
             LOGGER.debug('Create Raster From AOI')
-            # Make a raster from the AOI using the bathymetry rasters pixel size 
+            # Make a raster from the AOI using the bathymetry rasters pixel size
             raster_utils.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri) 
@@ -278,7 +281,7 @@ def execute(args):
         # Since no AOI was provided the wind energy points shapefile that is
         # created directly from dictionary will be the final output, so set the
         # uri to point to the output folder
-        wind_point_shape_uri = os.path.joi(
+        wind_point_shape_uri = os.path.join(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
         
         # Create point shapefile from wind data dictionary
@@ -290,8 +293,8 @@ def execute(args):
         # the case if an AOI is provided
         final_wind_points_uri = wind_point_shape_uri
         final_bathymetry_uri = bathymetry_uri
-        # The general out nodata value for the rasters will be from the bathymetry
-        # raster
+        # The general out nodata value for the rasters will be from the
+        # bathymetry raster
         out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
     
     # Get the min and max depth values from the arguments and set to a negative
@@ -318,11 +321,13 @@ def execute(args):
             return out_nodata
 
     depth_mask_uri = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
+   
+    # Get the cell size here to use from the DEM. The cell size could either
+    # come in a project unprojected format
+    cell_size = raster_utils.get_cell_size_from_uri(final_bathymetry_uri)
     
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-    cell_size = raster_utils.get_cell_size_from_uri(final_bathymetry_uri)
-    
     raster_utils.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
@@ -459,7 +464,8 @@ def execute(args):
                     (shape_value, scale_value))
             
             # Compute the final harvested wind energy value
-            harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
+            harvested_wind_energy = (
+                    scalar * (harv_results[0] + weibull_results[0]))
            
             # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
             # 1,000,000
@@ -470,12 +476,13 @@ def execute(args):
             # and due to electrical resistance in the cables 
             harvested_wind_energy = (1 - losses) * harvested_wind_energy
 
-            # Finally, multiply the harvested wind energy by the number of turbines
-            # to get the amount of energy generated for the entire farm
+            # Finally, multiply the harvested wind energy by the number of
+            # turbines to get the amount of energy generated for the entire farm
             harvested_wind_energy = harvested_wind_energy * number_of_turbines
 
             # Save the results to their respective fields 
-            for field_name, result_value in [(density_field_name, density_results),
+            for field_name, result_value in [
+                    (density_field_name, density_results),
                     (harvest_field_name, harvested_wind_energy)]:
                 out_index = feat.GetFieldIndex(field_name)
                 feat.SetField(out_index, result_value)
@@ -641,9 +648,6 @@ def execute(args):
 
     val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
     if len(val_parameters_dict.keys()) != val_param_len:
-        class FieldError(Exception):
-            """A custom error message for fields that are missing"""
-            pass
         raise FieldError('An Error occured from reading in a field value from '
                 'either the turbine CSV file or the global parameters JSON '
                 'file. Please make sure all the necessary fields are present '
@@ -702,8 +706,8 @@ def execute(args):
         land_projected_uri = os.path.join(
                 inter_dir, 'land_point_projected%s.shp' % suffix)
 
-        clip_and_project_shapefile(grid_ds_uri, aoi_uri, grid_projected_uri)
-        clip_and_project_shapefile(land_ds_uri, aoi_uri, land_projected_uri)
+        clip_and_reproject_shapefile(grid_ds_uri, aoi_uri, grid_projected_uri)
+        clip_and_reproject_shapefile(land_ds_uri, aoi_uri, land_projected_uri)
        
         LOGGER.info('Calculating distances using grid points')
        
@@ -758,16 +762,17 @@ def execute(args):
                 # Create a point from the geometry
                 point = np.array([x_loc, y_loc])
                 
-                # Get the shortest distance and closest index from the land points
+                # Get the shortest distance and closest index from the land
+                # points
                 dist, closest_index = kd_tree.query(point)
                 
-                # Knowing the closest index we can look into the land geoms lists,
-                # pull that lat/long key, and then use that to index into the
-                # dictionary to get the proper distance
+                # Knowing the closest index we can look into the land geoms
+                # lists, pull that lat/long key, and then use that to index
+                # into the dictionary to get the proper distance
                 l2g_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
                 grid_to_land_dist.append(l2g_dist)
 
-            wind_energy_points= None
+            wind_energy_points = None
 
         get_grid_land_dist(final_wind_points_uri)
         land_shape_uri = land_projected_uri
@@ -828,7 +833,7 @@ def execute(args):
     time = int(val_parameters_dict['time_period'])
     
     # Dollar per kiloWatt hour
-    dollar_per_kWh = float(args['dollar_per_kWh'])
+    dollar_per_kwh = float(args['dollar_per_kWh'])
     
     # The total mega watt compacity of the wind farm where mega watt is the
     # turbines rated power
@@ -836,7 +841,7 @@ def execute(args):
     
     # The price per kWh for energy converted to units of millions of dollars to
     # correspond to the units for valuation costs
-    mill_dollar_per_kwh = dollar_per_kWh / 1000000
+    mill_dollar_per_kwh = dollar_per_kwh / 1000000
     
     # Get the shortest distances from each ocean point to the land points
     land_to_ocean_dist = point_to_polygon_distance(
@@ -918,8 +923,8 @@ def execute(args):
             # Initialize cable cost variable
             cable_cost = 0
 
-            # The break at 'circuit_break' indicates the difference in using AC and
-            # DC current systems
+            # The break at 'circuit_break' indicates the difference in using AC
+            # and DC current systems
             if total_cable_dist <= circuit_break:
                 cable_cost = (mw_coef_ac * total_mega_watt) + \
                                 (cable_coef_ac * total_cable_dist)
@@ -930,8 +935,8 @@ def execute(args):
             # Compute the total CAP
             cap = cap_less_dist + cable_cost
             
-            # Nominal total capital costs including installation and miscellaneous
-            # costs (capex)
+            # Nominal total capital costs including installation and
+            # miscellaneous costs (capex)
             capex = cap / (1.0 - install_cost - misc_capex_cost) 
 
             # The ongoing cost of the farm
@@ -940,15 +945,15 @@ def execute(args):
             # The cost to decommission the farm
             decommish_capex = decom * capex / disc_time
             
-            # The revenue in millions of dollars for the wind farm. The energy_val
-            # is in kWh the farm.
+            # The revenue in millions of dollars for the wind farm. The
+            # energy_val is in kWh the farm.
             rev = energy_val * mill_dollar_per_kwh
             comp_one_sum = 0
             levelized_cost_sum = 0
             levelized_cost_denom = 0
             
-            # Calculate the total NPV summation over the lifespan of the wind farm
-            # as well as the levelized cost
+            # Calculate the total NPV summation over the lifespan of the wind
+            # farm as well as the levelized cost
             for year in range(1, time + 1):
                 # Calcuate the first component summation of the NPV equation
                 comp_one_sum = \
@@ -971,11 +976,13 @@ def execute(args):
             levelized_cost = ((levelized_cost_sum + decommish_capex + capex) /
                     levelized_cost_denom)
             
-            # Levelized cost of energy converted from millions of dollars to dollars
+            # Levelized cost of energy converted from millions of dollars to
+            # dollars
             levelized_cost = levelized_cost * 1000000
             
-            # The amount of CO2 not released into the atmosphere, with the constant
-            # conversion factor provided in the users guide by Rob Griffin
+            # The amount of CO2 not released into the atmosphere, with the
+            # constant conversion factor provided in the users guide by
+            # Rob Griffin
             carbon_coef = float(val_parameters_dict['carbon_coefficient']) 
             carbon_emissions = carbon_coef * energy_val 
             
@@ -1019,15 +1026,15 @@ def execute(args):
         
         valuation_mask_list = [tmp_val_uri, depth_mask_uri]
 
-        # If a distance mask was created then add it to the raster list to pass in
-        # for masking out the output datasets
+        # If a distance mask was created then add it to the raster list to pass
+        # in for masking out the output datasets
         try:
             valuation_mask_list.append(dist_mask_uri)
         except NameError:
             LOGGER.debug('NO Distance Mask to add to list')
 
-        # Mask out any areas where distance or depth has determined that wind farms
-        # cannot be located
+        # Mask out any areas where distance or depth has determined that wind
+        # farms cannot be located
         LOGGER.info('Mask out depth and [distance] areas from Valuation raster')
         raster_utils.vectorize_datasets(
                 valuation_mask_list, mask_out_depth_dist, valuation_uri,
@@ -1088,7 +1095,7 @@ def get_points_geometries(shape_uri):
         returns - A numpy array of points, which represent the shape's feature's
               geometries.
     """
-    shape = ogr.Open()
+    shape = ogr.Open(shape_uri)
     layer = shape.GetLayer()
     # Get the number of features or points in the shapefile
     feat_count = layer.GetFeatureCount()
@@ -1489,7 +1496,8 @@ def rasterize_layer_uri(
         gdal.RasterizeLayer(raster, [1], layer, options = option_list)
     else:
         gdal.RasterizeLayer(
-                raster, [1], layer, burn_values = [burn_value], options = option_list)
+                raster, [1], layer, burn_values = [burn_value],
+                options = option_list)
 
     raster = None
     shapefile = None
@@ -1661,7 +1669,8 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     # Reproject the AOI to the spatial reference of the raster so that the
     # AOI can be used to clip the raster properly
-    raster_utils.reproject_datasource_uri(aoi_uri, raster_wkt, aoi_reprojected_uri)
+    raster_utils.reproject_datasource_uri(
+            aoi_uri, raster_wkt, aoi_reprojected_uri)
 
     # Temporary URI for an intermediate step
     clipped_uri = raster_utils.temporary_filename()
