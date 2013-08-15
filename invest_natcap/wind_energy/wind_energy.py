@@ -1047,24 +1047,26 @@ def get_shapefile_feature_count(shape_uri):
     return feat_count
 
 def get_dictionary_from_shape(shape_uri):
-    """This function takes a shapefile and for each feature retrieves
-    the X and Y value from it's geometry. The X and Y value are stored in
-    a numpy array as a point [x_location,y_location], which is returned 
-    when all the features have been iterated through.
+    """This function takes a shapefile URI and for each feature retrieves
+        the X and Y value from it's geometry. The X and Y value are stored in
+        a numpy array as a point [x_location,y_location], which is returned 
+        when all the features have been iterated through.
     
-    shape - An OGR shapefile datasource
+        shape_uri - a URI to an OGR shapefile datasource
     
-    returns - A numpy array of points, which represent the shape's feature's
+        returns - A numpy array of points, which represent the shape's feature's
               geometries.
     """
+    shape = ogr.Open(shape_uri)
     layer = shape.GetLayer()
-    layer.ResetReading()
+    # Dictionary to store the X,Y (lat,long) location and fields / values
     feat_dict = {}
 
     for feat in layer:    
         geom = feat.GetGeometryRef()
         x_location = geom.GetX()
         y_location = geom.GetY()
+        # Set the key as the X,Y / Lat, Long as a tuple
         feat_dict[(x_location, y_location)] = {}
         for field_index in range(feat.GetFieldCount()):
             field_defn = feat.GetFieldDefnRef(field_index)
@@ -1072,24 +1074,27 @@ def get_dictionary_from_shape(shape_uri):
             feat_dict[(x_location, y_location)][field_name] = feat.GetField(
                     field_index)
 
+    shape = None
     return feat_dict 
 
 def get_points_geometries(shape_uri):
-    """This function takes a shapefile and for each feature retrieves
-    the X and Y value from it's geometry. The X and Y value are stored in
-    a numpy array as a point [x_location,y_location], which is returned 
-    when all the features have been iterated through.
+    """This function takes a shapefile URI and for each feature retrieves
+        the X and Y value from it's geometry. The X and Y value are stored in
+        a numpy array as a point [x_location,y_location], which is returned 
+        when all the features have been iterated through.
     
-    shape_uri - A URI to an OGR shapefile datasource
+        shape_uri - A URI to an OGR shapefile datasource
     
-    returns - A numpy array of points, which represent the shape's feature's
+        returns - A numpy array of points, which represent the shape's feature's
               geometries.
     """
     shape = ogr.Open()
     layer = shape.GetLayer()
-    layer.ResetReading()
-    feat_count = layer.GetFeatureCount() 
+    # Get the number of features or points in the shapefile
+    feat_count = layer.GetFeatureCount()
+    # Create a 2D numpy array of zeros with length of feature count
     points = np.zeros((feat_count, 2))
+    # Initiate an index to use to iterate through the numpy array
     index = 0
 
     for feat in layer:    
@@ -1099,39 +1104,44 @@ def get_points_geometries(shape_uri):
         points[index] = [x_location, y_location]
         index = index + 1
 
+    shape = None
     return np.array(points)
 
 def add_field_to_shape_given_list(shape_ds_uri, value_list, field_name):
-    """Addes a field and a value to a given shapefile from a list of values. The
+    """Adds a field and a value to a given shapefile from a list of values. The
         list of values must be the same size as the number of features in the 
         shape
 
         shape_ds_uri - a URI to an OGR datasource 
+
         value_list - a list of values that is the same length as there are
             features in 'shape_ds'
+        
         field_name - a String for the name of the new field
 
         returns - nothing""" 
-    LOGGER.info('Entering add_field_to_shape_given_list')
+    LOGGER.debug('Entering add_field_to_shape_given_list')
     shape_ds = ogr.Open(shape_ds_uri, 1)
     layer = shape_ds.GetLayer()
 
-    LOGGER.info('Creating new field')
+    # Create new field
+    LOGGER.debug('Creating new field')
     new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
     layer.CreateField(new_field)
 
+    # Iterator for indexing into array
     value_iterator = 0
     LOGGER.debug('Length of value_list : %s', len(value_list))
     LOGGER.debug('Feature Count : %s', layer.GetFeatureCount())
-    LOGGER.info('Adding values to new field for each point')
+    LOGGER.debug('Adding values to new field for each point')
     for feat in layer:
         field_index = feat.GetFieldIndex(field_name)
         feat.SetField(field_index, value_list[value_iterator])
         layer.SetFeature(feat)
         value_iterator = value_iterator + 1
     
-    LOGGER.debug('value iterator : %s', value_iterator)
     layer.SyncToDisk()
+    shape_ds = None
 
 def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
     """Calculates the distances from points in a point geometry shapefile to the
@@ -1147,10 +1157,11 @@ def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
     poly_ds = ogr.Open(poly_ds_uri)
     point_ds = ogr.Open(point_ds_uri)
 
-    LOGGER.info('Loading the polygons into Shapely')
     poly_layer = poly_ds.GetLayer()
-    poly_layer.ResetReading()
+    # List to store the polygons geometries as shapely objects
     poly_list = []
+    
+    LOGGER.debug('Loading the polygons into Shapely')
     for poly_feat in poly_layer:
         # Get the geometry of the polygon in WKT format
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
@@ -1162,12 +1173,14 @@ def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
                 shapely_polygon.simplify(0.01, preserve_topology=False))
     
     # Take the union over the list of polygons to get one defined polygon object
-    LOGGER.info('Get the collection of polygon geometries by taking the union')
+    LOGGER.debug('Get the collection of polygon geometries by taking the union')
     polygon_collection = shapely.ops.unary_union(poly_list)
 
-    LOGGER.info('Loading the points into shapely')
     point_layer = point_ds.GetLayer()
+    # List to store the shapely point objects
     point_list = []
+    
+    LOGGER.debug('Loading the points into shapely')
     for point_feat in point_layer:
         # Get the geometry of the point in WKT format
         point_wkt = point_feat.GetGeometryRef().ExportToWkt()
@@ -1176,7 +1189,7 @@ def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
         # Add the point to a list to iterate through
         point_list.append(shapely_point)
 
-    LOGGER.info('find distances')
+    LOGGER.debug('find distances')
     distances = []
     for point in point_list:
         # Get the distance in meters and convert to km
@@ -1185,8 +1198,9 @@ def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
         distances.append(point_dist)
 
     LOGGER.debug('Distance List Length : %s', len(distances))
-    point_layer.ResetReading()
-    poly_layer.ResetReading()
+
+    point_ds = None
+    poly_ds = None
 
     return distances
 
@@ -1214,7 +1228,8 @@ def read_csv_wind_parameters(csv_uri, parameter_list):
         # Only get the biophysical parameters and leave out the valuation ones
         if csv_row[0].lower() in parameter_list:
             output_dict[csv_row[0].lower()] = csv_row[1]
-
+    
+    csv_file.close()
     return output_dict
 
 def combine_dictionaries(dict_1, dict_2):
@@ -1257,8 +1272,8 @@ def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri):
         out_uri - a string representing the file path to disk for the new
             shapefile (required)
     
-        return - an OGR shapefile"""
-    LOGGER.info('Entering create_wind_farm_box')
+        return - nothing"""
+    LOGGER.debug('Entering create_wind_farm_box')
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     datasource = driver.CreateDataSource(out_uri)
@@ -1296,7 +1311,6 @@ def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_uri):
 
     datasource.SyncToDisk()
     datasource = None
-    LOGGER.info('Leaving create_wind_farm_box')
 
 def get_highest_harvested_geom(wind_points_uri):
     """Find the point with the highest harvested value for wind energy and
@@ -1311,6 +1325,7 @@ def get_highest_harvested_geom(wind_points_uri):
     wind_points = ogr.Open(wind_points_uri)
     layer = wind_points.GetLayer()
 
+    # Initiate some variables to use
     geom = None
     harv_value = None
     high_harv_value = 0.0
@@ -1335,17 +1350,21 @@ def get_highest_harvested_geom(wind_points_uri):
 def distance_transform_dataset(
         dataset_uri, min_dist, max_dist, out_nodata, out_uri):
     """A memory efficient distance transform function that operates on 
-       the dataset level and creates a new dataset that's transformed.
-       It will treat any nodata value in dataset as 0, and re-nodata
-       that area after the filter.
+        the dataset level and creates a new dataset that's transformed.
+        It will treat any nodata value in dataset as 0, and re-nodata
+        that area after the filter.
 
-       dataset - a gdal dataset
-       min_dist - an integer of the minimum distance allowed in meters
-       max_dist - an integer of the maximum distance allowed in meters
-       out_uri - the uri output of the transformed dataset
-       out_nodata - the nodata value of dataset
+        dataset_uri - a URI to a gdal dataset
+        
+        min_dist - an integer of the minimum distance allowed in meters
+        
+        max_dist - an integer of the maximum distance allowed in meters
+        
+        out_uri - the uri output of the transformed dataset
+        
+        out_nodata - the nodata value of dataset
 
-       returns the transformed dataset created at out_uri"""
+        returns - nothing"""
     
     dataset = gdal.Open(dataset_uri)
     # Define URI paths for the numpy arrays on disk
@@ -1436,7 +1455,8 @@ def distance_transform_dataset(
     shutil.rmtree(temp_dir, ignore_errors = True)
 
     out_dataset.FlushCache()
-    return out_dataset
+    out_dataset = None
+    dataset = None
 
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_value, field=None, option_list=None):
@@ -1445,22 +1465,26 @@ def rasterize_layer_uri(
         in which case it will burn the value from shapefiles field.
 
         raster_uri - a URI to a gdal dataset
+        
         shapefile_uri - a URI to an ogr datasource
+        
         burn_value - a Python number to burn into the raster
+        
         field - the name of a field from 'shapefile_uri' to use as the burn
             value (optional)
+        
         option_list - a Python list of options for the operation. Example:
             ["ATTRIBUTE=NPV", "ALL_TOUCHED=TRUE"]
 
-        returns - Nothing
-
-        
-    """
+        returns - Nothing"""
 
     raster = gdal.Open(raster_uri, 1)
     shapefile = ogr.Open(shapefile_uri)
     layer = shapefile.GetLayer()
 
+    # If 'field' is not None then the burned value is to be provided in the
+    # options argument using a field from the shapefile layer, otherwise burn in
+    # the 'burn_value'
     if field != None:
         gdal.RasterizeLayer(raster, [1], layer, options = option_list)
     else:
@@ -1481,6 +1505,7 @@ def read_binary_wind_data(wind_data_uri, field_list):
             "Ram-110m","Ram-120m","Ram-130m","Ram-140m","Ram-150m","K-010m"
         
         wind_data_uri - a uri for the binary wind data file
+
         field_list - a list of strings referring to the column headers from
             the text file that are to be included in the dictionary.
             ['LONG', 'LATI', scale_key, 'K-010m']
@@ -1555,7 +1580,9 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
             (55, 51) : {'LATI':55, 'LONG':51, 'Ram-030m':6.2, 'K-010m':2.4},
             (73, 47) : {'LATI':73, 'LONG':47, 'Ram-030m':6.5, 'K-010m':2.3}
             }
+       
         layer_name - a python string for the name of the layer
+       
         output_uri - a uri for the output destination of the shapefile
 
         return - nothing"""
@@ -1609,16 +1636,17 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     LOGGER.debug('Leaving wind_data_to_point_shape')
     output_datasource = None
 
-def clip_and_reproject_raster(
-        raster_uri, aoi_uri, projected_uri):
+def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
     """Clip and project a Dataset to an area of interest
 
         raster_uri - a URI to a gdal Dataset
+
         aoi_uri - a URI to a ogr DataSource of geometry type polygon
+        
         projected_uri - a URI string for the output dataset to be written to
             disk
 
-        returns - a Dataset clipped and projected to an area of interest"""
+        returns - nothing"""
 
     LOGGER.debug('Entering clip_and_reproject_raster')
     # Get the AOIs spatial reference as strings in Well Known Text
@@ -1669,11 +1697,13 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
     """Clip and project a DataSource to an area of interest
 
         shapefile_uri - a URI to a ogr Datasource
+
         aoi_uri - a URI to a ogr DataSource of geometry type polygon
+        
         projected_uri - a URI string for the output shapefile to be written to
             disk 
 
-        returns - a DataSource clipped and projected to an area of interest"""
+        returns - nothing""" 
 
     LOGGER.debug('Entering clip_and_reproject_shapefile')
     # Get the AOIs spatial reference as strings in Well Known Text
@@ -1711,7 +1741,9 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
         that has only one polygon feature
 
         aoi_uri - a URI to an OGR Datasource that is the clipping bounding box
+        
         orig_ds_uri - a URI to an OGR Datasource to clip
+        
         out_uri - output uri path for the clipped datasource
 
         returns - Nothing"""
