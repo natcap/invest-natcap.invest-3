@@ -8,9 +8,10 @@ import glob
 import scipy.stats
 import csv
 import re
+import os
 
 def regression_builder(slope, intercept):
-	return lambda(d): slope * d + intercept
+	return lambda(d): slope * numpy.log(d) + intercept
 
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
@@ -88,8 +89,6 @@ biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
 landcover_dataset = gdal.Open(BASE_LANDCOVER_FILENAME)
 biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
 landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
-print 'biomass size %s' % (str(biomass_array.shape))
-print 'landcover size %s' % (str(biomass_array.shape))
 
 #This gets us the cell size in projected units, should be meters if the raster is projected
 cell_size = landcover_dataset.GetGeoTransform()[1]
@@ -111,9 +110,9 @@ landcover_regression = {}
 landcover_mean = {}
 
 plot_id = 1
-print 'landcover type, biomass mean, r^2, stddev, pixel count'
+print 'building biomass regression'
+print 'landcover type, biomass mean, r^2, stddev, pixel count, regression_fn(1)'
 for landcover_type in numpy.unique(landcover_array):
-	print "%s," % landcover_type,
 	landcover_mask = numpy.where(
 		(landcover_array == landcover_type) * 
 		(biomass_array != biomass_nodata))
@@ -133,23 +132,22 @@ for landcover_type in numpy.unique(landcover_array):
 	
 	landcover_regression[landcover_type] = regression_builder(slope, intercept)
 	landcover_biomass_mean = numpy.average(landcover_biomass)
-	print '%.2f,' % landcover_biomass_mean,
-
+	
 	#calcualte R^2
 	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
 	ss_res = numpy.sum((landcover_biomass - landcover_regression[landcover_type](landcover_edge_distance)) ** 2)
 	r_value = 1 - ss_res / ss_tot
 	std_dev = numpy.std(landcover_biomass)
 	n_count = landcover_biomass.size
-	print '%.2f, %.2f, %s, %s' % (r_value, std_dev, n_count, landcover_regression[landcover_type](1))
+	print '%s, %.2f, %.2f, %.2f, %s, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression[landcover_type](cell_size), landcover_regression[landcover_type](10*cell_size))
 	
 	
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
-	#plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4, landcover_regression[landcover_type])
-	#plot_id += 1
+	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4, landcover_regression[landcover_type])
+	plot_id += 1
 	
-#pylab.show()
+pylab.show()
 
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
@@ -164,7 +162,7 @@ output_table.write('Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\
 for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	if '.' in lulc_path:
 		continue
-	print lulc_path
+	print '\n*** Calculating carbon stocks in %s' % os.path.basename(lulc_path)
 	lulc_dataset = gdal.Open(lulc_path)
 	landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 	
@@ -178,41 +176,33 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 		forest_existance)
 	carbon_stocks = numpy.zeros(landcover_array.shape)
 	
-	print 'mapping forest carbon stocks with regression function'
 	for landcover_type in REGRESSION_TYPES:
+		print 'mapping landcover_type %s from biomass regression function' % landcover_type
 		landcover_mask = numpy.where((landcover_array == landcover_type) * (edge_distance > 0))
-		print landcover_regression[landcover_type](numpy.sort(numpy.unique(edge_distance[landcover_mask])))
 		carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
 	
 	landcover_id_set = numpy.unique(landcover_array)
 	
 	for landcover_type in landcover_id_set:
-		print 'mapping landcover type %s from table' % landcover_type
 		if landcover_type in REGRESSION_TYPES:
 			continue
 		
 		if landcover_type in FROM_TABLE:
 			#convert from Mg/Ha to Mg/Pixel
+			print 'mapping landcover type %s from table %s' % (landcover_type, os.path.basename(CARBON_POOL_TABLE_FILENAME))
 			carbon_per_pixel = carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * cell_size ** 2 / 10000
 		else:
 			#look it up in the mean table
+			print 'mapping landcover type %s from mean of biomass raster %s' % (landcover_type, os.path.basename(BASE_BIOMASS_FILENAME))
 			try:
 				carbon_per_pixel = landcover_mean[landcover_type] * cell_size ** 2 / 10000
 			except KeyError:
-				print 'can\'t find a data entry for landcover type %s' % landcover_type
+				print 'can\'t find a data entry for landcover type %s, treating that landcover type as 0 biomass' % landcover_type
 		
 		landcover_mask = numpy.where(landcover_array == landcover_type)
-		
-		if numpy.isnan(carbon_per_pixel):
-			print 'landcover_type %s is NaN' % landcover_type
-			continue
-		try:
-			carbon_stocks[landcover_mask] = carbon_per_pixel
-		except TypeError:
-			print 'can\'t map value of landcover type %s, table entry as %s' % (landcover_type, carbon_pool_table[landcover_type]['C_ABOVE_MEAN'])
-		except KeyError:
-			print 'can\'t find an entry for landcover type %s' % landcover_type
+		carbon_stocks[landcover_mask] = carbon_per_pixel
 	
 	total_stocks = numpy.sum(carbon_stocks)
 	percent = re.search('[0-9]+$', lulc_path).group(0)
 	output_table.write('%s,%.2f\n' % (percent, total_stocks))
+	output_table.flush()
