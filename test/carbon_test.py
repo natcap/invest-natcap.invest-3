@@ -8,8 +8,7 @@ import re
 
 from nose.plugins.skip import SkipTest
 
-from invest_natcap.carbon import carbon_biophysical
-from invest_natcap.carbon import carbon_valuation
+from invest_natcap.carbon import carbon_combined
 import invest_test_core
 import html_test_utils
 
@@ -43,6 +42,8 @@ class TestCarbonBiophysical(unittest.TestCase):
             args = {}
             args['workspace_dir'] = workspace_dir
             args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
+            args['do_biophysical'] = True
+            args['do_valuation'] = False
 
             if do_uncertainty:
                 args['do_uncertainty'] = True
@@ -72,7 +73,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             if do_redd and do_hwp:
                 self.fail('The model doesn\'t currently support REDD analysis with HWP!')
 
-            carbon_biophysical.execute(args)
+            carbon_combined.execute(args)
 
         # Make sure nothing breaks when we run the model with the bare minimum.
         execute_model()
@@ -109,6 +110,8 @@ class TestCarbonBiophysical(unittest.TestCase):
         """Test carbon_biophysical function for UK data."""
 
         args = {}
+        args['do_biophysical'] = True
+        args['do_valuation'] = False
         args['workspace_dir'] = './invest-data/test/data/test_out/carbon_uk_output'
         args['lulc_cur_uri'] = './invest-data/test/data/carbon/uk_data/gb_lulc_2000'
         args['lulc_fut_uri'] = './invest-data/test/data/carbon/uk_data/gb_lulc_2007'
@@ -118,7 +121,7 @@ class TestCarbonBiophysical(unittest.TestCase):
         args['hwp_cur_shape_uri'] = "./invest-data/test/data/carbon/uk_data/GB_Harvest_rates_cur.shp"
         args['hwp_fut_shape_uri'] = "./invest-data/test/data/carbon/uk_data/GB_Harvest_rates_fut.shp"
 
-        carbon_biophysical.execute(args)
+        carbon_combined.execute(args)
 
     def test_carbon_valuation_regression(self):
         """Regression test for carbon_valuation function.  A few pixels have
@@ -146,6 +149,8 @@ class TestCarbonBiophysical(unittest.TestCase):
                           do_uncertainty=False,
                           suffix=''):
             args = {}
+            args['do_biophysical'] = False
+            args['do_valuation'] = True
             args['workspace_dir'] = workspace_dir
             args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
             args['V'] = 43.0
@@ -169,7 +174,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                 args['conf_redd_uri'] = (
                     './invest-data/test/data/carbon_regression_data/conf_redd.tif')
 
-            carbon_valuation.execute(args)
+            carbon_combined.execute(args)
 
         execute_model()
         self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_base.tif')

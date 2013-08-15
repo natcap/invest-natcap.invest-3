@@ -89,7 +89,10 @@ def execute_30(**args):
     create_HTML_report(biophysical_outputs, valuation_outputs)
 
 def package_valuation_args(args, biophysical_outputs):
-    # TODO: implement
+    if not biophysical_outputs:
+        return args
+
+    # TODO: implement threading from one model to the other
     return args
 
 def create_HTML_report(biophysical_outputs, valuation_outputs):
