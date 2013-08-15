@@ -191,7 +191,7 @@
             "id": "uncertain_carbon_pool_container",
             "type": "container",
             "collapsible": true,
-            "args_id": "use_uncertainty",
+            "args_id": "do_uncertainty",
             "label": "Data for uncertainty analysis (enable to trigger uncertainty analysis)",
             "elements": [
                 {

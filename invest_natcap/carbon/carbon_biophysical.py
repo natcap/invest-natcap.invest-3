@@ -32,15 +32,15 @@ def execute_30(**args):
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
         args['carbon_pools_uri'] - is a uri to a CSV or DBF dataset mapping carbon
             storage density to the lulc classifications specified in the
-            lulc rasters. (required if 'use_uncertainty' is false)
+            lulc rasters. (required if 'do_uncertainty' is false)
         args['carbon_pools_uncertain_uri'] - as above, but has probability distribution
             data for each lulc type rather than point estimates.
-            (required if 'use_uncertainty' is true)
-        args['use_uncertainty'] - a boolean that indicates whether we should do
+            (required if 'do_uncertainty' is true)
+        args['do_uncertainty'] - a boolean that indicates whether we should do
             uncertainty analysis. Defaults to False if not present.
         args['confidence_threshold'] - a number between 0 and 100 that indicates
             the minimum threshold for which we should highlight regions in the output
-            raster. (required if 'use_uncertainty' is True)
+            raster. (required if 'do_uncertainty' is True)
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur
@@ -79,8 +79,8 @@ def execute_30(**args):
 
     #1) load carbon pools into dictionary indexed by LULC
     LOGGER.debug("building carbon pools")
-    use_uncertainty = args.get('use_uncertainty', False)
-    if use_uncertainty:
+    do_uncertainty = args.get('do_uncertainty', False)
+    if do_uncertainty:
         pools = raster_utils.get_lookup_from_table(args['carbon_pools_uncertain_uri'], 'LULC')
     else:
         pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
@@ -100,7 +100,7 @@ def execute_30(**args):
             for lulc_id in pools:
                 pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
 
-                if use_uncertainty:
+                if do_uncertainty:
                     # Use the mean estimate of the distribution to compute the carbon output.
                     pool_estimate_sds = list(pool_estimate_types) # Make a copy for std deviations
                     for i in range(len(pool_estimate_types)):
@@ -134,7 +134,7 @@ def execute_30(**args):
                 gdal.GDT_Float32, nodata_out, pixel_size_out,
                 "intersection", dataset_to_align_index=0)
 
-            if use_uncertainty:
+            if do_uncertainty:
                 def map_carbon_pool_variance(lulc):
                     if lulc == nodata:
                         return nodata_out
@@ -219,7 +219,7 @@ def execute_30(**args):
                 out_file_names['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                 pixel_size_out, "intersection", dataset_to_align_index=0)
 
-            if use_uncertainty:
+            if do_uncertainty:
                 confidence_threshold = args['confidence_threshold']
 
                 # Returns 1 if we're confident storage will increase,
