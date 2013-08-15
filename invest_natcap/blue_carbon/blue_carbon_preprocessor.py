@@ -104,10 +104,22 @@ def execute(args):
             transition_matrix.write(",")
             
         for final in final_values:
+            #if no change then 0
             if original == final:
                 transition_matrix.write(",%i" % 0)
+            #if transition apply criteria
             elif (original, final) in transitions:
-                transition_matrix.write(",")
+                #if labels provided use vegetation criteria
+                if args["labels"] != "":
+                    if labels_dict[original][args["lulc_type"]] == 0:
+                        transition_matrix.write(",%i" % 0)
+                    elif labels_dict[final][args["lulc_type"]] == 0:
+                        transition_matrix.write(",")
+                    else:
+                        transition_matrix.write(",%i" % 0)
+                else:
+                    transition_matrix.write(",")
+            #if non-existant transition then 0
             else:
                 transition_matrix.write(",%i" % 0)
     transition_matrix.close()

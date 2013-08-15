@@ -48,6 +48,7 @@ then
         carbon_test.py
         fileio_test.py
         finfish_aquaculture_core_test.py
+        html_gen_test.py
         invest_core_fileio_test.py
         invest_core_test.py
         invest_init_test.py
