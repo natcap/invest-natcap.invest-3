@@ -37,15 +37,15 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         workspace_dir = './invest-data/test/data/test_out/carbon_output'
 
-        def execute_model(do_sequest=False, do_redd=False, use_uncertainty=False, do_hwp=False,
+        def execute_model(do_sequest=False, do_redd=False, do_uncertainty=False, do_hwp=False,
                           suffix=''):
             """Executes the carbon biophysical model with the appropriate parameters."""
             args = {}
             args['workspace_dir'] = workspace_dir
             args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
 
-            if use_uncertainty:
-                args['use_uncertainty'] = True
+            if do_uncertainty:
+                args['do_uncertainty'] = True
                 args['carbon_pools_uncertain_uri'] = (
                     './invest-data/test/data/carbon/input/carbon_pools_samp_uncertain.csv')
                 args['confidence_threshold'] = 90
@@ -83,14 +83,14 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif')
 
-        execute_model(do_sequest=True, do_hwp=True, use_uncertainty=True, suffix='hwp')
+        execute_model(do_sequest=True, do_hwp=True, do_uncertainty=True, suffix='hwp')
         self.assertDatasetsEqual(workspace_dir,
                                  'tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif',
                                  'conf_fut_hwp.tif')
 
-        execute_model(do_sequest=True, use_uncertainty=True, do_redd=True)
+        execute_model(do_sequest=True, do_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir,
                                 'tot_C_cur.tif',
                                 'tot_C_base.tif',
@@ -143,7 +143,7 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         def execute_model(carbon_units='Carbon',
                           do_redd=False,
-                          use_uncertainty=False,
+                          do_uncertainty=False,
                           suffix=''):
             args = {}
             args['workspace_dir'] = workspace_dir
@@ -157,7 +157,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             if suffix:
                 args['suffix'] = suffix
 
-            if use_uncertainty:
+            if do_uncertainty:
                 args['conf_uri'] = (
                     './invest-data/test/data/carbon_regression_data/conf_base.tif')
 
@@ -165,7 +165,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                 args['sequest_redd_uri'] = (
                     './invest-data/test/data/carbon_regression_data/sequest_redd.tif')
 
-            if use_uncertainty and do_redd:
+            if do_uncertainty and do_redd:
                 args['conf_redd_uri'] = (
                     './invest-data/test/data/carbon_regression_data/conf_redd.tif')
 
@@ -177,7 +177,7 @@ class TestCarbonBiophysical(unittest.TestCase):
         execute_model(carbon_units='Carbon Dioxide (CO2)', suffix='c02')
         self.assertDatasetEqual(workspace_dir, 'value_seq_c02.tif')
 
-        execute_model(use_uncertainty=True)
+        execute_model(do_uncertainty=True)
         self.assertDatasetsEqual(workspace_dir,
                                  ('value_seq.tif', 'value_seq_base.tif'),
                                  ('val_mask.tif', 'val_mask_base.tif'),
@@ -189,7 +189,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             [['Baseline', -3526095.89057, -67106273.81],
              ['Baseline (confident cells only)', -3530157.48653, -67183571.67]])
 
-        execute_model(use_uncertainty=True, do_redd=True)
+        execute_model(do_uncertainty=True, do_redd=True)
         self.assertDatasetsEqual(workspace_dir,
                                  'value_seq_base.tif',
                                  'val_mask_base.tif',

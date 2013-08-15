@@ -1,5 +1,15 @@
 """Integrated carbon model with biophysical and valuation components."""
 
+import logging
+
+from invest_natcap.carbon import carbon_biophysical
+from invest_natcap.carbon import carbon_valuation
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('carbon_combined')
+
 def execute(args):
     execute_30(**args)
 
@@ -58,4 +68,30 @@ def execute_30(**args):
     'r' - the market discount rate in terms of a percentage
     'c' - the annual rate of change in the price of carbon
     """
+    if not args['do_biophysical'] and not args['do_valuation']:
+        LOGGER.info('Neither biophysical nor valuation model selected. '
+                    'Nothing left to do. Exiting.')
+        return
+
+    if args['do_biophysical']:
+        LOGGER.info('Executing biophysical model.')
+        biophysical_outputs = carbon_biophysical.execute(args)
+    else:
+        biophysical_outputs = None
+
+    if args['do_valuation']:
+        LOGGER.info('Executing valuation model.')
+        valuation_args = package_valuation_args(args, biophysical_outputs)
+        valuation_outputs = carbon_valuation.execute(valuation_args)
+    else:
+        valuation_outputs = None
+
+    create_HTML_report(biophysical_outputs, valuation_outputs)
+
+def package_valuation_args(args, biophysical_outputs):
+    # TODO: implement
+    return args
+
+def create_HTML_report(biophysical_outputs, valuation_outputs):
+    # TODO: implement
     pass
