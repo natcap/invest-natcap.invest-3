@@ -139,15 +139,15 @@ for landcover_type in numpy.unique(landcover_array):
 	r_value = 1 - ss_res / ss_tot
 	std_dev = numpy.std(landcover_biomass)
 	n_count = landcover_biomass.size
-	print '%s, %.2f, %.2f, %.2f, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression[landcover_type](1))
+	print '%s, %.2f, %.2f, %.2f, %s, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression[landcover_type](cell_size), landcover_regression[landcover_type](10*cell_size))
 	
 	
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
-	#plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4, landcover_regression[landcover_type])
-	#plot_id += 1
+	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4, landcover_regression[landcover_type])
+	plot_id += 1
 	
-#pylab.show()
+pylab.show()
 
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
