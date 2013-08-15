@@ -1,0 +1,97 @@
+{
+    "id" : "window",
+    "label": "InVEST Carbon Model (Biophysical and Valuation)",
+    "targetScript" : "invest_natcap.carbon.carbon_combined",
+    "modelName" : "carbon_combined",
+    "localDocURI": "../documentation/carbonstorage.html",
+    "height": 800,
+    "width" : 700,
+    "elements": [
+        {
+            "id": "workspace_list",
+            "type": "list",
+            "elements": [
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "../Carbon",
+                    "required": true,
+                    "helpText": "A directory that will contain the intermediate and output files for this run."
+                },
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"This text will be appended to the end of the output files to help separate outputs from multiple runs."
+                }
+            ]
+        },
+        {
+            "id": "carbon_biophysical_container",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "do_biophysical",
+            "label": "Run biophysical model",
+            "elements": [
+                {
+                    "id": "biophysical_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id" : "calc_sequestration",
+                            "type": "checkbox",
+                            "label": "Calculate sequestration",
+                            "defaultValue": false,
+                            "required": false
+                        },
+                        {
+                            "id" : "cur_lulc_box",
+                            "type": "container",
+                            "collapsible" : false,
+                            "label": "Current land use/land cover",
+                            "elements": [
+                                {
+                                    "id" : "cur_lulc_list",
+                                    "type" : "list",
+                                    "elements":[
+                                        {
+                                            "id" : "cur_lulc_raster",
+                                            "args_id" : "lulc_cur_uri",
+                                            "type": "file",
+                                            "label": "Raster location",
+                                            "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
+                                            "required": true,
+                                            "validateAs": {"type": "GDAL"},
+                                            "helpText": "Location of the landcover map for the current scenario."
+                                        },
+                                        {
+                                            "id" : "cur_lulc_year",
+                                            "type": "text",
+                                            "width": 70,
+                                            "validText": "-?[0-9]+",
+                                            "dataType": "int",
+                                            "args_id": "lulc_cur_year",
+                                            "label": "Year of land cover",
+                                            "required": false,
+                                            "enabledBy": "calc_sequestration",
+                                            "defaultValue": "2000",
+                                            "helpText": "The calendar year of the current scenario."
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

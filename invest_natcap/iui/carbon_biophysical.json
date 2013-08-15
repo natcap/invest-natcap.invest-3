@@ -50,44 +50,6 @@
             ]
         },
         {
-            "id" : "cur_lulc_box",
-            "type": "container",
-            "collapsible" : false,
-            "label": "Current land use/land cover",
-            "elements": [
-                {
-                    "id" : "cur_lulc_list",
-                    "type" : "list",
-                    "elements":[
-                        {
-                           "id" : "cur_lulc_raster",
-                            "args_id" : "lulc_cur_uri",
-                            "type": "file",
-                            "label": "Raster location",
-                            "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
-                            "required": true,
-                            "validateAs": {"type": "GDAL"},
-                            "helpText": "Location of the landcover map for the current scenario."
-                        },
-                        {
-                            "id" : "cur_lulc_year",
-                            "type": "text",
-                            "width": 70,
-                            "validText": "-?[0-9]+",
-                            "dataType": "int",
-                            "args_id": "lulc_cur_year",
-                            "label": "Year of land cover",
-                            "required": false,
-                            "enabledBy": "calc_sequestration",
-                            "defaultValue": "2000",
-                            "requiredIf": ["cur_harvest_map", "fut_harvest_map"],
-                            "helpText": "The calendar year of the current scenario."
-                        }
-                    ]
-                }
-            ]
-        },
-        {
             "id" : "fut_lulc_box",
             "type": "container",
             "collapsible": false,
