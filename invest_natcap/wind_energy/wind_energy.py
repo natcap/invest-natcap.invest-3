@@ -224,14 +224,8 @@ def execute(args):
             land_polygon_uri = args['land_polygon_uri']
         except KeyError:
             LOGGER.info('Distance information not provided')
-            # A variable to use later on to check model functionality that is
-            # dependent on whether distance information was provided
-            dist_data_provided = False 
         else: 
             LOGGER.info('Handling distance parameters')
-            # A variable to use later on to check model functionality that is
-            # dependent on whether distance information was provided
-            dist_data_provided = True
 
             # Define the uri for reprojecting the land polygon datasource
             land_poly_proj_uri = os.path.join(
@@ -241,25 +235,29 @@ def execute(args):
             clip_and_reproject_shapefile(
                     land_polygon_uri, aoi_uri, land_poly_proj_uri)
             
+            # The general out nodata value for the rasters will be from the bathymetry
+            # raster
+            out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
+            
             # If the distance inputs are present create a mask for the output
             # area that restricts where the wind energy farms can be based
             # on distance
             aoi_raster_uri = os.path.join(
                     inter_dir, 'aoi_raster%s.tif' % suffix) 
 
-            LOGGER.info('Create Raster From AOI')
+            LOGGER.debug('Create Raster From AOI')
             # Make a raster from the AOI using the bathymetry rasters pixel size 
             raster_utils.create_raster_from_vector_extents_uri(
                 aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri) 
             
-            LOGGER.info('Rasterize AOI onto raster')
+            LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster 
             rasterize_layer_uri(
                 aoi_raster_uri, aoi_uri, 1, field=None,
                 option_list="ALL_TOUCHED=TRUE")
 
-            LOGGER.info('Rasterize Land Polygon onto raster')
+            LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
             rasterize_layer_uri(
@@ -292,15 +290,14 @@ def execute(args):
         # the case if an AOI is provided
         final_wind_points_uri = wind_point_shape_uri
         final_bathymetry_uri = bathymetry_uri
+        # The general out nodata value for the rasters will be from the bathymetry
+        # raster
+        out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
     
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1.0
     max_depth = abs(float(args['max_depth'])) * -1.0
-
-    # The general out nodata value for the rasters will be from the bathymetry
-    # raster
-    out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
     
     def depth_op(bath):
         """A vectorized function that takes one argument and uses a range to
@@ -430,13 +427,13 @@ def execute(args):
         
         wind_points_layer.ResetReading()
 
-        LOGGER.info('Creating Harvest and Density Fields')
+        LOGGER.debug('Creating Harvest and Density Fields')
         # Create new fields for the density and harvested values
         for new_field_name in [density_field_name, harvest_field_name]:
             new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
             wind_points_layer.CreateField(new_field)
 
-        LOGGER.info('Entering Density and Harvest Calculations for each point')
+        LOGGER.debug('Entering Density and Harvest Calculations for each point')
         # For all the locations compute the weibull density and 
         # harvested wind energy. Save in a field of the feature
         for feat in wind_points_layer:
@@ -991,13 +988,16 @@ def execute(args):
         wind_energy_layer.SyncToDisk()
         wind_energy_points = None
 
+    # Calculate the valuation outputs for wind energy
     calculate_valuation_outputs(final_wind_points_uri)
-    
+   
+    # URIs for output rasters
     npv_uri = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
     levelized_uri = os.path.join(
             out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
     carbon_uri = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
-   
+  
+    # List of output URIs
     uri_list = [npv_uri, levelized_uri, carbon_uri]
     
     for valuation_uri, field in zip(uri_list, val_field_list):
