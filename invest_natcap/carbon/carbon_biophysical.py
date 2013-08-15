@@ -631,7 +631,8 @@ def _calculate_summary(args):
                            ('tot_C_fut', 'Total scenario carbon: '),
                            ('tot_C_redd', 'Total REDD scenario carbon: '),
                            ('sequest_fut', 'Total sequestered carbon: '),
-                           ('sequest_fut', 'Total sequestered carbon in REDD scenario: ')]
+                           ('sequest_redd',
+                            'Total sequestered carbon in REDD scenario: ')]
 
     output_csv_file = open(args['output_csv_uri'], 'wb')
 
