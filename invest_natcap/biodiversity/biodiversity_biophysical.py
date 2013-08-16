@@ -139,8 +139,9 @@ def execute(args):
                 density_dict['density' + ext][threat] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat + ext))
             except:
-                LOGGER.warn('Error getting raster for threat : %s', \
-                            os.path.join(input_dir, threat + ext))
+                raise Exception('Error: Failed to open raster for the'
+                    'following threat : %s ',
+                    os.path.join(input_dir, threat + ext))
     
     biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
@@ -189,6 +190,14 @@ def open_ambiguous_raster(uri):
     # Turning off exceptions because there is a known bug that will hide
     # certain issues we care about later
     gdal.DontUseExceptions()
+
+    # If a dataset comes back None, then it could not be found / opened and we
+    # should fail gracefully
+    if dataset is None:
+        raise Exception('There was an Error locating a threat raster in the '
+        'input folder. One of the threat names in the CSV table does not match ' 
+        'to a threat raster in the input folder. Please check that the names '
+        'correspond. The threat raster that could not be found is : %s', uri)
 
     return dataset
 
