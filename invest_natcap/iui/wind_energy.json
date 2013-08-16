@@ -261,7 +261,7 @@
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                             "required": true,
-                            "helpText": "A number in kilometers that is only used if grid points are NOT used in valuation. When running valuation using the land polygon to compute distances, the model uses an average distance to the onshore grid from coastal cable landing points instead of specific grid connection points. -See the User's Guide for a description of the approach and the method used to calculate the default value."
+                            "helpText": "<b>Always required, but NOT used in the model if Grid Points provided</b><br><br>A number in kilometers that is only used if grid points are NOT used in valuation. When running valuation using the land polygon to compute distances, the model uses an average distance to the onshore grid from coastal cable landing points instead of specific grid connection points. -See the User's Guide for a description of the approach and the method used to calculate the default value."
                         }
                     ]
                 }
