@@ -65,19 +65,19 @@ def calculate_weights(arr, rounding=4):
 
 def calulcate_priority(table_uri, attributes_uri=None):
     table_file = open(table_uri,'r')
-    table_file.readline()
-    table = []
-    for line in table_file:
-        row = []
-        for value in line.split(",")[1:]:
-            try:
-                row.append(float(1/Fraction(value)))
-            except ValueError
-                row.append(0.0)
-         table.append(row)   
+    table = [line.split(",") for line in table_file]
+    table_file.close()
+
+    #format table
+    for row_id, line in enumerate(table):
+        for column_id in range(row_id+1):
+            table[row_id][column_id]=Fraction(table[row_id][column_id])
+            if row_id != column_id:
+                table[column_id][row_id]=1/Fraction(table[row_id][column_id])
+
     matrix = numpy.array(table)
 
-    priority_values = calculate_weights(matrix, 4)
+    return calculate_weights(matrix, 4)
 
 def execute(args):
 

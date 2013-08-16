@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Wind Energy",
-    "targetScript" : "invest_natcap.wind_energy.wind_energy_uri_handler",
+    "targetScript" : "invest_natcap.wind_energy.wind_energy",
     "modelName" : "wind_energy",
     "localDocURI": "../documentation/wind_energy.html",
     "height": 900,
@@ -113,7 +113,7 @@
                             },
                             {
                                 "id" : "number_of_machines",
-                                "args_id": "number_of_machines",
+                                "args_id": "number_of_turbines",
                                 "type": "text",
                                 "label": "Number Of Turbines",
                                 "defaultValue": "",
