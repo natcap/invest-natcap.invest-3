@@ -139,9 +139,10 @@ def execute(args):
                 density_dict['density' + ext][threat] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat + ext))
             except:
-                raise Exception('Error: Failed to open raster for the'
-                    'following threat : %s ',
-                    os.path.join(input_dir, threat + ext))
+                raise Exception('Error: Failed to open raster for the '
+                    'following threat : %s . Please make sure the threat names '
+                    'in the CSV table correspond to threat rasters in the input '
+                    'folder.' % os.path.join(input_dir, threat + ext))
     
     biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
