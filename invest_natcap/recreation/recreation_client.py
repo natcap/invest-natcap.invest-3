@@ -244,6 +244,13 @@ def execute(args):
                        compression)
 
     zip_file.close()
+
+    #check upload size
+    if os.path.getsize(zip_file_uri) >  20e6:
+        msg = "The upload size exceeds the maximum."
+        LOGGER.error(msg)
+        raise ValueError, msg
+    
     attachments["zip_file"] = open(zip_file_uri, 'rb')
 
     args["user_predictors"] = len(predictors)
@@ -283,7 +290,7 @@ def execute(args):
     if args["user_predictors"] + args["global_predictors"] == 0:
         msg = "You must include predictors for the analysis."
         LOGGER.error(msg)
-        raise ValueError, msg
+        raise ValueError, msg   
 
     #constructing upload predictors request
     LOGGER.debug("Uploading predictors.")
