@@ -1402,7 +1402,9 @@ def distance_transform_dataset(
     nodata_mask_array = np.memmap(
         nodata_mask_filename, dtype='bool', mode='w+', shape = shape)
     dest_array = np.memmap(
-        dest_filename, dtype='float32', mode='w+', shape = shape)
+        dest_filename, dtype='float64', mode='w+', shape = shape)
+    dest_array_tmp = np.memmap(
+        dest_filename, dtype='float64', mode='w+', shape = shape)
     mask_leq_min_dist_array = np.memmap(
         mask_leq_min_dist_filename, dtype='bool', mode='w+', shape = shape)
     mask_geq_max_dist_array = np.memmap(
@@ -1426,7 +1428,8 @@ def distance_transform_dataset(
     LOGGER.info('distance transform operation')
     # Calculate distances using distance transform and multiply by the pixel
     # size to get the proper distances in meters
-    dest_array = ndimage.distance_transform_edt(source_array) * pixel_size
+    ndimage.distance_transform_edt(source_array, distances=dest_array_tmp)
+    np.multiply(dest_array_tmp, pixel_size, dest_array)
     
     # Use conditional operations to properly get masks based on distance values
     np.less_equal(dest_array, min_dist, out = mask_leq_min_dist_array)
@@ -1446,9 +1449,9 @@ def distance_transform_dataset(
     LOGGER.debug('write to gdal object')
     out_band.WriteArray(dest_array)
     out_dataset.FlushCache()
-    raster_utils.calculate_raster_stats(out_dataset)
 
-    LOGGER.debug('deleting %s' % temp_dir)
+    out_dataset = None
+    dataset = None
     dest_array = None
     nodata_mask_array = None
     source_array = None
@@ -1457,13 +1460,12 @@ def distance_transform_dataset(
     mask_geq_max_dist_array = None
     dest_mask_array = None
     
+    raster_utils.calculate_raster_stats_uri(out_uri)
+
     #Turning on ignore_errors = True in case we can't remove the 
     #the temporary directory
+    LOGGER.debug('deleting %s' % temp_dir)
     shutil.rmtree(temp_dir, ignore_errors = True)
-
-    out_dataset.FlushCache()
-    out_dataset = None
-    dataset = None
 
 def rasterize_layer_uri(
         raster_uri, shapefile_uri, burn_value, field=None, option_list=None):

@@ -1624,8 +1624,11 @@ def _experimental_reproject_dataset_uri(
         from the original dataset.
 
        original_dataset_uri - a URI to a gdal Dataset to written to disk
+
        pixel_spacing - output dataset pixel size in projected linear units (probably meters)
+       
        output_wkt - output project in Well Known Text (the result of ds.GetProjection())
+       
        output_uri - location on disk to dump the reprojected dataset
 
        return projected dataset"""

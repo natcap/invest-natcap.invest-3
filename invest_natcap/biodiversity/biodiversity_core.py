@@ -120,15 +120,6 @@ def biophysical(args):
             # get the density raster for the specific threat
             threat_raster = args['density_dict']['density' + lulc_key][threat]
         
-            # if threat / density raster is not found for a landcover, that
-            # landcover should be skipped
-            if threat_raster is None:
-                LOGGER.warn('No threat raster found for threat : %s',
-                            threat + lulc_key)
-                LOGGER.warn('Moving to next landcover')
-                exit_landcover = True
-                break 
-
             # get the mean cell size, using absolute value because we could
             # get a negative for height or width
             mean_cell_size = \

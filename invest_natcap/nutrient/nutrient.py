@@ -282,6 +282,7 @@ def _execute_nutrient(args):
         'mn_run_ind': raster_utils.aggregate_raster_values_uri(
             runoff_index_uri, args['watersheds_uri'], 'ws_id').pixel_mean
         }
+    field_header_order = ['mn_run_ind']
 
     watershed_output_datasource_uri = os.path.join(
         output_dir, 'watershed_outputs%s.shp' % file_suffix)
@@ -295,7 +296,8 @@ def _execute_nutrient(args):
         original_datasource, watershed_output_datasource_uri)
     output_layer = output_datasource.GetLayer()
 
-    add_fields_to_shapefile('ws_id', field_summaries, output_layer)
+    add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
+    field_header_order = []
 
     #Burn the mean runoff values to a raster that matches the watersheds
     upstream_water_yield_dataset = gdal.Open(upstream_water_yield_uri)
@@ -366,7 +368,8 @@ def _execute_nutrient(args):
         field_summaries['%s_exp_tot' % nutrient] = export_tot
         field_summaries['%s_ret_tot' % nutrient] = retention_tot
         field_summaries['%s_ret_sm' % nutrient] = threshold_retention_tot
-
+        field_header_order = (
+            map(lambda(x): x % nutrient, ['%s_adjl_tot', '%s_exp_tot', '%s_ret_tot', '%s_ret_sm']) + field_header_order)
         #Do valuation if necessary
         if valuation_lookup is not None:
             field_summaries['value_%s' % nutrient] = {}
@@ -380,7 +383,7 @@ def _execute_nutrient(args):
                     valuation_lookup[ws_id]['cost_%s' % nutrient] * discount)
 
     LOGGER.info('Writing summaries to output shapefile')
-    add_fields_to_shapefile('ws_id', field_summaries, output_layer)
+    add_fields_to_shapefile('ws_id', field_summaries, output_layer, field_header_order)
 
 
 def disc(years, percent_rate):
@@ -398,7 +401,8 @@ def disc(years, percent_rate):
     return discount
 
 
-def add_fields_to_shapefile(key_field, field_summaries, output_layer):
+def add_fields_to_shapefile(key_field, field_summaries, output_layer,
+    field_header_order=None):
     """Adds fields and their values indexed by key fields to an OGR
         layer open for writing.
 
@@ -410,17 +414,22 @@ def add_fields_to_shapefile(key_field, field_summaries, output_layer):
             particular polygon.  ex {'field_name_1': {key_val1: value,
             key_val2: value}, 'field_name_2': {key_val1: value, etc.
         output_layer - an open writable OGR layer
+        field_header_order - a list of field headers in the order we
+            wish them to appear in the output table, if None then
+            random key order in field summaries is used.
 
         returns nothing"""
-
-    for field_name in field_summaries:
+    if field_header_order == None:
+        field_header_order = field_summaries.keys()
+        
+    for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         output_layer.CreateField(field_def)
 
     #Initialize each feature field to 0.0
     for feature_id in xrange(output_layer.GetFeatureCount()):
         feature = output_layer.GetFeature(feature_id)
-        for field_name in field_summaries:
+        for field_name in field_header_order:
             try:
                 ws_id = feature.GetFieldAsInteger(key_field)
                 feature.SetField(
