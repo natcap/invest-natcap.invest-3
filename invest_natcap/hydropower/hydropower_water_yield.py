@@ -169,6 +169,30 @@ def execute(args):
     soil_depth_nodata = raster_utils.get_nodata_from_uri(soil_depth_uri)
     pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
     
+    def pet_op(eto_pix, etk_pix):
+        """Vectorize operation for calculating the plant potential
+            evapotranspiration
+        
+            eto_pix - a float value for ETo 
+            etk_pix - a float value for ETK coefficient
+
+            returns - a float value for pet"""
+
+        if eto_pix == eto_nodata or etk_pix == etk_nodata:
+            return out_nodata
+    
+        return eto_pix * etk_pix
+    
+    # Get pixel size from tmp_etk_raster_uri which should be the same resolution
+    # as LULC raster
+    pixel_size = raster_utils.get_cell_size_from_uri(tmp_etk_raster_uri)
+    tmp_pet_uri = raster_utils.temporary_filename()
+    
+    LOGGER.debug('Calculate PET from Ref Evap times etk')
+    raster_utils.vectorize_datasets(
+            [eto_uri, tmp_etk_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
+            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
+    
     # Dictionary of out_nodata values corresponding to values for fractp_op
     # that will help avoid any out_nodata calculation issues
     fractp_nodata_dict = {'etk':etk_nodata, 
@@ -189,10 +213,6 @@ def execute(args):
     
     # Vectorize operation
     fractp_vec = np.vectorize(fractp_op)
-    
-    # Get pixel size from tmp_etk_raster_uri which should be the same resolution
-    # as LULC raster
-    pixel_size = raster_utils.get_cell_size_from_uri(tmp_etk_raster_uri)
     
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
@@ -265,7 +285,7 @@ def execute(args):
         # Create a list of tuples that pair up field names and raster uris so
         # that we can nicely do operations below
         sws_tuple_names_uris = [
-                ('precip_mn', precip_uri),('PET_mn', eto_uri),
+                ('precip_mn', precip_uri),('PET_mn', tmp_pet_uri),
                 ('AET_mn', aet_path), ('fractp_mn', fractp_clipped_path)]
 
         for key_name, rast_uri in sws_tuple_names_uris:
@@ -323,7 +343,7 @@ def execute(args):
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
     ws_tuple_names_uris = [
-            ('precip_mn', precip_uri),('PET_mn', eto_uri),
+            ('precip_mn', precip_uri),('PET_mn', tmp_pet_uri),
             ('AET_mn', aet_path)]
    
     for key_name, rast_uri in ws_tuple_names_uris:
