@@ -154,50 +154,6 @@ def _make_outfile_uris(output_directory, args):
 
     return outfile_uris
 
-def _make_outfile_descriptions(outfile_uris):
-    '''Returns a dict with descriptions of each outfile, keyed by filename.'''
-
-    def value_file_description(scenario_name):
-        return ('Maps the economic value of carbon sequestered between the '
-                'current and %s scenarios, with values in dollars per grid '
-                'cell.') % scenario_name
-
-    def value_mask_file_description(scenario_name):
-        return ('Maps the economic value of carbon sequestered between the '
-                'current and %s scenarios, but only for cells where we are '
-                'confident that carbon storage will either increase or '
-                'decrease.') % scenario_name
-
-    def carbon_mask_file_description(scenario_name):
-        return ('Maps the increase in carbon stored between the current and '
-                '%s scenarios, in Mg per grid cell, but only for cells where '
-                ' we are confident that carbon storage will either increase or '
-                'decrease.') % scenario_name
-
-    # Adjust the name of the baseline future scenario based on whether
-    # REDD analysis is enabled or not.
-    if 'redd_val' in outfile_uris:
-        base_name = 'baseline'
-    else:
-        base_name = 'future'
-
-    redd_name = 'REDD policy'
-
-    description_dict = {
-        'base_val': value_file_description(base_name),
-        'base_seq_mask': carbon_mask_file_description(base_name),
-        'base_val_mask': value_mask_file_description(base_name),
-        'redd_val': value_file_description(redd_name),
-        'redd_seq_mask': carbon_mask_file_description(redd_name),
-        'redd_val_mask': value_mask_file_description(redd_name)
-        }
-
-    descriptions = collections.OrderedDict()
-    for key, uri in outfile_uris.items():
-        filename = os.path.basename(uri)
-        descriptions[filename] = description_dict[key]
-
-    return descriptions
 
 def _create_masked_raster(orig_uri, mask_uri, result_uri):
     '''Creates a raster at result_uri with some areas masked out.
@@ -224,14 +180,3 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
         nodata_orig, pixel_size, 'intersection', dataset_to_align_index=0)
 
 
-def _create_html_summary(outfile_uris):
-    # Write a list of the output files produced by the model.
-    doc.write_header('Output Files')
-    outfile_descriptions = _make_outfile_descriptions(outfile_uris)
-
-    outfile_table = doc.add(html.Table(id='outfile_table'))
-    outfile_table.add_row(["Filename", "Description"], is_header=True)
-    for filename, description in outfile_descriptions.items():
-        outfile_table.add_row([('%s' % filename), description])
-
-    doc.flush()

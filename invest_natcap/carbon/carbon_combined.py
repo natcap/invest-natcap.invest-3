@@ -1,5 +1,6 @@
 """Integrated carbon model with biophysical and valuation components."""
 
+import collections
 import logging
 import os
 from datetime import datetime
@@ -226,8 +227,8 @@ def make_valuation_tables(valuation_outputs):
         comparison_table = html.Table(id='comparison_table')
         comparison_table.add_row(
             ["Scenario Comparison",
-             "Difference in Carbon Stocks<br>(Mg of carbon)",
-             "Difference in Net Present Value<br>(USD)"],
+             "Difference in carbon stocks<br>(Mg of carbon)",
+             "Difference in net present value<br>(USD)"],
             is_header=True)
 
         # Add a row with the difference in carbon and in value.
@@ -268,8 +269,98 @@ def make_valuation_intro():
 
 
 def make_outfile_table(biophysical_outputs, valuation_outputs):
-    # TODO: implement
-    return html.Table()
+    table = html.Table(id='outfile_table')
+    table.add_row(['Filename', 'Description'], is_header=True)
+
+    descriptions = collections.OrderedDict()
+
+    if biophysical_outputs:
+        descriptions.update(make_biophysical_outfile_descriptions(
+                biophysical_outputs))
+
+    if valuation_outputs:
+        descriptions.update(make_valuation_outfile_descriptions(
+                valuation_outputs))
+
+    for filename, description in descriptions.items():
+        table.add_row([filename, description])
+
+    return table
+
+
+def make_biophysical_outfile_descriptions(outfile_uris):
+    '''Return a dict with descriptions of biophysical outfiles.'''
+
+    def name(scenario_type):
+        return make_scenario_name(scenario_type,
+                                  do_redd=('tot_C_redd' in outfile_uris),
+                                  capitalize=False)
+
+    def total_carbon_description(scenario_type):
+        return ('Maps the total carbon stored in the %s scenario, in '
+                'Mg per grid cell.') % name(scenario_type)
+
+    def sequest_description(scenario_type):
+        return ('Maps the sequestered carbon in the %s scenario, relative to '
+                'the %s scenario, in Mg per grid cell.') % (
+            name(scenario_type), name('cur'))
+
+    file_key_to_func = {
+        'tot_C_%s': total_carbon_description,
+        'sequest_%s': sequest_description
+        }
+
+    return make_outfile_descriptions(outfile_uris, ['cur', 'fut', 'redd'],
+                                     file_key_to_func)
+
+def make_valuation_outfile_descriptions(outfile_uris):
+    '''Return a dict with descriptions of valuation outfiles.'''
+
+    def name(scenario_type):
+        return make_scenario_name(scenario_type,
+                                  do_redd=('sequest_redd' in outfile_uris),
+                                  capitalize=False)
+
+    def value_file_description(scenario_type):
+        return ('Maps the economic value of carbon sequestered between the '
+                'current and %s scenarios, with values in dollars per grid '
+                'cell.') % name(scenario_type)
+
+    def value_mask_file_description(scenario_type):
+        return ('Maps the economic value of carbon sequestered between the '
+                'current and %s scenarios, but only for cells where we are '
+                'confident that carbon storage will either increase or '
+                'decrease.') % name(scenario_type)
+
+    def carbon_mask_file_description(scenario_type):
+        return ('Maps the increase in carbon stored between the current and '
+                '%s scenarios, in Mg per grid cell, but only for cells where '
+                ' we are confident that carbon storage will either increase or '
+                'decrease.') % name(scenario_type)
+
+    file_key_to_func = {
+        '%s_val': value_file_description,
+        '%s_seq_mask': carbon_mask_file_description,
+        '%s_val_mask': value_mask_file_description
+        }
+
+    return make_outfile_descriptions(outfile_uris, ['base', 'redd'],
+                                     file_key_to_func)
+
+
+def make_outfile_descriptions(outfile_uris, scenarios, file_key_to_func):
+    descriptions = collections.OrderedDict()
+    for scenario_type in scenarios:
+        for file_key, description_func in file_key_to_func.items():
+            try:
+                uri = outfile_uris[file_key % scenario_type]
+            except KeyError:
+                continue
+
+            filename = os.path.basename(uri)
+            descriptions[filename] = description_func(scenario_type)
+
+    return descriptions
 
 
 def make_scenario_name(scenario, do_redd=True, capitalize=True):
