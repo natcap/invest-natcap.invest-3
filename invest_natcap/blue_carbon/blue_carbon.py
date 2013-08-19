@@ -22,8 +22,11 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
             (area_initial * carbon_initial * depth_initial))
 
 def execute(args):
-    disturbance_uri = os.path.join(os.path.getdir(__file__),"disturbance.csv")
+    disturbance_uri = os.path.join(os.path.dirname(__file__),"disturbance.csv")
     disturbance_key_field = "veg type"
+    disturbance_loss_name = "%s loss"
+    disturbance_depth_name = "%s depth"
+    
     
     #preprocess args for possible ease of adoption of future IUI features
     lulc_list = []
@@ -39,13 +42,17 @@ def execute(args):
 
     #file names
     biomass_name = "%i_bio.tif"
+    biomass_loss_name = "%i_bio_loss.tif"
     soil_name = "%i_soil.tif"
+    soil_loss_name = "%i_soil_loss.tif"
     acc_name = "%i_acc.tif"
+
     
     #inputs
     workspace_dir = args["workspace_dir"]
     carbon_uri = args["carbon_pools_uri"]
     carbon_key_field = "ID"
+    carbon_veg_field = "Veg Type"
     transition_matrix_uri = args["transition_matrix_uri"]
     transition_key_field = "ID"
     private_valuation = args["private_valuation"]
@@ -54,6 +61,8 @@ def execute(args):
     disturbance = raster_utils.get_lookup_from_csv(disturbance_uri, disturbance_key_field)
     transition = raster_utils.get_lookup_from_csv(transition_matrix_uri, transition_key_field)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_key_field)
+
+    #validating tables
        
     #generate list of snapshot years
     snapshots = [args["analysis_year"]]
@@ -71,13 +80,40 @@ def execute(args):
     lulc_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
     lulc_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
     lulc_accumulation_uri = os.path.join(workspace_dir, acc_name % lulc_base_year)
+
+    def biomass_loss_op(original, final):
+        t_value = transition[original][final].lower()
+        v_value = carbon[original][carbon_veg_field]
+        return disturbance[v_value][disturbance_loss_name % t_value]
+   
+    def soil_loss_op(original, final):
+        t_value = transition[original][final].lower()
+        v_value = carbon[original][carbon_veg_field]
+        return disturbance[v_value][disturbance_depth_name % t_value]
+
     
     for year in range(lulc_list[0]["year"], args["analysis_year"]+1):
         LOGGER.debug("Analyzing year %i." % year)
         if year in lulc_years:
             LOGGER.debug("LULC year detected.")            
             LOGGER.debug("Looking up biomass disturbance coefficient.")
+            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                            biomass_loss_op,
+                                            os.path.join(workspace_dir, biomass_loss_name % year),
+                                            gdal.GDT_Float32,
+                                            nodata,
+                                            cell_size,
+                                            "union")
+
             LOGGER.debug("Looking up soil disturbance coefficient.")
+            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                            soil_loss_op,
+                                            os.path.join(workspace_dir, soil_loss_name % year),
+                                            gdal.GDT_Float32,
+                                            nodata,
+                                            cell_size,
+                                            "union")
+
             LOGGER.debug("Calculating magnitude of loss.")
             LOGGER.debug("Calculating timing of loss.")
             
