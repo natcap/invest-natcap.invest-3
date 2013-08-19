@@ -151,8 +151,9 @@ def make_report_intro(args):
 
 def make_biophysical_table(biophysical_outputs):
     table = html.Table()
-    table.add_row(['Scenario', 'Total carbon',
-                   'Sequestered carbon (compared to current scenario)'],
+    table.add_row(['Scenario', 'Total carbon<br>(Mg of carbon)',
+                   'Sequestered carbon (compared to current scenario)'
+                   '<br>(Mg of carbon)'],
                   is_header=True)
 
     for scenario in ['cur', 'fut', 'redd']:
@@ -170,7 +171,8 @@ def make_biophysical_table(biophysical_outputs):
             sequestered_carbon = 'n/a'
 
         table.add_row([
-                scenario_name(scenario, 'tot_C_redd' in biophysical_outputs),
+                make_scenario_name(scenario,
+                                   'tot_C_redd' in biophysical_outputs),
                 total_carbon,
                 sequestered_carbon
                 ])
@@ -178,8 +180,81 @@ def make_biophysical_table(biophysical_outputs):
     return table
 
 def make_valuation_tables(valuation_outputs):
-    # TODO
-    yield html.Table()
+    scenario_results = {}
+    change_table = html.Table(id='change_table')
+    change_table.add_row(["Scenario",
+                          "Sequestered carbon<br>(Mg of carbon)",
+                          "Net present value<br>(USD)"],
+                         is_header=True)
+
+    for scenario_type in ['base', 'redd']:
+        try:
+            sequest_uri = valuation_outputs['sequest_%s' % scenario_type]
+        except KeyError:
+            # We may not be doing REDD analysis.
+            continue
+
+        scenario_name = make_scenario_name(
+            scenario_type, 'sequest_redd' in valuation_outputs)
+
+        total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
+        total_val = carbon_utils.sum_pixel_values_from_uri(
+            valuation_outputs['%s_val' % scenario_type])
+        scenario_results[scenario_type] = (total_seq, total_val)
+        change_table.add_row([scenario_name, total_seq, format_currency(total_val)])
+
+        try:
+            seq_mask_uri = valuation_outputs['%s_seq_mask' % scenario_type]
+            val_mask_uri = valuation_outputs['%s_val_mask' % scenario_type]
+        except KeyError:
+            # We may not have confidence-masking data.
+            continue
+
+        # Compute output for confidence-masked data.
+        masked_seq = carbon_utils.sum_pixel_values_from_uri(seq_mask_uri)
+        masked_val = carbon_utils.sum_pixel_values_from_uri(val_mask_uri)
+        scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
+        change_table.add_row(['%s (confident cells only)' % scenario_name,
+                              masked_seq,
+                              format_currency(masked_val)])
+
+    yield change_table
+
+    # If REDD scenario analysis is enabled, write the table
+    # comparing the baseline and REDD scenarios.
+    if 'base' in scenario_results and 'redd' in scenario_results:
+        comparison_table = html.Table(id='comparison_table')
+        comparison_table.add_row(
+            ["Scenario Comparison",
+             "Difference in Carbon Stocks<br>(Mg of carbon)",
+             "Difference in Net Present Value<br>(USD)"],
+            is_header=True)
+
+        # Add a row with the difference in carbon and in value.
+        base_results = scenario_results['base']
+        redd_results = scenario_results['redd']
+        comparison_table.add_row(
+            ['%s vs %s' % (make_scenario_name('redd'),
+                           make_scenario_name('base')),
+             redd_results[0] - base_results[0],
+             format_currency(redd_results[1] - base_results[1])
+             ])
+
+        if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
+            # Add a row with the difference in carbon and in value for the
+            # uncertainty-masked scenario.
+            base_mask_results = scenario_results['base_mask']
+            redd_mask_results = scenario_results['redd_mask']
+            comparison_table.add_row(
+                ['%s vs %s (confident cells only)'
+                 % (make_scenario_name('redd'),
+                    make_scenario_name('base')),
+                 redd_mask_results[0] - base_mask_results[0],
+                 format_currency(redd_mask_results[1] - base_mask_results[1])
+                 ])
+
+        yield comparison_table
+
 
 def make_valuation_intro():
     return [
@@ -191,18 +266,24 @@ def make_valuation_intro():
         'the cost of carbon emission.')
         ]
 
+
 def make_outfile_table(biophysical_outputs, valuation_outputs):
     # TODO: implement
     return html.Table()
 
-def scenario_name(scenario, do_redd, capitalize=True):
+
+def make_scenario_name(scenario, do_redd=True, capitalize=True):
     names = {
         'cur': 'current',
         'fut': 'baseline' if do_redd else 'future',
         'redd': 'REDD policy'
         }
+    names['base'] = names['fut']
     name = names[scenario]
     if capitalize:
         return name[0].upper() + name[1:]
     return name
 
+
+def format_currency(val):
+    return '%.2f' % val
