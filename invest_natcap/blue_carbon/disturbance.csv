@@ -1,0 +1,5 @@
+veg type,veg name,low loss,medium loss,high loss,low depth (m),medium depth (m),high depth (m),decay rate for biomass (yrs),decay rate for soil (yrs)
+0,other,0.3,0.6,1,1,1,1,inf,inf
+1,marsh,0.5,0.5,1,0.3,1,1.5,0.5,7.5
+2,mangrove,0.5,0.5,1,0.3,0.5,1,15,7.5
+3,seagrass,0.5,0.5,1,0.3,0.5,1,0.274,1

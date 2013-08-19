@@ -22,13 +22,111 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
             (area_initial * carbon_initial * depth_initial))
 
 def execute(args):
+    disturbance_uri = os.path.join(os.path.getdir(__file__),"disturbance.csv")
+    
     #preprocess args for possible ease of adoption of future IUI features
-    lulc = []
+    lulc_list = []
     for i in range(1,6):
         if "year_%i" % i in args:
-            lulc.append({"uri": args["lulc_uri_%i" % i], "year": args["year_%i" % i]})
+            lulc_list.append({"uri": args["lulc_uri_%i" % i], "year": args["year_%i" % i]})
         else:
             break
+
+    lulc_dict = dict([(lulc["year"], lulc["uri"]) for lulc in lulc_list])
+    lulc_years = lulc_dict.keys()
+    lulc_years.sort()
+
+    #file names
+    biomass_name = "%i_bio.tif"
+    soil_name = "%i_soil.tif"
+    acc_name = "%i_acc.tif"
+    
+    #inputs
+    workspace_dir = args["workspace_dir"]
+    carbon_uri = args["carbon_pools_uri"]
+    transition_matrix_uri = args["transition_matrix_uri"]    
+    private_valuation = args["private_valuation"]
+    social_valuation = args["social_valuation"]
+
+    #parsing disturbance table
+    disturbance_file = open(disturbance_uri, 'ru')
+    disturbance = {}
+    disturbance_file.readline()
+    for line in disturbance_file:
+        line = line.strip().split(",")
+        disturbance[int(line[0])] = {"biomass": float(line[8}), "soil": float(line[9])}
+    
+
+    #parsing transition matrix
+    transition_matrix_file = open(transition_matrix_uri, 'ru')
+    lulc_codes = [int(code) for code in transition_matrix_file.readline().strip().split(",")[2:]]
+    transition_matrix = {}
+    transition_matrix_file.readline()
+    for line in transition_matrix_file:
+        line = line.strip().split(",")
+        original_code = int(line[0])
+        impact_values = [int(code) for code in line[2:]]
+        for transition, impact in zip(lulc_codes, impact_values):
+            transition_matrix[(original_code, transition)] = impact
+    transition_matrix_file.close()
+    
+    #generate list of snapshot years
+    snapshots = [args["analysis_year"]]
+    if args["snapshots"]:
+        if args["analysis_year"] == "":
+            snapshots.extend(range(args["start"],args["analysis_year"]+1,args["step"]))
+        else:
+            snapshots.extend(range(args["start"],args["stop"]+1,args["step"]))
+
+    LOGGER.info("Running analysis.")
+    LOGGER.debug("Setting initial LULC year.")
+    lulc_base_year = lulc_years[0]
+    LOGGER.debug("Setting initial LULC ")
+    lulc_base_uri = lulc_dict[lulc_base_year]
+    lulc_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
+    lulc_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
+    lulc_accumulation_uri = os.path.join(workspace_dir, acc_name % lulc_base_year)
+    
+    for year in range(lulc_list[0]["year"], args["analysis_year"]+1):
+        LOGGER.debug("Analyzing year %i." % year)
+        if year in lulc_years:
+            LOGGER.debug("LULC year detected.")            
+            LOGGER.debug("Looking up biomass disturbance coefficient.")
+            LOGGER.debug("Looking up soil disturbance coefficient.")
+            LOGGER.debug("Calculating magnitude of loss.")
+            LOGGER.debug("Calculating timing of loss.")
+            
+            lulc_base_year = year
+            LOGGER.debug("Changed base year to %i." % lulc_base_year)
+            lulc_base_uri = lulc_dict[lulc_base_year]            
+            LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)
+
+            LOGGER.debug("Calculating biomass carbon.")
+            lulc_biomas_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
+            LOGGER.debug("Biomass carbon saved to %s.", lulc_biomass_uri)
+
+            LOGGER.debug("Calculating soil carbon.")
+            lulc_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
+            LOGGER.debug("Soil carbon saved to %s.", lulc_soil_uri)
+
+            LOGGER.debug("Calculating accumulation rate.")
+            lulc_accumulation_uri = os.path.join(workspace_dir, acc_name % lulc_base_year)
+            LOGGER.debug("Accumulation rate saved to %s.", lulc_accumulation_uri)
+            
+            
+        elif year in snapshots:
+            LOGGER.debug("Snapshot year detected.")
+            LOGGER.debug("Calculate time from base year.")
+            LOGGER.debug("Calculate carbon soil stock.")
+            
+        if private_valuation:
+            LOGGER.debug("Calculating private valuation.")
+
+        if social_valuation:
+            LOGGER.debug("Calculating social valuation.")
+        
+    return
+
 
     #inputs
     workspace_dir = args["workspace_dir"]
@@ -37,10 +135,9 @@ def execute(args):
     lulc2_uri = args["lulc2_uri"]
     year2 = int(args["year2"])
     years = year2 - year1
-    carbon_uri = args["carbon_pools_uri"]
-    transition_matrix_uri = args["transition_matrix_uri"]
 
-    private_valuation = args["private_valuation"]
+
+
     if private_valuation:
         carbon_value = args["carbon_value"]
         if args["carbon_units"] == "Carbon Dioxide (CO2)":
@@ -49,7 +146,7 @@ def execute(args):
         rate_change = args["rate_change"]
         private_valuation_uri = os.path.join(workspace_dir, "private_valuation.tif")
 
-    social_valuation = args["social_valuation"]
+
     if social_valuation:
         carbon_schedule = args["carbon_schedule"]
         carbon_schedule_field = args["carbon_schedule_field"]
