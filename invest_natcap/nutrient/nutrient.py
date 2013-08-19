@@ -315,7 +315,7 @@ def _execute_nutrient(args):
     def alv_calculation(load, runoff_index, mean_runoff_index, stream):
         """Calculates the adjusted loading value index"""
         if nodata_load in [load, runoff_index, mean_runoff_index] or \
-                stream == nodata_stream:
+                stream == nodata_stream or mean_runoff_index == 0.0:
             return nodata_load
         return load * runoff_index / mean_runoff_index * (1 - stream)
     alv_uri = {}
