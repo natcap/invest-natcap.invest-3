@@ -92,7 +92,20 @@ def package_valuation_args(args, biophysical_outputs):
     if not biophysical_outputs:
         return args
 
-    # TODO: implement threading from one model to the other
+    if 'sequest_fut' not in biophysical_outputs:
+        raise Exception(
+            'Both biophysical and valuation models were requested, '
+            'but sequestration was not calculated. In order to calculate '
+            'valuation data, please run the biophysical model with '
+            'sequestration analysis enabled. This requires a future LULC map '
+            'in addition to the current LULC map.')
+
+    args['sequest_uri'] = biophysical_outputs['sequest_fut']
+    args['yr_cur'] = args['lulc_cur_year']
+    args['yr_fut'] = args['lulc_fut_year']
+    if 'sequest_redd' in biophysical_outputs:
+        args['sequest_redd_uri'] = biophysical_outputs['sequest_redd']
+
     return args
 
 def create_HTML_report(biophysical_outputs, valuation_outputs):

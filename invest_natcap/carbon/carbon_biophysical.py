@@ -17,7 +17,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('carbon_biophysical')
 
 def execute(args):
-    execute_30(**args)
+    return execute_30(**args)
 
 def execute_30(**args):
     """This function invokes the carbon model given URI inputs of files.
@@ -56,7 +56,7 @@ def execute_30(**args):
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood
             calculation (optional, include if calculating future lulc hwp)
 
-        returns nothing."""
+        returns a dict with the names of all output files."""
 
     file_suffix = carbon_utils.make_suffix(args)
     dirs = carbon_utils.setup_dirs(args['workspace_dir'],
@@ -273,8 +273,7 @@ def execute_30(**args):
                     confidence_op, out_file_names['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                     pixel_size_out, "intersection", dataset_to_align_index=0)
 
-    _calculate_summary(out_file_names)
-
+    return out_file_names
 
 
 def calculate_hwp_storage_cur(
