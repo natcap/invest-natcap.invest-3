@@ -23,6 +23,7 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
 
 def execute(args):
     disturbance_uri = os.path.join(os.path.getdir(__file__),"disturbance.csv")
+    disturbance_key_field = "veg type"
     
     #preprocess args for possible ease of adoption of future IUI features
     lulc_list = []
@@ -44,32 +45,16 @@ def execute(args):
     #inputs
     workspace_dir = args["workspace_dir"]
     carbon_uri = args["carbon_pools_uri"]
-    transition_matrix_uri = args["transition_matrix_uri"]    
+    carbon_key_field = "ID"
+    transition_matrix_uri = args["transition_matrix_uri"]
+    transition_key_field = "ID"
     private_valuation = args["private_valuation"]
     social_valuation = args["social_valuation"]
 
-    #parsing disturbance table
-    disturbance_file = open(disturbance_uri, 'ru')
-    disturbance = {}
-    disturbance_file.readline()
-    for line in disturbance_file:
-        line = line.strip().split(",")
-        disturbance[int(line[0])] = {"biomass": float(line[8}), "soil": float(line[9])}
-    
-
-    #parsing transition matrix
-    transition_matrix_file = open(transition_matrix_uri, 'ru')
-    lulc_codes = [int(code) for code in transition_matrix_file.readline().strip().split(",")[2:]]
-    transition_matrix = {}
-    transition_matrix_file.readline()
-    for line in transition_matrix_file:
-        line = line.strip().split(",")
-        original_code = int(line[0])
-        impact_values = [int(code) for code in line[2:]]
-        for transition, impact in zip(lulc_codes, impact_values):
-            transition_matrix[(original_code, transition)] = impact
-    transition_matrix_file.close()
-    
+    disturbance = raster_utils.get_lookup_from_csv(disturbance_uri, disturbance_key_field)
+    transition = raster_utils.get_lookup_from_csv(transition_matrix_uri, transition_key_field)
+    carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_key_field)
+       
     #generate list of snapshot years
     snapshots = [args["analysis_year"]]
     if args["snapshots"]:
