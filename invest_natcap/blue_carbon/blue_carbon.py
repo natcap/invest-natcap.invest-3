@@ -22,6 +22,14 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
             (area_initial * carbon_initial * depth_initial))
 
 def execute(args):
+    #preprocess args for possible ease of adoption of future IUI features
+    lulc = []
+    for i in range(1,6):
+        if "year_%i" % i in args:
+            lulc.append({"uri": args["lulc_uri_%i" % i], "year": args["year_%i" % i]})
+        else:
+            break
+
     #inputs
     workspace_dir = args["workspace_dir"]
     lulc1_uri = args["lulc1_uri"]

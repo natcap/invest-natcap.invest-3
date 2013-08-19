@@ -21,8 +21,8 @@
                                                 "required": true
                                             },
                                             {
-                                                "id": "lulc1_uri",
-                                                "args_id": "lulc1_uri",
+                                                "id": "lulc_uri_1",
+                                                "args_id": "lulc_uri_1",
                                                 "type": "file",
                                                 "label": "LULC Time 1",
                                                 "defaultValue": "../BlueCarbon/input/GBJC_2004_mean.tif",
@@ -30,20 +30,20 @@
                                                 "required": true
                                             },
                                             {
-                                                "id" : "year1",
-                                                "args_id" : "year1",
+                                                "id" : "year_1",
+                                                "args_id" : "year_1",
                                                 "type": "text",
                                                 "label": "Year",
                                                 "validateAs": {"type": "number"},
-                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                                "dataType": "float",
+                                                "validText": "[1-9][0-9]*",
+                                                "dataType": "int",
                                                 "defaultValue": "2010",
                                                 "helpText": "The year of the land use land cover raster for time 1. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },                                                                
                                             {
-                                                "id": "lulc2_uri",
-                                                "args_id": "lulc2_uri",
+                                                "id": "lulc_uri_2",
+                                                "args_id": "lulc_uri_2",
                                                 "type": "file",
                                                 "label": "LULC Time 2",
                                                 "defaultValue": "../BlueCarbon/input/GBJC_2050_mean.tif",
@@ -51,15 +51,85 @@
                                                 "required": true
                                             },
                                             {
-                                                "id" : "year2",
-                                                "args_id" : "year2",
+                                                "id" : "year_2",
+                                                "args_id" : "year_2",
                                                 "type": "text",
                                                 "label": "Year",
                                                 "validateAs": {"type": "number"},
-                                                "validText": "[0-9]+(\\.[0-9][0-9])?",
-                                                "dataType": "float",
+                                                "validText": "[1-9][0-9]*",
+                                                "dataType": "int",
                                                 "defaultValue": "2050",
                                                 "helpText": "The year of the land use land cover raster for time 2. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "required": true
+                                            },
+                                            {
+                                                "id": "lulc_uri_3",
+                                                "args_id": "lulc_uri_3",
+                                                "type": "file",
+                                                "label": "LULC Time 3",
+                                                "defaultValue": "",
+                                                "helpText": "",
+                                                "enabledBy": "lulc_uri_2",
+                                                "required": false
+                                            },
+                                            {
+                                                "id" : "year_3",
+                                                "args_id" : "year_3",
+                                                "type": "text",
+                                                "label": "Year",
+                                                "validateAs": {"type": "number"},
+                                                "validText": "[1-9][0-9]*",
+                                                "dataType": "float",
+                                                "defaultValue": "",
+                                                "helpText": "",
+                                                "enabledBy": "lulc_uri_3",
+                                                "required": true
+                                            },                                                                
+                                            
+                                            {
+                                                "id": "lulc_uri_4",
+                                                "args_id": "lulc_uri_4",
+                                                "type": "file",
+                                                "label": "LULC Time 4",
+                                                "defaultValue": "",
+                                                "helpText": "",
+                                                "enabledBy": "lulc_uri_3",
+                                                "required": false
+                                            },
+                                            {
+                                                "id" : "year_4",
+                                                "args_id" : "year_4",
+                                                "type": "text",
+                                                "label": "Year",
+                                                "validateAs": {"type": "number"},
+                                                "validText": "[1-9][0-9]*",
+                                                "dataType": "float",
+                                                "defaultValue": "",
+                                                "helpText": "",
+                                                "enabledBy": "lulc_uri_4",
+                                                "required": true
+                                            },                                                                
+                                            {
+                                                "id": "lulc_uri_5",
+                                                "args_id": "lulc_uri_5",
+                                                "type": "file",
+                                                "label": "LULC Time 5",
+                                                "defaultValue": "",
+                                                "helpText": "",
+                                                "enabledBy": "lulc_uri_4",
+                                                "required": false
+                                            },
+                                            {
+                                                "id" : "year_5",
+                                                "args_id" : "year_5",
+                                                "type": "text",
+                                                "label": "Year",
+                                                "validateAs": {"type": "number"},
+                                                "validText": "[1-9][0-9]*",
+                                                "dataType": "float",
+                                                "defaultValue": "",
+                                                "helpText": "",
+                                                "enabledBy": "lulc_uri_5",
                                                 "required": true
                                             },                                                                
                                             {
@@ -76,13 +146,67 @@
                                                 "args_id": "transition_matrix_uri",
                                                 "type": "file",
                                                 "label": "Transition matrix",
-                                                "defaultValue": "../BlueCarbon/input/transitionmatrix.csv",
+                                                "defaultValue": "../BlueCarbon/input/transition.csv",
                                                 "helpText": "Coefficients for the carbon storage rates for the transtion between each of the land use land cover classes. Values above 1 indicate an increase, values below 1 indicate a decrease. Absent transitions are assigned a value of 1, representing no change. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             }
 
                                     ]
                    },
+                    {
+                       "id" : "snapshots",
+                       "type" : "container",
+                       "collapsible" : true,
+                       "args_id" : "snapshots",
+                       "label" : "Snapshots",
+                       "elements" : [
+                                       {
+                                           "id" : "snapshot_list",
+                                           "type" : "list",
+                                           "elements" : [
+                                                            {
+                                                                "id" : "start",
+                                                                "args_id" : "start",
+                                                                "type": "text",
+                                                                "label": "Start year",
+                                                                "validateAs": {"type": "number"},
+                                                                "validText": "[1-9][0-9]*",
+                                                                "dataType": "int",
+                                                                "defaultValue": "",
+                                                                "helpText": "",
+                                                                "enabledBy": "snapshots",
+                                                                "required": true
+                                                            },
+                                                            {
+                                                                "id" : "step",
+                                                                "args_id" : "step",
+                                                                "type": "text",
+                                                                "label": "Years between snapshots",
+                                                                "validateAs": {"type": "number"},
+                                                                "validText": "[1-9][0-9]*",
+                                                                "dataType": "int",
+                                                                "defaultValue": "",
+                                                                "helpText": "",
+                                                                "enabledBy": "snapshots",
+                                                                "required": true
+                                                            },                        
+                                                            {
+                                                                "id" : "stop",
+                                                                "args_id" : "stop",
+                                                                "type": "text",
+                                                                "label": "Stop year",
+                                                                "validateAs": {"type": "number"},
+                                                                "validText": "[1-9][0-9]*",
+                                                                "dataType": "int",
+                                                                "defaultValue": "",
+                                                                "helpText": "",
+                                                                "enabledBy": "snapshots",
+                                                                "required": false
+                                                            }
+                                                        ]
+                                           }
+                                       ]
+                    },
                    {
                        "id" : "private_valuation",
                        "type" : "container",

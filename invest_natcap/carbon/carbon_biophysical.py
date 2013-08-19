@@ -81,9 +81,9 @@ def execute_30(**args):
     LOGGER.debug("building carbon pools")
     use_uncertainty = args.get('use_uncertainty', False)
     if use_uncertainty:
-        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uncertain_uri'], 'LULC')
+        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uncertain_uri'], 'lucode')
     else:
-        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
+        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'lucode')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
     out_file_names = {

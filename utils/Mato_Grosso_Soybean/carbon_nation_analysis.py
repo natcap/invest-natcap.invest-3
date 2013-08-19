@@ -173,7 +173,7 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 
 #This calculates an edge distance for the clusters of forest
 	edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-		forest_existance)
+		forest_existance) * cell_size
 	carbon_stocks = numpy.zeros(landcover_array.shape)
 	
 	for landcover_type in REGRESSION_TYPES:
