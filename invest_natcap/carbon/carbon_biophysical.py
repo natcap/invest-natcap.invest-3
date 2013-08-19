@@ -86,10 +86,7 @@ def execute_30(**args):
         pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'LULC')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
-    out_file_names = {
-        #This it the csv table that summarizes the total carbon storage, sequestration, etc.
-        'output_csv_uri': os.path.join(dirs['output'], 'summary_table%s.csv' % file_suffix)
-        }
+    out_file_names = {}
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
@@ -603,43 +600,3 @@ def _carbon_pool_in_hwp_from_parcel(carbonPerCut, start_years, timeSpan, harvest
         carbonSum += (1 - math.exp(-omega)) / (omega *
             math.exp((timeSpan - t * harvestFreq) * omega))
     return carbonSum * carbonPerCut
-
-def _calculate_summary(args):
-    """Dumps information about total carbon summaries from the past run
-        in the form
-
-        Total current carbon: xxx Mg
-        Total scenario carbon: yyy Mg
-        Total sequestered carbon: zzz Mg
-
-        args - a dictionary of arguments defined as follows:
-
-        args['tot_C_cur'] - a gdal dataset uri that contains pixels with
-            total Mg of carbon per cell on current landscape (required)
-        args['tot_C_fut'] - a gdal dataset uri that contains pixels with
-            total Mg of carbon per cell on future landscape (optional)
-        args['sequest'] - a gdal dataset uri that contains pixels with
-            total Mg of carbon sequestered per cell (optional)
-        args['output_csv_uri'] - uri to an output table csv format to summarize
-            the carbon stats
-
-        returns nothing
-        """
-    LOGGER.debug('calculate summary')
-    raster_key_messages = [('tot_C_cur', 'Total current carbon: '),
-                           ('tot_C_fut', 'Total scenario carbon: '),
-                           ('tot_C_redd', 'Total REDD scenario carbon: '),
-                           ('sequest_fut', 'Total sequestered carbon: '),
-                           ('sequest_redd',
-                            'Total sequestered carbon in REDD scenario: ')]
-
-    output_csv_file = open(args['output_csv_uri'], 'wb')
-
-    for raster_key, message in raster_key_messages:
-        #Make sure we passed in the dictionary, and gracefully continue
-        #if we didn't.
-        if raster_key not in args:
-            continue
-        total_sum = carbon_utils.sum_pixel_values_from_uri(args[raster_key])
-        output_csv_file.write('%s, %f\n' % (raster_key, total_sum))
-        LOGGER.info("%s %s Mg", message, total_sum)

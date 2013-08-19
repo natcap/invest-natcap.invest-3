@@ -108,13 +108,14 @@ def execute_30(**args):
                 conf_uris[scenario_type],
                 outfile_uris['%s_val_mask' % scenario_type])
 
-    _create_html_summary(outfile_uris, sequest_uris)
+    return outfile_uris
 
 def _make_outfile_uris(output_directory, args):
     '''Set up a dict with uris for outfiles.
 
-    Outfiles include rasters for value sequestration, confidence-masked carbon sequestration,
-    confidence-masked value sequestration, and an HTML summary file.
+    Outfiles include rasters for value sequestration,
+    confidence-masked carbon sequestration, and
+    confidence-masked value sequestration.
     '''
     file_suffix = carbon_utils.make_suffix(args)
 
@@ -148,9 +149,6 @@ def _make_outfile_uris(output_directory, args):
         if args.get('conf_redd_uri'):
             outfile_uris['redd_seq_mask'] = outfile_uri('seq_mask', 'redd')
             outfile_uris['redd_val_mask'] = outfile_uri('val_mask', 'redd')
-
-    # HTML summary file.
-    outfile_uris['html'] = outfile_uri('summary', filetype='html')
 
     return outfile_uris
 
@@ -194,9 +192,6 @@ def _make_outfile_descriptions(outfile_uris):
 
     descriptions = collections.OrderedDict()
     for key, uri in outfile_uris.items():
-        if key == 'html':
-            # Don't need a description for this summary file.
-            continue
         filename = os.path.basename(uri)
         descriptions[filename] = description_dict[key]
 

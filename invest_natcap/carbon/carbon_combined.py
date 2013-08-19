@@ -1,9 +1,13 @@
 """Integrated carbon model with biophysical and valuation components."""
 
 import logging
+import os
+from datetime import datetime
 
 from invest_natcap.carbon import carbon_biophysical
 from invest_natcap.carbon import carbon_valuation
+from invest_natcap.carbon import carbon_utils
+from invest_natcap.report_generation import html
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -86,7 +90,7 @@ def execute_30(**args):
     else:
         valuation_outputs = None
 
-    create_HTML_report(biophysical_outputs, valuation_outputs)
+    create_HTML_report(args, biophysical_outputs, valuation_outputs)
 
 def package_valuation_args(args, biophysical_outputs):
     if not biophysical_outputs:
@@ -108,6 +112,97 @@ def package_valuation_args(args, biophysical_outputs):
 
     return args
 
-def create_HTML_report(biophysical_outputs, valuation_outputs):
+def create_HTML_report(args, biophysical_outputs, valuation_outputs):
+    html_uri = os.path.join(args['workspace_dir'], 'output',
+                            'Carbon_Results_[%s].html' %
+                            datetime.now().strftime('%Y-%m-%d_%H_%M'))
+
+    doc = html.HTMLDocument(html_uri, 'Carbon Results',
+                            'InVEST Carbon Model Results')
+
+    doc.write_paragraph(make_report_intro(args))
+
+    if args['do_biophysical']:
+        doc.write_header('Biophysical Results')
+        doc.add(make_biophysical_table(biophysical_outputs))
+
+    if args['do_valuation']:
+        doc.write_header('Valuation Results')
+        for paragraph in make_valuation_intro():
+            doc.write_paragraph(paragraph)
+        for table in make_valuation_tables(valuation_outputs):
+            doc.add(table)
+
+    doc.write_header('Output Files')
+    doc.add(make_outfile_table(biophysical_outputs, valuation_outputs))
+
+    doc.flush()
+
+def make_report_intro(args):
+    models = []
+    for model in 'biophysical', 'valuation':
+        if args['do_%s' % model]:
+            models.append(model)
+
+    return ('This document summarizes the results from running the InVEST '
+            'carbon model. This run of the model involved the %s %s.' %
+            (' and '.join(models),
+             'models' if len(models) > 1 else 'model'))
+
+def make_biophysical_table(biophysical_outputs):
+    table = html.Table()
+    table.add_row(['Scenario', 'Total carbon',
+                   'Sequestered carbon (compared to current scenario)'],
+                  is_header=True)
+
+    for scenario in ['cur', 'fut', 'redd']:
+        total_carbon_key = 'tot_C_%s' % scenario
+        if total_carbon_key not in biophysical_outputs:
+            continue
+        total_carbon = carbon_utils.sum_pixel_values_from_uri(
+            biophysical_outputs[total_carbon_key])
+
+        sequest_key = 'sequest_%s' % scenario
+        if sequest_key in biophysical_outputs:
+            sequestered_carbon = carbon_utils.sum_pixel_values_from_uri(
+                biophysical_outputs[sequest_key])
+        else:
+            sequestered_carbon = 'n/a'
+
+        table.add_row([
+                scenario_name(scenario, 'tot_C_redd' in biophysical_outputs),
+                total_carbon,
+                sequestered_carbon
+                ])
+
+    return table
+
+def make_valuation_tables(valuation_outputs):
+    # TODO
+    yield html.Table()
+
+def make_valuation_intro():
+    return [
+        ('<strong>Positive values</strong> in this table indicate that '
+         'carbon storage increased. In this case, the positive Net Present '
+         'Value represents the value of the sequestered carbon.'),
+        ('<strong>Negative values</strong> indicate that carbon storage '
+        'decreased. In this case, the negative Net Present Value represents '
+        'the cost of carbon emission.')
+        ]
+
+def make_outfile_table(biophysical_outputs, valuation_outputs):
     # TODO: implement
-    pass
+    return html.Table()
+
+def scenario_name(scenario, do_redd, capitalize=True):
+    names = {
+        'cur': 'current',
+        'fut': 'baseline' if do_redd else 'future',
+        'redd': 'REDD policy'
+        }
+    name = names[scenario]
+    if capitalize:
+        return name[0].upper() + name[1:]
+    return name
+
