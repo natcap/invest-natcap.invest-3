@@ -55,7 +55,7 @@ def execute(args):
         
         args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
-            coefficients such as root_depth (mm) and etk, which are required. 
+            coefficients such as root_depth (mm) and Kc, which are required. 
             NOTE: these data are attributes of each LULC class rather than 
             attributes of individual cells in the raster map (required)
         
@@ -108,7 +108,7 @@ def execute(args):
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
         bio_dict[int(row['lucode'])] = {
-                'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+                'Kc':float(row['Kc']), 'root_depth':float(row['root_depth'])}
 
     biophysical_table_file.close() 
     
@@ -137,19 +137,19 @@ def execute(args):
     out_nodata = - 1.0
     
     # Break the bio_dict into two separate dictionaries based on
-    # etk and root_depth fields to use for reclassifying 
-    etk_dict = {}
+    # Kc and root_depth fields to use for reclassifying 
+    Kc_dict = {}
     root_dict = {}
     for lulc_code in bio_dict:
-        etk_dict[lulc_code] = bio_dict[lulc_code]['etk']
+        Kc_dict[lulc_code] = bio_dict[lulc_code]['Kc']
         root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
 
-    # Create etk raster from table values to use in future calculations
-    LOGGER.info("Reclassifying temp_etk raster")
-    tmp_etk_raster_uri = raster_utils.temporary_filename()
+    # Create Kc raster from table values to use in future calculations
+    LOGGER.info("Reclassifying temp_Kc raster")
+    tmp_Kc_raster_uri = raster_utils.temporary_filename()
     
     raster_utils.reclassify_dataset_uri(
-            lulc_uri, etk_dict, tmp_etk_raster_uri, gdal.GDT_Float32,
+            lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float32,
             out_nodata)
 
     # Create root raster from table values to use in future calculations
@@ -162,53 +162,53 @@ def execute(args):
 
     # Get out_nodata values so that we can avoid any issues when running
     # operations
-    etk_nodata = raster_utils.get_nodata_from_uri(tmp_etk_raster_uri)
+    Kc_nodata = raster_utils.get_nodata_from_uri(tmp_Kc_raster_uri)
     root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
     eto_nodata = raster_utils.get_nodata_from_uri(eto_uri)
     soil_depth_nodata = raster_utils.get_nodata_from_uri(soil_depth_uri)
     pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
     
-    def pet_op(eto_pix, etk_pix):
+    def pet_op(eto_pix, Kc_pix):
         """Vectorize operation for calculating the plant potential
             evapotranspiration
         
             eto_pix - a float value for ETo 
-            etk_pix - a float value for ETK coefficient
+            Kc_pix - a float value for Kc coefficient
 
             returns - a float value for pet"""
 
-        if eto_pix == eto_nodata or etk_pix == etk_nodata:
+        if eto_pix == eto_nodata or Kc_pix == Kc_nodata:
             return out_nodata
     
-        return eto_pix * etk_pix
+        return eto_pix * Kc_pix
     
-    # Get pixel size from tmp_etk_raster_uri which should be the same resolution
+    # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
-    pixel_size = raster_utils.get_cell_size_from_uri(tmp_etk_raster_uri)
+    pixel_size = raster_utils.get_cell_size_from_uri(tmp_Kc_raster_uri)
     tmp_pet_uri = raster_utils.temporary_filename()
     
-    LOGGER.debug('Calculate PET from Ref Evap times etk')
+    LOGGER.debug('Calculate PET from Ref Evap times Kc')
     raster_utils.vectorize_datasets(
-            [eto_uri, tmp_etk_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
+            [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float32,
             out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
     
     # Dictionary of out_nodata values corresponding to values for fractp_op
     # that will help avoid any out_nodata calculation issues
-    fractp_nodata_dict = {'etk':etk_nodata, 
+    fractp_nodata_dict = {'Kc':Kc_nodata, 
                           'root':root_nodata,
                           'precip':precip_nodata,
                           'eto':eto_nodata,
                           'soil':soil_depth_nodata,
                           'pawc':pawc_nodata}
     
-    def fractp_op(etk, eto, precip, root, soil, pawc):
+    def fractp_op(Kc, eto, precip, root, soil, pawc):
         """A wrapper function to call hydropower's cython core. Acts as a
             closure for fractp_nodata_dict, out_nodata, seasonality_constant
             """
 
         return hydropower_cython_core.fractp_op(
-            fractp_nodata_dict, out_nodata, seasonality_constant, etk,
+            fractp_nodata_dict, out_nodata, seasonality_constant, Kc,
             eto, precip, root, soil, pawc)
     
     # Vectorize operation
@@ -216,7 +216,7 @@ def execute(args):
     
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
-            tmp_etk_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
+            tmp_Kc_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
             soil_depth_uri, pawc_uri]
     
     LOGGER.debug('Performing fractp operation')
