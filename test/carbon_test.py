@@ -25,11 +25,70 @@ class TestCarbonBiophysical(unittest.TestCase):
                 uri = os.path.join(self.output_dir, out_file)
                 os.remove(uri)
 
+        # Parameters to tweak for the biophysical model.
+        self.do_biophysical = False
+        self.do_sequest = False
+        self.do_redd = False
+        self.do_uncertainty = False
+        self.do_hwp = False
+        self.suffix = ''
+
+        # Parameters to tweak for the valuation model.
+        self.do_valuation = False
+        self.carbon_units = 'Carbon'
+
+    def execute(self):
+        """Executes the carbon model based on the state of instance vars."""
+        args = {}
+        args['workspace_dir'] = self.workspace_dir
+        args['do_biophysical'] = self.do_biophysical
+        args['do_valuation'] = self.do_valuation
+        args['do_uncertainty'] = self.do_uncertainty
+
+        if self.suffix:
+            args['suffix'] = self.suffix
+
+        # Set up biophysical args.
+        if self.do_biophysical:
+            args['lulc_cur_uri'] = (
+                "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur")
+
+            if self.do_uncertainty:
+                args['carbon_pools_uncertain_uri'] = (
+                    './invest-data/test/data/carbon/input/'
+                    'carbon_pools_samp_uncertain.csv')
+                args['confidence_threshold'] = 90
+            else:
+                args['carbon_pools_uri'] = (
+                    './invest-data/test/data/carbon/input/'
+                    'carbon_pools_samp.csv')
+
+            if self.do_sequest:
+                args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
+                args['lulc_cur_year'] = 2000
+                args['lulc_fut_year'] = 2030
+
+            if self.do_redd:
+                args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'
+
+            if self.do_hwp:
+                args['hwp_cur_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_cur.shp"
+
+            if self.do_sequest and self.do_hwp:
+                    args['hwp_fut_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_fut.shp"
+
+            if self.do_redd and self.do_hwp:
+                raise Exception(
+                    "The model doesn't currently support REDD analysis with HWP")
+
+        carbon_combined.execute(args)
+
+
     def assertDatasetEqual(self, output_filename, ref_filename=None):
         """Asserts that the output data set equals the reference data set."""
         if not ref_filename:
             ref_filename = output_filename
-        output_uri = os.path.join(self.workspace_dir, 'output', output_filename)
+        output_uri = os.path.join(self.output_dir, output_filename)
         ref_uri = os.path.join('./invest-data/test/data/carbon_regression_data', ref_filename)
         invest_test_core.assertTwoDatasetEqualURI(self, output_uri, ref_uri)
 
@@ -42,68 +101,45 @@ class TestCarbonBiophysical(unittest.TestCase):
                 self.assertDatasetEqual(*filename)
 
     def assert_table_contains_rows(self, table_id, rows, suffix=''):
-        uri = os.path.join(self.workspace_dir, 'output',
-                           'summary%s.html' % suffix)
+        uri = os.path.join(self.output_dir, 'summary%s.html' % suffix)
 
         html_test_utils.assert_table_contains_rows_uri(self, uri, table_id, rows)
 
-    def test_carbon_biophysical_sequestration(self):
-        """Test for carbon_biophysical function with various parameters."""
+    def test_biophysical(self):
+        self.do_biophysical = True
+        self.execute()
 
-        def execute_model(do_sequest=False, do_redd=False, do_uncertainty=False, do_hwp=False,
-                          suffix=''):
-            """Executes the carbon biophysical model with the appropriate parameters."""
-            args = {}
-            args['workspace_dir'] = self.workspace_dir
-            args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
-            args['do_biophysical'] = True
-            args['do_valuation'] = False
+    def test_biophysical_sequest_hwp(self):
+        self.do_biophysical = True
+        self.do_sequest = True
+        self.do_hwp = True
+        self.suffix = 'hwp'
+        self.execute()
 
-            if do_uncertainty:
-                args['do_uncertainty'] = True
-                args['carbon_pools_uncertain_uri'] = (
-                    './invest-data/test/data/carbon/input/carbon_pools_samp_uncertain.csv')
-                args['confidence_threshold'] = 90
-            else:
-                args['carbon_pools_uri'] = './invest-data/test/data/carbon/input/carbon_pools_samp.csv'
-
-            if do_sequest:
-                args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
-                args['lulc_cur_year'] = 2000
-                args['lulc_fut_year'] = 2030
-
-            if do_redd:
-                args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'
-
-            if do_hwp:
-                args['hwp_cur_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_cur.shp"
-
-                if do_sequest:
-                    args['hwp_fut_shape_uri'] = "./invest-data/test/data/carbon/input/harv_samp_fut.shp"
-
-            if suffix:
-                args['suffix'] = suffix
-
-            if do_redd and do_hwp:
-                self.fail('The model doesn\'t currently support REDD analysis with HWP!')
-
-            carbon_combined.execute(args)
-
-        # Make sure nothing breaks when we run the model with the bare minimum.
-        execute_model()
-
-        execute_model(do_sequest=True, do_hwp=True, suffix='hwp')
         self.assertDatasetsEqual('tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif')
 
-        execute_model(do_sequest=True, do_hwp=True, do_uncertainty=True, suffix='hwp')
+    def test_biophysical_sequest_hwp_uncertainty(self):
+        self.do_biophysical = True
+        self.do_sequest = True
+        self.do_hwp = True
+        self.do_uncertainty = True
+        self.suffix = 'hwp'
+        self.execute()
+
         self.assertDatasetsEqual('tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif',
                                  'conf_fut_hwp.tif')
 
-        execute_model(do_sequest=True, do_uncertainty=True, do_redd=True)
+    def test_biophysical_redd(self):
+        self.do_biophysical = True
+        self.do_sequest = True
+        self.do_uncertainty = True
+        self.do_redd = True
+        self.execute()
+
         self.assertDatasetsEqual('tot_C_cur.tif',
                                 'tot_C_base.tif',
                                 'tot_C_redd.tif',
@@ -117,10 +153,6 @@ class TestCarbonBiophysical(unittest.TestCase):
             [['Current', 41401439.7949, 'n/a'],
              ['Baseline', 37875383.0229, -3526095.89057],
              ['REDD policy', 41502289.835, 100847.723038]])
-
-        execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
-        self.assertDatasetEqual('tot_C_cur_foo_bar.tif',
-                                'tot_C_cur_hwp.tif')
 
     def test_carbon_biophysical_uk(self):
         """Test carbon_biophysical function for UK data."""
