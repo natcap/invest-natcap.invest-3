@@ -77,8 +77,14 @@ def execute(args):
     lulc_base_year = lulc_years[0]
     LOGGER.debug("Setting initial LULC ")
     lulc_base_uri = lulc_dict[lulc_base_year]
+
+    LOGGER.info("Calculating biomass carbon for initial LULC.")
     lulc_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
+
+    LOGGER.info("Calculating soil carbon for intial LULC.")
     lulc_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
+
+    LOGGER.info("Looking up accumulation rates for initial LULC")
     lulc_accumulation_uri = os.path.join(workspace_dir, acc_name % lulc_base_year)
 
     def biomass_loss_op(original, final):
@@ -91,8 +97,13 @@ def execute(args):
         v_value = carbon[original][carbon_veg_field]
         return disturbance[v_value][disturbance_depth_name % t_value]
 
-    
-    for year in range(lulc_list[0]["year"], args["analysis_year"]+1):
+
+    nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(lulc_base_uri)
+
+    analysis_years = list(set(lulc_years+snapshots))
+    analysis_years.sort()
+    for year in analysis_years:
         LOGGER.debug("Analyzing year %i." % year)
         if year in lulc_years:
             LOGGER.debug("LULC year detected.")            
@@ -135,16 +146,17 @@ def execute(args):
             LOGGER.debug("Accumulation rate saved to %s.", lulc_accumulation_uri)
             
             
-        elif year in snapshots:
+        else year in snapshots:
             LOGGER.debug("Snapshot year detected.")
             LOGGER.debug("Calculate time from base year.")
             LOGGER.debug("Calculate carbon soil stock.")
-            
-        if private_valuation:
-            LOGGER.debug("Calculating private valuation.")
 
-        if social_valuation:
-            LOGGER.debug("Calculating social valuation.")
+##    for year in range(lulc_list[0]["year"], args["analysis_year"]+1):            
+##        if private_valuation:
+##            LOGGER.debug("Calculating private valuation.")
+##
+##        if social_valuation:
+##            LOGGER.debug("Calculating social valuation.")
         
     return
 
