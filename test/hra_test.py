@@ -76,3 +76,38 @@ class TestHRA(invest_natcap.testing.GISTest):
         res_inter = os.path.join(self.args['workspace_dir'], 'Intermediate')
         res_output = os.path.join(self.args['workspace_dir'], 'Output')
 
+        def do_tests(curr_path, item):
+
+            if os.path.isdir(item):
+                dir_name = item.split("/")[-1]
+                contents = glob.glob(os.path.join(item, '*'))
+                for c in contents: 
+                    do_tests(os.path.join(curr_path, dir_name), c)
+            
+            else:
+                head, tail = os.path.splitext(item)
+
+                if tail == '.tif':
+                    #Want to use dataset compare
+                    LOGGER.debug("curr_path: %s", curr_path)
+                    LOGGER.debug("item: %s", item)
+                    LOGGER.debug("basename: %s", os.path.basename(item))
+                    expect_uri = os.path.join(exp_workspace, curr_path, os.path.basename(item))
+                    
+                    self.assertRastersEqual(self, item, expect_uri)
+
+                elif tail ==  '.shp':
+                    #Want to use dataset compare
+                    expect_uri = os.path.join(exp_workspace, curr_path, os.path.basename(item))
+
+                    self.assertVectorsEqual(self, item, expect_uri)
+
+                elif tail == '.html':
+                    #There is only one file here that we want to compare against.
+                    #Just explicitly call it so I can be done.
+                    exp_html = './invest-data/test/data/hra_regression_data/Output/HTML_Tables/Sub_Region_Averaged_Results_[2013-08-09_14_49].html'
+
+                    self.assertTrue(filecmp.cmp(item, exp_html))
+        
+        for folder in (res_inter, res_output):
+            do_tests('', folder)        
