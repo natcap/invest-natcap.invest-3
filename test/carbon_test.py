@@ -81,6 +81,32 @@ class TestCarbonBiophysical(unittest.TestCase):
                 raise Exception(
                     "The model doesn't currently support REDD analysis with HWP")
 
+        if self.do_valuation:
+            args['V'] = 43.0
+            args['r'] = 7.0
+            args['c'] = 0.0
+            args['carbon_price_units'] = self.carbon_units
+
+            # If we're running the stand-alone valuation model (without biophysical),
+            # then add a bunch of extra data, since it won't be threaded from
+            # the biophysical model to the valuation model.
+            if not self.do_biophysical:
+                args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
+                args['yr_cur'] = 2000
+                args['yr_fut'] = 2030
+
+                if self.do_uncertainty:
+                    args['conf_uri'] = (
+                        './invest-data/test/data/carbon_regression_data/conf_base.tif')
+
+                if self.do_redd:
+                    args['sequest_redd_uri'] = (
+                        './invest-data/test/data/carbon_regression_data/sequest_redd.tif')
+
+                if self.do_uncertainty and self.do_redd:
+                    args['conf_redd_uri'] = (
+                        './invest-data/test/data/carbon_regression_data/conf_redd.tif')
+
         carbon_combined.execute(args)
 
 
@@ -190,47 +216,25 @@ class TestCarbonBiophysical(unittest.TestCase):
         >>> sequest=-57.8494
         >>> f(V,sequest,yr_fut,yr_cur,r,c)
         -1100.9511853253725
-            """
+        """
+        self.do_valuation = True
+        self.execute()
 
-        def execute_model(carbon_units='Carbon',
-                          do_redd=False,
-                          do_uncertainty=False,
-                          suffix=''):
-            args = {}
-            args['do_biophysical'] = False
-            args['do_valuation'] = True
-            args['workspace_dir'] = self.workspace_dir
-            args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
-            args['V'] = 43.0
-            args['r'] = 7.0
-            args['c'] = 0.0
-            args['yr_cur'] = 2000
-            args['yr_fut'] = 2030
-            args['carbon_price_units'] = carbon_units
-            if suffix:
-                args['suffix'] = suffix
-
-            if do_uncertainty:
-                args['conf_uri'] = (
-                    './invest-data/test/data/carbon_regression_data/conf_base.tif')
-
-            if do_redd:
-                args['sequest_redd_uri'] = (
-                    './invest-data/test/data/carbon_regression_data/sequest_redd.tif')
-
-            if do_uncertainty and do_redd:
-                args['conf_redd_uri'] = (
-                    './invest-data/test/data/carbon_regression_data/conf_redd.tif')
-
-            carbon_combined.execute(args)
-
-        execute_model()
         self.assertDatasetEqual('value_seq.tif', 'value_seq_base.tif')
 
-        execute_model(carbon_units='Carbon Dioxide (CO2)', suffix='c02')
+    def test_valuation_units(self):
+        self.do_valuation = True
+        self.carbon_units = 'Carbon Dioxide (CO2)'
+        self.suffix = 'c02'
+        self.execute()
+
         self.assertDatasetEqual('value_seq_c02.tif')
 
-        execute_model(do_uncertainty=True)
+    def test_valuation_uncertainty(self):
+        self.do_valuation = True
+        self.do_uncertainty = True
+        self.execute()
+
         self.assertDatasetsEqual(('value_seq.tif', 'value_seq_base.tif'),
                                  ('val_mask.tif', 'val_mask_base.tif'),
                                  ('seq_mask.tif', 'seq_mask_base.tif'))
@@ -239,7 +243,12 @@ class TestCarbonBiophysical(unittest.TestCase):
             [['Future', -3526095.89057, -67106273.81],
              ['Future (confident cells only)', -3530157.48653, -67183571.67]])
 
-        execute_model(do_uncertainty=True, do_redd=True)
+    def test_valuation_uncertainty_redd(self):
+        self.do_valuation = True
+        self.do_uncertainty = True
+        self.do_redd = True
+        self.execute()
+
         self.assertDatasetsEqual('value_seq_base.tif',
                                  'val_mask_base.tif',
                                  'seq_mask_base.tif',
