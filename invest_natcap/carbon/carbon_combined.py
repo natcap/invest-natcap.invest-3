@@ -109,9 +109,17 @@ def package_valuation_args(args, biophysical_outputs):
     args['yr_cur'] = args['lulc_cur_year']
     args['yr_fut'] = args['lulc_fut_year']
 
-    # TODO: package confidence rasters (conf_fut and conf_redd) and add them
-    if 'sequest_redd' in biophysical_outputs:
-        args['sequest_redd_uri'] = biophysical_outputs['sequest_redd']
+    biophysical_to_valuation = {
+        'sequest_redd': 'sequest_redd_uri',
+        'conf_fut': 'conf_uri',
+        'conf_redd': 'conf_redd_uri'
+        }
+
+    for biophysical_key, valuation_key in biophysical_to_valuation.items():
+        try:
+            args[valuation_key] = biophysical_outputs[biophysical_key]
+        except KeyError:
+            continue
 
     return args
 
