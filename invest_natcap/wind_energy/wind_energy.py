@@ -275,6 +275,10 @@ def execute(args):
             distance_transform_dataset(
                     aoi_raster_uri, min_distance, max_distance, 
                     out_nodata, dist_mask_uri)
+
+        # Determines whether to check projections in future vectorize_datasets
+        # calls
+        projected = True
     else:
         LOGGER.info("AOI argument was not selected")
         
@@ -296,6 +300,11 @@ def execute(args):
         # The general out nodata value for the rasters will be from the
         # bathymetry raster
         out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
+
+        # Determines whether to check projections in future vectorize_datasets
+        # calls. Since no AOI is provided set to False since all our data is in
+        # geographical format
+        projected = False
     
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
@@ -330,7 +339,8 @@ def execute(args):
     LOGGER.info('Creating Depth Mask')
     raster_utils.vectorize_datasets(
             [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
-            out_nodata, cell_size, 'intersection')
+            out_nodata, cell_size, 'intersection',
+            assert_datasets_projected=projected)
 
     # The String name for the shape field. So far this is a default from the
     # text file given by CK. I guess we could search for the 'K' if needed.
@@ -562,12 +572,14 @@ def execute(args):
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
     raster_utils.vectorize_datasets(
             density_mask_list, mask_out_depth_dist, density_masked_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
+            assert_datasets_projected = projected)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     raster_utils.vectorize_datasets(
             harvest_mask_list, mask_out_depth_dist, harvested_masked_uri,
-            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
+            assert_datasets_projected = projected)
 
     # Create the farm polygon shapefile, which is an example of how big the farm
     # will be with a rough representation of its dimensions. 
