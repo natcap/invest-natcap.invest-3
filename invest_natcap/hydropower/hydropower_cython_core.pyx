@@ -4,11 +4,11 @@ cdef inline float float_min(float a, float b): return a if a <= b else b
 
 @cython.cdivision(True)
 def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant,
-              float etk, float eto, float precip, float root, float soil, float pawc):
+              float Kc, float eto, float precip, float root, float soil, float pawc):
     """Function that calculates the fractp (actual evapotranspiration
        fraction of precipitation) raster
 
-        etk - numpy array with the etk (plant evapotranspiration 
+        Kc - numpy array with the Kc (plant evapotranspiration 
               coefficient) raster values
         eto - numpy array with the potential evapotranspiration raster 
               values (mm)
@@ -29,13 +29,13 @@ def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant,
 
     #Check to make sure that variables are not zero to avoid dividing by
     #zero error
-    if precip == 0.0 or etk == 0.0 or eto == 0.0:
+    if precip == 0.0 or Kc == 0.0 or eto == 0.0:
         return out_nodata
 
     #Compute Budyko Dryness index
-    #Converting to a percent because 'etk' is stored in the table 
+    #Converting to a percent because 'Kc' is stored in the table 
     #as int(percent * 1000)
-    cdef float phi = (etk * eto) / (precip * 1000)
+    cdef float phi = (Kc * eto) / (precip * 1000)
 
     #Calculate plant available water content (mm) using the minimum
     #of soil depth and root depth
