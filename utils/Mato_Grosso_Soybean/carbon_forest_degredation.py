@@ -103,7 +103,7 @@ for landcover_type in numpy.unique(landcover_array):
         (landcover_array == landcover_type) * 
         (biomass_array != biomass_nodata))
     
-    landcover_biomass = biomass_array[landcover_mask]
+    landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
     
     landcover_edge_distance = edge_distance[landcover_mask] * cell_size
     
@@ -126,9 +126,21 @@ carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
 PIXELS_TO_CONVERT_PER_STEP = 2608
 
 total_forest_pixels = 0
+lulc_path = 'MG_Soy_Exp_07122013/mg_lulc0'
+lulc_dataset = gdal.Open(lulc_path)
+landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 for forest_lucode in FOREST_LANDCOVER_TYPES:
     total_forest_pixels += numpy.count_nonzero(landcover_array == forest_lucode)
 
+forest_existance = numpy.zeros(landcover_array.shape)
+for landcover_type in FOREST_LANDCOVER_TYPES:
+    forest_existance = forest_existance + (landcover_array == landcover_type)
+
+
+#This calculates an edge distance for the clusters of forest
+edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+    forest_existance)
+	
 print 'total forest pixels %s' % total_forest_pixels
 
 edge_distance[edge_distance == 0] = numpy.inf
@@ -137,6 +149,8 @@ increasing_distances = numpy.argsort(edge_distance.flat)
 output_table = open('forest_degredatation_carbon_stock_change.csv', 'wb')
 output_table.write('Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
 percent = 0
+
+
 for deepest_edge_index in range(0, total_forest_pixels + PIXELS_TO_CONVERT_PER_STEP, PIXELS_TO_CONVERT_PER_STEP):
     print 'percent %s' % percent
     landcover_array.flat[increasing_distances[0:deepest_edge_index]] = CONVERTING_CROP
