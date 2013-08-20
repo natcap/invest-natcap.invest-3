@@ -51,6 +51,7 @@ def get_lookup_from_csv(csv_table_uri, key_field):
                       for index, value in zip(range(len(line)), line)]))
         return lookup_dict
 
+
 #Units of base biomass in the raster pixels are are Mg/Ha
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
@@ -114,27 +115,30 @@ for landcover_type in numpy.unique(landcover_array):
 		continue
 	
 	landcover_regression[landcover_type] = regression_builder(slope, intercept)
+	landcover_mean[landcover_type] = numpy.average(landcover_biomass)
 	
-
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
-print landcover_regression
-for landcover_type, f in landcover_regression.iteritems():
-	print landcover_type, f(1)
 
-	
+#Mark the pixels to convert.  Edge distance in increasing order
+PIXELS_TO_CONVERT_PER_STEP = 2608
+
+total_forest_pixels = 0
+for forest_lucode in FOREST_LANDCOVER_TYPES:
+    total_forest_pixels += numpy.count_nonzero(landcover_array == forest_lucode)
+
+print 'total forest pixels %s' % total_forest_pixels
 os.exit(1)
 
-LAND_USE_DIRECTORY = 'MG_Soy_Exp_07122013'
-
-output_table = open('carbon_stock_change.csv', 'wb')
+output_table = open('forest_degredatation_carbon_stock_change.csv', 'wb')
 output_table.write('Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
 for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	if '.' in lulc_path:
 		continue
 	print '\n*** Calculating carbon stocks in %s' % os.path.basename(lulc_path)
 	lulc_dataset = gdal.Open(lulc_path)
-	landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
+	#Update hte landcover array with the next set of converted forest
+	landcover_array = None
 	
 	landcover_mask = numpy.where(landcover_array == landcover_type)
 	forest_existance = numpy.zeros(landcover_array.shape)
