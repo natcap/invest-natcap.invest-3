@@ -108,15 +108,17 @@ def package_valuation_args(args, biophysical_outputs):
     args['sequest_uri'] = biophysical_outputs['sequest_fut']
     args['yr_cur'] = args['lulc_cur_year']
     args['yr_fut'] = args['lulc_fut_year']
+
+    # TODO: package confidence rasters (conf_fut and conf_redd) and add them
     if 'sequest_redd' in biophysical_outputs:
         args['sequest_redd_uri'] = biophysical_outputs['sequest_redd']
 
     return args
 
 def create_HTML_report(args, biophysical_outputs, valuation_outputs):
-    html_uri = os.path.join(args['workspace_dir'], 'output',
-                            'Carbon_Results_[%s].html' %
-                            datetime.now().strftime('%Y-%m-%d_%H_%M'))
+    html_uri = os.path.join(
+        args['workspace_dir'], 'output',
+        'summary%s.html' % carbon_utils.make_suffix(args))
 
     doc = html.HTMLDocument(html_uri, 'Carbon Results',
                             'InVEST Carbon Model Results')

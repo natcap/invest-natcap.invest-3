@@ -178,5 +178,3 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
     raster_utils.vectorize_datasets(
         [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32,
         nodata_orig, pixel_size, 'intersection', dataset_to_align_index=0)
-
-

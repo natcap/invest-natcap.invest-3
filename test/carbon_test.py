@@ -15,32 +15,39 @@ import html_test_utils
 
 class TestCarbonBiophysical(unittest.TestCase):
 
-    def assertDatasetEqual(self, workspace_dir, output_filename, ref_filename=None):
+    def setUp(self):
+        self.workspace_dir = './invest-data/test/data/test_out/carbon_output'
+        self.output_dir = os.path.join(self.workspace_dir, 'output')
+
+        if os.path.exists(self.output_dir):
+            for out_file in os.listdir(self.output_dir):
+                uri = os.path.join(self.output_dir, out_file)
+                os.remove(uri)
+
+    def assertDatasetEqual(self, output_filename, ref_filename=None):
         """Asserts that the output data set equals the reference data set."""
         if not ref_filename:
             ref_filename = output_filename
-        output_uri = os.path.join(workspace_dir, 'output', output_filename)
+        output_uri = os.path.join(self.workspace_dir, 'output', output_filename)
         ref_uri = os.path.join('./invest-data/test/data/carbon_regression_data', ref_filename)
         invest_test_core.assertTwoDatasetEqualURI(self, output_uri, ref_uri)
 
-    def assertDatasetsEqual(self, workspace_dir, *files):
+    def assertDatasetsEqual(self, *files):
         """Calls assertDatasetEqual() for each file in the list of files."""
         for filename in files:
             if isinstance(filename, str):
-                self.assertDatasetEqual(workspace_dir, filename)
+                self.assertDatasetEqual(filename)
             else:
-                self.assertDatasetEqual(workspace_dir, *filename)
+                self.assertDatasetEqual(*filename)
 
     def test_carbon_biophysical_sequestration(self):
         """Test for carbon_biophysical function with various parameters."""
-
-        workspace_dir = './invest-data/test/data/test_out/carbon_output'
 
         def execute_model(do_sequest=False, do_redd=False, do_uncertainty=False, do_hwp=False,
                           suffix=''):
             """Executes the carbon biophysical model with the appropriate parameters."""
             args = {}
-            args['workspace_dir'] = workspace_dir
+            args['workspace_dir'] = self.workspace_dir
             args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
             args['do_biophysical'] = True
             args['do_valuation'] = False
@@ -79,21 +86,18 @@ class TestCarbonBiophysical(unittest.TestCase):
         execute_model()
 
         execute_model(do_sequest=True, do_hwp=True, suffix='hwp')
-        self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur_hwp.tif',
+        self.assertDatasetsEqual('tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif')
 
         execute_model(do_sequest=True, do_hwp=True, do_uncertainty=True, suffix='hwp')
-        self.assertDatasetsEqual(workspace_dir,
-                                 'tot_C_cur_hwp.tif',
+        self.assertDatasetsEqual('tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif',
                                  'conf_fut_hwp.tif')
 
         execute_model(do_sequest=True, do_uncertainty=True, do_redd=True)
-        self.assertDatasetsEqual(workspace_dir,
-                                'tot_C_cur.tif',
+        self.assertDatasetsEqual('tot_C_cur.tif',
                                 'tot_C_base.tif',
                                 'tot_C_redd.tif',
                                 'sequest_base.tif',
@@ -102,8 +106,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                                 'conf_redd.tif')
 
         execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
-        self.assertDatasetEqual(workspace_dir,
-                                'tot_C_cur_foo_bar.tif',
+        self.assertDatasetEqual('tot_C_cur_foo_bar.tif',
                                 'tot_C_cur_hwp.tif')
 
     def test_carbon_biophysical_uk(self):
@@ -112,7 +115,7 @@ class TestCarbonBiophysical(unittest.TestCase):
         args = {}
         args['do_biophysical'] = True
         args['do_valuation'] = False
-        args['workspace_dir'] = './invest-data/test/data/test_out/carbon_uk_output'
+        args['workspace_dir'] = self.workspace_dir
         args['lulc_cur_uri'] = './invest-data/test/data/carbon/uk_data/gb_lulc_2000'
         args['lulc_fut_uri'] = './invest-data/test/data/carbon/uk_data/gb_lulc_2007'
         args['carbon_pools_uri'] = './invest-data/test/data/carbon/uk_data/Carbon_pools_conifers.dbf'
@@ -123,9 +126,11 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         carbon_combined.execute(args)
 
-    def test_carbon_valuation_regression(self):
-        """Regression test for carbon_valuation function.  A few pixels have
-            been tested by hand against the following python snippet:
+    def test_carbon_valuation(self):
+        """Regression test for carbon valuation.
+
+        A few pixels have been tested by hand against the
+        following python snippet:
 
         >>> def f(V,sequest,yr_fut,yr_cur,r,c):
         ...     sum = 0
@@ -142,8 +147,6 @@ class TestCarbonBiophysical(unittest.TestCase):
         -1100.9511853253725
             """
 
-        workspace_dir = './invest-data/test/data/test_out/carbon_valuation_output'
-
         def execute_model(carbon_units='Carbon',
                           do_redd=False,
                           do_uncertainty=False,
@@ -151,7 +154,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             args = {}
             args['do_biophysical'] = False
             args['do_valuation'] = True
-            args['workspace_dir'] = workspace_dir
+            args['workspace_dir'] = self.workspace_dir
             args['sequest_uri'] = './invest-data/test/data/carbon_regression_data/sequest_base.tif'
             args['V'] = 43.0
             args['r'] = 7.0
@@ -177,26 +180,24 @@ class TestCarbonBiophysical(unittest.TestCase):
             carbon_combined.execute(args)
 
         execute_model()
-        self.assertDatasetEqual(workspace_dir, 'value_seq.tif', 'value_seq_base.tif')
+        self.assertDatasetEqual('value_seq.tif', 'value_seq_base.tif')
 
         execute_model(carbon_units='Carbon Dioxide (CO2)', suffix='c02')
-        self.assertDatasetEqual(workspace_dir, 'value_seq_c02.tif')
+        self.assertDatasetEqual('value_seq_c02.tif')
 
         execute_model(do_uncertainty=True)
-        self.assertDatasetsEqual(workspace_dir,
-                                 ('value_seq.tif', 'value_seq_base.tif'),
+        self.assertDatasetsEqual(('value_seq.tif', 'value_seq_base.tif'),
                                  ('val_mask.tif', 'val_mask_base.tif'),
                                  ('seq_mask.tif', 'seq_mask_base.tif'))
 
-        summary_uri = os.path.join(workspace_dir, 'output', 'summary.html')
+        summary_uri = os.path.join(self.workspace_dir, 'output', 'summary.html')
         html_test_utils.assert_table_contains_rows_uri(
             self, summary_uri, 'change_table',
-            [['Baseline', -3526095.89057, -67106273.81],
-             ['Baseline (confident cells only)', -3530157.48653, -67183571.67]])
+            [['Future', -3526095.89057, -67106273.81],
+             ['Future (confident cells only)', -3530157.48653, -67183571.67]])
 
         execute_model(do_uncertainty=True, do_redd=True)
-        self.assertDatasetsEqual(workspace_dir,
-                                 'value_seq_base.tif',
+        self.assertDatasetsEqual('value_seq_base.tif',
                                  'val_mask_base.tif',
                                  'seq_mask_base.tif',
                                  'value_seq_redd.tif',
@@ -215,5 +216,4 @@ class TestCarbonBiophysical(unittest.TestCase):
             [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
              ['REDD policy vs Baseline (confident cells only)',
               3631005.20957, 69102837.43]])
-
 
