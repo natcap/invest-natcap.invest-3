@@ -117,7 +117,7 @@ for landcover_type in numpy.unique(landcover_array):
 		(landcover_array == landcover_type) * 
 		(biomass_array != biomass_nodata))
 	
-	landcover_biomass = biomass_array[landcover_mask]
+	landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
 	
 	landcover_edge_distance = edge_distance[landcover_mask] * cell_size
 	
