@@ -226,3 +226,52 @@ class TestCarbonBiophysical(unittest.TestCase):
              ['REDD policy vs Baseline (confident cells only)',
               3631005.20957, 69102837.43]])
 
+    def test_carbon_combined(self):
+        """Test combined carbon model, feeding biophysical into valuation."""
+        args = {}
+        args['workspace_dir'] = self.workspace_dir
+        args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
+        args['do_biophysical'] = True
+        args['do_valuation'] = True
+        args['do_uncertainty'] = True
+        args['carbon_pools_uncertain_uri'] = (
+            './invest-data/test/data/carbon/input/carbon_pools_samp_uncertain.csv')
+        args['confidence_threshold'] = 90
+        args['carbon_pools_uri'] = './invest-data/test/data/carbon/input/carbon_pools_samp.csv'
+        args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
+        args['lulc_cur_year'] = 2000
+        args['lulc_fut_year'] = 2030
+        args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'
+        args['V'] = 43.0
+        args['r'] = 7.0
+        args['c'] = 0.0
+        args['yr_cur'] = 2000
+        args['yr_fut'] = 2030
+        args['carbon_price_units'] = 'Carbon'
+        carbon_combined.execute(args)
+
+        self.assertDatasetsEqual('value_seq_base.tif',
+                                 'val_mask_base.tif',
+                                 'seq_mask_base.tif',
+                                 'value_seq_redd.tif',
+                                 'val_mask_redd.tif',
+                                 'seq_mask_redd.tif')
+
+        self.assert_table_contains_rows(
+            'biophysical_table',
+            [['Current', 41401439.7949, 'n/a'],
+             ['Baseline', 37875383.0229, -3526095.89057],
+             ['REDD policy', 41502289.835, 100847.723038]])
+
+        self.assert_table_contains_rows(
+            'change_table',
+            [['Baseline', -3526095.89057, -67106273.81],
+             ['Baseline (confident cells only)', -3530157.48653, -67183571.67],
+             ['REDD policy', 100847.723038, 1919265.76],
+             ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
+
+        self.assert_table_contains_rows(
+            'comparison_table',
+            [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
+             ['REDD policy vs Baseline (confident cells only)',
+              3631005.20957, 69102837.43]])
