@@ -51,23 +51,6 @@ def get_lookup_from_csv(csv_table_uri, key_field):
                       for index, value in zip(range(len(line)), line)]))
         return lookup_dict
 
-
-def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot_cols, regression_fn):
-	pylab.subplot(plot_rows, plot_cols, plot_id + 1)
-	pylab.plot(landcover_edge_distance, landcover_biomass, '.k', markersize=1)
-	
-	#Plot the regression function
-	regression_distance = numpy.arange(
-		0.0, numpy.max(landcover_edge_distance), 0.05)
-	
-	regression_biomass = regression_fn(regression_distance)
-	pylab.plot(regression_distance, regression_biomass, '-r', linewidth=2)
-	pylab.axis('tight')
-	pylab.ylabel('Biomass (units?)')
-	pylab.xlabel('Distance from patch edge (m)')
-	pylab.title('Landcover %s\nR^2 = %.4f' % (landcover_type, r_value))
-
-
 #Units of base biomass in the raster pixels are are Mg/Ha
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
@@ -131,29 +114,16 @@ for landcover_type in numpy.unique(landcover_array):
 		continue
 	
 	landcover_regression[landcover_type] = regression_builder(slope, intercept)
-	landcover_biomass_mean = numpy.average(landcover_biomass)
 	
-	#calcualte R^2
-	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
-	ss_res = numpy.sum((landcover_biomass - landcover_regression[landcover_type](landcover_edge_distance)) ** 2)
-	r_value = 1 - ss_res / ss_tot
-	std_dev = numpy.std(landcover_biomass)
-	n_count = landcover_biomass.size
-	print '%s, %.2f, %.2f, %.2f, %s, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression[landcover_type](cell_size), landcover_regression[landcover_type](10*cell_size))
-	
-	
-	landcover_mean[landcover_type] = landcover_biomass_mean
-	
-	plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 4, landcover_regression[landcover_type])
-	plot_id += 1
-	
-pylab.show()
 
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
 print landcover_regression
 for landcover_type, f in landcover_regression.iteritems():
 	print landcover_type, f(1)
+
+	
+os.exit(1)
 
 LAND_USE_DIRECTORY = 'MG_Soy_Exp_07122013'
 
