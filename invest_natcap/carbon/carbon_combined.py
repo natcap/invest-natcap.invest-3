@@ -145,7 +145,10 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
             doc.add(table)
 
     doc.write_header('Output Files')
-    doc.add(make_outfile_table(biophysical_outputs, valuation_outputs))
+    doc.write_paragraph(
+        'This run of the carbon model produced the following output files.')
+    doc.add(make_outfile_table(
+            args, biophysical_outputs, valuation_outputs, html_uri))
 
     doc.flush()
 
@@ -278,7 +281,7 @@ def make_valuation_intro():
         ]
 
 
-def make_outfile_table(biophysical_outputs, valuation_outputs):
+def make_outfile_table(args, biophysical_outputs, valuation_outputs, html_uri):
     table = html.Table(id='outfile_table')
     table.add_row(['Filename', 'Description'], is_header=True)
 
@@ -286,11 +289,14 @@ def make_outfile_table(biophysical_outputs, valuation_outputs):
 
     if biophysical_outputs:
         descriptions.update(make_biophysical_outfile_descriptions(
-                biophysical_outputs))
+                biophysical_outputs, args))
 
     if valuation_outputs:
         descriptions.update(make_valuation_outfile_descriptions(
                 valuation_outputs))
+
+    html_filename = os.path.basename(html_uri)
+    descriptions[html_filename] = 'This summary file.' # dude, that's so meta
 
     for filename, description in sorted(descriptions.items()):
         table.add_row([filename, description])
@@ -298,7 +304,7 @@ def make_outfile_table(biophysical_outputs, valuation_outputs):
     return table
 
 
-def make_biophysical_outfile_descriptions(outfile_uris):
+def make_biophysical_outfile_descriptions(outfile_uris, args):
     '''Return a dict with descriptions of biophysical outfiles.'''
 
     def name(scenario_type):
@@ -315,9 +321,21 @@ def make_biophysical_outfile_descriptions(outfile_uris):
                 'the %s scenario, in Mg per grid cell.') % (
             name(scenario_type), name('cur'))
 
+    def conf_description(scenario_type):
+        return ('Maps confident areas for carbon sequestration and emissions '
+                'between the current scenario and the %s scenario. '
+                'Grid cells where we are at least %.2f%% confident that '
+                'carbon storage will increase have a value of 1. Grid cells '
+                'where we are at least %.2f%% confident that carbon storage will '
+                'decrease have a value of -1. Grid cells with a value of 0 '
+                'indicate regions where we are not %.2f%% confident that carbon '
+                'storage will either increase or decrease.') % (
+            tuple([name(scenario_type)] + [args['confidence_threshold']] * 3))
+
     file_key_to_func = {
         'tot_C_%s': total_carbon_description,
-        'sequest_%s': sequest_description
+        'sequest_%s': sequest_description,
+        'conf_%s': conf_description
         }
 
     return make_outfile_descriptions(outfile_uris, ['cur', 'fut', 'redd'],
