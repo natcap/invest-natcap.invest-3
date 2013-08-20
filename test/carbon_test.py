@@ -9,6 +9,7 @@ import re
 from nose.plugins.skip import SkipTest
 
 from invest_natcap.carbon import carbon_combined
+from invest_natcap.carbon import carbon_utils
 import invest_test_core
 import html_test_utils
 
@@ -39,6 +40,12 @@ class TestCarbonBiophysical(unittest.TestCase):
                 self.assertDatasetEqual(filename)
             else:
                 self.assertDatasetEqual(*filename)
+
+    def assert_table_contains_rows(self, table_id, rows, suffix=''):
+        uri = os.path.join(self.workspace_dir, 'output',
+                           'summary%s.html' % suffix)
+
+        html_test_utils.assert_table_contains_rows_uri(self, uri, table_id, rows)
 
     def test_carbon_biophysical_sequestration(self):
         """Test for carbon_biophysical function with various parameters."""
@@ -104,6 +111,12 @@ class TestCarbonBiophysical(unittest.TestCase):
                                 'conf_base.tif',
                                 'sequest_redd.tif',
                                 'conf_redd.tif')
+
+        self.assert_table_contains_rows(
+            'biophysical_table',
+            [['Current', 41401439.7949, 'n/a'],
+             ['Baseline', 37875383.0229, -3526095.89057],
+             ['REDD policy', 41502289.835, 100847.723038]])
 
         execute_model(do_sequest=True, do_hwp=True, suffix='_foo_bar')
         self.assertDatasetEqual('tot_C_cur_foo_bar.tif',
@@ -190,9 +203,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  ('val_mask.tif', 'val_mask_base.tif'),
                                  ('seq_mask.tif', 'seq_mask_base.tif'))
 
-        summary_uri = os.path.join(self.workspace_dir, 'output', 'summary.html')
-        html_test_utils.assert_table_contains_rows_uri(
-            self, summary_uri, 'change_table',
+        self.assert_table_contains_rows('change_table',
             [['Future', -3526095.89057, -67106273.81],
              ['Future (confident cells only)', -3530157.48653, -67183571.67]])
 
@@ -204,15 +215,13 @@ class TestCarbonBiophysical(unittest.TestCase):
                                  'val_mask_redd.tif',
                                  'seq_mask_redd.tif')
 
-        html_test_utils.assert_table_contains_rows_uri(
-            self, summary_uri, 'change_table',
+        self.assert_table_contains_rows('change_table',
             [['Baseline', -3526095.89057, -67106273.81],
              ['Baseline (confident cells only)', -3530157.48653, -67183571.67],
              ['REDD policy', 100847.723038, 1919265.76],
              ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
 
-        html_test_utils.assert_table_contains_rows_uri(
-            self, summary_uri, 'comparison_table',
+        self.assert_table_contains_rows('comparison_table',
             [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
              ['REDD policy vs Baseline (confident cells only)',
               3631005.20957, 69102837.43]])

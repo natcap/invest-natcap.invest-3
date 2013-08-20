@@ -153,7 +153,7 @@ def make_report_intro(args):
              'models' if len(models) > 1 else 'model'))
 
 def make_biophysical_table(biophysical_outputs):
-    table = html.Table()
+    table = html.Table(id='biophysical_table')
     table.add_row(['Scenario', 'Total carbon<br>(Mg of carbon)',
                    'Sequestered carbon (compared to current scenario)'
                    '<br>(Mg of carbon)'],
