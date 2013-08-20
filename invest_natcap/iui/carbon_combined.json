@@ -178,7 +178,7 @@
                             "required": true,
                             "disabledBy": "uncertain_carbon_pool_container",
                             "validateAs": {"type": "table",
-                                           "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
+                                           "fieldsExist": ["lucode", "C_above", "C_Below", "C_Soil", "C_Dead"]},
                             "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
                         },
                         {
@@ -233,7 +233,7 @@
                                     "args_id": "carbon_pools_uncertain_uri",
                                     "required": true,
                                     "validateAs": {"type": "table",
-                                                   "fieldsExist": ["LULC",
+                                                   "fieldsExist": ["lucode",
                                                                    "C_above_mean", "C_above_sd",
                                                                    "C_below_mean", "C_below_sd",
                                                                    "C_soil_mean", "C_soil_sd",
