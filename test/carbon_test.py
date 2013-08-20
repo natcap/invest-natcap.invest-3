@@ -109,8 +109,94 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         carbon_combined.execute(args)
 
+    def check(self):
+        """Helper method to check that results are what we expect.
 
-    def assertDatasetEqual(self, output_filename, ref_filename=None):
+        Doesn't work well together with suffixes.
+        """
+        if self.suffix:
+            raise Exception(
+                "This method doesn't work well if suffixes are enabled.")
+
+        if self.do_biophysical:
+            self.check_biophysical()
+
+        if self.do_valuation:
+            self.check_valuation()
+
+    def check_biophysical(self):
+        """Checks that biophysical results are what we expect."""
+        self.assert_dataset_equal('tot_C_cur.tif')
+        self.assert_table_contains_rows(
+            'biophysical_table',
+            [['Current', 41401439.7949, 'n/a']])
+
+        if self.do_uncertainty:
+            self.assert_dataset_equal('conf_base.tif')
+
+        if self.do_redd:
+            self.assert_datasets_equal('tot_C_base.tif',
+                                     'tot_C_redd.tif',
+                                     'sequest_base.tif',
+                                     'sequest_redd.tif')
+
+            self.assert_table_contains_rows(
+                'biophysical_table',
+                [['Baseline', 37875383.0229, -3526095.89057],
+                 ['REDD policy', 41502289.835, 100847.723038]])
+
+            if self.do_uncertainty:
+                self.assert_dataset_equal('conf_redd.tif')
+
+    def check_valuation(self):
+        """Checks that valuation results are what we expect."""
+        if self.do_redd:
+            self.assert_datasets_equal('value_seq_base.tif',
+                                     'value_seq_redd.tif')
+
+            self.assert_table_contains_rows(
+                'change_table',
+                [['Baseline', -3526095.89057, -67106273.81],
+                 ['REDD policy', 100847.723038, 1919265.76]])
+
+            self.assert_table_contains_rows(
+                'comparison_table',
+                [['REDD policy vs Baseline', 3626943.61361, 69025539.56]])
+
+            if self.do_uncertainty:
+                self.assert_datasets_equal('val_mask_base.tif',
+                                         'seq_mask_base.tif',
+                                         'val_mask_redd.tif',
+                                         'seq_mask_redd.tif')
+
+                self.assert_table_contains_rows(
+                    'change_table',
+                    [['Baseline (confident cells only)', -3530157.48653, -67183571.67],
+                     ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
+
+                self.assert_table_contains_rows(
+                    'comparison_table',
+                    [['REDD policy vs Baseline (confident cells only)',
+                      3631005.20957, 69102837.43]])
+
+        else:
+            # No REDD analysis.
+            self.assert_dataset_equal('value_seq.tif', 'value_seq_base.tif')
+
+            if self.do_uncertainty:
+                self.assert_table_contains_rows(
+                    'change_table',
+                    [['Future', -3526095.89057, -67106273.81],
+                     ['Future (confident cells only)', -3530157.48653,
+                      -67183571.67]])
+
+                self.assert_datasets_equal(
+                    ('value_seq.tif', 'value_seq_base.tif'),
+                    ('val_mask.tif', 'val_mask_base.tif'),
+                    ('seq_mask.tif', 'seq_mask_base.tif'))
+
+
+    def assert_dataset_equal(self, output_filename, ref_filename=None):
         """Asserts that the output data set equals the reference data set."""
         if not ref_filename:
             ref_filename = output_filename
@@ -118,67 +204,59 @@ class TestCarbonBiophysical(unittest.TestCase):
         ref_uri = os.path.join('./invest-data/test/data/carbon_regression_data', ref_filename)
         invest_test_core.assertTwoDatasetEqualURI(self, output_uri, ref_uri)
 
-    def assertDatasetsEqual(self, *files):
-        """Calls assertDatasetEqual() for each file in the list of files."""
+    def assert_datasets_equal(self, *files):
+        """Calls assert_dataset_equal() for each file in the list of files."""
         for filename in files:
             if isinstance(filename, str):
-                self.assertDatasetEqual(filename)
+                self.assert_dataset_equal(filename)
             else:
-                self.assertDatasetEqual(*filename)
+                self.assert_dataset_equal(*filename)
 
     def assert_table_contains_rows(self, table_id, rows, suffix=''):
+        """Assert that the table with the given id contains the given rows."""
         uri = os.path.join(self.output_dir, 'summary%s.html' % suffix)
 
         html_test_utils.assert_table_contains_rows_uri(self, uri, table_id, rows)
 
     def test_biophysical(self):
+        """Test the basic biophysical model."""
         self.do_biophysical = True
         self.execute()
+        self.check()
 
     def test_biophysical_sequest_hwp(self):
+        """Test biophysical with sequestration and HWP."""
         self.do_biophysical = True
         self.do_sequest = True
         self.do_hwp = True
         self.suffix = 'hwp'
         self.execute()
-
-        self.assertDatasetsEqual('tot_C_cur_hwp.tif',
+        self.assert_datasets_equal('tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif')
 
     def test_biophysical_sequest_hwp_uncertainty(self):
+        """Test biophysical with sequestration, HWP, and uncertainty."""
         self.do_biophysical = True
         self.do_sequest = True
         self.do_hwp = True
         self.do_uncertainty = True
         self.suffix = 'hwp'
         self.execute()
-
-        self.assertDatasetsEqual('tot_C_cur_hwp.tif',
+        self.assert_datasets_equal('tot_C_cur_hwp.tif',
                                  'tot_C_fut_hwp.tif',
                                  'sequest_fut_hwp.tif',
                                  'conf_fut_hwp.tif')
 
     def test_biophysical_redd(self):
+        """Test biophysical with REDD analysis (and uncertainty)."""
         self.do_biophysical = True
         self.do_sequest = True
         self.do_uncertainty = True
         self.do_redd = True
         self.execute()
+        self.check()
 
-        self.assertDatasetsEqual('tot_C_cur.tif',
-                                'tot_C_base.tif',
-                                'tot_C_redd.tif',
-                                'sequest_base.tif',
-                                'conf_base.tif',
-                                'sequest_redd.tif',
-                                'conf_redd.tif')
-
-        self.assert_table_contains_rows(
-            'biophysical_table',
-            [['Current', 41401439.7949, 'n/a'],
-             ['Baseline', 37875383.0229, -3526095.89057],
-             ['REDD policy', 41502289.835, 100847.723038]])
 
     def test_carbon_biophysical_uk(self):
         """Test carbon_biophysical function for UK data."""
@@ -219,100 +297,41 @@ class TestCarbonBiophysical(unittest.TestCase):
         """
         self.do_valuation = True
         self.execute()
-
-        self.assertDatasetEqual('value_seq.tif', 'value_seq_base.tif')
+        self.check()
 
     def test_valuation_units(self):
+        """Test valuation with different units."""
         self.do_valuation = True
         self.carbon_units = 'Carbon Dioxide (CO2)'
         self.suffix = 'c02'
         self.execute()
-
-        self.assertDatasetEqual('value_seq_c02.tif')
+        self.assert_dataset_equal('value_seq_c02.tif')
 
     def test_valuation_uncertainty(self):
+        """Test valuation with uncertainty."""
         self.do_valuation = True
         self.do_uncertainty = True
         self.execute()
-
-        self.assertDatasetsEqual(('value_seq.tif', 'value_seq_base.tif'),
-                                 ('val_mask.tif', 'val_mask_base.tif'),
-                                 ('seq_mask.tif', 'seq_mask_base.tif'))
-
-        self.assert_table_contains_rows('change_table',
-            [['Future', -3526095.89057, -67106273.81],
-             ['Future (confident cells only)', -3530157.48653, -67183571.67]])
+        self.check()
 
     def test_valuation_uncertainty_redd(self):
+        """Test valuation with REDD and uncertainty."""
         self.do_valuation = True
         self.do_uncertainty = True
         self.do_redd = True
         self.execute()
-
-        self.assertDatasetsEqual('value_seq_base.tif',
-                                 'val_mask_base.tif',
-                                 'seq_mask_base.tif',
-                                 'value_seq_redd.tif',
-                                 'val_mask_redd.tif',
-                                 'seq_mask_redd.tif')
-
-        self.assert_table_contains_rows('change_table',
-            [['Baseline', -3526095.89057, -67106273.81],
-             ['Baseline (confident cells only)', -3530157.48653, -67183571.67],
-             ['REDD policy', 100847.723038, 1919265.76],
-             ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
-
-        self.assert_table_contains_rows('comparison_table',
-            [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
-             ['REDD policy vs Baseline (confident cells only)',
-              3631005.20957, 69102837.43]])
+        self.check()
 
     def test_carbon_combined(self):
-        """Test combined carbon model, feeding biophysical into valuation."""
-        args = {}
-        args['workspace_dir'] = self.workspace_dir
-        args['lulc_cur_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur"
-        args['do_biophysical'] = True
-        args['do_valuation'] = True
-        args['do_uncertainty'] = True
-        args['carbon_pools_uncertain_uri'] = (
-            './invest-data/test/data/carbon/input/carbon_pools_samp_uncertain.csv')
-        args['confidence_threshold'] = 90
-        args['carbon_pools_uri'] = './invest-data/test/data/carbon/input/carbon_pools_samp.csv'
-        args['lulc_fut_uri'] = "./invest-data/test/data/base_data/terrestrial/lulc_samp_fut"
-        args['lulc_cur_year'] = 2000
-        args['lulc_fut_year'] = 2030
-        args['lulc_redd_uri'] = './invest-data/test/data/carbon/input/lulc_samp_redd.tif'
-        args['V'] = 43.0
-        args['r'] = 7.0
-        args['c'] = 0.0
-        args['yr_cur'] = 2000
-        args['yr_fut'] = 2030
-        args['carbon_price_units'] = 'Carbon'
-        carbon_combined.execute(args)
+        """Test combined carbon model.
 
-        self.assertDatasetsEqual('value_seq_base.tif',
-                                 'val_mask_base.tif',
-                                 'seq_mask_base.tif',
-                                 'value_seq_redd.tif',
-                                 'val_mask_redd.tif',
-                                 'seq_mask_redd.tif')
-
-        self.assert_table_contains_rows(
-            'biophysical_table',
-            [['Current', 41401439.7949, 'n/a'],
-             ['Baseline', 37875383.0229, -3526095.89057],
-             ['REDD policy', 41502289.835, 100847.723038]])
-
-        self.assert_table_contains_rows(
-            'change_table',
-            [['Baseline', -3526095.89057, -67106273.81],
-             ['Baseline (confident cells only)', -3530157.48653, -67183571.67],
-             ['REDD policy', 100847.723038, 1919265.76],
-             ['REDD policy (confident cells only)', 100847.723038, 1919265.76]])
-
-        self.assert_table_contains_rows(
-            'comparison_table',
-            [['REDD policy vs Baseline', 3626943.61361, 69025539.56],
-             ['REDD policy vs Baseline (confident cells only)',
-              3631005.20957, 69102837.43]])
+        In this combined model, the output from the biophysical model becomes
+        the input to the valuation model.
+        """
+        self.do_biophysical = True
+        self.do_sequest = True
+        self.do_redd = True
+        self.do_uncertainty = True
+        self.do_valuation = True
+        self.execute()
+        self.check()
