@@ -292,7 +292,7 @@ def make_outfile_table(biophysical_outputs, valuation_outputs):
         descriptions.update(make_valuation_outfile_descriptions(
                 valuation_outputs))
 
-    for filename, description in descriptions.items():
+    for filename, description in sorted(descriptions.items()):
         table.add_row([filename, description])
 
     return table
