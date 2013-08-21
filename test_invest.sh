@@ -31,7 +31,7 @@ echo $processes
 # top-level timing mechanism.  It's a known but with nosetests.  See:
 # http://stackoverflow.com/a/13306487
 #run_tests="nosetests -v --logging-filter=None --process-timeout=$timeout --processes=$processes"
-run_tests="nosetests -v --with-xunit --with-coverage --cover-tests --cover-package=invest_natcap  --logging-filter=None"
+run_tests="nosetests -v --with-xunit --with-coverage --cover-xml --cover-tests --cover-package=invest_natcap  --logging-filter=None"
 test_files=""
 
 if [ $# -eq 0 ]
