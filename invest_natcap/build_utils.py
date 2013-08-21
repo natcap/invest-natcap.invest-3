@@ -49,7 +49,7 @@ def invest_version(uri=None, force_new=False, attribute='version_str',
         # os module is located.  Would use distutils.sysconfig,  but it was
         # causing a really nasty importError I couldn't fix when building the
         # windows exe's.
-        new_uri = os.path.join(os.path.abspath(os.path.dirname(os.__file__))),
+        new_uri = os.path.join(os.path.abspath(os.path.dirname(os.__file__)),
             'site-packages', 'invest_natcap', 'invest_version.pyc')
         if not os.path.exists(new_uri):
             LOGGER.debug('URI %s does not exist.  Defaulting to local paths',
