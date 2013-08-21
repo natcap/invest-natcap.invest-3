@@ -433,6 +433,13 @@ class Executor(threading.Thread):
             LOGGER.info('Disk space remaining for workspace: %s',
                         fileio.get_free_space(workspace))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
+
+            LOGGER.info('Pointing temporary directory at the workspace at %s' % args['workspace_dir'])
+            for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
+                if tmp_variable in os.environ:
+                    LOGGER.info('Upddating os.environ["%s"]=%s to %s' % (tmp_variable, args['workspace_dir'], args['workspace_dir']))
+                    os.environ[tmp_variable] = args['workspace_dir']
+
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
