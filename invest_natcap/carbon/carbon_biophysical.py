@@ -285,7 +285,7 @@ def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
                      for pool_type_sd in pool_estimate_sds]))
 
 def compute_uncertainty_data(lulc_uri, carbon_pools, scenario_type):
-    """Computes the mean and std dev of carbon storage for the landscape.
+    """Computes the mean and variance of carbon storage for the landscape.
 
     The computation works as follows:
 
@@ -311,16 +311,15 @@ def compute_uncertainty_data(lulc_uri, carbon_pools, scenario_type):
     # Count how many times each lulc type appears in the raster.
     lulc_counts = raster_utils.unique_raster_values_count(lulc_uri)
 
-    mean = sum(carbon_pools[lulc]['total_%s' % scenario_type] * count
+    results = {}
+    results['mean'] = sum(carbon_pools[lulc]['total_%s' % scenario_type] * count
                           for lulc, count in lulc_counts.items())
-    variance =  sum(
+    results['variance'] =  sum(
         (carbon_pools[lulc]['variance_%s' % scenario_type] * count) ** 2
         for lulc, count in lulc_counts.items())
 
     LOGGER.info("Done with uncertainty analysis for scenario %s.", scenario_type)
-
-    return {'mean': mean,
-            'std_dev': math.sqrt(variance)}
+    return results
 
 
 def calculate_hwp_storage_cur(
