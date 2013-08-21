@@ -285,7 +285,25 @@ def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
                      for pool_type_sd in pool_estimate_sds]))
 
 def compute_uncertainty_data(lulc_uri, carbon_pools, scenario_type):
-    """Computes the mean and std dev of carbon storage for the landscape."""
+    """Computes the mean and std dev of carbon storage for the landscape.
+
+    The computation works as follows:
+
+    Let C_i be the amount of carbon of stored in grid cells with lulc type i.
+    C_i is normally distributed.
+    -The mean of C_i is the product of carbon per grid cell times number of
+    cells.
+    -The variance of C_i is the (number of grid cells times standard deviation
+    per cell) quantity squared. Note that this involves the assumption that
+    the amount of carbon in each grid cell of a particular lulc type is
+    identical (and that this amount is normally distributed).
+
+    We compute C_total (total carbon) as follows:
+    C_total is equal to the sum of all C_i.
+    -The mean of C_total is equal to the sum of the means of all C_i.
+    -The variance of C_total is equal to the sum of the variances of all
+    C_i (assuming that all C_i are independently distributed).
+    """
 
     LOGGER.info("Computing uncertainty data for scenario %s.", scenario_type)
     nodata = raster_utils.get_nodata_from_uri(lulc_uri)
@@ -293,21 +311,6 @@ def compute_uncertainty_data(lulc_uri, carbon_pools, scenario_type):
     # Count how many times each lulc type appears in the raster.
     lulc_counts = raster_utils.unique_raster_values_count(lulc_uri)
 
-
-    # Let C_i be the amount of carbon of stored in grid cells with lulc type i.
-    # C_i is normally distributed.
-    # The mean of C_i is the product of carbon per grid cell times number of
-    # cells.
-    # The variance of C_i is the (number of grid cells times standard deviation
-    # per cell) quantity squared. Note that this involves the assumption that
-    # the amount of carbon in each grid cell of a particular lulc type is
-    # identical (and that this amount is normally distributed).
-    #
-    # We compute C_total (total carbon as follows):
-    # C_total is equal to the sum of all C_i.
-    # The mean of C_total is equal to the sum of the means of all C_i.
-    # The variance of C_total is equal to the sum of the variances of all
-    # C_i (assuming that all C_i are independently distributed).
     mean = sum(carbon_pools[lulc]['total_%s' % scenario_type] * count
                           for lulc, count in lulc_counts.items())
     variance =  sum(
