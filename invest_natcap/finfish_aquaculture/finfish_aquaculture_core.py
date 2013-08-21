@@ -406,6 +406,8 @@ def do_monte_carlo_simulation(args):
 
     # Set up a dict to contain the results of the simulation.
     farms = sorted(int(f) for f in args['farm_op_dict'])
+
+    # Add a placeholder for aggregate results.
     farms.insert(0, 'total')
 
     fields = ['cycles', 'weight']
