@@ -1,6 +1,7 @@
 """Integrated carbon model with biophysical and valuation components."""
 
 import collections
+import math
 import logging
 import os
 from datetime import datetime
@@ -135,6 +136,8 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
 
     if args['do_biophysical']:
         doc.write_header('Biophysical Results')
+        for paragraph in make_biophysical_intro(args):
+            doc.write_paragraph(paragraph)
         doc.add(make_biophysical_table(biophysical_outputs))
 
     if args['do_valuation']:
@@ -161,35 +164,66 @@ def make_report_intro(args):
     return ('This document summarizes the results from running the InVEST '
             'carbon model. This run of the model involved the %s %s.' %
             (' and '.join(models),
-             'models' if len(models) > 1 else 'model'))
+             'model' if len(model) == 1 else 'models'))
+
+def make_biophysical_intro(args):
+    paragraphs = []
+    paragraphs.append(
+    'This table summarizes results from the carbon biophysical model.')
+
+    if args['do_uncertainty']:
+        paragraphs.append(
+            'Note that standard deviation data for total carbon '
+            'per scenario should not be used to compute standard '
+            'deviations for sequestration data. Since many lulc types '
+            'are present in multiple scenarios, the amounts of carbon '
+            'in different scenarios are correlated, so standard '
+            'deviations for sequestration are much smaller than for '
+            'total carbon.')
+
+    return paragraphs
 
 def make_biophysical_table(biophysical_outputs):
+    do_uncertainty = bool(biophysical_outputs['uncertainty'])
+
     table = html.Table(id='biophysical_table')
-    table.add_row(['Scenario', 'Total carbon<br>(Mg of carbon)',
-                   'Sequestered carbon (compared to current scenario)'
-                   '<br>(Mg of carbon)'],
-                  is_header=True)
+    headers = ['Scenario', 'Total carbon<br>(Mg of carbon)',
+               'Sequestered carbon<br>(compared to current scenario)'
+               '<br>(Mg of carbon)']
+
+    if do_uncertainty:
+        headers.insert(2, 'Standard deviation for total carbon<br>(Mg of carbon)')
+
+    table.add_row(headers, is_header=True)
 
     for scenario in ['cur', 'fut', 'redd']:
         total_carbon_key = 'tot_C_%s' % scenario
         if total_carbon_key not in biophysical_outputs:
             continue
-        total_carbon = carbon_utils.sum_pixel_values_from_uri(
-            biophysical_outputs[total_carbon_key])
 
+        row = []
+        row.append(
+            make_scenario_name(scenario, 'tot_C_redd' in biophysical_outputs))
+
+        # Append total carbon.
+        row.append(carbon_utils.sum_pixel_values_from_uri(
+                biophysical_outputs[total_carbon_key]))
+
+        if do_uncertainty:
+            # Append std dev for total carbon.
+            row.append(math.sqrt(
+                    biophysical_outputs['uncertainty'][scenario]['variance']))
+
+
+        # Append sequestration.
         sequest_key = 'sequest_%s' % scenario
         if sequest_key in biophysical_outputs:
-            sequestered_carbon = carbon_utils.sum_pixel_values_from_uri(
-                biophysical_outputs[sequest_key])
+            row.append(carbon_utils.sum_pixel_values_from_uri(
+                    biophysical_outputs[sequest_key]))
         else:
-            sequestered_carbon = 'n/a'
+            row.append('n/a')
 
-        table.add_row([
-                make_scenario_name(scenario,
-                                   'tot_C_redd' in biophysical_outputs),
-                total_carbon,
-                sequestered_carbon
-                ])
+        table.add_row(row)
 
     return table
 
