@@ -15,7 +15,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('carbon_valuation')
 
 def execute(args):
-    execute_30(**args)
+    return execute_30(**args)
 
 def execute_30(**args):
     """This function calculates carbon sequestration valuation.
@@ -43,7 +43,7 @@ def execute_30(**args):
             started
         args['yr_fut'] - the year at which the sequestration measurement ended
 
-        returns nothing."""
+        returns a dict with output file URIs."""
 
     output_directory = carbon_utils.setup_dirs(args['workspace_dir'], 'output')
 
@@ -64,18 +64,19 @@ def execute_30(**args):
 
     outfile_uris = _make_outfile_uris(output_directory, args)
 
-    sequest_uris = {}
-    sequest_uris['base'] = args['sequest_uri']
-    if args.get('sequest_redd_uri'):
-        sequest_uris['redd'] = args['sequest_redd_uri']
-
     conf_uris = {}
     if args.get('conf_uri'):
         conf_uris['base'] = args['conf_uri']
     if args.get('conf_redd_uri'):
         conf_uris['redd'] = args['conf_redd_uri']
 
-    for scenario_type, sequest_uri in sequest_uris.items():
+    for scenario_type in ['base', 'redd']:
+        try:
+            sequest_uri = outfile_uris['sequest_%s' % scenario_type]
+        except KeyError:
+            # REDD analysis might not be enabled, so just keep going.
+            continue
+
         sequest_nodata = raster_utils.get_nodata_from_uri(sequest_uri)
 
         def value_op(sequest):
@@ -108,14 +109,10 @@ def execute_30(**args):
                 conf_uris[scenario_type],
                 outfile_uris['%s_val_mask' % scenario_type])
 
-    _create_html_summary(outfile_uris, sequest_uris)
+    return outfile_uris
 
 def _make_outfile_uris(output_directory, args):
-    '''Set up a dict with uris for outfiles.
-
-    Outfiles include rasters for value sequestration, confidence-masked carbon sequestration,
-    confidence-masked value sequestration, and an HTML summary file.
-    '''
+    '''Return a dict with uris for outfiles.'''
     file_suffix = carbon_utils.make_suffix(args)
 
     def outfile_uri(prefix, scenario_type='', filetype='tif'):
@@ -149,58 +146,14 @@ def _make_outfile_uris(output_directory, args):
             outfile_uris['redd_seq_mask'] = outfile_uri('seq_mask', 'redd')
             outfile_uris['redd_val_mask'] = outfile_uri('val_mask', 'redd')
 
-    # HTML summary file.
-    outfile_uris['html'] = outfile_uri('summary', filetype='html')
+    # These sequestration rasters are actually input files (not output files),
+    # but it's convenient to have them in this dictionary.
+    outfile_uris['sequest_base'] = args['sequest_uri']
+    if args.get('sequest_redd_uri'):
+        outfile_uris['sequest_redd'] = args['sequest_redd_uri']
 
     return outfile_uris
 
-def _make_outfile_descriptions(outfile_uris):
-    '''Returns a dict with descriptions of each outfile, keyed by filename.'''
-
-    def value_file_description(scenario_name):
-        return ('Maps the economic value of carbon sequestered between the '
-                'current and %s scenarios, with values in dollars per grid '
-                'cell.') % scenario_name
-
-    def value_mask_file_description(scenario_name):
-        return ('Maps the economic value of carbon sequestered between the '
-                'current and %s scenarios, but only for cells where we are '
-                'confident that carbon storage will either increase or '
-                'decrease.') % scenario_name
-
-    def carbon_mask_file_description(scenario_name):
-        return ('Maps the increase in carbon stored between the current and '
-                '%s scenarios, in Mg per grid cell, but only for cells where '
-                ' we are confident that carbon storage will either increase or '
-                'decrease.') % scenario_name
-
-    # Adjust the name of the baseline future scenario based on whether
-    # REDD analysis is enabled or not.
-    if 'redd_val' in outfile_uris:
-        base_name = 'baseline'
-    else:
-        base_name = 'future'
-
-    redd_name = 'REDD policy'
-
-    description_dict = {
-        'base_val': value_file_description(base_name),
-        'base_seq_mask': carbon_mask_file_description(base_name),
-        'base_val_mask': value_mask_file_description(base_name),
-        'redd_val': value_file_description(redd_name),
-        'redd_seq_mask': carbon_mask_file_description(redd_name),
-        'redd_val_mask': value_mask_file_description(redd_name)
-        }
-
-    descriptions = collections.OrderedDict()
-    for key, uri in outfile_uris.items():
-        if key == 'html':
-            # Don't need a description for this summary file.
-            continue
-        filename = os.path.basename(uri)
-        descriptions[filename] = description_dict[key]
-
-    return descriptions
 
 def _create_masked_raster(orig_uri, mask_uri, result_uri):
     '''Creates a raster at result_uri with some areas masked out.
@@ -225,97 +178,3 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
     raster_utils.vectorize_datasets(
         [orig_uri, mask_uri], mask_op, result_uri, gdal.GDT_Float32,
         nodata_orig, pixel_size, 'intersection', dataset_to_align_index=0)
-
-
-def _create_html_summary(outfile_uris, sequest_uris):
-    doc = html.HTMLDocument(
-        outfile_uris['html'],
-        'Carbon Model Results',
-        'InVEST Carbon Storage and Sequestration Model Results')
-
-    def format_currency(val):
-        return '%.2f' % val
-
-    doc.write_header('Results Summary')
-    doc.write_paragraph(
-        '<strong>Positive values</strong> in this table indicate that '
-        'carbon storage increased. In this case, the positive Net Present '
-        'Value represents the value of the sequestered carbon.')
-    doc.write_paragraph(
-        '<strong>Negative values</strong> indicate that carbon storage '
-        'decreased. In this case, the negative Net Present Value represents '
-        'the cost of carbon emission.')
-
-    # Write the table that summarizes change in carbon stocks and
-    # net present value.
-    change_table = doc.add(html.Table(id='change_table'))
-    change_table.add_row(["Scenario",
-                          "Change in Carbon Stocks<br>(Mg of carbon)",
-                          "Net Present Value<br>(USD)"],
-                         is_header=True)
-
-    scenario_names = {'base': 'Baseline', 'redd': 'REDD policy'}
-    scenario_results = {}
-    for scenario_type, scenario_name in scenario_names.items():
-        if scenario_type not in sequest_uris:
-            # REDD scenario might not exist, so skip it.
-            continue
-
-        total_seq = carbon_utils.sum_pixel_values_from_uri(
-            sequest_uris[scenario_type])
-        total_val = carbon_utils.sum_pixel_values_from_uri(
-            outfile_uris['%s_val' % scenario_type])
-        scenario_results[scenario_type] = (total_seq, total_val)
-        change_table.add_row(
-            [scenario_name, total_seq, format_currency(total_val)])
-
-        if ('%s_seq_mask' % scenario_type) in outfile_uris:
-            # Compute output for confidence-masked data.
-            masked_seq = carbon_utils.sum_pixel_values_from_uri(
-                outfile_uris['%s_seq_mask' % scenario_type])
-            masked_val = carbon_utils.sum_pixel_values_from_uri(
-                outfile_uris['%s_val_mask' % scenario_type])
-            scenario_results['%s_mask' % scenario_type] = (masked_seq,
-                                                           masked_val)
-            change_table.add_row(['%s (confident cells only)' % scenario_name,
-                                  masked_seq,
-                                  format_currency(masked_val)])
-
-    # If REDD scenario analysis is enabled, write the table
-    # comparing the baseline and REDD scenarios.
-    if 'base' in scenario_results and 'redd' in scenario_results:
-        comparison_table = doc.add(html.Table(id='comparison_table'))
-        comparison_table.add_row(["Scenario Comparison",
-                          "Difference in Carbon Stocks<br>(Mg of carbon)",
-                          "Difference in Net Present Value<br>(USD)"],
-                         is_header=True)
-        base_results = scenario_results['base']
-        redd_results = scenario_results['redd']
-        # Add a row with the difference in carbon and in value.
-        comparison_table.add_row(
-            ['%s vs %s' % (scenario_names['redd'], scenario_names['base']),
-             redd_results[0] - base_results[0],
-             format_currency(redd_results[1] - base_results[1])
-             ])
-        if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
-            base_mask_results = scenario_results['base_mask']
-            redd_mask_results = scenario_results['redd_mask']
-            # Add a row with the difference in carbon and in value for the
-            # uncertainty-masked scenario.
-            comparison_table.add_row(
-                ['%s vs %s (confident cells only)'
-                 % (scenario_names['redd'], scenario_names['base']),
-                 redd_mask_results[0] - base_mask_results[0],
-                 format_currency(redd_mask_results[1] - base_mask_results[1])
-                 ])
-
-    # Write a list of the output files produced by the model.
-    doc.write_header('Output Files')
-    outfile_descriptions = _make_outfile_descriptions(outfile_uris)
-
-    outfile_table = doc.add(html.Table(id='outfile_table'))
-    outfile_table.add_row(["Filename", "Description"], is_header=True)
-    for filename, description in outfile_descriptions.items():
-        outfile_table.add_row([('%s' % filename), description])
-
-    doc.flush()

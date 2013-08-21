@@ -4,7 +4,6 @@ from osgeo import gdal, ogr
 
 from invest_natcap import raster_utils
 
-from scipy import stats
 from scipy.linalg import eig
 
 from decimal import Decimal
@@ -19,28 +18,6 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('scenario_generator')
 
-def unique_raster_values_count(dataset):
-    """Returns a list of the unique integer values on the given dataset
-
-        dataset - a gdal dataset of some integer type
-
-        returns a list of dataset's unique non-nodata values"""
-
-    band = dataset.GetRasterBand(1)
-    n_rows = band.YSize
-
-    itemfreq = {}
-
-    for row_index in xrange(n_rows):
-        array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
-        #numpy.bincount(array) would be better if all non-negative ints
-        for v,n in stats.itemfreq(array):
-            if v in itemfreq:
-                itemfreq[int(v)]+=int(n)
-            else:
-                itemfreq[int(v)]=int(n)
-        
-    return itemfreq
 
 def calculate_weights(arr, rounding=4):
    places = Decimal(10) ** -(rounding)
@@ -126,8 +103,7 @@ def execute(args):
     src_ds = gdal.Open(landcover_uri)
     driver = gdal.GetDriverByName("GTiff")
     LOGGER.debug("Copying landcover to %s.", landcover_transition_uri)
-    dst_ds = driver.CreateCopy(landcover_transition_uri, src_ds, 0 )
-    dst_ds = None
+    driver.CreateCopy(landcover_transition_uri, src_ds, 0 )
     src_ds = None
 
     #apply override
@@ -164,17 +140,12 @@ def execute(args):
     htm = open(landcover_htm_uri,'w')
     htm.write("<html>")
     
-    src_ds = gdal.Open(landcover_uri)
-    LOGGER.debug("Tabulating %s.", landcover_transition_uri)
-    landcover_counts = unique_raster_values_count(src_ds)
-    dst_ds = None
-    src_ds = None
+    LOGGER.debug("Tabulating %s.", landcover_uri)
+    landcover_counts = raster_utils.unique_raster_values_count(landcover_uri)
 
-    src_ds = gdal.Open(landcover_transition_uri)
     LOGGER.debug("Tabulating %s.", landcover_transition_uri)
-    landcover_transition_counts = unique_raster_values_count(src_ds)
-    dst_ds = None
-    src_ds = None
+    landcover_transition_counts = raster_utils.unique_raster_values_count(
+        landcover_transition_uri)
 
     for k in landcover_transition_counts:
         if k not in landcover_counts:

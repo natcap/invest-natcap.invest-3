@@ -25,7 +25,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['workspace_dir'] = './invest-data/test/data/test_out/HRA/New_Test' 
         args['grid_size'] = 500
         args['max_rating'] = 3
-        args['csv_uri'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/habitat_stressor_ratings'
+        args['csv_uri'] = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings'
 
         self.args = args
 
@@ -57,7 +57,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         #Standard params
         self.args['risk_eq'] = 'Euclidean'
         self.args['decay_eq'] = 'None'
-        self.args['aoi_tables'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/subregions.shp'
+        self.args['aoi_tables'] = './invest-data/test/data/hra_regression_data/Input/subregions.shp'
 
         hra.execute(self.args)
 
@@ -69,7 +69,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         self.args['workspace_dir'] = './invest-data/test/data/test_out/HRA/Reg_Folder'
         self.args['risk_eq'] = 'Euclidean'
         self.args['decay_eq'] = 'Linear'
-        self.args['aoi_tables'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/subregions.shp'
+        self.args['aoi_tables'] = './invest-data/test/data/hra_regression_data/Input/subregions.shp'
 
         hra.execute(self.args)
         

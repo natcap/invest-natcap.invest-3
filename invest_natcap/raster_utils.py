@@ -2907,3 +2907,28 @@ def get_dataset_projection_wkt_uri(ds_uri):
     raster_ds = gdal.Open(ds_uri)
     proj_wkt = raster_ds.GetProjection()
     return proj_wkt
+
+
+def unique_raster_values_count(dataset_uri):
+    """Return a dict from unique int values in the dataset to their frequency.
+
+    dataset_uri - uri to a gdal dataset of some integer type
+    """
+
+    dataset = gdal.Open(dataset_uri)
+
+    band = dataset.GetRasterBand(1)
+    n_rows = band.YSize
+
+    itemfreq = {}
+
+    for row_index in range(n_rows):
+        array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
+        # We could use numpy.bincount(array) if we had all non-negative ints.
+        for value, count in stats.itemfreq(array):
+            if value in itemfreq:
+                itemfreq[int(value)] += int(count)
+            else:
+                itemfreq[int(value)] = int(count)
+
+    return itemfreq
