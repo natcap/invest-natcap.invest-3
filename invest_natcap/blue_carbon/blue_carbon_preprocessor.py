@@ -82,19 +82,14 @@ def execute(args):
     original_values.sort()
     final_values.sort()
     transition_matrix = open(transition_matrix_uri, 'w')
-    transition_matrix.write("ID,,")
+    transition_matrix.write("ID,Name,")
     transition_matrix.write(",".join([str(value) for value in final_values]))
 
-    transition_matrix.write("\n,Name")
     labels_dict = {}
     #This will cause problems if the carbon table is missing more than one label.
     if args["labels"] != "":
         LOGGER.info("Reading category names from table.")
         labels_dict = raster_utils.get_lookup_from_csv(args["labels"], args["lulc_id"])
-        for lulc_id in final_values:
-            transition_matrix.write(",%s" % labels_dict[lulc_id][args["lulc_name"]])
-    else:
-        transition_matrix.write(",".join([""] * (len(final_values)+1)))
     
     for original in original_values:
         transition_matrix.write("\n%i" % original)
@@ -106,20 +101,20 @@ def execute(args):
         for final in final_values:
             #if no change then 0
             if original == final:
-                transition_matrix.write(",%i" % 0)
+                transition_matrix.write(",%s" % "None")
             #if transition apply criteria
             elif (original, final) in transitions:
                 #if labels provided use vegetation criteria
                 if args["labels"] != "":
                     if labels_dict[original][args["lulc_type"]] == 0:
-                        transition_matrix.write(",%i" % 0)
+                        transition_matrix.write(",%s" % "None")
                     elif labels_dict[final][args["lulc_type"]] == 0:
                         transition_matrix.write(",")
                     else:
-                        transition_matrix.write(",%i" % 0)
+                        transition_matrix.write(",%s" % "None")
                 else:
                     transition_matrix.write(",")
             #if non-existant transition then 0
             else:
-                transition_matrix.write(",%i" % 0)
+                transition_matrix.write(",%s" % "None")
     transition_matrix.close()
