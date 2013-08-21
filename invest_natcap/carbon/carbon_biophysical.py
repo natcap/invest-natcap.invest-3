@@ -85,13 +85,18 @@ def execute_30(**args):
         pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'lucode')
 
     #2) map lulc_cur and _fut (if availble) to total carbon
-    outputs = {}
+    outfiles = {}
+    uncertainty_data = {}
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
 
             populate_carbon_pools(
                 pools, do_uncertainty, args[lulc_uri], scenario_type)
+
+            if do_uncertainty:
+                uncertainty_data[scenario_type] = compute_uncertainty_data(
+                    args[lulc_uri], pools, scenario_type)
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0
@@ -100,7 +105,7 @@ def execute_30(**args):
                     return nodata_out
                 return pools[lulc]['total_%s' % scenario_type]
             dataset_out_uri = outfile_uri('tot_C', scenario_type)
-            outputs['tot_C_%s' % scenario_type] = dataset_out_uri
+            outfiles['tot_C_%s' % scenario_type] = dataset_out_uri
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args[lulc_uri])
             # Create a raster that models total carbon storage per pixel.
@@ -116,7 +121,7 @@ def execute_30(**args):
                     return pools[lulc]['variance_%s' % scenario_type]
                 variance_out_uri = outfile_uri(
                     'variance_C', scenario_type, dirtype='intermediate')
-                outputs['variance_C_%s' % scenario_type] = variance_out_uri
+                outfiles['variance_C_%s' % scenario_type] = variance_out_uri
 
                 # Create a raster that models variance in carbon storage per pixel.
                 raster_utils.vectorize_datasets(
@@ -137,8 +142,8 @@ def execute_30(**args):
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
                     #TODO add to tot_C_cur
                     temp_c_cur_uri = raster_utils.temporary_filename()
-                    LOGGER.debug(outputs)
-                    shutil.copyfile(outputs['tot_C_cur'], temp_c_cur_uri)
+                    LOGGER.debug(outfiles)
+                    shutil.copyfile(outfiles['tot_C_cur'], temp_c_cur_uri)
 
                     hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_cur, hwp_cur):
@@ -147,7 +152,7 @@ def execute_30(**args):
                         return tmp_c_cur + hwp_cur
 
                     raster_utils.vectorize_datasets(
-                        [temp_c_cur_uri, c_hwp_uri], add_op, outputs['tot_C_cur'], gdal.GDT_Float32, nodata_out,
+                        [temp_c_cur_uri, c_hwp_uri], add_op, outfiles['tot_C_cur'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection", dataset_to_align_index=0)
 
                 elif scenario_type == 'fut':
@@ -164,8 +169,8 @@ def execute_30(**args):
 
                     #TODO add to tot_C_cur
                     temp_c_fut_uri = raster_utils.temporary_filename()
-                    LOGGER.debug(outputs)
-                    shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
+                    LOGGER.debug(outfiles)
+                    shutil.copyfile(outfiles['tot_C_fut'], temp_c_fut_uri)
 
                     hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
                     def add_op(tmp_c_fut, hwp_fut):
@@ -174,7 +179,7 @@ def execute_30(**args):
                         return tmp_c_fut + hwp_fut
 
                     raster_utils.vectorize_datasets(
-                        [temp_c_fut_uri, c_hwp_uri], add_op, outputs['tot_C_fut'], gdal.GDT_Float32, nodata_out,
+                        [temp_c_fut_uri, c_hwp_uri], add_op, outfiles['tot_C_fut'], gdal.GDT_Float32, nodata_out,
                         pixel_size_out, "intersection", dataset_to_align_index=0)
 
 
@@ -188,10 +193,10 @@ def execute_30(**args):
                 return c_fut - c_cur
 
             pixel_size_out = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri'])
-            outputs['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
+            outfiles['sequest_%s' % fut_type] = outfile_uri('sequest', fut_type)
             raster_utils.vectorize_datasets(
-                [outputs['tot_C_cur'], outputs['tot_C_%s' % fut_type]], sub_op,
-                outputs['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
+                [outfiles['tot_C_cur'], outfiles['tot_C_%s' % fut_type]], sub_op,
+                outfiles['sequest_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                 pixel_size_out, "intersection", dataset_to_align_index=0)
 
             if do_uncertainty:
@@ -241,14 +246,14 @@ def execute_30(**args):
                     # We're not confident about whether storage will increase or decrease.
                     return 0
 
-                outputs['conf_%s' % fut_type] = outfile_uri('conf', fut_type)
+                outfiles['conf_%s' % fut_type] = outfile_uri('conf', fut_type)
                 raster_utils.vectorize_datasets(
-                    [outputs[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type,
+                    [outfiles[name] for name in ['tot_C_cur', 'tot_C_%s' % fut_type,
                                                        'variance_C_cur', 'variance_C_%s' % fut_type]],
-                    confidence_op, outputs['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
+                    confidence_op, outfiles['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                     pixel_size_out, "intersection", dataset_to_align_index=0)
 
-    return outputs
+    return outfiles, uncertainty_data
 
 
 def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
@@ -278,6 +283,41 @@ def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
                 (cell_area_ha ** 2) * sum(
                     [pools[lulc_id][pool_type_sd] ** 2
                      for pool_type_sd in pool_estimate_sds]))
+
+def compute_uncertainty_data(lulc_uri, carbon_pools, scenario_type):
+    """Computes the mean and std dev of carbon storage for the landscape."""
+
+    LOGGER.info("Computing uncertainty data for scenario %s.", scenario_type)
+    nodata = raster_utils.get_nodata_from_uri(lulc_uri)
+
+    # Count how many times each lulc type appears in the raster.
+    lulc_counts = raster_utils.unique_raster_values_count(lulc_uri)
+
+
+    # Let C_i be the amount of carbon of stored in grid cells with lulc type i.
+    # C_i is normally distributed.
+    # The mean of C_i is the product of carbon per grid cell times number of
+    # cells.
+    # The variance of C_i is the (number of grid cells times standard deviation
+    # per cell) quantity squared. Note that this involves the assumption that
+    # the amount of carbon in each grid cell of a particular lulc type is
+    # identical (and that this amount is normally distributed).
+    #
+    # We compute C_total (total carbon as follows):
+    # C_total is equal to the sum of all C_i.
+    # The mean of C_total is equal to the sum of the means of all C_i.
+    # The variance of C_total is equal to the sum of the variances of all
+    # C_i (assuming that all C_i are independently distributed).
+    mean = sum(carbon_pools[lulc]['total_%s' % scenario_type] * count
+                          for lulc, count in lulc_counts.items())
+    variance =  sum(
+        (carbon_pools[lulc]['variance_%s' % scenario_type] * count) ** 2
+        for lulc, count in lulc_counts.items())
+
+    LOGGER.info("Done with uncertainty analysis for scenario %s.", scenario_type)
+
+    return {'mean': mean,
+            'std_dev': math.sqrt(variance)}
 
 
 def calculate_hwp_storage_cur(

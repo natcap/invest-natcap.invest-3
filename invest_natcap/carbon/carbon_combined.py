@@ -80,24 +80,24 @@ def execute_30(**args):
 
     if args['do_biophysical']:
         LOGGER.info('Executing biophysical model.')
-        biophysical_outputs = carbon_biophysical.execute(args)
+        biophysical_outfiles, uncertainty_data = carbon_biophysical.execute(args)
     else:
-        biophysical_outputs = None
+        biophysical_outfiles = None
 
     if args['do_valuation']:
         LOGGER.info('Executing valuation model.')
-        valuation_args = package_valuation_args(args, biophysical_outputs)
+        valuation_args = package_valuation_args(args, biophysical_outfiles)
         valuation_outputs = carbon_valuation.execute(valuation_args)
     else:
         valuation_outputs = None
 
-    create_HTML_report(args, biophysical_outputs, valuation_outputs)
+    create_HTML_report(args, biophysical_outfiles, valuation_outputs)
 
-def package_valuation_args(args, biophysical_outputs):
-    if not biophysical_outputs:
+def package_valuation_args(args, biophysical_outfiles):
+    if not biophysical_outfiles:
         return args
 
-    if 'sequest_fut' not in biophysical_outputs:
+    if 'sequest_fut' not in biophysical_outfiles:
         raise Exception(
             'Both biophysical and valuation models were requested, '
             'but sequestration was not calculated. In order to calculate '
@@ -105,7 +105,7 @@ def package_valuation_args(args, biophysical_outputs):
             'sequestration analysis enabled. This requires a future LULC map '
             'in addition to the current LULC map.')
 
-    args['sequest_uri'] = biophysical_outputs['sequest_fut']
+    args['sequest_uri'] = biophysical_outfiles['sequest_fut']
     args['yr_cur'] = args['lulc_cur_year']
     args['yr_fut'] = args['lulc_fut_year']
 
@@ -117,13 +117,13 @@ def package_valuation_args(args, biophysical_outputs):
 
     for biophysical_key, valuation_key in biophysical_to_valuation.items():
         try:
-            args[valuation_key] = biophysical_outputs[biophysical_key]
+            args[valuation_key] = biophysical_outfiles[biophysical_key]
         except KeyError:
             continue
 
     return args
 
-def create_HTML_report(args, biophysical_outputs, valuation_outputs):
+def create_HTML_report(args, biophysical_outfiles, valuation_outputs):
     html_uri = os.path.join(
         args['workspace_dir'], 'output',
         'summary%s.html' % carbon_utils.make_suffix(args))
@@ -135,7 +135,7 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
 
     if args['do_biophysical']:
         doc.write_header('Biophysical Results')
-        doc.add(make_biophysical_table(biophysical_outputs))
+        doc.add(make_biophysical_table(biophysical_outfiles))
 
     if args['do_valuation']:
         doc.write_header('Valuation Results')
@@ -148,7 +148,7 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
     doc.write_paragraph(
         'This run of the carbon model produced the following output files.')
     doc.add(make_outfile_table(
-            args, biophysical_outputs, valuation_outputs, html_uri))
+            args, biophysical_outfiles, valuation_outputs, html_uri))
 
     doc.flush()
 
@@ -163,7 +163,7 @@ def make_report_intro(args):
             (' and '.join(models),
              'models' if len(models) > 1 else 'model'))
 
-def make_biophysical_table(biophysical_outputs):
+def make_biophysical_table(biophysical_outfiles):
     table = html.Table(id='biophysical_table')
     table.add_row(['Scenario', 'Total carbon<br>(Mg of carbon)',
                    'Sequestered carbon (compared to current scenario)'
@@ -172,21 +172,21 @@ def make_biophysical_table(biophysical_outputs):
 
     for scenario in ['cur', 'fut', 'redd']:
         total_carbon_key = 'tot_C_%s' % scenario
-        if total_carbon_key not in biophysical_outputs:
+        if total_carbon_key not in biophysical_outfiles:
             continue
         total_carbon = carbon_utils.sum_pixel_values_from_uri(
-            biophysical_outputs[total_carbon_key])
+            biophysical_outfiles[total_carbon_key])
 
         sequest_key = 'sequest_%s' % scenario
-        if sequest_key in biophysical_outputs:
+        if sequest_key in biophysical_outfiles:
             sequestered_carbon = carbon_utils.sum_pixel_values_from_uri(
-                biophysical_outputs[sequest_key])
+                biophysical_outfiles[sequest_key])
         else:
             sequestered_carbon = 'n/a'
 
         table.add_row([
                 make_scenario_name(scenario,
-                                   'tot_C_redd' in biophysical_outputs),
+                                   'tot_C_redd' in biophysical_outfiles),
                 total_carbon,
                 sequestered_carbon
                 ])
@@ -281,15 +281,15 @@ def make_valuation_intro():
         ]
 
 
-def make_outfile_table(args, biophysical_outputs, valuation_outputs, html_uri):
+def make_outfile_table(args, biophysical_outfiles, valuation_outputs, html_uri):
     table = html.Table(id='outfile_table')
     table.add_row(['Filename', 'Description'], is_header=True)
 
     descriptions = collections.OrderedDict()
 
-    if biophysical_outputs:
+    if biophysical_outfiles:
         descriptions.update(make_biophysical_outfile_descriptions(
-                biophysical_outputs, args))
+                biophysical_outfiles, args))
 
     if valuation_outputs:
         descriptions.update(make_valuation_outfile_descriptions(
