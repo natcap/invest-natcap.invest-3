@@ -111,7 +111,11 @@ def invest_version(uri=None, force_new=False, attribute='version_str',
         # to get the version info from HG.
 #        print 'getting version from hg'
         LOGGER.debug('Getting the version number from HG')
-        return_value = get_version_from_hg()
+        try:
+            return_value = get_version_from_hg()
+        except ValueError:
+            # When mercurial is not installed
+            return_value = 'dev'
 
     try:
         LOGGER.debug('Returning attribute %s', attribute)
