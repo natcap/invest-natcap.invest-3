@@ -5,7 +5,6 @@ import logging
 import traceback
 import platform
 import codecs
-from distutils.sysconfig import get_python_lib
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
@@ -46,7 +45,11 @@ def invest_version(uri=None, force_new=False, attribute='version_str',
     os.chdir(directory)
 
     if uri == None:
-        new_uri = os.path.join(os.path.abspath(os.path.dirname(get_python_lib())),
+        # get the location of the site-packages folder by looking at where the
+        # os module is located.  Would use distutils.sysconfig,  but it was
+        # causing a really nasty importError I couldn't fix when building the
+        # windows exe's.
+        new_uri = os.path.join(os.path.abspath(os.path.dirname(os.__file__)),
             'site-packages', 'invest_natcap', 'invest_version.pyc')
         if not os.path.exists(new_uri):
             LOGGER.debug('URI %s does not exist.  Defaulting to local paths',
