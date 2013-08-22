@@ -60,8 +60,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         computed_extreme_angles = np.array(computed_extreme_angles)
         
         error = np.sum(computed_extreme_angles - expected_extreme_angles)
-        print(abs(error), 10e-15)
-        assert abs(error) < 10e-15
+
+        assert abs(error) < 2e-15
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
