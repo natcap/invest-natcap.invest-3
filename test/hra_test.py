@@ -1,9 +1,7 @@
-
 '''This will be the test module for the non-core portion of Habitat Risk
 Assessment.'''
 
 import os
-import unittest
 import logging
 import glob
 import filecmp
@@ -11,7 +9,6 @@ import filecmp
 import invest_natcap.testing
 
 from invest_natcap.habitat_risk_assessment import hra
-from invest_natcap.habitat_risk_assessment import hra_core
 
 LOGGER = logging.getLogger('hra_scratch_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -85,7 +82,7 @@ class TestHRA(invest_natcap.testing.GISTest):
                     do_tests(os.path.join(curr_path, dir_name), c)
             
             else:
-                head, tail = os.path.splitext(item)
+                _, tail = os.path.splitext(item)
 
                 if tail == '.tif':
                     #Want to use dataset compare
