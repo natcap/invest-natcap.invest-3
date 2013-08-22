@@ -1141,8 +1141,6 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
     crit_name_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
                         h_s_list)
 
-    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
-
     def add_e_pix(*pixels):
         
         all_nodata = True
@@ -1189,8 +1187,6 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     Returns nothing.
     '''
-    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
-    LOGGER.debug("The h denom is: %s" % h_denom)
 
     tot_crit_list = h_s_list + h_list
 
@@ -1222,11 +1218,11 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
             p = pixels[i]
             
             if p != nodata:
-                if index < h_list_start_index:
-                    val += p
+                if i < h_list_start_index:
+                    value += p
                     denom_val += h_s_denom_dict[h_s_names[i]]
                 else:
-                    val += p
+                    value += p
                     denom_val += h_denom_dict[h_names[i]]
                 value += p
     
@@ -1514,7 +1510,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             denoms['Recovery'][h][crit_name] = 1/ float(dq)
 
             #First the risk rasters
-            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + '_' + crit + \
+            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + '_' + crit_name + \
                                                     '_' + 'C_Raster.tif')
             def burn_numerator_risk(pixel):
             
