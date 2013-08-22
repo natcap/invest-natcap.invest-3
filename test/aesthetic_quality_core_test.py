@@ -100,17 +100,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         array_shape = (3, 3)
         viewpoint = (1, 1)
 
-        #for row in range(array_shape[0]):
-        #    for col in range(array_shape[1]):
-        #        if row == 1 and col == 1:
-        #            continue
-        #        cell = (row, col)
-        #        extreme_angles = \
-        #            extreme_cell_angles_naive(cell, viewpoint)
-        #        print('cell', cell, 'viewpoint', viewpoint, \
-        #            'angles', extreme_angles * 180.0 / math.pi)
+        for row in range(array_shape[0]):
+            for col in range(array_shape[1]):
+                if row == 1 and col == 1:
+                    continue
+                cell = (row, col)
+                extreme_angles = \
+                    self.extreme_cell_angles_naive(cell, viewpoint)
 
-        #aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
     def test_viewshed(self):
         pass
