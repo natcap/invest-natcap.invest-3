@@ -15,7 +15,6 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('carbon_combined')
-NUM_MONTE_CARLO_RUNS = 500
 
 def execute(args):
     execute_30(**args)
@@ -219,7 +218,7 @@ def make_biophysical_uncertainty_table(uncertainty_results):
     return table
 
 def make_biophysical_table(biophysical_outputs):
-    do_uncertainty = bool(biophysical_outputs['uncertainty'])
+    do_uncertainty = 'uncertainty' in biophysical_outputs
 
     table = html.Table(id='biophysical_table')
     headers = ['Scenario', 'Total carbon<br>(Mg of carbon)',
