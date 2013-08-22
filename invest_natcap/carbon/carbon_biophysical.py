@@ -137,7 +137,6 @@ def execute_30(**args):
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
                     temp_c_cur_uri = raster_utils.temporary_filename()
-                    LOGGER.debug(outputs)
                     shutil.copyfile(outputs['tot_C_cur'], temp_c_cur_uri)
 
                     hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
@@ -163,7 +162,6 @@ def execute_30(**args):
                         vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
 
                     temp_c_fut_uri = raster_utils.temporary_filename()
-                    LOGGER.debug(outputs)
                     shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
 
                     hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
@@ -249,7 +247,13 @@ def execute_30(**args):
                     confidence_op, outputs['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                     pixel_size_out, "intersection", dataset_to_align_index=0)
 
-    if do_uncertainty:
+    # Do a Monte Carlo simulation for uncertainty analysis.
+    # We only do this if HWP is not enabled, because the simulation
+    # computes carbon just by summing carbon across the
+    # landscape, which is wrong if we're doing HWP analysis.
+    if (do_uncertainty and
+        'hwp_cur_shape_uri' not in args and
+        'hwp_fut_shape_uri' not in args):
         outputs['uncertainty'] = _compute_uncertainty_data(args, pools)
 
     return outputs

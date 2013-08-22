@@ -85,7 +85,16 @@ def execute_30(**args):
     else:
         biophysical_outputs = None
 
+        # We can't do uncertainty analysis if only the valuation model is run.
+        args['do_uncertainty'] = False
+
     if args['do_valuation']:
+        if not args['do_biophysical'] and not args.get('sequest_uri'):
+            raise Exception(
+                'In order to perform valuation, you must either run the '
+                'biophysical model, or provide a sequestration raster '
+                'mapping carbon sequestration for a landscape. Neither '
+                'was provided in this case, so valuation cannot run.')
         LOGGER.info('Executing valuation model.')
         valuation_args = _package_valuation_args(args, biophysical_outputs)
         valuation_outputs = carbon_valuation.execute(valuation_args)
