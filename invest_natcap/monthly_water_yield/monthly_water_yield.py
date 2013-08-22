@@ -243,7 +243,7 @@ def execute(args):
 
             # Project point shapefile to DEM projection
             raster_utils.reproject_datasource_uri(
-                    cur_point_uri, dem_wkt, projected_point_uri) 
+                    cur_point_uri, dem_wkt, projected_point_uri)
 
             # Create a new raster from the DEM to vectorize the points onto
             raster_utils.new_raster_from_base_uri(
@@ -718,15 +718,9 @@ def calculate_intermediate_interflow(
             if pix == pix_nodata: 
                 return out_nodata
        
-        try:
-            result = alpha_pix * soil_pix**beta * (
-                water_pix - evap_pix * (1.0 - math.exp(
+        result = alpha_pix * soil_pix**beta * (
+            water_pix - evap_pix * (1.0 - math.exp(
                     -1.0 * (water_pix / evap_pix))))
-        except OverflowError:
-            #NOTE: Talk To RICH about
-            LOGGER.debug(water_pix)
-            LOGGER.debug(evap_pix)
-            result = 1.0
 
         return result
 
@@ -740,7 +734,8 @@ def calculate_intermediate_interflow(
 def calculate_water_amt(
         imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
         out_nodata):
-    """Calculates the water available on a pixel
+    """Calculates the water available on a pixel, this is equation 4 from the
+        water yield guidance.
 
         imperv_area_uri - a URI to a gdal dataset for the impervious area in
             fraction
@@ -785,7 +780,8 @@ def calculate_water_amt(
 def calculate_evaporation(
         soil_storage_uri, smax_uri, water_uri, eto_uri, etk_uri, evap_uri,
         etc_uri, out_nodata):
-    """This function calculates the actual evaporation
+    """This function calculates the actual evaporation, from equation 3 in
+        user's guide.
 
         soil_storage_uri - a URI to a gdal dataset for the previous time steps
             soil water content
