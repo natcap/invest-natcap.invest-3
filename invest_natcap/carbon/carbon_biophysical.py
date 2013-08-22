@@ -94,6 +94,8 @@ def execute_30(**args):
         if lulc_uri in args:
             scenario_type = lulc_uri.split('_')[-2] #get the 'cur', 'fut', or 'redd'
 
+            LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
+
             populate_carbon_pools(
                 pools, do_uncertainty, args[lulc_uri], scenario_type)
 
@@ -131,6 +133,7 @@ def execute_30(**args):
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
             if hwp_key in args:
+                LOGGER.info('Computing HWP storage.')
                 c_hwp_uri = outfile_uri('c_hwp', scenario_type, dirtype='intermediate')
                 bio_hwp_uri = outfile_uri('bio_hwp', scenario_type, dirtype='intermediate')
                 vol_hwp_uri = outfile_uri('vol_hwp', scenario_type, dirtype='intermediate')
@@ -183,6 +186,8 @@ def execute_30(**args):
     for fut_type in ['fut', 'redd']:
         fut_type_lulc_uri = 'lulc_%s_uri' % fut_type
         if 'lulc_cur_uri' in args and fut_type_lulc_uri in args:
+            LOGGER.info('Computing sequestration for %s scenario', fut_type)
+
             def sub_op(c_cur, c_fut):
                 if nodata_out in [c_cur, c_fut]:
                     return nodata_out
@@ -196,6 +201,7 @@ def execute_30(**args):
                 pixel_size_out, "intersection", dataset_to_align_index=0)
 
             if do_uncertainty:
+                LOGGER.info('Computing confident cells for %s scenario.', fut_type)
                 confidence_threshold = args['confidence_threshold']
 
                 # Returns 1 if we're confident storage will increase,

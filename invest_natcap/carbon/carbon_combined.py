@@ -135,6 +135,8 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
 
     doc.write_paragraph(make_report_intro(args))
 
+    doc.insert_table_of_contents()
+
     if args['do_biophysical']:
         doc.write_header('Biophysical Results')
         doc.add(make_biophysical_table(biophysical_outputs))
