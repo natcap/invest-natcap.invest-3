@@ -612,14 +612,14 @@ def calculate_final_interflow(
             if pix == pix_nodata: 
                 return out_nodata
         
-        conditional = (soil_pix + water_pix - (
-                    evap_pix - inter_pix - bflow_pix))
+        conditional = (
+            soil_pix + water_pix - evap_pix - inter_pix - bflow_pix)
 
         if conditional <= smax_pix:
             return inter_pix
         else:
-            return (soil_pix + water_pix - (
-                        evap_pix - bflow_pix - smax_pix))
+            return (
+                soil_pix + water_pix - evap_pix - bflow_pix - smax_pix)
 
     cell_size = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
 
