@@ -155,7 +155,8 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
             doc.add(table)
         if 'uncertainty_data' in valuation_outputs:
             doc.write_header('Uncertainty Results', level=3)
-            # TODO add intro paragraphs
+            for paragraph in make_valuation_uncertainty_intro():
+                doc.write_paragraph(paragraph)
             doc.add(make_valuation_uncertainty_table(
                     valuation_outputs['uncertainty_data']))
 
@@ -181,7 +182,8 @@ def make_report_intro(args):
 def make_biophysical_uncertainty_intro():
     return [
         'This data was computed by doing a Monte Carlo '
-        'simulation, which involved many runs of the model.',
+        'simulation, which involved %d runs of the model.' %
+        carbon_biophysical.NUM_MONTE_CARLO_RUNS,
         'For each run of the simulation, the amount of carbon '
         'per grid cell for each LULC type was independently sampled '
         'from the normal distribution given in the input carbon pools. '
@@ -332,6 +334,14 @@ def make_valuation_tables(valuation_outputs):
 
         yield comparison_table
 
+
+def make_valuation_uncertainty_intro():
+    return [
+        'These results were computed by using the uncertainty data from the '
+        'Monte Carlo simulation in the biophysical model.'
+        ]
+
+
 def make_valuation_uncertainty_table(uncertainty_data):
     table = html.Table(id='valuation_uncertainty')
 
@@ -366,7 +376,7 @@ def make_valuation_intro(args):
 
     if args['do_uncertainty']:
         intro.append(
-            'Entries in the table with the label <i>confident cells only</i> '
+            'Entries in the table with the label "confident cells only" '
             'represent results for sequestration and value if we consider '
             'sequestration that occurs only in those cells where we are '
             'confident that carbon storage will either increase or decrease.')
