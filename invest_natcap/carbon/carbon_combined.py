@@ -177,7 +177,7 @@ def _make_report_intro(args):
     return ('This document summarizes the results from running the InVEST '
             'carbon model. This run of the model involved the %s %s.' %
             (' and '.join(models),
-             'model' if len(model) == 1 else 'models'))
+             'model' if len(models) == 1 else 'models'))
 
 def _make_biophysical_uncertainty_intro():
     return [

@@ -37,7 +37,7 @@ class HTMLDocument(object):
         head.add(Element('style', _get_style_css(), type='text/css'))
 
         self.body = self.html_elem.add(Element('body'))
-        self.body.add(Element('h1', ('<center>%s</center>' % header)))
+        self.body.add(Element('h1', header))
 
         self.id_counter = 0  # keep track of allocated IDs
         self.headers = collections.OrderedDict()
@@ -72,6 +72,7 @@ class HTMLDocument(object):
     def flush(self):
         '''Create a file with the contents of this document.'''
         outfile = open(self.uri, 'w')
+        outfile.write('<!DOCTYPE html>')
         outfile.write(self.html_elem.html())
         outfile.close()
 
@@ -204,6 +205,9 @@ def _get_style_css():
       body {
           background-color: #EFECCA;
           color: #002F2F
+      }
+      h1 {
+          text-align: center
       }
       h1, h2, h3, h4, strong, th {
           color: #046380;
