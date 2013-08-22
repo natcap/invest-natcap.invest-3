@@ -7,6 +7,8 @@ import logging
 import copy
 import os
 
+import operator
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -44,6 +46,7 @@ def execute(args):
     above_name = "%i_above.tif"
     below_name = "%i_below.tif"
     soil_name = "%i_soil.tif"
+    trans_soil_name = "%i_trans_soil.tif"
     litter_name = "%i_litter.tif"
     biomass_name = "%i_bio.tif"
     carbon_name = "%i_carbon.tif"
@@ -52,6 +55,7 @@ def execute(args):
     acc_name = "%i_acc.tif"
     soil_acc_name = "%i_soil_acc.tif"
     predisturbance_name = "%i_pre.tif"
+    residual_name = "%i_res.tif"
 
     #carbon emission and timing file names
     biomass_coefficient_name = "%i_bio_loss.tif"
@@ -145,10 +149,15 @@ def execute(args):
                 raise ValueError, msg
 
     #vectorize datasets operations            
-    def sum_op(*values):
+    def add_op(*values):
         if nodata in values:
             return nodata
-        return sum(values)
+        return reduce(operator.add,values)
+
+    def mul_op(*values):
+        if nodata in values:
+            return nodata
+        return reduce(operator.mul,values)    
 
     def biomass_coefficient_op(original, final):
         if nodata in [original, final]:
@@ -217,7 +226,7 @@ def execute(args):
 
     LOGGER.info("Calculating biomass carbon for %i.", lulc_base_year)
     raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri, lulc_base_litter_uri],
-                                    sum_op,
+                                    add_op,
                                     lulc_base_biomass_uri,
                                     gdal_type,
                                     nodata,
@@ -226,7 +235,7 @@ def execute(args):
 
     LOGGER.info("Calculating total carbon for %i.", lulc_base_year)
     raster_utils.vectorize_datasets([lulc_base_biomass_uri, lulc_base_soil_uri],
-                                    sum_op,
+                                    add_op,
                                     lulc_base_carbon_uri,
                                     gdal_type,
                                     nodata,
@@ -268,6 +277,7 @@ def execute(args):
             lulc_transition_uri = lulc_dict[lulc_transition_year]
 
             lulc_base_carbon_accumulation_uri = os.path.join(workspace_dir, soil_acc_name % lulc_base_year)
+            lulc_base_soil_residual_uri = os.path.join(workspace_dir, residual_name % lulc_base_year)
             
             lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
             lulc_base_soil_coefficient_uri = os.path.join(workspace_dir, soil_coefficient_name % lulc_base_year)
@@ -290,14 +300,14 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-            LOGGER.debug("Calculating total soil carbon before disturbance in %i.")
+            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
             raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
-                                            sum_op,
+                                            add_op,
                                             lulc_predisturbance_soil_uri,
                                             gdal_type,
                                             nodata,
                                             cell_size,
-                                            "union")                                            
+                                            "union")           
 
             #calculate magnitude and timing of emission
             LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
@@ -318,6 +328,15 @@ def execute(args):
                                             cell_size,
                                             "union")
 
+            LOGGER.debug("Calculate residual soil carbon after disturbance in %i.", lulc_transition_year)
+            raster_utils.vectorize_datasets([lulc_predisturbance_soil_uri, lulc_base_soil_coefficient_uri],
+                                            mul_op,
+                                            lulc_base_soil_residual_uri,
+                                            gdal_type,
+                                            nodata,
+                                            cell_size,
+                                            "union")            
+
             LOGGER.debug("Creating biomass half life raster for %i.", lulc_base_year)
             raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                        biomass_half_dict,
@@ -334,7 +353,7 @@ def execute(args):
                                        nodata,
                                        exception_flag="values_required")
                 
-            LOGGER.debug("Calculating magnitude of loss.")
+            LOGGER.info("Calculating magnitude of loss.")
             raster_utils.vectorize_datasets([lulc_base_biomass_coefficient_uri,
                                              lulc_base_biomass_uri,
                                              lulc_base_soil_coefficient_uri,
@@ -346,7 +365,7 @@ def execute(args):
                                             cell_size,
                                             "union")
             
-            LOGGER.debug("Calculating timing of loss.")
+            LOGGER.info("Calculating timing of loss.")
             raster_utils.vectorize_datasets([lulc_base_biomass_half_life_uri,
                                              lulc_base_biomass_coefficient_uri,
                                              lulc_base_biomass_uri,
@@ -369,6 +388,7 @@ def execute(args):
 
             lulc_base_above_uri = os.path.join(workspace_dir, above_name % lulc_base_year)
             lulc_base_below_uri = os.path.join(workspace_dir, below_name % lulc_base_year)
+            lulc_base_trans_soil_uri = os.path.join(workspace_dir, trans_soil_name % lulc_base_year)
             lulc_base_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
             lulc_base_litter_uri = os.path.join(workspace_dir, litter_name % lulc_base_year)
             lulc_base_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
@@ -392,13 +412,22 @@ def execute(args):
                                        nodata,
                                        exception_flag="values_required")
 
-            LOGGER.info("Creating carbon soil pool raster for %i.", lulc_base_year)
+            LOGGER.info("Creating carbon soil pool base raster for %i.", lulc_base_year)
             raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                        soil_dict,
-                                       lulc_base_soil_uri,
+                                       lulc_base_trans_soil_uri,
                                        gdal_type,
                                        nodata,
                                        exception_flag="values_required")
+
+            LOGGER.info("Creating carbon soil pool including residual carbon for %i.", lulc_base_year)
+            raster_utils.vectorize_datasets([lulc_base_trans_soil_uri, lulc_base_soil_residual_uri],
+                                            add_op,
+                                            lulc_base_soil_uri,
+                                            gdal_type,
+                                            nodata,
+                                            cell_size,
+                                            "union")
 
             LOGGER.info("Creating carbon litter pool raster for %i.", lulc_base_year)
             raster_utils.reclassify_dataset_uri(lulc_base_uri,
@@ -410,7 +439,7 @@ def execute(args):
 
             LOGGER.info("Calculating biomass carbon for %i.", lulc_base_year)
             raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri, lulc_base_litter_uri],
-                                            sum_op,
+                                            add_op,
                                             lulc_base_biomass_uri,
                                             gdal_type,
                                             nodata,
@@ -419,7 +448,7 @@ def execute(args):
 
             LOGGER.info("Calculating total carbon for %i.", lulc_base_year)
             raster_utils.vectorize_datasets([lulc_base_biomass_uri, lulc_base_soil_uri],
-                                            sum_op,
+                                            add_op,
                                             lulc_base_carbon_uri,
                                             gdal_type,
                                             nodata,
