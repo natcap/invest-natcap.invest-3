@@ -19,12 +19,24 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         returns a tuple of 2 arrays (min, max) as does numpy.where() with min
             and max the minimum and maximum angles spanned by each raster pixel
     """
+    extreme_cell_points = [ \
+    {'min_angle':[0.5, -0.5]}, {'max_angle':[-0.5,-0.5]}, \
+    {'min_angle':[0.5, 0.5]}, {'max_angle':[-0.5, -0.5]}, \
+    {'min_angle':[0.5, 0.5]}, {'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5]}, {'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5]}, {'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5]}, {'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5]}, {'max_angle':[-0.5, 0.5]}, \
+    {'min_angle':[0.5, -0.5]}, {'max_angle':[-0.5, 0.5]}]
+
     extreme_cell_angles = []
     x_range = np.array(range(array_shape[0]))
     y_range = np.array(range(array_shape[1]))
 
     print(x_range)
     print(y_range)
+
+    print(extreme_cell_points)
 
     #xx = np.meshgrid()
 
