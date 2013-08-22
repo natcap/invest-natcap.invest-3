@@ -1282,9 +1282,21 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. This dictionary will be the same structure
-            as crit_lists, but the innermost values will be floats instead of
-            lists.
+            can be divided by this. 
+            
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0, ...}, 
+                                 (hab1, stressB): {'CritName': 1.3, ...}
+                               },
+                        'h':   { hab1: {'CritName': 1.3, ...},
+                                ...
+                               },
+                        'h_s_e': { (hab1, stressA): {'CritName': 1.3, ...}
+                               }
+                     }
+             'Recovery': { hab1: 1.6,
+                           hab2: ...
+                         }
+            }
     '''
     LOGGER.debug("h_s_c: %s" % h_s_c)
     LOGGER.debug("h_s_e: %s" % h_s_e)
