@@ -6,7 +6,7 @@ import unittest
 import logging
 import re
 
-from nose.plugins.skip import SkipTest
+import numpy.random
 
 from invest_natcap.carbon import carbon_combined
 from invest_natcap.carbon import carbon_utils
@@ -54,6 +54,7 @@ class TestCarbonBiophysical(unittest.TestCase):
                 "./invest-data/test/data/base_data/terrestrial/lulc_samp_cur")
 
             if self.do_uncertainty:
+                numpy.random.seed(1) # Make the Monte Carlo simulation predictable.
                 args['carbon_pools_uncertain_uri'] = (
                     './invest-data/test/data/carbon/input/'
                     'carbon_pools_samp_uncertain.csv')
@@ -134,6 +135,26 @@ class TestCarbonBiophysical(unittest.TestCase):
         if self.do_uncertainty:
             self.assert_dataset_equal('conf_base.tif')
 
+            if not self.do_hwp:
+                self.assert_table_contains_rows(
+                    'biophysical_uncertainty',
+                    [['Current', 41393866.8552, 1952277.85499, 'n/a', 'n/a']])
+
+                if self.do_sequest:
+                    if self.do_redd:
+                        self.assert_table_contains_rows(
+                            'biophysical_uncertainty',
+                            [['Baseline', 37873479.3608, 1918933.29091,
+                              -3520387.68116, 871671.317364],
+                             ['REDD policy', 41494778.9465, 1952644.64532,
+                              100912.043313, 14000.0796437]])
+                    else:
+                        self.assert_table_contains_rows(
+                            'biophysical_uncertainty',
+                            [['Future', 37873479.3608, 1918933.29091,
+                              -3520387.68116, 871671.317364]])
+
+
         if self.do_redd:
             self.assert_datasets_equal('tot_C_base.tif',
                                      'tot_C_redd.tif',
@@ -179,6 +200,13 @@ class TestCarbonBiophysical(unittest.TestCase):
                     [['REDD policy vs Baseline (confident cells only)',
                       3631005.20957, 69102837.43]])
 
+                if self.do_biophysical and not self.do_hwp:
+                    self.assert_table_contains_rows(
+                        'valuation_uncertainty',
+                        [['Baseline', -3520387.68116, 871671.317364,
+                          -66997669.6454, 16589066.9578],
+                         ['REDD policy', 100912.043313, 14000.0796437,
+                          1920490.6827, 266440.175324]])
         else:
             # No REDD analysis.
             self.assert_dataset_equal('value_seq.tif', 'value_seq_base.tif')
