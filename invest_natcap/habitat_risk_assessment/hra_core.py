@@ -1138,8 +1138,8 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
 
     #This separates the URI into a list like the following, from which we pull the criteria name:
     #['H[eelgrass]', 'S[FFA]', 'Indiv', 'E', 'Raster']
-
-    crit_name_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2] 
+    crit_name_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
+                        h_s_list)
 
     LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
 
@@ -1170,7 +1170,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
+def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     '''Should return a raster burned with a 'C' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1178,12 +1178,14 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         out_uri- The location to which the calculated C raster should be burned.
         h_s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that h, s pair.
-        h_s_denom- A double representing the sum total of all applicable criteria
-            using the equation 1/dq*w.
+        h_s_denom- A dictionary containing criteria names applicable to this
+            particular h,s pair. Each criteria string name maps to a double
+            representing the denominator for that raster, using the equation 1/dq*w.
         h_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that s.
-        h_denom- A double representing the sum total of all applicable criteria
-            using the equation 1/dq*w.
+        h_denom- A dictionary containing criteria names applicable to this
+            particular habitat. Each criteria string name maps to a double
+            representing the denominator for that raster, using the equation 1/dq*w.
 
     Returns nothing.
     '''
@@ -1191,7 +1193,13 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     LOGGER.debug("The h denom is: %s" % h_denom)
 
     tot_crit_list = h_s_list + h_list
-    tot_denom = h_s_denom + h_denom
+
+    h_s_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
+                        h_s_list)
+    
+    h_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[1], \
+                        h_list)
+
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
@@ -1200,26 +1208,29 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     def add_c_pix(*pixels):
         
         all_nodata = True
-        for index, p in enumerate(pixels):
+        for p in pixels:
             if p != nodata:
                 all_nodata = False
         if all_nodata:
             return nodata
         
         value = 0.
-        
-        running_denom = 0
+        denom_val = 0.
 
-        for p in pixels:
+        for i in range(1, len(pixels) + 1):
+
+            p = pixels[i]
             
             if p != nodata:
                 if index < h_list_start_index:
-                    running_denom += denom_list['h_s'][index]
+                    val += p
+                    denom_val += h_s_denom_dict[h_s_names[i]]
                 else:
-                    running_denom += denom_list['h'][index]
+                    val += p
+                    denom_val += h_denom_dict[h_names[i]]
                 value += p
     
-        return value / running_denom
+        return value / denom_val
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
