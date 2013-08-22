@@ -182,7 +182,12 @@ def make_biophysical_uncertainty_intro():
         'carbon in each scenario, and computed sequestration by subtracting '
         'the carbon storage in different scenarios. ',
         'Results across all Monte Carlo simulation runs were '
-        'analyzed to produce the following mean and standard deviation data.']
+        'analyzed to produce the following mean and standard deviation data.',
+        'All uncertainty analysis in this model assumes that true carbon pool '
+        'values for different LULC types are independently distributed, '
+        'with no systematic bias. If there is systematic bias in the carbon '
+        'pool estimates, then actual standard deviations for results may be '
+        'larger than reported in the following table.']
 
 def make_biophysical_uncertainty_table(uncertainty_results):
     table = html.Table(id='biophysical_uncertainty')
