@@ -47,6 +47,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             [a[198], a[251]], \
             [a[225], a[315]], \
             [a[288], a[341]]])
+        expected_extreme_angles *= deg_to_rad
 
         computed_extreme_angles = []
         for row in range(array_shape[0]):
@@ -59,6 +60,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         computed_extreme_angles = np.array(computed_extreme_angles)
         print('computed', computed_extreme_angles)
         print('expected', expected_extreme_angles)
+        
+        print(sum(computed_extreme_angles - expected_extreme_angles))
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
