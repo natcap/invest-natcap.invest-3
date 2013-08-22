@@ -32,8 +32,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         a[288] = np.arctan2(-1.5, -0.5)
         a[315] = 315.0
         a[345] = 345.0
-        for item in a:
-            print(item)
+        for key in a.keys():
+            print(key, a[key])
         #expected_extreme_angles = np.array([[],[],[],[],[],[],[],[]])
         computed_extreme_angles = []
         for row in range(array_shape[0]):
