@@ -56,10 +56,11 @@ class TestAestheticQualityCore(unittest.TestCase):
                 cell = (row, col)
                 computed_extreme_angles.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
-                print('cell', cell, 'viewpoint', viewpoint, \
-                    'angles', extreme_angles * 180.0 / math.pi)
+        computed_extreme_angles = np.array(computed_extreme_angles)
+        print('computed', computed_extreme_angles)
+        print('expected', expected_extreme_angles)
 
-    def extreme_cell_angles_naive(cell_coord, viewpoint_coord):
+    def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
         the viewpoint and return the smallest and largest angles in a tuple"""
         # Convert cell and viewpoint tuples to numpy arrays
