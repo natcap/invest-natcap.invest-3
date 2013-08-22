@@ -223,8 +223,11 @@ def execute(args):
     watershed_table_uri = os.path.join(
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
     
+    count = 0
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
+        count += 1
+        if count >= 3: break
         # Create a tuple for precip and eto of the current months values
         # (represented as a dictionary), the field, and uri for raster output
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
@@ -615,9 +618,14 @@ def calculate_final_interflow(
         conditional = (
             soil_pix + water_pix - evap_pix - inter_pix - bflow_pix)
 
+
         if conditional <= smax_pix:
+            LOGGER.debug("%s <= %s" % (conditional,smax_pix))
+            LOGGER.debug("return %s" % inter_pix)
             return inter_pix
         else:
+            LOGGER.debug("%s > %s" % (conditional,smax_pix))
+            LOGGER.debug("return %s" % (soil_pix + water_pix - evap_pix - bflow_pix - smax_pix))
             return (
                 soil_pix + water_pix - evap_pix - bflow_pix - smax_pix)
 
@@ -847,7 +855,7 @@ def calculate_evaporation(
         
         if water_pix < etc_pix:
             return water_pix + soil_pix * (
-                    1.0 - math.exp((etc_pix - water_pix) / smax_pix))
+                    1.0 - math.exp(-(etc_pix - water_pix) / smax_pix))
         else:
             return etc_pix
     
