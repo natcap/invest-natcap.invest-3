@@ -75,9 +75,9 @@ def execute_30(**args):
     'c' - the annual rate of change in the price of carbon
     """
     if not args['do_biophysical'] and not args['do_valuation']:
-        LOGGER.info('Neither biophysical nor valuation model selected. '
-                    'Nothing left to do. Exiting.')
-        return
+        raise Exception(
+            'Neither biophysical nor valuation model selected. '
+            'Nothing left to do. Exiting.')
 
     if args['do_biophysical']:
         LOGGER.info('Executing biophysical model.')
