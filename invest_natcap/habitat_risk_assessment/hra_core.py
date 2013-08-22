@@ -1414,7 +1414,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             denoms['Risk']['h_s_c'][pair][crit_name] = 1/ float(dq * w)
 
             crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
-                                        ']_' + crit + '_' + 'C_Raster.tif')
+                                        ']_' + crit_name + '_' + 'C_Raster.tif')
 
             def burn_numerator_hs(pixel):
 
@@ -1533,7 +1533,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
             #Then the recovery rasters
-            crit_recov_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_' + crit + \
+            crit_recov_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_' + crit_name + \
                                                     '_' + 'Recov_Raster.tif')
             def burn_numerator_rec(pixel):
             
@@ -1630,7 +1630,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             denoms['Risk']['h_s_e'][pair][crit_name] = 1/ float(dq * w)
 
             crit_E_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
-                                        ']_' + crit + '_' + 'E_Raster.tif')
+                                        ']_' + crit_name + '_' + 'E_Raster.tif')
 
             def burn_numerator_hs(pixel):
 
