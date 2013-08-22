@@ -22,7 +22,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             # Compute the angle to the center of the cell
             viewpoint_to_cell = cell - viewpoint
             angle_to_cell = \
-                np.arctan2(viewpoint_to_cell[0], -viewpoint_to_cell[1])
+                np.arctan2(viewpoint_to_cell[1], viewpoint_to_cell[0])
             max_angle = angle_to_cell
             min_angle = angle_to_cell
             # Compute the angle to the 4 cell corners
