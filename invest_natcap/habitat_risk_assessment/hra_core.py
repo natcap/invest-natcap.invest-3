@@ -591,7 +591,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
         
         raster_utils.vectorize_datasets(curr_list, add_recov_pix, out_uri, 
                     gdal.GDT_Float32, -1., pixel_size, "union", 
-                    resample_method_list=None, dataset_to_align_index=None,
+                    resample_method_list=None, dataset_to_align_index=0,
                     aoi_uri=None)
 
 def make_ecosys_risk_raster(dir, h_dict):
@@ -645,7 +645,7 @@ def make_ecosys_risk_raster(dir, h_dict):
      
     raster_utils.vectorize_datasets(h_list, add_e_pixels, out_uri, 
                 gdal.GDT_Float32, -1., pixel_size, "union", 
-                resample_method_list=None, dataset_to_align_index=None,
+                resample_method_list=None, dataset_to_align_index=0,
                 aoi_uri=None)
 
 def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
@@ -743,7 +743,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         
         raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, h_out_uri_r,
                         gdal.GDT_Float32, -1., grid_size, "union", 
-                        resample_method_list=None, dataset_to_align_index=None,
+                        resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
         #Use gdal.Polygonize to take the raster, which should have only
@@ -758,7 +758,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         
         raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, l_out_uri_r,
                         gdal.GDT_Float32, -1., grid_size, "union", 
-                        resample_method_list=None, dataset_to_align_index=None,
+                        resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
         #Use gdal.Polygonize to take the raster, which should have only
@@ -895,7 +895,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
         raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
                         gdal.GDT_Float32, -1., pixel_size, "union", 
-                        resample_method_list=None, dataset_to_align_index=None,
+                        resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
         h_rasters[h] = out_uri 
@@ -1054,7 +1054,7 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult, risk_uri, 
                     gdal.GDT_Float32, -1., grid_size, "union", 
-                    resample_method_list=None, dataset_to_align_index=None,
+                    resample_method_list=None, dataset_to_align_index=0,
                     aoi_uri=None)
 
 def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
@@ -1116,7 +1116,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
                     combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., grid_size,
                     "union", resample_method_list=None, 
-                    dataset_to_align_index=None, aoi_uri=None)
+                    dataset_to_align_index=0, aoi_uri=None)
 
 def calc_E_raster(out_uri, h_s_list, h_s_denom):
     '''Should return a raster burned with an 'E' raster that is a combination
@@ -1158,7 +1158,7 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
 
     raster_utils.vectorize_datasets(h_s_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
-                        resample_method_list=None, dataset_to_align_index=None,
+                        resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
 def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
@@ -1207,7 +1207,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
-                        resample_method_list=None, dataset_to_align_index=None,
+                        resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
 def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
@@ -1355,7 +1355,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=None, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -1389,7 +1389,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=None, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None)
 
             crit_lists['Risk']['h_s_c'][pair].append(crit_C_uri)
 
@@ -1438,7 +1438,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                             single_crit_C_uri, gdal.GDT_Float32, -1., 
                             base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=None, aoi_uri=None)
+                            dataset_to_align_index=0, aoi_uri=None)
 
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
@@ -1458,7 +1458,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                             single_crit_rec_uri, gdal.GDT_Float32, -1., 
                             base_pixel_size, "union", 
                             resample_method_list=None, 
-                            dataset_to_align_index=None, aoi_uri=None)
+                            dataset_to_align_index=0, aoi_uri=None)
 
         crit_lists['Recovery'][h].append(single_crit_rec_uri)
         
@@ -1489,7 +1489,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_risk,
                                 crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size, 
                                 "union", resample_method_list=None, 
-                                dataset_to_align_index=None, aoi_uri=None)
+                                dataset_to_align_index=0, aoi_uri=None)
             
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
@@ -1508,7 +1508,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_rec,
                                 crit_recov_uri, gdal.GDT_Float32, -1., base_pixel_size, 
                                 "union", resample_method_list=None, 
-                                dataset_to_align_index=None, aoi_uri=None)
+                                dataset_to_align_index=0, aoi_uri=None)
             
             crit_lists['Recovery'][h].append(crit_recov_uri)
 
@@ -1571,7 +1571,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
                         single_crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=None, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None)
 
         #Add the burned ds URI containing only the numerator burned ratings to
         #the list in which all rasters will reside
@@ -1605,7 +1605,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_hs,
                         crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
                         "union", resample_method_list=None, 
-                        dataset_to_align_index=None, aoi_uri=None)
+                        dataset_to_align_index=0, aoi_uri=None)
 
             crit_lists['Risk']['h_s_e'][pair].append(crit_C_uri)
     
