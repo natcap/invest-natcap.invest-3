@@ -19,7 +19,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         returns a tuple of 2 arrays (min, max) as does numpy.where() with min
             and max the minimum and maximum angles spanned by each raster pixel
     """
-    exteme_cell_angles = []
+    extreme_cell_angles = []
     x_range = np.array(range(array_shape[0]))
     y_range = np.array(range(array_shape[1]))
 
