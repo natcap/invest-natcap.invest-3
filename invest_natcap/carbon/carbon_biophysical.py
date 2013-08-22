@@ -96,7 +96,7 @@ def execute_30(**args):
 
             LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
 
-            populate_carbon_pools(
+            _populate_carbon_pools(
                 pools, do_uncertainty, args[lulc_uri], scenario_type)
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
@@ -139,7 +139,7 @@ def execute_30(**args):
                 vol_hwp_uri = outfile_uri('vol_hwp', scenario_type, dirtype='intermediate')
 
                 if scenario_type == 'cur':
-                    calculate_hwp_storage_cur(
+                    _calculate_hwp_storage_cur(
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
                     temp_c_cur_uri = raster_utils.temporary_filename()
@@ -164,7 +164,7 @@ def execute_30(**args):
                     if 'hwp_fut_shape_uri' in args:
                         hwp_shapes['fut'] = args['hwp_fut_shape_uri']
 
-                    calculate_hwp_storage_fut(
+                    _calculate_hwp_storage_fut(
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
 
@@ -256,12 +256,12 @@ def execute_30(**args):
                     pixel_size_out, "intersection", dataset_to_align_index=0)
 
     if do_uncertainty:
-        outputs['uncertainty'] = compute_uncertainty_data(args, pools)
+        outputs['uncertainty'] = _compute_uncertainty_data(args, pools)
 
     return outputs
 
 
-def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
+def _populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
     """Populates pools with data on carbon content per LULC type."""
 
     cell_area_ha = (
@@ -289,7 +289,7 @@ def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
                     [pools[lulc_id][pool_type_sd] ** 2
                      for pool_type_sd in pool_estimate_sds]))
 
-def compute_uncertainty_data(args, pools):
+def _compute_uncertainty_data(args, pools):
     """Computes the mean and std dev for carbon storage and sequestration."""
 
     LOGGER.info("Computing uncertainty data.")
@@ -309,7 +309,7 @@ def compute_uncertainty_data(args, pools):
     monte_carlo_results = {}
     LOGGER.info("Beginning Monte Carlo simulation.")
     for _ in range(NUM_MONTE_CARLO_RUNS):
-        run_results = do_monte_carlo_run(pools, lulc_counts)
+        run_results = _do_monte_carlo_run(pools, lulc_counts)
 
         # Note that in this context, 'scenario' could be an actual scenario
         # (e.g. current, future, REDD) or it could be a sequestration
@@ -330,7 +330,7 @@ def compute_uncertainty_data(args, pools):
     return results
 
 
-def do_monte_carlo_run(pools, lulc_counts):
+def _do_monte_carlo_run(pools, lulc_counts):
     """Do a single Monte Carlo run for carbon storage.
 
     Returns a dict with the results, keyed by scenario, and
@@ -366,7 +366,7 @@ def do_monte_carlo_run(pools, lulc_counts):
     return results
 
 
-def calculate_hwp_storage_cur(
+def _calculate_hwp_storage_cur(
     hwp_shape_uri, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
     yr_cur):
     """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due
@@ -459,7 +459,7 @@ def calculate_hwp_storage_cur(
         raster = None
 
 
-def calculate_hwp_storage_fut(
+def _calculate_hwp_storage_fut(
     hwp_shapes, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
     yr_cur, yr_fut):
     """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to

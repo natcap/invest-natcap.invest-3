@@ -54,7 +54,7 @@ def execute_30(**args):
         #elements.
         args['V'] *= (15.9994*2+12.0107)/12.0107
 
-    LOGGER.debug('constructing valuation formula')
+    LOGGER.info('Constructing valuation formula.')
     n = args['yr_fut'] - args['yr_cur'] - 1
     ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
     valuation_constant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
@@ -77,6 +77,8 @@ def execute_30(**args):
             # REDD analysis might not be enabled, so just keep going.
             continue
 
+        LOGGER.info('Beginning valuation of %s scenario.', scenario_type)
+
         sequest_nodata = raster_utils.get_nodata_from_uri(sequest_uri)
 
         def value_op(sequest):
@@ -84,20 +86,14 @@ def execute_30(**args):
                 return nodata_out
             return sequest * valuation_constant
 
-        LOGGER.debug('finished constructing valuation formula for %s scenario',
-                     scenario_type)
-
-        LOGGER.info('starting valuation of each pixel')
-
         pixel_size_out = raster_utils.get_cell_size_from_uri(sequest_uri)
-        LOGGER.debug("pixel_size_out %s", pixel_size_out)
         raster_utils.vectorize_datasets(
             [sequest_uri], value_op, outputs['%s_val' % scenario_type],
             gdal.GDT_Float32, nodata_out, pixel_size_out, "intersection")
 
-        LOGGER.info('finished valuation of each pixel')
 
         if scenario_type in conf_uris:
+            LOGGER.info('Creating masked rasters for %s scenario.', scenario_type)
             # Produce a raster for sequestration, masking out uncertain areas.
             _create_masked_raster(sequest_uri, conf_uris[scenario_type],
                                   outputs['%s_seq_mask' % scenario_type])
@@ -116,6 +112,7 @@ def execute_30(**args):
             outputs['uncertainty_data'] = uncertainty_data
 
     return outputs
+
 
 def _make_outfile_uris(output_directory, args):
     '''Return a dict with uris for outfiles.'''
@@ -187,6 +184,7 @@ def _create_masked_raster(orig_uri, mask_uri, result_uri):
 
 def _compute_uncertainty_data(biophysical_uncertainty_data, valuation_const):
     """Computes mean and standard deviation for sequestration value."""
+    LOGGER.info('Computing uncertainty data.')
     results = {}
     for fut_type in ['fut', 'redd']:
         try:
