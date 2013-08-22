@@ -111,6 +111,7 @@ def package_valuation_args(args, biophysical_outputs):
     args['yr_fut'] = args['lulc_fut_year']
 
     biophysical_to_valuation = {
+        'uncertainty': 'uncertainty_data',
         'sequest_redd': 'sequest_redd_uri',
         'conf_fut': 'conf_uri',
         'conf_redd': 'conf_redd_uri'
@@ -152,6 +153,11 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
             doc.write_paragraph(paragraph)
         for table in make_valuation_tables(valuation_outputs):
             doc.add(table)
+        if 'uncertainty_data' in valuation_outputs:
+            doc.write_header('Uncertainty Results', level=3)
+            # TODO add intro paragraphs
+            doc.add(make_valuation_uncertainty_table(
+                    valuation_outputs['uncertainty_data']))
 
     doc.write_header('Output Files')
     doc.write_paragraph(
@@ -327,6 +333,20 @@ def make_valuation_tables(valuation_outputs):
                  ])
 
         yield comparison_table
+
+def make_valuation_uncertainty_table(uncertainty_data):
+    table = html.Table(id='valuation_uncertainty')
+
+    # TODO: add two-level header
+
+    for fut_type in ['fut', 'redd']:
+        if fut_type not in uncertainty_data:
+            continue
+
+        scenario_data = uncertainty_data[fut_type]
+        table.add_row(scenario_data['sequest'] + scenario_data['value'])
+
+    return table
 
 
 def make_valuation_intro(args):
