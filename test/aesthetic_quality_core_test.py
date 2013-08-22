@@ -29,6 +29,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         a[18] = (np.arctan2(0.5, 1.5) * rad_to_deg + 360.) % 360.
         a[45] = 45.0
         a[71] = (np.arctan2(1.5, 0.5) * rad_to_deg + 360.) % 360.
+        a[108] = (np.arctan2(1.5, -0.5) * rad_to_deg + 360.) % 360.
         a[135] = 135.0
         a[161] = (np.arctan2(0.5, -1.5) * rad_to_deg + 360.) % 360.
         a[198] = (np.arctan2(-0.5, -1.5) * rad_to_deg + 360.) % 360.
@@ -37,7 +38,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         a[288] = (np.arctan2(-1.5, 0.5) * rad_to_deg + 360.) % 360.
         a[315] = 315.0
         a[345] = 345.0
-
+        for key in a.keys():
+            print(key, a[key])
         expected_extreme_angles = np.array([[a[108], a[161]], \
             [a[45], a[135]], \
             [a[18], a[71]], \
@@ -47,6 +49,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             [a[225], a[315]], \
             [a[288], a[341]]])
         print(expected_extreme_angles)
+
         computed_extreme_angles = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
@@ -57,9 +60,6 @@ class TestAestheticQualityCore(unittest.TestCase):
                     extreme_cell_angles_naive(cell, viewpoint))
                 print('cell', cell, 'viewpoint', viewpoint, \
                     'angles', extreme_angles * 180.0 / math.pi)
-
-
-
 
     def extreme_cell_angles_naive(cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
@@ -98,17 +98,17 @@ class TestAestheticQualityCore(unittest.TestCase):
         array_shape = (3, 3)
         viewpoint = (1, 1)
 
-        for row in range(array_shape[0]):
-            for col in range(array_shape[1]):
-                if row == 1 and col == 1:
-                    continue
-                cell = (row, col)
-                extreme_angles = \
-                    extreme_cell_angles_naive(cell, viewpoint)
-                print('cell', cell, 'viewpoint', viewpoint, \
-                    'angles', extreme_angles * 180.0 / math.pi)
+        #for row in range(array_shape[0]):
+        #    for col in range(array_shape[1]):
+        #        if row == 1 and col == 1:
+        #            continue
+        #        cell = (row, col)
+        #        extreme_angles = \
+        #            extreme_cell_angles_naive(cell, viewpoint)
+        #        print('cell', cell, 'viewpoint', viewpoint, \
+        #            'angles', extreme_angles * 180.0 / math.pi)
 
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        #aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
     def test_viewshed(self):
         pass
