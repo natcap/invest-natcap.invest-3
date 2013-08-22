@@ -59,8 +59,8 @@ class TestAestheticQualityCore(unittest.TestCase):
                     self.extreme_cell_angles_naive(cell, viewpoint))
         computed_extreme_angles = np.array(computed_extreme_angles)
         
-        error = np.sum(computed_extreme_angles - expected_extreme_angles)[0]
-        print(error)
+        error = np.sum(computed_extreme_angles - expected_extreme_angles)
+        print(abs(error), 10e-15)
         assert abs(error) < 10e-15
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
