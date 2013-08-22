@@ -337,14 +337,21 @@ def make_valuation_tables(valuation_outputs):
 def make_valuation_uncertainty_table(uncertainty_data):
     table = html.Table(id='valuation_uncertainty')
 
-    # TODO: add two-level header
+    table.add_two_level_header(
+        outer_headers=['Sequestered carbon (Mg of carbon)',
+                       'Net present value (USD)'],
+        inner_headers=['Mean', 'Standard Deviation'],
+        row_id_header='Scenario')
 
     for fut_type in ['fut', 'redd']:
         if fut_type not in uncertainty_data:
             continue
 
         scenario_data = uncertainty_data[fut_type]
-        table.add_row(scenario_data['sequest'] + scenario_data['value'])
+        row = [make_scenario_name(fut_type, 'redd' in uncertainty_data)]
+        row += scenario_data['sequest']
+        row += scenario_data['value']
+        table.add_row(row)
 
     return table
 

@@ -137,6 +137,41 @@ class Table(object):
             row.add(Element(cell_tag, str(cell), **attr))
         self.table_elem.add(row)
 
+    def add_two_level_header(self, outer_headers,
+                             inner_headers, row_id_header):
+        """Adds a two level header to the table.
+
+        In this header, each outer header appears on the top row,
+        and each inner header appears once beneath each outer header.
+
+        For example, the following code:
+
+            table.add_two_level_header(
+                outer_headers=['Weight', 'Value'],
+                inner_headers=['Mean, Standard deviation'],
+                row_id_header='Farm ID')
+
+        produces the following header:
+
+                  Weight                            Value
+        Farm ID   Mean    Standard Deviation        Mean    Standard deviation
+        """
+
+        # Add the top-level header with the outer categories.
+        # Note that we use the 'colspan' attribute to stretch these cells out.
+        self.add_row(
+            cells=([''] + outer_headers), is_header=True,
+            cell_attr=([{}] + ([{'colspan': len(inner_headers)}] *
+                               len(outer_headers))))
+
+        # Add the second-level header with the inner categories.
+        # Note that the first cell has a row_id_header to help identify
+        # data rows that follow.
+        self.add_row(
+            cells=([row_id_header] + (inner_headers * len(outer_headers))),
+            is_header=True)
+
+
     def html(self):
         '''Return the HTML string for the table.'''
         return self.table_elem.html()
