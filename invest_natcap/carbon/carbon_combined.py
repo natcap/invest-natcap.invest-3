@@ -198,14 +198,12 @@ def make_biophysical_uncertainty_intro():
 
 def make_biophysical_uncertainty_table(uncertainty_results):
     table = html.Table(id='biophysical_uncertainty')
-    table.add_row(['', 'Total carbon (Mg of carbon)',
-                   'Sequestered carbon (compared to current scenario)'
-                   '<br>(Mg of carbon)'],
-                  is_header=True,
-                  cell_attr=[{}, {'colspan': 2}, {'colspan': 2}])
-    table.add_row(['Scenario', 'Mean', 'Standard deviation',
-                   'Mean', 'Standard deviation'],
-                  is_header=True)
+    table.add_two_level_header(
+        outer_headers=['Total carbon (Mg of carbon)',
+                       'Sequestered carbon (compared to current scenario)'
+                       '<br>(Mg of carbon)'],
+        inner_headers=['Mean', 'Standard deviation'],
+        row_id_header='Scenario')
 
     for scenario in ['cur', 'fut', 'redd']:
         if scenario not in uncertainty_results:
