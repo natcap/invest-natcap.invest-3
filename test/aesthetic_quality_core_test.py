@@ -20,12 +20,8 @@ class TestAestheticQualityCore(unittest.TestCase):
             cell = np.array([cell_coord[0], cell_coord[1]])
             viewpoint = np.array([viewpoint_coord[0], viewpoint_coord[1]])
             # Compute the angle to the center of the cell
-            viewpoint_to_cell = cell - viewpoint
-            angle_to_cell = \
-                np.arctan2(-viewpoint_to_cell[1], viewpoint_to_cell[0])
-            angle_to_cell = (2.0 * math.pi + angle_to_cell) % (2.0 * math.pi)
-            max_angle = angle_to_cell
-            min_angle = angle_to_cell
+            max_angle = 0.
+            min_angle = 2.0 * math.pi
             # Compute the angle to the 4 cell corners
             corners = np.array([ \
                 [cell_coord[0] + .5, cell_coord[1] + .5], \
