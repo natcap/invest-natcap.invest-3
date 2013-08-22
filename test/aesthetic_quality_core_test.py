@@ -35,7 +35,11 @@ class TestAestheticQualityCore(unittest.TestCase):
             for corner in corners:
                 viewpoint_to_corner = corner - viewpoint
                 angle_to_corner = \
-                    np.arctan2(viewpoint_to_corner[0], viewpoint_to_corner[1])
+                    np.arctan2(viewpoint_to_corner[1], viewpoint_to_corner[0])
+                angle_to_corner = \
+                    (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
+                print(corner, viewpoint_to_corner, angle_to_corner * \
+                180.0 / 3.14159265358979323846264338)
                 if angle_to_corner > max_angle:
                     max_angle = angle_to_corner
                 if angle_to_corner < min_angle:
