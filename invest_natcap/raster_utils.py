@@ -18,6 +18,7 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 import numpy
+import numpy.ma
 import scipy.interpolate
 import scipy.sparse
 import scipy.signal
@@ -2909,26 +2910,36 @@ def get_dataset_projection_wkt_uri(ds_uri):
     return proj_wkt
 
 
-def unique_raster_values_count(dataset_uri):
+def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     """Return a dict from unique int values in the dataset to their frequency.
+
+    Note that this uses numpy.bincount(), which requires that all values
+    be nonnegative ints.
 
     dataset_uri - uri to a gdal dataset of some integer type
     """
 
     dataset = gdal.Open(dataset_uri)
-
     band = dataset.GetRasterBand(1)
-    n_rows = band.YSize
+    nodata = band.GetNoDataValue()
 
     itemfreq = {}
-
-    for row_index in range(n_rows):
+    for row_index in range(band.YSize):
         array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
-        # We could use numpy.bincount(array) if we had all non-negative ints.
-        for value, count in stats.itemfreq(array):
-            if value in itemfreq:
+
+        if ignore_nodata:
+            # Remove the nodata values.
+            masked = numpy.ma.masked_equal(array, nodata)
+            array = masked.compressed()
+
+        counts = numpy.bincount(array)
+
+        for value, count in enumerate(counts):
+            if not count:
+                continue
+            try:
                 itemfreq[int(value)] += int(count)
-            else:
+            except KeyError:
                 itemfreq[int(value)] = int(count)
 
     return itemfreq
