@@ -7,6 +7,8 @@ import shutil
 
 from osgeo import gdal
 from osgeo import ogr
+from scipy.stats import norm
+import numpy as np
 
 from invest_natcap import raster_utils
 from invest_natcap.carbon import carbon_utils
@@ -15,6 +17,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('carbon_biophysical')
+
+NUM_MONTE_CARLO_RUNS = 10000
 
 def execute(args):
     return execute_30(**args)
@@ -86,17 +90,14 @@ def execute_30(**args):
 
     #2) map lulc_cur and _fut (if availble) to total carbon
     outputs = {}
-    outputs['uncertainty'] = {}
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
-            scenario_type = lulc_uri.split('_')[-2] #get the 'cur' or 'fut'
+            scenario_type = lulc_uri.split('_')[-2] #get the 'cur', 'fut', or 'redd'
+
+            LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
 
             populate_carbon_pools(
                 pools, do_uncertainty, args[lulc_uri], scenario_type)
-
-            if do_uncertainty:
-                outputs['uncertainty'][scenario_type] = compute_uncertainty_data(
-                    args[lulc_uri], pools, scenario_type)
 
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0
@@ -132,6 +133,7 @@ def execute_30(**args):
             #Add calculate the hwp storage, if it is passed as an input argument
             hwp_key = 'hwp_%s_shape_uri' % scenario_type
             if hwp_key in args:
+                LOGGER.info('Computing HWP storage.')
                 c_hwp_uri = outfile_uri('c_hwp', scenario_type, dirtype='intermediate')
                 bio_hwp_uri = outfile_uri('bio_hwp', scenario_type, dirtype='intermediate')
                 vol_hwp_uri = outfile_uri('vol_hwp', scenario_type, dirtype='intermediate')
@@ -140,7 +142,6 @@ def execute_30(**args):
                     calculate_hwp_storage_cur(
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
-                    #TODO add to tot_C_cur
                     temp_c_cur_uri = raster_utils.temporary_filename()
                     LOGGER.debug(outputs)
                     shutil.copyfile(outputs['tot_C_cur'], temp_c_cur_uri)
@@ -167,7 +168,6 @@ def execute_30(**args):
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
 
-                    #TODO add to tot_C_cur
                     temp_c_fut_uri = raster_utils.temporary_filename()
                     LOGGER.debug(outputs)
                     shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
@@ -183,10 +183,11 @@ def execute_30(**args):
                         pixel_size_out, "intersection", dataset_to_align_index=0)
 
 
-    #TODO: sequestration
     for fut_type in ['fut', 'redd']:
         fut_type_lulc_uri = 'lulc_%s_uri' % fut_type
         if 'lulc_cur_uri' in args and fut_type_lulc_uri in args:
+            LOGGER.info('Computing sequestration for %s scenario', fut_type)
+
             def sub_op(c_cur, c_fut):
                 if nodata_out in [c_cur, c_fut]:
                     return nodata_out
@@ -200,6 +201,7 @@ def execute_30(**args):
                 pixel_size_out, "intersection", dataset_to_align_index=0)
 
             if do_uncertainty:
+                LOGGER.info('Computing confident cells for %s scenario.', fut_type)
                 confidence_threshold = args['confidence_threshold']
 
                 # Returns 1 if we're confident storage will increase,
@@ -253,6 +255,9 @@ def execute_30(**args):
                     confidence_op, outputs['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                     pixel_size_out, "intersection", dataset_to_align_index=0)
 
+    if do_uncertainty:
+        outputs['uncertainty'] = compute_uncertainty_data(args, pools)
+
     return outputs
 
 
@@ -284,41 +289,80 @@ def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
                     [pools[lulc_id][pool_type_sd] ** 2
                      for pool_type_sd in pool_estimate_sds]))
 
-def compute_uncertainty_data(lulc_uri, carbon_pools, scenario_type):
-    """Computes the mean and variance of carbon storage for the landscape.
+def compute_uncertainty_data(args, pools):
+    """Computes the mean and std dev for carbon storage and sequestration."""
 
-    The computation works as follows:
+    LOGGER.info("Computing uncertainty data.")
 
-    Let C_i be the amount of carbon of stored in grid cells with lulc type i.
-    C_i is normally distributed.
-    -The mean of C_i is the product of carbon per grid cell times number of
-    cells.
-    -The variance of C_i is the (number of grid cells times standard deviation
-    per cell) quantity squared. Note that this involves the assumption that
-    the amount of carbon in each grid cell of a particular lulc type is
-    identical (and that this amount is normally distributed).
+    # Count how many grid cells have each lulc type in each scenario map.
+    lulc_counts = {}
+    for scenario in ['cur', 'fut', 'redd']:
+        try:
+            lulc_uri = args['lulc_%s_uri' % scenario]
+        except KeyError:
+            continue
 
-    We compute C_total (total carbon) as follows:
-    C_total is equal to the sum of all C_i.
-    -The mean of C_total is equal to the sum of the means of all C_i.
-    -The variance of C_total is equal to the sum of the variances of all
-    C_i (assuming that all C_i are independently distributed).
+        lulc_counts[scenario] = raster_utils.unique_raster_values_count(
+            lulc_uri)
+
+    # Do a Monte Carlo simulation for carbon storage.
+    monte_carlo_results = {}
+    LOGGER.info("Beginning Monte Carlo simulation.")
+    for _ in range(NUM_MONTE_CARLO_RUNS):
+        run_results = do_monte_carlo_run(pools, lulc_counts)
+
+        # Note that in this context, 'scenario' could be an actual scenario
+        # (e.g. current, future, REDD) or it could be a sequestration
+        # (e.g. sequestration under future or sequestration under REDD).
+        for scenario, carbon_amount in run_results.items():
+            try:
+                monte_carlo_results[scenario].append(carbon_amount)
+            except KeyError:
+                monte_carlo_results[scenario] = [carbon_amount]
+
+    LOGGER.info("Done with Monte Carlo simulation.")
+
+    # Compute the mean and standard deviation for each scenario.
+    results = {}
+    for scenario in monte_carlo_results:
+        results[scenario] = norm.fit(monte_carlo_results[scenario])
+
+    return results
+
+
+def do_monte_carlo_run(pools, lulc_counts):
+    """Do a single Monte Carlo run for carbon storage.
+
+    Returns a dict with the results, keyed by scenario, and
+    # including results for sequestration.
     """
 
-    LOGGER.info("Computing uncertainty data for scenario %s.", scenario_type)
-    nodata = raster_utils.get_nodata_from_uri(lulc_uri)
+    # Sample carbon-per-grid-cell from the given normal distribution.
+    # We sample this independently for each LULC type.
+    lulc_carbon_samples = {}
+    for lulc_id, distribution in pools.items():
+        if not distribution['variance_cur']:
+            lulc_carbon_samples[lulc_id] = distribution['total_cur']
+        else:
+            lulc_carbon_samples[lulc_id] = np.random.normal(
+                distribution['total_cur'],
+                math.sqrt(distribution['variance_cur']))
 
-    # Count how many times each lulc type appears in the raster.
-    lulc_counts = raster_utils.unique_raster_values_count(lulc_uri)
-
+    # Compute the amount of carbon in each scenario.
     results = {}
-    results['mean'] = sum(carbon_pools[lulc]['total_%s' % scenario_type] * count
-                          for lulc, count in lulc_counts.items())
-    results['variance'] =  sum(
-        (carbon_pools[lulc]['variance_%s' % scenario_type] * count) ** 2
-        for lulc, count in lulc_counts.items())
+    for scenario, counts in lulc_counts.items():
+        # Amount of carbon is the sum across all lulc types of:
+        # (number of grid cells) x (carbon per grid cell)
+        results[scenario] = sum(
+            count * lulc_carbon_samples[lulc_id]
+            for lulc_id, count in counts.items())
 
-    LOGGER.info("Done with uncertainty analysis for scenario %s.", scenario_type)
+    # Compute sequestration.
+    for scenario in ['fut', 'redd']:
+        if scenario not in results:
+            continue
+        results['sequest_%s' % scenario] = results[scenario] - results['cur']
+
     return results
 
 
