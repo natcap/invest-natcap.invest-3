@@ -140,13 +140,14 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
         doc.add(make_biophysical_table(biophysical_outputs))
         if 'uncertainty' in biophysical_outputs:
             doc.write_header('Uncertainty Results', level=3)
-            doc.write_paragraph(make_biophysical_uncertainty_intro())
+            for paragraph in make_biophysical_uncertainty_intro():
+                doc.write_paragraph(paragraph)
             doc.add(make_biophysical_uncertainty_table(
                     biophysical_outputs['uncertainty']))
 
     if args['do_valuation']:
         doc.write_header('Valuation Results')
-        for paragraph in make_valuation_intro():
+        for paragraph in make_valuation_intro(args):
             doc.write_paragraph(paragraph)
         for table in make_valuation_tables(valuation_outputs):
             doc.add(table)
@@ -171,15 +172,17 @@ def make_report_intro(args):
              'model' if len(model) == 1 else 'models'))
 
 def make_biophysical_uncertainty_intro():
-    return (
-        'Standard deviations were computed by doing a Monte Carlo '
-        'simulation. For each run of the simulation, the amount of carbon '
-        'per grid cell for each LULC type was independently sampled. '
-        'Then, the amount of carbon in each scenario was computed '
-        'using this set of samples. Sequestration results were computed by '
-        'subtracting the amounts of carbon in different scenarios for each '
-        'run. Results across all Monte Carlo simulation runs were '
-        'analyzed to produce the following mean and standard deviation data.')
+    return [
+        'This data was computed by doing a Monte Carlo '
+        'simulation, which involved many runs of the model.',
+        'For each run of the simulation, the amount of carbon '
+        'per grid cell for each LULC type was independently sampled '
+        'from the normal distribution given in the input carbon pools. '
+        'Given this set of carbon pools, the model computed the amount of '
+        'carbon in each scenario, and computed sequestration by subtracting '
+        'the carbon storage in different scenarios. ',
+        'Results across all Monte Carlo simulation runs were '
+        'analyzed to produce the following mean and standard deviation data.']
 
 def make_biophysical_uncertainty_table(uncertainty_results):
     table = html.Table(id='biophysical_uncertainty')
@@ -320,15 +323,24 @@ def make_valuation_tables(valuation_outputs):
         yield comparison_table
 
 
-def make_valuation_intro():
-    return [
-        ('<strong>Positive values</strong> in this table indicate that '
-         'carbon storage increased. In this case, the positive Net Present '
-         'Value represents the value of the sequestered carbon.'),
-        ('<strong>Negative values</strong> indicate that carbon storage '
+def make_valuation_intro(args):
+    intro = [
+        '<strong>Positive values</strong> in this table indicate that '
+        'carbon storage increased. In this case, the positive Net Present '
+        'Value represents the value of the sequestered carbon.',
+        '<strong>Negative values</strong> indicate that carbon storage '
         'decreased. In this case, the negative Net Present Value represents '
-        'the cost of carbon emission.')
+        'the cost of carbon emission.'
         ]
+
+    if args['do_uncertainty']:
+        intro.append(
+            'Entries in the table with the label <i>confident cells only</i> '
+            'represent results for sequestration and value if we consider '
+            'sequestration that occurs only in those cells where we are '
+            'confident that carbon storage will either increase or decrease.')
+
+    return intro
 
 
 def make_outfile_table(args, biophysical_outputs, valuation_outputs, html_uri):

@@ -18,7 +18,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('carbon_biophysical')
 
-NUM_MONTE_CARLO_RUNS = 1000
+NUM_MONTE_CARLO_RUNS = 10000
 
 def execute(args):
     return execute_30(**args)
