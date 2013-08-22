@@ -375,6 +375,7 @@ class GISTest(unittest.TestCase):
             '.json': self.assertJSON,
             '.tif': self.assertRastersEqual,
             '.shp': self.assertVectorsEqual,
+            '.csv': self.assertCSVEqual,
         }
 
         try:
