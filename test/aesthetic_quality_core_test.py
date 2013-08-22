@@ -20,16 +20,21 @@ class TestAestheticQualityCore(unittest.TestCase):
         array_shape = (3, 3)
         viewpoint = (1, 1)
 
+        pi = math.pi
+        two_pi = 2.0 * pi
+        rad_to_deg = 180.0 / pi
+        deg_to_rad = 1.0 / rad_to_deg
+
         a = {}
-        a[18] = np.arctan2(0.5, 1.5)
+        a[18] = (np.arctan2(0.5, 1.5) * rad_to_deg + two_pi) % two_pi
         a[45] = 45.0
-        a[71] = np.arctan2(1.5, 0.5)
+        a[71] = (np.arctan2(1.5, 0.5) * rad_to_deg + two_pi) % two_pi
         a[135] = 135.0
-        a[161] = np.arctan2(0.5, -1.5)
-        a[198] = np.arctan2(-0.5, -1.5)
+        a[161] = (np.arctan2(0.5, -1.5) * rad_to_deg + two_pi) % two_pi
+        a[198] = (np.arctan2(-0.5, -1.5) * rad_to_deg + two_pi) % two_pi
         a[225] = 225.0
-        a[251] = np.arctan2(1.5, -0.5)
-        a[288] = np.arctan2(-1.5, -0.5)
+        a[251] = (np.arctan2(1.5, -0.5) * rad_to_deg + two_pi) % two_pi
+        a[288] = (np.arctan2(-1.5, -0.5) * rad_to_deg + two_pi) % two_pi
         a[315] = 315.0
         a[345] = 345.0
         for key in a.keys():
