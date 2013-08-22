@@ -1186,10 +1186,12 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
+    h_list_start_index = len(h_s_list)
+    
     def add_c_pix(*pixels):
         
         all_nodata = True
-        for p in pixels:
+        for index, p in enumerate(pixels):
             if p != nodata:
                 all_nodata = False
         if all_nodata:
@@ -1197,13 +1199,18 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         
         value = 0.
         
+        running_denom = 0
+
         for p in pixels:
             
             if p != nodata:
-                
+                if index < h_list_start_index:
+                    running_denom += denom_list['h_s'][index]
+                else:
+                    running_denom += denom_list['h'][index]
                 value += p
     
-        return value / tot_denom
+        return value / running_denom
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
@@ -1424,7 +1431,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             denoms['Recovery'][h] += 1 / float(dq)
 
         #First, burn the crit raster for risk
-        single_crit_C_uri = os.path.join(pre_raster_dir, h + 
+        single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
                                                         '_Indiv_C_Raster.tif')
         def burn_numerator_risk_single(pixel):
             
@@ -1443,7 +1450,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
         #Now, burn the recovery potential raster, and add that.
-        single_crit_rec_uri = os.path.join(pre_raster_dir, h + 
+        single_crit_rec_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
                                                   '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
@@ -1475,7 +1482,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             denoms['Recovery'][h] += 1/ float(dq)
 
             #First the risk rasters
-            crit_C_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
+            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + '_' + crit + \
                                                     '_' + 'C_Raster.tif')
             def burn_numerator_risk(pixel):
             
@@ -1494,7 +1501,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
             #Then the recovery rasters
-            crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
+            crit_recov_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_' + crit + \
                                                     '_' + 'Recov_Raster.tif')
             def burn_numerator_rec(pixel):
             
