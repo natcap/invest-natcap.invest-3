@@ -21,15 +21,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         viewpoint = (1, 1)
 
         a = {}
-        a[18] = np.arctan2()
+        a[18] = np.arctan2(0.5, 1.5)
         a[45] = 45.0
-        a[71] = np.arctan2()
+        a[71] = np.arctan2(1.5, 0.5)
         a[135] = 135.0
-        a[161] = np.arctan2()
-        a[198] = np.arctan2()
+        a[161] = np.arctan2(0.5, -1.5)
+        a[198] = np.arctan2(-0.5, -1.5)
         a[225] = 225.0
-        a[251] = np.arctan2()
-        a[288] = np.arctan2()
+        a[251] = np.arctan2(1.5, -0.5)
+        a[288] = np.arctan2(-1.5, -0.5)
         a[315] = 315.0
         a[345] = 345.0
         for item in a:
