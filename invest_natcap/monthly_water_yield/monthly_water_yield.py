@@ -302,7 +302,7 @@ def execute(args):
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
-        calculate_soil_stoarge(
+        calculate_soil_storage(
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
                 soil_storage_uri, float_nodata)
 
@@ -426,7 +426,7 @@ def clean_uri(in_uri_list):
         if os.path.isfile(uri):
             os.remove(uri)
 
-def calculate_soil_stoarge(
+def calculate_soil_storage(
         prev_soil_uri, water_uri, evap_uri, streamflow_uri, soil_storage_uri,
         out_nodata):
     """This function calculates the soil storage 
