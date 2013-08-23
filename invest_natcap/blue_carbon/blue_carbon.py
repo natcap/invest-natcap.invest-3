@@ -148,6 +148,10 @@ def execute(args):
                 LOGGER.error(msg)
                 raise ValueError, msg
 
+    #scale soil carbon by depth
+    for k in soil_dict:
+        soil_dict[k]=soil_dict[k] * depth_dict[k]
+
     #vectorize datasets operations            
     def add_op(*values):
         if nodata in values:
@@ -365,7 +369,7 @@ def execute(args):
                                             cell_size,
                                             "union")
             
-            LOGGER.info("Calculating timing of loss.")
+            LOGGER.info("Calculating primary timing of loss.")
             raster_utils.vectorize_datasets([lulc_base_biomass_half_life_uri,
                                              lulc_base_biomass_coefficient_uri,
                                              lulc_base_biomass_uri,
@@ -377,7 +381,9 @@ def execute(args):
                                             gdal_type,
                                             nodata,
                                             cell_size,
-                                            "union")                
+                                            "union")
+
+            LOGGER.info("Calculating secondary timing of loss.")
 
             #set base to new LULC and year
             lulc_base_year = lulc_transition_year
@@ -465,8 +471,8 @@ def execute(args):
                         
         else:
             LOGGER.debug("Snapshot year %i.", lulc_transition_year)
-##            LOGGER.debug("Calculate time from base year.")
-##            LOGGER.debug("Calculate carbon soil stock.")
+            LOGGER.debug("Calculating accumulation.")
+            LOGGER.debug("Calculating emisson.")
 
 ##    for year in range(lulc_list[0]["year"], args["analysis_year"]+1):            
 ##        if private_valuation:
