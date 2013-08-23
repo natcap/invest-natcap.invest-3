@@ -1,6 +1,8 @@
 '''Useful functions for testing HTML output.'''
 from bs4 import BeautifulSoup
 
+from invest_natcap.report_generation import html
+
 def assert_contains_matching_elems(test_case, uri, elems):
     '''Assert that the file contains the given elements.
 
@@ -11,7 +13,7 @@ def assert_contains_matching_elems(test_case, uri, elems):
         test_case.assertIsNotNone(soup.find(elem.tag, attrs=elem.attrs))
 
 def assert_table_contains_rows_uri(test_case, uri, table_id, rows,
-                                   num_header_rows=0):
+                                   num_header_rows=0, do_formatting=True):
     '''Assert that the table in the file contains the given rows.
 
     rows - a list of rows, each of which is represented as a list
@@ -23,7 +25,10 @@ def assert_table_contains_rows_uri(test_case, uri, table_id, rows,
     table = tables[0]
     for i, row in enumerate(rows):
         is_header = (i < num_header_rows)
-        _assert_table_contains_row(test_case, table, row, is_header)
+        if do_formatting:
+            row = [html.cell_format(data) for data in row]
+        _assert_table_contains_row(test_case, table, row,
+                                   is_header)
 
 def _make_soup(uri):
     '''Returns a BeautifulSoup object from the given HTML file.'''

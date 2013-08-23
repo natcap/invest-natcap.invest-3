@@ -581,7 +581,7 @@ def create_HTML_table(
                            'start day for growing',
                            'Length of Fallowing period']:
             cells.append(args['farm_op_dict'][farm_id][column_key])
-        ops_table.add_row(cells)
+        ops_table.add_row(cells, do_formatting=False)
 
     doc.write_header('Farm Harvesting (output)')
     harvest_table = doc.add(html.Table(id='harvest_table'))

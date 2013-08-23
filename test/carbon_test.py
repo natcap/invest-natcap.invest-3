@@ -164,7 +164,7 @@ class TestCarbonBiophysical(unittest.TestCase):
             self.assert_table_contains_rows(
                 'biophysical_table',
                 [['Baseline', 37875383.0229, -3526095.89057],
-                 ['REDD policy', 41502289.835, 100847.723038]])
+                 ['REDD policy', 41502289.83, 100847.723038]])
 
             if self.do_uncertainty:
                 self.assert_dataset_equal('conf_redd.tif')
@@ -243,7 +243,6 @@ class TestCarbonBiophysical(unittest.TestCase):
     def assert_table_contains_rows(self, table_id, rows, suffix=''):
         """Assert that the table with the given id contains the given rows."""
         uri = os.path.join(self.output_dir, 'summary%s.html' % suffix)
-
         html_test_utils.assert_table_contains_rows_uri(self, uri, table_id, rows)
 
     def test_biophysical(self):
