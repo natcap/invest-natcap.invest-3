@@ -541,9 +541,21 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. This dictionary will be the same structure
-            as crit_lists, but the innermost values will be floats instead of
-            lists.
+            can be divided by this. 
+            
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0, ...}, 
+                                 (hab1, stressB): {'CritName': 1.3, ...}
+                               },
+                        'h':   { hab1: {'CritName': 1.3, ...},
+                                ...
+                               },
+                        'h_s_e': { (hab1, stressA): {'CritName': 1.3, ...}
+                               }
+                     }
+             'Recovery': { hab1: {'critname': 1.6, ...}
+                           hab2: ...
+                         }
+            }
     Output:
         A raster file for each of the habitats included in the model displaying
             the recovery potential within each potential grid cell.
@@ -557,6 +569,11 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
     #concat the lists of criteria rasters.
     for h in habitats:
 
+        curr_list = crit_lists['Recovery'][h]
+        curr_crit_names = os.path.splitext(os.path.basename(uri))[0].split("_")[1], \
+                            curr_list)
+        curr_denoms = denoms['Recovery'][h]
+    
         def add_recov_pix(*pixels):
             '''We will have burned numerator values for the recovery potential
             equation. Want to add all of the numerators (r/dq), then divide by
@@ -570,17 +587,19 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                 return -1.
         
             value = 0.
-            
-            for p in pixels:
+            denom_val = 0.
+
+            for i in range(0, len(pixels)):
                 
+                p = pixels[i]
+
                 if p not in [-1., -1]:
                     value += p
-  
-            value = value / denoms['Recovery'][h]
+                    denom_val += curr_denoms[curr_crit_names[i]]
+
+            value = value / denom_val
 
             return value
-
-        curr_list = crit_lists['Recovery'][h]
 
         #Need to get the arbitrary first element in order to have a pixel size
         #to use in vectorize_datasets. One hopes that we have at least 1 thing
@@ -659,6 +678,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     low risk areas and medium risk areas). 
     
     Since the raster_utils function can only take in ints, want to predetermine
+
     what areas are or are not going to be shapefile, and pass in a raster that
     is only 1 or nodata.
     
