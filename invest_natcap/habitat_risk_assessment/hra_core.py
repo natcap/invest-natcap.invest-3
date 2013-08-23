@@ -1156,10 +1156,15 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
     grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
-    #This separates the URI into a list like the following, from which we pull the criteria name:
-    #['H[eelgrass]', 'S[FFA]', 'Indiv', 'E', 'Raster']
-    crit_name_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
-                        h_s_list)
+    LOGGER.debug("h_s_list?: %s" % h_s_list)
+
+    #Using regex to pull out the criteria name after the last ]_. Will do this for all full URI's.
+    #See notebook notes from 8/22/13 for explanation for that regex.
+    crit_name_list = map(
+        lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
+
+    LOGGER.debug("Crit_Name_List E's: %s" % crit_name_list)
 
     def add_e_pix(*pixels):
         
@@ -1210,10 +1215,12 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     tot_crit_list = h_s_list + h_list
 
-    h_s_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
+    h_s_names = map(lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), \
                         h_s_list)
     
-    h_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[1], \
+    h_names = map(lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), \
                         h_list)
 
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
