@@ -21,7 +21,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         viewpoint = (1, 1)
 
         pi = math.pi
-        two_pi = 2.0 * pi
         rad_to_deg = 180.0 / pi
         deg_to_rad = 1.0 / rad_to_deg
 
@@ -106,9 +105,12 @@ class TestAestheticQualityCore(unittest.TestCase):
                 extreme_angles.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
 
+        extreme_angles = np.array(extreme_angles)
 
         extreme_cell_angles = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+
+        print(extreme_angles.shape, extreme_cell_angles.shape)
 
     def test_viewshed(self):
         pass
