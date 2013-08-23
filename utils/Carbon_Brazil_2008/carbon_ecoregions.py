@@ -9,6 +9,8 @@ import scipy.stats
 import csv
 import re
 import os
+from invest_natcap import raster_utils
+
 
 def regression_builder(slope, intercept):
 	return lambda(d): slope * numpy.log(d) + intercept
@@ -42,18 +44,29 @@ REGRESSION_TYPES = [2]
 biomass_dataset = gdal.Open(BASE_BIOMASS_FILENAME)
 biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
 landcover_dataset = gdal.Open(BASE_LANDCOVER_FILENAME)
-biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
-landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
+landcover_band = landcover_dataset.GetRasterBand(1)
+#biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
+#landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
+
+shape = (biomass_dataset.RasterYSize, biomass_dataset.RasterXSize)
+#source_array = numpy.memmap(
+#	source_filename, dtype='float32', mode='w+', shape=shape)
 
 #This gets us the cell size in projected units, should be meters if the raster is projected
 cell_size = landcover_dataset.GetGeoTransform()[1]
 
 #Create a mask of 0 and 1s for all the forest landcover types
 #This will be used to calculate edge effects
-forest_existance = numpy.zeros(landcover_array.shape)
-for landcover_type in FOREST_LANDCOVER_TYPES:
-	forest_existance = forest_existance + (landcover_array == landcover_type)
-forest_existance[biomass_array == biomass_nodata] = 0.0
+forest_filename = raster_utils.temporary_filename()
+forest_existance = numpy.memmap(
+	forest_filename, dtype='byte', mode='w+', shape=shape)
+forest_existance[:] = 0
+
+for row_index in range(biomass_dataset.RasterYSize):
+	landcover_array = landcover_band.ReadAsArray(0, row_index, biomass_dataset.RasterXSize, 1)
+	for landcover_type in FOREST_LANDCOVER_TYPES:
+		forest_existance[row_index,:] = forest_existance[row_index,:] + (landcover_array == landcover_type)
+
 
 #This calculates an edge distance for the clusters of forest
 edge_distance = scipy.ndimage.morphology.distance_transform_edt(
