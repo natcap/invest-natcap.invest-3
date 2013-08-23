@@ -572,7 +572,7 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
 
         curr_list = crit_lists['Recovery'][h]
         curr_crit_names = map(lambda uri: re.match(
-            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1)], \
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), \
                             curr_list)
         curr_denoms = denoms['Recovery'][h]
     
