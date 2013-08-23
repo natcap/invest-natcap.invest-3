@@ -99,7 +99,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_naive = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
-                if row == 1 and col == 1:
+                if (row == viewpoint[0]) and (col == viewpoint[1]):
                     continue
                 cell = (row, col)
                 extreme_angles_naive.append( \
@@ -110,6 +110,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_fast = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
+        print('naive', extreme_angles_naive)
+        print('fast ', extreme_angles_fast)
+        print('difference', extreme_angles_naive - extreme_angles_fast)
         error = np.sum(np.abs(extreme_angles_naive - extreme_angles_fast))
 
         print(error)
