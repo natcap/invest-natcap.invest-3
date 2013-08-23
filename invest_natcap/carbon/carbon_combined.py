@@ -289,7 +289,7 @@ def _make_valuation_tables(valuation_outputs):
         total_val = carbon_utils.sum_pixel_values_from_uri(
             valuation_outputs['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        change_table.add_row([scenario_name, total_seq, format_currency(total_val)])
+        change_table.add_row([scenario_name, total_seq, total_val])
 
         try:
             seq_mask_uri = valuation_outputs['%s_seq_mask' % scenario_type]
@@ -304,7 +304,7 @@ def _make_valuation_tables(valuation_outputs):
         scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
         change_table.add_row(['%s (confident cells only)' % scenario_name,
                               masked_seq,
-                              format_currency(masked_val)])
+                              masked_val])
 
     yield change_table
 
@@ -325,7 +325,7 @@ def _make_valuation_tables(valuation_outputs):
             ['%s vs %s' % (_make_scenario_name('redd'),
                            _make_scenario_name('base')),
              redd_results[0] - base_results[0],
-             format_currency(redd_results[1] - base_results[1])
+             redd_results[1] - base_results[1]
              ])
 
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
@@ -338,7 +338,7 @@ def _make_valuation_tables(valuation_outputs):
                  % (_make_scenario_name('redd'),
                     _make_scenario_name('base')),
                  redd_mask_results[0] - base_mask_results[0],
-                 format_currency(redd_mask_results[1] - base_mask_results[1])
+                 redd_mask_results[1] - base_mask_results[1]
                  ])
 
         yield comparison_table
@@ -514,7 +514,3 @@ def _make_scenario_name(scenario, do_redd=True, capitalize=True):
     if capitalize:
         return name[0].upper() + name[1:]
     return name
-
-
-def format_currency(val):
-    return '%.2f' % val

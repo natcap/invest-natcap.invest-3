@@ -1,6 +1,9 @@
 '''Utilities for creating simple HTML report files.'''
 
 import collections
+import locale
+
+locale.setlocale(locale.LC_ALL, '')
 
 class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
@@ -119,8 +122,9 @@ class Element(object):
 class Table(object):
     '''Represents and renders HTML tables.'''
 
-    def __init__(self, **attr):
+    def __init__(self, do_formatting=True, **attr):
         self.table_elem = Element('table', **attr)
+        self.do_formatting = do_formatting
 
     def add_row(self, cells, is_header=False, cell_attr=None):
         '''Writes a table row with the given cell data.
@@ -133,7 +137,8 @@ class Table(object):
         cell_tag = 'th' if is_header else 'td'
         for i, cell in enumerate(cells):
             attr = cell_attr[i] if cell_attr else {}
-            row.add(Element(cell_tag, str(cell), **attr))
+            str_cell = _format(cell) if self.do_formatting else str(cell)
+            row.add(Element(cell_tag, str_cell, **attr))
         self.table_elem.add(row)
 
     def add_two_level_header(self, outer_headers,
@@ -197,6 +202,16 @@ class _TableOfContents(object):
             link_list.add(list_elem)
 
         return header.html() + link_list.html()
+
+
+def _format(data):
+    if isinstance(data, (int, long)):
+        return locale.format("%d", data, grouping=True)
+    elif isinstance(data, float):
+        return locale.format("%.2f", data, grouping=True)
+    else:
+        return str(data)
+
 
 def _get_style_css():
     '''Return a string with CSS styling rules.'''
