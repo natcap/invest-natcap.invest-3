@@ -114,6 +114,8 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         print(error)
 
+        assert error < 5e-15
+
     def test_viewshed(self):
         pass
 
