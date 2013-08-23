@@ -55,16 +55,20 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 continue
             cell = np.array([row, col])
             viewpoint_to_cell = cell - viewpoint
-            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
-            angle = (angle + two_pi) % two_pi 
-            print(cell, viewpoint_to_cell, angle * rad_to_deg)
-            extreme_cell_angles.append(np.array([angle, angle]))
             # find index in extreme_cell_points that corresponds to the current
             # angle:
-            index = int(4. * angle / two_pi) * 2
+            sector = int(4. * angle / two_pi) * 2
             if np.amin(np.absolute(viewpoint_to_cell)) > 0:
-                index += 1
-            print(index)
+                sector += 1
+            print(sector)
+            min_angle_offset = \
+                np.array(extreme_cell_points[sector]['min_angle'])
+            max_angle_offset = \
+                np.array(extreme_cell_points[sector]['max_angle'])
+            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+            angle = (angle + two_pi) % two_pi 
+            print(cell, min_angle_offset, max_angle_offset)
+            extreme_cell_angles.append(np.array([angle, angle]))
     
     extreme_cell_angles = np.array(extreme_cell_angles) 
 
