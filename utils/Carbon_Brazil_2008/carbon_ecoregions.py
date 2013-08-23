@@ -28,7 +28,8 @@ def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot
 	pylab.axis('tight')
 	pylab.ylabel('Biomass (units?)')
 	pylab.xlabel('Distance from patch edge (m)')
-	pylab.title('Bioregion %s\nR^2 = %.4f' % (bioregion_id, r_value))
+	pylab.title('Bioregion %s\nR^2 = %.4f\ny(dist) = %.2f * ln(dist) + %.2f' % (bioregion_id, r_value, slope, intercept))
+	
 
 
 #Units of base biomass in the raster pixels are are Mg/Ha
