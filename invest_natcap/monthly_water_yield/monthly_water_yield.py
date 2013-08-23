@@ -223,11 +223,8 @@ def execute(args):
     watershed_table_uri = os.path.join(
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
     
-    count = 0
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
-        count += 1
-        if count >= 3: break
         # Create a tuple for precip and eto of the current months values
         # (represented as a dictionary), the field, and uri for raster output
         precip_params = (precip_data_dict[cur_month], 'p', precip_uri)
@@ -618,14 +615,9 @@ def calculate_final_interflow(
         conditional = (
             soil_pix + water_pix - evap_pix - inter_pix - bflow_pix)
 
-
         if conditional <= smax_pix:
-            LOGGER.debug("%s <= %s" % (conditional,smax_pix))
-            LOGGER.debug("return %s" % inter_pix)
             return inter_pix
         else:
-            LOGGER.debug("%s > %s" % (conditional,smax_pix))
-            LOGGER.debug("return %s" % (soil_pix + water_pix - evap_pix - bflow_pix - smax_pix))
             return (
                 soil_pix + water_pix - evap_pix - bflow_pix - smax_pix)
 
@@ -968,8 +960,7 @@ def calculate_alphas(
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
     soil_text_nodata = raster_utils.get_nodata_from_uri(soil_text_uri)
     LOGGER.debug('Soil Text Nodata: %s', soil_text_nodata)
-    slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
-    smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
 
     def alpha_one_op(slope_pix, soil_text_pix):
         """Vectorization operation to calculate the alpha one variable used in
@@ -1016,15 +1007,15 @@ def calculate_alphas(
 
     raster_utils.vectorize_datasets(
             [slope_uri, soil_text_uri], alpha_one_op, output_uri_list[0],
-            gdal.GDT_Float32, out_nodata, slope_cell_size, 'intersection')
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_two_op, output_uri_list[1], gdal.GDT_Float32,
-            out_nodata, smax_cell_size, 'intersection')
+            out_nodata, cell_size, 'intersection')
     
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
-            out_nodata, smax_cell_size, 'intersection')
+            out_nodata, cell_size, 'intersection')
 
 def model_parameters_to_dict(csv_uri):
     """Build a dictionary from the model parameters CSV table
