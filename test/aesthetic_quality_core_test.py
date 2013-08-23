@@ -38,14 +38,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         a[315] = 315.0
         a[341] = (np.arctan2(-0.5, 1.5) * rad_to_deg + 360.) % 360.
         # Use the angles above to create the expected min/max angles
-        expected_extreme_angles = np.array([[a[108], a[161]], \
-            [a[45], a[135]], \
-            [a[18], a[71]], \
-            [a[135], a[225]], \
-            [a[18], a[341]], \
-            [a[198], a[251]], \
-            [a[225], a[315]], \
-            [a[288], a[341]]])
+        expected_extreme_angles = np.array([ \
+            [a[108], 135., a[161]], \
+            [a[45], 90., a[135]], \
+            [a[18], 45., a[71]], \
+            [a[135], 180., a[225]], \
+            [a[18], 0., a[341]], \
+            [a[198], 225., a[251]], \
+            [a[225], 270., a[315]], \
+            [a[288], 315., a[341]]])
         # Convert to rad so it's compatible with extreme_cell_angles_naive
         expected_extreme_angles *= deg_to_rad
         # Compute extreme angles for each cell
@@ -61,7 +62,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Compare both results
         error = np.sum(computed_extreme_angles - expected_extreme_angles)
         # Assert if necessary
-        assert abs(error) < 2e-15
+        assert abs(error) < 1e-14
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
@@ -74,11 +75,15 @@ class TestAestheticQualityCore(unittest.TestCase):
                 looking at the point cell_coord.
                 
             Returns a numpy array with the extreme angles 
-                [min_angle, max_angle]"""
+                [min_cell_angle, center_cell_angle, max_cell_angle]"""
         # Convert cell and viewpoint tuples to numpy arrays
         cell = np.array([cell_coord[0], cell_coord[1]])
         viewpoint = np.array([viewpoint_coord[0], viewpoint_coord[1]])
         # Compute the angle to the center of the cell
+        viewpoint_to_cell = cell - viewpoint
+        center_angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+        center_angle = (2.0 * math.pi + center_angle) % (2.0 * math.pi)
+        # Compute the minimum and maximum angles by goignt hrough each corner
         max_angle = 0.
         min_angle = 2.0 * math.pi
         # Define the 4 cell corners
@@ -99,11 +104,11 @@ class TestAestheticQualityCore(unittest.TestCase):
             if angle_to_corner < min_angle:
                 min_angle = angle_to_corner
         # Done, return min and max angles
-        return np.array([min_angle, max_angle])
+        return np.array([min_angle, center_angle, max_angle])
 
     def test_extreme_cell_angles(self):
         """Testing naive vs optimized version of the same functionality"""
-        array_shape = (101, 101) # Testing on a 101x101 array
+        array_shape = (3, 3)
         viewpoint = (array_shape[0]/2, array_shape[1]/2)
 
         # Gather extreme angles from naive algorithm 
@@ -123,9 +128,16 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Colmpare the two
         error = np.sum(np.abs(extreme_angles_naive - extreme_angles_fast))
         # assert if necessary
-        assert error < 5e-15
+        if error > 5e-15:
+            print('naive', extreme_angles_naive)
+            print('fast', extreme_angles_fast)
+            print('difference', extreme_angles_fast - extreme_angles_naive)
+        message = 'error on expected and computed angles is too large:' + \
+        str(error)
+        assert error < 5e-15, message
 
     def test_viewshed(self):
+
         pass
 
     def tare_down(self):

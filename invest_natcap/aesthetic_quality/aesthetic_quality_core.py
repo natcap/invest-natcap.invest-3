@@ -18,8 +18,8 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
             
-        returns a tuple of 2 arrays (min, max) as does numpy.where() with min
-            and max the minimum and maximum angles spanned by each raster pixel
+        returns a tuple (min, center, max) of 3 Nx1 numpy arrays of each raster
+        cell's minimum, center, and maximum angles.
     """
     viewpoint = np.array(viewpoint_coords)
 
@@ -66,7 +66,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angle = (max_angle + two_pi) % two_pi 
             
-            extreme_cell_angles.append(np.array([min_angle, max_angle]))
+            extreme_cell_angles.append(np.array([min_angle, angle, max_angle]))
     
     extreme_cell_angles = np.array(extreme_cell_angles) 
 
@@ -87,7 +87,14 @@ max_dist=-1., refraction_coeff=None):
             -max_dist: maximum visibility radius. By default infinity (-1), 
                 not used yet
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet"""
-    pass
+    add_cell_events = []
+    delete_cell_events = []
+    cell_center_events = []
+
+    in_raster = gdal.Open(input_uri)
+    in_array = in_raster.GetRasterBand(1).ReadAsArray()
+
+    extreme_angles
 
 def execute(args):
     """Entry point for aesthetic quality core computation.
