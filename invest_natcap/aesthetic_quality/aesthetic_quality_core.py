@@ -52,9 +52,9 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         for col in range(array_shape[1]):
             cell = np.array([row, col])
             viewpoint_to_cell = cell - viewpoint
-            angle = math.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
             angle = (angle + two_pi) % two_pi 
-            print(cell, viewpoint_to_cell, angle)
+            print(cell, viewpoint_to_cell, angle * rad_to_deg)
     
 
     return extreme_cell_angles
