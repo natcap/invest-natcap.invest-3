@@ -243,7 +243,7 @@ def execute(args):
 
             # Project point shapefile to DEM projection
             raster_utils.reproject_datasource_uri(
-                    cur_point_uri, dem_wkt, projected_point_uri) 
+                    cur_point_uri, dem_wkt, projected_point_uri)
 
             # Create a new raster from the DEM to vectorize the points onto
             raster_utils.new_raster_from_base_uri(
@@ -302,7 +302,7 @@ def execute(args):
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
-        calculate_soil_stoarge(
+        calculate_soil_storage(
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
                 soil_storage_uri, float_nodata)
 
@@ -426,7 +426,7 @@ def clean_uri(in_uri_list):
         if os.path.isfile(uri):
             os.remove(uri)
 
-def calculate_soil_stoarge(
+def calculate_soil_storage(
         prev_soil_uri, water_uri, evap_uri, streamflow_uri, soil_storage_uri,
         out_nodata):
     """This function calculates the soil storage 
@@ -612,14 +612,14 @@ def calculate_final_interflow(
             if pix == pix_nodata: 
                 return out_nodata
         
-        conditional = (soil_pix + water_pix - (
-                    evap_pix - inter_pix - bflow_pix))
+        conditional = (
+            soil_pix + water_pix - evap_pix - inter_pix - bflow_pix)
 
         if conditional <= smax_pix:
             return inter_pix
         else:
-            return (soil_pix + water_pix - (
-                        evap_pix - bflow_pix - smax_pix))
+            return (
+                soil_pix + water_pix - evap_pix - bflow_pix - smax_pix)
 
     cell_size = raster_utils.get_cell_size_from_uri(intermediate_interflow_uri)
 
@@ -718,15 +718,9 @@ def calculate_intermediate_interflow(
             if pix == pix_nodata: 
                 return out_nodata
        
-        try:
-            result = alpha_pix * soil_pix**beta * (
-                water_pix - evap_pix * (1.0 - math.exp(
+        result = alpha_pix * soil_pix**beta * (
+            water_pix - evap_pix * (1.0 - math.exp(
                     -1.0 * (water_pix / evap_pix))))
-        except OverflowError:
-            #NOTE: Talk To RICH about
-            LOGGER.debug(water_pix)
-            LOGGER.debug(evap_pix)
-            result = 1.0
 
         return result
 
@@ -740,7 +734,8 @@ def calculate_intermediate_interflow(
 def calculate_water_amt(
         imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
         out_nodata):
-    """Calculates the water available on a pixel
+    """Calculates the water available on a pixel, this is equation 4 from the
+        water yield guidance.
 
         imperv_area_uri - a URI to a gdal dataset for the impervious area in
             fraction
@@ -785,7 +780,8 @@ def calculate_water_amt(
 def calculate_evaporation(
         soil_storage_uri, smax_uri, water_uri, eto_uri, etk_uri, evap_uri,
         etc_uri, out_nodata):
-    """This function calculates the actual evaporation
+    """This function calculates the actual evaporation, from equation 3 in
+        user's guide.
 
         soil_storage_uri - a URI to a gdal dataset for the previous time steps
             soil water content
@@ -851,7 +847,7 @@ def calculate_evaporation(
         
         if water_pix < etc_pix:
             return water_pix + soil_pix * (
-                    1.0 - math.exp((etc_pix - water_pix) / smax_pix))
+                    1.0 - math.exp(-(etc_pix - water_pix) / smax_pix))
         else:
             return etc_pix
     
@@ -964,8 +960,7 @@ def calculate_alphas(
     smax_nodata = raster_utils.get_nodata_from_uri(smax_uri)
     soil_text_nodata = raster_utils.get_nodata_from_uri(soil_text_uri)
     LOGGER.debug('Soil Text Nodata: %s', soil_text_nodata)
-    slope_cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
-    smax_cell_size = raster_utils.get_cell_size_from_uri(smax_uri)
+    cell_size = raster_utils.get_cell_size_from_uri(slope_uri)
 
     def alpha_one_op(slope_pix, soil_text_pix):
         """Vectorization operation to calculate the alpha one variable used in
@@ -1012,15 +1007,15 @@ def calculate_alphas(
 
     raster_utils.vectorize_datasets(
             [slope_uri, soil_text_uri], alpha_one_op, output_uri_list[0],
-            gdal.GDT_Float32, out_nodata, slope_cell_size, 'intersection')
+            gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_two_op, output_uri_list[1], gdal.GDT_Float32,
-            out_nodata, smax_cell_size, 'intersection')
+            out_nodata, cell_size, 'intersection')
     
     raster_utils.vectorize_datasets(
             [smax_uri], alpha_three_op, output_uri_list[2], gdal.GDT_Float32,
-            out_nodata, smax_cell_size, 'intersection')
+            out_nodata, cell_size, 'intersection')
 
 def model_parameters_to_dict(csv_uri):
     """Build a dictionary from the model parameters CSV table

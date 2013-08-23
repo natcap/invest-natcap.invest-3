@@ -264,6 +264,7 @@ class TestCarbonBiophysical(unittest.TestCase):
         args = {}
         args['do_biophysical'] = True
         args['do_valuation'] = False
+        args['do_uncertainty'] = False
         args['workspace_dir'] = self.workspace_dir
         args['lulc_cur_uri'] = './invest-data/test/data/carbon/uk_data/gb_lulc_2000'
         args['lulc_fut_uri'] = './invest-data/test/data/carbon/uk_data/gb_lulc_2007'
