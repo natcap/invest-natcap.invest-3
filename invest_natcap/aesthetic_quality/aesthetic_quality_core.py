@@ -50,6 +50,9 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
 
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
+            # Skip if cell falls on the viewpoint
+            if (row == viewpoint[0]) and (col == viewpoint[1]):
+                continue
             cell = np.array([row, col])
             viewpoint_to_cell = cell - viewpoint
             angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])

@@ -110,7 +110,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_cell_angles = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
-        print(extreme_angles.shape, extreme_cell_angles.shape)
+        error = np.sum(np.abs(extreme_angles - extreme_cell_angles))
+        print(error)
 
     def test_viewshed(self):
         pass
