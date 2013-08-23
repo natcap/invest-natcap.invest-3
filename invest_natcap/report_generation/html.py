@@ -2,8 +2,6 @@
 
 import collections
 
-BEACH_STYLE = 0  # constant to select a nice beach (tan and blue) palette
-
 class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
 
@@ -29,17 +27,17 @@ class HTMLDocument(object):
         doc.flush()
     '''
 
-    def __init__(self, uri, title, header, style_const=BEACH_STYLE):
+    def __init__(self, uri, title, header):
         self.uri = uri
 
         self.html_elem = Element('html')
 
         head = self.html_elem.add(Element('head'))
         head.add(Element('title', title))
-        head.add(Element('style', _get_style_css(style_const), type='text/css'))
+        head.add(Element('style', _get_style_css(), type='text/css'))
 
         self.body = self.html_elem.add(Element('body'))
-        self.body.add(Element('h1', ('<center>%s</center>' % header)))
+        self.body.add(Element('h1', header))
 
         self.id_counter = 0  # keep track of allocated IDs
         self.headers = collections.OrderedDict()
@@ -74,6 +72,7 @@ class HTMLDocument(object):
     def flush(self):
         '''Create a file with the contents of this document.'''
         outfile = open(self.uri, 'w')
+        outfile.write('<!DOCTYPE html>')
         outfile.write(self.html_elem.html())
         outfile.close()
 
@@ -199,13 +198,16 @@ class _TableOfContents(object):
 
         return header.html() + link_list.html()
 
-def _get_style_css(style_const):
-    '''Return a string with the given CSS styling rules.'''
-    if style_const == BEACH_STYLE:
-        return '''
+def _get_style_css():
+    '''Return a string with CSS styling rules.'''
+
+    return '''
       body {
           background-color: #EFECCA;
           color: #002F2F
+      }
+      h1 {
+          text-align: center
       }
       h1, h2, h3, h4, strong, th {
           color: #046380;
@@ -234,5 +236,3 @@ def _get_style_css(style_const):
           margin: 20px;
       }
       '''
-    else:
-        raise Exception('Unsupported style constant %d' % style_const)

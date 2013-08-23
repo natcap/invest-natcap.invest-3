@@ -81,14 +81,11 @@ def execute_30(**args):
         filename = '%s_%s%s.%s' % (prefix, scenario_type, file_suffix, filetype)
         return os.path.join(dirs[dirtype], filename)
 
-    #1) load carbon pools into dictionary indexed by LULC
-    do_uncertainty = args.get('do_uncertainty', False)
-    if do_uncertainty:
-        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uncertain_uri'], 'lucode')
-    else:
-        pools = raster_utils.get_lookup_from_table(args['carbon_pools_uri'], 'lucode')
+    pools = _compute_carbon_pools(args)
 
-    #2) map lulc_cur and _fut (if availble) to total carbon
+    do_uncertainty = args['do_uncertainty']
+
+    # Map total carbon for each scenario.
     outputs = {}
     for lulc_uri in ['lulc_cur_uri', 'lulc_fut_uri', 'lulc_redd_uri']:
         if lulc_uri in args:
@@ -96,15 +93,12 @@ def execute_30(**args):
 
             LOGGER.info('Mapping carbon for %s scenario.', scenario_type)
 
-            populate_carbon_pools(
-                pools, do_uncertainty, args[lulc_uri], scenario_type)
-
             nodata = raster_utils.get_nodata_from_uri(args[lulc_uri])
             nodata_out = -5.0
             def map_carbon_pool(lulc):
                 if lulc == nodata:
                     return nodata_out
-                return pools[lulc]['total_%s' % scenario_type]
+                return pools[lulc]['total']
             dataset_out_uri = outfile_uri('tot_C', scenario_type)
             outputs['tot_C_%s' % scenario_type] = dataset_out_uri
 
@@ -119,7 +113,7 @@ def execute_30(**args):
                 def map_carbon_pool_variance(lulc):
                     if lulc == nodata:
                         return nodata_out
-                    return pools[lulc]['variance_%s' % scenario_type]
+                    return pools[lulc]['variance']
                 variance_out_uri = outfile_uri(
                     'variance_C', scenario_type, dirtype='intermediate')
                 outputs['variance_C_%s' % scenario_type] = variance_out_uri
@@ -139,11 +133,10 @@ def execute_30(**args):
                 vol_hwp_uri = outfile_uri('vol_hwp', scenario_type, dirtype='intermediate')
 
                 if scenario_type == 'cur':
-                    calculate_hwp_storage_cur(
+                    _calculate_hwp_storage_cur(
                         args[hwp_key], args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_%s_year' % scenario_type])
                     temp_c_cur_uri = raster_utils.temporary_filename()
-                    LOGGER.debug(outputs)
                     shutil.copyfile(outputs['tot_C_cur'], temp_c_cur_uri)
 
                     hwp_cur_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
@@ -164,12 +157,11 @@ def execute_30(**args):
                     if 'hwp_fut_shape_uri' in args:
                         hwp_shapes['fut'] = args['hwp_fut_shape_uri']
 
-                    calculate_hwp_storage_fut(
+                    _calculate_hwp_storage_fut(
                         hwp_shapes, args[lulc_uri], c_hwp_uri, bio_hwp_uri,
                         vol_hwp_uri, args['lulc_cur_year'], args['lulc_fut_year'])
 
                     temp_c_fut_uri = raster_utils.temporary_filename()
-                    LOGGER.debug(outputs)
                     shutil.copyfile(outputs['tot_C_fut'], temp_c_fut_uri)
 
                     hwp_fut_nodata = raster_utils.get_nodata_from_uri(c_hwp_uri)
@@ -255,41 +247,80 @@ def execute_30(**args):
                     confidence_op, outputs['conf_%s' % fut_type], gdal.GDT_Float32, nodata_out,
                     pixel_size_out, "intersection", dataset_to_align_index=0)
 
-    if do_uncertainty:
-        outputs['uncertainty'] = compute_uncertainty_data(args, pools)
+    # Do a Monte Carlo simulation for uncertainty analysis.
+    # We only do this if HWP is not enabled, because the simulation
+    # computes carbon just by summing carbon across the
+    # landscape, which is wrong if we're doing HWP analysis.
+    if (do_uncertainty and
+        'hwp_cur_shape_uri' not in args and
+        'hwp_fut_shape_uri' not in args):
+        outputs['uncertainty'] = _compute_uncertainty_data(args, pools)
 
     return outputs
 
 
-def populate_carbon_pools(pools, do_uncertainty, lulc_uri, scenario_type):
-    """Populates pools with data on carbon content per LULC type."""
+def _compute_carbon_pools(args):
+    """Returns a dict with data on carbon pool totals and variance."""
 
-    cell_area_ha = (
-        raster_utils.get_cell_area_from_uri(lulc_uri) / 10000.0)
+    if args['do_uncertainty']:
+        pool_inputs = raster_utils.get_lookup_from_table(
+            args['carbon_pools_uncertain_uri'], 'lucode')
+    else:
+        pool_inputs = raster_utils.get_lookup_from_table(
+            args['carbon_pools_uri'], 'lucode')
+
+    cell_area_ha = _compute_cell_area_ha(args)
 
     pool_estimate_types = ['c_above', 'c_below', 'c_soil', 'c_dead']
 
-    if do_uncertainty:
-        # We want the mean and standard deviation columns.
+    if args['do_uncertainty']:
+        # We want the mean and standard deviation columns from the input.
         pool_estimate_sds = [s + '_sd' for s in pool_estimate_types]
         pool_estimate_types = [s + '_mean' for s in pool_estimate_types]
 
-    for lulc_id in pools:
-        # Compute the total carbon per pixel for each lulc type
-        pools[lulc_id]['total_%s' % scenario_type] = cell_area_ha * sum(
-            [pools[lulc_id][pool_type] for pool_type in pool_estimate_types])
+    pools = {}
+    for lulc_id in pool_inputs:
+        pools[lulc_id] = {}
 
-        if do_uncertainty:
+        # Compute the total carbon per pixel for each lulc type
+        pools[lulc_id]['total'] = cell_area_ha * sum(
+            pool_inputs[lulc_id][pool_type]
+            for pool_type in pool_estimate_types)
+
+        if args['do_uncertainty']:
             # Compute the total variance per pixel for each lulc type.
             # We have a normal distribution for each pool; we assume each is
             # independent, so the variance of the sum is equal to the sum of
             # the variances. Note that we scale by the area squared.
-            pools[lulc_id]['variance_%s' % scenario_type] = (
-                (cell_area_ha ** 2) * sum(
-                    [pools[lulc_id][pool_type_sd] ** 2
-                     for pool_type_sd in pool_estimate_sds]))
+            pools[lulc_id]['variance'] = (cell_area_ha ** 2) * sum(
+                pool_inputs[lulc_id][pool_type_sd] ** 2
+                for pool_type_sd in pool_estimate_sds)
 
-def compute_uncertainty_data(args, pools):
+    return pools
+
+
+def _compute_cell_area_ha(args):
+    cell_area_cur = raster_utils.get_cell_area_from_uri(args['lulc_cur_uri'])
+
+    for scenario in ['fut', 'redd']:
+        try:
+            lulc_uri = args['lulc_%s_uri' % scenario]
+        except KeyError:
+            continue
+
+        cell_area_in_scenario = raster_utils.get_cell_area_from_uri(lulc_uri)
+
+        if cell_area_cur != cell_area_in_scenario:
+            raise Exception(
+                'The LULC map for the %s scenario has a different cell area '
+                'than the LULC map for the current scenario. Please '
+                'ensure that all LULC maps have the same cell area.' % scenario)
+
+    # Convert to hectares.
+    return cell_area_cur / 10000.0
+
+
+def _compute_uncertainty_data(args, pools):
     """Computes the mean and std dev for carbon storage and sequestration."""
 
     LOGGER.info("Computing uncertainty data.")
@@ -309,7 +340,7 @@ def compute_uncertainty_data(args, pools):
     monte_carlo_results = {}
     LOGGER.info("Beginning Monte Carlo simulation.")
     for _ in range(NUM_MONTE_CARLO_RUNS):
-        run_results = do_monte_carlo_run(pools, lulc_counts)
+        run_results = _do_monte_carlo_run(pools, lulc_counts)
 
         # Note that in this context, 'scenario' could be an actual scenario
         # (e.g. current, future, REDD) or it could be a sequestration
@@ -330,7 +361,7 @@ def compute_uncertainty_data(args, pools):
     return results
 
 
-def do_monte_carlo_run(pools, lulc_counts):
+def _do_monte_carlo_run(pools, lulc_counts):
     """Do a single Monte Carlo run for carbon storage.
 
     Returns a dict with the results, keyed by scenario, and
@@ -341,12 +372,12 @@ def do_monte_carlo_run(pools, lulc_counts):
     # We sample this independently for each LULC type.
     lulc_carbon_samples = {}
     for lulc_id, distribution in pools.items():
-        if not distribution['variance_cur']:
-            lulc_carbon_samples[lulc_id] = distribution['total_cur']
+        if not distribution['variance']:
+            lulc_carbon_samples[lulc_id] = distribution['total']
         else:
             lulc_carbon_samples[lulc_id] = np.random.normal(
-                distribution['total_cur'],
-                math.sqrt(distribution['variance_cur']))
+                distribution['total'],
+                math.sqrt(distribution['variance']))
 
     # Compute the amount of carbon in each scenario.
     results = {}
@@ -366,7 +397,7 @@ def do_monte_carlo_run(pools, lulc_counts):
     return results
 
 
-def calculate_hwp_storage_cur(
+def _calculate_hwp_storage_cur(
     hwp_shape_uri, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
     yr_cur):
     """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due
@@ -459,7 +490,7 @@ def calculate_hwp_storage_cur(
         raster = None
 
 
-def calculate_hwp_storage_fut(
+def _calculate_hwp_storage_fut(
     hwp_shapes, base_dataset_uri, c_hwp_uri, bio_hwp_uri, vol_hwp_uri,
     yr_cur, yr_fut):
     """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to
