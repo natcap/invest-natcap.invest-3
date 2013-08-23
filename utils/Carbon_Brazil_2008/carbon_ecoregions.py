@@ -33,49 +33,67 @@ def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot
 
 #Units of base biomass in the raster pixels are are Mg/Ha
 BASE_BIOMASS_FILENAME = './clipped_bio.tif'
+CLIPPED_BIOMASS_FILENAME = './bio_tmp.tif'
 BASE_LANDCOVER_FILENAME = './clipped_lulc.tif'
+CLIPPED_BASE_LANDCOVER_FILENAME = './lulc_tmp.tif'
+ECOREGIONS_FILENAME = './ecoregions.tif'
+CLIPPED_ECOREGIONS_FILENAME = './clipped_ecoregions.tif'
+
 
 #These are the landcover types that define clusters of forest for the distance from edge calculation
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
 #These are the landcover types that should use the log regression
 REGRESSION_TYPES = [2]
 
-#Load the base biomass and landcover datasets
-biomass_dataset = gdal.Open(BASE_BIOMASS_FILENAME)
-biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
-landcover_dataset = gdal.Open(BASE_LANDCOVER_FILENAME)
-landcover_band = landcover_dataset.GetRasterBand(1)
-#biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
-#landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
+BIOREGIONS = {
+	1: 'bio_1.shp', 
+	2: 'bio_2.shp',
+	3: 'bio_3.shp',
+	4: 'bio_4.shp',
+	5: 'bio_5.shp'}
 
-shape = (biomass_dataset.RasterYSize, biomass_dataset.RasterXSize)
-#source_array = numpy.memmap(
-#	source_filename, dtype='float32', mode='w+', shape=shape)
+	
+for bioregion_id, bioregion_uri in BIOREGIONS.iteritems():
+	print 'working on %s' % bioregion_uri
+	raster_utils.clip_dataset_uri(
+		BASE_BIOMASS_FILENAME, bioregion_uri, CLIPPED_BIOMASS_FILENAME,
+		False)
+	raster_utils.clip_dataset_uri(
+		BASE_LANDCOVER_FILENAME, bioregion_uri, CLIPPED_BASE_LANDCOVER_FILENAME,
+		False)
+	raster_utils.clip_dataset_uri(
+		ECOREGIONS_FILENAME, bioregion_uri, CLIPPED_ECOREGIONS_FILENAME,
+		False)
 
-#This gets us the cell size in projected units, should be meters if the raster is projected
-cell_size = landcover_dataset.GetGeoTransform()[1]
+	#Load the base biomass and landcover datasets
+	biomass_dataset = gdal.Open(CLIPPED_BIOMASS_FILENAME)
+	biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
+	landcover_dataset = gdal.Open(CLIPPED_BASE_LANDCOVER_FILENAME)
+	landcover_band = landcover_dataset.GetRasterBand(1)
+	biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
+	landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
 
-#Create a mask of 0 and 1s for all the forest landcover types
-#This will be used to calculate edge effects
-forest_filename = raster_utils.temporary_filename()
-forest_existance = numpy.memmap(
-	forest_filename, dtype='byte', mode='w+', shape=shape)
-forest_existance[:] = 0
+	shape = (biomass_dataset.RasterYSize, biomass_dataset.RasterXSize)
 
-print 'making forest cover'
-for row_index in range(biomass_dataset.RasterYSize):
-	landcover_array = landcover_band.ReadAsArray(0, row_index, biomass_dataset.RasterXSize, 1)
-	for landcover_type in FOREST_LANDCOVER_TYPES:
-		forest_existance[row_index,:] = forest_existance[row_index,:] + (landcover_array == landcover_type)
+	#This gets us the cell size in projected units, should be meters if the raster is projected
+	cell_size = landcover_dataset.GetGeoTransform()[1]
 
-print 'calculating edge distance'
-edge_distance_filename = raster_utils.temporary_filename()
-edge_distance = numpy.memmap(
-	edge_distance_filename, dtype='byte', mode='w+', shape=shape)
+	#Create a mask of 0 and 1s for all the forest landcover types
+	#This will be used to calculate edge effects
+	forest_filename = raster_utils.temporary_filename()
+	forest_existance = numpy.zeros(shape)
 
-#This calculates an edge distance for the clusters of forest
-scipy.ndimage.morphology.distance_transform_edt(
-	forest_existance, distances=edge_distance)
+	print 'making forest cover'
+	for row_index in range(biomass_dataset.RasterYSize):
+		landcover_array = landcover_band.ReadAsArray(0, row_index, biomass_dataset.RasterXSize, 1)
+		for landcover_type in FOREST_LANDCOVER_TYPES:
+			forest_existance[row_index,:] = forest_existance[row_index,:] + (landcover_array == landcover_type)
+
+	print 'calculating edge distance'
+
+	#This calculates an edge distance for the clusters of forest
+	edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+		forest_existance)
 
 #For each forest type, build a regression of biomass based 
 #on the distance from the edge of the forest
