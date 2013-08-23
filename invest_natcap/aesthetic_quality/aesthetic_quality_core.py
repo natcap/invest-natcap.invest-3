@@ -66,10 +66,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angle = (max_angle + two_pi) % two_pi 
             
-            print('sector', sector, 'cell', cell)
-            print('offsets', min_corner_offset, max_corner_offset)
-            print('corners', min_corner, max_corner)
-            print('angles', min_angle * rad_to_deg, max_angle * rad_to_deg)
             extreme_cell_angles.append(np.array([min_angle, max_angle]))
     
     extreme_cell_angles = np.array(extreme_cell_angles) 

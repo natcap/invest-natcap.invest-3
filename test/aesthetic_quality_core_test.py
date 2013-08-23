@@ -93,8 +93,8 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_extreme_cell_angles(self):
         """Testing naive and optimized version of the same functionality"""
-        array_shape = (3, 3)
-        viewpoint = (1, 1)
+        array_shape = (5, 5)
+        viewpoint = (array_shape[0]/2, array_shape[1]/2)
 
         extreme_angles_naive = []
         for row in range(array_shape[0]):
@@ -110,12 +110,12 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_fast = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
-        print('naive', extreme_angles_naive)
-        print('fast ', extreme_angles_fast)
-        print('difference', extreme_angles_naive - extreme_angles_fast)
+        #print('naive', extreme_angles_naive)
+        #print('fast ', extreme_angles_fast)
+        #print('difference', extreme_angles_naive - extreme_angles_fast)
         error = np.sum(np.abs(extreme_angles_naive - extreme_angles_fast))
 
-        print(error)
+        print('error', error)
 
         assert error < 5e-15
 
