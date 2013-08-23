@@ -96,21 +96,22 @@ class TestAestheticQualityCore(unittest.TestCase):
         array_shape = (3, 3)
         viewpoint = (1, 1)
 
-        extreme_angles = []
+        extreme_angles_naive = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
                 if row == 1 and col == 1:
                     continue
                 cell = (row, col)
-                extreme_angles.append( \
+                extreme_angles_naive.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
 
-        extreme_angles = np.array(extreme_angles)
+        extreme_angles_naive = np.array(extreme_angles_naive)
 
-        extreme_cell_angles = \
+        extreme_angles_fast = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
-        error = np.sum(np.abs(extreme_angles - extreme_cell_angles))
+        error = np.sum(np.abs(extreme_angles_naive - extreme_angles_fast))
+
         print(error)
 
     def test_viewshed(self):
