@@ -1223,7 +1223,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                     denom_val += h_s_denom_dict[h_s_names[i]]
                 else:
                     value += p
-                    denom_val += h_denom_dict[h_names[i]]
+                    denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
                 value += p
     
         return value / denom_val
@@ -1585,7 +1585,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
 
-        for crit_dict in (h_s_e[pair]['Crit_Ratings']).values:
+        for crit_dict in (h_s_e[pair]['Crit_Ratings']).values():
                     
             r = crit_dict['Rating']
             dq = crit_dict['DQ']
