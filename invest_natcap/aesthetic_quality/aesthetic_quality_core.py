@@ -29,14 +29,14 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     deg_to_rad = 1.0 / rad_to_deg
 
     extreme_cell_points = [ \
-    [{'min_angle':[0.5, -0.5]}, {'max_angle':[-0.5,-0.5]}], \
-    [{'min_angle':[0.5, 0.5]}, {'max_angle':[-0.5, -0.5]}], \
-    [{'min_angle':[0.5, 0.5]}, {'max_angle':[0.5, -0.5]}], \
-    [{'min_angle':[-0.5, 0.5]}, {'max_angle':[0.5, -0.5]}], \
-    [{'min_angle':[-0.5, 0.5]}, {'max_angle':[0.5, 0.5]}], \
-    [{'min_angle':[-0.5, -0.5]}, {'max_angle':[0.5, 0.5]}], \
-    [{'min_angle':[-0.5, -0.5]}, {'max_angle':[-0.5, 0.5]}], \
-    [{'min_angle':[0.5, -0.5]}, {'max_angle':[-0.5, 0.5]}]]
+    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5,-0.5]}, \
+    {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
+    {'min_angle':[0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5], 'max_angle':[-0.5, 0.5]}, \
+    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, 0.5]}]
 
     extreme_cell_angles = []
     x_range = np.array(range(array_shape[0]))
@@ -62,7 +62,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             sector = int(4. * angle / two_pi) * 2
             if np.amin(np.absolute(viewpoint_to_cell)) > 0:
                 sector += 1
-            print(sector)
             min_angle_offset = \
                 np.array(extreme_cell_points[sector]['min_angle'])
             max_angle_offset = \
@@ -76,7 +75,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
             max_angle = (max_angle + two_pi) % two_pi 
             
-            print('cell', cell)
+            print('sector', sector, 'cell', cell)
             print('offsets', min_angle_offset, max_angle_offset)
             print('corners', min_corner, max_corner)
             print('angles', min_angle, max_angle)
