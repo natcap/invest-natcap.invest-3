@@ -8,6 +8,7 @@ import collections
 import math
 import datetime
 import matplotlib.pyplot
+import re
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
