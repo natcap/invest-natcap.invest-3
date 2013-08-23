@@ -46,10 +46,10 @@ FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
 REGRESSION_TYPE = 2
 
 BIOREGIONS = {
-	1: 'bio_1.shp', 
-	2: 'bio_2.shp',
+#	1: 'bio_1.shp', 
+#	2: 'bio_2.shp',
 	3: 'bio_3.shp',
-	4: 'bio_4.shp',
+#	4: 'bio_4.shp',
 	5: 'bio_5.shp',
 	}
 
@@ -135,7 +135,7 @@ for bioregion_id, bioregion_uri in BIOREGIONS.iteritems():
 	print '%s, %.2f, %.2f, %.2f, %s, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression(cell_size), landcover_regression(10*cell_size))
 	landcover_mean[landcover_type] = landcover_biomass_mean
 	
-	plot_regression(biomass_array, landcover_edge_distance, plot_id, 1, 5, landcover_regression)
+	plot_regression(biomass_array, landcover_edge_distance, plot_id, 1, 2, landcover_regression)
 	plot_id += 1
 	
 pylab.show()
