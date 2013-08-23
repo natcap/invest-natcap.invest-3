@@ -85,8 +85,6 @@ class TestAestheticQualityCore(unittest.TestCase):
                 np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
             angle_to_corner = \
                 (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
-            print(corner, viewpoint_to_corner, angle_to_corner * \
-            180.0 / math.pi)
             if angle_to_corner > max_angle:
                 max_angle = angle_to_corner
             if angle_to_corner < min_angle:
@@ -95,20 +93,22 @@ class TestAestheticQualityCore(unittest.TestCase):
         return np.array([min_angle, max_angle])
 
     def test_extreme_cell_angles(self):
-        """Ensure the core function list_extreme_cell_angles agrees with 
-        a naive implementation of the same functionality"""
+        """Testing naive and optimized version of the same functionality"""
         array_shape = (3, 3)
         viewpoint = (1, 1)
 
+        extreme_angles = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
                 if row == 1 and col == 1:
                     continue
                 cell = (row, col)
-                extreme_angles = \
-                    self.extreme_cell_angles_naive(cell, viewpoint)
+                extreme_angles.append( \
+                    self.extreme_cell_angles_naive(cell, viewpoint))
 
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+
+        extreme_cell_angles = \
+            aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
 
     def test_viewshed(self):
         pass

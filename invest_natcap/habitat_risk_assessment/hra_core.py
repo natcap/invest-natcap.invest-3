@@ -541,9 +541,21 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. This dictionary will be the same structure
-            as crit_lists, but the innermost values will be floats instead of
-            lists.
+            can be divided by this. 
+            
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0, ...}, 
+                                 (hab1, stressB): {'CritName': 1.3, ...}
+                               },
+                        'h':   { hab1: {'CritName': 1.3, ...},
+                                ...
+                               },
+                        'h_s_e': { (hab1, stressA): {'CritName': 1.3, ...}
+                               }
+                     }
+             'Recovery': { hab1: {'critname': 1.6, ...}
+                           hab2: ...
+                         }
+            }
     Output:
         A raster file for each of the habitats included in the model displaying
             the recovery potential within each potential grid cell.
@@ -557,6 +569,11 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
     #concat the lists of criteria rasters.
     for h in habitats:
 
+        curr_list = crit_lists['Recovery'][h]
+        curr_crit_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[1], \
+                            curr_list)
+        curr_denoms = denoms['Recovery'][h]
+    
         def add_recov_pix(*pixels):
             '''We will have burned numerator values for the recovery potential
             equation. Want to add all of the numerators (r/dq), then divide by
@@ -570,17 +587,19 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                 return -1.
         
             value = 0.
-            
-            for p in pixels:
+            denom_val = 0.
+
+            for i in range(0, len(pixels)):
                 
+                p = pixels[i]
+
                 if p not in [-1., -1]:
                     value += p
-  
-            value = value / denoms['Recovery'][h]
+                    denom_val += curr_denoms[curr_crit_names[i]]
+
+            value = value / denom_val
 
             return value
-
-        curr_list = crit_lists['Recovery'][h]
 
         #Need to get the arbitrary first element in order to have a pixel size
         #to use in vectorize_datasets. One hopes that we have at least 1 thing
@@ -659,6 +678,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     low risk areas and medium risk areas). 
     
     Since the raster_utils function can only take in ints, want to predetermine
+
     what areas are or are not going to be shapefile, and pass in a raster that
     is only 1 or nodata.
     
@@ -1118,7 +1138,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
                     "union", resample_method_list=None, 
                     dataset_to_align_index=0, aoi_uri=None)
 
-def calc_E_raster(out_uri, h_s_list, h_s_denom):
+def calc_E_raster(out_uri, h_s_list, denom_dict):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1126,7 +1146,7 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
         out_uri- The location to which the E raster should be burned.
         h_s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that h, s pair.
-        h_s_denom- A double representing the sum total of all applicable criteria
+        denom_dict- A double representing the sum total of all applicable criteria
             using the equation 1/dq*w.
             criteria applicable for that s.
 
@@ -1136,7 +1156,10 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
     grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
-    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
+    #This separates the URI into a list like the following, from which we pull the criteria name:
+    #['H[eelgrass]', 'S[FFA]', 'Indiv', 'E', 'Raster']
+    crit_name_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
+                        h_s_list)
 
     def add_e_pix(*pixels):
         
@@ -1148,20 +1171,24 @@ def calc_E_raster(out_uri, h_s_list, h_s_denom):
             return nodata
         
         value = 0.
-        
-        for p in pixels:
+        denom_val = 0.
+
+        for i in range(0, len(pixels)):
             
+            p = pixels[i]
+
             if p != nodata:
                 value += p
+                denom_val += denom_dict[crit_name_list[i]]
     
-        return value / h_s_denom
+        return value / denom_val
 
     raster_utils.vectorize_datasets(h_s_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
+def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     '''Should return a raster burned with a 'C' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1169,23 +1196,31 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
         out_uri- The location to which the calculated C raster should be burned.
         h_s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that h, s pair.
-        h_s_denom- A double representing the sum total of all applicable criteria
-            using the equation 1/dq*w.
+        h_s_denom- A dictionary containing criteria names applicable to this
+            particular h,s pair. Each criteria string name maps to a double
+            representing the denominator for that raster, using the equation 1/dq*w.
         h_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that s.
-        h_denom- A double representing the sum total of all applicable criteria
-            using the equation 1/dq*w.
+        h_denom- A dictionary containing criteria names applicable to this
+            particular habitat. Each criteria string name maps to a double
+            representing the denominator for that raster, using the equation 1/dq*w.
 
     Returns nothing.
     '''
-    LOGGER.debug("The URI is: %s and the H_S_Denom is: %s" % (out_uri, h_s_denom))
-    LOGGER.debug("The h denom is: %s" % h_denom)
 
     tot_crit_list = h_s_list + h_list
-    tot_denom = h_s_denom + h_denom
+
+    h_s_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
+                        h_s_list)
+    
+    h_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[1], \
+                        h_list)
+
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
+    h_list_start_index = len(h_s_list)
+    
     def add_c_pix(*pixels):
         
         all_nodata = True
@@ -1196,14 +1231,22 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom, h_list, h_denom):
             return nodata
         
         value = 0.
-        
-        for p in pixels:
+        denom_val = 0.
+
+        for i in range(0, len(pixels)):
+
+            p = pixels[i]
             
             if p != nodata:
-                
+                if i < h_list_start_index:
+                    value += p
+                    denom_val += h_s_denom_dict[h_s_names[i]]
+                else:
+                    value += p
+                    denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
                 value += p
     
-        return value / tot_denom
+        return value / denom_val
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
@@ -1275,9 +1318,21 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. This dictionary will be the same structure
-            as crit_lists, but the innermost values will be floats instead of
-            lists.
+            can be divided by this. 
+            
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0, ...}, 
+                                 (hab1, stressB): {'CritName': 1.3, ...}
+                               },
+                        'h':   { hab1: {'CritName': 1.3, ...},
+                                ...
+                               },
+                        'h_s_e': { (hab1, stressA): {'CritName': 1.3, ...}
+                               }
+                     }
+             'Recovery': { hab1: 1.6,
+                           hab2: ...
+                         }
+            }
     '''
     LOGGER.debug("h_s_c: %s" % h_s_c)
     LOGGER.debug("h_s_e: %s" % h_s_e)
@@ -1303,7 +1358,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         h, s = pair
 
         crit_lists['Risk']['h_s_c'][pair] = []
-        denoms['Risk']['h_s_c'][pair] = 0
+        denoms['Risk']['h_s_c'][pair] = {} 
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
@@ -1325,6 +1380,11 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
 
+        #For the summed individual ratings, want the denominator to be concatonated
+        #only with the other individual scores. Will make a single entry that will
+        #correspond to the file name being output.
+        denoms['Risk']['h_s_c'][pair]['Indiv'] = 0.
+
         for crit_dict in (h_s_c[pair]['Crit_Ratings']).values():
                     
             r = crit_dict['Rating']
@@ -1333,7 +1393,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
-            denoms['Risk']['h_s_c'][pair] += 1 / float(dq*w)
+            denoms['Risk']['h_s_c'][pair]['Indiv'] += 1 / float(dq*w)
         
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.
@@ -1365,17 +1425,17 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #of which is reburned with the pixel value r, as r/dq*w.
 
         #.iteritems creates a key, value pair for each one.
-        for crit, crit_dict in h_s_c[pair]['Crit_Rasters'].iteritems():
+        for crit_name, crit_dict in h_s_c[pair]['Crit_Rasters'].iteritems():
 
             crit_ds_uri = crit_dict['DS']
             crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
 
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
-            denoms['Risk']['h_s_c'][pair] += 1/ float(dq * w)
+            denoms['Risk']['h_s_c'][pair][crit_name] = 1/ float(dq * w)
 
             crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
-                                        ']_' + crit + '_' + 'C_Raster.tif')
+                                        ']_' + crit_name + '_' + 'C_Raster.tif')
 
             def burn_numerator_hs(pixel):
 
@@ -1399,8 +1459,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
         crit_lists['Risk']['h'][h] = []
         crit_lists['Recovery'][h] = []
-        denoms['Risk']['h'][h] = 0
-        denoms['Recovery'][h] = 0
+        denoms['Risk']['h'][h] = {}
+        denoms['Recovery'][h] = {}
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
@@ -1410,6 +1470,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
+        
+        denoms['Risk']['h'][h]['Indiv'] = 0.
+        denoms['Recovery'][h]['Indiv'] = 0.
 
         for crit_dict in hab[h]['Crit_Ratings'].values():
                     
@@ -1420,11 +1483,11 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             #Explicitly want a float output so as not to lose precision.
             risk_crit_rate_numerator += r / float(dq*w)
             rec_crit_rate_numerator += r/ float(dq)
-            denoms['Risk']['h'][h] += 1 / float(dq*w)
-            denoms['Recovery'][h] += 1 / float(dq)
+            denoms['Risk']['h'][h]['Indiv'] += 1 / float(dq*w)
+            denoms['Recovery'][h]['Indiv'] += 1 / float(dq)
 
         #First, burn the crit raster for risk
-        single_crit_C_uri = os.path.join(pre_raster_dir, h + 
+        single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
                                                         '_Indiv_C_Raster.tif')
         def burn_numerator_risk_single(pixel):
             
@@ -1443,7 +1506,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         crit_lists['Risk']['h'][h].append(single_crit_C_uri)
 
         #Now, burn the recovery potential raster, and add that.
-        single_crit_rec_uri = os.path.join(pre_raster_dir, h + 
+        single_crit_rec_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
                                                   '_Indiv_Recov_Raster.tif')
 
         def burn_numerator_rec_single(pixel):
@@ -1464,18 +1527,18 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         
         #Raster Criteria: should output multiple rasters, each
         #of which is reburned with the old pixel value r as r/dq*w, or r/dq.
-        for crit, crit_dict in hab[h]['Crit_Rasters'].iteritems():
+        for crit_name, crit_dict in hab[h]['Crit_Rasters'].iteritems():
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
 
             crit_ds_uri = crit_dict['DS']
             crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
 
-            denoms['Risk']['h'][h] += 1/ float(dq * w)
-            denoms['Recovery'][h] += 1/ float(dq)
+            denoms['Risk']['h'][h][crit_name] = 1/ float(dq * w)
+            denoms['Recovery'][h][crit_name] = 1/ float(dq)
 
             #First the risk rasters
-            crit_C_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
+            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + '_' + crit_name + \
                                                     '_' + 'C_Raster.tif')
             def burn_numerator_risk(pixel):
             
@@ -1494,7 +1557,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
             #Then the recovery rasters
-            crit_recov_uri = os.path.join(pre_raster_dir, h + '_' + crit + \
+            crit_recov_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_' + crit_name + \
                                                     '_' + 'Recov_Raster.tif')
             def burn_numerator_rec(pixel):
             
@@ -1518,7 +1581,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         h, s = pair
 
         crit_lists['Risk']['h_s_e'][pair] = []
-        denoms['Risk']['h_s_e'][pair] = 0
+        denoms['Risk']['h_s_e'][pair] = {}
 
         #The base dataset for all h_s overlap criteria. Will need to load bases
         #for each of the h/s crits too.
@@ -1536,6 +1599,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         the individual numerical criteria, and then the raster criteria.'''
 
         crit_rate_numerator = 0
+        denoms['Risk']['h_s_e'][pair]['Indiv'] = 0
         
         #H-S-E dictionary, Numerical Criteria: should output a 
         #single raster that equals to the sum of r/dq*w for all single number 
@@ -1549,7 +1613,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
-            denoms['Risk']['h_s_e'][pair] += 1 / float(dq*w)
+            denoms['Risk']['h_s_e'][pair]['Indiv'] += 1 / float(dq*w)
     
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.
@@ -1581,17 +1645,17 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #of which is reburned with the pixel value r, as r/dq*w.
 
         #.iteritems creates a key, value pair for each one.
-        for crit, crit_dict in h_s_e[pair]['Crit_Rasters'].iteritems():
+        for crit_name, crit_dict in h_s_e[pair]['Crit_Rasters'].iteritems():
 
             crit_ds_uri = crit_dict['DS']
             crit_nodata = raster_utils.get_nodata_from_uri(crit_ds_uri)
 
             dq = crit_dict['DQ']
             w = crit_dict['Weight']
-            denoms['Risk']['h_s_e'][pair] += 1/ float(dq * w)
+            denoms['Risk']['h_s_e'][pair][crit_name] = 1/ float(dq * w)
 
             crit_E_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_S[' + s + \
-                                        ']_' + crit + '_' + 'E_Raster.tif')
+                                        ']_' + crit_name + '_' + 'E_Raster.tif')
 
             def burn_numerator_hs(pixel):
 
