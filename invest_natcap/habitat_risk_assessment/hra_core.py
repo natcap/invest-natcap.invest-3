@@ -1153,7 +1153,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
         value = 0.
         denom_val = 0.
 
-        for i in range(1, len(pixels)+ 1):
+        for i in range(0, len(pixels)):
             
             p = pixels[i]
 
@@ -1213,7 +1213,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
         value = 0.
         denom_val = 0.
 
-        for i in range(1, len(pixels) + 1):
+        for i in range(0, len(pixels)):
 
             p = pixels[i]
             
