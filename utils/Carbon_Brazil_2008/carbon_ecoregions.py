@@ -42,17 +42,18 @@ CLIPPED_ECOREGIONS_FILENAME = './clipped_ecoregions.tif'
 
 #These are the landcover types that define clusters of forest for the distance from edge calculation
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
-#These are the landcover types that should use the log regression
-REGRESSION_TYPES = [2]
+#This is the landcover types that should use the log regression
+REGRESSION_TYPE = 2
 
 BIOREGIONS = {
 	1: 'bio_1.shp', 
 	2: 'bio_2.shp',
 	3: 'bio_3.shp',
 	4: 'bio_4.shp',
-	5: 'bio_5.shp'}
+	5: 'bio_5.shp',
+	}
 
-plot_id = 1
+plot_id = 0
 for bioregion_id, bioregion_uri in BIOREGIONS.iteritems():
 	print 'working on %s' % bioregion_uri
 	raster_utils.clip_dataset_uri(
@@ -72,7 +73,9 @@ for bioregion_id, bioregion_uri in BIOREGIONS.iteritems():
 	landcover_band = landcover_dataset.GetRasterBand(1)
 	biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
 	landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
-
+	ecoregions_dataset = gdal.Open(CLIPPED_ECOREGIONS_FILENAME)
+	ecoregions_array = ecoregions_dataset.GetRasterBand(1).ReadAsArray()
+	
 	shape = (biomass_dataset.RasterYSize, biomass_dataset.RasterXSize)
 
 	#This gets us the cell size in projected units, should be meters if the raster is projected
@@ -101,38 +104,38 @@ for bioregion_id, bioregion_uri in BIOREGIONS.iteritems():
 	landcover_mean = {}
 	print 'building biomass regression'
 	print 'landcover type, biomass mean, r^2, stddev, pixel count, regression_fn(1px), regression_fn(10px)'
-	for landcover_type in REGRESSION_TYPES:
-		landcover_mask = numpy.where(
-			(landcover_array == landcover_type) * 
-			(biomass_array != biomass_nodata))
-		
-		landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
-		
-		landcover_edge_distance = edge_distance[landcover_mask] * cell_size
-		print landcover_edge_distance
-		print landcover_biomass
-		#Fit a log function of edge distance to biomass for 
-		#landcover_type
-		try:
-			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
-				numpy.log(landcover_edge_distance), landcover_biomass)
-		except ValueError:
-			print "probably didn't have good data for the regression, just skip it"
-			continue
-		
-		landcover_regression = regression_builder(slope, intercept)
-		landcover_biomass_mean = numpy.average(landcover_biomass)
-		
-		#calcualte R^2
-		ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
-		ss_res = numpy.sum((landcover_biomass - landcover_regression(landcover_edge_distance)) ** 2)
-		r_value = 1 - ss_res / ss_tot
-		std_dev = numpy.std(landcover_biomass)
-		n_count = landcover_biomass.size
-		print '%s, %.2f, %.2f, %.2f, %s, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression(cell_size), landcover_regression(10*cell_size))
-		landcover_mean[landcover_type] = landcover_biomass_mean
-		
-		plot_regression(biomass_array, landcover_edge_distance, plot_id, 5, 1, landcover_regression)
-		plot_id += 1
+
+	landcover_mask = numpy.where(
+		(landcover_array == REGRESSION_TYPE) * 
+		(biomass_array != biomass_nodata) *
+		(edge_distance != 0) *
+		(ecoregions_array == bioregion_id))
+	
+	landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
+	
+	landcover_edge_distance = edge_distance[landcover_mask] * cell_size
+	#Fit a log function of edge distance to biomass for 
+	#landcover_type
+	try:
+		slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
+			numpy.log(landcover_edge_distance), landcover_biomass)
+	except ValueError:
+		print "probably didn't have good data for the regression, just skip it"
+		continue
+	
+	landcover_regression = regression_builder(slope, intercept)
+	landcover_biomass_mean = numpy.average(landcover_biomass)
+	
+	#calcualte R^2
+	ss_tot = numpy.sum((landcover_biomass - landcover_biomass_mean) **2)
+	ss_res = numpy.sum((landcover_biomass - landcover_regression(landcover_edge_distance)) ** 2)
+	r_value = 1 - ss_res / ss_tot
+	std_dev = numpy.std(landcover_biomass)
+	n_count = landcover_biomass.size
+	print '%s, %.2f, %.2f, %.2f, %s, %s, %s' % (landcover_type, landcover_biomass_mean, r_value, std_dev, n_count, landcover_regression(cell_size), landcover_regression(10*cell_size))
+	landcover_mean[landcover_type] = landcover_biomass_mean
+	
+	plot_regression(biomass_array, landcover_edge_distance, plot_id, 1, 5, landcover_regression)
+	plot_id += 1
 	
 pylab.show()
