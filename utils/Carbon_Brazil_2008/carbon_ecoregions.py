@@ -32,8 +32,8 @@ def plot_regression(biomass_array, edge_distance_array, plot_id, plot_rows, plot
 
 
 #Units of base biomass in the raster pixels are are Mg/Ha
-BASE_BIOMASS_FILENAME = './braz_bio_08'
-BASE_LANDCOVER_FILENAME = './braz_lulc_08'
+BASE_BIOMASS_FILENAME = './clipped_bio.tif'
+BASE_LANDCOVER_FILENAME = './clipped_lulc.tif'
 
 #These are the landcover types that define clusters of forest for the distance from edge calculation
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
@@ -62,15 +62,20 @@ forest_existance = numpy.memmap(
 	forest_filename, dtype='byte', mode='w+', shape=shape)
 forest_existance[:] = 0
 
+print 'making forest cover'
 for row_index in range(biomass_dataset.RasterYSize):
 	landcover_array = landcover_band.ReadAsArray(0, row_index, biomass_dataset.RasterXSize, 1)
 	for landcover_type in FOREST_LANDCOVER_TYPES:
 		forest_existance[row_index,:] = forest_existance[row_index,:] + (landcover_array == landcover_type)
 
+print 'calculating edge distance'
+edge_distance_filename = raster_utils.temporary_filename()
+edge_distance = numpy.memmap(
+	edge_distance_filename, dtype='byte', mode='w+', shape=shape)
 
 #This calculates an edge distance for the clusters of forest
-edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-	forest_existance)
+scipy.ndimage.morphology.distance_transform_edt(
+	forest_existance, distances=edge_distance)
 
 #For each forest type, build a regression of biomass based 
 #on the distance from the edge of the forest
