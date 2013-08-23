@@ -11,19 +11,19 @@ class TestAestheticQualityCore(unittest.TestCase):
         pass
 
     def test_extreme_cell_angles_naive(self):
-        """Testing extreme_cell_angles_naive with minimal data.
+        """Testing extreme_cell_angles_naive on 3x3 array.
             Sanity check to make sure the naive function does what we expect.
         
             Inputs: None
             
             Returns nothing"""
         array_shape = (3, 3)
-        viewpoint = (1, 1)
-
+        viewpoint = (array_shape[0]/2, array_shape[1]/2)
+        # Shorthand constants
         pi = math.pi
         rad_to_deg = 180.0 / pi
         deg_to_rad = 1.0 / rad_to_deg
-
+        # The angle we're expecting
         a = {}
         a[18] = (np.arctan2(0.5, 1.5) * rad_to_deg + 360.) % 360.
         a[45] = 45.0
@@ -37,7 +37,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         a[288] = (np.arctan2(-1.5, 0.5) * rad_to_deg + 360.) % 360.
         a[315] = 315.0
         a[341] = (np.arctan2(-0.5, 1.5) * rad_to_deg + 360.) % 360.
-
+        # Use the angles above to create the expected min/max angles
         expected_extreme_angles = np.array([[a[108], a[161]], \
             [a[45], a[135]], \
             [a[18], a[71]], \
@@ -46,8 +46,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             [a[198], a[251]], \
             [a[225], a[315]], \
             [a[288], a[341]]])
+        # Convert to rad so it's compatible with extreme_cell_angles_naive
         expected_extreme_angles *= deg_to_rad
-
+        # Compute extreme angles for each cell
         computed_extreme_angles = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
@@ -57,27 +58,36 @@ class TestAestheticQualityCore(unittest.TestCase):
                 computed_extreme_angles.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
         computed_extreme_angles = np.array(computed_extreme_angles)
-        
+        # Compare both results
         error = np.sum(computed_extreme_angles - expected_extreme_angles)
-
+        # Assert if necessary
         assert abs(error) < 2e-15
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
-        the viewpoint and return the smallest and largest angles in a tuple"""
+        the viewpoint and return the smallest and largest angles in a tuple.
+        
+            Inputs:
+                -cell_coord: (row, col) tuple of the cell we want to compute
+                    the extreme angles from.
+                -viewpoint_coord: (row, col) tuple of the observer that is
+                looking at the point cell_coord.
+                
+            Returns a numpy array with the extreme angles 
+                [min_angle, max_angle]"""
         # Convert cell and viewpoint tuples to numpy arrays
         cell = np.array([cell_coord[0], cell_coord[1]])
         viewpoint = np.array([viewpoint_coord[0], viewpoint_coord[1]])
         # Compute the angle to the center of the cell
         max_angle = 0.
         min_angle = 2.0 * math.pi
-        # Compute the angle to the 4 cell corners
+        # Define the 4 cell corners
         corners = np.array([ \
             [cell_coord[0] + .5, cell_coord[1] + .5], \
             [cell_coord[0] - .5, cell_coord[1] + .5], \
             [cell_coord[0] + .5, cell_coord[1] - .5], \
             [cell_coord[0] - .5, cell_coord[1] - .5]])
-        # Compute angle to cell corner and update extreme angles as needed
+        # Compute angle to all 4 cell corners and update min and max angles
         for corner in corners:
             viewpoint_to_corner = corner - viewpoint
             angle_to_corner = \
@@ -92,10 +102,11 @@ class TestAestheticQualityCore(unittest.TestCase):
         return np.array([min_angle, max_angle])
 
     def test_extreme_cell_angles(self):
-        """Testing naive and optimized version of the same functionality"""
-        array_shape = (5, 5)
+        """Testing naive vs optimized version of the same functionality"""
+        array_shape = (101, 101) # Testing on a 101x101 array
         viewpoint = (array_shape[0]/2, array_shape[1]/2)
 
+        # Gather extreme angles from naive algorithm 
         extreme_angles_naive = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
@@ -104,19 +115,14 @@ class TestAestheticQualityCore(unittest.TestCase):
                 cell = (row, col)
                 extreme_angles_naive.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
-
+        # Convert to numpy
         extreme_angles_naive = np.array(extreme_angles_naive)
-
+        # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
-
-        #print('naive', extreme_angles_naive)
-        #print('fast ', extreme_angles_fast)
-        #print('difference', extreme_angles_naive - extreme_angles_fast)
+        # Colmpare the two
         error = np.sum(np.abs(extreme_angles_naive - extreme_angles_fast))
-
-        print('error', error)
-
+        # assert if necessary
         assert error < 5e-15
 
     def test_viewshed(self):
