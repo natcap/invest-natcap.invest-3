@@ -127,7 +127,7 @@ carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
 PIXELS_TO_CONVERT_PER_STEP = 2608
 
 
-lulc_path = 'MG_Soy_Exp_07122013/mg_lulc0'
+lulc_path = './Carbon_MG_2008/mg_lulc_2008'
 lulc_dataset = gdal.Open(lulc_path)
 landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 total_grassland_pixels = numpy.count_nonzero(landcover_array == GRASSLAND)
@@ -152,9 +152,11 @@ percent = 0
 
 for deepest_edge_index in range(0, total_grassland_pixels + PIXELS_TO_CONVERT_PER_STEP, PIXELS_TO_CONVERT_PER_STEP):
 	print 'percent %s' % percent
-	landcover_mask = numpy.where(landcover_array == GRASSLAND)
-	landcover_array[landcover_mask[0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
-
+	landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
+	print landcover_mask
+	landcover_array.flat[landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
+	print landcover_array
+	
 	carbon_stocks = numpy.zeros(landcover_array.shape)
 	
 	for landcover_type in REGRESSION_TYPES:
