@@ -581,7 +581,7 @@ def create_HTML_table(
                            'start day for growing',
                            'Length of Fallowing period']:
             cells.append(args['farm_op_dict'][farm_id][column_key])
-        ops_table.add_row(cells)
+        ops_table.add_row(cells, do_formatting=False)
 
     doc.write_header('Farm Harvesting (output)')
     harvest_table = doc.add(html.Table(id='harvest_table'))
@@ -673,20 +673,12 @@ def create_HTML_table(
 
         # Add a table with uncertainty stats (mean and standard deviation).
         uncertainty_table = doc.add(html.Table(id='uncertainty_table'))
-        result_titles = ['Harvested weight after processing (kg)',
-                         'Net present value (thousands of USD)',
-                         'Number of cycles']
-        header_row = [''] + result_titles
-
-        # Make the top headers each take up two columns, since they each
-        # have two subheaders ('mean' and 'standard deviation')
-        header_attr = [{}] + ([{'colspan': 2}] * len(result_titles))
-
-        uncertainty_table.add_row(
-            header_row, is_header=True, cell_attr=header_attr)
-        uncertainty_table.add_row(
-            ['Farm ID'] + (['Mean', 'Standard Deviation'] * len(result_titles)),
-            is_header=True)
+        uncertainty_table.add_two_level_header(
+            outer_headers=['Harvested weight after processing (kg)',
+                           'Net present value (thousands of USD)',
+                           'Number of cycles'],
+            inner_headers=['Mean', 'Standard deviation'],
+            row_id_header='Farm ID')
 
         for farm in uncertainty_stats:
             row = []

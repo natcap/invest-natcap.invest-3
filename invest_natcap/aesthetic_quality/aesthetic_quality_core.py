@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import logging
 
@@ -16,16 +18,59 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
             
-        returns a tuple of 2 arrays (min, max) as does numpy.where() with min
-            and max the minimum and maximum angles spanned by each raster pixel
+        returns a tuple (min, center, max) of 3 Nx1 numpy arrays of each raster
+        cell's minimum, center, and maximum angles.
     """
-    x_range = np.array(range(array_shape[0]))
-    y_range = np.array(range(array_shape[1]))
+    viewpoint = np.array(viewpoint_coords)
 
-    print(x_range)
-    print(y_range)
+    pi = math.pi
+    two_pi = 2. * pi
+    rad_to_deg = 180.0 / pi
+    deg_to_rad = 1.0 / rad_to_deg
 
-    #xx = np.meshgrid()
+    extreme_cell_points = [ \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
+    {'min_angle':[0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
+    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[-0.5, -0.5], 'max_angle':[-0.5, 0.5]}, \
+    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, 0.5]}]
+
+    extreme_cell_angles = []
+    for row in range(array_shape[0]):
+        for col in range(array_shape[1]):
+            # Skip if cell falls on the viewpoint
+            if (row == viewpoint[0]) and (col == viewpoint[1]):
+                continue
+            cell = np.array([row, col])
+            viewpoint_to_cell = cell - viewpoint
+            # find index in extreme_cell_points that corresponds to the current
+            # angle:
+            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+            angle = (angle + two_pi) % two_pi 
+            sector = int(4. * angle / two_pi) * 2
+            if np.amin(np.absolute(viewpoint_to_cell)) > 0:
+                sector += 1
+            min_corner_offset = \
+                np.array(extreme_cell_points[sector]['min_angle'])
+            max_corner_offset = \
+                np.array(extreme_cell_points[sector]['max_angle'])
+
+            min_corner = viewpoint_to_cell + min_corner_offset
+            min_angle = np.arctan2(-min_corner[0], min_corner[1])
+            min_angle = (min_angle + two_pi) % two_pi 
+            
+            max_corner = viewpoint_to_cell + max_corner_offset
+            max_angle = np.arctan2(-max_corner[0], max_corner[1])
+            max_angle = (max_angle + two_pi) % two_pi 
+            
+            extreme_cell_angles.append(np.array([min_angle, angle, max_angle]))
+    
+    extreme_cell_angles = np.array(extreme_cell_angles) 
+
+    return extreme_cell_angles
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
@@ -42,7 +87,14 @@ max_dist=-1., refraction_coeff=None):
             -max_dist: maximum visibility radius. By default infinity (-1), 
                 not used yet
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet"""
-    pass
+    add_cell_events = []
+    delete_cell_events = []
+    cell_center_events = []
+
+    in_raster = gdal.Open(input_uri)
+    in_array = in_raster.GetRasterBand(1).ReadAsArray()
+
+    extreme_angles
 
 def execute(args):
     """Entry point for aesthetic quality core computation.

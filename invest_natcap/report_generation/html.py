@@ -1,8 +1,9 @@
 '''Utilities for creating simple HTML report files.'''
 
 import collections
+import locale
 
-BEACH_STYLE = 0  # constant to select a nice beach (tan and blue) palette
+locale.setlocale(locale.LC_ALL, '')
 
 class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
@@ -29,17 +30,17 @@ class HTMLDocument(object):
         doc.flush()
     '''
 
-    def __init__(self, uri, title, header, style_const=BEACH_STYLE):
+    def __init__(self, uri, title, header):
         self.uri = uri
 
         self.html_elem = Element('html')
 
         head = self.html_elem.add(Element('head'))
         head.add(Element('title', title))
-        head.add(Element('style', _get_style_css(style_const), type='text/css'))
+        head.add(Element('style', _get_style_css(), type='text/css'))
 
         self.body = self.html_elem.add(Element('body'))
-        self.body.add(Element('h1', ('<center>%s</center>' % header)))
+        self.body.add(Element('h1', header))
 
         self.id_counter = 0  # keep track of allocated IDs
         self.headers = collections.OrderedDict()
@@ -74,6 +75,7 @@ class HTMLDocument(object):
     def flush(self):
         '''Create a file with the contents of this document.'''
         outfile = open(self.uri, 'w')
+        outfile.write('<!DOCTYPE html>')
         outfile.write(self.html_elem.html())
         outfile.close()
 
@@ -123,7 +125,8 @@ class Table(object):
     def __init__(self, **attr):
         self.table_elem = Element('table', **attr)
 
-    def add_row(self, cells, is_header=False, cell_attr=None):
+    def add_row(self, cells, is_header=False, cell_attr=None,
+                do_formatting=True):
         '''Writes a table row with the given cell data.
 
         cell_attr - attributes for each cell. If provided, it must be the
@@ -134,8 +137,44 @@ class Table(object):
         cell_tag = 'th' if is_header else 'td'
         for i, cell in enumerate(cells):
             attr = cell_attr[i] if cell_attr else {}
-            row.add(Element(cell_tag, str(cell), **attr))
+            str_cell = cell_format(cell) if do_formatting else str(cell)
+            row.add(Element(cell_tag, str_cell, **attr))
         self.table_elem.add(row)
+
+    def add_two_level_header(self, outer_headers,
+                             inner_headers, row_id_header):
+        """Adds a two level header to the table.
+
+        In this header, each outer header appears on the top row,
+        and each inner header appears once beneath each outer header.
+
+        For example, the following code:
+
+            table.add_two_level_header(
+                outer_headers=['Weight', 'Value'],
+                inner_headers=['Mean, Standard deviation'],
+                row_id_header='Farm ID')
+
+        produces the following header:
+
+                  Weight                            Value
+        Farm ID   Mean    Standard Deviation        Mean    Standard deviation
+        """
+
+        # Add the top-level header with the outer categories.
+        # Note that we use the 'colspan' attribute to stretch these cells out.
+        self.add_row(
+            cells=([''] + outer_headers), is_header=True,
+            cell_attr=([{}] + ([{'colspan': len(inner_headers)}] *
+                               len(outer_headers))))
+
+        # Add the second-level header with the inner categories.
+        # Note that the first cell has a row_id_header to help identify
+        # data rows that follow.
+        self.add_row(
+            cells=([row_id_header] + (inner_headers * len(outer_headers))),
+            is_header=True)
+
 
     def html(self):
         '''Return the HTML string for the table.'''
@@ -164,13 +203,29 @@ class _TableOfContents(object):
 
         return header.html() + link_list.html()
 
-def _get_style_css(style_const):
-    '''Return a string with the given CSS styling rules.'''
-    if style_const == BEACH_STYLE:
-        return '''
+
+def cell_format(data):
+    """Formats the data to put in a table cell."""
+    if isinstance(data, (int, long)):
+        # Add commas to integers.
+        return locale.format("%d", data, grouping=True)
+    elif isinstance(data, float):
+        # Add commas to floats, and round to 2 decimal places.
+        return locale.format("%.2f", data, grouping=True)
+    else:
+        return str(data)
+
+
+def _get_style_css():
+    '''Return a string with CSS styling rules.'''
+
+    return '''
       body {
           background-color: #EFECCA;
           color: #002F2F
+      }
+      h1 {
+          text-align: center
       }
       h1, h2, h3, h4, strong, th {
           color: #046380;
@@ -199,5 +254,3 @@ def _get_style_css(style_const):
           margin: 20px;
       }
       '''
-    else:
-        raise Exception('Unsupported style constant %d' % style_const)

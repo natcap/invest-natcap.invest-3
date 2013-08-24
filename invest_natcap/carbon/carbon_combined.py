@@ -1,6 +1,7 @@
 """Integrated carbon model with biophysical and valuation components."""
 
 import collections
+import math
 import logging
 import os
 from datetime import datetime
@@ -74,9 +75,9 @@ def execute_30(**args):
     'c' - the annual rate of change in the price of carbon
     """
     if not args['do_biophysical'] and not args['do_valuation']:
-        LOGGER.info('Neither biophysical nor valuation model selected. '
-                    'Nothing left to do. Exiting.')
-        return
+        raise Exception(
+            'Neither biophysical nor valuation model selected. '
+            'Nothing left to do. Exiting.')
 
     if args['do_biophysical']:
         LOGGER.info('Executing biophysical model.')
@@ -84,16 +85,25 @@ def execute_30(**args):
     else:
         biophysical_outputs = None
 
+        # We can't do uncertainty analysis if only the valuation model is run.
+        args['do_uncertainty'] = False
+
     if args['do_valuation']:
+        if not args['do_biophysical'] and not args.get('sequest_uri'):
+            raise Exception(
+                'In order to perform valuation, you must either run the '
+                'biophysical model, or provide a sequestration raster '
+                'mapping carbon sequestration for a landscape. Neither '
+                'was provided in this case, so valuation cannot run.')
         LOGGER.info('Executing valuation model.')
-        valuation_args = package_valuation_args(args, biophysical_outputs)
+        valuation_args = _package_valuation_args(args, biophysical_outputs)
         valuation_outputs = carbon_valuation.execute(valuation_args)
     else:
         valuation_outputs = None
 
-    create_HTML_report(args, biophysical_outputs, valuation_outputs)
+    _create_HTML_report(args, biophysical_outputs, valuation_outputs)
 
-def package_valuation_args(args, biophysical_outputs):
+def _package_valuation_args(args, biophysical_outputs):
     if not biophysical_outputs:
         return args
 
@@ -110,6 +120,7 @@ def package_valuation_args(args, biophysical_outputs):
     args['yr_fut'] = args['lulc_fut_year']
 
     biophysical_to_valuation = {
+        'uncertainty': 'uncertainty_data',
         'sequest_redd': 'sequest_redd_uri',
         'conf_fut': 'conf_uri',
         'conf_redd': 'conf_redd_uri'
@@ -123,7 +134,7 @@ def package_valuation_args(args, biophysical_outputs):
 
     return args
 
-def create_HTML_report(args, biophysical_outputs, valuation_outputs):
+def _create_HTML_report(args, biophysical_outputs, valuation_outputs):
     html_uri = os.path.join(
         args['workspace_dir'], 'output',
         'summary%s.html' % carbon_utils.make_suffix(args))
@@ -131,28 +142,42 @@ def create_HTML_report(args, biophysical_outputs, valuation_outputs):
     doc = html.HTMLDocument(html_uri, 'Carbon Results',
                             'InVEST Carbon Model Results')
 
-    doc.write_paragraph(make_report_intro(args))
+    doc.write_paragraph(_make_report_intro(args))
+
+    doc.insert_table_of_contents()
 
     if args['do_biophysical']:
         doc.write_header('Biophysical Results')
-        doc.add(make_biophysical_table(biophysical_outputs))
+        doc.add(_make_biophysical_table(biophysical_outputs))
+        if 'uncertainty' in biophysical_outputs:
+            doc.write_header('Uncertainty Results', level=3)
+            for paragraph in _make_biophysical_uncertainty_intro():
+                doc.write_paragraph(paragraph)
+            doc.add(_make_biophysical_uncertainty_table(
+                    biophysical_outputs['uncertainty']))
 
     if args['do_valuation']:
         doc.write_header('Valuation Results')
-        for paragraph in make_valuation_intro():
+        for paragraph in _make_valuation_intro(args):
             doc.write_paragraph(paragraph)
-        for table in make_valuation_tables(valuation_outputs):
+        for table in _make_valuation_tables(valuation_outputs):
             doc.add(table)
+        if 'uncertainty_data' in valuation_outputs:
+            doc.write_header('Uncertainty Results', level=3)
+            for paragraph in _make_valuation_uncertainty_intro():
+                doc.write_paragraph(paragraph)
+            doc.add(_make_valuation_uncertainty_table(
+                    valuation_outputs['uncertainty_data']))
 
     doc.write_header('Output Files')
     doc.write_paragraph(
         'This run of the carbon model produced the following output files.')
-    doc.add(make_outfile_table(
+    doc.add(_make_outfile_table(
             args, biophysical_outputs, valuation_outputs, html_uri))
 
     doc.flush()
 
-def make_report_intro(args):
+def _make_report_intro(args):
     models = []
     for model in 'biophysical', 'valuation':
         if args['do_%s' % model]:
@@ -161,39 +186,88 @@ def make_report_intro(args):
     return ('This document summarizes the results from running the InVEST '
             'carbon model. This run of the model involved the %s %s.' %
             (' and '.join(models),
-             'models' if len(models) > 1 else 'model'))
+             'model' if len(models) == 1 else 'models'))
 
-def make_biophysical_table(biophysical_outputs):
+def _make_biophysical_uncertainty_intro():
+    return [
+        'This data was computed by doing a Monte Carlo '
+        'simulation, which involved %d runs of the model.' %
+        carbon_biophysical.NUM_MONTE_CARLO_RUNS,
+        'For each run of the simulation, the amount of carbon '
+        'per grid cell for each LULC type was independently sampled '
+        'from the normal distribution given in the input carbon pools. '
+        'Given this set of carbon pools, the model computed the amount of '
+        'carbon in each scenario, and computed sequestration by subtracting '
+        'the carbon storage in different scenarios. ',
+        'Results across all Monte Carlo simulation runs were '
+        'analyzed to produce the following mean and standard deviation data.',
+        'All uncertainty analysis in this model assumes that true carbon pool '
+        'values for different LULC types are independently distributed, '
+        'with no systematic bias. If there is systematic bias in the carbon '
+        'pool estimates, then actual standard deviations for results may be '
+        'larger than reported in the following table.']
+
+def _make_biophysical_uncertainty_table(uncertainty_results):
+    table = html.Table(id='biophysical_uncertainty')
+    table.add_two_level_header(
+        outer_headers=['Total carbon (Mg of carbon)',
+                       'Sequestered carbon (compared to current scenario)'
+                       '<br>(Mg of carbon)'],
+        inner_headers=['Mean', 'Standard deviation'],
+        row_id_header='Scenario')
+
+    for scenario in ['cur', 'fut', 'redd']:
+        if scenario not in uncertainty_results:
+            continue
+
+        row = [_make_scenario_name(scenario, 'redd' in uncertainty_results)]
+        row += uncertainty_results[scenario]
+
+        if scenario == 'cur':
+            row += ['n/a', 'n/a']
+        else:
+            row += uncertainty_results['sequest_%s' % scenario]
+
+        table.add_row(row)
+
+    return table
+
+def _make_biophysical_table(biophysical_outputs):
+    do_uncertainty = 'uncertainty' in biophysical_outputs
+
     table = html.Table(id='biophysical_table')
-    table.add_row(['Scenario', 'Total carbon<br>(Mg of carbon)',
-                   'Sequestered carbon (compared to current scenario)'
-                   '<br>(Mg of carbon)'],
-                  is_header=True)
+    headers = ['Scenario', 'Total carbon<br>(Mg of carbon)',
+               'Sequestered carbon<br>(compared to current scenario)'
+               '<br>(Mg of carbon)']
+
+    table.add_row(headers, is_header=True)
 
     for scenario in ['cur', 'fut', 'redd']:
         total_carbon_key = 'tot_C_%s' % scenario
         if total_carbon_key not in biophysical_outputs:
             continue
-        total_carbon = carbon_utils.sum_pixel_values_from_uri(
-            biophysical_outputs[total_carbon_key])
 
+        row = []
+        row.append(
+            _make_scenario_name(scenario, 'tot_C_redd' in biophysical_outputs))
+
+        # Append total carbon.
+        row.append(carbon_utils.sum_pixel_values_from_uri(
+                biophysical_outputs[total_carbon_key]))
+
+        # Append sequestration.
         sequest_key = 'sequest_%s' % scenario
         if sequest_key in biophysical_outputs:
-            sequestered_carbon = carbon_utils.sum_pixel_values_from_uri(
-                biophysical_outputs[sequest_key])
+            row.append(carbon_utils.sum_pixel_values_from_uri(
+                    biophysical_outputs[sequest_key]))
         else:
-            sequestered_carbon = 'n/a'
+            row.append('n/a')
 
-        table.add_row([
-                make_scenario_name(scenario,
-                                   'tot_C_redd' in biophysical_outputs),
-                total_carbon,
-                sequestered_carbon
-                ])
+        table.add_row(row)
 
     return table
 
-def make_valuation_tables(valuation_outputs):
+def _make_valuation_tables(valuation_outputs):
     scenario_results = {}
     change_table = html.Table(id='change_table')
     change_table.add_row(["Scenario",
@@ -208,14 +282,14 @@ def make_valuation_tables(valuation_outputs):
             # We may not be doing REDD analysis.
             continue
 
-        scenario_name = make_scenario_name(
+        scenario_name = _make_scenario_name(
             scenario_type, 'sequest_redd' in valuation_outputs)
 
         total_seq = carbon_utils.sum_pixel_values_from_uri(sequest_uri)
         total_val = carbon_utils.sum_pixel_values_from_uri(
             valuation_outputs['%s_val' % scenario_type])
         scenario_results[scenario_type] = (total_seq, total_val)
-        change_table.add_row([scenario_name, total_seq, format_currency(total_val)])
+        change_table.add_row([scenario_name, total_seq, total_val])
 
         try:
             seq_mask_uri = valuation_outputs['%s_seq_mask' % scenario_type]
@@ -230,7 +304,7 @@ def make_valuation_tables(valuation_outputs):
         scenario_results['%s_mask' % scenario_type] = (masked_seq, masked_val)
         change_table.add_row(['%s (confident cells only)' % scenario_name,
                               masked_seq,
-                              format_currency(masked_val)])
+                              masked_val])
 
     yield change_table
 
@@ -248,10 +322,10 @@ def make_valuation_tables(valuation_outputs):
         base_results = scenario_results['base']
         redd_results = scenario_results['redd']
         comparison_table.add_row(
-            ['%s vs %s' % (make_scenario_name('redd'),
-                           make_scenario_name('base')),
+            ['%s vs %s' % (_make_scenario_name('redd'),
+                           _make_scenario_name('base')),
              redd_results[0] - base_results[0],
-             format_currency(redd_results[1] - base_results[1])
+             redd_results[1] - base_results[1]
              ])
 
         if 'base_mask' in scenario_results and 'redd_mask' in scenario_results:
@@ -261,38 +335,76 @@ def make_valuation_tables(valuation_outputs):
             redd_mask_results = scenario_results['redd_mask']
             comparison_table.add_row(
                 ['%s vs %s (confident cells only)'
-                 % (make_scenario_name('redd'),
-                    make_scenario_name('base')),
+                 % (_make_scenario_name('redd'),
+                    _make_scenario_name('base')),
                  redd_mask_results[0] - base_mask_results[0],
-                 format_currency(redd_mask_results[1] - base_mask_results[1])
+                 redd_mask_results[1] - base_mask_results[1]
                  ])
 
         yield comparison_table
 
 
-def make_valuation_intro():
+def _make_valuation_uncertainty_intro():
     return [
-        ('<strong>Positive values</strong> in this table indicate that '
-         'carbon storage increased. In this case, the positive Net Present '
-         'Value represents the value of the sequestered carbon.'),
-        ('<strong>Negative values</strong> indicate that carbon storage '
-        'decreased. In this case, the negative Net Present Value represents '
-        'the cost of carbon emission.')
+        'These results were computed by using the uncertainty data from the '
+        'Monte Carlo simulation in the biophysical model.'
         ]
 
 
-def make_outfile_table(args, biophysical_outputs, valuation_outputs, html_uri):
+def _make_valuation_uncertainty_table(uncertainty_data):
+    table = html.Table(id='valuation_uncertainty')
+
+    table.add_two_level_header(
+        outer_headers=['Sequestered carbon (Mg of carbon)',
+                       'Net present value (USD)'],
+        inner_headers=['Mean', 'Standard Deviation'],
+        row_id_header='Scenario')
+
+    for fut_type in ['fut', 'redd']:
+        if fut_type not in uncertainty_data:
+            continue
+
+        scenario_data = uncertainty_data[fut_type]
+        row = [_make_scenario_name(fut_type, 'redd' in uncertainty_data)]
+        row += scenario_data['sequest']
+        row += scenario_data['value']
+        table.add_row(row)
+
+    return table
+
+
+def _make_valuation_intro(args):
+    intro = [
+        '<strong>Positive values</strong> in this table indicate that '
+        'carbon storage increased. In this case, the positive Net Present '
+        'Value represents the value of the sequestered carbon.',
+        '<strong>Negative values</strong> indicate that carbon storage '
+        'decreased. In this case, the negative Net Present Value represents '
+        'the cost of carbon emission.'
+        ]
+
+    if args['do_uncertainty']:
+        intro.append(
+            'Entries in the table with the label "confident cells only" '
+            'represent results for sequestration and value if we consider '
+            'sequestration that occurs only in those cells where we are '
+            'confident that carbon storage will either increase or decrease.')
+
+    return intro
+
+
+def _make_outfile_table(args, biophysical_outputs, valuation_outputs, html_uri):
     table = html.Table(id='outfile_table')
     table.add_row(['Filename', 'Description'], is_header=True)
 
     descriptions = collections.OrderedDict()
 
     if biophysical_outputs:
-        descriptions.update(make_biophysical_outfile_descriptions(
+        descriptions.update(_make_biophysical_outfile_descriptions(
                 biophysical_outputs, args))
 
     if valuation_outputs:
-        descriptions.update(make_valuation_outfile_descriptions(
+        descriptions.update(_make_valuation_outfile_descriptions(
                 valuation_outputs))
 
     html_filename = os.path.basename(html_uri)
@@ -304,11 +416,11 @@ def make_outfile_table(args, biophysical_outputs, valuation_outputs, html_uri):
     return table
 
 
-def make_biophysical_outfile_descriptions(outfile_uris, args):
+def _make_biophysical_outfile_descriptions(outfile_uris, args):
     '''Return a dict with descriptions of biophysical outfiles.'''
 
     def name(scenario_type):
-        return make_scenario_name(scenario_type,
+        return _make_scenario_name(scenario_type,
                                   do_redd=('tot_C_redd' in outfile_uris),
                                   capitalize=False)
 
@@ -338,14 +450,14 @@ def make_biophysical_outfile_descriptions(outfile_uris, args):
         'conf_%s': conf_description
         }
 
-    return make_outfile_descriptions(outfile_uris, ['cur', 'fut', 'redd'],
+    return _make_outfile_descriptions(outfile_uris, ['cur', 'fut', 'redd'],
                                      file_key_to_func)
 
-def make_valuation_outfile_descriptions(outfile_uris):
+def _make_valuation_outfile_descriptions(outfile_uris):
     '''Return a dict with descriptions of valuation outfiles.'''
 
     def name(scenario_type):
-        return make_scenario_name(scenario_type,
+        return _make_scenario_name(scenario_type,
                                   do_redd=('sequest_redd' in outfile_uris),
                                   capitalize=False)
 
@@ -372,11 +484,11 @@ def make_valuation_outfile_descriptions(outfile_uris):
         '%s_val_mask': value_mask_file_description
         }
 
-    return make_outfile_descriptions(outfile_uris, ['base', 'redd'],
+    return _make_outfile_descriptions(outfile_uris, ['base', 'redd'],
                                      file_key_to_func)
 
 
-def make_outfile_descriptions(outfile_uris, scenarios, file_key_to_func):
+def _make_outfile_descriptions(outfile_uris, scenarios, file_key_to_func):
     descriptions = collections.OrderedDict()
     for scenario_type in scenarios:
         for file_key, description_func in file_key_to_func.items():
@@ -391,7 +503,7 @@ def make_outfile_descriptions(outfile_uris, scenarios, file_key_to_func):
     return descriptions
 
 
-def make_scenario_name(scenario, do_redd=True, capitalize=True):
+def _make_scenario_name(scenario, do_redd=True, capitalize=True):
     names = {
         'cur': 'current',
         'fut': 'baseline' if do_redd else 'future',
@@ -402,7 +514,3 @@ def make_scenario_name(scenario, do_redd=True, capitalize=True):
     if capitalize:
         return name[0].upper() + name[1:]
     return name
-
-
-def format_currency(val):
-    return '%.2f' % val
