@@ -68,10 +68,7 @@ then
         timber_core_test.py
         timber_test.py
         wave_energy_test.py
-        wind_energy_biophysical_test.py
-        wind_energy_core_test.py
-        wind_energy_valuation_test.py
-        wind_energy_uri_handler_test.py
+        wind_energy_test.py
         coastal_vulnerability_test.py
 	marine_water_quality_regression_test.py
 #        coastal_vulnerability_core_test.py
