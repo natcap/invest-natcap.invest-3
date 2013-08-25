@@ -126,8 +126,7 @@ carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
 #Mark the pixels to convert.  Edge distance in increasing order
 PIXELS_TO_CONVERT_PER_STEP = 2608
 
-
-lulc_path = './Carbon_MG_2008/mg_lulc_2008'
+lulc_path = 'MG_Soy_Exp_07122013/mg_lulc0'
 lulc_dataset = gdal.Open(lulc_path)
 landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 total_grassland_pixels = numpy.count_nonzero(landcover_array == GRASSLAND)
@@ -144,19 +143,36 @@ edge_distance = scipy.ndimage.morphology.distance_transform_edt(
 print 'total grassland pixels %s' % total_grassland_pixels
 
 edge_distance[edge_distance == 0] = numpy.inf
+increasing_distances = numpy.argsort(edge_distance.flat)
+
+
 
 output_table = open('grassland_expansion_carbon_stock_change.csv', 'wb')
 output_table.write('Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
-percent = 0
 
 
-for deepest_edge_index in range(0, total_grassland_pixels + PIXELS_TO_CONVERT_PER_STEP, PIXELS_TO_CONVERT_PER_STEP):
+grassland_pixels_converted = 0
+deepest_edge_index = 0
+for percent in range(401):
 	print 'percent %s' % percent
-	landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
-	print landcover_mask
-	landcover_array.flat[landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
-	print landcover_array
 	
+	if grassland_pixels_converted < total_grassland_pixels:
+		landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
+		print landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]
+		landcover_array.flat[landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
+		grassland_pixels_converted += PIXELS_TO_CONVERT_PER_STEP
+	else:
+		#convert forest
+		deepest_edge_index += PIXELS_TO_CONVERT_PER_STEP
+		landcover_array.flat[increasing_distances[0:deepest_edge_index]] = CONVERTING_CROP
+
+	forest_existance = numpy.zeros(landcover_array.shape)
+	for landcover_type in FOREST_LANDCOVER_TYPES:
+		forest_existance = forest_existance + (landcover_array == landcover_type)
+
+#This calculates an edge distance for the clusters of forest
+	edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+		forest_existance) * cell_size
 	carbon_stocks = numpy.zeros(landcover_array.shape)
 	
 	for landcover_type in REGRESSION_TYPES:
@@ -186,6 +202,5 @@ for deepest_edge_index in range(0, total_grassland_pixels + PIXELS_TO_CONVERT_PE
 		carbon_stocks[landcover_mask] = carbon_per_pixel
 	
 	total_stocks = numpy.sum(carbon_stocks)
-	percent += 1
 	output_table.write('%s,%.2f\n' % (percent, total_stocks))
 	output_table.flush()
