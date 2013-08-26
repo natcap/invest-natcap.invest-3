@@ -1,12 +1,12 @@
 """This script calculates a log regresion function to predict forest carbon
     stocks based on the distance from the edge of the forest.  It goes on to
-	simulate soybean expansion 1% per step up to 400% by first selecting 
-	grassland pixels to convert, and then when grassland is converted, by
-	selecting forest pixels starting at the edge of the forest working inward.
-	
-	The program writes to a file called grassland_expansion_carbon_stock_change.csv
-	that contains two columns, the first the soybean expansion percent and the
-	second, the amount of carbon stocks on the landscape under that scenario."""
+    simulate soybean expansion 1% per step up to 400% by first selecting 
+    grassland pixels to convert, and then when grassland is converted, by
+    selecting forest pixels starting at the edge of the forest working inward.
+    
+    The program writes to a file called grassland_expansion_carbon_stock_change.csv
+    that contains two columns, the first the soybean expansion percent and the
+    second, the amount of carbon stocks on the landscape under that scenario."""
 
 import gdal
 import numpy
@@ -14,17 +14,18 @@ import scipy.ndimage
 import scipy
 import scipy.stats
 import csv
-import os
 
 BASE_BIOMASS_FILENAME = './Carbon_MG_2008/mg_bio_2008'
 BASE_LANDCOVER_FILENAME = './Carbon_MG_2008/mg_lulc_2008'
 CARBON_POOL_TABLE_FILENAME = './mato_grosso_carbon.csv'
 
-#These are the landcover types that define clusters of forest for the distance from edge calculation
+#These are the landcover types that define clusters of forest for the distance
+#from edge calculation
 FOREST_LANDCOVER_TYPES = [1, 2, 3, 4, 5]
 #These are the landcover types that should use the log regression
 REGRESSION_TYPES = [2]
-#These are the LULCs to take directly from table, everything else is mean from regression
+#These are the LULCs to take directly from table, everything else is mean from
+#regression
 FROM_TABLE = [10, 12, 120, 0]
 #This is the crop we convert into
 CONVERTING_CROP = 120
@@ -34,10 +35,10 @@ GRASSLAND = 10
 
 
 def regression_builder(slope, intercept):
-	"""A function to use as a closure for a slope/intercept log function"""
+    """A function to use as a closure for a slope/intercept log function"""
     return lambda(d): slope * numpy.log(d) + intercept
 
-	
+    
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
         csv table indexed by the given key_field
@@ -83,7 +84,7 @@ landcover_dataset = gdal.Open(BASE_LANDCOVER_FILENAME)
 biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
 landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
 
-#This gets us the cell size in projected units, should be meters if the raster is projected
+#This gets us the cell size in projected units
 cell_size = landcover_dataset.GetGeoTransform()[1]
 
 #Create a mask of 0 and 1s for all the forest landcover types
@@ -102,7 +103,6 @@ landcover_regression = {}
 landcover_mean = {}
 
 print 'building biomass regression'
-print 'landcover type, biomass mean, r^2, stddev, pixel count, regression_fn(1)'
 for landcover_type in numpy.unique(landcover_array):
     landcover_mask = numpy.where(
         (landcover_array == landcover_type) * 
@@ -118,7 +118,9 @@ for landcover_type in numpy.unique(landcover_array):
         slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
             numpy.log(landcover_edge_distance), landcover_biomass)
     except ValueError:
-        print "didn't have good data for the regression for landcover type %s, skip it" % landcover_type
+        print (
+            "skipping landcover type %s because regression failed, likely no data"
+            % landcover_type)
         continue
     
     landcover_regression[landcover_type] = regression_builder(slope, intercept)
@@ -161,60 +163,67 @@ deepest_edge_index = 0
 #in the original scenario
 for percent in range(401):
     print 'percent %s' % percent
-	
+    
     if grassland_pixels_converted < total_grassland_pixels:
-		#This section converts grassland
+        #This section converts grassland
         landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
         print landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]
-        landcover_array.flat[landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
+        landcover_array.flat[landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]] = (
+            CONVERTING_CROP)
         grassland_pixels_converted += PIXELS_TO_CONVERT_PER_STEP
     else:
         #This section converts forest pixels edge in if grassland is all converted
         deepest_edge_index += PIXELS_TO_CONVERT_PER_STEP
-        landcover_array.flat[increasing_distances[0:deepest_edge_index]] = CONVERTING_CROP
-	
-	#We have to recalculate the forest edge distances if we've eaten up some of
-	#the forest so we can use the regression function to predict the amount of
-	#carbon storage
+        landcover_array.flat[increasing_distances[0:deepest_edge_index]] = (
+            CONVERTING_CROP)
+    
+    #We have to recalculate the forest edge distances if we've eaten up some of
+    #the forest so we can use the regression function to predict the amount of
+    #carbon storage
     forest_existance = numpy.zeros(landcover_array.shape)
     for landcover_type in FOREST_LANDCOVER_TYPES:
         forest_existance = forest_existance + (landcover_array == landcover_type)
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         forest_existance) * cell_size
-		
-	#Add up the carbon stocks 
+        
+    #Add up the carbon stocks 
     carbon_stocks = numpy.zeros(landcover_array.shape)
     for landcover_type in REGRESSION_TYPES:
-		#This bit of code converts all the landcover types that map their carbon storage
-		#with a regression function
-        landcover_mask = numpy.where((landcover_array == landcover_type) * (edge_distance > 0))
-        carbon_stocks[landcover_mask] = landcover_regression[landcover_type](edge_distance[landcover_mask])
+        #This bit of code converts all the landcover types that map their carbon storage
+        #with a regression function
+        landcover_mask = numpy.where(
+            (landcover_array == landcover_type) * (edge_distance > 0))
+        carbon_stocks[landcover_mask] = (
+            landcover_regression[landcover_type](edge_distance[landcover_mask]))
     
-	#This section will calculate carbon stocks either from the mean calculated during
-	#regression building, or from the table, depending on how the parameters are set
+    #This section will calculate carbon stocks either from the mean calculated during
+    #regression building, or from the table, depending on how the parameters are set
     for landcover_type in numpy.unique(landcover_array):
         if landcover_type in REGRESSION_TYPES:
-			#we already calculated this one
+            #we already calculated this one
             continue
-			
-		#since this kind of mapping is spatially independant, we only need one variable
-		#to keep track of it
+            
+        #since this kind of mapping is spatially independant, we only need one variable
+        #to keep track of it
         carbon_per_pixel = 0.0
         if landcover_type in FROM_TABLE:
             #convert from Mg/Ha to Mg/Pixel
-            carbon_per_pixel = carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * cell_size ** 2 / 10000
+            carbon_per_pixel = (
+                carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] * 
+                cell_size ** 2 / 10000)
         else:
             #look it up in the mean table
             try:
                 carbon_per_pixel = landcover_mean[landcover_type]
             except KeyError:
-                print 'can\'t find a data entry for landcover type %s, treating that landcover type as 0 biomass' % landcover_type
+                print ('can\'t find a data entry for landcover type %s, treating'
+                    ' that landcover type as 0 biomass' % landcover_type)
         
-		#Map the carbon stocks of the current landcover type to the whole array
+        #Map the carbon stocks of the current landcover type to the whole array
         landcover_mask = numpy.where(landcover_array == landcover_type)
         carbon_stocks[landcover_mask] = carbon_per_pixel
     
-	#Dump the current percent iteration's carbon stocks to the csv file
+    #Dump the current percent iteration's carbon stocks to the csv file
     total_stocks = numpy.sum(carbon_stocks)
     output_table.write('%s,%.2f\n' % (percent, total_stocks))
     output_table.flush()
