@@ -62,6 +62,27 @@ def get_lookup_from_csv(csv_table_uri, key_field):
                       for index, value in zip(range(len(line)), line)]))
         return lookup_dict
 
+def calculate_forest_edge_distance(lulc_array, forest_lucodes, cell_size):
+    """Generates an array that contains the distance from the edge of
+        a forest inside the forest.
+        
+        lulc_array - an array of land cover codes
+        forest_lucodes - a list of lucodes that are forest types
+        cell_size - the size of a cell
+        
+        returns an array of same shape as lulc_array that contains the distance
+            from a forest pixel to its edge."""
+            
+    forest_existance = numpy.zeros(landcover_array.shape)
+    for landcover_type in FOREST_LANDCOVER_TYPES:
+        forest_existance = forest_existance + (landcover_array == landcover_type)
+
+    #This calculates an edge distance for the clusters of forest
+    edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+        forest_existance) * cell_size
+        
+    return edge_distance
+
 
 def analyze_premade_lulc_scenarios():
     pass
@@ -98,56 +119,48 @@ def analyze_grassland_expansion_forest_erosion(args):
         args['output_table_filename'] - this is the filename of the CSV
             output table.
         """
-    pass
 
-#Load the base biomass and landcover datasets
-biomass_dataset = gdal.Open(BASE_BIOMASS_FILENAME)
-biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
-landcover_dataset = gdal.Open(BASE_LANDCOVER_FILENAME)
-biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
-landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
+    #Load the base biomass and landcover datasets
+    biomass_dataset = gdal.Open(args['base_biomass_filename'])
+    biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
+    landcover_dataset = gdal.Open(args['base_landcover_filename'])
+    biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
+    landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
 
-#This gets us the cell size in projected units
-cell_size = landcover_dataset.GetGeoTransform()[1]
+    #This gets us the cell size in projected units
+    cell_size = landcover_dataset.GetGeoTransform()[1]
 
-#Create a mask of 0 and 1s for all the forest landcover types
-#This will be used to calculate edge effects
-forest_existance = numpy.zeros(landcover_array.shape)
-for landcover_type in FOREST_LANDCOVER_TYPES:
-    forest_existance = forest_existance + (landcover_array == landcover_type)
+    #This calculates an edge distance for the clusters of forest
+    edge_distance = calculate_forest_edge_distance(
+        lulc_array, forest_lucodes, cell_size)
 
-#This calculates an edge distance for the clusters of forest
-edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-    forest_existance)
+    #For each regression type, build a regression of biomass based
+    #on the distance from the edge of the forest
+    landcover_regression = {}
+    landcover_mean = {}
 
-#For each forest type, build a regression of biomass based
-#on the distance from the edge of the forest
-landcover_regression = {}
-landcover_mean = {}
+    print 'building biomass regression'
+    for landcover_type in numpy.unique(landcover_array):
+        landcover_mask = numpy.where(
+            (landcover_array == landcover_type) *
+            (biomass_array != biomass_nodata))
 
-print 'building biomass regression'
-for landcover_type in numpy.unique(landcover_array):
-    landcover_mask = numpy.where(
-        (landcover_array == landcover_type) *
-        (biomass_array != biomass_nodata))
+        landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
+        landcover_edge_distance = edge_distance[landcover_mask]
 
-    landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
+        #Fit a log function of edge distance to biomass for
+        #landcover_type
+        try:
+            slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
+                numpy.log(landcover_edge_distance), landcover_biomass)
+        except ValueError:
+            print (
+                "skipping landcover type %s because regression failed, "
+                "likely no data" % landcover_type)
+            continue
 
-    landcover_edge_distance = edge_distance[landcover_mask] * cell_size
-
-    #Fit a log function of edge distance to biomass for
-    #landcover_type
-    try:
-        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
-            numpy.log(landcover_edge_distance), landcover_biomass)
-    except ValueError:
-        print (
-            "skipping landcover type %s because regression failed, "
-            "likely no data" % landcover_type)
-        continue
-
-    landcover_regression[landcover_type] = regression_builder(slope, intercept)
-    landcover_mean[landcover_type] = numpy.average(landcover_biomass)
+        landcover_regression[landcover_type] = regression_builder(slope, intercept)
+        landcover_mean[landcover_type] = numpy.average(landcover_biomass)
 
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
