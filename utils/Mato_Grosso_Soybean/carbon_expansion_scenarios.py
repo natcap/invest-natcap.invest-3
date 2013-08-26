@@ -169,6 +169,7 @@ def analyze_grassland_expansion_forest_erosion(args):
             per Ha.
         args['base_landcover_filename'] - a raster of same dimensions as
             'base_biomass_filename' that contains lucodes for the landscape
+            regression analysis
         args['carbon_pool_table_filename'] - a CSV file containing carbon
             biomass values for given lucodes.  Must contain at least the
             columns 'LULC' and 'C_ABOVE_MEAN'
@@ -187,6 +188,8 @@ def analyze_grassland_expansion_forest_erosion(args):
             determine what we should convert to.
         args['output_table_filename'] - this is the filename of the CSV
             output table.
+        args['scenario_lulc_base_map_filename'] - the base LULC map used for
+            the scenario runs
         """
 
     #Load the base biomass and landcover datasets
@@ -209,15 +212,18 @@ def analyze_grassland_expansion_forest_erosion(args):
         landcover_array, biomass_array, biomass_nodata, edge_distance,
         cell_size, regression_lucodes)
 
+    #We'll use the biomass means in case we don't ahve a lookup value in the
+    #table
     landcover_mean = calculate_landcover_means(
         landcover_array, biomass_array, biomass_nodata)
 
-#Parse out the landcover pool table
-carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
+    #Parse out the landcover pool table
+    carbon_pool_table = get_lookup_from_csv(
+        args['carbon_pool_table_filename'], 'LULC')
 
 #Load the base landcover map that we use in the scenarios, this one
 #comes from the soybean expansion
-lulc_path = 'MG_Soy_Exp_07122013/mg_lulc0'
+lulc_path = args['scenario_lulc_base_map_filename']
 lulc_dataset = gdal.Open(lulc_path)
 landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
 total_grassland_pixels = numpy.count_nonzero(landcover_array == GRASSLAND)
@@ -341,6 +347,7 @@ if __name__ == '__main__':
         'pixels_to_convert_per_step': 2608,
         'grassland_lucode': 10,
         'output_table_filename': 'grassland_expansion_carbon_stock_change.csv',
+        'scenario_lulc_base_map_filename': 'MG_Soy_Exp_07122013/mg_lulc0',
     }
 
     #analyze_premade_lulc_scenarios()
