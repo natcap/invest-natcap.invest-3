@@ -30,17 +30,31 @@ def analyze_premade_lulc_scenarios(args):
 
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
-    output_table.write(
-        'percent change,\n')
 
-    for percent in range(args['scenario_conversion_steps']):
+    lucode_header = ''
+    for lucode in sorted(args['lucode_to_description'].keys()):
+        lucode_header += "%s (%d)," % (
+            args['lucode_to_description'][lucode], lucode)
+    output_table.write('percent change,%s\n' % lucode_header)
+
+    #Load the first scenario
+    scenario_base_filename = os.path.join(
+            args['scenario_path'],
+            args['scenario_file_pattern'].replace('%n', str(0)))
+    scenario_prev_lulc_array = (
+        gdal.Open(scenario_filename).GetRasterBand(1).ReadAsArray())
+    
+    for percent in range(1, args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
 
         scenario_filename = os.path.join(
             args['scenario_path'],
             args['scenario_file_pattern'].replace('%n', str(percent)))
-        scenario_dataset = gdal.Open(scenario_filename)
-        scenario_lulc_array = scenario_dataset.GetRasterBand(1).ReadAsArray()
+        scenario_lulc_array = (
+            gdal.Open(scenario_filename).scenario_dataset.GetRasterBand(1).
+            ReadAsArray())
+        pixel_change_mask = numpy.where(
+            scenario_lulc_array != scenario_prev_lulc_array)
 
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
