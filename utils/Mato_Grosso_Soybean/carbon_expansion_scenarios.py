@@ -106,26 +106,29 @@ def build_biomass_forest_edge_regression(
 
     print 'building biomass regression'
     for landcover_type in regression_lucodes:
+        
         landcover_mask = numpy.where(
             (landcover_array == landcover_type) *
-            (biomass_array != biomass_nodata))
+            (biomass_array != biomass_nodata) * 
+            (edge_distance != 0))
 
         landcover_biomass = (
             biomass_array[landcover_mask] * cell_size ** 2 / 10000)
         landcover_edge_distance = edge_distance[landcover_mask]
-
+        
         #Fit a log function of edge distance to biomass for
         #landcover_type
         try:
             slope, intercept, r_value, p_value, std_err = (
-                scipy.stats.linregress(numpy.log(landcover_edge_distance),
-                landcover_biomass))
+                scipy.stats.linregress(numpy.log(landcover_edge_distance.flat),
+                landcover_biomass.flat))
         except ValueError:
             print (
                 "skipping landcover type %s because regression failed, "
                 "likely no data" % landcover_type)
             continue
-
+        print ('regression for lucode(%s) f(d)=%.2f * d + %.2f' %
+            (landcover_type, slope, intercept))
         landcover_regression[landcover_type] = (
             regression_builder(slope, intercept))
 
