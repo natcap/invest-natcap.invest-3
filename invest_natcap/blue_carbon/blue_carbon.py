@@ -282,10 +282,10 @@ def execute(args):
         if lulc_transition_year in lulc_years:
             LOGGER.debug("Transition year %i.", lulc_transition_year)
             t = lulc_transition_year - lulc_base_year            
-            def timing_op(biomass_half, biomass_coefficient, biomass, soil_half, soil_coefficient, soil):
+            def timing_op(biomass_half, biomass, soil_half, soil_coefficient, soil):
                 if nodata in [biomass_half, biomass_coefficient, biomass, soil_half, soil_coefficient, soil]:
                     return nodata
-                return ((0.5 ** (t / biomass_half)) * biomass_coefficient * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
+                return ((0.5 ** (t / biomass_half)) * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
 
             def accumulation_op(accumulation):
                 if nodata in [accumulation]:
@@ -384,7 +384,7 @@ def execute(args):
             
             LOGGER.info("Calculating primary timing of loss.")
             raster_utils.vectorize_datasets([lulc_base_biomass_half_life_uri,
-                                             lulc_base_biomass_coefficient_uri,
+##                                             lulc_base_biomass_coefficient_uri,
                                              lulc_base_biomass_uri,
                                              lulc_base_soil_half_life_uri,
                                              lulc_base_soil_coefficient_uri,
