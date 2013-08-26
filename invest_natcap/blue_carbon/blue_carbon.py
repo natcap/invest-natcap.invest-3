@@ -72,7 +72,7 @@ def execute(args):
     disturbed_soil_other_name = "%i_dis_soil_other.tif"
 
     #carbon emission and timing file names
-    biomass_coefficient_name = "%i_bio_loss.tif"
+##    biomass_coefficient_name = "%i_bio_loss.tif"
     soil_coefficient_name = "%i_soil_coefficient.tif"
     magnitude_name = "%i_mag.tif"
     biomass_half_name = "%i_bio_half.tif"
@@ -195,10 +195,10 @@ def execute(args):
         v_value = carbon[original][carbon_veg_field]
         return disturbance[v_value][disturbance_depth_name % t_value]
 
-    def magnitude_op(biomass_coefficient, biomass, soil_coefficient, soil):
-        if nodata in [biomass_coefficient, biomass, soil_coefficient, soil]:
+    def magnitude_op(biomass, soil_coefficient, soil):
+        if nodata in [biomass, soil_coefficient, soil]:
             return nodata
-        return (biomass_coefficient * biomass) + (soil_coefficient * soil)    
+        return biomass + (soil_coefficient * soil)    
 
     #set file paths for lulc base
     lulc_base_above_uri = os.path.join(workspace_dir, above_name % lulc_base_year)
@@ -283,7 +283,7 @@ def execute(args):
             LOGGER.debug("Transition year %i.", lulc_transition_year)
             t = lulc_transition_year - lulc_base_year            
             def timing_op(biomass_half, biomass, soil_half, soil_coefficient, soil):
-                if nodata in [biomass_half, biomass_coefficient, biomass, soil_half, soil_coefficient, soil]:
+                if nodata in [biomass_half, biomass, soil_half, soil_coefficient, soil]:
                     return nodata
                 return ((0.5 ** (t / biomass_half)) * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
 
@@ -297,7 +297,7 @@ def execute(args):
             lulc_base_carbon_accumulation_uri = os.path.join(workspace_dir, soil_acc_name % lulc_base_year)
             lulc_base_soil_residual_uri = os.path.join(workspace_dir, residual_name % lulc_base_year)
             
-            lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
+##            lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
             lulc_base_soil_coefficient_uri = os.path.join(workspace_dir, soil_coefficient_name % lulc_base_year)
 
             lulc_predisturbance_soil_uri = os.path.join(workspace_dir, predisturbance_name % lulc_transition_year)
@@ -371,8 +371,7 @@ def execute(args):
                                        exception_flag="values_required")
                 
             LOGGER.info("Calculating magnitude of loss.")
-            raster_utils.vectorize_datasets([lulc_base_biomass_coefficient_uri,
-                                             lulc_base_biomass_uri,
+            raster_utils.vectorize_datasets([lulc_base_biomass_uri,
                                              lulc_base_soil_coefficient_uri,
                                              lulc_predisturbance_soil_uri],
                                             magnitude_op,
