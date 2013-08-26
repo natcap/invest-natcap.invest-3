@@ -137,8 +137,21 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
     def test_viewshed(self):
-
-        pass
+        array_shape = (3, 3)
+        viewpoint = (1, 1)
+        # list all perimeter cell center angles
+        row_count, col_count = array_shape
+        print(col_count, col_count)
+        perimeter_rows = np.array(range(viewpoint[0], -1, -1))
+        perimeter_rows = np.concatenate((perimeter_rows, \
+            np.zeros(col_count - 1)))
+        perimeter_rows = np.concatenate((perimeter_rows, \
+            np.array(range(1, row_count))))
+        perimeter_rows = np.concatenate((perimeter_rows, \
+            np.ones(col_count - 1) * (row_count -1)))
+        perimeter_rows = np.concatenate((perimeter_rows, \
+            np.array(range(row_count - 2, viewpoint[0], -1))))
+        print('perimeter_rows', perimeter_rows)
 
     def tare_down(self):
         pass
