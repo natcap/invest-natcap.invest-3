@@ -55,7 +55,11 @@ def execute(args):
     acc_name = "%i_acc.tif"
     soil_acc_name = "%i_soil_acc.tif"
     predisturbance_name = "%i_pre.tif"
-    residual_name = "%i_res.tif"
+    residual_name = "%i_soil_res.tif"
+    released_marsh_name = "%i_marsh_rel.tif"
+    released_grove_name = "%i_grove_rel.tif"
+    released_grass_name = "%i_grass_rel.tif"
+    released_other_name = "%i_other_rel.tif"
 
     #carbon emission and timing file names
     biomass_coefficient_name = "%i_bio_loss.tif"
@@ -293,7 +297,6 @@ def execute(args):
             lulc_base_soil_half_life_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
             lulc_base_time_uri = os.path.join(workspace_dir, time_name % lulc_base_year)
 
-
             #calculate accumulation
             LOGGER.debug("Calculating accumulated soil carbon before disturbance in %i.", lulc_transition_year)
             raster_utils.vectorize_datasets([lulc_base_acc_uri],
@@ -304,14 +307,14 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
-            raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
-                                            add_op,
-                                            lulc_predisturbance_soil_uri,
-                                            gdal_type,
-                                            nodata,
-                                            cell_size,
-                                            "union")           
+##            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
+##            raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
+##                                            add_op,
+##                                            lulc_predisturbance_soil_uri,
+##                                            gdal_type,
+##                                            nodata,
+##                                            cell_size,
+##                                            "union")           
 
             #calculate magnitude and timing of emission
             LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
@@ -375,7 +378,7 @@ def execute(args):
                                              lulc_base_biomass_uri,
                                              lulc_base_soil_half_life_uri,
                                              lulc_base_soil_coefficient_uri,
-                                             lulc_base_soil_uri],
+                                             lulc_predisturbance_soil_uri],
                                             timing_op,
                                             lulc_base_magnitude_uri,
                                             gdal_type,
