@@ -1,3 +1,13 @@
+"""This script calculates a log regresion function to predict forest carbon
+    stocks based on the distance from the edge of the forest.  It goes on to
+	simulate soybean expansion 1% per step up to 400% by first selecting 
+	grassland pixels to convert, and then when grassland is converted, by
+	selecting forest pixels starting at the edge of the forest working inward.
+	
+	The program writes to a file called grassland_expansion_carbon_stock_change.csv
+	that contains two columns, the first the soybean expansion percent and the
+	second, the amount of carbon stocks on the landscape under that scenario."""
+
 import gdal
 import numpy
 import scipy.ndimage
