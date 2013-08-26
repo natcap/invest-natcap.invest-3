@@ -327,14 +327,14 @@ def execute(args):
 ##                                            "union")           
 
             #calculate magnitude and timing of emission
-            LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            biomass_coefficient_op,
-                                            lulc_base_biomass_coefficient_uri,
-                                            gdal_type,
-                                            nodata,
-                                            cell_size,
-                                            "union")
+##            LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
+##            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+##                                            biomass_coefficient_op,
+##                                            lulc_base_biomass_coefficient_uri,
+##                                            gdal_type,
+##                                            nodata,
+##                                            cell_size,
+##                                            "union")
 
             LOGGER.debug("Creating soil disturbance coefficient raster for %i.", lulc_base_year)
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
@@ -396,7 +396,7 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-            LOGGER.info("Calculating secondary timing of loss.")
+##            LOGGER.info("Calculating secondary timing of loss.")
 
             #set base to new LULC and year
             lulc_base_year = lulc_transition_year
@@ -482,10 +482,10 @@ def execute(args):
                                        nodata,
                                        exception_flag="values_required")
                         
-        else:
-            LOGGER.debug("Snapshot year %i.", lulc_transition_year)
-            LOGGER.debug("Calculating accumulation.")
-            LOGGER.debug("Calculating emisson.")
+##        else:
+##            LOGGER.debug("Snapshot year %i.", lulc_transition_year)
+##            LOGGER.debug("Calculating accumulation.")
+##            LOGGER.debug("Calculating emisson.")
 
 ##    for year in range(lulc_list[0]["year"], args["analysis_year"]+1):            
 ##        if private_valuation:
