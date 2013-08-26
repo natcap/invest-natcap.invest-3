@@ -65,14 +65,14 @@ def get_lookup_from_csv(csv_table_uri, key_field):
 def calculate_forest_edge_distance(lulc_array, forest_lucodes, cell_size):
     """Generates an array that contains the distance from the edge of
         a forest inside the forest.
-        
+
         lulc_array - an array of land cover codes
         forest_lucodes - a list of lucodes that are forest types
         cell_size - the size of a cell
-        
+
         returns an array of same shape as lulc_array that contains the distance
             from a forest pixel to its edge."""
-            
+
     forest_existance = numpy.zeros(landcover_array.shape)
     for landcover_type in FOREST_LANDCOVER_TYPES:
         forest_existance = forest_existance + (landcover_array == landcover_type)
@@ -80,8 +80,77 @@ def calculate_forest_edge_distance(lulc_array, forest_lucodes, cell_size):
     #This calculates an edge distance for the clusters of forest
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         forest_existance) * cell_size
-        
+
     return edge_distance
+
+
+def build_biomass_forest_edge_regression(
+    landcover_array, biomass_array, biomass_nodata, edge_distance, cell_size,
+    regression_lucodes):
+    """Builds a log regression function to fit biomass to edge distance for a
+        set of given lucodes.
+
+        landcover_array - a numpy array of lucodes
+        biomass_array - a numpy array of same size as landcover array indicating
+            a density of biomass per Ha
+        biomass_nodata - the value that indicates a nodata value for the
+            biomass array
+        edge_distance - a numpy array of same size as landcover_array indicating
+            distance from forest edge
+        cell_size - the cell size in meters
+        regression_lucodes - a list of lucodes to build a regression for
+
+        returns a dictionary mapping lucode to regression function"""
+
+    landcover_regression = {}
+
+    print 'building biomass regression'
+    for landcover_type in regression_lucodes:
+        landcover_mask = numpy.where(
+            (landcover_array == landcover_type) *
+            (biomass_array != biomass_nodata))
+
+        landcover_biomass = (
+            biomass_array[landcover_mask] * cell_size ** 2 / 10000)
+        landcover_edge_distance = edge_distance[landcover_mask]
+
+        #Fit a log function of edge distance to biomass for
+        #landcover_type
+        try:
+            slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
+                numpy.log(landcover_edge_distance), landcover_biomass)
+        except ValueError:
+            print (
+                "skipping landcover type %s because regression failed, "
+                "likely no data" % landcover_type)
+            continue
+
+        landcover_regression[landcover_type] = (
+            regression_builder(slope, intercept))
+
+    return landcover_regression
+
+def calculate_landcover_means(landcover_array, biomass_array, biomass_nodata):
+    """Calculates the mean biomass for all the landcover types.
+
+        landcover_array - a numpy array of lucodes
+        biomass_array - a numpy array of same size as landcover array indicating
+            a density of biomass per Ha
+        biomass_nodata - the value that indicates a nodata value for the
+            biomass array
+
+        returns a dictionary mapping lucode to biomass mean"""
+
+    landcover_mean = {}
+    for landcover_type in numpy.unique(landcover_array):
+        landcover_mask = numpy.where(
+            (landcover_array == landcover_type) *
+            (biomass_array != biomass_nodata))
+
+        landcover_biomass = (
+            biomass_array[landcover_mask] * cell_size ** 2 / 10000)
+        landcover_mean[landcover_type] = numpy.average(landcover_biomass)
+    return landcover_mean
 
 
 def analyze_premade_lulc_scenarios():
@@ -136,31 +205,12 @@ def analyze_grassland_expansion_forest_erosion(args):
 
     #For each regression type, build a regression of biomass based
     #on the distance from the edge of the forest
-    landcover_regression = {}
-    landcover_mean = {}
+    landcover_regression = build_biomass_forest_edge_regression(
+        landcover_array, biomass_array, biomass_nodata, edge_distance,
+        cell_size, regression_lucodes)
 
-    print 'building biomass regression'
-    for landcover_type in numpy.unique(landcover_array):
-        landcover_mask = numpy.where(
-            (landcover_array == landcover_type) *
-            (biomass_array != biomass_nodata))
-
-        landcover_biomass = biomass_array[landcover_mask] * cell_size ** 2 / 10000
-        landcover_edge_distance = edge_distance[landcover_mask]
-
-        #Fit a log function of edge distance to biomass for
-        #landcover_type
-        try:
-            slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
-                numpy.log(landcover_edge_distance), landcover_biomass)
-        except ValueError:
-            print (
-                "skipping landcover type %s because regression failed, "
-                "likely no data" % landcover_type)
-            continue
-
-        landcover_regression[landcover_type] = regression_builder(slope, intercept)
-        landcover_mean[landcover_type] = numpy.average(landcover_biomass)
+    landcover_mean = calculate_landcover_means(
+        landcover_array, biomass_array, biomass_nodata)
 
 #Parse out the landcover pool table
 carbon_pool_table = get_lookup_from_csv(CARBON_POOL_TABLE_FILENAME, 'LULC')
