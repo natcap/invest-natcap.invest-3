@@ -61,6 +61,16 @@ def execute(args):
     released_grass_name = "%i_grass_rel.tif"
     released_other_name = "%i_other_rel.tif"
 
+    disturbed_biomass_marsh_name = "%i_dis_bio_marsh.tif"
+    disturbed_biomass_grove_name = "%i_dis_bio_grove.tif"
+    disturbed_biomass_grass_name = "%i_dis_bio_grass.tif"
+    disturbed_biomass_other_name = "%i_dis_bio_other.tif"
+
+    disturbed_soil_marsh_name = "%i_dis_soil_marsh.tif"
+    disturbed_soil_grove_name = "%i_dis_soil_grove.tif"
+    disturbed_soil_grass_name = "%i_dis_soil_grass.tif"
+    disturbed_soil_other_name = "%i_dis_soil_other.tif"
+
     #carbon emission and timing file names
     biomass_coefficient_name = "%i_bio_loss.tif"
     soil_coefficient_name = "%i_soil_coefficient.tif"
