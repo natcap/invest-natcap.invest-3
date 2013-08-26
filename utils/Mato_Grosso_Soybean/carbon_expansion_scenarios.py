@@ -262,27 +262,11 @@ def analyze_grassland_expansion_forest_erosion(args):
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'percent %s' % percent
 
-        if grassland_pixels_converted < total_grassland_pixels:
-            #This section converts grassland
-            landcover_mask = numpy.where(
-                scenario_lulc_array.flat == args['grassland_lucode'])
-            print landcover_mask[0][0:args['pixels_to_convert_per_step']]
-            scenario_lulc_array.flat[landcover_mask[0][
-                0:args['pixels_to_convert_per_step']]] = args['converting_crop']
-            grassland_pixels_converted += args['pixels_to_convert_per_step']
-        else:
-            #Converts forest pixels edge in if grassland is all converted
-            deepest_edge_index += args['pixels_to_convert_per_step']
-            scenario_lulc_array.flat[
-                increasing_distances[0:deepest_edge_index]] = (
-                    args['converting_crop'])
-
         #We have to recalculate the forest edge distances if we've eaten up
         #some of the forest so we can use the regression function to predict
         #the amount of carbon storage
         edge_distance = calculate_forest_edge_distance(
             scenario_lulc_array, args['forest_lucodes'], cell_size)
-
         #Add up the carbon stocks
         carbon_stocks = numpy.zeros(scenario_lulc_array.shape)
         for landcover_type in args['regression_lucodes']:
@@ -299,7 +283,7 @@ def analyze_grassland_expansion_forest_erosion(args):
         #on how the parameters are set
         for landcover_type in numpy.unique(landcover_array):
             if landcover_type in args['regression_lucodes']:
-                #we already calculated this one
+                #we already calculated earlier
                 continue
 
             #since this kind of mapping is spatially independant, we only need
@@ -328,7 +312,22 @@ def analyze_grassland_expansion_forest_erosion(args):
         total_stocks = numpy.sum(carbon_stocks)
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
-
+        
+        #Convert lulc for the next iteration
+        if grassland_pixels_converted < total_grassland_pixels:
+            #This section converts grassland
+            landcover_mask = numpy.where(
+                scenario_lulc_array.flat == args['grassland_lucode'])
+            print landcover_mask[0][0:args['pixels_to_convert_per_step']]
+            scenario_lulc_array.flat[landcover_mask[0][
+                0:args['pixels_to_convert_per_step']]] = args['converting_crop']
+            grassland_pixels_converted += args['pixels_to_convert_per_step']
+        else:
+            #Converts forest pixels edge in if grassland is all converted
+            deepest_edge_index += args['pixels_to_convert_per_step']
+            scenario_lulc_array.flat[
+                increasing_distances[0:deepest_edge_index]] = (
+                    args['converting_crop'])
 
 if __name__ == '__main__':
 
