@@ -134,6 +134,7 @@ def build_biomass_forest_edge_regression(
 
     return landcover_regression
 
+    
 def calculate_landcover_means(
     landcover_array, biomass_array, biomass_nodata, cell_size):
     """Calculates the mean biomass for all the landcover types.
@@ -155,7 +156,10 @@ def calculate_landcover_means(
 
         landcover_biomass = (
             biomass_array[landcover_mask] * cell_size ** 2 / 10000)
-        landcover_mean[landcover_type] = numpy.average(landcover_biomass)
+        if landcover_biomass.size > 0:
+            landcover_mean[landcover_type] = numpy.average(landcover_biomass)
+        else:
+            landcover_mean[landcover_type] = 0.0
     return landcover_mean
 
 
