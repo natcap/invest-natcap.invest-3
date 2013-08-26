@@ -38,9 +38,9 @@ def get_lookup_from_csv(csv_table_uri, key_field):
     def smart_cast(value):
         """Attempts to cat value to a float, int, or leave it as string"""
         cast_functions = [int, float]
-        for fn in cast_functions:
+        for cast_fn in cast_functions:
             try:
-                return fn(value)
+                return cast_fn(value)
             except ValueError:
                 pass
         return value
@@ -73,9 +73,9 @@ def calculate_forest_edge_distance(lulc_array, forest_lucodes, cell_size):
         returns an array of same shape as lulc_array that contains the distance
             from a forest pixel to its edge."""
 
-    forest_existance = numpy.zeros(landcover_array.shape)
-    for landcover_type in FOREST_LANDCOVER_TYPES:
-        forest_existance = forest_existance + (landcover_array == landcover_type)
+    forest_existance = numpy.zeros(lulc_array.shape)
+    for landcover_type in forest_lucodes:
+        forest_existance = forest_existance + (lulc_array == landcover_type)
 
     #This calculates an edge distance for the clusters of forest
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
@@ -117,8 +117,9 @@ def build_biomass_forest_edge_regression(
         #Fit a log function of edge distance to biomass for
         #landcover_type
         try:
-            slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(
-                numpy.log(landcover_edge_distance), landcover_biomass)
+            slope, intercept, r_value, p_value, std_err = (
+                scipy.stats.linregress(numpy.log(landcover_edge_distance),
+                landcover_biomass))
         except ValueError:
             print (
                 "skipping landcover type %s because regression failed, "
@@ -130,7 +131,8 @@ def build_biomass_forest_edge_regression(
 
     return landcover_regression
 
-def calculate_landcover_means(landcover_array, biomass_array, biomass_nodata):
+def calculate_landcover_means(
+    landcover_array, biomass_array, biomass_nodata, cell_size):
     """Calculates the mean biomass for all the landcover types.
 
         landcover_array - a numpy array of lucodes
@@ -138,6 +140,7 @@ def calculate_landcover_means(landcover_array, biomass_array, biomass_nodata):
             a density of biomass per Ha
         biomass_nodata - the value that indicates a nodata value for the
             biomass array
+        cell_size - the cell size in meters
 
         returns a dictionary mapping lucode to biomass mean"""
 
@@ -204,33 +207,31 @@ def analyze_grassland_expansion_forest_erosion(args):
 
     #This calculates an edge distance for the clusters of forest
     regression_edge_distance = calculate_forest_edge_distance(
-        lulc_array, forest_lucodes, cell_size)
+        landcover_array, args['forest_lucodes'], cell_size)
 
     #For each regression type, build a regression of biomass based
     #on the distance from the edge of the forest
     landcover_regression = build_biomass_forest_edge_regression(
         landcover_array, biomass_array, biomass_nodata,
-        regression_edge_distance, cell_size, regression_lucodes)
+        regression_edge_distance, cell_size, args['regression_lucodes'])
 
     #We'll use the biomass means in case we don't ahve a lookup value in the
     #table
     landcover_mean = calculate_landcover_means(
-        landcover_array, biomass_array, biomass_nodata)
+        landcover_array, biomass_array, biomass_nodata, cell_size)
 
     #Parse out the landcover pool table
     carbon_pool_table = get_lookup_from_csv(
         args['carbon_pool_table_filename'], 'LULC')
 
-    #Load the base landcover map that we use in the scenarios, this one
-    #comes from the soybean expansion
-    scenario_lulc_path = args['scenario_lulc_base_map_filename']
-    scenario_lulc_dataset = gdal.Open(lulc_path)
-    scenario_lulc_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
+    #Load the base landcover map that we use in the scenarios
+    scenario_lulc_dataset = gdal.Open(args['scenario_lulc_base_map_filename'])
+    scenario_lulc_array = scenario_lulc_dataset.GetRasterBand(1).ReadAsArray()
     total_grassland_pixels = numpy.count_nonzero(
         scenario_lulc_array == args['grassland_lucode'])
-        
+
     scenario_edge_distance = calculate_forest_edge_distance(
-        scenario_lulc_array, forest_lucodes, cell_size)
+        scenario_lulc_array, args['forest_lucodes'], cell_size)
 
     print 'total grassland pixels %s' % total_grassland_pixels
 
@@ -256,49 +257,48 @@ def analyze_grassland_expansion_forest_erosion(args):
 
         if grassland_pixels_converted < total_grassland_pixels:
             #This section converts grassland
-            landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
-            print landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]
-            landcover_array.flat[landcover_mask[0][
-                0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
-            grassland_pixels_converted += PIXELS_TO_CONVERT_PER_STEP
+            landcover_mask = numpy.where(
+                scenario_lulc_array.flat == args['grassland_lucode'])
+            print landcover_mask[0][0:args['pixels_to_convert_per_step']]
+            scenario_lulc_array.flat[landcover_mask[0][
+                0:args['pixels_to_convert_per_step']]] = args['converting_crop']
+            grassland_pixels_converted += args['pixels_to_convert_per_step']
         else:
             #Converts forest pixels edge in if grassland is all converted
-            deepest_edge_index += PIXELS_TO_CONVERT_PER_STEP
-            landcover_array.flat[increasing_distances[0:deepest_edge_index]] = (
-                CONVERTING_CROP)
+            deepest_edge_index += args['pixels_to_convert_per_step']
+            scenario_lulc_array.flat[
+                increasing_distances[0:deepest_edge_index]] = (
+                    args['converting_crop'])
 
-        #We have to recalculate the forest edge distances if we've eaten up some of
-        #the forest so we can use the regression function to predict the amount of
-        #carbon storage
-        forest_existance = numpy.zeros(landcover_array.shape)
-        for landcover_type in FOREST_LANDCOVER_TYPES:
-            forest_existance = (
-                forest_existance + (landcover_array == landcover_type))
-        edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-            forest_existance) * cell_size
+        #We have to recalculate the forest edge distances if we've eaten up
+        #some of the forest so we can use the regression function to predict
+        #the amount of carbon storage
+        edge_distance = calculate_forest_edge_distance(
+            scenario_lulc_array, args['forest_lucodes'], cell_size)
 
         #Add up the carbon stocks
-        carbon_stocks = numpy.zeros(landcover_array.shape)
-        for landcover_type in REGRESSION_TYPES:
+        carbon_stocks = numpy.zeros(scenario_lulc_array.shape)
+        for landcover_type in args['regression_lucodes']:
             #This bit of code converts all the landcover types that map their
             #carbon storage with a regression function
             landcover_mask = numpy.where(
-                (landcover_array == landcover_type) * (edge_distance > 0))
+                (scenario_lulc_array == landcover_type) * (edge_distance > 0))
             carbon_stocks[landcover_mask] = (
-                landcover_regression[landcover_type](edge_distance[landcover_mask]))
+                landcover_regression[landcover_type](
+                edge_distance[landcover_mask]))
 
-        #This section will calculate carbon stocks either from the mean calculated
-        #during regression building, or from the table, depending on how the
-        #parameters are set
+        #This section will calculate carbon stocks either from the mean
+        #calculated during regression building, or from the table, depending
+        #on how the parameters are set
         for landcover_type in numpy.unique(landcover_array):
-            if landcover_type in REGRESSION_TYPES:
+            if landcover_type in args['regression_lucodes']:
                 #we already calculated this one
                 continue
 
-            #since this kind of mapping is spatially independant, we only need one
-            #variable to keep track of it
+            #since this kind of mapping is spatially independant, we only need
+            #one variable to keep track of it
             carbon_per_pixel = 0.0
-            if landcover_type in FROM_TABLE:
+            if landcover_type in args['biomass_from_table_lucodes']:
                 #convert from Mg/Ha to Mg/Pixel
                 carbon_per_pixel = (
                     carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] *
@@ -309,11 +309,12 @@ def analyze_grassland_expansion_forest_erosion(args):
                     carbon_per_pixel = landcover_mean[landcover_type]
                 except KeyError:
                     print (
-                        'can\'t find a data entry for landcover type %s, treating'
-                        ' that landcover type as 0 biomass' % landcover_type)
+                        'can\'t find a data entry for landcover type %s, '
+                        'treating that landcover type as 0 biomass'
+                        % landcover_type)
 
-            #Map the carbon stocks of the current landcover type to the whole array
-            landcover_mask = numpy.where(landcover_array == landcover_type)
+            #Map the carbon stocks of the current landcover type to the array
+            landcover_mask = numpy.where(scenario_lulc_array == landcover_type)
             carbon_stocks[landcover_mask] = carbon_per_pixel
 
         #Dump the current percent iteration's carbon stocks to the csv file
@@ -325,7 +326,7 @@ def analyze_grassland_expansion_forest_erosion(args):
 if __name__ == '__main__':
 
 
-    args = {
+    ARGS = {
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
         'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
@@ -346,9 +347,9 @@ if __name__ == '__main__':
         'grassland_lucode': 10,
         'output_table_filename': 'grassland_expansion_carbon_stock_change.csv',
         'scenario_lulc_base_map_filename': 'MG_Soy_Exp_07122013/mg_lulc0',
-        
+
     }
 
     #analyze_premade_lulc_scenarios()
     #analyze_forest_erosion()
-    analyze_grassland_expansion_forest_erosion(args)
+    analyze_grassland_expansion_forest_erosion(ARGS)
