@@ -274,9 +274,9 @@ def analyze_premade_lulc_scenarios():
     pass
 
 
-def analyze_forest_erosion(args):
-    """This function does a simulation of cropland expansion by first
-        consuming grassland, then expanding into the forest edges.
+def analyze_forest_expansion(args):
+    """This function does a simulation of cropland expansion by
+        expanding into the forest edges.
 
         args['base_biomass_filename'] - a raster that contains carbon densities
             per Ha.
@@ -297,15 +297,60 @@ def analyze_forest_erosion(args):
             this lucode.
         args['pixels_to_convert_per_step'] - each step of the simulation
             converts this many pixels
-        args['grassland_lucode'] - this is the lucode for grassland used to
-            determine what we should convert to.
         args['output_table_filename'] - this is the filename of the CSV
             output table.
         args['scenario_lulc_base_map_filename'] - the base LULC map used for
             the scenario runs
         """
-    pass
+        
+    print 'starting forest expansion scenario'
+    landcover_regression, landcover_mean, carbon_pool_table = (
+        load_base_datasets(args))
 
+    #Load the base landcover map that we use in the scenarios
+    scenario_lulc_dataset = gdal.Open(args['scenario_lulc_base_map_filename'])
+    cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
+    scenario_lulc_array = scenario_lulc_dataset.GetRasterBand(1).ReadAsArray()
+
+    scenario_edge_distance = calculate_forest_edge_distance(
+        scenario_lulc_array, args['forest_lucodes'], cell_size)
+
+    #We want to visit the edge pixels in increasing distance order starting
+    #from the fist pixel in.  Set the pixels outside to at a distance of
+    #infinity so that we visit the inner edge forest pixels first
+    scenario_edge_distance[scenario_edge_distance == 0] = numpy.inf
+    increasing_distances = numpy.argsort(scenario_edge_distance.flat)
+
+    #Open a .csv file to dump the grassland expansion scenario
+    output_table = open(args['output_table_filename'], 'wb')
+    output_table.write(
+        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+
+    #This index will keep track of the number of forest pixels converted.
+    deepest_edge_index = 0
+    for percent in range(args['scenario_conversion_steps'] + 1):
+        print 'calculating carbon stocks for expansion step %s' % percent
+
+        #Calcualte the carbon stocks based on the regression functions, lookup
+        #tables, and land cover raster.
+        carbon_stocks = calculate_carbon_stocks(
+            scenario_lulc_array, args['forest_lucodes'],
+            args['regression_lucodes'],
+            args['biomass_from_table_lucodes'], carbon_pool_table,
+            landcover_regression, landcover_mean, cell_size)
+
+        #Dump the current percent iteration's carbon stocks to the csv file
+        total_stocks = numpy.sum(carbon_stocks)
+        print 'total stocks %.2f' % total_stocks
+        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.flush()
+
+        deepest_edge_index += args['pixels_to_convert_per_step']
+        scenario_lulc_array.flat[
+            increasing_distances[0:deepest_edge_index]] = (
+                args['converting_crop'])
+
+                
 def analyze_grassland_expansion_forest_erosion(args):
     """This function does a simulation of cropland expansion by first
         consuming grassland, then expanding into the forest edges.
@@ -337,6 +382,7 @@ def analyze_grassland_expansion_forest_erosion(args):
             the scenario runs
         """
 
+    print 'starting grassland/forest expansion scenario'
     #Load the base biomass and landcover datasets
     landcover_regression, landcover_mean, carbon_pool_table = (
         load_base_datasets(args))
@@ -420,7 +466,16 @@ if __name__ == '__main__':
     }
 
     #analyze_premade_lulc_scenarios()
-    #analyze_forest_erosion()
+    
+    #Set up args for the forest only scenario
+    ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
+    ARGS['pixels_to_convert_per_step'] = 2608
+    ARGS['converting_crop'] = 120,
+    ARGS['output_table_filename'] = (
+        'forest_degredation_carbon_stock_change.csv')
+    analyze_forest_expansion(ARGS)
+    
+    #Set up args for the grassland/forest scenario
     ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['grassland_lucode'] = 10
