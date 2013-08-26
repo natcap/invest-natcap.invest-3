@@ -186,7 +186,7 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 	for landcover_type in landcover_id_set:
 		if landcover_type in REGRESSION_TYPES:
 			continue
-		
+		carbon_per_pixel = 0.0
 		if landcover_type in FROM_TABLE:
 			#convert from Mg/Ha to Mg/Pixel
 			print 'mapping landcover type %s from table %s' % (landcover_type, os.path.basename(CARBON_POOL_TABLE_FILENAME))
@@ -195,7 +195,7 @@ for lulc_path in glob.glob(LAND_USE_DIRECTORY + '/mg_*'):
 			#look it up in the mean table
 			print 'mapping landcover type %s from mean of biomass raster %s' % (landcover_type, os.path.basename(BASE_BIOMASS_FILENAME))
 			try:
-				carbon_per_pixel = landcover_mean[landcover_type] * cell_size ** 2 / 10000
+				carbon_per_pixel = landcover_mean[landcover_type]
 			except KeyError:
 				print 'can\'t find a data entry for landcover type %s, treating that landcover type as 0 biomass' % landcover_type
 		

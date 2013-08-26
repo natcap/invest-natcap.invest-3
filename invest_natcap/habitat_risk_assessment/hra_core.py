@@ -8,6 +8,7 @@ import collections
 import math
 import datetime
 import matplotlib.pyplot
+import re
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -541,9 +542,21 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
             }
         denoms- Dictionary containing the combined denominator for a given
             H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. This dictionary will be the same structure
-            as crit_lists, but the innermost values will be floats instead of
-            lists.
+            can be divided by this. 
+            
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0, ...}, 
+                                 (hab1, stressB): {'CritName': 1.3, ...}
+                               },
+                        'h':   { hab1: {'CritName': 1.3, ...},
+                                ...
+                               },
+                        'h_s_e': { (hab1, stressA): {'CritName': 1.3, ...}
+                               }
+                     }
+             'Recovery': { hab1: {'critname': 1.6, ...}
+                           hab2: ...
+                         }
+            }
     Output:
         A raster file for each of the habitats included in the model displaying
             the recovery potential within each potential grid cell.
@@ -557,6 +570,12 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
     #concat the lists of criteria rasters.
     for h in habitats:
 
+        curr_list = crit_lists['Recovery'][h]
+        curr_crit_names = map(lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), \
+                            curr_list)
+        curr_denoms = denoms['Recovery'][h]
+    
         def add_recov_pix(*pixels):
             '''We will have burned numerator values for the recovery potential
             equation. Want to add all of the numerators (r/dq), then divide by
@@ -570,17 +589,19 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                 return -1.
         
             value = 0.
-            
-            for p in pixels:
+            denom_val = 0.
+
+            for i in range(0, len(pixels)):
                 
+                p = pixels[i]
+
                 if p not in [-1., -1]:
                     value += p
-  
-            value = value / denoms['Recovery'][h]
+                    denom_val += curr_denoms[curr_crit_names[i]]
+
+            value = value / denom_val
 
             return value
-
-        curr_list = crit_lists['Recovery'][h]
 
         #Need to get the arbitrary first element in order to have a pixel size
         #to use in vectorize_datasets. One hopes that we have at least 1 thing
@@ -659,6 +680,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
     low risk areas and medium risk areas). 
     
     Since the raster_utils function can only take in ints, want to predetermine
+
     what areas are or are not going to be shapefile, and pass in a raster that
     is only 1 or nodata.
     
@@ -1136,10 +1158,15 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
     grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
-    #This separates the URI into a list like the following, from which we pull the criteria name:
-    #['H[eelgrass]', 'S[FFA]', 'Indiv', 'E', 'Raster']
-    crit_name_list = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
-                        h_s_list)
+    LOGGER.debug("h_s_list?: %s" % h_s_list)
+
+    #Using regex to pull out the criteria name after the last ]_. Will do this for all full URI's.
+    #See notebook notes from 8/22/13 for explanation for that regex.
+    crit_name_list = map(
+        lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
+
+    LOGGER.debug("Crit_Name_List E's: %s" % crit_name_list)
 
     def add_e_pix(*pixels):
         
@@ -1153,7 +1180,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
         value = 0.
         denom_val = 0.
 
-        for i in range(1, len(pixels)+ 1):
+        for i in range(0, len(pixels)):
             
             p = pixels[i]
 
@@ -1190,10 +1217,12 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     tot_crit_list = h_s_list + h_list
 
-    h_s_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[2], \
+    h_s_names = map(lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), \
                         h_s_list)
     
-    h_names = map(lambda uri: os.path.splitext(os.path.basename(uri))[0].split("_")[1], \
+    h_names = map(lambda uri: re.match(
+            '.*\]_([^_]*)', os.path.splitext(os.path.basename(uri))[0]).group(1), \
                         h_list)
 
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
@@ -1213,7 +1242,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
         value = 0.
         denom_val = 0.
 
-        for i in range(1, len(pixels) + 1):
+        for i in range(0, len(pixels)):
 
             p = pixels[i]
             
@@ -1223,7 +1252,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                     denom_val += h_s_denom_dict[h_s_names[i]]
                 else:
                     value += p
-                    denom_val += h_denom_dict[h_names[i]]
+                    denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
                 value += p
     
         return value / denom_val
@@ -1360,7 +1389,12 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
 
-        for crit_name, crit_dict in (h_s_c[pair]['Crit_Ratings']).iteritems():
+        #For the summed individual ratings, want the denominator to be concatonated
+        #only with the other individual scores. Will make a single entry that will
+        #correspond to the file name being output.
+        denoms['Risk']['h_s_c'][pair]['Indiv'] = 0.
+
+        for crit_dict in (h_s_c[pair]['Crit_Ratings']).values():
                     
             r = crit_dict['Rating']
             dq = crit_dict['DQ']
@@ -1368,7 +1402,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
-            denoms['Risk']['h_s_c'][pair][crit_name] = 1 / float(dq*w)
+            denoms['Risk']['h_s_c'][pair]['Indiv'] += 1 / float(dq*w)
         
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.
@@ -1445,8 +1479,11 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
+        
+        denoms['Risk']['h'][h]['Indiv'] = 0.
+        denoms['Recovery'][h]['Indiv'] = 0.
 
-        for crit_name, crit_dict in hab[h]['Crit_Ratings'].iteritems():
+        for crit_dict in hab[h]['Crit_Ratings'].values():
                     
             r = crit_dict['Rating']
             dq = crit_dict['DQ']
@@ -1455,8 +1492,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             #Explicitly want a float output so as not to lose precision.
             risk_crit_rate_numerator += r / float(dq*w)
             rec_crit_rate_numerator += r/ float(dq)
-            denoms['Risk']['h'][h][crit_name] = 1 / float(dq*w)
-            denoms['Recovery'][h][crit_name] = 1 / float(dq)
+            denoms['Risk']['h'][h]['Indiv'] += 1 / float(dq*w)
+            denoms['Recovery'][h]['Indiv'] += 1 / float(dq)
 
         #First, burn the crit raster for risk
         single_crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + 
@@ -1571,12 +1608,13 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         the individual numerical criteria, and then the raster criteria.'''
 
         crit_rate_numerator = 0
+        denoms['Risk']['h_s_e'][pair]['Indiv'] = 0
         
         #H-S-E dictionary, Numerical Criteria: should output a 
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
 
-        for crit_name, crit_dict in (h_s_e[pair]['Crit_Ratings']).iteritems():
+        for crit_dict in (h_s_e[pair]['Crit_Ratings']).values():
                     
             r = crit_dict['Rating']
             dq = crit_dict['DQ']
@@ -1584,7 +1622,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
 
             #Explicitly want a float output so as not to lose precision.
             crit_rate_numerator += r / float(dq*w)
-            denoms['Risk']['h_s_e'][pair][crit_name] = 1 / float(dq*w)
+            denoms['Risk']['h_s_e'][pair]['Indiv'] += 1 / float(dq*w)
     
         #This will not be spatially explicit, since we need to add the
         #others in first before multiplying against the decayed raster.

@@ -135,7 +135,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         html_test_utils.assert_table_contains_rows_uri(
             self, html_uri, 'farm_ops_table',
             [[1, 0.06, 5.4, 600000, 1, 30],
-             [4, 0.08, 6, 500000, 20, 0]])
+             [4, 0.08, 6, 500000, 20, 0]], do_formatting=False)
 
         # Check the farm harvesting table.
         if do_valuation:

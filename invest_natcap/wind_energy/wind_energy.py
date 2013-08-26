@@ -107,6 +107,9 @@ def execute(args):
             
     bathymetry_uri = args['bathymetry_uri']
     number_of_turbines = int(args['number_of_turbines'])
+
+    # Set the output nodata value to use throughout the model
+    out_nodata = -64329.0
     
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -235,9 +238,6 @@ def execute(args):
             clip_and_reproject_shapefile(
                     land_polygon_uri, aoi_uri, land_poly_proj_uri)
             
-            # The general out nodata value for the rasters will be from the
-            # bathymetry raster
-            out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
             # Get the cell size to use in new raster outputs from the DEM
             cell_size = raster_utils.get_cell_size_from_uri(
                     final_bathymetry_uri)
@@ -297,9 +297,6 @@ def execute(args):
         # the case if an AOI is provided
         final_wind_points_uri = wind_point_shape_uri
         final_bathymetry_uri = bathymetry_uri
-        # The general out nodata value for the rasters will be from the
-        # bathymetry raster
-        out_nodata = raster_utils.get_nodata_from_uri(final_bathymetry_uri)
 
         # Determines whether to check projections in future vectorize_datasets
         # calls. Since no AOI is provided set to False since all our data is in
@@ -1679,7 +1676,7 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
     raster_wkt = raster_utils.get_dataset_projection_wkt_uri(raster_uri) 
    
     # Temporary filename for an intermediate step
-    aoi_reprojected_uri = raster_utils.temporary_filename()
+    aoi_reprojected_uri = raster_utils.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the raster so that the
     # AOI can be used to clip the raster properly
@@ -1738,7 +1735,7 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
     shapefile_wkt = shapefile_sr.ExportToWkt()
     
     # Temporary URI for an intermediate step
-    aoi_reprojected_uri = raster_utils.temporary_filename()
+    aoi_reprojected_uri = raster_utils.temporary_folder()
     
     # Reproject the AOI to the spatial reference of the shapefile so that the
     # AOI can be used to clip the shapefile properly
@@ -1746,7 +1743,7 @@ def clip_and_reproject_shapefile(shapefile_uri, aoi_uri, projected_uri):
             aoi_uri, shapefile_wkt, aoi_reprojected_uri)
 
     # Temporary URI for an intermediate step
-    clipped_uri = raster_utils.temporary_filename()
+    clipped_uri = raster_utils.temporary_folder()
     
     # Clip the shapefile to the AOI
     LOGGER.debug('Clipping datasource')
