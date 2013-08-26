@@ -203,14 +203,14 @@ def analyze_grassland_expansion_forest_erosion(args):
     cell_size = landcover_dataset.GetGeoTransform()[1]
 
     #This calculates an edge distance for the clusters of forest
-    edge_distance = calculate_forest_edge_distance(
+    regression_edge_distance = calculate_forest_edge_distance(
         lulc_array, forest_lucodes, cell_size)
 
     #For each regression type, build a regression of biomass based
     #on the distance from the edge of the forest
     landcover_regression = build_biomass_forest_edge_regression(
-        landcover_array, biomass_array, biomass_nodata, edge_distance,
-        cell_size, regression_lucodes)
+        landcover_array, biomass_array, biomass_nodata,
+        regression_edge_distance, cell_size, regression_lucodes)
 
     #We'll use the biomass means in case we don't ahve a lookup value in the
     #table
@@ -221,108 +221,105 @@ def analyze_grassland_expansion_forest_erosion(args):
     carbon_pool_table = get_lookup_from_csv(
         args['carbon_pool_table_filename'], 'LULC')
 
-#Load the base landcover map that we use in the scenarios, this one
-#comes from the soybean expansion
-lulc_path = args['scenario_lulc_base_map_filename']
-lulc_dataset = gdal.Open(lulc_path)
-landcover_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
-total_grassland_pixels = numpy.count_nonzero(landcover_array == GRASSLAND)
+    #Load the base landcover map that we use in the scenarios, this one
+    #comes from the soybean expansion
+    scenario_lulc_path = args['scenario_lulc_base_map_filename']
+    scenario_lulc_dataset = gdal.Open(lulc_path)
+    scenario_lulc_array = lulc_dataset.GetRasterBand(1).ReadAsArray()
+    total_grassland_pixels = numpy.count_nonzero(
+        scenario_lulc_array == args['grassland_lucode'])
+        
+    scenario_edge_distance = calculate_forest_edge_distance(
+        scenario_lulc_array, forest_lucodes, cell_size)
 
-#Calculates an edge distance for the clusters of forest
-forest_existance = numpy.zeros(landcover_array.shape)
-for landcover_type in FOREST_LANDCOVER_TYPES:
-    forest_existance = forest_existance + (landcover_array == landcover_type)
-edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-    forest_existance)
+    print 'total grassland pixels %s' % total_grassland_pixels
 
-print 'total grassland pixels %s' % total_grassland_pixels
+    #We want to visit the edge pixels in increasing distance order starting
+    #from the fist pixel in.  Set the pixels outside to at a distance of
+    #infinity so that we visit the inner edge forest pixels first
+    scenario_edge_distance[scenario_edge_distance == 0] = numpy.inf
+    increasing_distances = numpy.argsort(scenario_edge_distance.flat)
 
-#We want to visit the edge pixels in increasing distance order starting
-#from the fist pixel in.  Set the pixels outside to at a distance of
-#infinity so that we visit the inner edge forest pixels first
-edge_distance[edge_distance == 0] = numpy.inf
-increasing_distances = numpy.argsort(edge_distance.flat)
+    #Open a .csv file to dump the grassland expansion scenario
+    output_table = open(args['output_table_filename'], 'wb')
+    output_table.write(
+        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
 
-#Open a .csv file to dump the grassland expansion scenario
-output_table = open('grassland_expansion_carbon_stock_change.csv', 'wb')
-output_table.write(
-    'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+    #These two indexes will keep track of the number of grassland, and later
+    #how deep into the forest we've converted.
+    grassland_pixels_converted = 0
+    deepest_edge_index = 0
+    #the 401 comes from converting 0-400 percent expansion, it's what Brad had
+    #in the original scenario
+    for percent in range(args['scenario_conversion_steps'] + 1):
+        print 'percent %s' % percent
 
-#These two indexes will keep track of the number of grassland, and later how
-#deep into the forest we've converted.
-grassland_pixels_converted = 0
-deepest_edge_index = 0
-#the 401 comes from converting 0-400 percent expansion, it's what Brad had
-#in the original scenario
-for percent in range(401):
-    print 'percent %s' % percent
-
-    if grassland_pixels_converted < total_grassland_pixels:
-        #This section converts grassland
-        landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
-        print landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]
-        landcover_array.flat[landcover_mask[0][
-            0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
-        grassland_pixels_converted += PIXELS_TO_CONVERT_PER_STEP
-    else:
-        #Converts forest pixels edge in if grassland is all converted
-        deepest_edge_index += PIXELS_TO_CONVERT_PER_STEP
-        landcover_array.flat[increasing_distances[0:deepest_edge_index]] = (
-            CONVERTING_CROP)
-
-    #We have to recalculate the forest edge distances if we've eaten up some of
-    #the forest so we can use the regression function to predict the amount of
-    #carbon storage
-    forest_existance = numpy.zeros(landcover_array.shape)
-    for landcover_type in FOREST_LANDCOVER_TYPES:
-        forest_existance = (
-            forest_existance + (landcover_array == landcover_type))
-    edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-        forest_existance) * cell_size
-
-    #Add up the carbon stocks
-    carbon_stocks = numpy.zeros(landcover_array.shape)
-    for landcover_type in REGRESSION_TYPES:
-        #This bit of code converts all the landcover types that map their
-        #carbon storage with a regression function
-        landcover_mask = numpy.where(
-            (landcover_array == landcover_type) * (edge_distance > 0))
-        carbon_stocks[landcover_mask] = (
-            landcover_regression[landcover_type](edge_distance[landcover_mask]))
-
-    #This section will calculate carbon stocks either from the mean calculated
-    #during regression building, or from the table, depending on how the
-    #parameters are set
-    for landcover_type in numpy.unique(landcover_array):
-        if landcover_type in REGRESSION_TYPES:
-            #we already calculated this one
-            continue
-
-        #since this kind of mapping is spatially independant, we only need one
-        #variable to keep track of it
-        carbon_per_pixel = 0.0
-        if landcover_type in FROM_TABLE:
-            #convert from Mg/Ha to Mg/Pixel
-            carbon_per_pixel = (
-                carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] *
-                cell_size ** 2 / 10000)
+        if grassland_pixels_converted < total_grassland_pixels:
+            #This section converts grassland
+            landcover_mask = numpy.where(landcover_array.flat == GRASSLAND)
+            print landcover_mask[0][0:PIXELS_TO_CONVERT_PER_STEP]
+            landcover_array.flat[landcover_mask[0][
+                0:PIXELS_TO_CONVERT_PER_STEP]] = CONVERTING_CROP
+            grassland_pixels_converted += PIXELS_TO_CONVERT_PER_STEP
         else:
-            #look it up in the mean table
-            try:
-                carbon_per_pixel = landcover_mean[landcover_type]
-            except KeyError:
-                print (
-                    'can\'t find a data entry for landcover type %s, treating'
-                    ' that landcover type as 0 biomass' % landcover_type)
+            #Converts forest pixels edge in if grassland is all converted
+            deepest_edge_index += PIXELS_TO_CONVERT_PER_STEP
+            landcover_array.flat[increasing_distances[0:deepest_edge_index]] = (
+                CONVERTING_CROP)
 
-        #Map the carbon stocks of the current landcover type to the whole array
-        landcover_mask = numpy.where(landcover_array == landcover_type)
-        carbon_stocks[landcover_mask] = carbon_per_pixel
+        #We have to recalculate the forest edge distances if we've eaten up some of
+        #the forest so we can use the regression function to predict the amount of
+        #carbon storage
+        forest_existance = numpy.zeros(landcover_array.shape)
+        for landcover_type in FOREST_LANDCOVER_TYPES:
+            forest_existance = (
+                forest_existance + (landcover_array == landcover_type))
+        edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+            forest_existance) * cell_size
 
-    #Dump the current percent iteration's carbon stocks to the csv file
-    total_stocks = numpy.sum(carbon_stocks)
-    output_table.write('%s,%.2f\n' % (percent, total_stocks))
-    output_table.flush()
+        #Add up the carbon stocks
+        carbon_stocks = numpy.zeros(landcover_array.shape)
+        for landcover_type in REGRESSION_TYPES:
+            #This bit of code converts all the landcover types that map their
+            #carbon storage with a regression function
+            landcover_mask = numpy.where(
+                (landcover_array == landcover_type) * (edge_distance > 0))
+            carbon_stocks[landcover_mask] = (
+                landcover_regression[landcover_type](edge_distance[landcover_mask]))
+
+        #This section will calculate carbon stocks either from the mean calculated
+        #during regression building, or from the table, depending on how the
+        #parameters are set
+        for landcover_type in numpy.unique(landcover_array):
+            if landcover_type in REGRESSION_TYPES:
+                #we already calculated this one
+                continue
+
+            #since this kind of mapping is spatially independant, we only need one
+            #variable to keep track of it
+            carbon_per_pixel = 0.0
+            if landcover_type in FROM_TABLE:
+                #convert from Mg/Ha to Mg/Pixel
+                carbon_per_pixel = (
+                    carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] *
+                    cell_size ** 2 / 10000)
+            else:
+                #look it up in the mean table
+                try:
+                    carbon_per_pixel = landcover_mean[landcover_type]
+                except KeyError:
+                    print (
+                        'can\'t find a data entry for landcover type %s, treating'
+                        ' that landcover type as 0 biomass' % landcover_type)
+
+            #Map the carbon stocks of the current landcover type to the whole array
+            landcover_mask = numpy.where(landcover_array == landcover_type)
+            carbon_stocks[landcover_mask] = carbon_per_pixel
+
+        #Dump the current percent iteration's carbon stocks to the csv file
+        total_stocks = numpy.sum(carbon_stocks)
+        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.flush()
 
 
 if __name__ == '__main__':
@@ -344,10 +341,12 @@ if __name__ == '__main__':
         'biomass_from_table_lucodes': [10, 12, 120, 0],
         #This is the crop we convert into
         'converting_crop': 120,
+        'scenario_conversion_steps': 400,
         'pixels_to_convert_per_step': 2608,
         'grassland_lucode': 10,
         'output_table_filename': 'grassland_expansion_carbon_stock_change.csv',
         'scenario_lulc_base_map_filename': 'MG_Soy_Exp_07122013/mg_lulc0',
+        
     }
 
     #analyze_premade_lulc_scenarios()
