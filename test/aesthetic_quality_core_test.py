@@ -137,8 +137,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
     def test_viewshed(self):
-        array_shape = (4, 4)
-        viewpoint = (2, 3)
+        array_shape = (4, 2)
+        viewpoint = (array_shape[0]/2, array_shape[1]/2)
         # list all perimeter cell center angles
         row_count, col_count = array_shape
         print(col_count, col_count)
