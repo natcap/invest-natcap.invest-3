@@ -138,8 +138,8 @@ class TestAestheticQualityCore(unittest.TestCase):
 
 
     def test_viewshed(self):
-        array_shape = (4,2) 
-        viewpoint = (array_shape[0]/2, array_shape[1]/2)
+        array_shape = (400,400) 
+        viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
         # list all perimeter cell center angles
         row_count, col_count = array_shape
         print(row_count, col_count)
@@ -167,14 +167,20 @@ class TestAestheticQualityCore(unittest.TestCase):
         perimeter_cols = np.concatenate((perimeter_cols, \
             np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
         # List the angles between each perimeter cell
+        two_pi = 2.0 * math.pi
+        rad_to_deg = 180. / math.pi
+        delta_a = []
         for i in range(perimeter_rows.size):
-            a1 = np.arctan2(-perimeter_row[i-1], perimeter_col[i-1])
-            a2 = np.arctan2(-perimeter_row[i], perimeter_col[i])
-            delta_a = a2 - a1
-            print(a1, a1, delta_a)
+            x1 = (perimeter_rows[i-1] - viewpoint[0], \
+                perimeter_cols[i-1] - viewpoint[1])
+            x2 = (perimeter_rows[i] - viewpoint[0], \
+                perimeter_cols[i] - viewpoint[1])
+            a1 = (np.arctan2(-x1[0], x1[1]) + two_pi) % two_pi
+            a2 = (np.arctan2(-x2[0], x2[1]) + two_pi) % two_pi
+            delta_a.append((a2 - a1 + two_pi) % two_pi)
 
-        print('perimeter_rows', perimeter_rows)
-        print('perimeter_cols', perimeter_cols)
+        delta_a = np.array(delta_a)
+        print(np.amax(delta_a / np.amin(delta_a)))
 
     def tare_down(self):
         pass
