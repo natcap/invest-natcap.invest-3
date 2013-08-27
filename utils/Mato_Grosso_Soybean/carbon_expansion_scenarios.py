@@ -705,6 +705,8 @@ if __name__ == '__main__':
         'savanna_expansion_carbon_stock_change.csv')
     analyze_lu_expansion(ARGS)
 
+    os.exit(1)
+    
     #Set up the args for the disk based scenario
     ARGS['scenario_path'] = './MG_Soy_Exp_07122013/'
     ARGS['scenario_file_pattern'] = 'mg_lulc%n'
