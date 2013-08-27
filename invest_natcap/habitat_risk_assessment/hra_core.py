@@ -1214,7 +1214,6 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     Returns nothing.
     '''
-
     tot_crit_list = h_s_list + h_list
 
     h_s_names = map(lambda uri: re.match(
@@ -1253,8 +1252,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                 else:
                     value += p
                     denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
-                value += p
-    
+        
         return value / denom_val
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
@@ -1681,6 +1679,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                         dataset_to_align_index=0, aoi_uri=None)
 
             crit_lists['Risk']['h_s_e'][pair].append(crit_C_uri)
-    
+   
+    LOGGER.debug("DENOMS: %s" % denoms) 
+
     #This might help.
     return (crit_lists, denoms)

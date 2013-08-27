@@ -50,6 +50,13 @@ class ImproperECSelection(Exception):
     this with an 'E' or 'C'. '''
     pass
 
+class MissingEOrCException(Exception):
+    '''An exception for hra_preprocessor that catches h-s pairings who are
+    missing either E or C criteria, though not both. The user must either zero
+    all criteria for that paoir, or make sure that both E and C are represented.
+    '''
+    pass
+
 def execute(args):
     """Want to read in multiple hab/stressors directories, in addition to named
     criteria, and make an appropriate csv file.
@@ -619,13 +626,40 @@ def zero_check(h_s_c, h_s_e, habs):
                         if subdict_lvl_3['Rating'] == 0.0:
                             
                             del subdict_lvl_2[key_3]
-
+            '''
             #Now that we have removed that, check the dictionary isn't
             #now empty
             if len(subdict_lvl_1['Crit_Ratings']) == 0 and \
                         len(subdict_lvl_1['Crit_Rasters']) == 0:
 
                 del dictionary[key_1]
+            '''
+    #At this point, the pair keys for h_s_c and h_s_e should be identical.
+    #Going to use h_s_e as the iterator.
+    for pair, overlap_dict in h_s_e.items():
+
+        h, s = pair
+
+        e_crit_count = len(overlap_dict['Crit_Rasters']) + len(overlap_dict['Crit_Ratings'])
+        c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
+        h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
+
+        #First case should be if a dict pair's own Rasters/Ratings dictionaries
+        #are empty, and h_s_c[pair] are also empty.
+        if e_crit_count == 0 and c_crit_count == 0:
+
+            #Want to remove the pair from the assessment, can do this by removing
+            #from both h_s_c and h_s_e.
+            del h_s_e[pair]
+            del h_s_c[pair]
+        
+        #If either h_s_c/habs or h_s_e has criteria, but not both.
+        elif e_crit_count == 1 ^ (c_crit_count + h_crit_count) == 1:
+            raise MissingEOrCException("For a given habitat-stressor pairing, \
+                    there must be at least one relevant exposure criteria, \
+                    and at leeast one relevant sensitivity or resilience criteria. \
+                    Currently, the (%s, %s) pairing is missing one or the other. \
+                    This can be corrected in the %s ratings csv file." % (h, s, h))
 
     LOGGER.debug(h_s_e)
 
