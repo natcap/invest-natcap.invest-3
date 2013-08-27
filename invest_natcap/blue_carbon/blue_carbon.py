@@ -55,10 +55,24 @@ def execute(args):
     acc_name = "%i_acc.tif"
     soil_acc_name = "%i_soil_acc.tif"
     predisturbance_name = "%i_pre.tif"
-    residual_name = "%i_res.tif"
+    residual_name = "%i_soil_res.tif"
+    released_marsh_name = "%i_marsh_rel.tif"
+    released_grove_name = "%i_grove_rel.tif"
+    released_grass_name = "%i_grass_rel.tif"
+    released_other_name = "%i_other_rel.tif"
+
+    disturbed_biomass_marsh_name = "%i_dis_bio_marsh.tif"
+    disturbed_biomass_grove_name = "%i_dis_bio_grove.tif"
+    disturbed_biomass_grass_name = "%i_dis_bio_grass.tif"
+    disturbed_biomass_other_name = "%i_dis_bio_other.tif"
+
+    disturbed_soil_marsh_name = "%i_dis_soil_marsh.tif"
+    disturbed_soil_grove_name = "%i_dis_soil_grove.tif"
+    disturbed_soil_grass_name = "%i_dis_soil_grass.tif"
+    disturbed_soil_other_name = "%i_dis_soil_other.tif"
 
     #carbon emission and timing file names
-    biomass_coefficient_name = "%i_bio_loss.tif"
+##    biomass_coefficient_name = "%i_bio_loss.tif"
     soil_coefficient_name = "%i_soil_coefficient.tif"
     magnitude_name = "%i_mag.tif"
     biomass_half_name = "%i_bio_half.tif"
@@ -181,10 +195,10 @@ def execute(args):
         v_value = carbon[original][carbon_veg_field]
         return disturbance[v_value][disturbance_depth_name % t_value]
 
-    def magnitude_op(biomass_coefficient, biomass, soil_coefficient, soil):
-        if nodata in [biomass_coefficient, biomass, soil_coefficient, soil]:
+    def magnitude_op(biomass, soil_coefficient, soil):
+        if nodata in [biomass, soil_coefficient, soil]:
             return nodata
-        return (biomass_coefficient * biomass) + (soil_coefficient * soil)    
+        return biomass + (soil_coefficient * soil)    
 
     #set file paths for lulc base
     lulc_base_above_uri = os.path.join(workspace_dir, above_name % lulc_base_year)
@@ -268,10 +282,10 @@ def execute(args):
         if lulc_transition_year in lulc_years:
             LOGGER.debug("Transition year %i.", lulc_transition_year)
             t = lulc_transition_year - lulc_base_year            
-            def timing_op(biomass_half, biomass_coefficient, biomass, soil_half, soil_coefficient, soil):
-                if nodata in [biomass_half, biomass_coefficient, biomass, soil_half, soil_coefficient, soil]:
+            def timing_op(biomass_half, biomass, soil_half, soil_coefficient, soil):
+                if nodata in [biomass_half, biomass, soil_half, soil_coefficient, soil]:
                     return nodata
-                return ((0.5 ** (t / biomass_half)) * biomass_coefficient * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
+                return ((0.5 ** (t / biomass_half)) * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
 
             def accumulation_op(accumulation):
                 if nodata in [accumulation]:
@@ -283,7 +297,7 @@ def execute(args):
             lulc_base_carbon_accumulation_uri = os.path.join(workspace_dir, soil_acc_name % lulc_base_year)
             lulc_base_soil_residual_uri = os.path.join(workspace_dir, residual_name % lulc_base_year)
             
-            lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
+##            lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
             lulc_base_soil_coefficient_uri = os.path.join(workspace_dir, soil_coefficient_name % lulc_base_year)
 
             lulc_predisturbance_soil_uri = os.path.join(workspace_dir, predisturbance_name % lulc_transition_year)
@@ -292,7 +306,6 @@ def execute(args):
             lulc_base_biomass_half_life_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
             lulc_base_soil_half_life_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
             lulc_base_time_uri = os.path.join(workspace_dir, time_name % lulc_base_year)
-
 
             #calculate accumulation
             LOGGER.debug("Calculating accumulated soil carbon before disturbance in %i.", lulc_transition_year)
@@ -304,24 +317,24 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
-            raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
-                                            add_op,
-                                            lulc_predisturbance_soil_uri,
-                                            gdal_type,
-                                            nodata,
-                                            cell_size,
-                                            "union")           
+##            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
+##            raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
+##                                            add_op,
+##                                            lulc_predisturbance_soil_uri,
+##                                            gdal_type,
+##                                            nodata,
+##                                            cell_size,
+##                                            "union")           
 
             #calculate magnitude and timing of emission
-            LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            biomass_coefficient_op,
-                                            lulc_base_biomass_coefficient_uri,
-                                            gdal_type,
-                                            nodata,
-                                            cell_size,
-                                            "union")
+##            LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
+##            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+##                                            biomass_coefficient_op,
+##                                            lulc_base_biomass_coefficient_uri,
+##                                            gdal_type,
+##                                            nodata,
+##                                            cell_size,
+##                                            "union")
 
             LOGGER.debug("Creating soil disturbance coefficient raster for %i.", lulc_base_year)
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
@@ -358,8 +371,7 @@ def execute(args):
                                        exception_flag="values_required")
                 
             LOGGER.info("Calculating magnitude of loss.")
-            raster_utils.vectorize_datasets([lulc_base_biomass_coefficient_uri,
-                                             lulc_base_biomass_uri,
+            raster_utils.vectorize_datasets([lulc_base_biomass_uri,
                                              lulc_base_soil_coefficient_uri,
                                              lulc_predisturbance_soil_uri],
                                             magnitude_op,
@@ -371,11 +383,11 @@ def execute(args):
             
             LOGGER.info("Calculating primary timing of loss.")
             raster_utils.vectorize_datasets([lulc_base_biomass_half_life_uri,
-                                             lulc_base_biomass_coefficient_uri,
+##                                             lulc_base_biomass_coefficient_uri,
                                              lulc_base_biomass_uri,
                                              lulc_base_soil_half_life_uri,
                                              lulc_base_soil_coefficient_uri,
-                                             lulc_base_soil_uri],
+                                             lulc_predisturbance_soil_uri],
                                             timing_op,
                                             lulc_base_magnitude_uri,
                                             gdal_type,
@@ -383,7 +395,7 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-            LOGGER.info("Calculating secondary timing of loss.")
+##            LOGGER.info("Calculating secondary timing of loss.")
 
             #set base to new LULC and year
             lulc_base_year = lulc_transition_year
@@ -469,10 +481,10 @@ def execute(args):
                                        nodata,
                                        exception_flag="values_required")
                         
-        else:
-            LOGGER.debug("Snapshot year %i.", lulc_transition_year)
-            LOGGER.debug("Calculating accumulation.")
-            LOGGER.debug("Calculating emisson.")
+##        else:
+##            LOGGER.debug("Snapshot year %i.", lulc_transition_year)
+##            LOGGER.debug("Calculating accumulation.")
+##            LOGGER.debug("Calculating emisson.")
 
 ##    for year in range(lulc_list[0]["year"], args["analysis_year"]+1):            
 ##        if private_valuation:
