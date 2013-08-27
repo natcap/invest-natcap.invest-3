@@ -137,21 +137,38 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
     def test_viewshed(self):
-        array_shape = (3, 3)
-        viewpoint = (1, 1)
+        array_shape = (4, 4)
+        viewpoint = (2, 3)
         # list all perimeter cell center angles
         row_count, col_count = array_shape
         print(col_count, col_count)
+        # Create the rows on the right side from viewpoint to top right corner
         perimeter_rows = np.array(range(viewpoint[0], -1, -1))
+        perimeter_cols = np.ones(perimeter_rows.size) * (col_count - 1)
+        # Create top row, avoiding repeat from what's already created
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.zeros(col_count - 1)))
+        perimeter_cols = np.concatenate((perimeter_cols, \
+            np.array(range(row_count-2, -1, -1))))
+        # Create left side, avoiding repeat from top row
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.array(range(1, row_count))))
+        perimeter_cols = np.concatenate((perimeter_cols, \
+            np.zeros(row_count - 1)))
+        # Create bottom row, avoiding repat from left side
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.ones(col_count - 1) * (row_count -1)))
+        perimeter_cols = np.concatenate((perimeter_cols, \
+            np.array(range(1, col_count))))
+        # Create last part of the right side, avoiding repeat from bottom row
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.array(range(row_count - 2, viewpoint[0], -1))))
+        perimeter_cols = np.concatenate((perimeter_cols, \
+            np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
+        
+        
         print('perimeter_rows', perimeter_rows)
+        print('perimeter_cols', perimeter_cols)
 
     def tare_down(self):
         pass
