@@ -73,17 +73,6 @@ def execute(args):
 
     raster_utils.create_directories([workspace])
 
-    if args["resolution"] != "":
-       if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
-          msg = "The analysis resolution cannot be smaller than the input."
-          LOGGER.error(msg)
-          raise ValueError, msg
-      
-       else:
-          LOGGER.info("Resampling land cover.")
-          raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
-          landcover_uri = landcover_resample_uri
-         
     ###
     #validate data
     ###
@@ -93,7 +82,20 @@ def execute(args):
     ###
     #resample, align and rasterize data
     ###
-    
+
+    if args["resolution"] != "":
+       if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
+          msg = "The analysis resolution cannot be smaller than the input."
+          LOGGER.error(msg)
+          raise ValueError, msg
+      
+       else:
+          LOGGER.info("Resampling land cover.")
+          #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
+          raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
+          landcover_uri = landcover_resample_uri
+         
+  
     ###
     #compute intermediate data if needed
     ###
