@@ -136,12 +136,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         str(error)
         assert error < 5e-15, message
 
+
     def test_viewshed(self):
-        array_shape = (4, 2)
+        array_shape = (4,2) 
         viewpoint = (array_shape[0]/2, array_shape[1]/2)
         # list all perimeter cell center angles
         row_count, col_count = array_shape
-        print(col_count, col_count)
+        print(row_count, col_count)
         # Create the rows on the right side from viewpoint to top right corner
         perimeter_rows = np.array(range(viewpoint[0], -1, -1))
         perimeter_cols = np.ones(perimeter_rows.size) * (col_count - 1)
@@ -149,7 +150,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.zeros(col_count - 1)))
         perimeter_cols = np.concatenate((perimeter_cols, \
-            np.array(range(row_count-2, -1, -1))))
+            np.array(range(col_count-2, -1, -1))))
         # Create left side, avoiding repeat from top row
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.array(range(1, row_count))))
@@ -165,8 +166,13 @@ class TestAestheticQualityCore(unittest.TestCase):
             np.array(range(row_count - 2, viewpoint[0], -1))))
         perimeter_cols = np.concatenate((perimeter_cols, \
             np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
-        
-        
+        # List the angles between each perimeter cell
+        for i in range(perimeter_rows.size):
+            a1 = np.arctan2(-perimeter_row[i-1], perimeter_col[i-1])
+            a2 = np.arctan2(-perimeter_row[i], perimeter_col[i])
+            delta_a = a2 - a1
+            print(a1, a1, delta_a)
+
         print('perimeter_rows', perimeter_rows)
         print('perimeter_cols', perimeter_cols)
 
