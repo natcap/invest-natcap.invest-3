@@ -1,4 +1,5 @@
 import invest_natcap.testing
+import invest_natcap.wind_energy.wind_energy
 
 class WindEnergyRegressionTest(invest_natcap.testing.GISTest):
     @invest_natcap.testing.regression(
