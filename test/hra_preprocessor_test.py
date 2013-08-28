@@ -264,7 +264,6 @@ class TestHRAPreprocessor(unittest.TestCase):
         exp_dict_h_s_e = copy.deepcopy(h_s_e)
         exp_dict_h_s_c = copy.deepcopy(h_s_c)
        
-
         hra_preprocessor.zero_check(h_s_c, h_s_e, habs)
         LOGGER.debug("Exp_Habs?: %s" % exp_dict_h)
         
@@ -285,6 +284,9 @@ class TestHRAPreprocessor(unittest.TestCase):
         #or C with no e
         del h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']\
                     ['management effectiveness']
+        LOGGER.debug("Curr_Habs?: %s" % habs)
+        LOGGER.debug("Curr_H_S_C?: %s" % h_s_c)
+        LOGGER.debug("Curr_H_S_E?: %s" % h_s_e)
         self.assertRaises(hra_preprocessor.MissingEOrCException,
                         hra_preprocessor.zero_check, h_s_c, h_s_e, habs)
 

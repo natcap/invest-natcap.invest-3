@@ -653,11 +653,12 @@ def zero_check(h_s_c, h_s_e, habs):
             del h_s_e[pair]
             del h_s_c[pair]
         
-        #If either h_s_c/habs or h_s_e has criteria, but not both.
-        elif e_crit_count == 1 ^ (c_crit_count + h_crit_count) == 1:
+        #We know at this point that both are not 0. So at least one is 1+.
+        #If either h_s_c/habs or h_s_e has no criteria. criteria, but not both.
+        elif e_crit_count == 0 ^ (c_crit_count + h_crit_count) == 0:
             raise MissingEOrCException("For a given habitat-stressor pairing, \
                     there must be at least one relevant exposure criteria, \
-                    and at leeast one relevant sensitivity or resilience criteria. \
+                    and at least one relevant sensitivity or resilience criteria. \
                     Currently, the (%s, %s) pairing is missing one or the other. \
                     This can be corrected in the %s ratings csv file." % (h, s, h))
 
