@@ -2,7 +2,7 @@
     "id" : "window",
     "label": "Scenario Generator",
     "targetScript" : "invest_natcap.scenario_generator.scenario_generator",
-    "modelName" : "recreation_client_init",
+    "modelName" : "scenario_generator",
     "localDocURI": "../documentation/scenario_generator.html",
     "height": 600,
     "width" : 700,
@@ -158,7 +158,7 @@
                     "args_id": "resolution",
                     "label" : "Resolution",
                     "type": "text",
-                    "validText": "[0-9]?(\\.[0-9][0-9])?",
+                    "validText": "[0-9]*(\\.[0-9]*)?",
                     "dataType": "float",
                     "required": false,
                     "helpText": "The spatial resolution of the model run."

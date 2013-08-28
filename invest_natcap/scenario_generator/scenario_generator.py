@@ -65,11 +65,14 @@ def execute(args):
     landcover_uri = args["landcover"]
     override_uri = args["override"]
     
+    landcover_resample_uri = os.path.join(workspace, "resample.tif")
+    
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
     override_dataset_uri = os.path.join(workspace,"override.tif")
     landcover_htm_uri = os.path.join(workspace,"landcover.htm")
 
     raster_utils.create_directories([workspace])
+
     ###
     #validate data
     ###
@@ -79,7 +82,20 @@ def execute(args):
     ###
     #resample, align and rasterize data
     ###
-    
+
+    if args["resolution"] != "":
+       if args["resolution"] < raster_utils.get_cell_size_from_uri(landcover_uri):
+          msg = "The analysis resolution cannot be smaller than the input."
+          LOGGER.error(msg)
+          raise ValueError, msg
+      
+       else:
+          LOGGER.info("Resampling land cover.")
+          #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
+          raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
+          landcover_uri = landcover_resample_uri
+         
+  
     ###
     #compute intermediate data if needed
     ###
