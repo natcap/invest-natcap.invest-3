@@ -662,7 +662,7 @@ def zero_check(h_s_c, h_s_e, habs):
                     This can be corrected in the %s ratings csv file." % (h, s, h))
 
     LOGGER.debug(h_s_e)
-
+    LOGGER.debug(h_s_c)
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 

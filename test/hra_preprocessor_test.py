@@ -1,6 +1,6 @@
 '''Test module for the hra_scratch_preprocessor module.'''
 
-
+import copy
 import os
 import logging
 import unittest
@@ -29,6 +29,7 @@ class TestHRAPreprocessor(unittest.TestCase):
     
         self.args = args
 
+    @unittest.skip("For later testing.")
     def test_HabsOnly_NoShapes_smoke(self):
         '''This will use only the habitats directory as an input to overlap
         stressors, and won't attempt to pull in shapefile criteria.'''
@@ -37,6 +38,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         hra_preprocessor.execute(self.args)
     
+    @unittest.skip("For later testing.")
     def test_HabsOnlyShape_smoke(self):
         '''This will use only the habitats directory as an input to overlap
         stressors, and will atempt to use a single shapefile criteria with
@@ -55,6 +57,7 @@ class TestHRAPreprocessor(unittest.TestCase):
 
         hra_preprocessor.execute(self.args)
 
+    @unittest.skip("For later testing.")
     def test_Missing_HabsSpecies_exception(self):
         '''Want to make sure that if neither a habitat or species is selected for
         use in overlap, that it throws an error. Should raise a 
@@ -63,6 +66,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertRaises(hra_preprocessor.MissingHabitatsOrSpecies,
                         hra_preprocessor.execute, self.args)
     
+    @unittest.skip("For later testing.")
     def test_NotEnoughCriteria_exception(self):
         '''Want to make sure that if we have at least 4 or more criteria passed
         within our 3 criteria type lists. Should raise a NotEnoughCriteria 
@@ -81,6 +85,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertRaises(hra_preprocessor.NotEnoughCriteria,
                         hra_preprocessor.execute, self.args)
     
+    @unittest.skip("For later testing.")
     def test_Improper_Crit_FileStruct(self):
         '''Since the folder structure for the criteria shapefiles must be in an
         explicit form, want to check that it will error if given an incorrect
@@ -91,6 +96,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertRaises(IOError, hra_preprocessor.make_crit_shape_dict,
                     crit_uri)
     
+    @unittest.skip("For later testing.")
     def test_make_crit_dict_regression(self):
         '''This should specifically test the make_crit_shape_dict function in
         hra_preprocessor. This will get called by both preprocessor and
@@ -114,6 +120,7 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(expected_dict, produced_dict)
 
+    @unittest.skip("For later testing.")
     def test_UnexpectedString_exception(self):
         '''Want to make sure that preproc will throw an exception if a CSV is
         passed which contains strings or null values where there should be
@@ -229,7 +236,7 @@ class TestHRAPreprocessor(unittest.TestCase):
                 'Crit_Rasters':{}
                 }
             }
-        
+        '''    
         #Anything that has a 0 in the ratings score should have the entire criteria
         #removed from the dictionary.
         exp_dict_h = habs.copy()
@@ -249,7 +256,40 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertEqual(exp_dict_h, habs)
         self.assertEqual(exp_dict_h_s_e, h_s_e)
         self.assertEqual(exp_dict_h_s_c, h_s_c)
+    
+        '''
+        #Anything that has a 0 in the ratings score should have the entire criteria
+        #removed from the dictionary.
+        exp_dict_h = copy.deepcopy(habs)
+        exp_dict_h_s_e = copy.deepcopy(h_s_e)
+        exp_dict_h_s_c = copy.deepcopy(h_s_c)
+       
 
+        hra_preprocessor.zero_check(h_s_c, h_s_e, habs)
+        LOGGER.debug("Exp_Habs?: %s" % exp_dict_h)
+        
+        #At this point, it should have removed any critiera whose ratings were 0.
+        del exp_dict_h['kelp']['Crit_Ratings']['natural mortality']
+        del exp_dict_h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']['intensity rating']
+        del exp_dict_h_s_c[('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
+        self.maxDiff = None
+        self.assertEqual(exp_dict_h, habs)
+        self.assertEqual(exp_dict_h_s_e, h_s_e)
+        self.assertEqual(exp_dict_h_s_c, h_s_c)
+
+        #h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']\
+        #            ['management effectiveness']['Rating'] = 0.0
+
+
+        #Want to make sure it properly errors if there are E but no C,
+        #or C with no e
+        del h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']\
+                    ['management effectiveness']
+        self.assertRaises(hra_preprocessor.MissingEOrCException,
+                        hra_preprocessor.zero_check, h_s_c, h_s_e, habs)
+
+
+    @unittest.skip("For later testing.")
     def test_error_checking_reg(self):
         '''Want to test the error_checking functionality that exists for individual
         lines of preprocessor's parse.
