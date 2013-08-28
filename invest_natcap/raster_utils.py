@@ -1603,7 +1603,7 @@ def resample_dataset(
     # Perform the projection/resampling 
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
-                        gdal.GRA_Bilinear)
+                        resample_method)
 
 def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
     """A URI wrapper for reproject dataset that opens the original_dataset_uri
