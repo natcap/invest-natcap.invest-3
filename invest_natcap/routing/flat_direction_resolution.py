@@ -38,14 +38,8 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
             #If the cell is flat, it's not a drain
             if flat_cells[row_index, col_index]: continue
             
-            for neighbor_row, neighbor_col in [(0, 1), 
-                                               (1, 1),
-                                               (1, 0),
-                                               (1, -1),
-                                               (0, -1),
-                                               (-1, -1),
-                                               (-1, 0),
-                                               (-1, 1)]:
+            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0), (1, -1),
+                (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
             
                 if (dem_array[row_index + neighbor_row, col_index + neighbor_col] == dem_array[row_index, col_index] and
                     flat_cells[row_index + neighbor_row, col_index + neighbor_col]):
@@ -54,6 +48,7 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
                     break
     LOGGER.debug(sink_cells)
 
+    
     #Iterate out from sink increasing along the way
     #Identify edge increasing cells
     #Iterate out from increasing cells
