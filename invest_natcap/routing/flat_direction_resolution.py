@@ -97,7 +97,16 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     LOGGER.debug(max_distance)
     edge_distance_row = max_distance + 1 - edge_distance_row    
     LOGGER.debug(edge_distance_row.reshape(flat_cells.shape))
-    #Iterate out from increasing cells
+    
+    LOGGER.info('resolve any cells that don\'t drain')
+    dem_offset = (edge_distance_row + sink_distance_row).reshape(flat_cells.shape)
+    for row_index in range(1, flat_cells.shape[0] - 1):
+        for col_index in range(1, flat_cells.shape[1] - 1):
+            min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
+            if min_offset == dem_offset[row_index, col_index]:
+                dem_offset[row_index, col_index] += 0.5
+                
+    LOGGER.debug(dem_offset)
 
     
     
