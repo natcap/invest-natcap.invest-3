@@ -55,7 +55,7 @@
                     "id" : "potential_evapotranspiration",
                     "args_id" : "eto_uri",
                     "type": "file",
-                    "label": "Potential Evapotranspiration",
+                    "label": "Reference Evapotranspiration",
                     "defaultValue": "../Base_Data/Freshwater/eto",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
