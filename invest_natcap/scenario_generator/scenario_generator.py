@@ -56,6 +56,27 @@ def calulcate_priority(table_uri, attributes_uri=None):
 
     return calculate_weights(matrix, 4)
 
+def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field):
+    """
+    Table expected to contain the following columns in order:
+
+    0 LULC    The land cover code  
+    1 SHORTNME  The land cover short name (max 12 characters) 
+    2 COUNT  Number of pixels in each LULC class  
+    3 PIXELCHANGE  The number of pixels expected to change
+    4 PRIORITY  The priority of this landcover (objective) 
+    5 PROXIMITY Is this landcover suitability affected by proximity, eg do pixels
+                closer to agriculture have higher chances of converting to agriculture [0,1] 
+    6 PROXDIST  At what distance does the proximity influence die? (in meters, default 10,000m) 
+    7 PATCHHA Minimum size of patch
+    8 F1...Fn  The matching landcover probability score for the matrix. n corresponds to LULC   
+    """
+
+    raster_utils.get_lookup_from_csv(trasition_uri, transition_key_field)
+    ratser_utils.unique_raster_values_count(landcover_uri)
+
+   #convert change amount to pixels?
+
 def execute(args):
 
     ###
