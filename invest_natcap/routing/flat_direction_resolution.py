@@ -1,5 +1,6 @@
 import logging
 import numpy
+import scipy.sparse
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -22,6 +23,10 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
             
         returns nothing"""
 
+    def calc_flat_index(row_index, col_index):
+        """Helper function to calculate a flat index"""
+        return row_index * dem_array.shape[0] + col_index
+    
     #Identify flat regions
     LOGGER.info('identifying flat pixels')
     flat_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)	 
@@ -48,7 +53,25 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
                     break
     LOGGER.debug(sink_cells)
 
+    LOGGER.info('construct connectivity path for sinks and flat regions')
+    connectivity_matrix = scipy.sparse.lil_matrix(
+        (dem_array.size, dem_array.size))
+
+    LOGGER.debug(dem_array.size)
+    for row_index in range(1, flat_cells.shape[0] - 1):
+        for col_index in range(1, flat_cells.shape[1] - 1):
+            if not flat_cells[row_index, col_index]: continue
+        
+            current_index = calc_flat_index(row_index, col_index)
+            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0),
+                (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
+                if flat_cells[row_index + neighbor_row, col_index + neighbor_col]:
+                    neighbor_index = calc_flat_index(
+                        row_index + neighbor_row, col_index + neighbor_col)
+                    connectivity_matrix[current_index, neighbor_index] = 1
+                    connectivity_matrix[neighbor_index, current_index] = 1
     
+    LOGGER.debug(connectivity_matrix)
     #Iterate out from sink increasing along the way
     #Identify edge increasing cells
     #Iterate out from increasing cells
