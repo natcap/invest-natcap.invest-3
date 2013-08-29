@@ -110,6 +110,7 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     
     dem_array += dem_offset * 1.0/100000.0
 
+    
 if __name__ == "__main__":
     dem_array = numpy.array(
         [[9,9,9,9,9,9,9],
@@ -122,3 +123,15 @@ if __name__ == "__main__":
 
     resolve_flat_regions_for_drainage(dem_array, -1)
     LOGGER.debug(dem_array)
+    
+    correct_offset_dem_array = numpy.array(
+        [[9.,9.,9.,9.,9.,9.,9.],
+        [9.,6.0000701,6.0000701,6.0000701,6.0000701,6.0000701,9.],
+        [8.,6.00006008, 6.00005007, 6.00005007, 6.00005007, 6.00006008, 9.],
+        [8.,6.00005007,6.00004005,6.00003481,6.00004005,6.00005007,9.],
+        [7.,6.00004005,6.00003004,6.00003004,6.00003004,6.00005007,8.],
+        [7.,6.00002003,6.00002003,6.00002003,6.00004005,6.00005007,8.],
+        [7.,7.,5.,7.,7.,8.,8.]])
+        
+    numpy.testing.assert_array_almost_equal(correct_offset_dem_array, dem_array)
+    LOGGER.info('offseting complete!')
