@@ -79,20 +79,27 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
                     edge_cell_list.append(current_index)
                     
     LOGGER.info('find distances from sinks to flat cells')
-    distance_matrix = scipy.sparse.csgraph.dijkstra(
+    sink_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
         connectivity_matrix, directed=True, indices=sink_cell_list, 
-        return_predecessors=False, unweighted=True)
+        return_predecessors=False, unweighted=True), axis=0)
         
-    LOGGER.debug(distance_matrix)
     #Compress rows of distance matrix into a single row that contains the min
     #distance of all the distances
-    distance_row = numpy.min(distance_matrix, axis=0)
-    LOGGER.debug(distance_row.reshape(flat_cells.shape))
-        
-     
+    LOGGER.debug(sink_distance_row.reshape(flat_cells.shape))
+    
     #Identify edge increasing cells
+    edge_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
+        connectivity_matrix, directed=True, indices=edge_cell_list, 
+        return_predecessors=False, unweighted=True), axis=0)
+    
+    max_distance = numpy.max(edge_distance_row[edge_distance_row != numpy.inf])
+    
+    LOGGER.debug(max_distance)
+    edge_distance_row = max_distance + 1 - edge_distance_row    
+    LOGGER.debug(edge_distance_row.reshape(flat_cells.shape))
     #Iterate out from increasing cells
 
+    
     
 if __name__ == "__main__":
     dem_array = numpy.array(
