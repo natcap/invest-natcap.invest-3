@@ -105,11 +105,11 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
             min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
             if min_offset == dem_offset[row_index, col_index]:
                 dem_offset[row_index, col_index] += 0.5
-                
+    dem_offset[numpy.isnan(dem_offset)] = 0.0
     LOGGER.debug(dem_offset)
+    
+    dem_array += dem_offset * 1.0/100000.0
 
-    
-    
 if __name__ == "__main__":
     dem_array = numpy.array(
         [[9,9,9,9,9,9,9],
@@ -118,6 +118,7 @@ if __name__ == "__main__":
          [8,6,6,6,6,6,9],
          [7,6,6,6,6,6,8],
          [7,6,6,6,6,6,8],
-         [7,7,5,7,7,8,8]])
+         [7,7,5,7,7,8,8]], dtype=numpy.float32)
 
     resolve_flat_regions_for_drainage(dem_array, -1)
+    LOGGER.debug(dem_array)
