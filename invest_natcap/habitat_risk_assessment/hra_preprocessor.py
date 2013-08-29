@@ -644,6 +644,8 @@ def zero_check(h_s_c, h_s_e, habs):
         c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
         h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
 
+        LOGGER.debug("E_Count is %s, and C_Count is %s, and H_Count is %s" % (e_crit_count, c_crit_count, h_crit_count))
+
         #First case should be if a dict pair's own Rasters/Ratings dictionaries
         #are empty, and h_s_c[pair] are also empty.
         if e_crit_count == 0 and c_crit_count == 0:
@@ -652,10 +654,10 @@ def zero_check(h_s_c, h_s_e, habs):
             #from both h_s_c and h_s_e.
             del h_s_e[pair]
             del h_s_c[pair]
-        
+       
         #We know at this point that both are not 0. So at least one is 1+.
         #If either h_s_c/habs or h_s_e has no criteria. criteria, but not both.
-        elif e_crit_count == 0 ^ (c_crit_count + h_crit_count) == 0:
+        elif e_crit_count == 0 ^ (c_crit_count + h_crit_count == 0):
             raise MissingEOrCException("For a given habitat-stressor pairing, \
                     there must be at least one relevant exposure criteria, \
                     and at least one relevant sensitivity or resilience criteria. \

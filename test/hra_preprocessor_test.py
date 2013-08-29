@@ -276,22 +276,15 @@ class TestHRAPreprocessor(unittest.TestCase):
         self.assertEqual(exp_dict_h_s_e, h_s_e)
         self.assertEqual(exp_dict_h_s_c, h_s_c)
 
-        #h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']\
-        #            ['management effectiveness']['Rating'] = 0.0
-
-
         #Want to make sure it properly errors if there are E but no C,
         #or C with no e
         del h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']\
                     ['management effectiveness']
-        LOGGER.debug("Curr_Habs?: %s" % habs)
-        LOGGER.debug("Curr_H_S_C?: %s" % h_s_c)
-        LOGGER.debug("Curr_H_S_E?: %s" % h_s_e)
+        
         self.assertRaises(hra_preprocessor.MissingEOrCException,
                         hra_preprocessor.zero_check, h_s_c, h_s_e, habs)
 
 
-    @unittest.skip("For later testing.")
     def test_error_checking_reg(self):
         '''Want to test the error_checking functionality that exists for individual
         lines of preprocessor's parse.
