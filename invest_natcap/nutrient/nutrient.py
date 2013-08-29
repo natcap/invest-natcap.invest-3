@@ -44,7 +44,7 @@ def execute(args):
     except KeyError:
         file_suffix = ''
     args['pixel_yield_uri'] = os.path.join(
-        water_yield_args['workspace_dir'], 'output', 'pixel',
+        water_yield_args['workspace_dir'], 'output',
         'wyield%s.tif' % file_suffix)
     _execute_nutrient(args)
 
