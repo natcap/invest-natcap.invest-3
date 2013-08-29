@@ -41,7 +41,7 @@
                     "id" : "soil_depth",
                     "args_id" : "soil_depth_uri",
                     "type": "file",
-                    "label": "Soil Depth",
+                    "label": "Root Restricting Layer Depth",
                     "defaultValue": "../Base_Data/Freshwater/soil_depth",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
