@@ -38,6 +38,7 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     #Identify sink cells
     LOGGER.info('identify sink cells')
     sink_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)
+    sink_cell_list = []
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
             #If the cell is flat, it's not a drain
@@ -50,6 +51,7 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
                     flat_cells[row_index + neighbor_row, col_index + neighbor_col]):
                     
                     sink_cells[row_index, col_index] = True
+                    sink_cell_list.append(calc_flat_index(row_index, col_index))
                     break
     LOGGER.debug(sink_cells)
 
@@ -57,22 +59,28 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     connectivity_matrix = scipy.sparse.lil_matrix(
         (dem_array.size, dem_array.size))
 
-    LOGGER.debug(dem_array.size)
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
-            if not flat_cells[row_index, col_index]: continue
-        
+            if not flat_cells[row_index, col_index] and not sink_cells[row_index, col_index]: continue
+            
+            #Loop through each cell and visit the neighbors.  If two flat cells
+            #touch each other, connect them.
             current_index = calc_flat_index(row_index, col_index)
             for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0),
                 (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
-                if flat_cells[row_index + neighbor_row, col_index + neighbor_col]:
+                if (flat_cells[row_index + neighbor_row, col_index + neighbor_col] or
+                    sink_cells[row_index + neighbor_row, col_index + neighbor_col]):
                     neighbor_index = calc_flat_index(
                         row_index + neighbor_row, col_index + neighbor_col)
                     connectivity_matrix[current_index, neighbor_index] = 1
-                    connectivity_matrix[neighbor_index, current_index] = 1
-    
-    LOGGER.debug(connectivity_matrix)
-    #Iterate out from sink increasing along the way
+                    
+    LOGGER.info('find distances from sinks to flat cells')
+    distance_matrix = scipy.sparse.csgraph.dijkstra(
+        connectivity_matrix, directed=True, indices=sink_cell_list, 
+        return_predecessors=False, unweighted=True)
+
+    LOGGER.debug(distance_matrix)
+                    #Iterate out from sink increasing along the way
     #Identify edge increasing cells
     #Iterate out from increasing cells
 
