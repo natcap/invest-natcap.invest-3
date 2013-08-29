@@ -1,4 +1,10 @@
+import logging
 import numpy
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('plateau resolution')
+
 
 def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     """This function resolves the flat regions on a DEM that cause undefined
@@ -17,19 +23,21 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
         returns nothing"""
 
     #Identify flat regions
+    LOGGER.info('identifying flat pixels')
     flat_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)	 
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
             flat_cells[row_index, col_index] = (dem_array[row_index-1:row_index+2, col_index-1:col_index+2] >= dem_array[row_index, col_index]).all()
-    print flat_cells
-    print '\n'
+    LOGGER.debug(flat_cells)
+
     #Identify sink cells
+    LOGGER.info('identify sink cells')
     sink_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
             if (flat_cells[row_index-1:row_index+2, col_index-1:col_index+2].any() and not flat_cells[row_index, col_index]):
                 sink_cells[dem_array[row_index-1:row_index+2, col_index-1:col_index+2] < dem_array[row_index, col_index]] = True
-    print sink_cells
+    LOGGER.debug(sink_cells)
 
     #Iterate out from sink increasing along the way
     #Identify edge increasing cells
