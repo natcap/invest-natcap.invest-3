@@ -59,6 +59,8 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     connectivity_matrix = scipy.sparse.lil_matrix(
         (dem_array.size, dem_array.size))
 
+        
+    edge_cell_list = []
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
             if not flat_cells[row_index, col_index] and not sink_cells[row_index, col_index]: continue
@@ -73,14 +75,21 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
                     neighbor_index = calc_flat_index(
                         row_index + neighbor_row, col_index + neighbor_col)
                     connectivity_matrix[current_index, neighbor_index] = 1
+                if flat_cells[row_index, col_index] and dem_array[row_index, col_index] < dem_array[row_index + neighbor_row, col_index + neighbor_col]:
+                    edge_cell_list.append(current_index)
                     
     LOGGER.info('find distances from sinks to flat cells')
     distance_matrix = scipy.sparse.csgraph.dijkstra(
         connectivity_matrix, directed=True, indices=sink_cell_list, 
         return_predecessors=False, unweighted=True)
-
+        
     LOGGER.debug(distance_matrix)
-                    #Iterate out from sink increasing along the way
+    #Compress rows of distance matrix into a single row that contains the min
+    #distance of all the distances
+    distance_row = numpy.min(distance_matrix, axis=0)
+    LOGGER.debug(distance_row.reshape(flat_cells.shape))
+        
+     
     #Identify edge increasing cells
     #Iterate out from increasing cells
 
