@@ -1,8 +1,6 @@
 import invest_natcap.testing
-import invest_natcap.testing
-import invest_natcap.testing
+import invest_natcap.hydropower.hydropower_water_yield
 
-import invest_natcap.testing
 class HydropowerRegressionTest(invest_natcap.testing.GISTest):
     @invest_natcap.testing.regression(
         input_archive="invest-data/test/data/hydropower_regression_data/hydro_input_archive_valuation.tar.gz",
