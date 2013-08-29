@@ -15,7 +15,8 @@ def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant,
         precip - numpy array with the precipitation raster values (mm)
         root - numpy array with the root depth (maximum root depth for
                vegetated land use classes) raster values (mm)
-        soil - numpy array with the soil depth raster values (mm)
+        soil - numpy array with the depth to root restricted layer raster
+            values (mm)
         pawc - numpy array with the plant available water content raster 
                values
 

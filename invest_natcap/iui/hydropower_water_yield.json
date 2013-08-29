@@ -38,11 +38,11 @@
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
-                    "id" : "soil_depth",
-                    "args_id" : "soil_depth_uri",
+                    "id" : "depth_to_root_rest_layer",
+                    "args_id" : "depth_to_root_rest_layer_uri",
                     "type": "file",
-                    "label": "Root Restricting Layer Depth",
-                    "defaultValue": "../Base_Data/Freshwater/soil_depth",
+                    "label": "Depth To Root Restricting Layer",
+                    "defaultValue": "../Base_Data/Freshwater/depth_to_root_rest_layer",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
