@@ -20,8 +20,8 @@ class TestHRAPreprocessor(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA_Scratch' 
-        args['stressors_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/StressorLayers'
+        args['workspace_dir'] = './invest-data/test/data/test_out/HRA/HRA_Reg' 
+        args['stressors_dir'] = './invest-data/test/data/hra_regression_data/Input/StressorLayers'
         args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
         args['sensitivity_crits'] = ['temporal overlap', \
                     'frequency of disturbance']
