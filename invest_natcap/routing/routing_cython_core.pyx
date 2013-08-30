@@ -1126,7 +1126,7 @@ def percent_to_sink(
                     (time.clock() - start_time))
 
                     
-def resolve_flat_regions_for_drainage(dem_array, nodata_value):
+def resolve_flat_regions_for_drainage(dem_array, int n_rows, int n_cols, float nodata_value):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
         presented in "The assignment of drainage direction over float surfaces
@@ -1148,15 +1148,15 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     
     #Identify flat regions
     LOGGER.info('identifying flat pixels')
-    flat_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)	 
-    for row_index in range(1, flat_cells.shape[0] - 1):
-        for col_index in range(1, flat_cells.shape[1] - 1):
+    flat_cells = numpy.zeros((n_rows, n_cols), dtype=numpy.bool)	 
+    for row_index in range(1, n_rows - 1):
+        for col_index in range(1, n_cols - 1):
             flat_cells[row_index, col_index] = (dem_array[row_index-1:row_index+2, col_index-1:col_index+2] >= dem_array[row_index, col_index]).all()
     LOGGER.debug(flat_cells)
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
-    sink_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)
+    sink_cells = numpy.zeros((n_rows, n_cols), dtype=numpy.bool)
     sink_cell_list = []
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
