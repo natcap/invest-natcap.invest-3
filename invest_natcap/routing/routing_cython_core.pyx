@@ -281,7 +281,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
         raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
-    resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
+    #resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
 
