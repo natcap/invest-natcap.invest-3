@@ -20,8 +20,8 @@ class TestHRAPreprocessor(unittest.TestCase):
     def setUp(self):
 
         args = {}
-        args['workspace_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/test_out/HRA_Scratch' 
-        args['stressors_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/StressorLayers'
+        args['workspace_dir'] = './invest-data/test/data/test_out/HRA/HRA_Reg' 
+        args['stressors_dir'] = './invest-data/test/data/hra_regression_data/Input/StressorLayers'
         args['exposure_crits'] = ['management effectiveness', 'intensity_rating']
         args['sensitivity_crits'] = ['temporal overlap', \
                     'frequency of disturbance']
@@ -29,12 +29,11 @@ class TestHRAPreprocessor(unittest.TestCase):
     
         self.args = args
 
-    @unittest.skip("For later testing.")
     def test_HabsOnly_NoShapes_smoke(self):
         '''This will use only the habitats directory as an input to overlap
         stressors, and won't attempt to pull in shapefile criteria.'''
 
-        self.args['habitats_dir'] = '/home/kathryn/workspace/invest-natcap.invest-3/test/invest-data/test/data/hra_regression_data/Input/HabitatLayers'
+        self.args['habitats_dir'] = './invest-data/test/data/hra_regression_data/Input/HabitatLayers'
 
         hra_preprocessor.execute(self.args)
     
@@ -236,28 +235,7 @@ class TestHRAPreprocessor(unittest.TestCase):
                 'Crit_Rasters':{}
                 }
             }
-        '''    
-        #Anything that has a 0 in the ratings score should have the entire criteria
-        #removed from the dictionary.
-        exp_dict_h = habs.copy()
-        exp_dict_h_s_e = h_s_e.copy()
-        exp_dict_h_s_c = h_s_c.copy()
-
-        #The criteria which should be removed automagically when run through the
-        #function.
-        del exp_dict_h['kelp']['Crit_Ratings']['natural mortality']
-        del exp_dict_h_s_e[('eelgrass', 'ShellfishAquacultureComm')]['Crit_Ratings']['intensity rating']
-        del exp_dict_h_s_c[('kelp', 'FinfishAquacultureComm')]['Crit_Ratings']['temporal overlap']
-
-        #If function works correctly, should edit our versions of the three dicts.
-        hra_preprocessor.zero_check(h_s_c, h_s_e, habs)
-
-        self.maxDiff = None
-        self.assertEqual(exp_dict_h, habs)
-        self.assertEqual(exp_dict_h_s_e, h_s_e)
-        self.assertEqual(exp_dict_h_s_c, h_s_c)
-    
-        '''
+        
         #Anything that has a 0 in the ratings score should have the entire criteria
         #removed from the dictionary.
         exp_dict_h = copy.deepcopy(habs)
@@ -283,7 +261,6 @@ class TestHRAPreprocessor(unittest.TestCase):
         
         self.assertRaises(hra_preprocessor.MissingEOrCException,
                         hra_preprocessor.zero_check, h_s_c, h_s_e, habs)
-
 
     def test_error_checking_reg(self):
         '''Want to test the error_checking functionality that exists for individual

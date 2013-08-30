@@ -136,8 +136,13 @@ def execute(args):
         # raster which should be found in workspace/input/
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict['density' + ext][threat] = \
-                    open_ambiguous_raster(os.path.join(input_dir, threat + ext))
+                if ext == '_b':
+                    density_dict['density' + ext][threat] = open_ambiguous_raster(
+                            os.path.join(input_dir, threat + ext),
+                            raise_error=False)
+                else:
+                    density_dict['density' + ext][threat] = open_ambiguous_raster(
+                            os.path.join(input_dir, threat + ext))
             except:
                 raise Exception('Error: Failed to open raster for the '
                     'following threat : %s . Please make sure the threat names '
@@ -155,13 +160,16 @@ def execute(args):
 
     biodiversity_core.biophysical(biophysical_args)
 
-def open_ambiguous_raster(uri):
+def open_ambiguous_raster(uri, raise_error=True):
     """Open and return a gdal dataset given a uri path that includes the file
         name but not neccessarily the suffix or extension of how the raster may
         be represented.
 
         uri - a python string of the file path that includes the name of the
               file but not its extension
+
+        raise_error - a Boolean that indicates whether the function should
+            raise an error if a raster file could not be opened. 
 
         return - a gdal dataset or NONE if no file is found with the pre-defined
                  suffixes and 'uri'"""
@@ -176,7 +184,7 @@ def open_ambiguous_raster(uri):
     # initialize dataset to None in the case that all paths do not exist
     dataset = None
     for suffix in possible_suffixes:
-        full_uri = uri +  suffix
+        full_uri = uri + suffix
         if not os.path.exists(full_uri):
             continue
         try:
@@ -194,7 +202,7 @@ def open_ambiguous_raster(uri):
 
     # If a dataset comes back None, then it could not be found / opened and we
     # should fail gracefully
-    if dataset is None:
+    if dataset is None and raise_error:
         raise Exception('There was an Error locating a threat raster in the '
         'input folder. One of the threat names in the CSV table does not match ' 
         'to a threat raster in the input folder. Please check that the names '

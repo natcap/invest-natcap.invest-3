@@ -28,8 +28,8 @@ def execute(args):
             Used for determining soil retention and other biophysical 
             properties of the landscape. (required)
         
-        args['soil_depth_uri'] - a uri to an input raster describing the 
-            average soil depth value for each cell (mm) (required)
+        args['depth_to_root_rest_layer_uri'] - a uri to an input raster describing the 
+            depth of "good" soil before reaching this restrictive layer (required)
         
         args['precipitation_uri'] - a uri to an input raster describing the 
             average annual precipitation value for each cell (mm) (required)
@@ -92,7 +92,7 @@ def execute(args):
     lulc_uri = args['lulc_uri']
     eto_uri = args['eto_uri']
     precip_uri = args['precipitation_uri']
-    soil_depth_uri = args['soil_depth_uri']
+    depth_to_root_rest_layer_uri = args['depth_to_root_rest_layer_uri']
     pawc_uri = args['pawc_uri']
     sub_sheds_uri = None
     if 'sub_watersheds_uri' in args and args['sub_watersheds_uri'] != '':
@@ -165,7 +165,7 @@ def execute(args):
     root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
     eto_nodata = raster_utils.get_nodata_from_uri(eto_uri)
-    soil_depth_nodata = raster_utils.get_nodata_from_uri(soil_depth_uri)
+    root_rest_layer_nodata = raster_utils.get_nodata_from_uri(depth_to_root_rest_layer_uri)
     pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
     
     def pet_op(eto_pix, Kc_pix):
@@ -198,7 +198,7 @@ def execute(args):
                           'root':root_nodata,
                           'precip':precip_nodata,
                           'eto':eto_nodata,
-                          'soil':soil_depth_nodata,
+                          'soil':root_rest_layer_nodata,
                           'pawc':pawc_nodata}
     
     def fractp_op(Kc, eto, precip, root, soil, pawc):
@@ -216,7 +216,7 @@ def execute(args):
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
             tmp_Kc_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
-            soil_depth_uri, pawc_uri]
+            depth_to_root_rest_layer_uri, pawc_uri]
     
     LOGGER.debug('Performing fractp operation')
     # Create clipped fractp_clipped raster

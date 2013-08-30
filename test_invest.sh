@@ -50,6 +50,7 @@ then
         finfish_aquaculture_core_test.py
         html_gen_test.py
         hra_test.py
+        hra_preprocessor_test.py
         invest_core_fileio_test.py
         invest_core_test.py
         invest_init_test.py
@@ -69,6 +70,7 @@ then
         timber_test.py
         wave_energy_test.py
         wind_energy_test.py
+        hydropower_test.py
         coastal_vulnerability_test.py
 	marine_water_quality_regression_test.py
 #        coastal_vulnerability_core_test.py
