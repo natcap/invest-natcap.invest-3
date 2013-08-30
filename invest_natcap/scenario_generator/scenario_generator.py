@@ -7,6 +7,8 @@ from invest_natcap import raster_utils
 from scipy.linalg import eig
 import scipy.ndimage
 
+import disk_sort
+
 from decimal import Decimal
 from fractions import Fraction
 
@@ -83,12 +85,22 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, feature_list,
        print dataset_in_uri
        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
 
-    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, dataset_out_uri)
+    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename(), numpy.float32)
      
     for feature_type in feature_list:
        memory_array = memory_array + (memory_array == feature_type)
       
     memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
+
+    nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
+    raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
+
+    dataset_out = gdal.Open(dataset_out_uri)
+    band = dataset_out.GetRasterBand(1)
+    band.WriteArray(memory_array)
+    
+    band = None
+    dataset_out = None
 
 
 def execute(args):
@@ -143,6 +155,17 @@ def execute(args):
     raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=["ALL_TOUCHED=TRUE"] )
     calculate_distance_raster_uri(ds_uri, distance_uri, [1])
 
+##    pixel_heap = disk_sort.sort_to_disk(ds_uri, 0)
+##    ds = gdal.Open(ds_uri)
+##
+##    n_cols = ds.RasterXSize
+##    n_rows = ds.RasterYSize
+##    ds = None
+##    
+##    for value, flat_index, dataset_index in pixel_heap:
+##        print value, flat_index, dataset_index
+##        print "(%s, %s)" % (flat_index % n_cols, flat_index / n_cols)
+##
     return
          
   
