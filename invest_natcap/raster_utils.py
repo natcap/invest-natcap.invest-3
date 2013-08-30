@@ -2355,8 +2355,8 @@ def resize_and_resample_dataset(
 
 def align_dataset_list(
     dataset_uri_list, dataset_out_uri_list, resample_method_list,
-    out_pixel_size, mode, dataset_to_align_index, aoi_uri=None,
-    assert_datasets_projected=True):
+    out_pixel_size, mode, dataset_to_align_index, dataset_to_bound_index=None,
+    aoi_uri=None, assert_datasets_projected=True):
     """Take a list of dataset uris and generates a new set that is completely
         aligned with identical projections and pixel sizes.
 
@@ -2367,14 +2367,19 @@ def align_dataset_list(
             in dataset_out_uri list.  Each element must be one of
             "nearest|bilinear|cubic|cubic_spline|lanczos"
         out_pixel_size - the output pixel size
-        mode - one of "union" or "intersection" which defines how the output
-            output extents are defined as either the union or intersection
-            of the input datasets.
+        mode - one of "union", "intersection", or "dataset" which defines how 
+            the output output extents are defined as either the union or
+            intersection of the input datasets or to have the same bounds as an
+            existing raster.  If mode is "dataset" then dataset_to_bound_index
+            must be defined
         dataset_to_align_index - an int that corresponds to the position in
             one of the dataset_uri_lists that, if positive aligns the output
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
+        dataset_to_bound_index - if mode is "dataset" then this index is used
+            to indicate which dataset to define the output bounds of the
+            dataset_out_uri_list
         aoi_uri - (optional) a URI to an OGR datasource to be used for the 
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
@@ -2385,12 +2390,19 @@ def align_dataset_list(
     #me a precedent for this.
     if assert_datasets_projected:
         assert_datasets_in_same_projection(dataset_uri_list)
-    if mode not in ["union", "intersection"]:
+    if mode not in ["union", "intersection", "dataset"]:
         raise Exception("Unknown mode %s" % (str(mode)))
-    if dataset_to_align_index >= len(dataset_uri_list):
+    if dataset_to_align_index >= len(dataset_uri_list) or dataset_to_align_index < 0:
         raise Exception(
             "Alignment index is out of bounds of the datasets index: %s"
             "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
+    if mode == "dataset" and dataset_to_bound_index is None:
+        raise Exception("Mode is 'dataset' but dataset_to_bound_index is not defined")
+    if mode == "dataset" and (dataset_to_bound_index < 0 or 
+                              dataset_to_bound_index >= len(dataset_uri_list)):
+        raise Exception(
+            "dataset_to_bound_index is out of bounds of the datasets index: %s"
+            "n_elements %s" % (dataset_to_bound_index, len(dataset_uri_list)))
 
     def merge_bounding_boxes(bb1, bb2, mode):
         """Helper function to merge two bounding boxes through union or 
@@ -2407,9 +2419,13 @@ def align_dataset_list(
         return bb_out
 
     #get the intersecting or unioned bounding box
-    bounding_box = reduce(
-        functools.partial(merge_bounding_boxes,mode=mode), 
-        [get_bounding_box(dataset_uri) for dataset_uri in dataset_uri_list])
+    if mode == "dataset":
+        bounding_box = get_bounding_box(
+            dataset_uri_list[dataset_to_bound_index])
+    else:
+        bounding_box = reduce(
+            functools.partial(merge_bounding_boxes,mode=mode),
+            [get_bounding_box(dataset_uri) for dataset_uri in dataset_uri_list])
 
     if aoi_uri != None:
         bounding_box = merge_bounding_boxes(

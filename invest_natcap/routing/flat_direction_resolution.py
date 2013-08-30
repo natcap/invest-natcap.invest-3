@@ -2,6 +2,8 @@ import logging
 import numpy
 import scipy.sparse
 
+import routing_cython_core
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('plateau resolution')
@@ -121,17 +123,11 @@ if __name__ == "__main__":
          [7,6,6,6,6,6,8],
          [7,7,5,7,7,8,8]], dtype=numpy.float32)
 
+    dem_copy = dem_array.copy()
+
     resolve_flat_regions_for_drainage(dem_array, -1)
+    routing_cython_core.resolve_flat_regions_for_drainage(dem_copy, -1)
     LOGGER.debug(dem_array)
-    
-    correct_offset_dem_array = numpy.array(
-        [[9.,9.,9.,9.,9.,9.,9.],
-        [9.,6.0000701,6.0000701,6.0000701,6.0000701,6.0000701,9.],
-        [8.,6.00006008, 6.00005007, 6.00005007, 6.00005007, 6.00006008, 9.],
-        [8.,6.00005007,6.00004005,6.00003481,6.00004005,6.00005007,9.],
-        [7.,6.00004005,6.00003004,6.00003004,6.00003004,6.00005007,8.],
-        [7.,6.00002003,6.00002003,6.00002003,6.00004005,6.00005007,8.],
-        [7.,7.,5.,7.,7.,8.,8.]])
         
-    numpy.testing.assert_array_almost_equal(correct_offset_dem_array, dem_array)
+    numpy.testing.assert_array_almost_equal(dem_array, dem_copy)
     LOGGER.info('offseting complete!')
