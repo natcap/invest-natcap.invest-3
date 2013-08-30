@@ -1196,27 +1196,27 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
                 sink_queue.push(t)
 
     LOGGER.info('update offset distances from sinks to other flat cells')
-    cdef float[:, :] dem_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
-    dem_offset[:] = numpy.inf
+    cdef float[:, :] dem_sink_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
+    dem_sink_offset[:] = numpy.inf
 
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
     cdef Row_Col_Weight_Tuple current_cell_tuple
     while sink_queue.size() > 0:
         current_cell_tuple = sink_queue.front()
         sink_queue.pop()
-        if dem_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
+        if dem_sink_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
             continue
-        dem_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
+        dem_sink_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
 
         for neighbor_index in xrange(8):
             neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
             neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-            if is_flat(neighbor_row_index, neighbor_col_index) and dem_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
+            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 sink_queue.push(t)
 
     LOGGER.debug("result of breadth first walk")
-    LOGGER.debug(numpy.asarray(dem_offset))
+    LOGGER.debug(numpy.asarray(dem_sink_offset))
 
     LOGGER.info('construct connectivity path for sinks and flat regions')
     connectivity_matrix = scipy.sparse.lil_matrix(
