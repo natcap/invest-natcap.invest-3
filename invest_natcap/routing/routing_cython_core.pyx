@@ -6,6 +6,7 @@ import sys
 
 import numpy
 cimport numpy
+import scipy.sparse
 import osgeo
 from osgeo import gdal
 
@@ -267,7 +268,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         gdal.GDT_Float32, fill_value=flow_nodata)
 
     LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
-    resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
+    #resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
 
@@ -280,7 +281,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
         raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
-
+    #resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
 
@@ -1123,3 +1124,107 @@ def percent_to_sink(
     effect_band.WriteArray(effect_array, 0, 0)
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
                     (time.clock() - start_time))
+
+                    
+def resolve_flat_regions_for_drainage(dem_array, int n_rows, int n_cols, float nodata_value):
+    """This function resolves the flat regions on a DEM that cause undefined
+        flow directions to occur during routing.  The algorithm is the one
+        presented in "The assignment of drainage direction over float surfaces
+        in raster digital elevation models by Garbrecht and Martz (1997)
+        
+        dem_array - a numpy floating point array that represents a digital
+            elevation model.  Any flat regions that would cause an undefined
+            flow direction will be adjusted in height so that every pixel
+            on the dem has a local defined slope.
+
+        nodata_value - this value will be ignored on the DEM as a valid height
+            value
+            
+        returns nothing"""
+
+    def calc_flat_index(row_index, col_index):
+        """Helper function to calculate a flat index"""
+        return row_index * dem_array.shape[1] + col_index
+    
+    #Identify flat regions
+    LOGGER.info('identifying flat pixels')
+    flat_cells = numpy.zeros((n_rows, n_cols), dtype=numpy.bool)	 
+    for row_index in range(1, n_rows - 1):
+        for col_index in range(1, n_cols - 1):
+            flat_cells[row_index, col_index] = (dem_array[row_index-1:row_index+2, col_index-1:col_index+2] >= dem_array[row_index, col_index]).all()
+    LOGGER.debug(flat_cells)
+
+    #Identify sink cells
+    LOGGER.info('identify sink cells')
+    sink_cells = numpy.zeros((n_rows, n_cols), dtype=numpy.bool)
+    sink_cell_list = []
+    for row_index in range(1, flat_cells.shape[0] - 1):
+        for col_index in range(1, flat_cells.shape[1] - 1):
+            #If the cell is flat, it's not a drain
+            if flat_cells[row_index, col_index]: continue
+            
+            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0), (1, -1),
+                (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
+            
+                if (dem_array[row_index + neighbor_row, col_index + neighbor_col] == dem_array[row_index, col_index] and
+                    flat_cells[row_index + neighbor_row, col_index + neighbor_col]):
+                    
+                    sink_cells[row_index, col_index] = True
+                    sink_cell_list.append(calc_flat_index(row_index, col_index))
+                    break
+    LOGGER.debug(sink_cells)
+
+    LOGGER.info('construct connectivity path for sinks and flat regions')
+    connectivity_matrix = scipy.sparse.lil_matrix(
+        (dem_array.size, dem_array.size))
+
+        
+    edge_cell_list = []
+    for row_index in range(1, flat_cells.shape[0] - 1):
+        for col_index in range(1, flat_cells.shape[1] - 1):
+            if not flat_cells[row_index, col_index] and not sink_cells[row_index, col_index]: continue
+            
+            #Loop through each cell and visit the neighbors.  If two flat cells
+            #touch each other, connect them.
+            current_index = calc_flat_index(row_index, col_index)
+            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0),
+                (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
+                if (flat_cells[row_index + neighbor_row, col_index + neighbor_col] or
+                    sink_cells[row_index + neighbor_row, col_index + neighbor_col]):
+                    neighbor_index = calc_flat_index(
+                        row_index + neighbor_row, col_index + neighbor_col)
+                    connectivity_matrix[current_index, neighbor_index] = 1
+                if flat_cells[row_index, col_index] and dem_array[row_index, col_index] < dem_array[row_index + neighbor_row, col_index + neighbor_col]:
+                    edge_cell_list.append(current_index)
+                    
+    LOGGER.info('find distances from sinks to flat cells')
+    sink_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
+        connectivity_matrix, directed=True, indices=sink_cell_list, 
+        return_predecessors=False, unweighted=True), axis=0)
+        
+    #Compress rows of distance matrix into a single row that contains the min
+    #distance of all the distances
+    LOGGER.debug(sink_distance_row.reshape(flat_cells.shape))
+    
+    #Identify edge increasing cells
+    edge_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
+        connectivity_matrix, directed=True, indices=edge_cell_list, 
+        return_predecessors=False, unweighted=True), axis=0)
+    
+    max_distance = numpy.max(edge_distance_row[edge_distance_row != numpy.inf])
+    
+    LOGGER.debug(max_distance)
+    edge_distance_row = max_distance + 1 - edge_distance_row    
+    LOGGER.debug(edge_distance_row.reshape(flat_cells.shape))
+    
+    LOGGER.info('resolve any cells that don\'t drain')
+    dem_offset = (edge_distance_row + sink_distance_row).reshape(flat_cells.shape)
+    for row_index in range(1, flat_cells.shape[0] - 1):
+        for col_index in range(1, flat_cells.shape[1] - 1):
+            min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
+            if min_offset == dem_offset[row_index, col_index]:
+                dem_offset[row_index, col_index] += 0.5
+    dem_offset[numpy.isnan(dem_offset)] = 0.0
+    LOGGER.debug(dem_offset)
+    
+    dem_array += dem_offset * 1.0/100000.0

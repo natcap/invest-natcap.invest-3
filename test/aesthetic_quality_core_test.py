@@ -136,12 +136,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         str(error)
         assert error < 5e-15, message
 
+
     def test_viewshed(self):
-        array_shape = (4, 4)
-        viewpoint = (2, 3)
+        array_shape = (400,400) 
+        viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
         # list all perimeter cell center angles
         row_count, col_count = array_shape
-        print(col_count, col_count)
+        print(row_count, col_count)
         # Create the rows on the right side from viewpoint to top right corner
         perimeter_rows = np.array(range(viewpoint[0], -1, -1))
         perimeter_cols = np.ones(perimeter_rows.size) * (col_count - 1)
@@ -149,7 +150,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.zeros(col_count - 1)))
         perimeter_cols = np.concatenate((perimeter_cols, \
-            np.array(range(row_count-2, -1, -1))))
+            np.array(range(col_count-2, -1, -1))))
         # Create left side, avoiding repeat from top row
         perimeter_rows = np.concatenate((perimeter_rows, \
             np.array(range(1, row_count))))
@@ -165,10 +166,21 @@ class TestAestheticQualityCore(unittest.TestCase):
             np.array(range(row_count - 2, viewpoint[0], -1))))
         perimeter_cols = np.concatenate((perimeter_cols, \
             np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
-        
-        
-        print('perimeter_rows', perimeter_rows)
-        print('perimeter_cols', perimeter_cols)
+        # List the angles between each perimeter cell
+        two_pi = 2.0 * math.pi
+        rad_to_deg = 180. / math.pi
+        delta_a = []
+        for i in range(perimeter_rows.size):
+            x1 = (perimeter_rows[i-1] - viewpoint[0], \
+                perimeter_cols[i-1] - viewpoint[1])
+            x2 = (perimeter_rows[i] - viewpoint[0], \
+                perimeter_cols[i] - viewpoint[1])
+            a1 = (np.arctan2(-x1[0], x1[1]) + two_pi) % two_pi
+            a2 = (np.arctan2(-x2[0], x2[1]) + two_pi) % two_pi
+            delta_a.append((a2 - a1 + two_pi) % two_pi)
+
+        delta_a = np.array(delta_a)
+        print(np.amax(delta_a / np.amin(delta_a)))
 
     def tare_down(self):
         pass
