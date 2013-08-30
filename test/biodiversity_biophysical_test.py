@@ -588,11 +588,22 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         uri_list = [uri_1, uri_2, uri_3, uri_4, uri_5]
         uri_results = [None, 1, 1, None, None]
         for uri, res in zip(uri_list, uri_results):
-            ds = biodiversity_biophysical.open_ambiguous_raster(uri)
+            ds = biodiversity_biophysical.open_ambiguous_raster(
+                    uri, #raise_error=False)
             if not ds is None:
                 self.assertEqual(res, 1)
             else:
                 self.assertEqual(res, ds)
+    
+    def test_biodiversity_biophysical_open_amb_error(self):
+        """Test multiple URI's ultimately assuring that we #raise an exception
+            if a raster cannot be found"""
+        #raise SkipTest
+        reg_dir = './invest-data/test/data/biodiversity_regression_data/'
+        uri = os.path.join(reg_dir, 'test_none_open_amb')
+        
+        self.assertRaises(
+                Exception, biodiversity_biophysical.open_ambiguous_raster, uri)        
 
     def test_biodiversity_biophysical_make_dict_from_csv(self):
         """Test a few hand made CSV files to make sure make_dict_from_csv
