@@ -1149,7 +1149,15 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     cdef float[:, :] dem_array = dem_python_array
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    cdef int is_flat
+
+    def is_flat(row_index, col_index):
+        is_flat = True
+        for neighbor_index in xrange(8):
+            if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
+                is_flat = False
+        return is_flat
+        
+
 
     #Identify flat regions
     LOGGER.info('identifying flat pixels')
@@ -1157,12 +1165,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
             #Check to make sure all the neighbors are the same or greater height
-            is_flat = True
-            for neighbor_index in xrange(8):
-                if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
-                    is_flat = False
-                    break
-            flat_cells[row_index, col_index] = is_flat
+            flat_cells[row_index, col_index] = is_flat(row_index, col_index)
     LOGGER.debug(flat_cells)
 
     #Identify sink cells
