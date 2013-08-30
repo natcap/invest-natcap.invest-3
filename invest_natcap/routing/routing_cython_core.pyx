@@ -1126,7 +1126,7 @@ def percent_to_sink(
                     (time.clock() - start_time))
 
                     
-def resolve_flat_regions_for_drainage(dem_array, nodata_value):
+def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
         presented in "The assignment of drainage direction over float surfaces
@@ -1146,28 +1146,36 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
         """Helper function to calculate a flat index"""
         return row_index * dem_array.shape[0] + col_index
     
+    cdef float[:, :] dem_array = dem_python_array
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int is_flat
+
     #Identify flat regions
     LOGGER.info('identifying flat pixels')
-    flat_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)	 
+    flat_cells = numpy.zeros(dem_python_array.shape, dtype=numpy.bool)	 
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
-            flat_cells[row_index, col_index] = (dem_array[row_index-1:row_index+2, col_index-1:col_index+2] >= dem_array[row_index, col_index]).all()
+            #Check to make sure all the neighbors are the same or greater height
+            is_flat = True
+            for neighbor_index in xrange(8):
+                if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
+                    is_flat = False
+                    break
+            flat_cells[row_index, col_index] = is_flat
     LOGGER.debug(flat_cells)
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
-    sink_cells = numpy.zeros(dem_array.shape, dtype=numpy.bool)
+    sink_cells = numpy.zeros(dem_python_array.shape, dtype=numpy.bool)
     sink_cell_list = []
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
-            #If the cell is flat, it's not a drain
             if flat_cells[row_index, col_index]: continue
-            
-            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0), (1, -1),
-                (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
-            
-                if (dem_array[row_index + neighbor_row, col_index + neighbor_col] == dem_array[row_index, col_index] and
-                    flat_cells[row_index + neighbor_row, col_index + neighbor_col]):
+            for neighbor_index in xrange(8):
+            #If the cell is flat, it's not a drain
+                if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
+                    flat_cells[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]]):
                     
                     sink_cells[row_index, col_index] = True
                     sink_cell_list.append(calc_flat_index(row_index, col_index))
@@ -1201,6 +1209,8 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     sink_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
         connectivity_matrix, directed=True, indices=sink_cell_list, 
         return_predecessors=False, unweighted=True), axis=0)
+    sink_distance_row = sink_distance_row.astype(numpy.float32)
+
         
     #Compress rows of distance matrix into a single row that contains the min
     #distance of all the distances
@@ -1211,6 +1221,8 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
         connectivity_matrix, directed=True, indices=edge_cell_list, 
         return_predecessors=False, unweighted=True), axis=0)
     
+    edge_distance_row = edge_distance_row.astype(numpy.float32)
+
     max_distance = numpy.max(edge_distance_row[edge_distance_row != numpy.inf])
     
     LOGGER.debug(max_distance)
@@ -1227,4 +1239,4 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     dem_offset[numpy.isnan(dem_offset)] = 0.0
     LOGGER.debug(dem_offset)
     
-    dem_array += dem_offset * 1.0/100000.0
+    dem_python_array += dem_offset * 1.0/100000.0
