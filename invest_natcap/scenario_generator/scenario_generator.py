@@ -5,6 +5,7 @@ from osgeo import gdal, ogr
 from invest_natcap import raster_utils
 
 from scipy.linalg import eig
+import scipy.ndimage
 
 from decimal import Decimal
 from fractions import Fraction
@@ -77,24 +78,18 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
 
    #convert change amount to pixels?
 
-def rasterize_uri(datasource_in_uri, dataset_out_uri, out_pixel_size):
-    datasource_in = ogr.Open(datasource_in_uri)
-    source_layer = datasource_in.GetLayer(0)
+def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, feature_list, cell_size = None):
+    if cell_size == None:
+       print dataset_in_uri
+       cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
 
-    nodata_out_value = 0
-    dataset_out = raster_utils.create_raster_from_vector_extents_uri(datasource_in_uri,
-                                                                     out_pixel_size,
-                                                                     gdal.GDT_Byte,
-                                                                     nodata_out_value,
-                                                                     dataset_out_uri)
+    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, dataset_out_uri)
+     
+    for feature_type in feature_list:
+       memory_array = memory_array + (memory_array == feature_type)
+      
+    memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
 
-    err = gdal.RasterizeLayer(dataset_out, [1], source_layer, burn_values=[1], options = ["ALL_TOUCHED=TRUE"])
-
-    if err != 0:
-        raise Exception("error rasterizing layer: %s" % err)
-
-def calculate_distance_raster_uri():
-   scipy.ndimage.morphology.distance_transform_edt
 
 def execute(args):
 
@@ -135,7 +130,18 @@ def execute(args):
           raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
           landcover_uri = landcover_resample_uri
 
-    rasterize_uri(os.path.join(workspace, "roads.shp"), os.path.join(workspace, "roads.tif"), raster_utils.get_cell_size_from_uri(landcover_uri))
+    factor_uri = os.path.join(workspace, "roads.shp")
+    ds_uri = os.path.join(workspace, "roads.tif")
+    distance_uri = os.path.join(workspace, "distance.tif")
+    cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
+    gdal_format = gdal.GDT_Byte
+    nodata = 0
+    
+    raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
+
+    burn_value = 1 
+    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=["ALL_TOUCHED=TRUE"] )
+    calculate_distance_raster_uri(ds_uri, distance_uri, [1])
 
     return
          
