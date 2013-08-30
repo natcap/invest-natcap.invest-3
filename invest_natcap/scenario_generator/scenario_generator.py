@@ -77,6 +77,25 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
 
    #convert change amount to pixels?
 
+def rasterize_uri(datasource_in_uri, dataset_out_uri, out_pixel_size):
+    datasource_in = ogr.Open(datasource_in_uri)
+    source_layer = datasource_in.GetLayer(0)
+
+    nodata_out_value = 0
+    dataset_out = raster_utils.create_raster_from_vector_extents_uri(datasource_in_uri,
+                                                                     out_pixel_size,
+                                                                     gdal.GDT_Byte,
+                                                                     nodata_out_value,
+                                                                     dataset_out_uri)
+
+    err = gdal.RasterizeLayer(dataset_out, [1], source_layer, burn_values=[1], options = ["ALL_TOUCHED=TRUE"])
+
+    if err != 0:
+        raise Exception("error rasterizing layer: %s" % err)
+
+def calculate_distance_raster_uri():
+   scipy.ndimage.morphology.distance_transform_edt
+
 def execute(args):
 
     ###
@@ -115,6 +134,10 @@ def execute(args):
           #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
           raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
           landcover_uri = landcover_resample_uri
+
+    rasterize_uri(os.path.join(workspace, "roads.shp"), os.path.join(workspace, "roads.tif"), raster_utils.get_cell_size_from_uri(landcover_uri))
+
+    return
          
   
     ###
