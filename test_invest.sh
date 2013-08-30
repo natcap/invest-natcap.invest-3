@@ -50,6 +50,7 @@ then
         finfish_aquaculture_core_test.py
         html_gen_test.py
         hra_test.py
+        hra_preprocessor_test.py
         invest_core_fileio_test.py
         invest_core_test.py
         invest_init_test.py
