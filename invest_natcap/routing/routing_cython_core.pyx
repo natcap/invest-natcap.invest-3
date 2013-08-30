@@ -1152,9 +1152,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     cdef int n_rows = dem_array.shape[0]
     cdef int n_cols = dem_array.shape[1]
 
-
     def is_flat(row_index, col_index):
-        flat_neighbors = True
         if row_index <= 0 or row_index >= n_rows - 1:
             return False
         if col_index <= 0 or col_index >= n_rows - 1:
@@ -1162,35 +1160,40 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
 
         for neighbor_index in xrange(8):
             if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
-                flat_neighbors = False
-        return flat_neighbors
+                return False
+        return True
+
+    def is_sink(row_index, col_index):
+        if row_index <= 0 or row_index >= n_rows - 1:
+            return False
+        if col_index <= 0 or col_index >= n_rows - 1:
+            return False
+
+        if is_flat(row_index, col_index):
+            return False
+
+        for neighbor_index in xrange(8):
+            if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
+                    is_flat(row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index])):
+                return True
+        return False
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
-    sink_cells = numpy.zeros(dem_python_array.shape, dtype=numpy.bool)
     sink_cell_list = []
     for row_index in range(1, dem_python_array.shape[0] - 1):
         for col_index in range(1, dem_python_array.shape[1] - 1):
-            if is_flat(row_index, col_index): continue
-            for neighbor_index in xrange(8):
-            #If the cell is flat, it's not a drain
-                if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
-                    is_flat(row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index])):
-                    
-                    sink_cells[row_index, col_index] = True
-                    sink_cell_list.append(calc_flat_index(row_index, col_index))
-                    break
-    LOGGER.debug(sink_cells)
+            if is_sink(row_index, col_index):
+                sink_cell_list.append(calc_flat_index(row_index, col_index))
 
     LOGGER.info('construct connectivity path for sinks and flat regions')
     connectivity_matrix = scipy.sparse.lil_matrix(
         (dem_array.size, dem_array.size))
-
         
     edge_cell_list = []
     for row_index in range(1, dem_python_array.shape[0] - 1):
         for col_index in range(1, dem_python_array.shape[1] - 1):
-            if not is_flat(row_index, col_index) and not sink_cells[row_index, col_index]: continue
+            if not is_flat(row_index, col_index) and not is_sink(row_index, col_index): continue
             
             #Loop through each cell and visit the neighbors.  If two flat cells
             #touch each other, connect them.
@@ -1198,7 +1201,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0),
                 (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
                 if (is_flat(row_index + neighbor_row, col_index + neighbor_col) or
-                    sink_cells[row_index + neighbor_row, col_index + neighbor_col]):
+                    is_sink(row_index + neighbor_row, col_index + neighbor_col)):
                     neighbor_index = calc_flat_index(
                         row_index + neighbor_row, col_index + neighbor_col)
                     connectivity_matrix[current_index, neighbor_index] = 1
