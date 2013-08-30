@@ -2943,3 +2943,40 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
                 itemfreq[int(value)] = int(count)
 
     return itemfreq
+
+def rasterize_layer_uri(
+        raster_uri, shapefile_uri, burn_value, field=None, option_list=None):
+    """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
+        Will burn 'burn_value' onto the raster unless 'field' is not None,
+        in which case it will burn the value from shapefiles field.
+
+        raster_uri - a URI to a gdal dataset
+        
+        shapefile_uri - a URI to an ogr datasource
+        
+        burn_value - a Python number to burn into the raster
+        
+        field - the name of a field from 'shapefile_uri' to use as the burn
+            value (optional)
+        
+        option_list - a Python list of options for the operation. Example:
+            ["ATTRIBUTE=NPV", "ALL_TOUCHED=TRUE"]
+
+        returns - Nothing"""
+
+    raster = gdal.Open(raster_uri, 1)
+    shapefile = ogr.Open(shapefile_uri)
+    layer = shapefile.GetLayer()
+
+    # If 'field' is not None then the burned value is to be provided in the
+    # options argument using a field from the shapefile layer, otherwise burn in
+    # the 'burn_value'
+    if field != None:
+        gdal.RasterizeLayer(raster, [1], layer, options = option_list)
+    else:
+        gdal.RasterizeLayer(
+                raster, [1], layer, burn_values = [burn_value],
+                options = option_list)
+
+    raster = None
+    shapefile = None
