@@ -1236,7 +1236,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
 
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
     dem_edge_offset[:] = numpy.inf
-    LOGGER.debug("edge queue size %s" % edge_queue.size())
     
     while edge_queue.size() > 0:
         current_cell_tuple = edge_queue.front()
@@ -1255,8 +1254,9 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     LOGGER.debug('result of uphill edge effect')
     LOGGER.debug(numpy.asarray(dem_edge_offset))
 
-
+    
     max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
+    dem_edge_offset[dem_edge_offset == numpy.inf] = 0
     
     LOGGER.debug(max_distance)
     dem_edge_offset = max_distance + 1 - dem_edge_offset
