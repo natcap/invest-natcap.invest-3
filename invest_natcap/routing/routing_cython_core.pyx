@@ -1219,7 +1219,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     LOGGER.debug(numpy.asarray(dem_sink_offset))
 
     LOGGER.info('construct uphill edge offset')
-        
     edge_cell_list = []
     cdef queue[Row_Col_Weight_Tuple] edge_queue
 
@@ -1248,6 +1247,9 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             if is_flat(neighbor_row_index, neighbor_col_index) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 edge_queue.push(t)
+    
+    LOGGER.debug('result of uphill edge effect')
+    LOGGER.debug(numpy.asarray(dem_edge_offset))
 
 
     max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
