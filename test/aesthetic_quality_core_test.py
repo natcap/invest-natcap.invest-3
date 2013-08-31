@@ -178,7 +178,10 @@ class TestAestheticQualityCore(unittest.TestCase):
                 perimeter_cols[i-1] - viewpoint[1])
             x2 = (perimeter_rows[i] - viewpoint[0], \
                 perimeter_cols[i] - viewpoint[1])
-            l = math.sqrt(x2[0]**2 + x2[1]**2)
+            l1 = math.sqrt(x1[0]**2 + x1[1]**2)
+            l2 = math.sqrt(x2[0]**2 + x2[1]**2)
+            l = l1
+            #l = (l1 + l2) / 2.
             a1 = (np.arctan2(-x1[0], x1[1]) + two_pi) % two_pi
             a2 = (np.arctan2(-x2[0], x2[1]) + two_pi) % two_pi
             delta_a.append((a2 - a1 + two_pi) % two_pi)
@@ -198,12 +201,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         print(lenghts)
         lenghts -= min_lenghts
         print(lenghts)
-        lenghts = lenghts / (max_lenghts-min_lenghts) / \
-            (max_delta_a-min_delta_a)
+        lenghts = lenghts / (max_lenghts-min_lenghts) * \
+            (1/min_delta_a-1/max_delta_a)
         print(lenghts)
         lenghts += 1. / (max_delta_a)
         print(lenghts)
-        plt.plot(angles, delta_a)
+        #plt.plot(angles, lenghts * delta_a)
+        plt.plot(angles, np.arcsin(angles))
+        #plt.plot(angles, lenghts)
+        #plt.plot(angles, delta_a)
         plt.show()
 
     def tare_down(self):
