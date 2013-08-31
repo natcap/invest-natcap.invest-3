@@ -1160,25 +1160,24 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
 
     def is_flat(row_index, col_index):
+        if dem_array[row_index, col_index] == nodata_value: return False
         if row_index <= 0 or row_index >= n_rows - 1:
             return False
         if col_index <= 0 or col_index >= n_cols - 1:
             return False
-
         for neighbor_index in xrange(8):
             if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
                 return False
         return True
 
     def is_sink(row_index, col_index):
+        if dem_array[row_index, col_index] == nodata_value: return False
         if row_index <= 0 or row_index >= n_rows - 1:
             return False
         if col_index <= 0 or col_index >= n_cols - 1:
             return False
-
         if is_flat(row_index, col_index):
             return False
-
         for neighbor_index in xrange(8):
             if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
                     is_flat(row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index])):
@@ -1228,7 +1227,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
-                if dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]:
+                if (dem_array[neighbor_row_index, neighbor_col_index] != nodata_value) and (dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]):
                     t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                     edge_queue.push(t)
                     break
