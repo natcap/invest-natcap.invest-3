@@ -125,9 +125,9 @@ if __name__ == "__main__":
 
     dem_copy = dem_array.copy()
 
-    resolve_flat_regions_for_drainage(dem_array, -1)
+    #resolve_flat_regions_for_drainage(dem_array, -1)
     routing_cython_core.resolve_flat_regions_for_drainage(dem_copy, -1)
-    LOGGER.debug(dem_array)
+    #LOGGER.debug(dem_array)
         
-    numpy.testing.assert_array_almost_equal(dem_array, dem_copy)
-    LOGGER.info('offseting complete!')
+    #numpy.testing.assert_array_almost_equal(dem_array, dem_copy)
+    #LOGGER.info('offseting complete!')
