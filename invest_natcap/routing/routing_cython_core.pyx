@@ -281,7 +281,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
         raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
-    #resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
+    resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
 
@@ -1162,7 +1162,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     def is_flat(row_index, col_index):
         if row_index <= 0 or row_index >= n_rows - 1:
             return False
-        if col_index <= 0 or col_index >= n_rows - 1:
+        if col_index <= 0 or col_index >= n_cols - 1:
             return False
 
         for neighbor_index in xrange(8):
@@ -1173,7 +1173,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     def is_sink(row_index, col_index):
         if row_index <= 0 or row_index >= n_rows - 1:
             return False
-        if col_index <= 0 or col_index >= n_rows - 1:
+        if col_index <= 0 or col_index >= n_cols - 1:
             return False
 
         if is_flat(row_index, col_index):
