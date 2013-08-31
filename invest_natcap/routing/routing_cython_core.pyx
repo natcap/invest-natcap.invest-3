@@ -1224,16 +1224,21 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
 
     for row_index in range(1, dem_python_array.shape[0] - 1):
         for col_index in range(1, dem_python_array.shape[1] - 1):
-            if not is_flat(row_index, col_index) and not is_sink(row_index, col_index): continue
+            #only consider flat cells
+            if not is_flat(row_index, col_index): continue
             for neighbor_index in xrange(8):
                 neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
                 neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-                if is_flat(row_index, col_index) and dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]:
-                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, 0)
+                if dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]:
+                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                    LOGGER.debug("row_index, col_index %s %s" % (row_index, col_index))
                     edge_queue.push(t)
+                    break
 
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
     dem_edge_offset[:] = numpy.inf
+    LOGGER.debug("edge queue size %s" % edge_queue.size())
+    
     while edge_queue.size() > 0:
         current_cell_tuple = edge_queue.front()
         edge_queue.pop()
