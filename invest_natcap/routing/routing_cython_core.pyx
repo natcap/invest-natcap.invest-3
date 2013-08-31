@@ -1227,11 +1227,10 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             #only consider flat cells
             if not is_flat(row_index, col_index): continue
             for neighbor_index in xrange(8):
-                neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
-                neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
                 if dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]:
                     t = Row_Col_Weight_Tuple(row_index, col_index, 0)
-                    LOGGER.debug("row_index, col_index %s %s" % (row_index, col_index))
                     edge_queue.push(t)
                     break
 
