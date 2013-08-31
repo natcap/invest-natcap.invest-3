@@ -268,7 +268,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         gdal.GDT_Float32, fill_value=flow_nodata)
 
     LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
-    #resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
+    resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
 
@@ -1262,5 +1262,4 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
             if min_offset == dem_offset[row_index, col_index]:
                 dem_offset[row_index, col_index] += 0.5
-    dem_offset[numpy.isnan(dem_offset)] = 0.0
     dem_python_array += dem_offset * numpy.float(1.0/100000.0)
