@@ -2392,7 +2392,10 @@ def align_dataset_list(
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
         raise Exception("Unknown mode %s" % (str(mode)))
-    if dataset_to_align_index >= len(dataset_uri_list) or dataset_to_align_index < 0:
+    # :NIC: The code was breaking because of dataset_to_align_index == -1, 
+    # which seems a legit value
+    #if dataset_to_align_index >= len(dataset_uri_list) or dataset_to_align_index < 0:
+    if dataset_to_align_index >= len(dataset_uri_list):
         raise Exception(
             "Alignment index is out of bounds of the datasets index: %s"
             "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
