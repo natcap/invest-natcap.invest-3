@@ -65,7 +65,7 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     edge_cell_list = []
     for row_index in range(1, flat_cells.shape[0] - 1):
         for col_index in range(1, flat_cells.shape[1] - 1):
-            if not flat_cells[row_index, col_index] and not sink_cells[row_index, col_index]: continue
+            if not flat_cells[row_index, col_index]: continue
             
             #Loop through each cell and visit the neighbors.  If two flat cells
             #touch each other, connect them.
@@ -77,7 +77,7 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
                     neighbor_index = calc_flat_index(
                         row_index + neighbor_row, col_index + neighbor_col)
                     connectivity_matrix[current_index, neighbor_index] = 1
-                if flat_cells[row_index, col_index] and dem_array[row_index, col_index] < dem_array[row_index + neighbor_row, col_index + neighbor_col]:
+                if dem_array[row_index, col_index] < dem_array[row_index + neighbor_row, col_index + neighbor_col]:
                     edge_cell_list.append(current_index)
                     
     LOGGER.info('find distances from sinks to flat cells')

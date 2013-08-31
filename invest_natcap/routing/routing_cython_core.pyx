@@ -1215,7 +1215,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 sink_queue.push(t)
 
-    LOGGER.debug("result of breadth first walk")
+    LOGGER.debug("distance from sink")
     LOGGER.debug(numpy.asarray(dem_sink_offset))
 
     LOGGER.info('construct uphill edge offset')
@@ -1251,18 +1251,16 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 edge_queue.push(t)
     
-    LOGGER.debug('result of uphill edge effect')
-    LOGGER.debug(numpy.asarray(dem_edge_offset))
-
-    
+    LOGGER.debug('distance from edge')
     max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
-    dem_edge_offset[dem_edge_offset == numpy.inf] = 0
-    
-    LOGGER.debug(max_distance)
     dem_edge_offset = max_distance + 1 - dem_edge_offset
+    dem_edge_offset[dem_edge_offset == numpy.inf] = 0
+    LOGGER.debug(numpy.asarray(dem_edge_offset))
     
     LOGGER.info('resolve any cells that don\'t drain')
     dem_offset = dem_edge_offset + dem_sink_offset
+    LOGGER.debug("total dem offset")
+    LOGGER.debug(numpy.asarray(dem_offset))
     for row_index in range(1, dem_python_array.shape[0] - 1):
         for col_index in range(1, dem_python_array.shape[1] - 1):
             min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
