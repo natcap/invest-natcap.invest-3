@@ -279,8 +279,24 @@ class GISTest(unittest.TestCase):
         reader_b = csv.reader(b)
 
         for index, (a_row, b_row) in enumerate(zip(reader_a, reader_b)):
-            self.assertEqual(a_row, b_row,
-                'Rows differ at row %s: a=%s b=%s' % (index, a_row, b_row))
+            try:
+                self.assertEqual(a_row, b_row,
+                    'Rows differ at row %s: a=%s b=%s' % (index, a_row, b_row))
+            except AssertionError:
+                for col_index, (a_element, b_element) in enumerate(zip(a_row, b_row)):
+                    try:
+                        a_element = float(a_element)
+                        b_element = float(b_element)
+                        self.assertAlmostEqual(a_element, b_element,
+                            ('Values are significantly different at row %s col %s:'
+                             ' a=%s b=%s' % (index, col_index, a_element,
+                             b_element)))
+                    except ValueError:
+                        # we know for sure they arenot floats, so compare as
+                        # non-floats.
+                        self.assertEqual(a_element, b_element,
+                            ('Elements differ at row %s col%s: a=%s b=%s' %
+                            (index, col_index, a_element, b_element)))
 
     def assertMD5(self, uri, regression_hash):
         """Tests if the input file has the same hash as the regression hash
