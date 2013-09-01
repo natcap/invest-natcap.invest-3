@@ -141,27 +141,44 @@ def execute(args):
     factor_uri = os.path.join(workspace, "roads.shp")
     ds_uri = os.path.join(workspace, "roads.tif")
     distance_uri = os.path.join(workspace, "distance.tif")
+    allocation_uri = os.path.join(workspace, "allocation.tif")
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
     gdal_format = gdal.GDT_Byte
     nodata = 1
     
     raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
 
+    #calculate distance raster
     burn_value = 0
     raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=["ALL_TOUCHED=TRUE"] )
     calculate_distance_raster_uri(ds_uri, distance_uri)
 
-##    pixel_heap = disk_sort.sort_to_disk(ds_uri, 0)
-##    ds = gdal.Open(ds_uri)
+    src_ds = gdal.Open(distance_uri)
+    driver = gdal.GetDriverByName("GTiff")
+    dst_ds = driver.CreateCopy( allocation_uri, src_ds, 0 )
+
+    dst_ds = None
+    src_ds = None
+
+##    #select pixels
+##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
+##    ds = gdal.Open(ds_uri)    
 ##
 ##    n_cols = ds.RasterXSize
 ##    n_rows = ds.RasterYSize
 ##    ds = None
-##    
-##    for value, flat_index, dataset_index in pixel_heap:
-##        print value, flat_index, dataset_index
-##        print "(%s, %s)" % (flat_index % n_cols, flat_index / n_cols)
 ##
+##    dst_ds = gdal.Open(distance_uri, 1)
+##    dst_band = dst_ds.GetRasterBand(1)
+##    
+##    for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
+##        if n == 10:
+##           break
+##        dst_band.WriteBlock(flat_index % n_cols, flat_index / n_cols, nodata, 1)
+##
+##    dst_band = None   
+##    dst_ds = None
+
     return
          
   
