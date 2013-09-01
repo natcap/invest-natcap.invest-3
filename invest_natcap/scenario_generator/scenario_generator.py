@@ -80,22 +80,18 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
 
    #convert change amount to pixels?
 
-def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, feature_list, cell_size = None):
+def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None):
     if cell_size == None:
-       print dataset_in_uri
        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
-
-    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename(), numpy.float32)
-     
-    for feature_type in feature_list:
-       memory_array = memory_array + (memory_array == feature_type)
+    
+    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
       
     memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
 
     nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
     raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
 
-    dataset_out = gdal.Open(dataset_out_uri)
+    dataset_out = gdal.Open(dataset_out_uri, 1)
     band = dataset_out.GetRasterBand(1)
     band.WriteArray(memory_array)
     
@@ -147,13 +143,13 @@ def execute(args):
     distance_uri = os.path.join(workspace, "distance.tif")
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
     gdal_format = gdal.GDT_Byte
-    nodata = 0
+    nodata = 1
     
     raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
 
-    burn_value = 1 
+    burn_value = 0
     raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=["ALL_TOUCHED=TRUE"] )
-    calculate_distance_raster_uri(ds_uri, distance_uri, [1])
+    calculate_distance_raster_uri(ds_uri, distance_uri)
 
 ##    pixel_heap = disk_sort.sort_to_disk(ds_uri, 0)
 ##    ds = gdal.Open(ds_uri)
