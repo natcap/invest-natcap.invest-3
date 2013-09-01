@@ -1,6 +1,7 @@
 import os
-from osgeo import gdal, ogr, osr
-gdal.UseExceptions()
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 from invest_natcap import raster_utils
 #from invest_natcap.overlap_analysis import overlap_analysis
 

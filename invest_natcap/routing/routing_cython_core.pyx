@@ -1125,8 +1125,14 @@ def percent_to_sink(
     LOGGER.info('Done calculating percent to sink elapsed time %ss' % \
                     (time.clock() - start_time))
 
+
+cdef struct Row_Col_Weight_Tuple:
+    int row_index
+    int col_index
+    int weight
+
                     
-def resolve_flat_regions_for_drainage(dem_array, int n_rows, int n_cols, float nodata_value):
+def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
         presented in "The assignment of drainage direction over float surfaces
@@ -1144,87 +1150,119 @@ def resolve_flat_regions_for_drainage(dem_array, int n_rows, int n_cols, float n
 
     def calc_flat_index(row_index, col_index):
         """Helper function to calculate a flat index"""
-        return row_index * dem_array.shape[1] + col_index
+        return row_index * dem_array.shape[0] + col_index
     
-    #Identify flat regions
-    LOGGER.info('identifying flat pixels')
-    flat_cells = numpy.zeros((n_rows, n_cols), dtype=numpy.bool)	 
-    for row_index in range(1, n_rows - 1):
-        for col_index in range(1, n_cols - 1):
-            flat_cells[row_index, col_index] = (dem_array[row_index-1:row_index+2, col_index-1:col_index+2] >= dem_array[row_index, col_index]).all()
-    LOGGER.debug(flat_cells)
+    cdef float[:, :] dem_array = dem_python_array
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+    cdef int n_rows = dem_array.shape[0]
+    cdef int n_cols = dem_array.shape[1]
+    cdef queue[Row_Col_Weight_Tuple] sink_queue
+
+    def is_flat(row_index, col_index):
+        if row_index <= 0 or row_index >= n_rows - 1:
+            return False
+        if col_index <= 0 or col_index >= n_rows - 1:
+            return False
+
+        for neighbor_index in xrange(8):
+            if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
+                return False
+        return True
+
+    def is_sink(row_index, col_index):
+        if row_index <= 0 or row_index >= n_rows - 1:
+            return False
+        if col_index <= 0 or col_index >= n_rows - 1:
+            return False
+
+        if is_flat(row_index, col_index):
+            return False
+
+        for neighbor_index in xrange(8):
+            if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
+                    is_flat(row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index])):
+                return True
+        return False
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
-    sink_cells = numpy.zeros((n_rows, n_cols), dtype=numpy.bool)
     sink_cell_list = []
-    for row_index in range(1, flat_cells.shape[0] - 1):
-        for col_index in range(1, flat_cells.shape[1] - 1):
-            #If the cell is flat, it's not a drain
-            if flat_cells[row_index, col_index]: continue
-            
-            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0), (1, -1),
-                (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
-            
-                if (dem_array[row_index + neighbor_row, col_index + neighbor_col] == dem_array[row_index, col_index] and
-                    flat_cells[row_index + neighbor_row, col_index + neighbor_col]):
-                    
-                    sink_cells[row_index, col_index] = True
-                    sink_cell_list.append(calc_flat_index(row_index, col_index))
-                    break
-    LOGGER.debug(sink_cells)
+    cdef Row_Col_Weight_Tuple t
+    for row_index in range(1, dem_python_array.shape[0] - 1):
+        for col_index in range(1, dem_python_array.shape[1] - 1):
+            if is_sink(row_index, col_index):
+                t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                sink_queue.push(t)
 
-    LOGGER.info('construct connectivity path for sinks and flat regions')
-    connectivity_matrix = scipy.sparse.lil_matrix(
-        (dem_array.size, dem_array.size))
+    LOGGER.info('update offset distances from sinks to other flat cells')
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
+    dem_sink_offset[:] = numpy.inf
 
+    LOGGER.info('sink queue size %s' % (sink_queue.size()))
+    cdef Row_Col_Weight_Tuple current_cell_tuple
+    while sink_queue.size() > 0:
+        current_cell_tuple = sink_queue.front()
+        sink_queue.pop()
+        if dem_sink_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
+            continue
+        dem_sink_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
+
+        for neighbor_index in xrange(8):
+            neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
+            neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
+            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
+                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
+                sink_queue.push(t)
+
+    LOGGER.debug("result of breadth first walk")
+    LOGGER.debug(numpy.asarray(dem_sink_offset))
+
+    LOGGER.info('construct uphill edge offset')
         
     edge_cell_list = []
-    for row_index in range(1, flat_cells.shape[0] - 1):
-        for col_index in range(1, flat_cells.shape[1] - 1):
-            if not flat_cells[row_index, col_index] and not sink_cells[row_index, col_index]: continue
-            
-            #Loop through each cell and visit the neighbors.  If two flat cells
-            #touch each other, connect them.
-            current_index = calc_flat_index(row_index, col_index)
-            for neighbor_row, neighbor_col in [(0, 1), (1, 1), (1, 0),
-                (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1)]:
-                if (flat_cells[row_index + neighbor_row, col_index + neighbor_col] or
-                    sink_cells[row_index + neighbor_row, col_index + neighbor_col]):
-                    neighbor_index = calc_flat_index(
-                        row_index + neighbor_row, col_index + neighbor_col)
-                    connectivity_matrix[current_index, neighbor_index] = 1
-                if flat_cells[row_index, col_index] and dem_array[row_index, col_index] < dem_array[row_index + neighbor_row, col_index + neighbor_col]:
-                    edge_cell_list.append(current_index)
-                    
-    LOGGER.info('find distances from sinks to flat cells')
-    sink_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
-        connectivity_matrix, directed=True, indices=sink_cell_list, 
-        return_predecessors=False, unweighted=True), axis=0)
-        
-    #Compress rows of distance matrix into a single row that contains the min
-    #distance of all the distances
-    LOGGER.debug(sink_distance_row.reshape(flat_cells.shape))
-    
-    #Identify edge increasing cells
-    edge_distance_row = numpy.min(scipy.sparse.csgraph.dijkstra(
-        connectivity_matrix, directed=True, indices=edge_cell_list, 
-        return_predecessors=False, unweighted=True), axis=0)
-    
-    max_distance = numpy.max(edge_distance_row[edge_distance_row != numpy.inf])
+    cdef queue[Row_Col_Weight_Tuple] edge_queue
+
+    for row_index in range(1, dem_python_array.shape[0] - 1):
+        for col_index in range(1, dem_python_array.shape[1] - 1):
+            if not is_flat(row_index, col_index) and not is_sink(row_index, col_index): continue
+            for neighbor_index in xrange(8):
+                neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
+                neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
+                if is_flat(row_index, col_index) and dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]:
+                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, 0)
+                    edge_queue.push(t)
+
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
+    dem_edge_offset[:] = numpy.inf
+    while edge_queue.size() > 0:
+        current_cell_tuple = edge_queue.front()
+        edge_queue.pop()
+        if dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
+            continue
+        dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
+
+        for neighbor_index in xrange(8):
+            neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
+            neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
+            if is_flat(neighbor_row_index, neighbor_col_index) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
+                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
+                edge_queue.push(t)
+
+
+    max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
     
     LOGGER.debug(max_distance)
-    edge_distance_row = max_distance + 1 - edge_distance_row    
-    LOGGER.debug(edge_distance_row.reshape(flat_cells.shape))
+    dem_edge_offset = max_distance + 1 - dem_edge_offset
     
     LOGGER.info('resolve any cells that don\'t drain')
-    dem_offset = (edge_distance_row + sink_distance_row).reshape(flat_cells.shape)
-    for row_index in range(1, flat_cells.shape[0] - 1):
-        for col_index in range(1, flat_cells.shape[1] - 1):
+    dem_offset = dem_edge_offset + dem_sink_offset
+    for row_index in range(1, dem_python_array.shape[0] - 1):
+        for col_index in range(1, dem_python_array.shape[1] - 1):
             min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
             if min_offset == dem_offset[row_index, col_index]:
                 dem_offset[row_index, col_index] += 0.5
     dem_offset[numpy.isnan(dem_offset)] = 0.0
     LOGGER.debug(dem_offset)
     
-    dem_array += dem_offset * 1.0/100000.0
+    dem_python_array += dem_offset * numpy.float(1.0/100000.0)

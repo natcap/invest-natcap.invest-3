@@ -13,8 +13,6 @@ from invest_natcap import raster_utils
 LOGGER = logging.getLogger('overlap_analysis_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-ogr.UseExceptions()
-gdal.UseExceptions()
 
 def execute(args):
     '''This function will take the properly formatted arguments passed to it by
