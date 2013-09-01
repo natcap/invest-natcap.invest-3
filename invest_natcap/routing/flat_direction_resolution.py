@@ -115,19 +115,21 @@ def resolve_flat_regions_for_drainage(dem_array, nodata_value):
     
 if __name__ == "__main__":
     dem_array = numpy.array(
-        [[9,9,9,9,9,9,9],
-         [9,6,6,6,6,6,9],
-         [8,6,6,6,6,6,9],
-         [8,6,6,6,6,6,9],
-         [7,6,6,6,6,6,8],
-         [7,6,6,6,6,6,8],
-         [7,7,5,7,7,8,8]], dtype=numpy.float32)
+        [[-1,-1,-1,-1,-1,-1,-1,-1,-1],
+        [-1,9,9,9,9,9,9,9,-1],
+         [-1,9,6,6,6,6,6,9,-1],
+         [-1,8,6,6,6,6,6,9,-1],
+         [-1,8,6,6,6,6,6,9,-1],
+         [-1,7,6,6,6,6,6,8,-1],
+         [-1,7,6,6,6,6,6,8,-1],
+         [-1,7,7,5,7,7,8,8,-1],
+         [-1,-1,-1,-1,-1,-1,-1,-1,-1]], dtype=numpy.float32)
 
     dem_copy = dem_array.copy()
 
     #resolve_flat_regions_for_drainage(dem_array, -1)
     routing_cython_core.resolve_flat_regions_for_drainage(dem_copy, -1)
-    #LOGGER.debug(dem_array)
+    LOGGER.debug(dem_copy)
         
     #numpy.testing.assert_array_almost_equal(dem_array, dem_copy)
     #LOGGER.info('offseting complete!')
