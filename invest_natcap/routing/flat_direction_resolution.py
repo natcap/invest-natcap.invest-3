@@ -136,6 +136,15 @@ if __name__ == "__main__":
          [-1,9,9,9,9,9,9,9,-1],
          [-1,-1,-1,-1,-1,-1,-1,-1,-1]], dtype=numpy.float32)
          
+    flat_array_full = numpy.array(
+        [[9,9,9,9,9,9,9],
+         [9,9,9,9,9,9,9],
+         [9,9,9,9,9,9,9],
+         [9,9,9,9,9,9,9],
+         [9,9,9,9,9,9,9],
+         [9,9,9,9,9,9,9],
+         [9,9,9,9,9,9,9]], dtype=numpy.float32)
+         
     dem_copy = dem_array.copy()
 
     #resolve_flat_regions_for_drainage(dem_array, -1)

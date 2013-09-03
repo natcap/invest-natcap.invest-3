@@ -1160,27 +1160,37 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
 
     def is_flat(row_index, col_index):
-        if dem_array[row_index, col_index] == nodata_value: return False
-        if row_index <= 0 or row_index >= n_rows - 1:
+        if row_index <= 0 or row_index >= n_rows - 1 or col_index <= 0 or col_index >= n_cols - 1:
             return False
-        if col_index <= 0 or col_index >= n_cols - 1:
-            return False
+        if dem_array[row_index, col_index] == nodata_value: return False    
         for neighbor_index in xrange(8):
-            if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
+            neighbor_row_index = row_index + row_offsets[neighbor_index]            
+            neighbor_col_index = col_index + col_offsets[neighbor_index]            
+            
+            if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
+                return False
+            if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[row_index, col_index]:
                 return False
         return True
 
     def is_sink(row_index, col_index):
         if dem_array[row_index, col_index] == nodata_value: return False
-        if row_index <= 0 or row_index >= n_rows - 1:
-            return False
-        if col_index <= 0 or col_index >= n_cols - 1:
-            return False
+        if row_index < 0 or row_index >= n_rows or col_index < 0 or col_index >= n_cols:
+            raise Exception("%s %s out of bounds from %s %s" % (row_index, col_index, n_rows, n_cols))
+            
         if is_flat(row_index, col_index):
             return False
+        
         for neighbor_index in xrange(8):
-            if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
-                    is_flat(row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index])):
+            neighbor_row_index = row_index + row_offsets[neighbor_index]
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                continue
+            neighbor_col_index = col_index + col_offsets[neighbor_index]
+            if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                continue
+            
+            if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
+                    is_flat(neighbor_row_index, neighbor_col_index)):
                 return True
         return False
 
@@ -1188,8 +1198,8 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
-    for row_index in range(1, dem_python_array.shape[0] - 1):
-        for col_index in range(1, dem_python_array.shape[1] - 1):
+    for row_index in range(dem_python_array.shape[0]):
+        for col_index in range(dem_python_array.shape[1]):
             if is_sink(row_index, col_index):
                 t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
