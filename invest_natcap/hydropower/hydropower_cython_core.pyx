@@ -3,8 +3,9 @@ import cython
 cdef inline float float_min(float a, float b): return a if a <= b else b
 
 @cython.cdivision(True)
-def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant,
-              float Kc, float eto, float precip, float root, float soil, float pawc):
+cdef float fractp_op(float out_nodata, float seasonality_constant,
+              float Kc, float eto, float precip, float root, float soil, float pawc,
+              float Kc_nodata, float eto_nodata, float precip_nodata, float root_nodata, float soil_nodata, float pawc_nodata):
     """Function that calculates the fractp (actual evapotranspiration
        fraction of precipitation) raster
 
@@ -24,9 +25,18 @@ def fractp_op(fractp_nodata_dict, float out_nodata, float seasonality_constant,
 
     #If any of the local variables which are in the 'fractp_nodata_dict' 
     #dictionary are equal to a out_nodata value, then return out_nodata
-    for var_name, value in locals().items():
-        if var_name in fractp_nodata_dict and value == fractp_nodata_dict[var_name]:
-            return out_nodata
+    if Kc == Kc_nodata:
+        return out_nodata
+    if eto == eto_nodata:
+        return out_nodata
+    if precip == precip_nodata:
+        return out_nodata
+    if root == root_nodata:
+        return out_nodata
+    if soil == soil_nodata:
+        return out_nodata
+    if pawc == pawc_nodata:
+        return out_nodata
 
     #Check to make sure that variables are not zero to avoid dividing by
     #zero error

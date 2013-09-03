@@ -194,12 +194,14 @@ def execute(args):
     
     # Dictionary of out_nodata values corresponding to values for fractp_op
     # that will help avoid any out_nodata calculation issues
-    fractp_nodata_dict = {'Kc':Kc_nodata, 
-                          'root':root_nodata,
-                          'precip':precip_nodata,
-                          'eto':eto_nodata,
-                          'soil':root_rest_layer_nodata,
-                          'pawc':pawc_nodata}
+    fractp_nodata_dict = {
+        'Kc':Kc_nodata, 
+        'eto':eto_nodata,
+        'precip':precip_nodata,
+        'root':root_nodata,
+        'soil':root_rest_layer_nodata,
+        'pawc':pawc_nodata,
+        }
     
     def fractp_op(Kc, eto, precip, root, soil, pawc):
         """A wrapper function to call hydropower's cython core. Acts as a
@@ -207,8 +209,9 @@ def execute(args):
             """
 
         return hydropower_cython_core.fractp_op(
-            fractp_nodata_dict, out_nodata, seasonality_constant, Kc,
-            eto, precip, root, soil, pawc)
+            out_nodata, seasonality_constant, 
+            Kc, eto, precip, root, soil, pawc, 
+            Kc_nodata, eto_nodata, precip_nodata, root_nodata, soil_nodata, pawc_nodata)
     
     # Vectorize operation
     fractp_vec = np.vectorize(fractp_op)
