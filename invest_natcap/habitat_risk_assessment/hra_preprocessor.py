@@ -885,8 +885,9 @@ def error_check(line, hab_name, stress_name):
     
     #Weight and DQ
 
-    #They may not be 0.
-    if line[2] in ['0', '0.0'] or line[3] in ['0', '0.0']:
+    #They may not be 0 unless Rating is 0.
+    if (line[2] in ['0', '0.0'] or line[3] in ['0', '0.0']) and line[1] \
+                    not in [0, 0.0]:
         raise ZeroDQWeightValue("Individual criteria data qualities and weights \
             may not be 0. Check your %s CSV table in the %s section to \
             correct this." % (hab_name, stress_name))
