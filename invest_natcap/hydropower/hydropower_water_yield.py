@@ -211,7 +211,7 @@ def execute(args):
         return hydropower_cython_core.fractp_op(
             out_nodata, seasonality_constant, 
             Kc, eto, precip, root, soil, pawc, 
-            Kc_nodata, eto_nodata, precip_nodata, root_nodata, soil_nodata, pawc_nodata)
+            Kc_nodata, eto_nodata, precip_nodata, root_nodata, root_rest_layer_nodata, pawc_nodata)
     
     # Vectorize operation
     fractp_vec = np.vectorize(fractp_op)

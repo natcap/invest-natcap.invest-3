@@ -3,7 +3,7 @@ import cython
 cdef inline float float_min(float a, float b): return a if a <= b else b
 
 @cython.cdivision(True)
-cdef float fractp_op(float out_nodata, float seasonality_constant,
+cpdef float fractp_op(float out_nodata, float seasonality_constant,
               float Kc, float eto, float precip, float root, float soil, float pawc,
               float Kc_nodata, float eto_nodata, float precip_nodata, float root_nodata, float soil_nodata, float pawc_nodata):
     """Function that calculates the fractp (actual evapotranspiration
