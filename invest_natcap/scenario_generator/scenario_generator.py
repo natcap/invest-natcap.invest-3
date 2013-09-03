@@ -5,6 +5,9 @@ from osgeo import gdal, ogr
 from invest_natcap import raster_utils
 
 from scipy.linalg import eig
+import scipy.ndimage
+
+import disk_sort
 
 from decimal import Decimal
 from fractions import Fraction
@@ -56,6 +59,46 @@ def calulcate_priority(table_uri, attributes_uri=None):
 
     return calculate_weights(matrix, 4)
 
+def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field):
+    """
+    Table expected to contain the following columns in order:
+
+    0 LULC    The land cover code  
+    1 SHORTNME  The land cover short name (max 12 characters) 
+    2 COUNT  Number of pixels in each LULC class  
+    3 PIXELCHANGE  The number of pixels expected to change
+    4 PRIORITY  The priority of this landcover (objective) 
+    5 PROXIMITY Is this landcover suitability affected by proximity, eg do pixels
+                closer to agriculture have higher chances of converting to agriculture [0,1] 
+    6 PROXDIST  At what distance does the proximity influence die? (in meters, default 10,000m) 
+    7 PATCHHA Minimum size of patch
+    8 F1...Fn  The matching landcover probability score for the matrix. n corresponds to LULC   
+    """
+
+    raster_utils.get_lookup_from_csv(trasition_uri, transition_key_field)
+    ratser_utils.unique_raster_values_count(landcover_uri)
+
+   #convert change amount to pixels?
+
+def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None):
+    if cell_size == None:
+       cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
+    
+    memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
+      
+    memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
+
+    nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
+    raster_utils.new_raster_from_base_uri(dataset_in_uri, dataset_out_uri, 'GTiff', nodata, gdal.GDT_Float32)
+
+    dataset_out = gdal.Open(dataset_out_uri, 1)
+    band = dataset_out.GetRasterBand(1)
+    band.WriteArray(memory_array)
+    
+    band = None
+    dataset_out = None
+
+
 def execute(args):
 
     ###
@@ -94,6 +137,49 @@ def execute(args):
           #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
           raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
           landcover_uri = landcover_resample_uri
+
+    factor_uri = os.path.join(workspace, "roads.shp")
+    ds_uri = os.path.join(workspace, "roads.tif")
+    distance_uri = os.path.join(workspace, "distance.tif")
+    allocation_uri = os.path.join(workspace, "allocation.tif")
+    cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
+    gdal_format = gdal.GDT_Byte
+    nodata = 1
+    
+    raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
+
+    #calculate distance raster
+    burn_value = 0
+    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=["ALL_TOUCHED=TRUE"] )
+    calculate_distance_raster_uri(ds_uri, distance_uri)
+
+    src_ds = gdal.Open(distance_uri)
+    driver = gdal.GetDriverByName("GTiff")
+    dst_ds = driver.CreateCopy( allocation_uri, src_ds, 0 )
+
+    dst_ds = None
+    src_ds = None
+
+##    #select pixels
+##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
+##    ds = gdal.Open(ds_uri)    
+##
+##    n_cols = ds.RasterXSize
+##    n_rows = ds.RasterYSize
+##    ds = None
+##
+##    dst_ds = gdal.Open(distance_uri, 1)
+##    dst_band = dst_ds.GetRasterBand(1)
+##    
+##    for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
+##        if n == 10:
+##           break
+##        dst_band.WriteBlock(flat_index % n_cols, flat_index / n_cols, nodata, 1)
+##
+##    dst_band = None   
+##    dst_ds = None
+
+    return
          
   
     ###

@@ -33,8 +33,17 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir)
 
+        #in_dem_uri = 'invest-data/test/data/routing_regression/clipped_dem.tif'
         in_dem_uri = 'invest-data/test/data/sediment_test_data/dem'
 
+        
+        flow_direction_out_uri = os.path.join(workspace_dir, 'flow_direction.tif')
+        routing_cython_core.flow_direction_inf_noresolution(in_dem_uri,flow_direction_out_uri)
+        flux_direction_out_uri = os.path.join(workspace_dir, 'flux.tif')
+        #routing_utils.flow_accumulation(in_dem_uri, flux_direction_out_uri)
+        
+        return
+        
         in_absorption_rate_uri = os.path.join(workspace_dir, 'absorption_rate.tif')
         in_source_uri = os.path.join(workspace_dir, 'source.tif')
         make_constant_raster_from_base(in_dem_uri, 1.0, in_source_uri)
@@ -47,15 +56,15 @@ class TestRasterUtils(unittest.TestCase):
         flux_uri = os.path.join(workspace_dir, 'flux%s.tif' % absorption_mode)
         routing_utils.route_flux(
             in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri, flux_uri,
-            absorption_mode, aoi_uri=aoi_uri)
+            absorption_mode, aoi_uri=None)
 
-        absorption_mode = 'source_and_flux'
-        loss_uri = os.path.join(workspace_dir, 'loss%s.tif' % absorption_mode)
-        flux_uri = os.path.join(workspace_dir, 'flux%s.tif' % absorption_mode)
+#        absorption_mode = 'source_and_flux'
+#        loss_uri = os.path.join(workspace_dir, 'loss%s.tif' % absorption_mode)
+#        flux_uri = os.path.join(workspace_dir, 'flux%s.tif' % absorption_mode)
 
-        routing_utils.route_flux(
-            in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri, flux_uri,
-            absorption_mode, aoi_uri=aoi_uri)
+#        routing_utils.route_flux(
+#            in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri, flux_uri,
+#            absorption_mode, aoi_uri=aoi_uri)
 
 
 
