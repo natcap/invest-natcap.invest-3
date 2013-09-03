@@ -91,7 +91,7 @@
                     "id": "override_inclusion",
                     "args_id": "override_inclusion",
                     "type": "dropdown",
-                    "label": "Override inclusion",
+                    "label": "Rasterization method",
                     "options": ["All touched pixels", "Only pixels with covered center points"],
                     "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
                     "defaultValue": 0,
@@ -102,7 +102,7 @@
                 {
                     "id": "constraints",
                     "args_id": "constraints",
-                    "label": "Constraints Layer",
+                    "label": "Constraints layer",
                     "type": "file",
                     "defaultValue": "../ScenarioGenerator/input/constraints.shp",
                     "validateAs": {"type": "OGR"},                    
@@ -123,27 +123,64 @@
                     "id" : "factors_list",
                     "type": "list",
                     "elements": [
-
-        
+                        {
+                            "id": "suitability_folder",
+                            "args_id": "suitability_folder",
+                            "type": "folder",
+                            "defaultValue": "../ScenarioGenerator/input",
+                            "label": "Factors folder",
+                            "required": true
+                            
+                        },
                         {
                             "id": "suitability",
                             "args_id": "suitability",
                             "type": "file",
-                            "defaultValue": "../ScenarioGenerator/input/factors.dbf",
-                            "label": "Factors Table",
+                            "defaultValue": "../ScenarioGenerator/input/scenario_suitability_factors.csv",
+                            "label": "Factors table",
                             "required": false,
                             "helpText": "This table lists the factors that determine suitability of the land cover for change, and includes: the factor name, layer name, distance of influence, suitability value, weight of the factor, distance breaks, and applicable land cover."
                         },
                         {
+                            "id": "suitability_id",
+                            "args_id": "suitability_id",
+                            "type": "OGRFieldDropdown",
+                            "label": "Suitability id",
+                            "enabledBy": "suitability",
+                            "returns": "strings",
+                            "required": true
+                        },
+                        {
+                            "id": "suitability_layer",
+                            "args_id": "suitability_layer",
+                            "type": "OGRFieldDropdown",
+                            "label": "Suitability layer",
+                            "enabledBy": "suitability",
+                            "returns": "strings",
+                            "required": true
+                        },
+                        {
                             "id": "weight",
                             "args_id": "weight",
-                            "label" : "Factor Weight",
+                            "label" : "Factor weight",
                             "type": "text",
                             "validText": "[0](\\.[0-9][0-9])?",
                             "dataType": "float",
                             "defaultValue": "0.5",
                             "required": false,
                             "helpText": "The factor weight is a value between 0 and 1 which determines the weight given to the factors vs. the expert opinion likelihood rasters.  For example, if a weight of 0.3 is entered then 30% of the final suitability is contributed by the factors and the likelihood matrix contributes 70%.  This value is entered on the tool interface."
+                        },
+                        {
+                            "id": "factor_inclusion",
+                            "args_id": "factor_inclusion",
+                            "type": "dropdown",
+                            "label": "Rasterization method",
+                            "options": ["All touched pixels", "Only pixels with covered center points"],
+                            "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
+                            "defaultValue": 0,
+                            "required": true,
+                            "enabledBy": "override_field",
+                            "helpText": ""
                         }
                     ]
                 }

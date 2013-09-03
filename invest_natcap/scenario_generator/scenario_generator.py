@@ -107,6 +107,9 @@ def execute(args):
     workspace = args["workspace_dir"]
     landcover_uri = args["landcover"]
     override_uri = args["override"]
+
+    factor_name = "%s.tif"
+    distance_name = "%s_distance.tif"
     
     landcover_resample_uri = os.path.join(workspace, "resample.tif")
     
@@ -138,27 +141,39 @@ def execute(args):
           raster_utils.resample_dataset(landcover_uri, args["resolution"], landcover_resample_uri, gdal.GRA_NearestNeighbour)
           landcover_uri = landcover_resample_uri
 
-    factor_uri = os.path.join(workspace, "roads.shp")
-    ds_uri = os.path.join(workspace, "roads.tif")
-    distance_uri = os.path.join(workspace, "distance.tif")
-    allocation_uri = os.path.join(workspace, "allocation.tif")
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
-    gdal_format = gdal.GDT_Byte
-    nodata = 1
-    
-    raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
+    if args["factors"]:
+        factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
+        gdal_format = gdal.GDT_Byte
+        nodata = 1
+        burn_value = 0
+        factor_set = set()
+        factor_folder = args["suitability_folder"]
+        
+        for factor_id in factor_dict:
+            factor = factor_dict[factor_id][args["suitability_layer"]]
+            factor_stem, _ = os.path.splitext(factor)
+            LOGGER.debug("Found reference to factor %s.", factor_stem)
+            if not factor_stem in factor_set:
+                factor_uri = os.path.join(factor_folder, factor)
+                if not os.path.exists(factor_uri):
+                   msg = "Missing file %s." % factor_uri
+                   LOGGER.error(msg)
+                   raise ValueError, msg
+                  
+                ds_uri = os.path.join(workspace, factor_name % factor_stem)
+                distance_uri = os.path.join(workspace, distance_name % factor_stem)
 
-    #calculate distance raster
-    burn_value = 0
-    raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=["ALL_TOUCHED=TRUE"] )
-    calculate_distance_raster_uri(ds_uri, distance_uri)
+                LOGGER.info("Rasterizing %s.", factor_stem)
+                raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
+                if args["factor_inclusion"]:
+                   option_list=["ALL_TOUCHED=TRUE"]
+                else:
+                   option_list = []
+                raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list )
+                calculate_distance_raster_uri(ds_uri, distance_uri)
 
-    src_ds = gdal.Open(distance_uri)
-    driver = gdal.GetDriverByName("GTiff")
-    dst_ds = driver.CreateCopy( allocation_uri, src_ds, 0 )
-
-    dst_ds = None
-    src_ds = None
+                factor_set.add(factor_stem)
 
 ##    #select pixels
 ##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
