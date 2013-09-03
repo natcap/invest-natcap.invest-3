@@ -268,7 +268,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
         gdal.GDT_Float32, fill_value=flow_nodata)
 
     LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
-    #resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
+    resolve_esri_etched_stream_directions(dem_uri, flow_direction_uri)
 
     flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
 
@@ -281,7 +281,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
         raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
-    #resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
+    resolve_flat_regions_for_drainage(dem_array, dem_nodata)     
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
 
@@ -1160,28 +1160,37 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
 
     def is_flat(row_index, col_index):
-        if row_index <= 0 or row_index >= n_rows - 1:
+        if row_index <= 0 or row_index >= n_rows - 1 or col_index <= 0 or col_index >= n_cols - 1:
             return False
-        if col_index <= 0 or col_index >= n_rows - 1:
-            return False
-
+        if dem_array[row_index, col_index] == nodata_value: return False    
         for neighbor_index in xrange(8):
-            if dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] < dem_array[row_index, col_index]:
+            neighbor_row_index = row_index + row_offsets[neighbor_index]            
+            neighbor_col_index = col_index + col_offsets[neighbor_index]            
+            
+            if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
+                return False
+            if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[row_index, col_index]:
                 return False
         return True
 
     def is_sink(row_index, col_index):
-        if row_index <= 0 or row_index >= n_rows - 1:
-            return False
-        if col_index <= 0 or col_index >= n_rows - 1:
-            return False
-
+        if dem_array[row_index, col_index] == nodata_value: return False
+        if row_index < 0 or row_index >= n_rows or col_index < 0 or col_index >= n_cols:
+            raise Exception("%s %s out of bounds from %s %s" % (row_index, col_index, n_rows, n_cols))
+            
         if is_flat(row_index, col_index):
             return False
-
+        
         for neighbor_index in xrange(8):
-            if (dem_array[row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index]] == dem_array[row_index, col_index] and
-                    is_flat(row_index + row_offsets[neighbor_index], col_index + col_offsets[neighbor_index])):
+            neighbor_row_index = row_index + row_offsets[neighbor_index]
+            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+                continue
+            neighbor_col_index = col_index + col_offsets[neighbor_index]
+            if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+                continue
+            
+            if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
+                    is_flat(neighbor_row_index, neighbor_col_index)):
                 return True
         return False
 
@@ -1189,13 +1198,13 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
-    for row_index in range(1, dem_python_array.shape[0] - 1):
-        for col_index in range(1, dem_python_array.shape[1] - 1):
+    for row_index in range(dem_python_array.shape[0]):
+        for col_index in range(dem_python_array.shape[1]):
             if is_sink(row_index, col_index):
                 t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
 
-    LOGGER.info('update offset distances from sinks to other flat cells')
+    LOGGER.info('calculate distances from sinks to other flat cells')
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
     dem_sink_offset[:] = numpy.inf
 
@@ -1211,58 +1220,253 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
         for neighbor_index in xrange(8):
             neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
             neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
+            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 sink_queue.push(t)
 
-    LOGGER.debug("result of breadth first walk")
-    LOGGER.debug(numpy.asarray(dem_sink_offset))
-
-    LOGGER.info('construct uphill edge offset')
-        
+    dem_sink_offset[dem_sink_offset == numpy.inf] = 0
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy()
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
+    
+    LOGGER.debug("dem_sink_offset\n%s" % dem_sink_offset)
+    LOGGER.info('calculate distances from edge to center of flat regions')
     edge_cell_list = []
     cdef queue[Row_Col_Weight_Tuple] edge_queue
 
     for row_index in range(1, dem_python_array.shape[0] - 1):
         for col_index in range(1, dem_python_array.shape[1] - 1):
-            if not is_flat(row_index, col_index) and not is_sink(row_index, col_index): continue
+            #only consider flat cells
+            if not is_flat(row_index, col_index): continue
+            for neighbor_index in xrange(8):
+                neighbor_row_index = row_index + row_offsets[neighbor_index]
+                neighbor_col_index = col_index + col_offsets[neighbor_index]
+                if (dem_array[neighbor_row_index, neighbor_col_index] != nodata_value) and (dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]):
+                    t = Row_Col_Weight_Tuple(row_index, col_index, 0)
+                    edge_queue.push(t)
+                    break
+                    
+    if edge_queue.size() > 0:
+        LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
+        dem_edge_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
+        dem_edge_offset[:] = numpy.inf
+        
+        while edge_queue.size() > 0:
+            current_cell_tuple = edge_queue.front()
+            edge_queue.pop()
+            if dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
+                continue
+            dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
+
             for neighbor_index in xrange(8):
                 neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
                 neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-                if is_flat(row_index, col_index) and dem_array[row_index, col_index] < dem_array[neighbor_row_index, neighbor_col_index]:
-                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, 0)
+                if is_flat(neighbor_row_index, neighbor_col_index) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
+                    t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                     edge_queue.push(t)
-
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
-    dem_edge_offset[:] = numpy.inf
-    while edge_queue.size() > 0:
-        current_cell_tuple = edge_queue.front()
-        edge_queue.pop()
-        if dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] <= current_cell_tuple.weight:
-            continue
-        dem_edge_offset[current_cell_tuple.row_index, current_cell_tuple.col_index] = current_cell_tuple.weight
-
-        for neighbor_index in xrange(8):
-            neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
-            neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-            if is_flat(neighbor_row_index, neighbor_col_index) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
-                t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
-                edge_queue.push(t)
-
-
-    max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
-    
-    LOGGER.debug(max_distance)
-    dem_edge_offset = max_distance + 1 - dem_edge_offset
+                    
+        LOGGER.debug("dem_edge_offset\n%s" % dem_edge_offset)
+        max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
+        dem_edge_offset = max_distance + 1 - dem_edge_offset
+        dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
+        dem_offset += dem_edge_offset
     
     LOGGER.info('resolve any cells that don\'t drain')
-    dem_offset = dem_edge_offset + dem_sink_offset
     for row_index in range(1, dem_python_array.shape[0] - 1):
         for col_index in range(1, dem_python_array.shape[1] - 1):
+            if not is_flat(row_index, col_index): continue
             min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
             if min_offset == dem_offset[row_index, col_index]:
                 dem_offset[row_index, col_index] += 0.5
-    dem_offset[numpy.isnan(dem_offset)] = 0.0
-    LOGGER.debug(dem_offset)
+    LOGGER.debug("dem_offset\n%s" % dem_offset)
+    dem_python_array += dem_offset * numpy.float(1.0/10000.0)
+    return dem_offset, dem_sink_offset, dem_edge_offset
     
-    dem_python_array += dem_offset * numpy.float(1.0/100000.0)
+def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
+    """Calculates the D-infinity flow algorithm.  The output is a float
+        raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
+
+       dem - (input) a single band GDAL Dataset with elevation values
+       bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
+       flow - (output) a single band float raster of same dimensions as
+           dem.  After the function call it will have flow direction in it 
+       
+       returns nothing"""
+
+    cdef int col_index, row_index, n_cols, n_rows, max_index, facet_index
+    cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
+        flow_direction_max_slope, slope_max, dem_nodata, nodata_flow
+
+    dem_dataset = gdal.Open(dem_uri)
+
+    flow_nodata = -1.0
+    raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri, 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
+
+    LOGGER.debug("flow_direction_uri %s" % flow_direction_uri)
+    flow_direction_dataset = gdal.Open(flow_direction_uri, gdal.GA_Update)
+    if dem_dataset.GetRasterBand(1).GetNoDataValue() != None:
+        dem_nodata = dem_dataset.GetRasterBand(1).GetNoDataValue()
+    else:
+        #we don't have a nodata value, just make something small
+        dem_nodata = -1e6
+    flow_band = flow_direction_dataset.GetRasterBand(1)
+
+    LOGGER.info("loading DEM")
+    dem_data_file = tempfile.TemporaryFile()
+    flow_data_file = tempfile.TemporaryFile()
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_array = \
+        raster_utils.load_memory_mapped_array(dem_uri, dem_data_file, array_type=numpy.float32)
+    dem_offset, sink_offset,edge_offset = resolve_flat_regions_for_drainage(dem_array, dem_nodata)
+    raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri + 'dem_offest.tif', 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
+    dem_offset_dataset = gdal.Open(flow_direction_uri + 'dem_offest.tif', gdal.GA_Update)
+    dem_offset_band = dem_offset_dataset.GetRasterBand(1)
+    dem_offset_band.WriteArray(dem_offset)
+    raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri + 'sink_offest.tif', 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
+    sink_offset_dataset = gdal.Open(flow_direction_uri + 'sink_offest.tif', gdal.GA_Update)
+    sink_offset_band = sink_offset_dataset.GetRasterBand(1)
+    sink_offset_band.WriteArray(sink_offset)
+    raster_utils.new_raster_from_base(
+        dem_dataset, flow_direction_uri + 'edge_offest.tif', 'GTiff', flow_nodata,
+        gdal.GDT_Float32, fill_value=flow_nodata)
+    edge_offset_dataset = gdal.Open(flow_direction_uri + 'edge_offest.tif', gdal.GA_Update)
+    edge_offset_band = edge_offset_dataset.GetRasterBand(1)
+    edge_offset_band.WriteArray(edge_offset)
+    
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
+
+    #This matrix holds the flow direction value, initialize to flow_nodata
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] flow_array = \
+        raster_utils.load_memory_mapped_array(flow_direction_uri, flow_data_file, array_type=numpy.float32)
+
+    #facet elevation and factors for slope and flow_direction calculations 
+    #from Table 1 in Tarboton 1997.  
+    #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
+    #convention.
+    cdef int *e_0_offsets = [+0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0]
+    cdef int *e_1_offsets = [+0, +1,
+                             -1, +0,
+                             -1, +0,
+                             +0, -1,
+                             +0, -1,
+                             +1, +0,
+                             +1, +0,
+                             +0, +1]
+    cdef int *e_2_offsets = [-1, +1,
+                             -1, +1,
+                             -1, -1,
+                             -1, -1,
+                             +1, -1,
+                             +1, -1,
+                             +1, +1,
+                             +1, +1]
+    cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
+    cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
+
+    #Get pixel sizes
+    d_1 = abs(dem_dataset.GetGeoTransform()[1])
+    d_2 = abs(dem_dataset.GetGeoTransform()[5])
+
+    LOGGER.info("calculating d-inf per pixel flows")
+    #loop through each cell and skip any edge pixels
+    for col_index in range(1, n_cols - 1):
+        for row_index in range(1, n_rows - 1):
+
+            #If we're on a nodata pixel, set the flow to nodata and skip
+            if dem_array[row_index, col_index] == dem_nodata:
+                flow_array[row_index, col_index] = flow_nodata
+                continue
+
+            if flow_array[row_index, col_index] != flow_nodata:
+                continue
+
+            #Calculate the flow flow_direction for each facet
+            slope_max = 0 #use this to keep track of the maximum down-slope
+            flow_direction_max_slope = 0 #flow direction on max downward slope
+            max_index = 0 #index to keep track of max slope facet
+            
+            #Initialize flow matrix to nod_data flow so the default is to 
+            #calculate with D8.
+            flow_array[row_index, col_index] = flow_nodata
+            
+            for facet_index in range(8):
+                #This defines the three height points
+                e_0 = dem_array[e_0_offsets[facet_index*2+0] + row_index,
+                                e_0_offsets[facet_index*2+1] + col_index]
+                e_1 = dem_array[e_1_offsets[facet_index*2+0] + row_index,
+                                e_1_offsets[facet_index*2+1] + col_index]
+                e_2 = dem_array[e_2_offsets[facet_index*2+0] + row_index,
+                                e_2_offsets[facet_index*2+1] + col_index]
+                
+                #avoid calculating a slope on nodata values
+                if e_1 == dem_nodata:
+                    flow_array[row_index, col_index] = 3.14159262 / 4.0 * facet_index
+                    break
+                if e_2 == dem_nodata:
+                    flow_array[row_index, col_index] = 3.14159262 / 4.0 * (facet_index + 1)
+                    break
+                 
+                #s_1 is slope along straight edge
+                s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                
+                #slope along diagonal edge
+                s_2 = (e_1 - e_2) / d_2 #Eqn 2
+                
+                if s_1 <= 0 and s_2 <= 0:
+                    #uphill slope or flat, so skip, D8 resolve 
+                    continue 
+                
+                #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
+                flow_direction = 3.14159262/2.0
+                if s_1 != 0:
+                    flow_direction = atan(s_2 / s_1) #Eqn 3
+
+                if flow_direction < 0: #Eqn 4
+                    #If the flow direction goes off one side, set flow
+                    #direction to that side and the slope to the straight line
+                    #distance slope
+                    flow_direction = 0
+                    slope = s_1
+                elif flow_direction > atan(d_2 / d_1): #Eqn 5
+                    #If the flow direciton goes off the diagonal side, figure
+                    #out what its value is and
+                    flow_direction = atan(d_2 / d_1)
+                    slope = (e_0 - e_2) / sqrt(d_1 * d_1 + d_2 * d_2)
+                else:
+                    slope = sqrt(s_1 * s_1 + s_2 * s_2) #Eqn 3
+
+                #LOGGER.debug("slope %s" % slope)
+                if slope > slope_max:
+                    flow_direction_max_slope = flow_direction
+                    slope_max = slope
+                    max_index = facet_index
+            else: 
+                # This is the fallthrough condition for the for loop, we reach
+                # it only if we haven't encountered an invalid slope or pixel
+                # that caused the above algorithm to break out 
+                #Calculate the global angle depending on the max slope facet
+                if slope_max > 0:
+                    flow_array[row_index, col_index] = \
+                        a_f[max_index] * flow_direction_max_slope + \
+                        a_c[max_index] * 3.14159265 / 2.0
+
+    LOGGER.info("writing flow data to raster")
+    flow_band.WriteArray(flow_array)
+    raster_utils.calculate_raster_stats(flow_direction_dataset)
