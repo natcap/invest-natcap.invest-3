@@ -1220,7 +1220,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
         for neighbor_index in xrange(8):
             neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
             neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1:
+            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 sink_queue.push(t)
 
