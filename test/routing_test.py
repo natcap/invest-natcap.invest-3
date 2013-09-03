@@ -33,7 +33,8 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir)
 
-        in_dem_uri = 'invest-data/test/data/routing_regression/clipped_dem.tif'
+        #in_dem_uri = 'invest-data/test/data/routing_regression/clipped_dem.tif'
+        in_dem_uri = 'invest-data/test/data/sediment_test_data/dem'
 
         
         flow_direction_out_uri = os.path.join(workspace_dir, 'flow_direction.tif')
