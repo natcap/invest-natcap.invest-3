@@ -33,13 +33,13 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir)
 
-        in_dem_uri = 'invest-data/test/data/sediment_test_data/dem'
+        in_dem_uri = 'invest-data/test/data/routing_regression/clipped_dem.tif'
 
         
         flow_direction_out_uri = os.path.join(workspace_dir, 'flow_direction.tif')
-        routing_cython_core.flow_direction_inf(in_dem_uri,flow_direction_out_uri)
+        routing_cython_core.flow_direction_inf_noresolution(in_dem_uri,flow_direction_out_uri)
         flux_direction_out_uri = os.path.join(workspace_dir, 'flux.tif')
-        routing_utils.flow_accumulation(in_dem_uri, flux_direction_out_uri)
+        #routing_utils.flow_accumulation(in_dem_uri, flux_direction_out_uri)
         
         return
         
