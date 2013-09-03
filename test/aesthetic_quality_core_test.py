@@ -173,6 +173,37 @@ class TestAestheticQualityCore(unittest.TestCase):
         angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
         return angles
 
+    def cell_angle(self, cell_pos, viewpoint_pos):
+        """Test the cell's angle to the viewpoint. 0 is the positive J axis
+        
+            Inputs:
+                -cell_pos: coordinate tuple (row, col) of the cell position
+                -viewer_pos: coordinate tuple (row, col) of the viewer's 
+                position
+                
+            Returns the cell's angle in radians"""
+        two_pi = 2. * math.pi
+        return (np.arctan2(-(cell_pos[0]-viewpoint_pos[0]),
+            cell_pos[1]-viewpoint_pos[0]) + two_pi) % two_pi
+
+    def test_cell_angle(self):
+        """Simple test that ensures cell_angle is doing what it is supposed to"""
+        viewpoint_pos = (3, 3)
+        cell_pos = [(0,0), (0,3), (2,2), (2,4), (4,2), (3,4), (4,3), (4,4)]
+        # Pre-computed angles
+        pi = math.pi
+        precomputed_angles = np.array([3. * pi / 4., pi / 2., 3. * pi / 2., \
+            pi, 0., 5. * pi / 4., 3. * pi / 2., 7. * pi / 4.])
+        # compute the angles using cell_angles
+        computed_angles = []
+        for cell in cell_pos:
+            computed_angles.append(self.cell_angle(cell, viewpoint_pos))
+        # Convert computed result and compute error 
+        computed_angles = np.array(computed_angles)
+        error = np.sum(computed_angles - precomputed_angles)
+        print('error', error)
+        assert error < 1e-15
+
     def test_viewshed(self):
         array_shape = (400,400) 
         viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
