@@ -1181,6 +1181,8 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
         if is_flat(row_index, col_index):
             return False
         
+        next_to_flat = False
+        next_to_lower = False
         for neighbor_index in xrange(8):
             neighbor_row_index = row_index + row_offsets[neighbor_index]
             if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
@@ -1191,8 +1193,10 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             
             if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
                     is_flat(neighbor_row_index, neighbor_col_index)):
-                return True
-        return False
+                next_to_flat = True
+            if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[row_index, col_index]:
+                next_to_lower = True
+        return next_to_flat and next_to_lower
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
