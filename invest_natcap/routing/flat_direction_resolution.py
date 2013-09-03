@@ -135,6 +135,16 @@ if __name__ == "__main__":
          [-1,9,9,9,9,9,9,9,-1],
          [-1,9,9,9,9,9,9,9,-1],
          [-1,-1,-1,-1,-1,-1,-1,-1,-1]], dtype=numpy.float32)
+    sink_array = numpy.array(
+        [[10,10,10,10,10,10,10,10,10],
+        [10,9,9,9,9,9,9,9,10],
+         [10,9,9,9,9,9,9,9,10],
+         [10,9,9,9,9,9,9,9,10],
+         [10,9,9,9,9,9,9,9,10],
+         [10,9,9,9,9,9,9,9,10],
+         [10,9,9,9,9,9,9,9,10],
+         [10,9,9,9,9,9,9,9,10],
+         [-1,-1,-1,-1,-1,-1,-1,-1,-1]], dtype=numpy.float32)
          
     flat_array_full = numpy.array(
         [[9,9,9,9,9,9,9],
@@ -145,7 +155,7 @@ if __name__ == "__main__":
          [9,9,9,9,9,9,9],
          [9,9,9,9,9,9,9]], dtype=numpy.float32)
          
-    dem_copy = dem_array.copy()
+    dem_copy = sink_array.copy()
 
     #resolve_flat_regions_for_drainage(dem_array, -1)
     routing_cython_core.resolve_flat_regions_for_drainage(dem_copy, -1)
