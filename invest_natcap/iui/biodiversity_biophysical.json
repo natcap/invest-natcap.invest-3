@@ -64,7 +64,7 @@
                                     "fieldsExist": ["THREAT", "MAX_DIST", "WEIGHT"],
                                     "restrictions": [{"field": "THREAT",
                                                     "validateAs":{"type": "string",
-                                                                  "allowedValues": {"pattern":"^[a-zA-Z_]+$"}
+                                                                  "allowedValues": {"pattern":"^[a-zA-Z0-9_]+$"}
                                                                   }},
                                                      {"field": "MAX_DIST",
                                                       "validateAs": {"type": "number",
