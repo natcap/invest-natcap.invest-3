@@ -201,7 +201,7 @@ def execute(args):
                             feature.items().keys()))
             
             if 'name' not in lower_attrib:
-                raise ImproperAOIAttributeName("Risk table layer attributes must \
+                raise ImproperAOIAttributeName("Subregion layer attributes must \
                     contain the attribute \"Name\" in order to be properly used \
                     within the HRA model run.")
 
