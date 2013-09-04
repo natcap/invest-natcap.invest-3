@@ -1383,7 +1383,7 @@ def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
     #Get pixel sizes
     d_1 = abs(dem_dataset.GetGeoTransform()[1])
     d_2 = abs(dem_dataset.GetGeoTransform()[5])
-
+    cdef float max_r = numpy.pi / 4.0
     LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
     for col_index in range(1, n_cols - 1):
@@ -1402,10 +1402,6 @@ def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
             
-            #Initialize flow matrix to nod_data flow so the default is to 
-            #calculate with D8.
-            flow_array[row_index, col_index] = flow_nodata
-            
             for facet_index in range(8):
                 #This defines the three height points
                 e_0 = dem_array[e_0_offsets[facet_index*2+0] + row_index,
@@ -1416,43 +1412,48 @@ def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
                                 e_2_offsets[facet_index*2+1] + col_index]
                 
                 #avoid calculating a slope on nodata values
-                if e_1 == dem_nodata:
-                    flow_array[row_index, col_index] = 3.14159262 / 4.0 * facet_index
-                    break
-                if e_2 == dem_nodata:
-                    flow_array[row_index, col_index] = 3.14159262 / 4.0 * (facet_index + 1)
-                    break
-                 
+                if e_1 == dem_nodata or e_2 == dem_nodata:
+                    continue
+
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
                 
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
-                if s_1 <= 0 and s_2 <= 0:
-                    #uphill slope or flat, so skip, D8 resolve 
+                if s_1 < 0 and s_2 < 0:
+                    #uphill slope 
                     continue 
                 
                 #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
-                flow_direction = 3.14159262/2.0
-                if s_1 != 0:
-                    flow_direction = atan(s_2 / s_1) #Eqn 3
-
-                if flow_direction < 0: #Eqn 4
-                    #If the flow direction goes off one side, set flow
-                    #direction to that side and the slope to the straight line
-                    #distance slope
+                
+                
+                if s_1 < 0:
+                    flow_direction = max_r
+                    slope = s_2
+                elif s_2 < 0:
                     flow_direction = 0
                     slope = s_1
-                elif flow_direction > atan(d_2 / d_1): #Eqn 5
-                    #If the flow direciton goes off the diagonal side, figure
-                    #out what its value is and
-                    flow_direction = atan(d_2 / d_1)
-                    slope = (e_0 - e_2) / sqrt(d_1 * d_1 + d_2 * d_2)
                 else:
-                    slope = sqrt(s_1 * s_1 + s_2 * s_2) #Eqn 3
+                    try:
+                        flow_direction = atan(s_2 / s_1) #Eqn 3
+                    except ZeroDivisionError:
+                        flow_direction = max_r
 
-                #LOGGER.debug("slope %s" % slope)
+                    if flow_direction < 0: #Eqn 4
+                        #If the flow direction goes off one side, set flow
+                        #direction to that side and the slope to the straight line
+                        #distance slope
+                        flow_direction = 0
+                        slope = s_1
+                    elif flow_direction > atan(d_2 / d_1): #Eqn 5
+                        #If the flow direciton goes off the diagonal side, figure
+                        #out what its value is and
+                        flow_direction = max_r
+                        slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                    else:
+                        slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+
                 if slope > slope_max:
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
