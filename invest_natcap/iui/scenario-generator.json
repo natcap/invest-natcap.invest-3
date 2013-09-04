@@ -160,6 +160,24 @@
                             "required": true
                         },
                         {
+                            "id": "suitability_field",
+                            "args_id": "suitability_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Suitability field",
+                            "enabledBy": "suitability",
+                            "returns": "strings",
+                            "required": true
+                        },
+                        {
+                            "id": "distance_field",
+                            "args_id": "distance_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Distance field",
+                            "enabledBy": "suitability",
+                            "returns": "strings",
+                            "required": true
+                        },                                                
+                        {
                             "id": "weight",
                             "args_id": "weight",
                             "label" : "Factor weight",

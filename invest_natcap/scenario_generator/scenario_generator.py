@@ -24,7 +24,7 @@ LOGGER = logging.getLogger('scenario_generator')
 
 def calculate_weights(arr, rounding=4):
    places = Decimal(10) ** -(rounding)
-   
+
    # get eigenvalues and vectors
    eigenvalues, eigenvectors = eig(arr)
 
@@ -63,16 +63,16 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
     """
     Table expected to contain the following columns in order:
 
-    0 LULC    The land cover code  
-    1 SHORTNME  The land cover short name (max 12 characters) 
-    2 COUNT  Number of pixels in each LULC class  
+    0 LULC    The land cover code
+    1 SHORTNME  The land cover short name (max 12 characters)
+    2 COUNT  Number of pixels in each LULC class
     3 PIXELCHANGE  The number of pixels expected to change
-    4 PRIORITY  The priority of this landcover (objective) 
+    4 PRIORITY  The priority of this landcover (objective)
     5 PROXIMITY Is this landcover suitability affected by proximity, eg do pixels
-                closer to agriculture have higher chances of converting to agriculture [0,1] 
-    6 PROXDIST  At what distance does the proximity influence die? (in meters, default 10,000m) 
+                closer to agriculture have higher chances of converting to agriculture [0,1]
+    6 PROXDIST  At what distance does the proximity influence die? (in meters, default 10,000m)
     7 PATCHHA Minimum size of patch
-    8 F1...Fn  The matching landcover probability score for the matrix. n corresponds to LULC   
+    8 F1...Fn  The matching landcover probability score for the matrix. n corresponds to LULC
     """
 
     raster_utils.get_lookup_from_csv(trasition_uri, transition_key_field)
@@ -83,9 +83,9 @@ def prepare_landattrib_array(landcover_uri, transition_uri, transition_key_field
 def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = None):
     if cell_size == None:
        cell_size = raster_utils.get_cell_size_from_uri(dataset_in_uri)
-    
+
     memory_array = raster_utils.load_memory_mapped_array(dataset_in_uri, raster_utils.temporary_filename())
-      
+
     memory_array = scipy.ndimage.morphology.distance_transform_edt(memory_array) * cell_size
 
     nodata = raster_utils.get_nodata_from_uri(dataset_in_uri)
@@ -94,7 +94,7 @@ def calculate_distance_raster_uri(dataset_in_uri, dataset_out_uri, cell_size = N
     dataset_out = gdal.Open(dataset_out_uri, 1)
     band = dataset_out.GetRasterBand(1)
     band.WriteArray(memory_array)
-    
+
     band = None
     dataset_out = None
 
@@ -108,11 +108,8 @@ def execute(args):
     landcover_uri = args["landcover"]
     override_uri = args["override"]
 
-    factor_name = "%s.tif"
-    distance_name = "%s_distance.tif"
-    
     landcover_resample_uri = os.path.join(workspace, "resample.tif")
-    
+
     landcover_transition_uri = os.path.join(workspace,"transitioned.tif")
     override_dataset_uri = os.path.join(workspace,"override.tif")
     landcover_htm_uri = os.path.join(workspace,"landcover.htm")
@@ -134,7 +131,7 @@ def execute(args):
           msg = "The analysis resolution cannot be smaller than the input."
           LOGGER.error(msg)
           raise ValueError, msg
-      
+
        else:
           LOGGER.info("Resampling land cover.")
           #gdal.GRA_Mode might be a better resample method, but requires GDAL >= 1.10.0
@@ -144,40 +141,82 @@ def execute(args):
     cell_size = raster_utils.get_cell_size_from_uri(landcover_uri)
     if args["factors"]:
         factor_dict = raster_utils.get_lookup_from_csv(args["suitability"], args["suitability_id"])
-        gdal_format = gdal.GDT_Byte
-        nodata = 1
-        burn_value = 0
+        raster_format = "GTiff"
         factor_set = set()
         factor_folder = args["suitability_folder"]
-        
+
+        if args["factor_inclusion"]:
+           option_list=["ALL_TOUCHED=TRUE"]
+        else:
+           option_list = ["ALL_TOUCHED=FALSE"]
+
+
         for factor_id in factor_dict:
             factor = factor_dict[factor_id][args["suitability_layer"]]
             factor_stem, _ = os.path.splitext(factor)
-            LOGGER.debug("Found reference to factor %s.", factor_stem)
-            if not factor_stem in factor_set:
+            suitability_field_name = factor_dict[factor_id][args["suitability_field"]]
+            distance = factor_dict[factor_id][args["distance_field"]]
+            LOGGER.debug("Found reference to factor (%s, %s, %s).", factor_stem, suitability_field_name, distance)
+            if not (factor_stem, suitability_field_name, distance) in factor_set:
                 factor_uri = os.path.join(factor_folder, factor)
                 if not os.path.exists(factor_uri):
                    msg = "Missing file %s." % factor_uri
                    LOGGER.error(msg)
                    raise ValueError, msg
-                  
-                ds_uri = os.path.join(workspace, factor_name % factor_stem)
-                distance_uri = os.path.join(workspace, distance_name % factor_stem)
 
-                LOGGER.info("Rasterizing %s.", factor_stem)
-                raster_utils.create_raster_from_vector_extents_uri(factor_uri, cell_size, gdal_format, nodata, ds_uri)
-                if args["factor_inclusion"]:
-                   option_list=["ALL_TOUCHED=TRUE"]
+                if suitability_field_name == "" and distance == "":
+                   LOGGER.info("Rasterizing %s without sutibility field or distance field.", factor_stem)
+                   ds_uri = os.path.join(workspace, "%s.tif" % factor_stem)
+                   nodata = 0
+                   burn_value = 1
+                   gdal_format = gdal.GDT_Byte
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list)
+                elif distance == "":
+                   LOGGER.info("Rasterizing %s using sutibility field.", factor_stem)
+                   ds_uri = os.path.join(workspace, "%s_%s.tif" % (factor_stem, suitability_field_name))
+                   nodata = 0
+                   burn_value = 0
+                   suitability_field = ["ATTRIBUTE=%s" % suitability_field_name]
+                   gdal_format = gdal.GDT_Float64
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list + suitability_field)
+                elif suitability_field_name == "":
+                   ds_uri = raster_utils.temporary_filename()
+                   nodata = 1
+                   burn_value = 0
+                   LOGGER.info("Rasterizing %s using distance field.", factor_stem)
+                   gdal_format = gdal.GDT_Byte
+                   raster_utils.new_raster_from_base_uri(landcover_uri, ds_uri, raster_format, nodata, gdal_format)
+                   raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list)
+                   distance_uri = raster_utils.temporary_filename()
+                   fdistance_uri = os.path.join(workspace, "%s_%i.tif" % (factor_stem, distance))
+                   calculate_distance_raster_uri(ds_uri, distance_uri)
+
+                   nodata = -1
+                   def threshold(value):
+                       if value == nodata or value > distance:
+                           return nodata
+                       return value
+
+                   raster_utils.vectorize_datasets([distance_uri],
+                                                   threshold,
+                                                   fdistance_uri,
+                                                   raster_utils.get_datatype_from_uri(distance_uri),
+                                                   nodata,
+                                                   cell_size,
+                                                   "union")
+
                 else:
-                   option_list = []
-                raster_utils.rasterize_layer_uri(ds_uri, factor_uri, burn_value, option_list=option_list )
-                calculate_distance_raster_uri(ds_uri, distance_uri)
+                   raise ValueError, "Not sure what to do."
 
-                factor_set.add(factor_stem)
+                factor_set.add((factor_stem, suitability_field_name, distance))
+            else:
+               LOGGER.debug("Skipping already processed suitability layer.")
 
 ##    #select pixels
 ##    pixel_heap = disk_sort.sort_to_disk(distance_uri, 0)
-##    ds = gdal.Open(ds_uri)    
+##    ds = gdal.Open(ds_uri)
 ##
 ##    n_cols = ds.RasterXSize
 ##    n_rows = ds.RasterYSize
@@ -185,18 +224,18 @@ def execute(args):
 ##
 ##    dst_ds = gdal.Open(distance_uri, 1)
 ##    dst_band = dst_ds.GetRasterBand(1)
-##    
+##
 ##    for n, (value, flat_index, dataset_index) in enumerate(pixel_heap):
 ##        if n == 10:
 ##           break
 ##        dst_band.WriteBlock(flat_index % n_cols, flat_index / n_cols, nodata, 1)
 ##
-##    dst_band = None   
+##    dst_band = None
 ##    dst_ds = None
 
     return
-         
-  
+
+
     ###
     #compute intermediate data if needed
     ###
@@ -211,7 +250,7 @@ def execute(args):
 
     #combine rasters for weighting into sutibility raster, multiply proximity by 0.3
     #[suitability * (1-factor weight)] + (factors * factor weight) or only single raster
-    
+
     ###
     #reallocate pixels (disk heap sort, randomly reassign equal value pixels, applied in order)
     ###
@@ -256,7 +295,7 @@ def execute(args):
     ###
     htm = open(landcover_htm_uri,'w')
     htm.write("<html>")
-    
+
     LOGGER.debug("Tabulating %s.", landcover_uri)
     landcover_counts = raster_utils.unique_raster_values_count(landcover_uri)
 
@@ -271,7 +310,7 @@ def execute(args):
     for k in landcover_counts:
         if k not in landcover_transition_counts:
             landcover_transition_counts[k]=0
-    
+
     landcover_keys = landcover_counts.keys()
     landcover_keys.sort()
 
@@ -281,6 +320,6 @@ def execute(args):
     for k in landcover_keys:
         htm.write("<tr><td>%i</td><td>%i</td><td>%i</td><td>%i</td></tr>" % (k, landcover_counts[k], landcover_transition_counts[k], landcover_transition_counts[k] - landcover_counts[k]))
     htm.write("</table>")
-    
+
     htm.write("</html>")
     htm.close()
