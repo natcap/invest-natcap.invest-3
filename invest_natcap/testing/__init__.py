@@ -288,14 +288,14 @@ class GISTest(unittest.TestCase):
                         a_element = float(a_element)
                         b_element = float(b_element)
                         self.assertAlmostEqual(a_element, b_element,
-                            ('Values are significantly different at row %s col %s:'
+                            msg=('Values are significantly different at row %s col %s:'
                              ' a=%s b=%s' % (index, col_index, a_element,
                              b_element)))
                     except ValueError:
                         # we know for sure they arenot floats, so compare as
                         # non-floats.
                         self.assertEqual(a_element, b_element,
-                            ('Elements differ at row %s col%s: a=%s b=%s' %
+                            msg=('Elements differ at row %s col%s: a=%s b=%s' %
                             (index, col_index, a_element, b_element)))
 
     def assertMD5(self, uri, regression_hash):
