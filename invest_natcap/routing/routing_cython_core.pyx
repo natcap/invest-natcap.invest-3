@@ -1225,7 +1225,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
                 sink_queue.push(t)
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy()
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy() * 2.0
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
     
     LOGGER.debug("dem_sink_offset\n%s" % dem_sink_offset)
@@ -1270,13 +1270,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
         dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
         dem_offset += dem_edge_offset
     
-    LOGGER.info('resolve any cells that don\'t drain')
-    for row_index in range(1, dem_python_array.shape[0] - 1):
-        for col_index in range(1, dem_python_array.shape[1] - 1):
-            if not is_flat(row_index, col_index): continue
-            min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
-            if min_offset == dem_offset[row_index, col_index]:
-                dem_offset[row_index, col_index] += 0.5
     LOGGER.debug("dem_offset\n%s" % dem_offset)
     dem_python_array += dem_offset * numpy.float(1.0/10000.0)
     return dem_offset, dem_sink_offset, dem_edge_offset
