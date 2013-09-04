@@ -35,14 +35,24 @@
                     "label": "Landcover",
                     "required": true,
                     "helpText": "The landuse landcover raster."
-                }
+                },
+                {
+                    "id": "resolution",
+                    "args_id": "resolution",
+                    "label" : "Downsampling",
+                    "type": "text",
+                    "validText": "[0-9]*(\\.[0-9]*)?",
+                    "dataType": "float",
+                    "required": false,
+                    "helpText": "The spatial resolution of the model run."
+                }                    
             ]
         },
         {
             "id" : "calculate_transition",
+            "args_id" : "calculate_transition",            
             "type" : "container",
             "collapsible" : true,
-            "args_id" : "calculate_transition",
             "label" : "Specify transitions",
             "defaultValue": true,
             "elements" : [
@@ -54,60 +64,160 @@
                                         "id": "transition",
                                         "args_id": "transition",
                                         "type": "file",
-                                        "defaultValue": "../ScenarioGenerator/input/land_attributes.dbf",
-                                        "validateAs": {"type": "table"},
+                                        "defaultValue": "../ScenarioGenerator/input/land_attributes.csv",
                                         "label": "Transition Table",
                                         "required": true,
                                         "helpText": "This table contains the land cover transition likelihoods, priority of transitions, area change, proximity suitiblity, proximity effect distance, seed size, short name, and patch size."
                                     }
                                 ]
+                },
+                {
+                    "id": "transition_fields",
+                    "args_id": "transition_fields",
+                    "type": "container",
+                    "collapsible": true,
+                    "label": "Non-standard field names",
+                    "defaultValue": true,
+                    "elements": [
+                        {
+                            "id": "transition_field_list",
+                            "type": "list",
+                            "elements": [
+                                {
+                                    "id": "transition_id",
+                                    "args_id": "transition_id",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Suitability id",
+                                    "enabledBy": "transition",
+                                    "returns": "strings",
+                                    "defaultValue": "ID",
+                                    "required": true
+                                },
+                                {
+                                    "id": "percent_field",
+                                    "args_id": "change_field",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Change field",
+                                    "enabledBy": "transition",
+                                    "returns": "strings",
+                                    "defaultValue": "Percent Change",
+                                    "required": true
+                                },
+                                {
+                                    "id": "area_field",
+                                    "args_id": "area_field",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Area field",
+                                    "enabledBy": "transition",
+                                    "returns": "strings",
+                                    "defaultValue": "Area Change",
+                                    "required": true
+                                },                                        
+                                {
+                                    "id": "priority_field",
+                                    "args_id": "priority_field",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Priority field",
+                                    "enabledBy": "transition",
+                                    "returns": "strings",
+                                    "defaultValue": "Priority",
+                                    "required": false
+                                },
+                                {
+                                    "id": "proximity_field",
+                                    "args_id": "proximity_field",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Proximity distance field",
+                                    "enabledBy": "transition",
+                                    "returns": "strings",
+                                    "defaultValue": "Proximity",
+                                    "required": false
+                                }
+                            ]
+                        }
+                    ]
                 }
             ]
         },
         {
-            "id" : "workspace2_list",
-            "type" : "list",
-            "elements" : [
+            "id": "override_layer",
+            "type": "container",
+            "collapsible": true,
+            "args_id": "override_layer",
+            "label": "Override layer",
+            "defaultValue": true,
+            "elements": [
                 {
-                    "id": "override",
-                    "args_id": "override",
-                    "label": "Override Layer",                    
-                    "type": "file",
-                    "defaultValue": "../ScenarioGenerator/input/override.shp",
-                    "validateAs": {"type": "OGR"},                    
-                    "required": false,
-                    "helpText": "This is a vector (polygon) layer with land cover types in the same scale and projection as the input land cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
-                },
+                    "id" : "workspace2_list",
+                    "type" : "list",
+                    "elements" : [
+                        {
+                            "id": "override",
+                            "args_id": "override",
+                            "label": "Override Layer",                    
+                            "type": "file",
+                            "defaultValue": "../ScenarioGenerator/input/override.shp",
+                            "validateAs": {"type": "OGR"},                    
+                            "required": false,
+                            "helpText": "This is a vector (polygon) layer with land cover types in the same scale and projection as the input land cover. This layer is used to override all the changes and is applied after the rule conversion is complete."
+                        },
+                        {
+                            "id": "override_field",
+                            "args_id": "override_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Override field",
+                            "enabledBy": "override",
+                            "helpText" : "The field from the override table that contains the value for the override.",
+                            "returns": "strings"
+                        },
+                        {
+                            "id": "override_inclusion",
+                            "args_id": "override_inclusion",
+                            "type": "dropdown",
+                            "label": "Rasterization method",
+                            "options": ["All touched pixels", "Only pixels with covered center points"],
+                            "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
+                            "defaultValue": 0,
+                            "required": true,
+                            "enabledBy": "override_field",
+                            "helpText": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "constraints_layer",
+            "args_id": "contraints_layer",
+            "type": "container",
+            "collapsible": true,
+            "label": "Constraints layer",
+            "defaultsValue": true,
+            "elements": [
                 {
-                    "id": "override_field",
-                    "args_id": "override_field",
-                    "type": "OGRFieldDropdown",
-                    "label": "Override field",
-                    "enabledBy": "override",
-                    "helpText" : "The field from the override table that contains the value for the override.",
-                    "returns": "strings"
-                },
-                {
-                    "id": "override_inclusion",
-                    "args_id": "override_inclusion",
-                    "type": "dropdown",
-                    "label": "Rasterization method",
-                    "options": ["All touched pixels", "Only pixels with covered center points"],
-                    "returns": {"mapValues": {"All touched pixels": 0, "Only pixels with covered center points": 1}},
-                    "defaultValue": 0,
-                    "required": true,
-                    "enabledBy": "override_field",
-                    "helpText": ""
-                },  
-                {
-                    "id": "constraints",
-                    "args_id": "constraints",
-                    "label": "Constraints layer",
-                    "type": "file",
-                    "defaultValue": "../ScenarioGenerator/input/constraints.shp",
-                    "validateAs": {"type": "OGR"},                    
-                    "required": false,
-                    "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
+                    "id": "constraints_layer_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id": "constraints",
+                            "args_id": "constraints",
+                            "label": "Constraints layer",
+                            "type": "file",
+                            "defaultValue": "../ScenarioGenerator/input/constraints.shp",
+                            "validateAs": {"type": "OGR"},                    
+                            "required": false,
+                            "helpText": "This is a vector layer which indicates the parts of the landscape that are protected of have constraints to land cover change.  The layer should have one field named \"porosity\" with a valuebetween 0 and 1 where 0 means its fully protected and 1 means its fully open to change."
+                        },
+                        {
+                            "id": "constraints_field",
+                            "args_id": "constraints_field",
+                            "type": "OGRFieldDropdown",
+                            "label": "Constraints field",
+                            "enabledBy": "constraints",
+                            "helpText" : "The field from the override table that contains the value for the override.",
+                            "returns": "strings"
+                        }                        
+                    ]
                 }
             ]
         },
@@ -142,42 +252,6 @@
                             "helpText": "This table lists the factors that determine suitability of the land cover for change, and includes: the factor name, layer name, distance of influence, suitability value, weight of the factor, distance breaks, and applicable land cover."
                         },
                         {
-                            "id": "suitability_id",
-                            "args_id": "suitability_id",
-                            "type": "OGRFieldDropdown",
-                            "label": "Suitability id",
-                            "enabledBy": "suitability",
-                            "returns": "strings",
-                            "required": true
-                        },
-                        {
-                            "id": "suitability_layer",
-                            "args_id": "suitability_layer",
-                            "type": "OGRFieldDropdown",
-                            "label": "Suitability layer",
-                            "enabledBy": "suitability",
-                            "returns": "strings",
-                            "required": true
-                        },
-                        {
-                            "id": "suitability_field",
-                            "args_id": "suitability_field",
-                            "type": "OGRFieldDropdown",
-                            "label": "Suitability field",
-                            "enabledBy": "suitability",
-                            "returns": "strings",
-                            "required": true
-                        },
-                        {
-                            "id": "distance_field",
-                            "args_id": "distance_field",
-                            "type": "OGRFieldDropdown",
-                            "label": "Distance field",
-                            "enabledBy": "suitability",
-                            "returns": "strings",
-                            "required": true
-                        },                                                
-                        {
                             "id": "weight",
                             "args_id": "weight",
                             "label" : "Factor weight",
@@ -201,23 +275,58 @@
                             "helpText": ""
                         }
                     ]
-                }
-            ]
-        },
-        {
-            "id" : "workspace3_list",
-            "type" : "list",
-            "elements" : [        
+                },
                 {
-                    "id": "resolution",
-                    "args_id": "resolution",
-                    "label" : "Resolution",
-                    "type": "text",
-                    "validText": "[0-9]*(\\.[0-9]*)?",
-                    "dataType": "float",
-                    "required": false,
-                    "helpText": "The spatial resolution of the model run."
-                }    
+                    "id": "factors_field_container",
+                    "args_id": "factors_field_container",
+                    "type": "container",
+                    "collapsible": true,
+                    "label": "Non-standard fields",
+                    "elements": [
+                        {
+                            "id": "factors_field_list",
+                            "type": "list",
+                            "elements": [
+                                {
+                                    "id": "suitability_id",
+                                    "args_id": "suitability_id",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Suitability id",
+                                    "enabledBy": "suitability",
+                                    "returns": "strings",
+                                    "required": true
+                                },
+                                {
+                                    "id": "suitability_layer",
+                                    "args_id": "suitability_layer",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Suitability layer",
+                                    "enabledBy": "suitability",
+                                    "returns": "strings",
+                                    "required": true
+                                },
+                                {
+                                    "id": "suitability_field",
+                                    "args_id": "suitability_field",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Suitability field",
+                                    "enabledBy": "suitability",
+                                    "returns": "strings",
+                                    "required": true
+                                },
+                                {
+                                    "id": "distance_field",
+                                    "args_id": "distance_field",
+                                    "type": "OGRFieldDropdown",
+                                    "label": "Distance field",
+                                    "enabledBy": "suitability",
+                                    "returns": "strings",
+                                    "required": true
+                                }
+                            ]
+                        }
+                    ]
+                }
             ]
         }
     ]
