@@ -1406,7 +1406,9 @@ def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
-                    continue
+                    #If any neighbors are nodata, it's contaminated
+                    flow_array[row_index, col_index] = flow_nodata
+                    break
 
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
