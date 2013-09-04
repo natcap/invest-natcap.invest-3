@@ -138,79 +138,77 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
 
-    def test_viewshed(self):
-        array_shape = (400,400) 
-        viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
+    def angles_from_perimeter_cells(self, array_shape, viewpoint):
+        """Compute angles between consecutive cells along the perimeter from 0
+            Inputs:
+                -array_shape: tuple (row, col) as ndarray.shape containing the
+                size of the array from which to compute the perimeter
+                -viewpoint: tuple (row, col) indicating the position of the
+                observer
+                
+            Returns a sorted list of angles"""
         # list all perimeter cell center angles
         row_count, col_count = array_shape
-        print(row_count, col_count)
         # Create the rows on the right side from viewpoint to top right corner
-        perimeter_rows = np.array(range(viewpoint[0], -1, -1))
-        perimeter_cols = np.ones(perimeter_rows.size) * (col_count - 1)
+        rows = np.array(range(viewpoint[0], -1, -1))
+        cols = np.ones(rows.size) * (col_count - 1)
         # Create top row, avoiding repeat from what's already created
-        perimeter_rows = np.concatenate((perimeter_rows, \
-            np.zeros(col_count - 1)))
-        perimeter_cols = np.concatenate((perimeter_cols, \
-            np.array(range(col_count-2, -1, -1))))
+        rows = np.concatenate((rows, np.zeros(col_count - 1)))
+        cols = np.concatenate((cols, np.array(range(col_count-2, -1, -1))))
         # Create left side, avoiding repeat from top row
-        perimeter_rows = np.concatenate((perimeter_rows, \
-            np.array(range(1, row_count))))
-        perimeter_cols = np.concatenate((perimeter_cols, \
-            np.zeros(row_count - 1)))
+        rows = np.concatenate((rows, np.array(range(1, row_count))))
+        cols = np.concatenate((cols, np.zeros(row_count - 1)))
         # Create bottom row, avoiding repat from left side
-        perimeter_rows = np.concatenate((perimeter_rows, \
-            np.ones(col_count - 1) * (row_count -1)))
-        perimeter_cols = np.concatenate((perimeter_cols, \
-            np.array(range(1, col_count))))
+        rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
+        cols = np.concatenate((cols, np.array(range(1, col_count))))
         # Create last part of the right side, avoiding repeat from bottom row
-        perimeter_rows = np.concatenate((perimeter_rows, \
+        rows = np.concatenate((rows, \
             np.array(range(row_count - 2, viewpoint[0], -1))))
-        perimeter_cols = np.concatenate((perimeter_cols, \
+        cols = np.concatenate((cols, \
             np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
         # List the angles between each perimeter cell
         two_pi = 2.0 * math.pi
-        rad_to_deg = 180. / math.pi
-        angles = []
-        lenghts = []
-        delta_a = []
-        for i in range(perimeter_rows.size):
-            x1 = (perimeter_rows[i-1] - viewpoint[0], \
-                perimeter_cols[i-1] - viewpoint[1])
-            x2 = (perimeter_rows[i] - viewpoint[0], \
-                perimeter_cols[i] - viewpoint[1])
-            l1 = math.sqrt(x1[0]**2 + x1[1]**2)
-            l2 = math.sqrt(x2[0]**2 + x2[1]**2)
-            l = l1
-            #l = (l1 + l2) / 2.
-            a1 = (np.arctan2(-x1[0], x1[1]) + two_pi) % two_pi
-            a2 = (np.arctan2(-x2[0], x2[1]) + two_pi) % two_pi
-            delta_a.append((a2 - a1 + two_pi) % two_pi)
-            angles.append(a2)
-            lenghts.append(l)
+        r = np.array(range(rows.size))
+        p = (rows[r] - viewpoint[0], cols[r] - viewpoint[1])
+        angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
+        return angles
 
-        delta_a = np.array(delta_a)
-        lenghts = np.array(lenghts)
-        angles = np.array(angles)
-        print(np.amax(delta_a / np.amin(delta_a)))
+    def cell_angle(self, cell_pos, viewpoint_pos):
+        """Test the cell's angle to the viewpoint. 0 is the positive J axis
         
-        min_delta_a = np.amin(delta_a)
-        max_delta_a = np.amax(delta_a)
-        min_lenghts = np.amin(lenghts)
-        max_lenghts = np.amax(lenghts)
+            Inputs:
+                -cell_pos: coordinate tuple (row, col) of the cell position
+                -viewer_pos: coordinate tuple (row, col) of the viewer's 
+                position
+                
+            Returns the cell's angle in radians"""
+        two_pi = 2. * math.pi
+        return (np.arctan2(-(cell_pos[0]-viewpoint_pos[0]),
+            cell_pos[1]-viewpoint_pos[0]) + two_pi) % two_pi
 
-        print(lenghts)
-        lenghts -= min_lenghts
-        print(lenghts)
-        lenghts = lenghts / (max_lenghts-min_lenghts) * \
-            (1/min_delta_a-1/max_delta_a)
-        print(lenghts)
-        lenghts += 1. / (max_delta_a)
-        print(lenghts)
-        #plt.plot(angles, lenghts * delta_a)
-        plt.plot(angles, np.arcsin(angles))
-        #plt.plot(angles, lenghts)
-        #plt.plot(angles, delta_a)
-        plt.show()
+    def test_cell_angle(self):
+        """Simple test that ensures cell_angle is doing what it is supposed to"""
+        viewpoint_pos = (3, 3)
+        cell_pos = [(0,0), (0,3), (2,2), (2,4), (4,2), (3,4), (4,3), (4,4)]
+        # Pre-computed angles
+        pi = math.pi
+        precomputed_angles = np.array([3. * pi / 4., pi / 2., 3. * pi / 2., \
+            pi, 0., 5. * pi / 4., 3. * pi / 2., 7. * pi / 4.])
+        # compute the angles using cell_angles
+        computed_angles = []
+        for cell in cell_pos:
+            computed_angles.append(self.cell_angle(cell, viewpoint_pos))
+        # Convert computed result and compute error 
+        computed_angles = np.array(computed_angles)
+        error = np.sum(computed_angles - precomputed_angles)
+        print('error', error)
+        assert error < 1e-15
+
+    def test_viewshed(self):
+        array_shape = (400,400) 
+        viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
+
+        angles = self.angles_from_perimeter_cells(array_shape, viewpoint)
 
     def tare_down(self):
         pass
