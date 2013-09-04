@@ -488,14 +488,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
 
         #Just going to have to pull explicitly. Too late to go back and
         #rejigger now.
-        e_rast_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+        e_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_E_Risk_Raster.tif')
 
         e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
                 e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
 
         #GETTING MEANS OF THE C RASTER HERE
 
-        c_rast_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
+        c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_C_Risk_Raster.tif')
 
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
@@ -1001,8 +1001,8 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
         #pre-calc'd rasters. We should be able to use vec_ds to straight add 
         #the pixels and divide by the saved denoms total. These are the URIs to
         #which these parts of the risk equation will be burned. 
-        c_out_uri = os.path.join(inter_dir, h + '_' + s + '_C_Risk_Raster.tif')
-        e_out_uri = os.path.join(inter_dir, h + '_' + s + '_E_Risk_Raster.tif')
+        c_out_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_C_Risk_Raster.tif')
+        e_out_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_E_Risk_Raster.tif')
 
         #Each of the E/C calculations should take in all of the relevant 
         #subdictionary data, and return a raster to be used in risk calculation. 
