@@ -113,7 +113,7 @@ class TestHRA(invest_natcap.testing.GISTest):
                 elif tail == '.html':
                     #There is only one file here that we want to compare against.
                     #Just explicitly call it so I can be done.
-                    exp_html = './invest-data/test/data/hra_regression_data/Output/HTML_Plots/Sub_Region_Averaged_Results_[2013-08-09_14_49].html'
+                    exp_html = './invest-data/test/data/hra_regression_data/Output/HTML_Plots/Sub_Region_Averaged_Results_[2013-09-05_14_34].html'
 
                     self.assertTrue(filecmp.cmp(item, exp_html))
         
