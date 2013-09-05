@@ -46,6 +46,17 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         hra.execute(self.args)
 
+    def test_euc_withShape_smoke(self):
+        '''Testing that we can use shapefiles as criteria inputs, and that both
+        the CSV part and the file structure part will work.'''
+
+        self.args['risk_eq'] = 'Euclidean'
+        self.args['decay_eq'] = 'Linear'
+
+        self.args['csv_uri'] = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings_shape'
+        
+        hra.execute(self.args)
+
     def test_euc_withAOI_smoke(self):
         '''Want to make sure that we can run from non-core when including an AOI
         overlay as a final output. That should produce an HTML folder, containining
@@ -102,7 +113,7 @@ class TestHRA(invest_natcap.testing.GISTest):
                 elif tail == '.html':
                     #There is only one file here that we want to compare against.
                     #Just explicitly call it so I can be done.
-                    exp_html = './invest-data/test/data/hra_regression_data/Output/HTML_Plots/Sub_Region_Averaged_Results_[2013-08-09_14_49].html'
+                    exp_html = './invest-data/test/data/hra_regression_data/Output/HTML_Plots/Sub_Region_Averaged_Results_[2013-09-05_14_34].html'
 
                     self.assertTrue(filecmp.cmp(item, exp_html))
         
