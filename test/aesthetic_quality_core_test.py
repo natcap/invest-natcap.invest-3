@@ -152,35 +152,26 @@ class TestAestheticQualityCore(unittest.TestCase):
             right to the viewpoint, and the others are enumerated clockwise."""
         # list all perimeter cell center angles
         row_count, col_count = array_shape
-        # Create the rows on the right side from viewpoint to top right corner
-        rows = np.array(range(viewpoint[0], -1, -1))
-        cols = np.ones(rows.size) * (col_count - 1)
-        # Create top row, avoiding repeat from what's already created
-        rows = np.concatenate((rows, np.zeros(col_count - 1)))
-        cols = np.concatenate((cols, np.array(range(col_count-2, -1, -1))))
+        # Create top row, except cell (0,0)
+        rows = np.zeros(col_count - 1)
+        cols = np.array(range(col_count-1, 0, -1))
         # Create left side, avoiding repeat from top row
-        rows = np.concatenate((rows, np.array(range(1, row_count))))
+        rows = np.concatenate((rows, np.array(range(row_count -1))))
         cols = np.concatenate((cols, np.zeros(row_count - 1)))
         # Create bottom row, avoiding repat from left side
         rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
-        cols = np.concatenate((cols, np.array(range(1, col_count))))
-        # If viewer is in the lower right corner, then we must handle this
-        # special case separately:
-        if (rows[-1] == rows[0]) and (cols[-1] == cols[0]):
-            # Remove the last point, as it's the same as the first
-            rows = np.resize(rows, (rows.size-1,))
-            cols = np.resize(cols, (cols.size-1,))
-        else:
-            # Create last part of the right side, avoiding repeat from bottom row
-            rows = np.concatenate((rows, \
-                np.array(range(row_count - 2, viewpoint[0], -1))))
-            cols = np.concatenate((cols, \
-                np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
-
+        cols = np.concatenate((cols, np.array(range(col_count - 1))))
+        # Create last part of the right side, avoiding repeat from bottom row
+        rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
+        cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
+        # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
+        rows = np.roll(rows, viewpoint[0])
+        cols = np.roll(cols, viewpoint[0])
         return (rows, cols)
 
     def test_get_perimeter_cells(self):
         """Test get_perimeter_cells on 2 hand-designed examples"""
+        # First hand-designed example: 3x4 raster
         # Given the shape of the array below and the viewpoint coordinates
         array_shape = (3, 4)
         viewpoint = (2, 3)
@@ -190,6 +181,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Test if the computed rows and columns agree with the expected ones
         computed_rows, computed_cols = \
             self.get_perimeter_cells(array_shape, viewpoint)
+        print('expected rows', expected_rows)
+        print('computed rows', computed_rows)
+        print('expected cols', expected_cols)
+        print('computed cols', computed_cols)
         message = 'number of rows disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_rows.shape == computed_rows.shape, message
@@ -203,6 +198,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'difference in columns: ' + str(col_diff)
         assert col_diff == 0, message
 
+        # Second hand-designed example: 5x3 raster
         # Given the shape of the array below and the viewpoint coordinates
         array_shape = (5, 3)
         viewpoint = (0, 1)
@@ -267,26 +263,11 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_cell_angle(self):
         """Simple test that ensures cell_angle is doing what it is supposed to"""
         viewpoint_pos = (3, 3)
-        cell_pos = [(0,0), \
-        (0,3), \
-        (2,2), \
-        (2,4), \
-        (3,0), \
-        (3,4), \
-        (4,2), \
-        (4,3), \
-        (4,4)]
+        cell_pos = [(0,0),(0,3),(2,2),(2,4),(3,0),(3,4),(4,2),(4,3),(4,4)]
         # Pre-computed angles
         pi = math.pi
-        precomputed_angles = np.array([3. * pi / 4., \
-        pi / 2., \
-        3. * pi / 4., \
-        pi / 4., \
-        pi, \
-        0., \
-        5. * pi / 4., \
-        3. * pi / 2., \
-        7. * pi / 4.])
+        precomputed_angles = np.array([3.*pi/4.,pi/2.,3.*pi/4.,pi/4.,pi,0., \
+        5.*pi/4., 3.*pi/2., 7.*pi/4.])
         # compute the angles using cell_angles
         computed_angles = []
         for cell in cell_pos:
