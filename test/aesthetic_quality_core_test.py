@@ -181,10 +181,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Test if the computed rows and columns agree with the expected ones
         computed_rows, computed_cols = \
             self.get_perimeter_cells(array_shape, viewpoint)
-        print('expected rows', expected_rows)
-        print('computed rows', computed_rows)
-        print('expected cols', expected_cols)
-        print('computed cols', computed_cols)
         message = 'number of rows disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_rows.shape == computed_rows.shape, message
@@ -244,7 +240,19 @@ class TestAestheticQualityCore(unittest.TestCase):
         function cell_angles"""
         array_shape = (400, 400)
         viewpoint = (350, 200)
-         
+        # Get the perimeter cells
+        perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
+        # Compute angles associated to the perimeter cells
+        angles_fast = self.cell_angles(perimeter_cells, viewpoint)
+        # Compute the same angles individually
+        angles_naive = []
+        for cell in zip(perimeter_cells[0], perimeter_cells[1]):
+            angles_naive.append(self.cell_angle(cell, viewpoint))
+        angles_naive = np.array(angles_naive)
+        # Compute the error between both algorithms
+        error = np.sum(np.absolute(angles_fast - angles_naive))
+        message = 'error between cell angle algorithms: ' + str(error)
+        assert error < 1e-15, message
 
     def cell_angle(self, cell_pos, viewpoint_pos):
         """Compute the angle from a single cell to the viewpoint where 0 is 
@@ -258,7 +266,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             Returns the cell's angle in radians"""
         two_pi = 2. * math.pi
         return (np.arctan2(-(cell_pos[0]-viewpoint_pos[0]),
-            cell_pos[1]-viewpoint_pos[0]) + two_pi) % two_pi
+            cell_pos[1]-viewpoint_pos[1]) + two_pi) % two_pi
 
     def test_cell_angle(self):
         """Simple test that ensures cell_angle is doing what it is supposed to"""
