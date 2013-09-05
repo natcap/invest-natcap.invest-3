@@ -688,7 +688,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
                               shape=(n_rows, n_cols))
     mask_data_file = tempfile.TemporaryFile()
-    cdef numpy.ndarray[numpy.npy_uint8_t, ndim=1] mask_array                           
+    cdef numpy.ndarray[numpy.npy_uint, ndim=1] mask_array                           
     dem_sink_offset[:] = numpy.inf
 
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
