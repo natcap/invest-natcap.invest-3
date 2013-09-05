@@ -684,7 +684,12 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
                 sink_queue.push(t)
 
     LOGGER.info('calculate distances from sinks to other flat cells')
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_sink_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
+    dem_sink_offset_data_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_sink_offset = numpy.memmap(dem_sink_offset_data_file, dtype=numpy.float32, mode='w+',
+                              shape=(n_rows, n_cols))
+    dem_offset_data_file = tempfile.TemporaryFile()
+    cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
+                              shape=(n_rows, n_cols))                              
     dem_sink_offset[:] = numpy.inf
 
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
@@ -704,11 +709,10 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
                 sink_queue.push(t)
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy() * 2.0
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
+    numpy.multiply(dem_sink_offset, 2.0, dem_offset)
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = dem_sink_offset
     cdef int max_distance
     
-    LOGGER.debug("dem_sink_offset\n%s" % dem_sink_offset)
     LOGGER.info('calculate distances from edge to center of flat regions')
     edge_cell_list = []
     cdef queue[Row_Col_Weight_Tuple] edge_queue
@@ -727,7 +731,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
                     
     if edge_queue.size() > 0:
         LOGGER.info('edge cell queue size %s' % (edge_queue.size()))
-        dem_edge_offset = numpy.empty(dem_python_array.shape, dtype=numpy.float32)
         dem_edge_offset[:] = numpy.inf
         
         while edge_queue.size() > 0:
