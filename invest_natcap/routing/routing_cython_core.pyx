@@ -607,8 +607,45 @@ cdef struct Row_Col_Weight_Tuple:
     int col_index
     int weight
 
-                    
-def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
+    
+cdef int _is_flat(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, float[:, :] dem_array, float nodata_value):
+    cdef int neighbor_row_index, neighbor_col_index
+    if row_index <= 0 or row_index >= n_rows - 1 or col_index <= 0 or col_index >= n_cols - 1:
+        return 0
+    if dem_array[row_index, col_index] == nodata_value: return 0    
+    for neighbor_index in xrange(8):
+        neighbor_row_index = row_index + row_offsets[neighbor_index]            
+        neighbor_col_index = col_index + col_offsets[neighbor_index]            
+        
+        if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
+            return 0
+        if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[row_index, col_index]:
+            return 0
+    return 1
+              
+
+cdef int _is_sink(int row_index, int col_index, int n_rows, int n_cols, int* row_offsets, int *col_offsets, float[:, :] dem_array, float nodata_value):
+    cdef int neighbor_row_index, neighbor_col_index
+    if dem_array[row_index, col_index] == nodata_value: return 0
+            
+    if _is_flat(row_index, col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
+        return 0
+    
+    for neighbor_index in xrange(8):
+        neighbor_row_index = row_index + row_offsets[neighbor_index]
+        if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
+            continue
+        neighbor_col_index = col_index + col_offsets[neighbor_index]
+        if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
+            continue
+        
+        if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
+                _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value)):
+            return 1
+    return 0              
+        
+        
+def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
     """This function resolves the flat regions on a DEM that cause undefined
         flow directions to occur during routing.  The algorithm is the one
         presented in "The assignment of drainage direction over float surfaces
@@ -624,9 +661,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             
         returns nothing"""
 
-    def calc_flat_index(row_index, col_index):
-        """Helper function to calculate a flat index"""
-        return row_index * dem_array.shape[0] + col_index
     
     cdef float[:, :] dem_array = dem_python_array
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
@@ -634,49 +668,18 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
     cdef int n_rows = dem_array.shape[0]
     cdef int n_cols = dem_array.shape[1]
     cdef queue[Row_Col_Weight_Tuple] sink_queue
+    cdef int row_index, col_index
 
-    def is_flat(int row_index, int col_index):
-        if row_index <= 0 or row_index >= n_rows - 1 or col_index <= 0 or col_index >= n_cols - 1:
-            return False
-        if dem_array[row_index, col_index] == nodata_value: return False    
-        for neighbor_index in xrange(8):
-            neighbor_row_index = row_index + row_offsets[neighbor_index]            
-            neighbor_col_index = col_index + col_offsets[neighbor_index]            
-            
-            if dem_array[neighbor_row_index, neighbor_col_index] == nodata_value:
-                return False
-            if dem_array[neighbor_row_index, neighbor_col_index] < dem_array[row_index, col_index]:
-                return False
-        return True
 
-    def is_sink(row_index, col_index):
-        if dem_array[row_index, col_index] == nodata_value: return False
-        if row_index < 0 or row_index >= n_rows or col_index < 0 or col_index >= n_cols:
-            raise Exception("%s %s out of bounds from %s %s" % (row_index, col_index, n_rows, n_cols))
-            
-        if is_flat(row_index, col_index):
-            return False
-        
-        for neighbor_index in xrange(8):
-            neighbor_row_index = row_index + row_offsets[neighbor_index]
-            if neighbor_row_index < 0 or neighbor_row_index >= n_rows:
-                continue
-            neighbor_col_index = col_index + col_offsets[neighbor_index]
-            if neighbor_col_index < 0 or neighbor_col_index >= n_cols:
-                continue
-            
-            if (dem_array[neighbor_row_index, neighbor_col_index] == dem_array[row_index, col_index] and
-                    is_flat(neighbor_row_index, neighbor_col_index)):
-                return True
-        return False
+    
 
     #Identify sink cells
     LOGGER.info('identify sink cells')
     sink_cell_list = []
     cdef Row_Col_Weight_Tuple t
-    for row_index in range(dem_python_array.shape[0]):
-        for col_index in range(dem_python_array.shape[1]):
-            if is_sink(row_index, col_index):
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            if _is_sink(row_index, col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value):
                 t = Row_Col_Weight_Tuple(row_index, col_index, 0)
                 sink_queue.push(t)
 
@@ -696,23 +699,24 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
         for neighbor_index in xrange(8):
             neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
             neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-            if is_flat(neighbor_row_index, neighbor_col_index) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
+            if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 sink_queue.push(t)
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy() * 2.0
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
+    cdef int max_distance
     
     LOGGER.debug("dem_sink_offset\n%s" % dem_sink_offset)
     LOGGER.info('calculate distances from edge to center of flat regions')
     edge_cell_list = []
     cdef queue[Row_Col_Weight_Tuple] edge_queue
 
-    for row_index in range(1, dem_python_array.shape[0] - 1):
-        for col_index in range(1, dem_python_array.shape[1] - 1):
+    for row_index in range(1, n_rows - 1):
+        for col_index in range(1, n_cols - 1):
             #only consider flat cells
-            if not is_flat(row_index, col_index): continue
+            if not _is_flat(row_index, col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value): continue
             for neighbor_index in xrange(8):
                 neighbor_row_index = row_index + row_offsets[neighbor_index]
                 neighbor_col_index = col_index + col_offsets[neighbor_index]
@@ -736,7 +740,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
             for neighbor_index in xrange(8):
                 neighbor_row_index = current_cell_tuple.row_index + row_offsets[neighbor_index]
                 neighbor_col_index = current_cell_tuple.col_index + col_offsets[neighbor_index]
-                if is_flat(neighbor_row_index, neighbor_col_index) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
+                if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
                     t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                     edge_queue.push(t)
                     
