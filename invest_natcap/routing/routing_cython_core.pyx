@@ -15,6 +15,7 @@ from invest_natcap import raster_utils
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libc.math cimport atan
+from libc.math cimport atan2
 from libc.math cimport tan
 from libc.math cimport sqrt
 
@@ -1415,7 +1416,7 @@ def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
-                flow_direction = numpy.atan2(s_2, s_1) #Eqn 3
+                flow_direction = atan2(s_2, s_1) #Eqn 3
                 if flow_direction < 0: #Eqn 4
                         #If the flow direction goes off one side, set flow
                         #direction to that side and the slope to the straight line
