@@ -164,8 +164,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Create bottom row, avoiding repat from left side
         rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
         cols = np.concatenate((cols, np.array(range(1, col_count))))
+        # If viewer is in the lower right corner, then we must handle this
+        # special case separately:
         if (rows[-1] == rows[0]) and (cols[-1] == cols[0]):
-            print('lower right corner detected')
+            # Remove the last point, as it's the same as the first
             rows = np.resize(rows, (rows.size-1,))
             cols = np.resize(cols, (cols.size-1,))
         else:
@@ -181,24 +183,47 @@ class TestAestheticQualityCore(unittest.TestCase):
         """Test get_perimeter_cells on 2 hand-designed examples"""
         # Given the shape of the array below and the viewpoint coordinates
         array_shape = (3, 4)
-        viewpoint = (2, 2)
+        viewpoint = (2, 3)
         # The coordinates of perimeter cells should be as follows:
-        expected_rows = np.array([2, 1, 0, 0, 0, 0, 1, 2, 2, 2])
-        expected_cols = np.array([3, 3, 3, 2, 1, 0, 0, 0, 1, 2])
+        expected_rows = np.array([2.,1.,0.,0.,0.,0.,1.,2.,2.,2.])
+        expected_cols = np.array([3.,3.,3.,2.,1.,0.,0.,0.,1.,2.])
         # Test if the computed rows and columns agree with the expected ones
         computed_rows, computed_cols = \
             self.get_perimeter_cells(array_shape, viewpoint)
-        print('computed_rows', computed_rows)
-        message = 'rows disagree: expected' + str(expected_rows.shape) + \
+        message = 'number of rows disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_rows.shape == computed_rows.shape, message
-        message = 'cols disagree: expected' + str(expected_rows.shape) + \
+        message = 'number of cols disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_cols.shape == computed_cols.shape, message
-        error = np.sum(expected_rows - computed_rows) + \
-            np.sum(expected_cols - computed_cols)
-        print(error)
-        assert error < 1e-15
+        row_diff = np.sum(np.absolute(expected_rows - computed_rows))
+        message = 'difference in rows: ' + str(row_diff)
+        assert row_diff == 0, message
+        col_diff = np.sum(np.absolute(expected_cols - computed_cols))
+        message = 'difference in columns: ' + str(col_diff)
+        assert col_diff == 0, message
+
+        # Given the shape of the array below and the viewpoint coordinates
+        array_shape = (5, 3)
+        viewpoint = (0, 1)
+        # The coordinates of perimeter cells should be as follows:
+        expected_rows = np.array([0.,0.,0.,1.,2.,3.,4.,4.,4.,3.,2.,1.])
+        expected_cols = np.array([2.,1.,0.,0.,0.,0.,0.,1.,2.,2.,2.,2.])
+        # Test if the computed rows and columns agree with the expected ones
+        computed_rows, computed_cols = \
+            self.get_perimeter_cells(array_shape, viewpoint)
+        message = 'number of rows disagree: expected' + str(expected_rows.shape) + \
+            ', computed' + str(computed_rows.shape)
+        assert expected_rows.shape == computed_rows.shape, message
+        message = 'number of cols disagree: expected' + str(expected_rows.shape) + \
+            ', computed' + str(computed_rows.shape)
+        assert expected_cols.shape == computed_cols.shape, message
+        row_diff = np.sum(np.absolute(expected_rows - computed_rows))
+        message = 'difference in rows: ' + str(row_diff)
+        assert row_diff == 0, message
+        col_diff = np.sum(np.absolute(expected_cols - computed_cols))
+        message = 'difference in columns: ' + str(col_diff)
+        assert col_diff == 0, message
 
     def cell_angles(self, cell_coords, viewpoint):
         """Compute angles between cells and viewpoint where 0 angle is right of
