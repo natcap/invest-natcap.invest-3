@@ -138,15 +138,18 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
 
-    def angles_from_perimeter_cells(self, array_shape, viewpoint):
-        """Compute angles between consecutive cells along the perimeter from 0
+    def get_perimeter_cells(self, array_shape, viewpoint):
+        """Compute cells along the perimeter of an array.
+
             Inputs:
                 -array_shape: tuple (row, col) as ndarray.shape containing the
                 size of the array from which to compute the perimeter
                 -viewpoint: tuple (row, col) indicating the position of the
                 observer
                 
-            Returns a sorted list of angles"""
+            Returns a tuple (rows, cols) of the cell rows and columns following
+            the convention of numpy.where() where the first cell is immediately
+            right to the viewpoint, and the others are enumerated clockwise."""
         # list all perimeter cell center angles
         row_count, col_count = array_shape
         # Create the rows on the right side from viewpoint to top right corner
@@ -162,10 +165,48 @@ class TestAestheticQualityCore(unittest.TestCase):
         rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
         cols = np.concatenate((cols, np.array(range(1, col_count))))
         # Create last part of the right side, avoiding repeat from bottom row
-        rows = np.concatenate((rows, \
-            np.array(range(row_count - 2, viewpoint[0], -1))))
-        cols = np.concatenate((cols, \
-            np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
+        if (row_count - viewpoint[0] - 2) > 0:
+            rows = np.concatenate((rows, \
+                np.array(range(row_count - 2, viewpoint[0], -1))))
+            cols = np.concatenate((cols, \
+                np.ones(row_count - viewpoint[0] - 2) * (col_count - 1)))
+
+        return (rows, cols)
+
+    def test_get_perimeter_cells(self):
+        """Test get_perimeter_cells on 2 hand-designed examples"""
+        # Given the shape of the array below and the viewpoint coordinates
+        array_shape = (3, 4)
+        viewpoint = (2, 2)
+        # The coordinates of perimeter cells should be as follows:
+        expected_rows = np.array([2, 1, 0, 0, 0, 0, 1, 2, 2, 2])
+        expected_cols = np.array([3, 3, 3, 2, 1, 0, 0, 0, 1, 2])
+        # Test if the computed rows and columns agree with the expected ones
+        computed_rows, computed_cols = \
+            self.get_perimeter_cells(array_shape, viewpoint)
+        print('computed_rows', computed_rows)
+        message = 'rows disagree: expected' + str(expected_rows.shape) + \
+            ', computed' + str(computed_rows.shape)
+        assert expected_rows.shape == computed_rows.shape, message
+        message = 'cols disagree: expected' + str(expected_rows.shape) + \
+            ', computed' + str(computed_rows.shape)
+        assert expected_cols.shape == computed_cols.shape, message
+        error = np.sum(expected_rows - computed_rows) + \
+            np.sum(expected_cols - computed_cols)
+        print(error)
+        assert error < 1e-15
+
+    def cell_angles(self, cell_coords, viewpoint):
+        """Compute angles between cells and viewpoint where 0 angle is right of
+        viewpoint.
+            Inputs:
+                -cell_coords: coordinate tuple (rows, cols) as numpy.where()
+                from which to compute the angles
+                -viewpoint: tuple (row, col) indicating the position of the
+                observer. Each of row and col is an integer.
+                
+            Returns a sorted list of angles"""
+        rows, cols = cell_coords
         # List the angles between each perimeter cell
         two_pi = 2.0 * math.pi
         r = np.array(range(rows.size))
@@ -173,8 +214,16 @@ class TestAestheticQualityCore(unittest.TestCase):
         angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
         return angles
 
+    def test_cell_angles(self):
+        """Test the angles computed by angles_from_perimeter_cells agains the
+        function cell_angles"""
+        array_shape = (400, 400)
+        viewpoint = (350, 200)
+         
+
     def cell_angle(self, cell_pos, viewpoint_pos):
-        """Test the cell's angle to the viewpoint. 0 is the positive J axis
+        """Compute the angle from a single cell to the viewpoint where 0 is 
+        the positive J axis:
         
             Inputs:
                 -cell_pos: coordinate tuple (row, col) of the cell position
@@ -208,7 +257,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         array_shape = (400,400) 
         viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
 
-        angles = self.angles_from_perimeter_cells(array_shape, viewpoint)
+        #angles = self.cell_angles(array_shape, viewpoint)
 
     def tare_down(self):
         pass

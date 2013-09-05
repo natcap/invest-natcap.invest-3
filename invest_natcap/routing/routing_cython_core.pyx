@@ -15,6 +15,7 @@ from invest_natcap import raster_utils
 from libcpp.stack cimport stack
 from libcpp.queue cimport queue
 from libc.math cimport atan
+from libc.math cimport atan2
 from libc.math cimport tan
 from libc.math cimport sqrt
 
@@ -1225,7 +1226,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
                 sink_queue.push(t)
 
     dem_sink_offset[dem_sink_offset == numpy.inf] = 0
-    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy()
+    cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_offset = dem_sink_offset.copy() * 2.0
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset
     
     LOGGER.debug("dem_sink_offset\n%s" % dem_sink_offset)
@@ -1270,13 +1271,6 @@ def resolve_flat_regions_for_drainage(dem_python_array, nodata_value):
         dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
         dem_offset += dem_edge_offset
     
-    LOGGER.info('resolve any cells that don\'t drain')
-    for row_index in range(1, dem_python_array.shape[0] - 1):
-        for col_index in range(1, dem_python_array.shape[1] - 1):
-            if not is_flat(row_index, col_index): continue
-            min_offset = numpy.min(dem_offset[row_index-1:row_index+2, col_index-1:col_index+2])
-            if min_offset == dem_offset[row_index, col_index]:
-                dem_offset[row_index, col_index] += 0.5
     LOGGER.debug("dem_offset\n%s" % dem_offset)
     dem_python_array += dem_offset * numpy.float(1.0/10000.0)
     return dem_offset, dem_sink_offset, dem_edge_offset
@@ -1413,47 +1407,30 @@ def flow_direction_inf_noresolution(dem_uri, flow_direction_uri):
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == dem_nodata or e_2 == dem_nodata:
-                    continue
+                    #If any neighbors are nodata, it's contaminated
+                    flow_array[row_index, col_index] = flow_nodata
+                    break
 
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
-                
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
-                if s_1 < 0 and s_2 < 0:
-                    #uphill slope 
-                    continue 
-                
-                #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
-                
-                
-                if s_1 < 0:
-                    flow_direction = max_r
-                    slope = s_2
-                elif s_2 < 0:
-                    flow_direction = 0
-                    slope = s_1
-                else:
-                    try:
-                        flow_direction = atan(s_2 / s_1) #Eqn 3
-                    except ZeroDivisionError:
-                        flow_direction = max_r
-
-                    if flow_direction < 0: #Eqn 4
+                flow_direction = atan2(s_2, s_1) #Eqn 3
+                if flow_direction < 0: #Eqn 4
                         #If the flow direction goes off one side, set flow
                         #direction to that side and the slope to the straight line
                         #distance slope
-                        flow_direction = 0
-                        slope = s_1
-                    elif flow_direction > atan(d_2 / d_1): #Eqn 5
+                    flow_direction = 0
+                    slope = s_1
+                elif flow_direction > max_r: #Eqn 5
                         #If the flow direciton goes off the diagonal side, figure
                         #out what its value is and
-                        flow_direction = max_r
-                        slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
-                    else:
-                        slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
-
+                    flow_direction = max_r
+                    slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                else:
+                    slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                    
                 if slope > slope_max:
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
