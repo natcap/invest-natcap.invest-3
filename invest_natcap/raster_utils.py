@@ -1418,6 +1418,16 @@ def extract_band_and_nodata(dataset, get_array=False):
     #Otherwise just return the band and nodata
     return band, nodata
 
+def calculate_value_not_in_dataset_uri(dataset_uri):
+    """Calcualte a value not contained in a dataset.  Useful for calculating
+        nodata values.
+
+        dataset - a GDAL dataset
+
+        returns a number not contained in the dataset"""
+    ds = gdal.Open(dataset_uri)
+    return calculate_value_not_in_dataset(ds)
+    
 def calculate_value_not_in_dataset(dataset):
     """Calcualte a value not contained in a dataset.  Useful for calculating
         nodata values.
