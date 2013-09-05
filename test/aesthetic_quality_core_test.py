@@ -164,8 +164,12 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Create bottom row, avoiding repat from left side
         rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
         cols = np.concatenate((cols, np.array(range(1, col_count))))
-        # Create last part of the right side, avoiding repeat from bottom row
-        if (row_count - viewpoint[0] - 2) > 0:
+        if (rows[-1] == rows[0]) and (cols[-1] == cols[0]):
+            print('lower right corner detected')
+            rows = np.resize(rows, (rows.size-1,))
+            cols = np.resize(cols, (cols.size-1,))
+        else:
+            # Create last part of the right side, avoiding repeat from bottom row
             rows = np.concatenate((rows, \
                 np.array(range(row_count - 2, viewpoint[0], -1))))
             cols = np.concatenate((cols, \
@@ -238,20 +242,35 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_cell_angle(self):
         """Simple test that ensures cell_angle is doing what it is supposed to"""
         viewpoint_pos = (3, 3)
-        cell_pos = [(0,0), (0,3), (2,2), (2,4), (4,2), (3,4), (4,3), (4,4)]
+        cell_pos = [(0,0), \
+        (0,3), \
+        (2,2), \
+        (2,4), \
+        (3,0), \
+        (3,4), \
+        (4,2), \
+        (4,3), \
+        (4,4)]
         # Pre-computed angles
         pi = math.pi
-        precomputed_angles = np.array([3. * pi / 4., pi / 2., 3. * pi / 2., \
-            pi, 0., 5. * pi / 4., 3. * pi / 2., 7. * pi / 4.])
+        precomputed_angles = np.array([3. * pi / 4., \
+        pi / 2., \
+        3. * pi / 4., \
+        pi / 4., \
+        pi, \
+        0., \
+        5. * pi / 4., \
+        3. * pi / 2., \
+        7. * pi / 4.])
         # compute the angles using cell_angles
         computed_angles = []
         for cell in cell_pos:
             computed_angles.append(self.cell_angle(cell, viewpoint_pos))
         # Convert computed result and compute error 
         computed_angles = np.array(computed_angles)
-        error = np.sum(computed_angles - precomputed_angles)
-        print('error', error)
-        assert error < 1e-15
+        error = np.sum(np.absolute(computed_angles - precomputed_angles))
+        message = 'error on cell angles is ' + str(error)
+        assert error < 1e-14, message
 
     def test_viewshed(self):
         array_shape = (400,400) 
