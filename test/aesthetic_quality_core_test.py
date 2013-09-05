@@ -287,10 +287,23 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 1e-14, message
 
     def test_viewshed(self):
-        array_shape = (400,400) 
+        array_shape = (4,4) 
         viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
 
-        #angles = self.cell_angles(array_shape, viewpoint)
+        # 1- get perimeter cells
+        perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
+        # 1.1- remove perimeter cell if same coord as viewpoint
+        # 2- compute cell angles
+        angles = self.cell_angles(perimeter_cells, viewpoint)
+        # 3- build event lists
+        print('angles', angles.size, angles)
+        add_cell_events = []
+        cell_center_events = []
+        remove_cell_events = []
+        # 5- compute angles on raster cells + add to event lists
+        aesthetic_quality_core.list_extreme_angles(array_shape, viewpoint)
+        rows = range(array_shape[0])
+        cols = range(array_shape[1])
 
     def tare_down(self):
         pass
