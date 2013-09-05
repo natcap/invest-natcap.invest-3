@@ -2254,7 +2254,7 @@ def assert_datasets_in_same_projection(dataset_uri_list):
 
     for index in range(len(dataset_projections)-1):
         if not dataset_projections[index][0].IsSame(dataset_projections[index+1][0]):
-            raise DifferentProjections(
+            LOGGER.warn(
                 "These two datasets are not in the same projection."
                 " The different projections are:\n\n'filename: %s'\n%s\n\nand:\n\n'filename:%s'\n%s\n\n"
                 "Note there may be other files not projected, this function reports the first"
@@ -2339,6 +2339,10 @@ def resize_and_resample_dataset(
     output_dataset = gdal_driver.Create(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)
     output_band = output_dataset.GetRasterBand(1)
+    if original_nodata is None:
+        LOGGER.debug('original nodata is %s' % original_nodata)
+        original_nodata = float(calculate_value_not_in_dataset(original_dataset))
+        LOGGER.debug('setting new nodata to %s' % original_nodata)
     output_band.SetNoDataValue(original_nodata)
     output_band.Fill(original_nodata)
 
