@@ -162,11 +162,23 @@ def execute(args):
     # Get out_nodata values so that we can avoid any issues when running
     # operations
     Kc_nodata = raster_utils.get_nodata_from_uri(tmp_Kc_raster_uri)
+    if Kc_nodata is None:
+        Kc_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(tmp_Kc_raster_uri))
     root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
+    if root_nodata is None:
+        root_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(tmp_root_raster_uri))
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
+    if precip_nodata is None:
+        precip_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(precip_uri))
     eto_nodata = raster_utils.get_nodata_from_uri(eto_uri)
+    if eto_nodata is None:
+        eto_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(eto_uri))
     root_rest_layer_nodata = raster_utils.get_nodata_from_uri(depth_to_root_rest_layer_uri)
+    if root_rest_layer_nodata is None:
+        root_rest_layer_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(depth_to_root_rest_layer_uri))
     pawc_nodata = raster_utils.get_nodata_from_uri(pawc_uri)
+    if pawc_nodata is None:
+        pawc_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(pawc_uri))
     
     def pet_op(eto_pix, Kc_pix):
         """Vectorize operation for calculating the plant potential
@@ -202,7 +214,6 @@ def execute(args):
         'soil':root_rest_layer_nodata,
         'pawc':pawc_nodata,
         }
-    
     def fractp_op(Kc, eto, precip, root, soil, pawc):
         """A wrapper function to call hydropower's cython core. Acts as a
             closure for fractp_nodata_dict, out_nodata, seasonality_constant
@@ -223,6 +234,7 @@ def execute(args):
     
     LOGGER.debug('Performing fractp operation')
     # Create clipped fractp_clipped raster
+    LOGGER.debug(fractp_nodata_dict)
     raster_utils.vectorize_datasets(
             raster_list, fractp_vec, fractp_clipped_path, gdal.GDT_Float32,
             out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri)
