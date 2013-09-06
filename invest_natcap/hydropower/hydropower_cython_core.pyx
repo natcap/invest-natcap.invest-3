@@ -1,6 +1,9 @@
 import cython
 
-from libc.math cimport fmin
+cdef double fmin(double a, double b):
+     if a < b:
+         return a
+     return b
 
 @cython.cdivision(True)
 cpdef double fractp_op(double out_nodata, double seasonality_constant,
