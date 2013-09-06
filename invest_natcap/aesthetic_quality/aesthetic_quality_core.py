@@ -70,9 +70,14 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
     # Create a tuple of sorted angles before returning
-    return (np.array(min_angles).sort(), \
-        np.array(angles).sort(), \
-        np.array(max_angles).sort())
+    min_angles = np.array(min_angles)
+    min_angles.sort()
+    angles = np.array(angles)
+    angles.sort()
+    max_angles = np.array(max_angles)
+    max_angles.sort()
+
+    return (min_angles, angles, max_angles)
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
