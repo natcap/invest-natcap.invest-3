@@ -49,6 +49,7 @@
             "id": "biophysical_container",
             "type": "container",
             "collapsible": true,
+	    "defaultValue": true,
             "args_id": "do_biophysical",
             "label": "Run biophysical model",
             "elements": [
