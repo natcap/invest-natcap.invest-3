@@ -135,7 +135,7 @@
 		    "defaultValue": "../WP_Nutrient_Retention/Input/water_biophysical_table.csv",
 		    "required": true,
 		    "validateAs": {"type": "CSV",
-				  "fieldsExist": ["lucode", "etk", "root_depth"],
+				  "fieldsExist": ["lucode", "Kc", "root_depth"],
                                     "restrictions": [{"field": "lucode",
                                                     "validateAs":{"type": "number",
                                                                   "allowedValues": {"pattern":"^[0-9]+$"}
