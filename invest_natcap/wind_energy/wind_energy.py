@@ -258,14 +258,14 @@ def execute(args):
             # Burn the area of interest onto the raster 
             rasterize_layer_uri(
                 aoi_raster_uri, aoi_uri, 1, field=None,
-                option_list="ALL_TOUCHED=TRUE")
+                option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
             rasterize_layer_uri(
                 aoi_raster_uri, land_poly_proj_uri, 0, field=None,
-                option_list="ALL_TOUCHED=TRUE")
+                option_list=["ALL_TOUCHED=TRUE"])
 
             dist_mask_uri = os.path.join(
                     inter_dir, 'distance_mask%s.tif' % suffix) 
@@ -1388,6 +1388,7 @@ def distance_transform_dataset(
     source_filename = os.path.join(temp_dir, 'source.dat')
     nodata_mask_filename = os.path.join(temp_dir, 'nodata_mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
+    dest_filename_tmp = os.path.join(temp_dir, 'dest_tmp.dat')
 
     mask_leq_min_dist_filename = os.path.join(temp_dir, 'mask_leq_min_dist.dat')
     mask_geq_max_dist_filename = os.path.join(temp_dir, 'mask_geq_max_dist.dat')
@@ -1413,7 +1414,7 @@ def distance_transform_dataset(
     dest_array = np.memmap(
         dest_filename, dtype='float64', mode='w+', shape = shape)
     dest_array_tmp = np.memmap(
-        dest_filename, dtype='float64', mode='w+', shape = shape)
+        dest_filename_tmp, dtype='float64', mode='w+', shape = shape)
     mask_leq_min_dist_array = np.memmap(
         mask_leq_min_dist_filename, dtype='bool', mode='w+', shape = shape)
     mask_geq_max_dist_array = np.memmap(
