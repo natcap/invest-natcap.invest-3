@@ -138,15 +138,12 @@ class TestAestheticQualityCore(unittest.TestCase):
                 cell = (row, col)
                 extreme_angles_naive.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
-        # Convert to numpy and sort
+        # Convert to numpy
         min_angles, nested_list = zip(*extreme_angles_naive)
         min_angles = np.array(min_angles)
-        min_angles.sort()
         center_angles, max_angles = zip(*nested_list)
         center_angles = np.array(center_angles)
-        center_angles.sort()
         max_angles = np.array(max_angles)
-        max_angles.sort()
         extreme_angles_naive = (min_angles, center_angles, max_angles)
         # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
@@ -159,7 +156,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         if error > 5e-15:
             print('naive', extreme_angles_naive)
             print('fast', extreme_angles_fast)
-            print('difference', extreme_angles_fast - extreme_angles_naive)
+            print('difference')
+            print(extreme_angles_fast[0] - extreme_angles_naive[0])
+            print(extreme_angles_fast[1] - extreme_angles_naive[1])
+            print(extreme_angles_fast[2] - extreme_angles_naive[2])
         message = 'error on expected and computed angles is too large:' + \
         str(error)
         assert error < 5e-15, message
