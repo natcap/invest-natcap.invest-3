@@ -324,13 +324,17 @@ class TestAestheticQualityCore(unittest.TestCase):
         angles = self.cell_angles(perimeter_cells, viewpoint)
         # 3- build event lists
         print('angles', angles.size, angles)
-        add_cell_events = np.array_like(angles)
-        cell_center_events = np.array_like(angles)
-        remove_cell_events = np.array_like(angles)
+        add_cell_events = np.array(angles.shape)
+        cell_center_events = np.array(angles.shape)
+        remove_cell_events = np.array(angles.shape)
         # 5- compute angles on raster cells
         events = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        print('min', events[0])
+        print('center', events[1])
+        print('max', events[2])
         # Add the events to the 3 event lists
+
         
 
     def tare_down(self):

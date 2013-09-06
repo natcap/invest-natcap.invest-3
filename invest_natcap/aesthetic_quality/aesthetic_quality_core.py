@@ -18,9 +18,10 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
             
-        returns a tuple (min, center, max) of 3 Nx1 numpy arrays of each raster
-        cell's minimum, center, and maximum angles sorted in ascending angle
-        value.
+        returns a tuple (min, center, max, coords) with min, center and max 
+        Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
+        angles and coords a Nx1 list of [row, col] numpy arrays of the
+        coordinate of each point.
     """
     viewpoint = np.array(viewpoint_coords)
 
@@ -42,12 +43,14 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     min_angles = []
     angles = []
     max_angles = []
+    coords = []
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
             cell = np.array([row, col])
+            coords.append(cell)
             viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
             angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
@@ -69,15 +72,12 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
-    # Create a tuple of sorted angles before returning
+    # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
-    min_angles.sort()
     angles = np.array(angles)
-    angles.sort()
     max_angles = np.array(max_angles)
-    max_angles.sort()
 
-    return (min_angles, angles, max_angles)
+    return (min_angles, angles, max_angles, coords)
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
