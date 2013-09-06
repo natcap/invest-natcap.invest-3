@@ -40,7 +40,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, 0.5]}]
 
     min_angles = []
-    center_angles = []
+    angles = []
     max_angles = []
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
@@ -64,11 +64,11 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             # Use the offset to compute extreme angles
             min_corner = viewpoint_to_cell + min_corner_offset
             min_angle = np.arctan2(-min_corner[0], min_corner[1])
-            min_angles.append(min_angle + two_pi) % two_pi 
+            min_angles.append((min_angle + two_pi) % two_pi) 
             
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
-            max_angles.append(max_angle + two_pi) % two_pi 
+            max_angles.append((max_angle + two_pi) % two_pi)
     # Create a tuple of sorted angles before returning
     return (np.array(min_angles).sort(), \
         np.array(angles).sort(), \
