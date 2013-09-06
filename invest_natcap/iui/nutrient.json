@@ -62,7 +62,7 @@
                 },
                 {
                     "id" : "soil_depth",
-                    "args_id" : "soil_depth_uri",
+                    "args_id" : "depth_to_root_rest_layer_uri",
                     "type": "file",
                     "label": "Depth To Root Restricting Layer",
                     "defaultValue": "../Base_Data/Freshwater/depth_to_root_rest_layer",

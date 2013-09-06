@@ -11,6 +11,7 @@ import platform
 import datetime
 import shutil
 import codecs
+import errno
 
 import invest_natcap
 import invest_natcap.iui
@@ -435,11 +436,22 @@ class Executor(threading.Thread):
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
 
             LOGGER.info('Pointing temporary directory at the workspace at %s' % args['workspace_dir'])
+            temporary_path = os.path.join(args['workspace_dir'], 'tmp')
+            try:
+                os.makedirs(temporary_path)
+            except OSError as exception:
+                #It's okay if the directory already exists, if it fails for
+                #some other reason, raise that exception
+                if exception.errno != errno.EEXIST:
+                    raise
             for tmp_variable in ['TMP', 'TEMP', 'TMPDIR']:
-                if tmp_variable in os.environ:
-                    LOGGER.info('Upddating os.environ["%s"]=%s to %s' % (tmp_variable, args['workspace_dir'], args['workspace_dir']))
-                    os.environ[tmp_variable] = args['workspace_dir']
 
+                if tmp_variable in os.environ:
+                    LOGGER.info('Upddating os.environ["%s"]=%s to %s' % (tmp_variable, os.environ[tmp_variable], args['workspace_dir']))
+                else:
+                    LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
+
+                os.environ[tmp_variable] = temporary_path
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
