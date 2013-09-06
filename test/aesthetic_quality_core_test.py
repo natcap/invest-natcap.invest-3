@@ -301,7 +301,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         cell_center_events = []
         remove_cell_events = []
         # 5- compute angles on raster cells + add to event lists
-        aesthetic_quality_core.list_extreme_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
         rows = range(array_shape[0])
         cols = range(array_shape[1])
 
