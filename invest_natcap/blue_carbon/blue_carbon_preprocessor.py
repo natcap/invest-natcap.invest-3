@@ -27,6 +27,9 @@ def get_transition_set_from_uri(dataset_uri_list):
 
 def execute(args):
     transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
+    values_matrix_uri = os.path.join(os.path.dirname(__file__), "preprocessor.csv")
+    values_matrix_id = "ID"
+    
     nodata = set([raster_utils.get_nodata_from_uri(uri) for uri in args["lulc"]])
 
     LOGGER.debug("Validating LULCs.")
@@ -90,7 +93,8 @@ def execute(args):
     if args["labels"] != "":
         LOGGER.info("Reading category names from table.")
         labels_dict = raster_utils.get_lookup_from_csv(args["labels"], args["lulc_id"])
-    
+
+    values = raster_utils.get_lookup_from_csv(values_matrix_uri, values_matrix_id)
     for original in original_values:
         transition_matrix.write("\n%i" % original)
         if original in labels_dict:
@@ -99,22 +103,8 @@ def execute(args):
             transition_matrix.write(",")
             
         for final in final_values:
-            #if no change then 0
-            if original == final:
-                transition_matrix.write(",%s" % "None")
-            #if transition apply criteria
-            elif (original, final) in transitions:
-                #if labels provided use vegetation criteria
-                if args["labels"] != "":
-                    if labels_dict[original][args["lulc_type"]] == 0:
-                        transition_matrix.write(",%s" % "None")
-                    elif labels_dict[final][args["lulc_type"]] == 0:
-                        transition_matrix.write(",")
-                    else:
-                        transition_matrix.write(",%s" % "None")
-                else:
-                    transition_matrix.write(",")
-            #if non-existant transition then 0
+            if (original, final) in transitions:
+                transition_matrix.write(",%s" % values[labels_dict[original][args["lulc_type"]]][str(labels_dict[original][args["lulc_type"]])])
             else:
                 transition_matrix.write(",%s" % "None")
     transition_matrix.close()

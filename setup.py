@@ -123,7 +123,7 @@ if platform.system() == 'Windows':
 
     #These are the exes that will get built
     py2exe_args['console'] = \
-        ['invest_carbon_combined.py',
+        ['invest_carbon.py',
          'invest_wave_energy.py',
          'invest_hra.py',
          'invest_hra_preprocessor.py',
@@ -147,7 +147,7 @@ if platform.system() == 'Windows':
     #Need to manually bring along the json configuration files to
     #the current build directory
     data_files.append(
-        ('.',['invest_natcap/iui/carbon_combined.json',
+        ('.',['invest_natcap/iui/carbon.json',
               'invest_natcap/iui/timber.json',
               'invest_natcap/iui/aesthetic_quality.json',
               'invest_natcap/iui/wave_energy.json',

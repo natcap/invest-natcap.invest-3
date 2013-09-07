@@ -31,7 +31,7 @@
                                           "type": "file",
                                           "label": "Input",
                                           "validateAs": {"type": "GDAL"}},
-                        "defaultValue": ["../BlueCarbon/input/GBJC_2004_mean.tif", "../BlueCarbon/input/GBJC_2050_mean.tif", "../BlueCarbon/input/GBJC_2100_mean.tif"],
+                        "defaultValue": ["../BlueCarbon/input/GBJC_2004_mean_Resample.tif", "../BlueCarbon/input/GBJC_2050_mean_Resample.tif", "../BlueCarbon/input/GBJC_2100_mean_Resample.tif"],
                         "linkText": "Add Another",
                         "helpText": ""
                     },
@@ -46,7 +46,7 @@
                                 "label": "Labels",
                                 "defaultValue": "../BlueCarbon/input/carbon.csv",
                                 "helpText": "",
-                                "required": false
+                                "required": true
                             },
                             {
                                 "id": "lulc_id",

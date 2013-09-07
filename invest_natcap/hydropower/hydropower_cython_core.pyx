@@ -1,11 +1,14 @@
 import cython
 
-cdef inline float float_min(float a, float b): return a if a <= b else b
+cdef double fmin(double a, double b):
+     if a < b:
+         return a
+     return b
 
 @cython.cdivision(True)
-cpdef float fractp_op(float out_nodata, float seasonality_constant,
-              float Kc, float eto, float precip, float root, float soil, float pawc,
-              float Kc_nodata, float eto_nodata, float precip_nodata, float root_nodata, float soil_nodata, float pawc_nodata):
+cpdef double fractp_op(double out_nodata, double seasonality_constant,
+              double Kc, double eto, double precip, double root, double soil, double pawc,
+              double Kc_nodata, double eto_nodata, double precip_nodata, double root_nodata, double soil_nodata, double pawc_nodata):
     """Function that calculates the fractp (actual evapotranspiration
        fraction of precipitation) raster
 
@@ -46,19 +49,19 @@ cpdef float fractp_op(float out_nodata, float seasonality_constant,
     #Compute Budyko Dryness index
     #Converting to a percent because 'Kc' is stored in the table 
     #as int(percent * 1000)
-    cdef float phi = (Kc * eto) / (precip * 1000)
+    cdef double phi = (Kc * eto) / (precip * 1000)
 
     #Calculate plant available water content (mm) using the minimum
     #of soil depth and root depth
-    cdef float awc = (float_min(root, soil) * pawc)  
+    cdef double awc = (fmin(root, soil) * pawc)  
 
     #Calculate dimensionless ratio of plant accessible water
     #storage to expected precipitation during the year
 
-    cdef float w_x = (awc / precip) * seasonality_constant
+    cdef double w_x = (awc / precip) * seasonality_constant
 
     #Compute evapotranspiration partition of the water balance
-    cdef float aet_p = (1+ w_x * phi) / (1 + w_x * phi + 1 / phi)
+    cdef double aet_p = (1+ w_x * phi) / (1 + w_x * phi + 1 / phi)
 
     #Currently as of release 2.2.2 the following operation is not
     #documented in the users guide. We take the minimum of the
@@ -68,4 +71,4 @@ cpdef float fractp_op(float out_nodata, float seasonality_constant,
     #5/10/12
     #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
 
-    return float_min(phi, aet_p)
+    return fmin(phi, aet_p)
