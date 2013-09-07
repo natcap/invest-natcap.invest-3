@@ -313,6 +313,19 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'error on cell angles is ' + str(error)
         assert error < 1e-14, message
 
+    def find_angle_index(self, angle_list, angle):
+        breadth = angle_list.size / 2
+        
+        index = breadth
+        while (angle_list[index] > angle) or (angle_list[index + 1] < angle):
+            breadth /= 2
+            if angle_list[index] > angle:
+                index -= breadth
+            if angle_list[index + 1] < angle:
+                index += breadth
+            if breadth == 0:
+                return index
+
     def test_viewshed(self):
         array_shape = (4,4) 
         viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
@@ -330,11 +343,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 5- compute angles on raster cells
         events = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
-        print('min', events[0])
-        print('center', events[1])
-        print('max', events[2])
+        arg_min = np.argsort(events[0])
+        #print('min', events[0][arg_min])
+        arg_center = np.argsort(events[1])
+        #print('center', events[1][arg_center])
+        arg_max = np.argsort(events[2])
+        #print('max', events[2][arg_max])
+        
         # Add the events to the 3 event lists
-
+        print('index', self.find_angle_index(angles, 1.6))
         
 
     def tare_down(self):
