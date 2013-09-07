@@ -670,6 +670,9 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
     cdef queue[Row_Col_Weight_Tuple] sink_queue
     cdef int row_index, col_index
 
+
+    
+
     #Identify sink cells
     LOGGER.info('identify sink cells')
     sink_cell_list = []
@@ -686,9 +689,7 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
                               shape=(n_rows, n_cols))
     dem_offset_data_file = tempfile.TemporaryFile()
     cdef numpy.ndarray[numpy.npy_float32, ndim=2] dem_offset = numpy.memmap(dem_offset_data_file, dtype=numpy.float32, mode='w+',
-                              shape=(n_rows, n_cols))
-    cdef numpy.ndarray[numpy.npy_uint8, ndim=1] mask_array = numpy.empty((n_cols,), dtype=numpy.uint8)
-    mask_data_file = tempfile.TemporaryFile()
+                              shape=(n_rows, n_cols))                              
     dem_sink_offset[:] = numpy.inf
 
     LOGGER.info('sink queue size %s' % (sink_queue.size()))
@@ -706,13 +707,9 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
             if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_sink_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
                 t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                 sink_queue.push(t)
-    
-    LOGGER.debug('setting infinity to 0')
-    #Masking out with this loop row by row for memory efficency
-    for row_index in xrange(n_rows):
-        numpy.not_equal(dem_sink_offset[row_index, :], numpy.inf, mask_array)
-        dem_sink_offset[row_index, :] *= 2.0 * mask_array
 
+    dem_sink_offset[dem_sink_offset == numpy.inf] = 0
+    numpy.multiply(dem_sink_offset, 2.0, dem_offset)
     cdef numpy.ndarray[numpy.npy_float, ndim=2] dem_edge_offset = dem_sink_offset
     cdef int max_distance
     
@@ -753,13 +750,8 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
         LOGGER.debug("dem_edge_offset\n%s" % dem_edge_offset)
         max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
         dem_edge_offset = max_distance + 1 - dem_edge_offset
-        
-        LOGGER.debug('setting minus infinity to 0')
-        #Masking out with this loop row by row for memory efficency
-        for row_index in xrange(n_rows):
-            numpy.not_equal(dem_sink_offset[row_index, :], -numpy.inf, mask_array)
-            dem_offset[row_index, :] += mask_array * dem_edge_offset[row_index, :]
-        
+        dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
+        dem_offset += dem_edge_offset
     
     LOGGER.debug("dem_offset\n%s" % dem_offset)
     dem_python_array += dem_offset * numpy.float(1.0/10000.0)
