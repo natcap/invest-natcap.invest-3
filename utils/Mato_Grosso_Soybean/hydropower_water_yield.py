@@ -7,7 +7,7 @@ from invest_natcap import raster_utils
 def premade_water_yield_scenario(args):
     base_landcover_table_uri = os.path.join(args['workspace_dir'], 'premade_landcover_scenario.csv')
     print base_landcover_table_uri
-    base_landcover_table = open(base_landcover_table_uri, 'wb')
+    base_landcover_table = open(args['output_table_filename'], 'wb')
     base_landcover_table.write('percent expansion,water yield volume\n')
 
     for percent in xrange(400):
@@ -24,7 +24,8 @@ def premade_water_yield_scenario(args):
         ws_table = raster_utils.extract_datasource_table_by_key(
             water_yield_shapefile_uri, 'ws_id')
         base_landcover_table.write('%s,%.2f\n' % (percent, ws_table[1]['wyield_vol']))
-        
+    
+    
 if __name__ == '__main__':
     ARGS = {
         u'biophysical_table_uri': u'Water_Yield/Parameters.csv',
@@ -40,5 +41,17 @@ if __name__ == '__main__':
         u'watersheds_uri': u'Water_Yield/mg_boundary.shp',
         u'workspace_dir': u'Water_Yield/workspace',
     }
+
+    #Set up args for the savanna scenario
+    ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
+    ARGS['pixels_to_convert_per_step'] = 2608
+    ARGS['conversion_lucode'] = 9
+    ARGS['converting_crop'] = 120,
+    ARGS['output_table_filename'] = os.path.join(
+        ARGS['workspace_dir'], 'savanna_expansion_carbon_stock_change.csv')
+#    analyze_lu_expansion(ARGS)
+
+    ARGS['output_table_filename'] = os.path.join(
+        ARGS['workspace_dir'], 'premade_landcover_scenario.csv')
     premade_water_yield_scenario(ARGS)
     
