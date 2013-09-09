@@ -369,19 +369,17 @@ class TestAestheticQualityCore(unittest.TestCase):
                 print('adding', center_events[arg_center[event_id]])
                 #print(events[1][arg_center[event_id]], '< current angle')
                 current_events.append(arg_center[event_id])
+                arg_center[event_id] = 0
                 event_id += 1
             cell_center_events.append(np.array(current_events))
         print('---------------------------------')
         processed_cell_ids = []
         for i in range(len(cell_center_events)):
             cell_center_ids = cell_center_events[i]
-            processed_cell_ids.append(cell_center_ids)
             cell_centers = center_events[cell_center_ids]
             print('within bounds:', (cell_centers >= angles[i]).all() and \
                 (cell_centers < angles[i+1]).all())
-        processed_cell_ids = set(processed_cell_ids)
-        total_cell_ids = set(arg_center)
-        print('all cells accounted for', processed_cell_ids == total_cell_ids)
+        print('unprocessed ids', np.where(arg_center > 0)[0])
             
     def tare_down(self):
         pass
