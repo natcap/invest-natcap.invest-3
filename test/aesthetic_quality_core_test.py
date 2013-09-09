@@ -29,27 +29,31 @@ class TestAestheticQualityCore(unittest.TestCase):
         a[18] = (np.arctan2(0.5, 1.5) * rad_to_deg + 360.) % 360.
         a[45] = 45.0
         a[71] = (np.arctan2(1.5, 0.5) * rad_to_deg + 360.) % 360.
+        a[90] = 90.
         a[108] = (np.arctan2(1.5, -0.5) * rad_to_deg + 360.) % 360.
         a[135] = 135.0
         a[161] = (np.arctan2(0.5, -1.5) * rad_to_deg + 360.) % 360.
+        a[180] = 180.
         a[198] = (np.arctan2(-0.5, -1.5) * rad_to_deg + 360.) % 360.
         a[225] = 225.0
         a[251] = (np.arctan2(-1.5, -0.5) * rad_to_deg + 360.) % 360.
+        a[270] = 270.
         a[288] = (np.arctan2(-1.5, 0.5) * rad_to_deg + 360.) % 360.
         a[315] = 315.0
         a[341] = (np.arctan2(-0.5, 1.5) * rad_to_deg + 360.) % 360.
-        # Use the angles above to create the expected min/max angles
-        expected_extreme_angles = np.array([ \
-            [a[108], 135., a[161]], \
-            [a[45], 90., a[135]], \
-            [a[18], 45., a[71]], \
-            [a[135], 180., a[225]], \
-            [a[18], 0., a[341]], \
-            [a[198], 225., a[251]], \
-            [a[225], 270., a[315]], \
-            [a[288], 315., a[341]]])
         # Convert to rad so it's compatible with extreme_cell_angles_naive
-        expected_extreme_angles *= deg_to_rad
+        for key in a.keys():
+            a[key] *= deg_to_rad
+        # Use the angles above to create the expected min/max angles
+        expected_extreme_angles = [ \
+            (a[108], (a[135], a[161])), \
+            (a[45], (a[90], a[135])), \
+            (a[18], (a[45], a[71])), \
+            (a[135], (a[180], a[225])), \
+            (a[18], (0., a[341])), \
+            (a[198], (a[225], a[251])), \
+            (a[225], (a[270], a[315])), \
+            (a[288], (a[315], a[341]))]
         # Compute extreme angles for each cell
         computed_extreme_angles = []
         for row in range(array_shape[0]):
@@ -59,9 +63,22 @@ class TestAestheticQualityCore(unittest.TestCase):
                 cell = (row, col)
                 computed_extreme_angles.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
-        computed_extreme_angles = np.array(computed_extreme_angles)
+        # convert tuple to np.array
+        a, b = zip(*computed_extreme_angles)
+        b, c = zip(*b)
+        a = np.array(a)
+        b = np.array(b)
+        c = np.array(c)
+        computed_extreme_angles = np.array([a, b, c])
+        a, b = zip(*expected_extreme_angles)
+        b, c = zip(*b)
+        a = np.array(a)
+        b = np.array(b)
+        c = np.array(c)
+        expected_extreme_angles = np.array([a, b, c])
         # Compare both results
-        error = np.sum(computed_extreme_angles - expected_extreme_angles)
+        error = np.sum(np.absolute(computed_extreme_angles - \
+            expected_extreme_angles))
         # Assert if necessary
         assert abs(error) < 1e-14
 
@@ -105,7 +122,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             if angle_to_corner < min_angle:
                 min_angle = angle_to_corner
         # Done, return min and max angles
-        return np.array([min_angle, center_angle, max_angle])
+        return (min_angle, (center_angle, max_angle))
 
     def test_extreme_cell_angles(self):
         """Testing naive vs optimized version of the same functionality"""
@@ -122,17 +139,27 @@ class TestAestheticQualityCore(unittest.TestCase):
                 extreme_angles_naive.append( \
                     self.extreme_cell_angles_naive(cell, viewpoint))
         # Convert to numpy
-        extreme_angles_naive = np.array(extreme_angles_naive)
+        min_angles, nested_list = zip(*extreme_angles_naive)
+        min_angles = np.array(min_angles)
+        center_angles, max_angles = zip(*nested_list)
+        center_angles = np.array(center_angles)
+        max_angles = np.array(max_angles)
+        extreme_angles_naive = (min_angles, center_angles, max_angles)
         # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
             aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
-        # Colmpare the two
-        error = np.sum(np.abs(extreme_angles_naive - extreme_angles_fast))
+        # Compare the two
+        error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
+            np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
+            np.abs(extreme_angles_naive[2]-extreme_angles_fast[2]))
         # assert if necessary
         if error > 5e-15:
             print('naive', extreme_angles_naive)
             print('fast', extreme_angles_fast)
-            print('difference', extreme_angles_fast - extreme_angles_naive)
+            print('difference')
+            print(extreme_angles_fast[0] - extreme_angles_naive[0])
+            print(extreme_angles_fast[1] - extreme_angles_naive[1])
+            print(extreme_angles_fast[2] - extreme_angles_naive[2])
         message = 'error on expected and computed angles is too large:' + \
         str(error)
         assert error < 5e-15, message
@@ -286,6 +313,19 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'error on cell angles is ' + str(error)
         assert error < 1e-14, message
 
+    def find_angle_index(self, angle_list, angle):
+        breadth = angle_list.size / 2
+        
+        index = breadth
+        while (angle_list[index] > angle) or (angle_list[index + 1] < angle):
+            breadth /= 2
+            if angle_list[index] > angle:
+                index -= breadth
+            if angle_list[index + 1] < angle:
+                index += breadth
+            if breadth == 0:
+                return index
+
     def test_viewshed(self):
         array_shape = (4,4) 
         viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
@@ -297,13 +337,22 @@ class TestAestheticQualityCore(unittest.TestCase):
         angles = self.cell_angles(perimeter_cells, viewpoint)
         # 3- build event lists
         print('angles', angles.size, angles)
-        add_cell_events = []
-        cell_center_events = []
-        remove_cell_events = []
-        # 5- compute angles on raster cells + add to event lists
-        aesthetic_quality_core.list_extreme_angles(array_shape, viewpoint)
-        rows = range(array_shape[0])
-        cols = range(array_shape[1])
+        add_cell_events = np.array(angles.shape)
+        cell_center_events = np.array(angles.shape)
+        remove_cell_events = np.array(angles.shape)
+        # 5- compute angles on raster cells
+        events = \
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        arg_min = np.argsort(events[0])
+        #print('min', events[0][arg_min])
+        arg_center = np.argsort(events[1])
+        #print('center', events[1][arg_center])
+        arg_max = np.argsort(events[2])
+        #print('max', events[2][arg_max])
+        
+        # Add the events to the 3 event lists
+        print('index', self.find_angle_index(angles, 1.6))
+        
 
     def tare_down(self):
         pass

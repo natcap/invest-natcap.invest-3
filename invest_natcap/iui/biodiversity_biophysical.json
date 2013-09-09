@@ -136,8 +136,8 @@
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "required": false,
+                    "returns": {"ifEmpty": "pass"},
                     "helpText":"A String that will be added to the end of the output uris."
-
                 }                         
             ]
         }
