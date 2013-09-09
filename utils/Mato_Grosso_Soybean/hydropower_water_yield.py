@@ -1,8 +1,4 @@
-""""
-This is a saved model run from invest_natcap.hydropower.hydropower_water_yield.
-Generated: 09/09/13 09:26:11
-InVEST version: 2.5.6
-"""
+import os
 
 import invest_natcap.hydropower.hydropower_water_yield
 
@@ -22,4 +18,14 @@ args = {
         u'workspace_dir': u'\Water_Yield\workspace',
 }
 
+base_landcover_table_uri = os.path.join(args['workspace_dir'], 'base_landcover_scenario.csv')
+
+base_landcover_table = open(base_landcover_table_uri, 'wb')
+base_landcover_table.write('percent expansion,water yield volume\n')
+
 invest_natcap.hydropower.hydropower_water_yield.execute(args)
+water_yield_shapefile_uri = os.path.join(
+    args['workspace_dir'], output, 'wyield_sheds.shp')
+ws_table = raster_utils.extract_datasource_table_by_key(
+    water_yield_shapefile_uri, 'ws_id')
+base_landcover_table.write('0,%.2f\n' % ws_table['wyield_vol'])
