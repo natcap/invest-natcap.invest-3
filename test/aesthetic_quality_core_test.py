@@ -317,12 +317,14 @@ class TestAestheticQualityCore(unittest.TestCase):
         breadth = angle_list.size / 2
         
         index = breadth
+        print('index', index, 'breadth', breadth)
         while (angle_list[index] > angle) or (angle_list[index + 1] < angle):
             breadth /= 2
             if angle_list[index] > angle:
                 index -= breadth
             if angle_list[index + 1] < angle:
                 index += breadth
+            print('index', index, 'breadth', breadth)
             if breadth == 0:
                 return index
 
@@ -336,10 +338,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2- compute cell angles
         angles = self.cell_angles(perimeter_cells, viewpoint)
         # 3- build event lists
-        print('angles', angles.size, angles)
-        add_cell_events = np.array(angles.shape)
-        cell_center_events = np.array(angles.shape)
-        remove_cell_events = np.array(angles.shape)
+        add_cell_events = []
+        cell_center_events = []
+        remove_cell_events = []
         # 5- compute angles on raster cells
         events = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
@@ -352,7 +353,29 @@ class TestAestheticQualityCore(unittest.TestCase):
         
         # Add the events to the 3 event lists
         print('index', self.find_angle_index(angles, 1.6))
-        
+        print('center', events[1][arg_center])
+        print('center', arg_center)
+        # Add center angles to center_events_array
+        event_id = 0
+        angles = np.append(angles, 2.0 * math.pi)
+        print('angles', angles.size, angles)
+        center_events = events[1]
+        event_count = center_events.size
+        for a in range(1, len(angles)): 
+            print('current angle', angles[a])
+            current_events = []
+            while (event_id < event_count) and \
+                (center_events[arg_center[event_id]] < angles[a]):
+                print(events[1][arg_center[event_id]], '< current angle')
+                current_events.append(arg_center[event_id])
+                event_id += 1
+            cell_center_events.append(np.array(current_events))
+
+        #for i in range(len(cell_center_events)):
+        #    print('angle', angles[i])
+        #    print('cell_center_events', cell_center_events[i])
+        #    print('within bounds:', cell_center_events[i] < angles[i])
+
 
     def tare_down(self):
         pass
