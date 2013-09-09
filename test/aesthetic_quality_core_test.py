@@ -337,13 +337,25 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 1.1- remove perimeter cell if same coord as viewpoint
         # 2- compute cell angles
         angles = self.cell_angles(perimeter_cells, viewpoint)
-        # 3- build event lists
-        add_cell_events = []
-        cell_center_events = []
-        remove_cell_events = []
-        # 5- compute angles on raster cells
+        angles = np.append(angles, 2.0 * math.pi)
+        print('angles', angles.size, angles)
+        # 3- compute angles on raster cells
         events = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        # 4- build event lists
+        add_cell_events = []
+        add_event_id = 0
+        add_events = events[0]
+        add_event_count = add_events.size
+        cell_center_events = []
+        center_event_id = 0
+        center_events = events[1]
+        center_event_count = center_events.size
+        remove_cell_events = []
+        remove_event_id = 0
+        remove_events = events[2]
+        remove_event_count = remove_events.size
+        # 5- Sort event lists
         arg_min = np.argsort(events[0])
         #print('min', events[0][arg_min])
         arg_center = np.argsort(events[1])
@@ -352,34 +364,50 @@ class TestAestheticQualityCore(unittest.TestCase):
         #print('max', events[2][arg_max])
         
         # Add the events to the 3 event lists
-        print('index', self.find_angle_index(angles, 1.6))
+        #print('index', self.find_angle_index(angles, 1.6))
         print('center', events[1][arg_center])
         print('center', arg_center)
         # Add center angles to center_events_array
-        event_id = 0
-        angles = np.append(angles, 2.0 * math.pi)
-        print('angles', angles.size, angles)
-        center_events = events[1]
-        event_count = center_events.size
         for a in range(1, len(angles)): 
             print('current angle', angles[a])
+            # Collect cell_center events
             current_events = []
-            while (event_id < event_count) and \
-                (center_events[arg_center[event_id]] < angles[a]):
-                print('adding', center_events[arg_center[event_id]])
+            while (center_event_id < center_event_count) and \
+                (center_events[arg_center[center_event_id]] < angles[a]):
                 #print(events[1][arg_center[event_id]], '< current angle')
-                current_events.append(arg_center[event_id])
-                arg_center[event_id] = 0
-                event_id += 1
+                #print('adding', center_events[arg_center[center_event_id]])
+                current_events.append(arg_center[center_event_id])
+                arg_center[center_event_id] = 0
+                center_event_id += 1
             cell_center_events.append(np.array(current_events))
+            # Collect add_cell events:
+            current_events = []
+            while (add_event_id < add_event_count) and \
+                (add_events[arg_min[add_event_id]] < angles[a]):
+                #print(events[0][arg_min[add_event_id]], '< current angle')
+                #print('adding', arg_min[add_event_id],add_events[arg_min[add_event_id]])
+                current_events.append(arg_min[add_event_id])
+                arg_min[add_event_id] = 0
+                add_event_id += 1
+            add_cell_events.append(np.array(current_events))
+        #print('add_cell_events', add_cell_events)
+
         print('---------------------------------')
-        processed_cell_ids = []
+        print('add_cell events:')
+        for i in range(len(add_cell_events)):
+            add_cell_ids = add_cell_events[i]
+            if add_cell_ids.size > 0:
+                add_cell = add_events[add_cell_ids]
+                print('within bounds:', (add_cell >= angles[i]).all() and \
+                    (add_cell < angles[i+1]).all())
+        print('unprocessed add_cell ids', np.where(arg_min > 0)[0])
+        print('cell_center events:')
         for i in range(len(cell_center_events)):
             cell_center_ids = cell_center_events[i]
             cell_centers = center_events[cell_center_ids]
             print('within bounds:', (cell_centers >= angles[i]).all() and \
                 (cell_centers < angles[i+1]).all())
-        print('unprocessed ids', np.where(arg_center > 0)[0])
+        print('unprocessed cell_center ids', np.where(arg_center > 0)[0])
             
     def tare_down(self):
         pass
