@@ -390,6 +390,16 @@ class TestAestheticQualityCore(unittest.TestCase):
                 arg_min[add_event_id] = 0
                 add_event_id += 1
             add_cell_events.append(np.array(current_events))
+            # Collect add_cell events:
+            current_events = []
+            while (remove_event_id < remove_event_count) and \
+                (remove_events[arg_max[remove_event_id]] < angles[a]):
+                #print(events[2][arg_max[remove_event_id]], '< current angle')
+                #print('adding', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
+                current_events.append(arg_max[remove_event_id])
+                arg_max[remove_event_id] = 0
+                remove_event_id += 1
+            remove_cell_events.append(np.array(current_events))
         #print('add_cell_events', add_cell_events)
 
         print('---------------------------------')
@@ -401,6 +411,14 @@ class TestAestheticQualityCore(unittest.TestCase):
                 print('within bounds:', (add_cell >= angles[i]).all() and \
                     (add_cell < angles[i+1]).all())
         print('unprocessed add_cell ids', np.where(arg_min > 0)[0])
+        print('remove_cell events:')
+        for i in range(len(remove_cell_events)):
+            remove_cell_ids = remove_cell_events[i]
+            if remove_cell_ids.size > 0:
+                remove_cell = remove_events[remove_cell_ids]
+                print('within bounds:', (remove_cell >= angles[i]).all() and \
+                    (remove_cell < angles[i+1]).all())
+        print('unprocessed remove_cell ids', np.where(arg_max > 0)[0])
         print('cell_center events:')
         for i in range(len(cell_center_events)):
             cell_center_ids = cell_center_events[i]
