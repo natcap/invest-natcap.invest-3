@@ -1,7 +1,7 @@
 import os
 
 import invest_natcap.hydropower.hydropower_water_yield
-
+from invest_natcap import raster_utils
 
 args = {
         u'biophysical_table_uri': u'Water_Yield/Parameters.csv',
@@ -15,17 +15,25 @@ args = {
         u'sub_watersheds_uri': u'',
         u'water_scarcity_container': False,
         u'watersheds_uri': u'Water_Yield/mg_boundary.shp',
-        u'workspace_dir': u'\Water_Yield\workspace',
+        u'workspace_dir': u'Water_Yield/workspace',
 }
 
-base_landcover_table_uri = os.path.join(args['workspace_dir'], 'base_landcover_scenario.csv')
-
+base_landcover_table_uri = os.path.join(args['workspace_dir'], 'premade_landcover_scenario.csv')
+print base_landcover_table_uri
 base_landcover_table = open(base_landcover_table_uri, 'wb')
 base_landcover_table.write('percent expansion,water yield volume\n')
 
-invest_natcap.hydropower.hydropower_water_yield.execute(args)
-water_yield_shapefile_uri = os.path.join(
-    args['workspace_dir'], 'output', 'wyield_sheds.shp')
-ws_table = raster_utils.extract_datasource_table_by_key(
-    water_yield_shapefile_uri, 'ws_id')
-base_landcover_table.write('0,%.2f\n' % ws_table['wyield_vol'])
+for percent in xrange(400):
+    print 'premade scenarios percent step %s' % percent
+    scenario_path = './MG_Soy_Exp_07122013/'
+    scenario_file_pattern = 'mg_lulc%n'
+    args['lulc_uri'] = os.path.join(
+        scenario_path,
+        scenario_file_pattern.replace('%n', str(percent)))
+
+    #invest_natcap.hydropower.hydropower_water_yield.execute(args)
+    water_yield_shapefile_uri = os.path.join(
+        args['workspace_dir'], 'output', 'wyield_sheds.shp')
+    ws_table = raster_utils.extract_datasource_table_by_key(
+        water_yield_shapefile_uri, 'ws_id')
+    base_landcover_table.write('%s,%.2f\n' % (percent, ws_table[1]['wyield_vol']))
