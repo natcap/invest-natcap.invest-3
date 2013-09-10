@@ -396,7 +396,7 @@ if __name__ == '__main__':
     }
 
     #Set up args for the savanna scenario
-    ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
+    ARGS['scenario_lulc_base_map_filename'] = 'Water_Yield/mg_lulc0'
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['conversion_lucode'] = 9
     ARGS['converting_crop'] = 120,
