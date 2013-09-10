@@ -14,7 +14,7 @@ def premade_water_yield_scenario(args):
     base_landcover_table = open(args['output_table_filename'], 'wb')
     base_landcover_table.write('percent expansion,water yield volume\n')
 
-    for percent in xrange(400):
+    for percent in xrange(args['scenario_conversion_steps'] + 1):
         print 'premade scenarios percent step %s' % percent
         scenario_path = './MG_Soy_Exp_07122013/'
         scenario_file_pattern = 'mg_lulc%n'
