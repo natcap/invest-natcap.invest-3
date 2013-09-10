@@ -2377,6 +2377,11 @@ def align_dataset_list(
                 dataset_row[mask_row == 0] = nodata_out
                 out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
 
+        #Remove the mask aoi if necessary
+        mask_band = None
+        mask_dataset = None
+        os.remove(mask_uri)
+
 
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
@@ -2513,8 +2518,8 @@ def vectorize_datasets(
     for temp_dataset_uri in dataset_out_uri_list:
         LOGGER.debug('removing %s' % temp_dataset_uri)
         os.remove(temp_dataset_uri)
-
     calculate_raster_stats_uri(dataset_out_uri)
+
 
 def get_lookup_from_table(table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
