@@ -2068,8 +2068,7 @@ def temporary_filename():
 
         returns a unique temporary filename"""
 
-    traceback.print_stack()
-    file_handle, path = tempfile.mkstemp(suffix="foo")
+    file_handle, path = tempfile.mkstemp()
     os.close(file_handle)
 
     def remove_file(path):

@@ -401,6 +401,12 @@ def execute(args):
     # Write watershed CSV table
     write_new_table(wyield_ws_table_uri, field_list_ws, wyield_value_dict_ws)
   
+    #clear out the temporary filenames, doing this because a giant run of
+    #hydropower water yield chews up all available disk space
+    for tmp_uri in [
+        tmp_Kc_raster_uri, tmp_root_raster_uri, tmp_pet_uri]:
+        os.remove(tmp_uri)
+
     # Check to see if Water Scarcity was selected to run
     water_scarcity_checked = args.pop('water_scarcity_container', False)
     if not water_scarcity_checked:
@@ -497,6 +503,9 @@ def execute(args):
     # Write watershed CSV table for water scarcity
     write_new_table(scarcity_table_ws_uri, field_list_ws, scarcity_dict_ws)
     
+    #Don't need this anymore
+    os.remove(tmp_demand_uri)
+
     # Check to see if Valuation was selected to run
     valuation_checked = args.pop('valuation_container', False)
     if not valuation_checked:
@@ -558,12 +567,6 @@ def execute(args):
    
     # Generate the final CSV file
     write_new_table(valuation_table_ws_uri, field_list_ws, hydropower_dict_ws)
-
-    #clear out the temporary filenames, doing this because a giant run of
-    #hydropower water yield chews up all available disk space
-    for tmp_uri in [
-        tmp_Kc_raster_uri, tmp_root_raster_uri, tmp_pet_uri, tmp_demand_uri]:
-        os.remove(tmp_uri)
     
 def compute_watershed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
     """Computes and adds the net present value and energy for the watersheds to
