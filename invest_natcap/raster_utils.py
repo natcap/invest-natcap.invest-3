@@ -2479,6 +2479,8 @@ def vectorize_datasets(
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
         mask_array = numpy.zeros((1, n_cols))
+        aoi_layer = None
+        aoi_datasource = None
 
     dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
     for row_index in range(n_rows):
@@ -2498,6 +2500,20 @@ def vectorize_datasets(
     output_dataset.FlushCache()
     output_dataset = None
     output_band = None
+
+    #Clean up the files made by temporary file because we had an issue once
+    #where I was running the water yield model over 2000 times and it made
+    #so many temporary files I ran out of disk space.
+    if aoi_uri != None:
+        mask_band = None
+        mask_dataset = None
+        os.remove(mask_uri)
+    aligned_bands = None
+    aligned_datasets = None
+    for temp_dataset_uri in dataset_out_uri_list:
+        LOGGER.debug('removing %s' % temp_dataset_uri)
+        os.remove(temp_dataset_uri)
+
     calculate_raster_stats_uri(dataset_out_uri)
 
 def get_lookup_from_table(table_uri, key_field):
