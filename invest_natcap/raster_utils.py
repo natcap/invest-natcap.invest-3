@@ -1100,9 +1100,12 @@ def aggregate_raster_values_uri(
 
     mask_band = None
     mask_dataset = None
+    clipped_band = None
+    clipped_dataset = None
     os.remove(temporary_mask_filename)
-
+    os.remove(clipped_raster_uri)
     return result_tuple
+
 
 
 def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
