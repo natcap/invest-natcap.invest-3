@@ -9,8 +9,6 @@ import carbon_expansion_scenarios
 
 #Premade scenario
 def premade_water_yield_scenario(args):
-    base_landcover_table_uri = os.path.join(args['workspace_dir'], 'premade_landcover_scenario.csv')
-    print base_landcover_table_uri
     base_landcover_table = open(args['output_table_filename'], 'wb')
     base_landcover_table.write('percent expansion,water yield volume\n')
 
