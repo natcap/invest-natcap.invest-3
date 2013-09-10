@@ -2631,6 +2631,9 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
         key_value = feature.GetField(key_field)
         attribute_dictionary[key_value] = feature_fields
 
+    #Explictly clean up the layers so the files close
+    layer = None
+    datasource = None
     return attribute_dictionary
     
 def get_geotransform_uri(ds_uri):
