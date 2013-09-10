@@ -400,7 +400,7 @@ if __name__ == '__main__':
     ARGS['converting_crop'] = 120,
     ARGS['output_table_filename'] = os.path.join(
         ARGS['workspace_dir'], 'savanna_expansion_water_yield_change.csv')
-    ARGS['scenario_conversion_steps'] = 1
+    ARGS['scenario_conversion_steps'] = 400
     analyze_lu_expansion(ARGS)
 
     ARGS['output_table_filename'] = os.path.join(
@@ -412,10 +412,10 @@ if __name__ == '__main__':
         ARGS['workspace_dir'], 'forest_core_fragmentation_water_yield_change.csv')
     analyze_forest_core_fragmentation(ARGS)
     
-    ARGS['output_table_filename'] = (
-        'forest_core_expansion_water_yield_change.csv')
+    ARGS['output_table_filename'] = os.path.join(
+        ARGS['workspace_dir'], 'forest_core_expansion_water_yield_change.csv')
     analyze_forest_core_expansion(ARGS)
 
-    ARGS['output_table_filename'] = (
-        'forest_edge_expansion_water_yield_change.csv')
+    ARGS['output_table_filename'] = os.path.join(
+        ARGS['workspace_dir'], 'forest_edge_expansion_water_yield_change.csv')
     analyze_forest_edge_expansion(ARGS)
