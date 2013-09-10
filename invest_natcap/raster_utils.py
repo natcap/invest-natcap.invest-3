@@ -1205,6 +1205,9 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
     calculate_raster_stats(slope_dataset)
 
+    dem_small_dataset = None
+    os.remove(dem_small_uri)
+
 
 def clip_dataset_uri(
         source_dataset_uri, aoi_datasource_uri, out_dataset_uri,
