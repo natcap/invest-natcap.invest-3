@@ -1,5 +1,6 @@
 """A collection of GDAL dataset and raster utilities"""
 
+import traceback
 import logging
 import random
 import string
@@ -1099,6 +1100,8 @@ def aggregate_raster_values_uri(
 
     mask_band = None
     mask_dataset = None
+    os.remove(temporary_mask_filename)
+
     return result_tuple
 
 
@@ -2059,7 +2062,8 @@ def temporary_filename():
 
         returns a unique temporary filename"""
 
-    file_handle, path = tempfile.mkstemp()
+    traceback.print_stack()
+    file_handle, path = tempfile.mkstemp(suffix="foo")
     os.close(file_handle)
 
     def remove_file(path):
@@ -2068,9 +2072,9 @@ def temporary_filename():
         try:
             os.remove(path)
         except OSError as exception:
-            LOGGER.debug(
-                'tried to removing temporary file %s but got %s '
-                % (path, exception))
+            #This happens if the file didn't exist, which is okay because maybe
+            #we deleted it in a method
+            pass
 
     atexit.register(remove_file, path)
     return path
