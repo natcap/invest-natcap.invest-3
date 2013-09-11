@@ -31,7 +31,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     deg_to_rad = 1.0 / rad_to_deg
 
     extreme_cell_points = [ \
-    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
+    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, -0.5]}, \
     {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
     {'min_angle':[0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
     {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, -0.5]}, \

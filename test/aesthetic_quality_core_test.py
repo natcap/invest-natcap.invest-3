@@ -369,7 +369,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('center', arg_center)
         # Add center angles to center_events_array
         for a in range(1, len(angles)): 
-            #print('current angle', angles[a])
+            print('current angle', angles[a])
             # Collect cell_center events
             current_events = []
             while (center_event_id < center_event_count) and \
@@ -393,12 +393,12 @@ class TestAestheticQualityCore(unittest.TestCase):
                 arg_min[add_event_id] = 0
                 add_event_id += 1
             add_cell_events.append(np.array(current_events))
-            # Collect add_cell events:
+            # Collect remove_cell events:
             current_events = []
             while (remove_event_id < remove_event_count) and \
                 (remove_events[arg_max[remove_event_id]] < angles[a]):
                 #print(events[2][arg_max[remove_event_id]], '< current angle')
-                #print('remove', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
+                print('remove', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
                 current_events.append(arg_max[remove_event_id])
                 arg_max[remove_event_id] = 0
                 remove_event_id += 1
