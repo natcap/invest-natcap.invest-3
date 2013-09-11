@@ -1102,8 +1102,11 @@ def aggregate_raster_values_uri(
     mask_dataset = None
     clipped_band = None
     clipped_dataset = None
-    os.remove(temporary_mask_filename)
-    os.remove(clipped_raster_uri)
+    for filename in [temporary_mask_filename, clipped_raster_uri]:
+        try:
+            os.remove(filename)
+        except OSError:
+            LOGGER.warn("couldn't remove file %s" % filename)
     return result_tuple
 
 
@@ -2526,7 +2529,10 @@ def vectorize_datasets(
     aligned_datasets = None
     for temp_dataset_uri in dataset_out_uri_list:
         LOGGER.debug('removing %s' % temp_dataset_uri)
-        os.remove(temp_dataset_uri)
+        try:
+            os.remove(temp_dataset_uri)
+        except OSError:
+            LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
     calculate_raster_stats_uri(dataset_out_uri)
 
 
