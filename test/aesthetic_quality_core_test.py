@@ -411,19 +411,22 @@ class TestAestheticQualityCore(unittest.TestCase):
         for c in cell_center_events[0]:
             #print('  adding', c)
             active_cells.add(c)
-        print('initalized active cells', active_cells)
+        print('active cells', len(active_cells), active_cells)
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
+            print('sweep angle', a)
         #   2.1- add cells
-            #print('add cell events', add_cell_events[a])
+            print('  add cell events', add_cell_events[a])
             if add_cell_events[a].size > 0:
                 for c in add_cell_events[a]:
                     #print('  adding', c)
                     active_cells.add(c)
         #   2.2- remove cells
+            print('  remove cell events', remove_cell_events[a])
             for c in remove_cell_events[a]:
                 #print('  removing', c)
                 active_cells.remove(c)
+            print('active cells', len(active_cells), active_cells)
         print('active cells', active_cells, len(active_cells) == 0)
 
         # Sanity checks
