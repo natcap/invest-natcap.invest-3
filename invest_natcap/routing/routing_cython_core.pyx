@@ -746,14 +746,12 @@ def resolve_flat_regions_for_drainage(dem_python_array, float nodata_value):
                 if _is_flat(neighbor_row_index, neighbor_col_index, n_rows, n_cols, row_offsets, col_offsets, dem_array, nodata_value) and dem_edge_offset[neighbor_row_index, neighbor_col_index] > current_cell_tuple.weight + 1 and dem_array[current_cell_tuple.row_index, current_cell_tuple.col_index] == dem_array[neighbor_row_index, neighbor_col_index]:
                     t = Row_Col_Weight_Tuple(neighbor_row_index, neighbor_col_index, current_cell_tuple.weight + 1)
                     edge_queue.push(t)
-                    
-        LOGGER.debug("dem_edge_offset\n%s" % dem_edge_offset)
+
         max_distance = numpy.max(dem_edge_offset[dem_edge_offset != numpy.inf])
         dem_edge_offset = max_distance + 1 - dem_edge_offset
         dem_edge_offset[dem_edge_offset == -numpy.inf] = 0
         dem_offset += dem_edge_offset
     
-    LOGGER.debug("dem_offset\n%s" % dem_offset)
     dem_python_array += dem_offset * numpy.float(1.0/10000.0)
     return dem_offset, dem_sink_offset, dem_edge_offset
 
