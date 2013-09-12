@@ -118,10 +118,17 @@ class TestAestheticQualityCore(unittest.TestCase):
                 np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
             angle_to_corner = \
                 (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
+            # If center is at angle 0, then extreme angles are reversed
+            #if center_angle == 0.:
+            #    angle_to_corner *= -1
+            # Sort the angles
             if angle_to_corner > max_angle:
                 max_angle = angle_to_corner
             if angle_to_corner < min_angle:
                 min_angle = angle_to_corner
+        # If center is at angle 0, then extreme angles are reversed
+        #if center_angle == 0.:
+        #    min_angle, max_angle = -max_angle, -min_angle
         # Done, return min and max angles
         return (min_angle, (center_angle, max_angle))
 
@@ -451,7 +458,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             if remove_cell_ids.size > 0:
                 remove_cell = remove_events[remove_cell_ids]
                 print('within bounds:', (remove_cell >= angles[i]).all() and \
-                    (remove_cell < angles[i+1]).all())
+                    (remove_cell <= angles[i+1]).all())
         print('unprocessed remove_cell ids', np.where(arg_max > 0)[0])
         print('cell_center events:')
         for i in range(len(cell_center_events)):
