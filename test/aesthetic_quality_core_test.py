@@ -1,6 +1,7 @@
 import unittest
 import logging
 import math
+import collections
 
 import numpy as np
 
@@ -329,8 +330,8 @@ class TestAestheticQualityCore(unittest.TestCase):
                 return index
 
     def test_viewshed(self):
-        array_shape = (4,4) 
-        viewpoint = np.array([array_shape[0]/2, array_shape[1]/2])
+        array_shape = (6,6) 
+        viewpoint = (3, 4) #np.array([array_shape[0]/2, array_shape[1]/2])
 
         # 1- get perimeter cells
         perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
@@ -369,7 +370,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('center', arg_center)
         # Add center angles to center_events_array
         for a in range(1, len(angles)): 
-            print('current angle', angles[a])
+            #print('current angle', angles[a])
             # Collect cell_center events
             current_events = []
             while (center_event_id < center_event_count) and \
@@ -396,38 +397,43 @@ class TestAestheticQualityCore(unittest.TestCase):
             # Collect remove_cell events:
             current_events = []
             while (remove_event_id < remove_event_count) and \
-                (remove_events[arg_max[remove_event_id]] < angles[a]):
+                (remove_events[arg_max[remove_event_id]] <= angles[a]):
                 #print(events[2][arg_max[remove_event_id]], '< current angle')
-                print('remove', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
+                #print('remove', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
                 current_events.append(arg_max[remove_event_id])
                 arg_max[remove_event_id] = 0
                 remove_event_id += 1
             remove_cell_events.append(np.array(current_events))
         #print('add_cell_events', add_cell_events)
 
+        # Create the binary search tree as depicted in Kreveld et al.
+        # "Vatiations on Sweep Algorithms"
+        sweep_cell = collections.namedtuple('sweep_cell', ['left', 'right', 'up', 'value'])
+        scell = sweep_cell(left = None, right = 1, up = 0, value = 3.5)
+        print('scell', scell)
         # Updating active cells
         active_cells = set()
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
             #print('  adding', c)
             active_cells.add(c)
-        print('active cells', len(active_cells), active_cells)
+        #print('active cells', len(active_cells), active_cells)
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
-            print('sweep angle', a)
+            #print('sweep angle', a)
         #   2.1- add cells
-            print('  add cell events', add_cell_events[a])
+            #print('  add cell events', add_cell_events[a])
             if add_cell_events[a].size > 0:
                 for c in add_cell_events[a]:
                     #print('  adding', c)
                     active_cells.add(c)
         #   2.2- remove cells
-            print('  remove cell events', remove_cell_events[a])
+            #print('  remove cell events', remove_cell_events[a])
             for c in remove_cell_events[a]:
                 #print('  removing', c)
                 active_cells.remove(c)
-            print('active cells', len(active_cells), active_cells)
-        print('active cells', active_cells, len(active_cells) == 0)
+        #    print('  active cells', len(active_cells), active_cells)
+        #print('active cells', active_cells, len(active_cells) == 0)
 
         # Sanity checks
         print('---------------------------------')
