@@ -51,7 +51,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             (a[45], (a[90], a[135])), \
             (a[18], (a[45], a[71])), \
             (a[135], (a[180], a[225])), \
-            (a[18], (0., a[341])), \
+            (a[315], (0., a[45])), \
             (a[198], (a[225], a[251])), \
             (a[225], (a[270], a[315])), \
             (a[288], (a[315], a[341]))]
@@ -81,7 +81,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         error = np.sum(np.absolute(computed_extreme_angles - \
             expected_extreme_angles))
         # Assert if necessary
-        assert abs(error) < 1e-14
+        message = 'error is ' + str(error)
+        assert abs(error) < 1e-14, message
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
@@ -111,24 +112,29 @@ class TestAestheticQualityCore(unittest.TestCase):
             [cell_coord[0] - .5, cell_coord[1] + .5], \
             [cell_coord[0] + .5, cell_coord[1] - .5], \
             [cell_coord[0] - .5, cell_coord[1] - .5]])
-        # Compute angle to all 4 cell corners and update min and max angles
-        for corner in corners:
-            viewpoint_to_corner = corner - viewpoint
-            angle_to_corner = \
+        # If cell angle is 0, use pre-computed corners for min and max:
+        if center_angle == 0.:
+            viewpoint_to_corner = corners[2] - viewpoint
+            min_angle = \
                 np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
-            angle_to_corner = \
-                (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
-            # If center is at angle 0, then extreme angles are reversed
-            #if center_angle == 0.:
-            #    angle_to_corner *= -1
-            # Sort the angles
-            if angle_to_corner > max_angle:
-                max_angle = angle_to_corner
-            if angle_to_corner < min_angle:
-                min_angle = angle_to_corner
-        # If center is at angle 0, then extreme angles are reversed
-        #if center_angle == 0.:
-        #    min_angle, max_angle = -max_angle, -min_angle
+            min_angle = (2.0 * math.pi + min_angle) % (2.0 * math.pi)
+            viewpoint_to_corner = corners[3] - viewpoint
+            max_angle = \
+                np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
+            max_angle = (2.0 * math.pi + max_angle) % (2.0 * math.pi)
+        else:
+            # Compute angle to all 4 cell corners and update min and max angles
+            for corner in corners:
+                viewpoint_to_corner = corner - viewpoint
+                angle_to_corner = \
+                    np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
+                angle_to_corner = \
+                    (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
+                # Sort the angles
+                if angle_to_corner > max_angle:
+                    max_angle = angle_to_corner
+                if angle_to_corner < min_angle:
+                    min_angle = angle_to_corner
         # Done, return min and max angles
         return (min_angle, (center_angle, max_angle))
 
