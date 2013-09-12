@@ -151,10 +151,22 @@ def execute(args):
     lulc_to_retention_dict = \
         dict([(lulc_code, float(table['sedret_eff'])/100.0) \
                   for (lulc_code, table) in biophysical_table.items()])
+                  
+    no_stream_retention_rate_uri = raster_utils.temporary_filename()
+    nodata_retention = -1.0
     raster_utils.reclassify_dataset(
-        lulc_clipped_dataset, lulc_to_retention_dict, retention_rate_uri, gdal.GDT_Float32,
+        lulc_clipped_dataset, lulc_to_retention_dict, no_stream_retention_rate_uri, gdal.GDT_Float32,
         -1.0, exception_flag='values_required')
 
+    def zero_out_retention_fn(retention, v_stream):
+        if v_stream == 1:
+            return 0.0
+        return retention
+    raster_utils.vectorize_datasets(
+        [no_stream_retention_rate_uri, v_stream_uri], zero_out_retention_fn,
+        retention_rate_uri, gdal.GDT_Float32, nodata_retention, out_pixel_size,
+        "intersection", dataset_to_align_index=0,
+        aoi_uri=args['watersheds_uri'])
 
     LOGGER.info('building cp raster from lulc')
     lulc_to_cp_dict = dict([(lulc_code, float(table['usle_c']) * float(table['usle_p']))  for (lulc_code, table) in biophysical_table.items()])
@@ -235,7 +247,7 @@ def execute(args):
         'usle_tot': raster_utils.aggregate_raster_values_uri(usle_uri, args['watersheds_uri'], 'ws_id').total,
         'sed_export': raster_utils.aggregate_raster_values_uri(sed_export_uri, args['watersheds_uri'], 'ws_id').total,
         'upret_tot': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
-        'upret_mean': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').total,
+        'upret_mean': raster_utils.aggregate_raster_values_uri(sed_retention_uri, args['watersheds_uri'], 'ws_id').pixel_mean,
         }
 
     #Create the service field sums

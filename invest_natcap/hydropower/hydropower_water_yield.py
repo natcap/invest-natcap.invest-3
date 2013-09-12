@@ -89,7 +89,10 @@ def execute(args):
     raster_utils.create_directories([workspace, output_dir])
     
     # Get inputs from the args dictionary
-    lulc_uri = args['lulc_uri']
+    clipped_lulc_uri = raster_utils.temporary_filename()
+    raster_utils.clip_dataset_uri(
+        args['lulc_uri'], args['watersheds_uri'], clipped_lulc_uri, True)
+
     eto_uri = args['eto_uri']
     precip_uri = args['precipitation_uri']
     depth_to_root_rest_layer_uri = args['depth_to_root_rest_layer_uri']
@@ -148,7 +151,7 @@ def execute(args):
     tmp_Kc_raster_uri = raster_utils.temporary_filename()
     
     raster_utils.reclassify_dataset_uri(
-            lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float32,
             out_nodata)
 
     # Create root raster from table values to use in future calculations
@@ -156,7 +159,7 @@ def execute(args):
     tmp_root_raster_uri = raster_utils.temporary_filename()
     
     raster_utils.reclassify_dataset_uri(
-            lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
             out_nodata)
 
     # Get out_nodata values so that we can avoid any issues when running
@@ -401,12 +404,19 @@ def execute(args):
     # Write watershed CSV table
     write_new_table(wyield_ws_table_uri, field_list_ws, wyield_value_dict_ws)
   
+    #clear out the temporary filenames, doing this because a giant run of
+    #hydropower water yield chews up all available disk space
+    for tmp_uri in [
+        tmp_Kc_raster_uri, tmp_root_raster_uri, tmp_pet_uri]:
+        os.remove(tmp_uri)
+
     # Check to see if Water Scarcity was selected to run
     water_scarcity_checked = args.pop('water_scarcity_container', False)
     if not water_scarcity_checked:
         LOGGER.debug('Water Scarcity Not Selected')
         # The rest of the function is water scarcity and valuation, so we can
         # quit now
+        os.remove(clipped_lulc_uri)
         return
 
     LOGGER.info('Starting Water Scarcity')
@@ -448,7 +458,7 @@ def execute(args):
     LOGGER.info("Reclassifying demand raster")
     tmp_demand_uri = raster_utils.temporary_filename()
     raster_utils.reclassify_dataset_uri(
-            lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float32,
+            clipped_lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float32,
             out_nodata)
     
     # Aggregate the consumption volume over sheds using the
@@ -496,7 +506,11 @@ def execute(args):
     
     # Write watershed CSV table for water scarcity
     write_new_table(scarcity_table_ws_uri, field_list_ws, scarcity_dict_ws)
-    
+
+    #Don't need this anymore
+    os.remove(tmp_demand_uri)
+    os.remove(clipped_lulc_uri)
+
     # Check to see if Valuation was selected to run
     valuation_checked = args.pop('valuation_container', False)
     if not valuation_checked:

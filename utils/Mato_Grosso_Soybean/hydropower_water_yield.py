@@ -9,12 +9,10 @@ import carbon_expansion_scenarios
 
 #Premade scenario
 def premade_water_yield_scenario(args):
-    base_landcover_table_uri = os.path.join(args['workspace_dir'], 'premade_landcover_scenario.csv')
-    print base_landcover_table_uri
     base_landcover_table = open(args['output_table_filename'], 'wb')
     base_landcover_table.write('percent expansion,water yield volume\n')
 
-    for percent in xrange(400):
+    for percent in xrange(args['scenario_conversion_steps'] + 1):
         print 'premade scenarios percent step %s' % percent
         scenario_path = './MG_Soy_Exp_07122013/'
         scenario_file_pattern = 'mg_lulc%n'
@@ -22,7 +20,7 @@ def premade_water_yield_scenario(args):
             scenario_path,
             scenario_file_pattern.replace('%n', str(percent)))
 
-        #invest_natcap.hydropower.hydropower_water_yield.execute(args)
+        invest_natcap.hydropower.hydropower_water_yield.execute(args)
         water_yield_shapefile_uri = os.path.join(
             args['workspace_dir'], 'output', 'wyield_sheds.shp')
         ws_table = raster_utils.extract_datasource_table_by_key(
@@ -96,7 +94,7 @@ def analyze_lu_expansion(args):
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating water yield for expansion step %s' % percent
         
-        #invest_natcap.hydropower.hydropower_water_yield.execute(args)
+        invest_natcap.hydropower.hydropower_water_yield.execute(args)
         water_yield_shapefile_uri = os.path.join(
             args['workspace_dir'], 'output', 'wyield_sheds.shp')
         ws_table = raster_utils.extract_datasource_table_by_key(
@@ -176,7 +174,7 @@ def analyze_forest_core_fragmentation(args):
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating water yield for forest fragmentation step %s' % percent
 
-        #invest_natcap.hydropower.hydropower_water_yield.execute(args)
+        invest_natcap.hydropower.hydropower_water_yield.execute(args)
         water_yield_shapefile_uri = os.path.join(
             args['workspace_dir'], 'output', 'wyield_sheds.shp')
         ws_table = raster_utils.extract_datasource_table_by_key(
@@ -269,7 +267,7 @@ def analyze_forest_core_expansion(args):
         print 'calculating carbon stocks for expansion step %s' % percent
 
         #Dump the current percent iteration's carbon stocks to the csv file
-        #invest_natcap.hydropower.hydropower_water_yield.execute(args)
+        invest_natcap.hydropower.hydropower_water_yield.execute(args)
         water_yield_shapefile_uri = os.path.join(
             args['workspace_dir'], 'output', 'wyield_sheds.shp')
         ws_table = raster_utils.extract_datasource_table_by_key(
@@ -358,7 +356,7 @@ def analyze_forest_edge_expansion(args):
     deepest_edge_index = 0
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating water yield for forest edge expansion %s' % percent
-        #invest_natcap.hydropower.hydropower_water_yield.execute(args)
+        invest_natcap.hydropower.hydropower_water_yield.execute(args)
         water_yield_shapefile_uri = os.path.join(
             args['workspace_dir'], 'output', 'wyield_sheds.shp')
         ws_table = raster_utils.extract_datasource_table_by_key(
@@ -384,7 +382,7 @@ if __name__ == '__main__':
         u'biophysical_table_uri': u'Water_Yield/Parameters.csv',
         u'depth_to_root_rest_layer_uri': u'Water_Yield/mg_sdepth_proj.tif',
         u'eto_uri': u'Water_Yield/mg_pet',
-        u'lulc_uri': u'MG_Soy_Exp_07122013/mg_lulc0',
+        u'lulc_uri': u'Water_Yield/mg_lulc0',
         u'pawc_uri': u'Water_Yield/mg_pawc_proj.tif',
         u'precipitation_uri': u'Water_Yield/mg_precipe',
         u'results_suffix': u'',
@@ -396,28 +394,28 @@ if __name__ == '__main__':
     }
 
     #Set up args for the savanna scenario
-    ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
+    ARGS['scenario_lulc_base_map_filename'] = 'Water_Yield/mg_lulc0'
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['conversion_lucode'] = 9
     ARGS['converting_crop'] = 120,
     ARGS['output_table_filename'] = os.path.join(
         ARGS['workspace_dir'], 'savanna_expansion_water_yield_change.csv')
     ARGS['scenario_conversion_steps'] = 400
-    #analyze_lu_expansion(ARGS)
+    analyze_lu_expansion(ARGS)
 
     ARGS['output_table_filename'] = os.path.join(
         ARGS['workspace_dir'], 'premade_landcover_water_yield_change.csv')
-#    premade_water_yield_scenario(ARGS)
+    premade_water_yield_scenario(ARGS)
     
     ARGS['forest_lucodes'] = [1, 2, 3, 4, 5]
     ARGS['output_table_filename'] = os.path.join(
         ARGS['workspace_dir'], 'forest_core_fragmentation_water_yield_change.csv')
-    #analyze_forest_core_fragmentation(ARGS)
+    analyze_forest_core_fragmentation(ARGS)
     
-    ARGS['output_table_filename'] = (
-        'forest_core_expansion_water_yield_change.csv')
-    #analyze_forest_core_expansion(ARGS)
+    ARGS['output_table_filename'] = os.path.join(
+        ARGS['workspace_dir'], 'forest_core_expansion_water_yield_change.csv')
+    analyze_forest_core_expansion(ARGS)
 
-    ARGS['output_table_filename'] = (
-        'forest_edge_expansion_water_yield_change.csv')
+    ARGS['output_table_filename'] = os.path.join(
+        ARGS['workspace_dir'], 'forest_edge_expansion_water_yield_change.csv')
     analyze_forest_edge_expansion(ARGS)

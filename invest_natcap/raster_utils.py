@@ -1,5 +1,6 @@
 """A collection of GDAL dataset and raster utilities"""
 
+import traceback
 import logging
 import random
 import string
@@ -1099,7 +1100,15 @@ def aggregate_raster_values_uri(
 
     mask_band = None
     mask_dataset = None
+    clipped_band = None
+    clipped_dataset = None
+    for filename in [temporary_mask_filename, clipped_raster_uri]:
+        try:
+            os.remove(filename)
+        except OSError:
+            LOGGER.warn("couldn't remove file %s" % filename)
     return result_tuple
+
 
 
 def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
@@ -1198,6 +1207,9 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
 
     slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
     calculate_raster_stats(slope_dataset)
+
+    dem_small_dataset = None
+    os.remove(dem_small_uri)
 
 
 def clip_dataset_uri(
@@ -2068,9 +2080,9 @@ def temporary_filename():
         try:
             os.remove(path)
         except OSError as exception:
-            LOGGER.debug(
-                'tried to removing temporary file %s but got %s '
-                % (path, exception))
+            #This happens if the file didn't exist, which is okay because maybe
+            #we deleted it in a method
+            pass
 
     atexit.register(remove_file, path)
     return path
@@ -2377,6 +2389,11 @@ def align_dataset_list(
                 dataset_row[mask_row == 0] = nodata_out
                 out_band.WriteArray(dataset_row, xoff=0, yoff=row_index)
 
+        #Remove the mask aoi if necessary
+        mask_band = None
+        mask_dataset = None
+        os.remove(mask_uri)
+
 
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
@@ -2479,6 +2496,8 @@ def vectorize_datasets(
         aoi_layer = aoi_datasource.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
         mask_array = numpy.zeros((1, n_cols))
+        aoi_layer = None
+        aoi_datasource = None
 
     dataset_rows = [numpy.zeros((1, n_cols)) for _ in aligned_bands]
     for row_index in range(n_rows):
@@ -2498,7 +2517,24 @@ def vectorize_datasets(
     output_dataset.FlushCache()
     output_dataset = None
     output_band = None
+
+    #Clean up the files made by temporary file because we had an issue once
+    #where I was running the water yield model over 2000 times and it made
+    #so many temporary files I ran out of disk space.
+    if aoi_uri != None:
+        mask_band = None
+        mask_dataset = None
+        os.remove(mask_uri)
+    aligned_bands = None
+    aligned_datasets = None
+    for temp_dataset_uri in dataset_out_uri_list:
+        LOGGER.debug('removing %s' % temp_dataset_uri)
+        try:
+            os.remove(temp_dataset_uri)
+        except OSError:
+            LOGGER.warn("couldn't delete file %s" % temp_dataset_uri)
     calculate_raster_stats_uri(dataset_out_uri)
+
 
 def get_lookup_from_table(table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
@@ -2631,6 +2667,9 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
         key_value = feature.GetField(key_field)
         attribute_dictionary[key_value] = feature_fields
 
+    #Explictly clean up the layers so the files close
+    layer = None
+    datasource = None
     return attribute_dictionary
     
 def get_geotransform_uri(ds_uri):
