@@ -707,10 +707,10 @@ if __name__ == '__main__':
     args['output_table_filename'] = (
         './export/globio_forest_expansion_msa_change_'+args['run_id']+'.csv')
     args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './data/export/'
+    args['export_folder'] = './export/'
     args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
     args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './data/' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
+    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
     args['potential_vegetation_uri'] = './potential_vegetation.tif'
     args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
     args['pasture_uri'] = './pasture.tif'
@@ -728,19 +728,19 @@ if __name__ == '__main__':
     args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
     args['pixels_to_convert_per_step'] = 2608*4 #default 2608. 
     args['converting_crop'] = 120,
-    args['data_location'] = './data/'
+    args['data_location'] = './'
     args['output_table_filename'] = (
-        './data/export/globio_forest_core_expansion_msa_change_'+args['run_id']+'.csv')
+        './export/globio_forest_core_expansion_msa_change_'+args['run_id']+'.csv')
     args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './data/export/'
-    args['sum_yieldgap_uri'] = './data/sum_yieldgap.tif' 
+    args['export_folder'] = './export/'
+    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
     args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './data/' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './data/potential_vegetation.tif'
+    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
+    args['potential_vegetation_uri'] = './potential_vegetation.tif'
     args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './data/pasture.tif'
+    args['pasture_uri'] = './pasture.tif'
     args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './data/mg_definition.tif'
+    args['mg_definition_uri'] = './mg_definition.tif'
     args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
     globio_analyze_forest_core_expansion(args)
 
@@ -753,19 +753,19 @@ if __name__ == '__main__':
     args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
     args['pixels_to_convert_per_step'] = 2608*4 #default 2608. 
     args['converting_crop'] = 120,
-    args['data_location'] = './data/'
+    args['data_location'] = './'
     args['output_table_filename'] = (
-        './data/export/globio_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv')
+        './export/globio_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv')
     args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './data/export/'
-    args['sum_yieldgap_uri'] = './data/sum_yieldgap.tif' 
+    args['export_folder'] = './export/'
+    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
     args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './data/' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './data/potential_vegetation.tif'
+    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
+    args['potential_vegetation_uri'] = './potential_vegetation.tif'
     args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './data/pasture.tif'
+    args['pasture_uri'] = './pasture.tif'
     args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './data/mg_definition.tif'
+    args['mg_definition_uri'] = './mg_definition.tif'
     args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
     globio_analyze_forest_core_fragmentation(args)
 
@@ -778,19 +778,19 @@ if __name__ == '__main__':
     args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
     args['pixels_to_convert_per_step'] = 2608*4 #default 2608. 
     args['converting_crop'] = 120,
-    args['data_location'] = './data/'
+    args['data_location'] = './'
     args['output_table_filename'] = (
-        './data/export/globio_lu_expansion_msa_change_'+args['run_id']+'.csv')
+        './export/globio_lu_expansion_msa_change_'+args['run_id']+'.csv')
     args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './data/export/'
-    args['sum_yieldgap_uri'] = './data/sum_yieldgap.tif' 
+    args['export_folder'] = './export/'
+    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
     args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './data/' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './data/potential_vegetation.tif'
+    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
+    args['potential_vegetation_uri'] = './potential_vegetation.tif'
     args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './data/pasture.tif'
+    args['pasture_uri'] = './pasture.tif'
     args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './data/mg_definition.tif'
+    args['mg_definition_uri'] = './mg_definition.tif'
     args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
     args['conversion_lucode'] = 9
     globio_analyze_lu_expansion(args)
@@ -806,17 +806,17 @@ if __name__ == '__main__':
     args['converting_crop'] = 120,
     args['data_location'] = './'
     args['output_table_filename'] = (
-        './data/export/globio_premade_lulc_scenarios_msa_change_'+args['run_id']+'.csv')
+        './export/globio_premade_lulc_scenarios_msa_change_'+args['run_id']+'.csv')
     args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './data/export/'
-    args['sum_yieldgap_uri'] = './data/sum_yieldgap.tif' 
+    args['export_folder'] = './export/'
+    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
     args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './data/' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './data/potential_vegetation.tif'
+    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
+    args['potential_vegetation_uri'] = './potential_vegetation.tif'
     args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './data/pasture.tif'
+    args['pasture_uri'] = './pasture.tif'
     args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './data/mg_definition.tif'
+    args['mg_definition_uri'] = './mg_definition.tif'
     args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
     args['scenario_path'] = './data/MG_Soy_Exp_07122013/'
     args['scenario_file_pattern'] = 'mg_lulc%n'
