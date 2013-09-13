@@ -343,8 +343,10 @@ class TestAestheticQualityCore(unittest.TestCase):
                 return index
 
     def test_viewshed(self):
-        array_shape = (6,6) 
+        array_shape = (6,6)
+        DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
         viewpoint = (3, 4) #np.array([array_shape[0]/2, array_shape[1]/2])
+        viewpoint_elevation = 1.75
 
         # 1- get perimeter cells
         perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
@@ -353,9 +355,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         angles = self.cell_angles(perimeter_cells, viewpoint)
         angles = np.append(angles, 2.0 * math.pi)
         print('angles', angles.size, angles)
-        # 3- compute angles on raster cells
+        # 3- compute information on raster cells
         events = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        I = events[3]
+        J = events[4]
+        distances = (viewpoint[0] - I)**2 + (viewpoint[1] - J)**2
+        visibility = (viewpoint_elevation - DEM[(I, J)]) / distances
         # 4- build event lists
         add_cell_events = []
         add_event_id = 0
@@ -434,8 +440,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         for c in cell_center_events[0]:
             #print('  adding', c)
             active_cells.add(c)
-            d = 3.5
-            v = 0.5
+            d = distances[c]
+            v = visibility[c]
             active_line.append(sweep_cell(left = None, right = None, \
             up = None, distance = d, visibility = v))
         #print('active cells', len(active_cells), active_cells)
