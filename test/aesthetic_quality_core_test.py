@@ -420,16 +420,24 @@ class TestAestheticQualityCore(unittest.TestCase):
         #print('add_cell_events', add_cell_events)
 
         # Create the binary search tree as depicted in Kreveld et al.
-        # "Vatiations on Sweep Algorithms"
-        sweep_cell = collections.namedtuple('sweep_cell', ['left', 'right', 'up', 'value'])
-        scell = sweep_cell(left = None, right = 1, up = 0, value = 3.5)
+        # "Variations on Sweep Algorithms"
+        sweep_cell = collections.namedtuple('sweep_cell', \
+            ['left', 'right', 'up', 'distance', 'visibility'])
+        scell = sweep_cell(left = None, right = 1, up = 0, distance = 3.5,
+        visibility = 0.5)
         print('scell', scell)
+
         # Updating active cells
         active_cells = set()
+        active_line = []
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
             #print('  adding', c)
             active_cells.add(c)
+            d = 3.5
+            v = 0.5
+            active_line.append(sweep_cell(left = None, right = None, \
+            up = None, distance = d, visibility = v))
         #print('active cells', len(active_cells), active_cells)
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):

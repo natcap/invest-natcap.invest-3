@@ -18,9 +18,9 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
             
-        returns a tuple (min, center, max, coords) with min, center and max 
+        returns a tuple (min, center, max, I, J) with min, center and max 
         Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
-        angles and coords a Nx1 list of [row, col] numpy arrays of the
+        angles and coords as two Nx1 numpy arrays of row and column of the 
         coordinate of each point.
     """
     viewpoint = np.array(viewpoint_coords)
@@ -43,14 +43,16 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     min_angles = []
     angles = []
     max_angles = []
-    coords = []
+    I = []
+    J = []
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
             cell = np.array([row, col])
-            coords.append(cell)
+            I.append(row)
+            J.append(col)
             viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
             angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
@@ -76,8 +78,10 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     min_angles = np.array(min_angles)
     angles = np.array(angles)
     max_angles = np.array(max_angles)
+    I = np.array(I)
+    J = np.array(J)
 
-    return (min_angles, angles, max_angles, coords)
+    return (min_angles, angles, max_angles, I, J)
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
