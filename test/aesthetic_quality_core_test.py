@@ -361,7 +361,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         I = events[3]
         J = events[4]
         distances = (viewpoint[0] - I)**2 + (viewpoint[1] - J)**2
-        visibility = (viewpoint_elevation - DEM[(I, J)]) / distances
+        visibility = \
+        (DEM[(I, J)] - DEM[viewpoint[0], viewpoint[1]] - viewpoint_elevation) \
+        / distances
         # 4- build event lists
         add_cell_events = []
         add_event_id = 0
@@ -444,6 +446,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             v = visibility[c]
             active_line.append(sweep_cell(left = None, right = None, \
             up = None, distance = d, visibility = v))
+        print('active_line', active_line)
         #print('active cells', len(active_cells), active_cells)
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
