@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+import collections
 import logging
 
 #LOGGER = logging.get('aesthetic_quality_core')
@@ -82,6 +83,18 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     J = np.array(J)
 
     return (min_angles, angles, max_angles, I, J)
+
+# Linked cells used for the active pixels
+linked_cell_factory = collections.namedtuple('linked_cell', \
+    ['left', 'right', 'up', 'distance', 'visibility'])
+
+# Links to the cells
+cell_link_factory = collections.namedtuple('cell_link', \
+    ['top', 'left', 'bottom', 'level', 'distance'])
+
+
+def add_active_pixel(sweep_line, pixel):
+    pass
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
