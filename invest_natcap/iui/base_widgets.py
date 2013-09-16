@@ -1781,6 +1781,7 @@ class OperationDialog(QtGui.QDialog):
         self.setWindowTitle("Running the model")
         self.resize(700, 400)
         center_window(self)
+        self.setModal(True)
 
         self.cancel = False
 
