@@ -1455,12 +1455,17 @@ class FileButton(QtGui.QPushButton):
         oldText = self.URIfield.text()
         filename = ''
 
+        # the default folder to open.
+        default_folder = os.path.expanduser('~')
+
         if self.filetype == 'folder':
-            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
+            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' +
+                self.text, default_folder)
             filter = self.last_filter
         else:
             file_dialog = QtGui.QFileDialog()
-            filename, filter = file_dialog.getOpenFileNameAndFilter(self, 'Select ' + self.text, '.',
+            filename, filter = file_dialog.getOpenFileNameAndFilter(self,
+                'Select ' + self.text, default_folder,
                 filter=self.filter_string, initialFilter = self.last_filter)
         self.last_filter = filter
 
