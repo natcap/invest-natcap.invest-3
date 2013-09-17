@@ -86,37 +86,39 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
 
 # Linked cells used for the active pixels
 linked_cell_factory = collections.namedtuple('linked_cell', \
-    ['right', 'distance', 'visibility'])
+    ['previous', 'next', 'distance', 'visibility'])
 
 # Links to the cells
 cell_link_factory = collections.namedtuple('cell_link', \
     ['top', 'right', 'bottom', 'level', 'distance'])
 
 
-def add_active_pixel(sweep_line, new_pixel):
+def add_active_pixel(sweep_line, distance, visibility):
     """Add a pixel to the sweep line. The sweep line is a linked list, and the
     pixel is a linked_cell"""
+    new_pixel = linked_cell_factory(previous = None, next = None, \
+        distance = distance, visibility = visibility)
     if 'closest' in sweep_line:
         max_distance = new_pixel.distance
         # Get information about first pixel in the list
         pixel = sweep_line['closest']
         # Move on to next pixel if we're not done
-        while (pixel.right is not None) and \
-            (pixel.right.distance < max_distance):
-            pixel = pixel.right
+        while (pixel.next is not None) and \
+            (pixel.next.distance < max_distance):
+            pixel = pixel.next
         distance = pixel.distance
-        end_reached = pixel.right is None
+        end_reached = pixel.next is None
         print('End of loop. End/distance', end_reached, distance)
         print('distance', new_pixel.distance)
+        new_pixel = new_pixel._replace(next = pixel.next)
+        pixel = pixel._replace(next = new_pixel)
         sweep_line[new_pixel.distance] = new_pixel
         if not end_reached:
-            print('next distance', pixel.right.distance)
-        print('new_pixel.right', new_pixel.right)
-        print('pixel.right', pixel.right)
-        new_pixel = new_pixel._replace(right = pixel.right)
-        pixel = pixel._replace(right = new_pixel)
+            print('next distance', pixel.next.distance)
+        print('new_pixel.next', new_pixel.next)
+        print('pixel.next', pixel.next)
         print('pixel dist', pixel.distance)
-        print('new pixel dist', pixel.right.distance)
+        print('new pixel dist', pixel.next.distance)
         
         #print('next pixel distance', pixel.right.right.distance)
     else:
