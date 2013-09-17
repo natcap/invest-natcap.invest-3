@@ -452,12 +452,32 @@ class Executor(threading.Thread):
                     LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
 
                 os.environ[tmp_variable] = temporary_path
+            LOGGER.info('Starting %s', model_name)
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
             #case for out of disk space
-            LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
-            LOGGER.error('Error: a problem occurred while running the model')
+            LOGGER.error('---------------------------------------------------')
+            LOGGER.error('---------------------- ERROR ----------------------')
+            LOGGER.error('---------------------------------------------------')
+            LOGGER.error('Error: exception found while running %s', model_name)
+            LOGGER.debug('')
+            LOGGER.debug('System')
+            fmt_string = '%-16s: %s'
+            LOGGER.debug(fmt_string, 'Disk space free', fileio.get_free_space(workspace))
+            LOGGER.debug(fmt_string, 'OS', platform.platform())
+            LOGGER.debug(fmt_string, 'Machine type', platform.machine())
+            LOGGER.debug(fmt_string, 'FS encoding', sys.getfilesystemencoding())
+            LOGGER.debug('')
+            LOGGER.debug('Python')
+            LOGGER.debug(fmt_string, 'Version', platform.python_version())
+            LOGGER.debug(fmt_string, 'Build', platform.python_build())
+            LOGGER.debug(fmt_string, 'Compiler', platform.python_compiler())
+            LOGGER.debug(fmt_string, 'Implementation', platform.python_implementation())
+            LOGGER.debug(fmt_string, 'Architecture', platform.architecture()[0])
+            LOGGER.debug(fmt_string, 'Linkage format', platform.architecture()[1])
+            LOGGER.debug(fmt_string, 'InVEST version', invest_natcap.__version__)
+            LOGGER.debug('')
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
