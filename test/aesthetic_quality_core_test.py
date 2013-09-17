@@ -436,7 +436,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         for c in cell_center_events[0]:
             print('  adding', c)
             active_cells.add(c)
-            active_line = {}
             d = distances[c]
             v = visibility[c]
             pixel = aesthetic_quality_core.linked_cell_factory(right = None, \
