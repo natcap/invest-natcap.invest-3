@@ -96,34 +96,37 @@ cell_link_factory = collections.namedtuple('cell_link', \
 def add_active_pixel(sweep_line, distance, visibility):
     """Add a pixel to the sweep line. The sweep line is a linked list, and the
     pixel is a linked_cell"""
-    new_pixel = linked_cell_factory(previous = None, next = None, \
-        distance = distance, visibility = visibility)
+    new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
+    #linked_cell_factory(previous = None, next = None, \
+    #    distance = distance, visibility = visibility)
     if 'closest' in sweep_line:
-        max_distance = new_pixel.distance
+        max_distance = new_pixel['distance']
         # Get information about first pixel in the list
         pixel = sweep_line['closest']
         # Move on to next pixel if we're not done
-        while (pixel.next is not None) and \
-            (pixel.next.distance < max_distance):
-            pixel = pixel.next
-        distance = pixel.distance
-        end_reached = pixel.next is None
+        while (pixel['next'] is not None) and \
+            (pixel['next']['distance'] < max_distance):
+            pixel = pixel['next']
+        distance = pixel['distance']
+        end_reached = pixel['next'] is None
         print('End of loop. End/distance', end_reached, distance)
-        print('distance', new_pixel.distance)
-        new_pixel = new_pixel._replace(next = pixel.next)
-        pixel = pixel._replace(next = new_pixel)
-        sweep_line[new_pixel.distance] = new_pixel
+        print('distance', new_pixel['distance'])
+        # Insert the current pixel in the sweep line:
+        # Create the 
+        new_pixel['next'] = pixel['next']
+        pixel['next'] = new_pixel
+        sweep_line[new_pixel['distance']] = new_pixel
         if not end_reached:
-            print('next distance', pixel.next.distance)
-        print('new_pixel.next', new_pixel.next)
-        print('pixel.next', pixel.next)
-        print('pixel dist', pixel.distance)
-        print('new pixel dist', pixel.next.distance)
+            print('next distance', pixel['next']['distance'])
+        print('new_pixel.next', new_pixel['next'])
+        print('pixel.next', pixel['next'])
+        print('pixel dist', pixel['distance'])
+        print('new pixel dist', pixel['next']['distance'])
         
         #print('next pixel distance', pixel.right.right.distance)
     else:
-        print('distance', new_pixel.distance)
-        sweep_line[new_pixel.distance] = new_pixel
+        print('distance', new_pixel['distance'])
+        sweep_line[new_pixel['distance']] = new_pixel
         sweep_line['closest'] = new_pixel
     for entry in sweep_line:
         print(entry, sweep_line[entry])
