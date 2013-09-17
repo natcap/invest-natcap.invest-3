@@ -86,15 +86,41 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
 
 # Linked cells used for the active pixels
 linked_cell_factory = collections.namedtuple('linked_cell', \
-    ['left', 'right', 'up', 'distance', 'visibility'])
+    ['right', 'distance', 'visibility'])
 
 # Links to the cells
 cell_link_factory = collections.namedtuple('cell_link', \
-    ['top', 'left', 'bottom', 'level', 'distance'])
+    ['top', 'right', 'bottom', 'level', 'distance'])
 
 
-def add_active_pixel(sweep_line, pixel):
-    pass
+def add_active_pixel(sweep_line, new_pixel):
+    """Add a pixel to the sweep line. The sweep line is a linked list, and the
+    pixel is a linked_cell"""
+    print('sweep line before addition', sweep_line)
+    if 'closest' in sweep_line:
+        max_distance = new_pixel.distance
+        # Get information about first pixel in the list
+        pixel = sweep_line['closest']
+        # Move on to next pixel if we're not done
+        while (pixel.right is not None) and \
+            (pixel.right.distance < max_distance):
+            pixel = pixel.right
+        distance = pixel.distance
+        end_reached = pixel.right is None
+        print('distance', distance)
+        print('end reached', end_reached)
+        sweep_line[distance] = new_pixel
+        if not end_reached:
+            print('next distance', pixel.right.distance)
+        new_pixel.right = pixel.right
+        pixel.right = new_pixel
+        print('pixel dist', pixel.distance)
+        print('new pixel dist', pixel.right.distance)
+        #print('next pixel distance', pixel.right.right.distance)
+    else:
+        sweep_line['closest'] = new_pixel
+    print('sweep line after addition', sweep_line)
+    return sweep_line
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):

@@ -345,7 +345,7 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_viewshed(self):
         array_shape = (6,6)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
-        viewpoint = (3, 4) #np.array([array_shape[0]/2, array_shape[1]/2])
+        viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
 
         # 1- get perimeter cells
@@ -387,8 +387,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         
         # Add the events to the 3 event lists
         #print('index', self.find_angle_index(angles, 1.6))
-        print('center', events[1][arg_center])
-        print('center', arg_center)
+        #print('center', events[1][arg_center])
+        #print('center', arg_center)
         # Add center angles to center_events_array
         for a in range(1, len(angles)): 
             #print('current angle', angles[a])
@@ -429,23 +429,20 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         # Create the binary search tree as depicted in Kreveld et al.
         # "Variations on Sweep Algorithms"
-        sweep_cell = collections.namedtuple('sweep_cell', \
-            ['left', 'right', 'up', 'distance', 'visibility'])
-        scell = sweep_cell(left = None, right = 1, up = 0, distance = 3.5,
-        visibility = 0.5)
-        print('scell', scell)
-
         # Updating active cells
         active_cells = set()
-        active_line = []
+        active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            #print('  adding', c)
+            print('  adding', c)
             active_cells.add(c)
+            active_line = {}
             d = distances[c]
             v = visibility[c]
-            active_line.append(sweep_cell(left = None, right = None, \
-            up = None, distance = d, visibility = v))
+            pixel = aesthetic_quality_core.linked_cell_factory(right = None, \
+                distance = d, visibility = v)
+            active_line = \
+                aesthetic_quality_core.add_active_pixel(active_line, pixel)
         print('active_line', active_line)
         #print('active cells', len(active_cells), active_cells)
         # 2- loop through line sweep angles:
