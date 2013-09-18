@@ -2434,9 +2434,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.file_menu = QtGui.QMenu('&File')
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
+        self.load_file_action.setShortcut(QtGui.QKeySequence("Ctrl+O"))
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
+        self.save_file_action.setShortcut(QtGui.QKeySequence("Ctrl+S"))
         self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
         self.exit_action = self.file_menu.addAction('Exit')
+        self.exit_action.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
         self.menuBar().addMenu(self.file_menu)
 
         self.dev_menu = QtGui.QMenu('&Development')
