@@ -342,6 +342,47 @@ class TestAestheticQualityCore(unittest.TestCase):
             if breadth == 0:
                 return index
 
+    def test_skip_list(self):
+        """Test the data structure that holds active pixels in the sweep line
+        What is tested:
+            1- At the leaves:
+                1.1- insertions:
+                    1.1.1- check for list length
+                    1.1.2- check elements are sorted
+                1.2- deletions:
+                    1.2.1- check for list length
+                    1.2.2- check elements are sorted
+                1.3- access for data retreival
+                    1.3.1- check the right element is retreived
+                    1.3.2- check for O(log n) performance
+            2- In the intermediate levels:
+                2.1- creation of skip links after leaf insertions:
+                    2.1.1- insert new leaf in the right place
+                    2.1.2- create intermediate links when and where expected
+                    2.1.3- O(log n) performance is maintained
+                2.2- deletion of skip links after leaf deletions:
+                    2.2.1- delete the correct leaf
+                    2.2.2- trim intermediate links: the skip list reduces to 1
+                    2.2.3- O(log n) performance is maintained
+                2.3- fast access:
+                    2.3.1- Finds the appropriate value
+                    2.3.2- O(log n) performance is maintained"""
+        # 1- Leaf operations:
+        # Add random elements to the list
+        test_list = {}
+        additions = 10
+        for i in range(additions):
+            distance = np.random.randint(additions)
+            print('adding', distance)
+            aesthetic_quality_core.add_active_pixel(test_list, distance, 0)
+            print(' active line')
+            current = test_list['closest']
+            print('  distance', current['distance'])
+            while current['next'] is not None:
+                current = current['next']
+                print('  distance', current['distance'])
+        
+
     def test_viewshed(self):
         array_shape = (6,6)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
@@ -440,12 +481,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             v = visibility[c]
             active_line = \
                 aesthetic_quality_core.add_active_pixel(active_line, d, v)
-        print('active line')
-        current = active_line['closest']
-        print('distance', current['distance'])
-        while current['next'] is not None:
-            current = current['next']
-            print('distance', current['distance'])
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
             #print('sweep angle', a)
