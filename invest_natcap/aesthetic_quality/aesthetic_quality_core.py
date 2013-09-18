@@ -99,21 +99,31 @@ def add_active_pixel(sweep_line, distance, visibility):
     new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
-        pixel = sweep_line['closest']
+        previous = None
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
         # Move on to next pixel if we're not done
-        while (pixel['next'] is not None) and \
-            (pixel['next']['distance'] < distance):
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            previous = pixel
             pixel = pixel['next']
-        # 1- Insert the current pixel in the sweep line:
+        if previous is None:
+            print('adding at the beginning')
+        elif pixel is None:
+            print('adding at the end')
+            print('previous', previous)
+            print('pixel', pixel)
+        else:
+            print('adding between ' + str(previous['distance']) + ' and ' + \
+                str(pixel['distance']))
+        # 1- Make the current pixel point to the next one
+        new_pixel['next'] = pixel
+        # 2- Insert the current pixel in the sweep line:
         sweep_line[distance] = new_pixel
-        # 2- Make the new pixel point to the next pixel
-        sweep_line[distance]['next'] = pixel['next']
-        # 3- Make the current pixel point to the new pixel
-        sweep_line[pixel['distance']]['next'] = new_pixel
-        # Iterate through the active pixels
-        current = sweep_line['closest']
-        while (current['next'] is not None):
-            current = current['next']
+        # 3- Make the preceding pixel point to the current one
+        if previous is None:
+            sweep_line['closest'] = new_pixel
+        else:
+            sweep_line[previous['distance']]['next'] = sweep_line[distance]
     else:
         sweep_line[distance] = new_pixel
         sweep_line['closest'] = new_pixel

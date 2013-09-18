@@ -370,17 +370,19 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 1- Leaf operations:
         # Add random elements to the list
         test_list = {}
-        additions = 10
+        additions = 5
         for i in range(additions):
-            distance = np.random.randint(additions)
-            print('adding', distance)
-            aesthetic_quality_core.add_active_pixel(test_list, distance, 0)
+            distance = 1 + (i+1)/additions #np.random.randint(additions)
+            visibility = len(test_list)
+            print('adding', distance, visibility)
+            aesthetic_quality_core.add_active_pixel(test_list, distance, \
+                visibility)
             print(' active line')
             current = test_list['closest']
-            print('  distance', current['distance'])
+            print('  distance', current['distance'], current['visibility'])
             while current['next'] is not None:
                 current = current['next']
-                print('  distance', current['distance'])
+                print('  distance', current['distance'], current['visibility'])
         
 
     def test_viewshed(self):
