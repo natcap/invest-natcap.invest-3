@@ -440,7 +440,12 @@ class TestAestheticQualityCore(unittest.TestCase):
             v = visibility[c]
             active_line = \
                 aesthetic_quality_core.add_active_pixel(active_line, d, v)
-        #print('active cells', len(active_cells), active_cells)
+        print('active line')
+        current = active_line['closest']
+        print('distance', current['distance'])
+        while current['next'] is not None:
+            current = current['next']
+            print('distance', current['distance'])
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
             #print('sweep angle', a)

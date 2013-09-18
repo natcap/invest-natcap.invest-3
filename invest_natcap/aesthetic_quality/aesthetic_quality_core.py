@@ -96,11 +96,7 @@ cell_link_factory = collections.namedtuple('cell_link', \
 def add_active_pixel(sweep_line, distance, visibility):
     """Add a pixel to the sweep line. The sweep line is a linked list, and the
     pixel is a linked_cell"""
-    print('before addition')
-    for entry in sweep_line:
-        print(entry, sweep_line[entry])
     new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
-    print('new pixel', new_pixel)
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
         pixel = sweep_line['closest']
@@ -108,28 +104,19 @@ def add_active_pixel(sweep_line, distance, visibility):
         while (pixel['next'] is not None) and \
             (pixel['next']['distance'] < distance):
             pixel = pixel['next']
-        print('pixel', pixel)
         # 1- Insert the current pixel in the sweep line:
         sweep_line[distance] = new_pixel
         # 2- Make the new pixel point to the next pixel
         sweep_line[distance]['next'] = pixel['next']
         # 3- Make the current pixel point to the new pixel
         sweep_line[pixel['distance']]['next'] = new_pixel
-        
         # Iterate through the active pixels
-        loop_count = 0
         current = sweep_line['closest']
-        print('closest', current['distance'])
-        while (current['next'] is not None) and (loop_count < 10):
+        while (current['next'] is not None):
             current = current['next']
-            print(current['distance'])
-            loop_count += 1
     else:
         sweep_line[distance] = new_pixel
         sweep_line['closest'] = new_pixel
-    print('sweep line after addition')
-    for entry in sweep_line:
-        print(entry, sweep_line[entry])
     return sweep_line
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
