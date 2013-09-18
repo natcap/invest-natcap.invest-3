@@ -368,22 +368,36 @@ class TestAestheticQualityCore(unittest.TestCase):
                     2.3.1- Finds the appropriate value
                     2.3.2- O(log n) performance is maintained"""
         # 1- Leaf operations:
+        # 1.1- leaf insertions
         # Add random elements to the list
         test_list = {}
-        additions = 5
-        for i in range(additions):
-            distance = 1 + (i+1)/additions #np.random.randint(additions)
-            visibility = len(test_list)
-            print('adding', distance, visibility)
+        additions = 50
+        shuffled_range = np.array(range(additions)) * 2
+        np.random.shuffle(shuffled_range)
+        for i in shuffled_range:
+            distance = i
+            visibility = 0
             aesthetic_quality_core.add_active_pixel(test_list, distance, \
                 visibility)
-            print(' active line')
-            current = test_list['closest']
-            print('  distance', current['distance'], current['visibility'])
-            while current['next'] is not None:
-                current = current['next']
-                print('  distance', current['distance'], current['visibility'])
-        
+        expected_length = additions + 1
+        actual_length = len(test_list)
+        # 1.1.1- Check for list length 
+        message = 'Unexpected dictionary size (' + str(expected_length) + \
+            ' expected ' + str(actual_length)
+        assert expected_length == actual_length, message
+        # 1.1.2- Check elements are sorted
+        distances = []
+        current = test_list['closest']
+        distances.append(current['distance'])
+        while current['next'] is not None:
+            current = current['next']
+            distances.append(current['distance'])
+        distances = np.array(distances)
+        differences = distances[1:] - distances[:-1]
+        all_differences_negative = (differences > 0).all()
+        message = 'Array elements are not sorted in increasing order: '  + \
+            str(distances)
+        assert all_differences_negative, message
 
     def test_viewshed(self):
         array_shape = (6,6)

@@ -96,6 +96,9 @@ cell_link_factory = collections.namedtuple('cell_link', \
 def add_active_pixel(sweep_line, distance, visibility):
     """Add a pixel to the sweep line. The sweep line is a linked list, and the
     pixel is a linked_cell"""
+    # Make sure we're not creating any duplicate
+    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
+    assert distance not in sweep_line, message
     new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
@@ -106,16 +109,7 @@ def add_active_pixel(sweep_line, distance, visibility):
             (pixel['distance'] < distance):
             previous = pixel
             pixel = pixel['next']
-        if previous is None:
-            print('adding at the beginning')
-        elif pixel is None:
-            print('adding at the end')
-            print('previous', previous)
-            print('pixel', pixel)
-        else:
-            print('adding between ' + str(previous['distance']) + ' and ' + \
-                str(pixel['distance']))
-        # 1- Make the current pixel point to the next one
+        # 1- Make the current pixel points to the next one
         new_pixel['next'] = pixel
         # 2- Insert the current pixel in the sweep line:
         sweep_line[distance] = new_pixel
