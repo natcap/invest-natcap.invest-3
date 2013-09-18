@@ -288,6 +288,22 @@ class Executor(threading.Thread):
             self.write(format_str % (name, value))
         self.write("\n\n")
 
+    def format_time(self, seconds):
+        """Render the integer number of seconds in a string.  Returns a string.
+        """
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        hours = int(hours)
+        minutes = int(minutes)
+
+        if hours > 0:
+            return "%sh %sm %ss" % (hours, minutes, seconds)
+        else:
+            if minutes > 0:
+                return "%sm %ss" % (minutes, seconds)
+            else:
+                return "%ss" % seconds
 
     def run(self):
         sys.stdout = self
@@ -317,7 +333,8 @@ class Executor(threading.Thread):
                 break
 
         # Log the elapsed time.
-        LOGGER.info('Elapsed time: %ss', round(time.time() - overall_start, 2))
+        elapsed_time = round(time.time() - overall_start, 2)
+        LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
 
         if not self.isThreadFailed():
             LOGGER.info('Operations completed successfully')
@@ -452,6 +469,8 @@ class Executor(threading.Thread):
                     LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
 
                 os.environ[tmp_variable] = temporary_path
+
+            model_start_time = time.time()
             LOGGER.info('Starting %s', model_name)
             model.execute(args)
         except Exception as e:
@@ -530,5 +549,8 @@ class Executor(threading.Thread):
                     ' folder: %s', platform.system(), workspace)
 
         LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
+        # Log the elapsed time.
+        elapsed_time = round(time.time() - model_start_time, 2)
+        LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
         self.move_log_file(workspace)
