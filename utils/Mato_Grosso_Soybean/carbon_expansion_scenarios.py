@@ -20,6 +20,18 @@ import csv
 import os
 
 
+def expand_lu_type(base_array, expansion_id, expansion_pixel_count):
+    """Given a base array, and a number of pixels to expand
+        from, buffer out a conversion of that number of pixels
+        
+        base_array - a 2D array of integers that represent
+            land cover IDs
+        expansion_id - the ID type to expand
+        expansion_pixel_count - convert this number of pixels
+        
+        """
+    pass
+
 def regression_builder(slope, intercept):
     """A function to use as a closure for a slope/intercept log function"""
     return lambda(d): slope * numpy.log(d) + intercept
