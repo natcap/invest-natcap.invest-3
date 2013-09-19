@@ -771,6 +771,14 @@ if __name__ == '__main__':
         'scenario_conversion_steps': 400,
     }
 
+    #Set up the args for the disk based scenario
+    ARGS['scenario_path'] = './MG_Soy_Exp_07122013/'
+    ARGS['scenario_file_pattern'] = 'mg_lulc%n'
+    ARGS['output_table_filename'] = (
+        'pre_calculated_scenarios_carbon_stock_change.csv')
+    analyze_premade_lulc_scenarios(ARGS)
+
+    os.exit(-1)
     
     #set up args for the composite scenario
     ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
@@ -808,12 +816,7 @@ if __name__ == '__main__':
 
     os.exit(1)
     
-    #Set up the args for the disk based scenario
-    ARGS['scenario_path'] = './MG_Soy_Exp_07122013/'
-    ARGS['scenario_file_pattern'] = 'mg_lulc%n'
-    ARGS['output_table_filename'] = (
-        'pre_calculated_scenarios_carbon_stock_change.csv')
-    analyze_premade_lulc_scenarios(ARGS)
+
 
     #Set up args for the forest only scenario
     ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
