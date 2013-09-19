@@ -92,6 +92,30 @@ linked_cell_factory = collections.namedtuple('linked_cell', \
 cell_link_factory = collections.namedtuple('cell_link', \
     ['top', 'right', 'bottom', 'level', 'distance'])
 
+def remove_active_pixel(sweep_line, distance):
+    """Remove a pixel based on distance. Do nothing if can't be found."""
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        previous = None
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+        # Move on to next pixel if we're not done
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            previous = pixel
+            pixel = pixel['next']
+        # Either pixel doesn't exist:
+        if pixel['distance'] != distance:
+            return sweep_line
+        # Or we found the value we want to delete
+        # Make the previous element point to the next
+        if previous is None:
+            sweep_line['closest'] = pixel['next']
+        else:
+            previous['next'] = sweep_line[distance]['next']
+        # 1- Remove the value from the list
+        del sweep_line[distance]
+    return sweep_line
+
 
 def add_active_pixel(sweep_line, distance, visibility):
     """Add a pixel to the sweep line. The sweep line is a linked list, and the
