@@ -127,7 +127,10 @@ def remove_active_pixel(sweep_line, distance):
                 sweep_line['closest'] = pixel['next']
         # We're not at the beginning of the list: only update previous
         else:
-            print("Putting " + str(previous['distance']) + ' before ' + \
+            if sweep_line[distance]['next'] is None:
+                print("Putting "+str(previous['distance'])+' before None')
+            else:
+                print("Putting " + str(previous['distance']) + ' before ' + \
                 str(sweep_line[distance]['next']['distance']))
             previous['next'] = sweep_line[distance]['next']
         # Remove the value from the list

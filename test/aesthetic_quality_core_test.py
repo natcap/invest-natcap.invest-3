@@ -372,8 +372,12 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Add random elements to the list
         test_list = {}
         additions = 50
-        shuffled_range = np.array(range(additions)) * 2
+        forward_range = np.array(range(additions)) * 2
+        inverted_range = forward_range[::-1]
+        shuffled_range = np.copy(forward_range)
         np.random.shuffle(shuffled_range)
+        half_shuffled_range = np.copy(shuffled_range[:shuffled_range.size/2])
+        np.random.shuffle(half_shuffled_range)
         for i in shuffled_range:
             distance = i
             visibility = 0
@@ -399,19 +403,25 @@ class TestAestheticQualityCore(unittest.TestCase):
             str(distances)
         assert all_differences_negative, message
         # 1.2- leaf removal
+        # Removing element that is not in the list
+        length_before = len(test_list)
+        aesthetic_quality_core.remove_active_pixel(test_list, 1)
+        actual_length_decrease = length_before - len(test_list)
+        message = 'Unexpected length decrease ' + str(actual_length_decrease)+\
+        ', expected 0'
         # Removing random elements from the list
-        half_shuffled_range = shuffled_range[:shuffled_range.size/2]
-        np.random.shuffle(half_shuffled_range)
-        for i in half_shuffled_range:
+        for i in shuffled_range:
             distance = i
             aesthetic_quality_core.remove_active_pixel(test_list, distance)
-        expected_length = shuffled_range.size - half_shuffled_range.size + 1
+        expected_length = 0
         actual_length = len(test_list)
         # 1.2.1- Check for list length 
-        message = 'Unexpected dictionary size after removal (' + \
-            str(expected_length) + ' expected ' + str(actual_length)
+        message = 'Unexpected dictionary size after removal ' + \
+            str(actual_length) + ' expected ' + str(expected_length) + \
+            " dictionary: " + str(test_list)
         assert expected_length == actual_length, message
         
+
 
     def test_viewshed(self):
         array_shape = (6,6)
