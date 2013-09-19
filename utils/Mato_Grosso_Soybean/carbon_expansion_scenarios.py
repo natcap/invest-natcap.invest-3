@@ -42,6 +42,75 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count):
     result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
     return result_array
 
+def analyze_composite_carbon_stock_change(args):
+    """This function loads scenarios from disk and calculates the carbon stocks
+        on them.
+
+        args['base_biomass_filename'] - a raster that contains carbon densities
+            per Ha.
+        args['base_landcover_filename'] - a raster of same dimensions as
+            'base_biomass_filename' that contains lucodes for the landscape
+            regression analysis
+        args['carbon_pool_table_filename'] - a CSV file containing carbon
+            biomass values for given lucodes.  Must contain at least the
+            columns 'LULC' and 'C_ABOVE_MEAN'
+        args['forest_lucodes'] - a list of lucodes that are used to determine
+            forest landcover types
+        args['regression_lucodes'] - a list of lucodes that will use the
+            linear regression to determine forest biomass given edge
+            distance
+        args['biomass_from_table_lucodes'] - a list of lucodes that will use
+            the carbon pool csv table to determine biomass
+        args['output_table_filename'] - this is the filename of the CSV
+            output table.
+        args['scenario_conversion_steps'] - the number of steps to run in
+            the simulation
+        args['scenario_path'] - the path to the directory that holds the
+            scenarios
+        args['converting_crop'] - when a pixel is converted to crop, it uses
+            this lucode.
+        args['pixels_to_convert_per_step'] - each step of the simulation
+            converts this many pixels
+        """
+
+    print 'starting composite expansion scenario'
+    landcover_regression, landcover_mean, carbon_pool_table = (
+        load_base_datasets(args))
+
+    #Load the base landcover map that we use in the scenarios
+    scenario_lulc_dataset = gdal.Open(args['scenario_lulc_base_map_filename'])
+    cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
+    scenario_lulc_array = scenario_lulc_dataset.GetRasterBand(1).ReadAsArray()
+
+    landcover_regression, landcover_mean, carbon_pool_table = (
+        load_base_datasets(args))
+
+    #Open a .csv file to dump the grassland expansion scenario
+    output_table = open(args['output_table_filename'], 'wb')
+    output_table.write(
+        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+
+    for percent in range(args['scenario_conversion_steps'] + 1):
+        print 'calculating carbon stocks for expansion step %s' % percent
+
+        scenario_lulc_array = expand_lu_type(scenario_lulc_array, args['converting_crop'], args['pixels_to_convert_per_step'])
+
+        #Calcualte the carbon stocks based on the regression functions, lookup
+        #tables, and land cover raster.
+        carbon_stocks = calculate_carbon_stocks(
+            scenario_lulc_array, args['forest_lucodes'],
+            args['regression_lucodes'],
+            args['biomass_from_table_lucodes'], carbon_pool_table,
+            landcover_regression, landcover_mean, cell_size)
+
+        #Dump the current percent iteration's carbon stocks to the csv file
+        total_stocks = numpy.sum(carbon_stocks)
+        print 'total stocks %.2f' % total_stocks
+        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.flush()
+
+    
+    
 def regression_builder(slope, intercept):
     """A function to use as a closure for a slope/intercept log function"""
     return lambda(d): slope * numpy.log(d) + intercept
@@ -685,13 +754,6 @@ def analyze_lu_expansion(args):
 
 
 if __name__ == '__main__':
-    base_array = numpy.array([[1,2,3,4],[1,2,3,1],[1,3,3,1],[4,4,4,4]])
-    
-    expansion_id = 3
-    expansion_pixel_count = 11
-    new_array = expand_lu_type(base_array, expansion_id, expansion_pixel_count)
-    print base_array, new_array
-    os.exit(-1)
     ARGS = {
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
@@ -709,6 +771,16 @@ if __name__ == '__main__':
         'scenario_conversion_steps': 400,
     }
 
+    
+    #set up args for the composite scenario
+    ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
+    ARGS['pixels_to_convert_per_step'] = 2608
+    ARGS['converting_crop'] = 120,
+    ARGS['output_table_filename'] = (
+        'composite_carbon_stock_change.csv')
+    analyze_composite_carbon_stock_change(ARGS)
+        
+    os.exit(-1)
     #Set up args for the forest core scenario
     ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
     ARGS['pixels_to_convert_per_step'] = 2608
