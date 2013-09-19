@@ -8,9 +8,15 @@ import csv
 import threading
 import traceback
 
-import osgeo
-from osgeo import ogr
-from osgeo import gdal
+try:
+    from osgeo import ogr
+except ImportError:
+    import osgeo.ogr as ogr
+
+try:
+    from osgeo import gdal
+except ImportError:
+    import osgeo.gdal as gdal
 
 from dbfpy import dbf
 import registrar
@@ -649,7 +655,7 @@ class OGRChecker(TableChecker):
 
         self.file = ogr.Open(str(self.uri))
 
-        if not isinstance(self.file, osgeo.ogr.DataSource):
+        if not isinstance(self.file, ogr.DataSource):
             return str('Shapefile not compatible with OGR')
 
     def check_layers(self, layer_list):
@@ -666,7 +672,7 @@ class OGRChecker(TableChecker):
 
             self.layer = self.file.GetLayerByName(str(layer_name))
 
-            if not isinstance(self.layer, osgeo.ogr.Layer):
+            if not isinstance(self.layer, ogr.Layer):
                 return str('Shapefile must have a layer called ' + layer_name)
 
             if 'projection' in layer_dict:
