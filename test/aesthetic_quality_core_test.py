@@ -354,7 +354,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     1.2.2- check elements are sorted
                 1.3- access for data retreival
                     1.3.1- check the right element is retreived
-                    1.3.2- check for O(log n) performance
+                    1.3.2- check return value is None if element is not there
             2- In the intermediate levels:
                 2.1- creation of skip links after leaf insertions:
                     2.1.1- insert new leaf in the right place
@@ -420,8 +420,22 @@ class TestAestheticQualityCore(unittest.TestCase):
             str(actual_length) + ' expected ' + str(expected_length) + \
             " dictionary: " + str(test_list)
         assert expected_length == actual_length, message
+        # 1.3- access for data retreival
+        distance = 1
+        aesthetic_quality_core.add_active_pixel(test_list, distance, 0.5)
+        pixel = aesthetic_quality_core.find_active_pixel(test_list, distance)
+        # 1.3.1- check the right element is retreived
+        message = 'Error, returned None for a pixel that should be in the list'
+        assert pixel is not None, message
+        message = "Failed to retreive the right pixel. Expected 1, found " + \
+            str(pixel['distance'])
+        assert pixel['distance'] == distance, message
+        # 1.3.2- check return value is None if element is not there
+        pixel = aesthetic_quality_core.find_active_pixel(test_list, distance+1)
+        message = "Wrong return value for searching a non-existent item: " + \
+            str(pixel)
+        assert pixel is None, message
         
-
 
     def test_viewshed(self):
         array_shape = (6,6)
