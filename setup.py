@@ -175,6 +175,7 @@ if platform.system() == 'Windows':
               'geos_c.dll',
               'libgcc_s_dw2-1.dll',
               'libstdc++-6.dll',
+              'gdal_dlls/*.dll',
               ]))
 
     # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
