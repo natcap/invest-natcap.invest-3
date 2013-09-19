@@ -382,8 +382,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         expected_length = additions + 1
         actual_length = len(test_list)
         # 1.1.1- Check for list length 
-        message = 'Unexpected dictionary size (' + str(expected_length) + \
-            ' expected ' + str(actual_length)
+        message = 'Unexpected dictionary size after additions (' + \
+            str(expected_length) + ' expected ' + str(actual_length)
         assert expected_length == actual_length, message
         # 1.1.2- Check elements are sorted
         distances = []
@@ -398,6 +398,20 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'Array elements are not sorted in increasing order: '  + \
             str(distances)
         assert all_differences_negative, message
+        # 1.2- leaf removal
+        # Removing random elements from the list
+        half_shuffled_range = shuffled_range[:shuffled_range.size/2]
+        np.random.shuffle(half_shuffled_range)
+        for i in half_shuffled_range:
+            distance = i
+            aesthetic_quality_core.remove_active_pixel(test_list, distance)
+        expected_length = shuffled_range.size - half_shuffled_range.size + 1
+        actual_length = len(test_list)
+        # 1.2.1- Check for list length 
+        message = 'Unexpected dictionary size after removal (' + \
+            str(expected_length) + ' expected ' + str(actual_length)
+        assert expected_length == actual_length, message
+        
 
     def test_viewshed(self):
         array_shape = (6,6)

@@ -94,6 +94,7 @@ cell_link_factory = collections.namedtuple('cell_link', \
 
 def remove_active_pixel(sweep_line, distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
+    print('trying to remove', distance)
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
         previous = None
@@ -103,16 +104,34 @@ def remove_active_pixel(sweep_line, distance):
             (pixel['distance'] < distance):
             previous = pixel
             pixel = pixel['next']
-        # Either pixel doesn't exist:
+        # We reached the end and didn't find anything
+        if pixel is None:
+            print("end of list reached, didn't find anything")
+            return sweep_line
+        # We didn't reach the end: either pixel doesn't exist:
         if pixel['distance'] != distance:
+            print("Can't find " + str(distance) + ", exiting")
             return sweep_line
         # Or we found the value we want to delete
         # Make the previous element point to the next
+        # We're at the beginning of the list: update the list's first element
         if previous is None:
-            sweep_line['closest'] = pixel['next']
+            print("At the beginning of the list")
+            # No next pixel: we have to delete 'closest'
+            if pixel['next'] is None:
+                print("Only one pixel, deteting 'closest'")
+                del sweep_line['closest']
+            # Otherwise, update it
+            else:
+                print("Updating 'closest'")
+                sweep_line['closest'] = pixel['next']
+        # We're not at the beginning of the list: only update previous
         else:
+            print("Putting " + str(previous['distance']) + ' before ' + \
+                str(sweep_line[distance]['next']['distance']))
             previous['next'] = sweep_line[distance]['next']
-        # 1- Remove the value from the list
+        # Remove the value from the list
+        print("Deleting " + str(sweep_line[distance]['distance']))
         del sweep_line[distance]
     return sweep_line
 
