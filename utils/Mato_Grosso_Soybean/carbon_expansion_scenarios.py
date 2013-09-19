@@ -29,6 +29,7 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count):
         expansion_id - the ID type to expand
         expansion_pixel_count - convert this number of pixels
         
+        returns the new expanded array
         """
     expansion_existance = base_array != expansion_id
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
@@ -37,13 +38,9 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count):
     edge_distance[edge_distance == 0] = numpy.inf
     increasing_distances = numpy.argsort(edge_distance.flat)
     
-    print base_array
-    print expansion_pixel_count
-    print increasing_distances
-    base_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
-    
-    print base_array
-    print edge_distance
+    result_array = base_array.copy()
+    result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
+    return result_array
 
 def regression_builder(slope, intercept):
     """A function to use as a closure for a slope/intercept log function"""
@@ -691,8 +688,9 @@ if __name__ == '__main__':
     base_array = numpy.array([[1,2,3,4],[1,2,3,1],[1,3,3,1],[4,4,4,4]])
     
     expansion_id = 3
-    expansion_pixel_count = 12
-    expand_lu_type(base_array, expansion_id, expansion_pixel_count)
+    expansion_pixel_count = 11
+    new_array = expand_lu_type(base_array, expansion_id, expansion_pixel_count)
+    print base_array, new_array
     os.exit(-1)
     ARGS = {
         #the locations for the various filenames needed for the simulations
