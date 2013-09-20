@@ -19,7 +19,6 @@ import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
-
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(uri='invest_version.py',
     force_new=True)
@@ -176,6 +175,12 @@ if platform.system() == 'Windows':
               'libgcc_s_dw2-1.dll',
               'libstdc++-6.dll',
               ]))
+
+    # These are the GDAL DLLs.  They are absolutely required for running the
+    # Windows executeables on XP.  For whatever reason, they do not appear to be
+    # required for running GDAL stuff on Windows 7.  Not sure why that is.
+    data_files.append(('.', glob.glob('%s/*.dll' %
+        'gdal_dlls')))
 
     # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
     # Only necessary for binary package installer, but I can't seem to figure
