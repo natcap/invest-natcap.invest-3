@@ -810,14 +810,14 @@ if __name__ == '__main__':
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['converting_crop'] = 120,
     ARGS['output_table_filename'] = (
-        'composite_carbon_stock_change.csv')
+        'composite_carbon_stock_change_20_60.csv')
     ARGS['land_cover_start_fractions'] = {
         2: .2,
-        9: .8
+        9: .6
         }
     
     ARGS['land_cover_end_fractions'] = {
-        2: .8,
+        2: .6,
         9: .2
         }
     analyze_composite_carbon_stock_change(ARGS)
