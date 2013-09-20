@@ -20,7 +20,7 @@ import csv
 import os
 
 
-def expand_lu_type(base_array, expansion_id, expansion_pixel_count):
+def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_start_percentages=None, land_cover_end_percentages=None, end_expansion_pixel_count=None):
     """Given a base array, and a number of pixels to expand
         from, buffer out a conversion of that number of pixels
         
@@ -28,18 +28,39 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count):
             land cover IDs
         expansion_id - the ID type to expand
         expansion_pixel_count - convert this number of pixels
+        land_cover_start_percentages/land_cover_end_percentages -
+            optional, if defined is a dictionary of land cover types
+            that are used for conversion during the start step
+        end_expansion_pixel_count - defined if land_cover_*_percentages are defined.  use to know what % of total conversion has been reached
         
         returns the new expanded array
         """
     expansion_existance = base_array != expansion_id
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         expansion_existance)
-    
     edge_distance[edge_distance == 0] = numpy.inf
-    increasing_distances = numpy.argsort(edge_distance.flat)
+    
     
     result_array = base_array.copy()
-    result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
+    if land_cover_start_percentages is None:
+        increasing_distances = numpy.argsort(edge_distance.flat)
+        result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
+    else:
+        current_percent = expansion_pixel_count / float(end_expansion_pixel_count)
+        pixels_converted_so_far = 0
+        for lu_code in land_cover_start_percentages:
+            lu_edge_distance = edge_distance.copy()
+            lu_edge_distance[base_array != lu_code] = numpy.inf
+            increasing_distances = numpy.argsort(lu_edge_distance.flat)
+            lu_pixels_to_convert = expansion_pixel_count * (land_cover_start_percentages[lu_code] * (1-current_percent) + land_cover_end_percentages[lu_code] * current_percent)
+            print lu_code, lu_pixels_to_convert
+            result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
+            pixels_converted_so_far += lu_pixels_to_convert
+        edge_distance[result_array == expansion_id] = numpy.inf
+        increasing_distances = numpy.argsort(edge_distance.flat)
+        print expansion_pixel_count - pixels_converted_so_far
+        result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
+            
     return result_array
 
 def analyze_composite_carbon_stock_change(args):
@@ -90,15 +111,23 @@ def analyze_composite_carbon_stock_change(args):
     output_table.write(
         'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
 
+    land_cover_start_percentages = {
+        2: .2,
+        9: .8}
+    
+    land_cover_end_percentages = {
+        2: .8,
+        9: .2}
+    
     for percent in range(args['scenario_conversion_steps'] + 1):
-        print 'calculating carbon stocks for expansion step %s' % percent
+        print 'calculating carbon stocks for composite expansion step %s' % percent
 
-        scenario_lulc_array = expand_lu_type(scenario_lulc_array, args['converting_crop'], args['pixels_to_convert_per_step'])
-
+        expanded_lulc_array = expand_lu_type(scenario_lulc_array, args['converting_crop'], percent * args['pixels_to_convert_per_step'], land_cover_start_percentages, land_cover_end_percentages, args['scenario_conversion_steps'] * args['pixels_to_convert_per_step'])        
+        
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
         carbon_stocks = calculate_carbon_stocks(
-            scenario_lulc_array, args['forest_lucodes'],
+            expanded_lulc_array, args['forest_lucodes'],
             args['regression_lucodes'],
             args['biomass_from_table_lucodes'], carbon_pool_table,
             landcover_regression, landcover_mean, cell_size)
@@ -109,7 +138,6 @@ def analyze_composite_carbon_stock_change(args):
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
 
-    
     
 def regression_builder(slope, intercept):
     """A function to use as a closure for a slope/intercept log function"""
@@ -776,9 +804,9 @@ if __name__ == '__main__':
     ARGS['scenario_file_pattern'] = 'mg_lulc%n'
     ARGS['output_table_filename'] = (
         'pre_calculated_scenarios_carbon_stock_change.csv')
-    analyze_premade_lulc_scenarios(ARGS)
+    #analyze_premade_lulc_scenarios(ARGS)
 
-    os.exit(-1)
+    #os.exit(-1)
     
     #set up args for the composite scenario
     ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
