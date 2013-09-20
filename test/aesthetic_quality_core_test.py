@@ -355,6 +355,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                 1.3- access for data retreival
                     1.3.1- check the right element is retreived
                     1.3.2- check return value is None if element is not there
+                    1.3.3- O(log n) performance is maintained
             2- In the intermediate levels:
                 2.1- creation of skip links after leaf insertions:
                     2.1.1- insert new leaf in the right place
@@ -435,7 +436,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = "Wrong return value for searching a non-existent item: " + \
             str(pixel)
         assert pixel is None, message
-        
+        # 2- Intermediate nodes insertion 
 
     def test_viewshed(self):
         array_shape = (6,6)

@@ -95,7 +95,6 @@ cell_link_factory = collections.namedtuple('cell_link', \
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
     if 'closest' in sweep_line:
-        print('list is not empty, looking...')
         # Get information about first pixel in the list
         pixel = sweep_line[sweep_line['closest']['distance']] # won't change
         # Move on to next pixel if we're not done
@@ -104,15 +103,12 @@ def find_active_pixel(sweep_line, distance):
             pixel = pixel['next']
         # We reached the end and didn't find anything
         if pixel is None:
-            print("Reached the end, couldn't find pixel, returning None")
             return None
         # We didn't reach the end: either pixel doesn't exist...
         if pixel['distance'] != distance:
-            print("Stopped before the end: value doesn't exist. Returning None")
             return None
         # ...or we found it
         else:
-            print("Found value, returning pixel.")
             return pixel
     else:
         print('list is empty: returning None')
