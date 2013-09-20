@@ -175,6 +175,10 @@ if platform.system() == 'Windows':
               'libgcc_s_dw2-1.dll',
               'libstdc++-6.dll',
               ]))
+
+    # These are the GDAL DLLs.  They are absolutely required for running the
+    # Windows executeables on XP.  For whatever reason, they do not appear to be
+    # required for running GDAL stuff on Windows 7.  Not sure why that is.
     data_files.append(('.', glob.glob('%s/*.dll' %
         'gdal_dlls')))
 

@@ -5,19 +5,6 @@ import platform
 import sys
 import os
 
-# Add paths to the necessary GDAL binaries.  Required if we're on Windows.
-# If GDAL_BIN is None, then we're not concerned about Windows GDAL binaries and
-# they were not included in this distribution.
-GDAL_BIN = None
-if platform.system() == 'Windows':
-    parent_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    gdal_folder = os.path.join(parent_folder, 'gdal_data')
-    #GDAL_BIN = gdal_folder
-    GDAL_BIN = os.getcwd()
-    try:
-        os.environ['GDAL_DATA'] = GDAL_BIN + os.environ['GDAL_DATA']
-    except KeyError:
-        os.environ['GDAL_DATA'] = GDAL_BIN
 
 import build_utils
 
