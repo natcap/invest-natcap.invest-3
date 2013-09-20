@@ -496,6 +496,15 @@ class Executor(threading.Thread):
             LOGGER.debug(fmt_string, 'Architecture', platform.architecture()[0])
             LOGGER.debug(fmt_string, 'Linkage format', platform.architecture()[1])
             LOGGER.debug(fmt_string, 'InVEST version', invest_natcap.__version__)
+
+            import Cython
+            import numpy
+            import scipy
+            import osgeo
+            LOGGER.debug(fmt_string, 'Cython version', Cython.__version__)
+            LOGGER.debug(fmt_string, 'Numpy version', numpy.__version__)
+            LOGGER.debug(fmt_string, 'Scipy version', scipy.__version__)
+            LOGGER.debug(fmt_string, 'OSGEO version', osgeo.__version__)
             LOGGER.debug('')
 
             # If the exception indicates that we ran out of disk space, convert

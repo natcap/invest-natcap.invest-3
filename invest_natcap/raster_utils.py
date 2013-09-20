@@ -987,7 +987,8 @@ def aggregate_raster_values_uri(
     vectorize_datasets(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
         raster_nodata, out_pixel_size, "intersection", 
-        dataset_to_align_index=0, aoi_uri=shapefile_uri)
+        dataset_to_align_index=0, aoi_uri=shapefile_uri,
+        assert_datasets_projected=False)
     clipped_raster = gdal.Open(clipped_raster_uri)
 
     #This should be a value that's not in shapefile[shapefile_field]
