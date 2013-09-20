@@ -19,7 +19,6 @@ import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
-
 from invest_natcap import build_utils
 VERSION = build_utils.invest_version(uri='invest_version.py',
     force_new=True)
@@ -175,8 +174,9 @@ if platform.system() == 'Windows':
               'geos_c.dll',
               'libgcc_s_dw2-1.dll',
               'libstdc++-6.dll',
-              'gdal_dlls/*.dll',
               ]))
+    data_files.append(('.', glob.glob('%s/*.dll' %
+        'gdal_dlls')))
 
     # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
     # Only necessary for binary package installer, but I can't seem to figure
