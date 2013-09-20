@@ -3,6 +3,13 @@ from urllib2 import Request
 from urllib2 import urlopen
 import platform
 import sys
+import os
+
+# Add paths to the necessary GDAL binaries.  Required if we're on Windows.
+if platform.system() == 'Windows':
+    parent_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    os.environ['PATH'] =  parent_folder + ';' + os.environ['PATH']
+    os.environ['GDAL_DATA'] = parent_folder
 
 import build_utils
 

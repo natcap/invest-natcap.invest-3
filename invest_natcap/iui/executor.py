@@ -288,6 +288,22 @@ class Executor(threading.Thread):
             self.write(format_str % (name, value))
         self.write("\n\n")
 
+    def format_time(self, seconds):
+        """Render the integer number of seconds in a string.  Returns a string.
+        """
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        hours = int(hours)
+        minutes = int(minutes)
+
+        if hours > 0:
+            return "%sh %sm %ss" % (hours, minutes, seconds)
+        else:
+            if minutes > 0:
+                return "%sm %ss" % (minutes, seconds)
+            else:
+                return "%ss" % seconds
 
     def run(self):
         sys.stdout = self
@@ -317,7 +333,8 @@ class Executor(threading.Thread):
                 break
 
         # Log the elapsed time.
-        LOGGER.info('Elapsed time: %ss', round(time.time() - overall_start, 2))
+        elapsed_time = round(time.time() - overall_start, 2)
+        LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
 
         if not self.isThreadFailed():
             LOGGER.info('Operations completed successfully')
@@ -452,12 +469,34 @@ class Executor(threading.Thread):
                     LOGGER.info('Setting os.environ["%s"]=%s' % (tmp_variable, args['workspace_dir']))
 
                 os.environ[tmp_variable] = temporary_path
+
+            model_start_time = time.time()
+            LOGGER.info('Starting %s', model_name)
             model.execute(args)
         except Exception as e:
             #We are explicitly handling all exceptions and below we have a special
             #case for out of disk space
-            LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
-            LOGGER.error('Error: a problem occurred while running the model')
+            LOGGER.error('---------------------------------------------------')
+            LOGGER.error('---------------------- ERROR ----------------------')
+            LOGGER.error('---------------------------------------------------')
+            LOGGER.error('Error: exception found while running %s', model_name)
+            LOGGER.debug('')
+            LOGGER.debug('System')
+            fmt_string = '%-16s: %s'
+            LOGGER.debug(fmt_string, 'Disk space free', fileio.get_free_space(workspace))
+            LOGGER.debug(fmt_string, 'OS', platform.platform())
+            LOGGER.debug(fmt_string, 'Machine type', platform.machine())
+            LOGGER.debug(fmt_string, 'FS encoding', sys.getfilesystemencoding())
+            LOGGER.debug('')
+            LOGGER.debug('Python')
+            LOGGER.debug(fmt_string, 'Version', platform.python_version())
+            LOGGER.debug(fmt_string, 'Build', platform.python_build())
+            LOGGER.debug(fmt_string, 'Compiler', platform.python_compiler())
+            LOGGER.debug(fmt_string, 'Implementation', platform.python_implementation())
+            LOGGER.debug(fmt_string, 'Architecture', platform.architecture()[0])
+            LOGGER.debug(fmt_string, 'Linkage format', platform.architecture()[1])
+            LOGGER.debug(fmt_string, 'InVEST version', invest_natcap.__version__)
+            LOGGER.debug('')
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
@@ -510,5 +549,8 @@ class Executor(threading.Thread):
                     ' folder: %s', platform.system(), workspace)
 
         LOGGER.info('Disk space free: %s', fileio.get_free_space(workspace))
+        # Log the elapsed time.
+        elapsed_time = round(time.time() - model_start_time, 2)
+        LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
         self.move_log_file(workspace)

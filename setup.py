@@ -130,7 +130,6 @@ if platform.system() == 'Windows':
          'invest_timber.py',
          'invest_hydropower_water_yield.py',
          'invest_marine_water_quality_biophysical.py',
-         'invest_pollination.py',
          'invest_recreation_client_init.py',
          'invest_recreation_client_scenario.py',
          'invest_finfish_aquaculture.py',
@@ -143,6 +142,10 @@ if platform.system() == 'Windows':
          'invest_wind_energy.py',
          'invest_ntfp.py',
          'invest_test_all.py']
+
+    py2exe_args['windows'] = [
+        'invest_pollination.py',
+    ]
 
     #Need to manually bring along the json configuration files to
     #the current build directory

@@ -1455,12 +1455,17 @@ class FileButton(QtGui.QPushButton):
         oldText = self.URIfield.text()
         filename = ''
 
+        # the default folder to open.
+        default_folder = os.path.expanduser('~')
+
         if self.filetype == 'folder':
-            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
+            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' +
+                self.text, default_folder)
             filter = self.last_filter
         else:
             file_dialog = QtGui.QFileDialog()
-            filename, filter = file_dialog.getOpenFileNameAndFilter(self, 'Select ' + self.text, '.',
+            filename, filter = file_dialog.getOpenFileNameAndFilter(self,
+                'Select ' + self.text, default_folder,
                 filter=self.filter_string, initialFilter = self.last_filter)
         self.last_filter = filter
 
@@ -1781,6 +1786,7 @@ class OperationDialog(QtGui.QDialog):
         self.setWindowTitle("Running the model")
         self.resize(700, 400)
         center_window(self)
+        self.setModal(True)
 
         self.cancel = False
 
@@ -1812,34 +1818,34 @@ class OperationDialog(QtGui.QDialog):
 
 
         #create Quit and Cancel buttons for the window        
-        self.quitButton = QtGui.QPushButton(' Quit')
-        self.quitButton.setToolTip('Quit the application')
+#        self.quitButton = QtGui.QPushButton(' Quit')
+#        self.quitButton.setToolTip('Quit the application')
         self.backButton = QtGui.QPushButton(' Back')
         self.backButton.setToolTip('Return to parameter list')
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
-        self.quitButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
-            'dialog-close.png')))
+#        self.quitButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+#            'dialog-close.png')))
         self.backButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'dialog-ok.png')))
 #        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
 
         #disable the 'Back' button by default
         self.backButton.setDisabled(True)
-        self.quitButton.setDisabled(True)
+#        self.quitButton.setDisabled(True)
 #        self.cancelButton.setDisabled(False)
 
         #create the buttonBox (a container for buttons) and add the buttons to
         #the buttonBox.
         self.buttonBox = QtGui.QDialogButtonBox()
-        self.buttonBox.addButton(self.quitButton, QtGui.QDialogButtonBox.RejectRole)
+#        self.buttonBox.addButton(self.quitButton, QtGui.QDialogButtonBox.RejectRole)
         self.buttonBox.addButton(self.backButton, QtGui.QDialogButtonBox.AcceptRole)
 #        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.ResetRole)
 
         #connect the buttons to their callback functions.
         self.backButton.clicked.connect(self.closeWindow)
-        self.quitButton.clicked.connect(sys.exit)
+#        self.quitButton.clicked.connect(sys.exit)
 #        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
 
         #add the buttonBox to the window.        
@@ -1872,13 +1878,13 @@ class OperationDialog(QtGui.QDialog):
     def start_buttons(self):
         self.progressBar.setMaximum(0) #start the progressbar.
         self.backButton.setDisabled(True)
-        self.quitButton.setDisabled(True)
+#        self.quitButton.setDisabled(True)
 #        self.cancelButton.setDisabled(False)
 
     def stop_buttons(self):
         self.progressBar.setMaximum(1) #stops the progressbar.
         self.backButton.setDisabled(False)
-        self.quitButton.setDisabled(False)
+#        self.quitButton.setDisabled(False)
 #        self.cancelButton.setDisabled(True)
 
     def write(self, text):
@@ -2428,9 +2434,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.file_menu = QtGui.QMenu('&File')
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
+        self.load_file_action.setShortcut(QtGui.QKeySequence("Ctrl+O"))
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
+        self.save_file_action.setShortcut(QtGui.QKeySequence("Ctrl+S"))
         self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
         self.exit_action = self.file_menu.addAction('Exit')
+        self.exit_action.setShortcut(QtGui.QKeySequence("Ctrl+Q"))
         self.menuBar().addMenu(self.file_menu)
 
         self.dev_menu = QtGui.QMenu('&Development')

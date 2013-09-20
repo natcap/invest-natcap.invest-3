@@ -51,7 +51,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             (a[45], (a[90], a[135])), \
             (a[18], (a[45], a[71])), \
             (a[135], (a[180], a[225])), \
-            (a[18], (0., a[341])), \
+            (a[315], (0., a[45])), \
             (a[198], (a[225], a[251])), \
             (a[225], (a[270], a[315])), \
             (a[288], (a[315], a[341]))]
@@ -81,7 +81,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         error = np.sum(np.absolute(computed_extreme_angles - \
             expected_extreme_angles))
         # Assert if necessary
-        assert abs(error) < 1e-14
+        message = 'error is ' + str(error)
+        assert abs(error) < 1e-14, message
 
     def extreme_cell_angles_naive(self, cell_coord, viewpoint_coord):
         """Test each of the 4 corners of a cell, compute their angle from
@@ -111,17 +112,29 @@ class TestAestheticQualityCore(unittest.TestCase):
             [cell_coord[0] - .5, cell_coord[1] + .5], \
             [cell_coord[0] + .5, cell_coord[1] - .5], \
             [cell_coord[0] - .5, cell_coord[1] - .5]])
-        # Compute angle to all 4 cell corners and update min and max angles
-        for corner in corners:
-            viewpoint_to_corner = corner - viewpoint
-            angle_to_corner = \
+        # If cell angle is 0, use pre-computed corners for min and max:
+        if center_angle == 0.:
+            viewpoint_to_corner = corners[2] - viewpoint
+            min_angle = \
                 np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
-            angle_to_corner = \
-                (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
-            if angle_to_corner > max_angle:
-                max_angle = angle_to_corner
-            if angle_to_corner < min_angle:
-                min_angle = angle_to_corner
+            min_angle = (2.0 * math.pi + min_angle) % (2.0 * math.pi)
+            viewpoint_to_corner = corners[3] - viewpoint
+            max_angle = \
+                np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
+            max_angle = (2.0 * math.pi + max_angle) % (2.0 * math.pi)
+        else:
+            # Compute angle to all 4 cell corners and update min and max angles
+            for corner in corners:
+                viewpoint_to_corner = corner - viewpoint
+                angle_to_corner = \
+                    np.arctan2(-viewpoint_to_corner[0], viewpoint_to_corner[1])
+                angle_to_corner = \
+                    (2.0 * math.pi + angle_to_corner) % (2.0 * math.pi)
+                # Sort the angles
+                if angle_to_corner > max_angle:
+                    max_angle = angle_to_corner
+                if angle_to_corner < min_angle:
+                    min_angle = angle_to_corner
         # Done, return min and max angles
         return (min_angle, (center_angle, max_angle))
 
@@ -329,9 +342,106 @@ class TestAestheticQualityCore(unittest.TestCase):
             if breadth == 0:
                 return index
 
+    def test_skip_list(self):
+        """Test the data structure that holds active pixels in the sweep line
+        What is tested:
+            1- At the leaves:
+                1.1- insertions:
+                    1.1.1- check for list length
+                    1.1.2- check elements are sorted
+                1.2- deletions:
+                    1.2.1- check for list length
+                    1.2.2- check elements are sorted
+                1.3- access for data retreival
+                    1.3.1- check the right element is retreived
+                    1.3.2- check return value is None if element is not there
+            2- In the intermediate levels:
+                2.1- creation of skip links after leaf insertions:
+                    2.1.1- insert new leaf in the right place
+                    2.1.2- create intermediate links when and where expected
+                    2.1.3- O(log n) performance is maintained
+                2.2- deletion of skip links after leaf deletions:
+                    2.2.1- delete the correct leaf
+                    2.2.2- trim intermediate links: the skip list reduces to 1
+                    2.2.3- O(log n) performance is maintained
+                2.3- fast access:
+                    2.3.1- Finds the appropriate value
+                    2.3.2- O(log n) performance is maintained"""
+        # 1- Leaf operations:
+        # 1.1- leaf insertions
+        # Add random elements to the list
+        test_list = {}
+        additions = 50
+        forward_range = np.array(range(additions)) * 2
+        inverted_range = forward_range[::-1]
+        shuffled_range = np.copy(forward_range)
+        np.random.shuffle(shuffled_range)
+        half_shuffled_range = np.copy(shuffled_range[:shuffled_range.size/2])
+        np.random.shuffle(half_shuffled_range)
+        for i in shuffled_range:
+            distance = i
+            visibility = 0
+            aesthetic_quality_core.add_active_pixel(test_list, distance, \
+                visibility)
+        expected_length = additions + 1
+        actual_length = len(test_list)
+        # 1.1.1- Check for list length 
+        message = 'Unexpected dictionary size after additions (' + \
+            str(expected_length) + ' expected ' + str(actual_length)
+        assert expected_length == actual_length, message
+        # 1.1.2- Check elements are sorted
+        distances = []
+        current = test_list['closest']
+        distances.append(current['distance'])
+        while current['next'] is not None:
+            current = current['next']
+            distances.append(current['distance'])
+        distances = np.array(distances)
+        differences = distances[1:] - distances[:-1]
+        all_differences_negative = (differences > 0).all()
+        message = 'Array elements are not sorted in increasing order: '  + \
+            str(distances)
+        assert all_differences_negative, message
+        # 1.2- leaf removal
+        # Removing element that is not in the list
+        length_before = len(test_list)
+        aesthetic_quality_core.remove_active_pixel(test_list, 1)
+        actual_length_decrease = length_before - len(test_list)
+        message = 'Unexpected length decrease ' + str(actual_length_decrease)+\
+        ', expected 0'
+        # Removing random elements from the list
+        for i in shuffled_range:
+            distance = i
+            aesthetic_quality_core.remove_active_pixel(test_list, distance)
+        expected_length = 0
+        actual_length = len(test_list)
+        # 1.2.1- Check for list length 
+        message = 'Unexpected dictionary size after removal ' + \
+            str(actual_length) + ' expected ' + str(expected_length) + \
+            " dictionary: " + str(test_list)
+        assert expected_length == actual_length, message
+        # 1.3- access for data retreival
+        distance = 1
+        aesthetic_quality_core.add_active_pixel(test_list, distance, 0.5)
+        pixel = aesthetic_quality_core.find_active_pixel(test_list, distance)
+        # 1.3.1- check the right element is retreived
+        message = 'Error, returned None for a pixel that should be in the list'
+        assert pixel is not None, message
+        message = "Failed to retreive the right pixel. Expected 1, found " + \
+            str(pixel['distance'])
+        assert pixel['distance'] == distance, message
+        # 1.3.2- check return value is None if element is not there
+        pixel = aesthetic_quality_core.find_active_pixel(test_list, distance+1)
+        message = "Wrong return value for searching a non-existent item: " + \
+            str(pixel)
+        assert pixel is None, message
+        
+
     def test_viewshed(self):
-        array_shape = (6,6) 
-        viewpoint = (3, 4) #np.array([array_shape[0]/2, array_shape[1]/2])
+        array_shape = (6,6)
+        DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
+        viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
+        viewpoint_elevation = 1.75
 
         # 1- get perimeter cells
         perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
@@ -340,9 +450,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         angles = self.cell_angles(perimeter_cells, viewpoint)
         angles = np.append(angles, 2.0 * math.pi)
         print('angles', angles.size, angles)
-        # 3- compute angles on raster cells
+        # 3- compute information on raster cells
         events = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        I = events[3]
+        J = events[4]
+        distances = (viewpoint[0] - I)**2 + (viewpoint[1] - J)**2
+        visibility = \
+        (DEM[(I, J)] - DEM[viewpoint[0], viewpoint[1]] - viewpoint_elevation) \
+        / distances
         # 4- build event lists
         add_cell_events = []
         add_event_id = 0
@@ -366,8 +482,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         
         # Add the events to the 3 event lists
         #print('index', self.find_angle_index(angles, 1.6))
-        print('center', events[1][arg_center])
-        print('center', arg_center)
+        #print('center', events[1][arg_center])
+        #print('center', arg_center)
         # Add center angles to center_events_array
         for a in range(1, len(angles)): 
             #print('current angle', angles[a])
@@ -407,17 +523,18 @@ class TestAestheticQualityCore(unittest.TestCase):
         #print('add_cell_events', add_cell_events)
 
         # Create the binary search tree as depicted in Kreveld et al.
-        # "Vatiations on Sweep Algorithms"
-        sweep_cell = collections.namedtuple('sweep_cell', ['left', 'right', 'up', 'value'])
-        scell = sweep_cell(left = None, right = 1, up = 0, value = 3.5)
-        print('scell', scell)
+        # "Variations on Sweep Algorithms"
         # Updating active cells
         active_cells = set()
+        active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            #print('  adding', c)
+            print('  adding', c)
             active_cells.add(c)
-        #print('active cells', len(active_cells), active_cells)
+            d = distances[c]
+            v = visibility[c]
+            active_line = \
+                aesthetic_quality_core.add_active_pixel(active_line, d, v)
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
             #print('sweep angle', a)
@@ -451,7 +568,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             if remove_cell_ids.size > 0:
                 remove_cell = remove_events[remove_cell_ids]
                 print('within bounds:', (remove_cell >= angles[i]).all() and \
-                    (remove_cell < angles[i+1]).all())
+                    (remove_cell <= angles[i+1]).all())
         print('unprocessed remove_cell ids', np.where(arg_max > 0)[0])
         print('cell_center events:')
         for i in range(len(cell_center_events)):
