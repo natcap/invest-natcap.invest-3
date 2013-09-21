@@ -22,12 +22,13 @@ import sys
 import collections
 
 
-def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_start_fractions=None, land_cover_end_fractions=None, end_expansion_pixel_count=None):
+def expand_lu_type(base_array, nodata, expansion_id, expansion_pixel_count, land_cover_start_fractions=None, land_cover_end_fractions=None, end_expansion_pixel_count=None):
     """Given a base array, and a number of pixels to expand
         from, buffer out a conversion of that number of pixels
         
         base_array - a 2D array of integers that represent
             land cover IDs
+        nodata - value in base_array to ignore
         expansion_id - the ID type to expand
         expansion_pixel_count - convert this number of pixels
         land_cover_start_percentages/land_cover_end_percentages -
@@ -37,7 +38,7 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_s
         
         returns the new expanded array, the number of pixels per type that were converted to expansion_id
         """
-    expansion_existance = base_array != expansion_id
+    expansion_existance = (base_array != expansion_id) & (base_array != nodata)
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         expansion_existance)
     edge_distance[edge_distance == 0] = numpy.inf
@@ -62,7 +63,7 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_s
             print lu_code, lu_pixels_to_convert
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
             pixels_converted_so_far += lu_pixels_to_convert
-            pixel_count[lu_code] += lu_pixels_to_convert
+            pixel_count[lu_code] += int(lu_pixels_to_convert)
         edge_distance[result_array == expansion_id] = numpy.inf
         increasing_distances = numpy.argsort(edge_distance.flat)
         print expansion_pixel_count - pixels_converted_so_far
@@ -124,10 +125,8 @@ def analyze_composite_carbon_stock_change(args):
     scenario_lulc_dataset = gdal.Open(args['scenario_lulc_base_map_filename'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
     scenario_lulc_array = scenario_lulc_dataset.GetRasterBand(1).ReadAsArray()
-
-    landcover_regression, landcover_mean, carbon_pool_table = (
-        load_base_datasets(args))
-
+    scenario_nodata = scenario_lulc_dataset.GetRasterBand(1).GetNoDataValue()
+    
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
@@ -140,7 +139,7 @@ def analyze_composite_carbon_stock_change(args):
         print 'calculating carbon stocks for composite expansion step %s' % percent
 
         expanded_lulc_array, pixel_count = expand_lu_type(
-            scenario_lulc_array, args['converting_crop'], 
+            scenario_lulc_array, scenario_nodata, args['converting_crop'], 
             percent * args['pixels_to_convert_per_step'], 
             args['land_cover_start_fractions'], 
             args['land_cover_end_fractions'], 
@@ -319,6 +318,7 @@ def load_base_datasets(args):
     biomass_dataset = gdal.Open(args['base_biomass_filename'])
     biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
     landcover_dataset = gdal.Open(args['base_landcover_filename'])
+    landcover_nodata = landcover_dataset.GetRasterBand(1).GetNoDataValue()
     biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
     landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
 
