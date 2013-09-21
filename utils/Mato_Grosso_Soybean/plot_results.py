@@ -15,6 +15,7 @@ table_to_label = {
     'composite_carbon_stock_change_20_60.csv': '20/60 - 60/20 Composite', 
     'composite_carbon_stock_change_20_80.csv': '20/80 - 80/20 Composite', 
     'composite_carbon_stock_change_20_80_50.csv': '20/60 - 50/20 Composite',
+    'pre_calculated_scenarios_carbon_stock_change.csv': 'ArcGIS Random Composite'
     }
 
 data_lookup = {}
@@ -42,7 +43,7 @@ for label, data in data_lookup.iteritems():
     index += 1
 
 ax.set_xlabel("Percent Soybean Expansion", fontsize=14)
-ax.set_ylabel(r'Percent Change from original', fontsize=14)
+ax.set_ylabel(r'Total Carbon Stocks (Mg)', fontsize=14)
 ax.set_title('Composite percent change')
 
 fig.tight_layout()
