@@ -19,6 +19,7 @@ import scipy.stats
 import csv
 import os
 import sys
+import collections
 
 
 def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_start_fractions=None, land_cover_end_fractions=None, end_expansion_pixel_count=None):
@@ -34,7 +35,7 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_s
             that are used for conversion during the start step
         end_expansion_pixel_count - defined if land_cover_*_percentages are defined.  use to know what % of total conversion has been reached
         
-        returns the new expanded array
+        returns the new expanded array, the number of pixels per type that were converted to expansion_id
         """
     expansion_existance = base_array != expansion_id
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
@@ -44,10 +45,15 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_s
     result_array = base_array.copy()
     if land_cover_start_fractions is None:
         increasing_distances = numpy.argsort(edge_distance.flat)
+        
+        remaining_pixels = result_array.flat[increasing_distances[0:expansion_pixel_count]]
+        for lu_code in numpy.unique(remaining_pixels):
+            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
         result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
     else:
         current_percent = expansion_pixel_count / float(end_expansion_pixel_count)
         pixels_converted_so_far = 0
+        pixel_count = collections.defaultdict(int)
         for lu_code in land_cover_start_fractions:
             lu_edge_distance = edge_distance.copy()
             lu_edge_distance[base_array != lu_code] = numpy.inf
@@ -56,12 +62,17 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_s
             print lu_code, lu_pixels_to_convert
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
             pixels_converted_so_far += lu_pixels_to_convert
+            pixel_count[lu_code] += lu_pixels_to_convert
         edge_distance[result_array == expansion_id] = numpy.inf
         increasing_distances = numpy.argsort(edge_distance.flat)
         print expansion_pixel_count - pixels_converted_so_far
+        
+        remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
+        for lu_code in numpy.unique(remaining_pixels):
+            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
         result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
             
-    return result_array
+    return result_array, pixel_count
 
 def analyze_composite_carbon_stock_change(args):
     """This function loads scenarios from disk and calculates the carbon stocks
@@ -101,6 +112,8 @@ def analyze_composite_carbon_stock_change(args):
             types to conversion fractions per step for the last step
             of land cover conversion.  Percent of landcover will be
             linearly interpolated between 'start' and 'end' fractions.
+        args['output_pixel_count_filename'] - a report of the number of pixel
+            types changed per step
         """
 
     print 'starting composite expansion scenario'
@@ -120,16 +133,22 @@ def analyze_composite_carbon_stock_change(args):
     output_table.write(
         'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
     
+    output_count_table = open(args['output_pixel_count_filename'], 'wb')
+    unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
+    output_count_table.write(','.join(map(str,unique_lucodes)) + '\n')
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for composite expansion step %s' % percent
 
-        expanded_lulc_array = expand_lu_type(
+        expanded_lulc_array, pixel_count = expand_lu_type(
             scenario_lulc_array, args['converting_crop'], 
             percent * args['pixels_to_convert_per_step'], 
             args['land_cover_start_fractions'], 
             args['land_cover_end_fractions'], 
             args['scenario_conversion_steps'] * args['pixels_to_convert_per_step'])        
-        
+        for lu_code in unique_lucodes:
+            output_count_table.write('%s,' % pixel_count[lu_code])
+        output_count_table.write('\n')
+        output_count_table.flush()
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
         carbon_stocks = calculate_carbon_stocks(
@@ -811,6 +830,8 @@ if __name__ == '__main__':
     ARGS['converting_crop'] = 120,
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_60.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_60_pixel_count.csv')
     ARGS['land_cover_start_fractions'] = {
         2: .2,
         9: .6
@@ -818,6 +839,38 @@ if __name__ == '__main__':
     
     ARGS['land_cover_end_fractions'] = {
         2: .6,
+        9: .2
+        }
+    analyze_composite_carbon_stock_change(ARGS)
+    
+    #set up args for the composite scenario
+    ARGS['output_table_filename'] = (
+        'composite_carbon_stock_change_20_80.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_80_pixel_count.csv')
+    ARGS['land_cover_start_fractions'] = {
+        2: .2,
+        9: .8
+        }
+    
+    ARGS['land_cover_end_fractions'] = {
+        2: .8,
+        9: .2
+        }
+    analyze_composite_carbon_stock_change(ARGS)
+    
+    #set up args for the composite scenario
+    ARGS['output_table_filename'] = (
+        'composite_carbon_stock_change_20_80_50.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_80_50_pixel_count.csv')
+    ARGS['land_cover_start_fractions'] = {
+        2: .2,
+        9: .8
+        }
+    
+    ARGS['land_cover_end_fractions'] = {
+        2: .5,
         9: .2
         }
     analyze_composite_carbon_stock_change(ARGS)
