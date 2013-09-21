@@ -62,7 +62,7 @@ def expand_lu_type(base_array, nodata, expansion_id, expansion_pixel_count, land
             lu_pixels_to_convert = expansion_pixel_count * (land_cover_start_fractions[lu_code] * (1-current_percent) + land_cover_end_fractions[lu_code] * current_percent)
             print lu_code, lu_pixels_to_convert
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-            pixels_converted_so_far += lu_pixels_to_convert
+            pixels_converted_so_far += int(lu_pixels_to_convert)
             pixel_count[lu_code] += int(lu_pixels_to_convert)
         edge_distance[result_array == expansion_id] = numpy.inf
         increasing_distances = numpy.argsort(edge_distance.flat)
