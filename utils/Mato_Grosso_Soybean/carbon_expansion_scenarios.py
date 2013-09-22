@@ -56,7 +56,9 @@ def expand_lu_type(
     expansion_existance = (base_array != expansion_id) & (base_array != nodata)
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         expansion_existance)
-    edge_distance[edge_distance == 0] = numpy.inf
+    zero_distance_mask = edge_distance == 0
+    edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
+    edge_distance[zero_distance_mask] = numpy.inf
     
     result_array = base_array.copy()
     if land_cover_start_fractions is None:
@@ -846,7 +848,23 @@ if __name__ == '__main__':
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['converting_crop'] = 120,
     
+    #set up args for the composite scenario
+    ARGS['output_table_filename'] = (
+        'composite_carbon_stock_change_20_80_50.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_80_50_pixel_count.csv')
+    ARGS['land_cover_start_fractions'] = {
+        2: .2,
+        9: .8
+        }
     
+    ARGS['land_cover_end_fractions'] = {
+        2: .5,
+        9: .2
+        }
+    analyze_composite_carbon_stock_change(ARGS)
+   
+   
     #set up args for the composite scenario
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_80.csv')
@@ -863,7 +881,7 @@ if __name__ == '__main__':
         }
         
     analyze_composite_carbon_stock_change(ARGS)
-    os.exit(0)
+ 
     
     
     ARGS['output_table_filename'] = (
@@ -881,24 +899,9 @@ if __name__ == '__main__':
         }
     analyze_composite_carbon_stock_change(ARGS)
     
+    os.exit(-1)
     
-    
-    #set up args for the composite scenario
-    ARGS['output_table_filename'] = (
-        'composite_carbon_stock_change_20_80_50.csv')
-    ARGS['output_pixel_count_filename'] = (
-        'composite_carbon_stock_change_20_80_50_pixel_count.csv')
-    ARGS['land_cover_start_fractions'] = {
-        2: .2,
-        9: .8
-        }
-    
-    ARGS['land_cover_end_fractions'] = {
-        2: .5,
-        9: .2
-        }
-    analyze_composite_carbon_stock_change(ARGS)
-    sys.exit(0)
+ 
     
     #Set up the args for the disk based scenario
     ARGS['scenario_path'] = './MG_Soy_Exp_07122013/'
