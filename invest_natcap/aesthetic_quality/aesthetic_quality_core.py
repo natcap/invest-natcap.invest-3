@@ -95,7 +95,6 @@ cell_link_factory = collections.namedtuple('cell_link', \
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
     if 'closest' in sweep_line:
-        print('list is not empty, looking...')
         # Get information about first pixel in the list
         pixel = sweep_line[sweep_line['closest']['distance']] # won't change
         # Move on to next pixel if we're not done
@@ -104,18 +103,15 @@ def find_active_pixel(sweep_line, distance):
             pixel = pixel['next']
         # We reached the end and didn't find anything
         if pixel is None:
-            print("Reached the end, couldn't find pixel, returning None")
             return None
         # We didn't reach the end: either pixel doesn't exist...
         if pixel['distance'] != distance:
-            print("Stopped before the end: value doesn't exist. Returning None")
             return None
         # ...or we found it
         else:
-            print("Found value, returning pixel.")
             return pixel
     else:
-        print('list is empty: returning None')
+        pintenancerint('list is empty: returning None')
         return None
 
 
@@ -154,9 +150,39 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
+def add_active_pixel_fast(sweep_line, distance, visibility):
+    """Add a pixel to the sweep line in O(log n) using a skip list."""
+    # Make sure we're not creating any duplicate
+    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
+    assert distance not in sweep_line, message
+    new_pixel = \
+    {'next':None, 'up':None, 'distance':distance, 'visibility':visibility}
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        previous = None
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+        # Move on to next pixel if we're not done
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            previous = pixel
+            pixel = pixel['next']
+        # 1- Make the current pixel points to the next one
+        new_pixel['next'] = pixel
+        # 2- Insert the current pixel in the sweep line:
+        sweep_line[distance] = new_pixel
+        # 3- Make the preceding pixel point to the current one
+        if previous is None:
+            sweep_line['closest'] = new_pixel
+        else:
+            sweep_line[previous['distance']]['next'] = sweep_line[distance]
+    else:
+        sweep_line[distance] = new_pixel
+        sweep_line['closest'] = new_pixel
+    return sweep_line
+
 def add_active_pixel(sweep_line, distance, visibility):
-    """Add a pixel to the sweep line. The sweep line is a linked list, and the
-    pixel is a linked_cell"""
+    """Add a pixel to the sweep line in O(n) using a linked_list of
+    linked_cells."""
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message

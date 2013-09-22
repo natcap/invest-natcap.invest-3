@@ -355,6 +355,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                 1.3- access for data retreival
                     1.3.1- check the right element is retreived
                     1.3.2- check return value is None if element is not there
+                    1.3.3- O(log n) performance is maintained
             2- In the intermediate levels:
                 2.1- creation of skip links after leaf insertions:
                     2.1.1- insert new leaf in the right place
@@ -435,7 +436,50 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = "Wrong return value for searching a non-existent item: " + \
             str(pixel)
         assert pixel is None, message
-        
+        # 1.3.3- O(log n) performance is maintained
+        # 2- Intermediate nodes insertion 
+        # 2.3- fast access:
+        # Create a hierarchy that can be searched:
+        # The basal sweep line:
+        sweep_line = {}
+        sweep_line[0] = {'next':None, 'up':None, 'distance':0}
+        sweep_line['closest'] = sweep_line[0]
+        sweep_line[2] = {'next':None, 'up':None, 'distance':2}
+        sweep_line[0]['next'] = sweep_line[2]
+        sweep_line[4] = {'next':None, 'up':None, 'distance':4}
+        sweep_line[2]['next'] = sweep_line[4]
+        sweep_line[6] = {'next':None, 'up':None, 'distance':6}
+        sweep_line[4]['next'] = sweep_line[6]
+        # Creating the skip node hierarchy:
+        skip_nodes = []
+        # skip_nodes[0]
+        skip_nodes.append([])
+        # skip_nodes[0][0]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
+            'distance':sweep_line[0]['distance']})
+        # skip_nodes[0][1]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[2], \
+            'distance':sweep_line[2]['distance']})
+        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+        # skip_nodes[0][2]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
+            'distance':sweep_line[4]['distance']})
+        skip_nodes[0][1]['next'] = skip_nodes[0][2]
+        # skip_nodes[1]
+        skip_nodes.append([])
+        # skip_nodes[1][0]
+        skip_nodes[1].append({'next':None, 'up':None, \
+        'down':skip_nodes[0][0], 'distance':skip_nodes[0][0]['distance']})
+        skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        # Adjusting the 'up' fields in sweep_line elements:
+        sweep_line[0]['up'] = skip_nodes[0][0]
+        sweep_line[4]['up'] = skip_nodes[0][1]
+        # Check all the skip levels are accessible:
+        current_node = skip_nodes[0][-1]
+        print(current_node)
+        # 2.3.1- Finds the appropriate value
+        # 2.3.2- O(log n) performance is maintained
+
 
     def test_viewshed(self):
         array_shape = (6,6)
