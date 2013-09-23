@@ -484,6 +484,19 @@ class TestAestheticQualityCore(unittest.TestCase):
             right = current['next']
             print('distance ' + str(current['distance']) + ', next ' + \
                 str(right if right is None else right['distance']))
+        for level in range(len(skip_nodes)):
+            print('skip nodes level ' + str(level) + ':')
+            current = skip_nodes[level][0]
+            right = current['next']
+            print('distance ' + str(current['distance']) + ', next ' + \
+                str(right if right is None else right['distance']), \
+                'down ' + str(current['down']['distance']))
+            while(right is not None):
+                current = current['next']
+                right = current['next']
+                print('distance ' + str(current['distance']) + ', next ' + \
+                    str(right if right is None else right['distance']), \
+                    'down ' + str(current['down']['distance']))
         # 2.3.1- Finds the appropriate value
         # 2.3.2- O(log n) performance is maintained
 
