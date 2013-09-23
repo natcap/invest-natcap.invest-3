@@ -19,14 +19,18 @@ import scipy.stats
 import csv
 import os
 import sys
+import collections
 
-
-def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_start_fractions=None, land_cover_end_fractions=None, end_expansion_pixel_count=None):
+def expand_lu_type(
+    base_array, nodata, expansion_id, current_step, pixels_per_step,
+    land_cover_start_fractions=None, land_cover_end_fractions=None,
+    end_step=None):
     """Given a base array, and a number of pixels to expand
         from, buffer out a conversion of that number of pixels
         
         base_array - a 2D array of integers that represent
             land cover IDs
+        nodata - value in base_array to ignore
         expansion_id - the ID type to expand
         expansion_pixel_count - convert this number of pixels
         land_cover_start_percentages/land_cover_end_percentages -
@@ -34,34 +38,58 @@ def expand_lu_type(base_array, expansion_id, expansion_pixel_count, land_cover_s
             that are used for conversion during the start step
         end_expansion_pixel_count - defined if land_cover_*_percentages are defined.  use to know what % of total conversion has been reached
         
-        returns the new expanded array
+        returns the new expanded array, the number of pixels per type that were converted to expansion_id
         """
-    expansion_existance = base_array != expansion_id
+        
+    def step_percent(lu_code):
+        total_pixels = 0
+        for step_id in range(current_step):
+            current_percent = float(step_id) / (end_step - 1)
+            print current_percent, pixels_per_step
+            total_pixels += pixels_per_step * (
+                land_cover_start_fractions[lu_code] * (1-current_percent) + 
+                land_cover_end_fractions[lu_code] * current_percent)
+        return total_pixels
+            
+    expansion_pixel_count = pixels_per_step * current_step
+
+    expansion_existance = (base_array != expansion_id) & (base_array != nodata)
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         expansion_existance)
-    edge_distance[edge_distance == 0] = numpy.inf
+    zero_distance_mask = edge_distance == 0
+    edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
+    edge_distance[zero_distance_mask] = numpy.inf
     
     result_array = base_array.copy()
     if land_cover_start_fractions is None:
         increasing_distances = numpy.argsort(edge_distance.flat)
+        
+        remaining_pixels = result_array.flat[increasing_distances[0:expansion_pixel_count]]
+        for lu_code in numpy.unique(remaining_pixels):
+            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
         result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
     else:
-        current_percent = expansion_pixel_count / float(end_expansion_pixel_count)
         pixels_converted_so_far = 0
+        pixel_count = collections.defaultdict(int)
         for lu_code in land_cover_start_fractions:
             lu_edge_distance = edge_distance.copy()
             lu_edge_distance[base_array != lu_code] = numpy.inf
             increasing_distances = numpy.argsort(lu_edge_distance.flat)
-            lu_pixels_to_convert = expansion_pixel_count * (land_cover_start_fractions[lu_code] * (1-current_percent) + land_cover_end_fractions[lu_code] * current_percent)
+            lu_pixels_to_convert = int(round(step_percent(lu_code)))
             print lu_code, lu_pixels_to_convert
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-            pixels_converted_so_far += lu_pixels_to_convert
+            pixels_converted_so_far += int(lu_pixels_to_convert)
+            pixel_count[lu_code] += int(lu_pixels_to_convert)
         edge_distance[result_array == expansion_id] = numpy.inf
         increasing_distances = numpy.argsort(edge_distance.flat)
         print expansion_pixel_count - pixels_converted_so_far
+        
+        remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
+        for lu_code in numpy.unique(remaining_pixels):
+            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
         result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
             
-    return result_array
+    return result_array, pixel_count
 
 def analyze_composite_carbon_stock_change(args):
     """This function loads scenarios from disk and calculates the carbon stocks
@@ -101,6 +129,8 @@ def analyze_composite_carbon_stock_change(args):
             types to conversion fractions per step for the last step
             of land cover conversion.  Percent of landcover will be
             linearly interpolated between 'start' and 'end' fractions.
+        args['output_pixel_count_filename'] - a report of the number of pixel
+            types changed per step
         """
 
     print 'starting composite expansion scenario'
@@ -111,25 +141,32 @@ def analyze_composite_carbon_stock_change(args):
     scenario_lulc_dataset = gdal.Open(args['scenario_lulc_base_map_filename'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
     scenario_lulc_array = scenario_lulc_dataset.GetRasterBand(1).ReadAsArray()
-
-    landcover_regression, landcover_mean, carbon_pool_table = (
-        load_base_datasets(args))
-
+    scenario_nodata = scenario_lulc_dataset.GetRasterBand(1).GetNoDataValue()
+    
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
         'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
     
+    output_count_table = open(args['output_pixel_count_filename'], 'wb')
+    unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
+    output_count_table.write(','.join(map(str,unique_lucodes)) + '\n')
+
+    expansion_existance = (scenario_lulc_array != args['converting_crop']) & (scenario_lulc_array != scenario_nodata)
+
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for composite expansion step %s' % percent
 
-        expanded_lulc_array = expand_lu_type(
-            scenario_lulc_array, args['converting_crop'], 
-            percent * args['pixels_to_convert_per_step'], 
+        expanded_lulc_array, pixel_count = expand_lu_type(
+            scenario_lulc_array, scenario_nodata, args['converting_crop'], 
+            percent, args['pixels_to_convert_per_step'], 
             args['land_cover_start_fractions'], 
             args['land_cover_end_fractions'], 
-            args['scenario_conversion_steps'] * args['pixels_to_convert_per_step'])        
-        
+            args['scenario_conversion_steps'])        
+        for lu_code in unique_lucodes:
+            output_count_table.write('%s,' % pixel_count[lu_code])
+        output_count_table.write('\n')
+        output_count_table.flush()
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
         carbon_stocks = calculate_carbon_stocks(
@@ -300,6 +337,7 @@ def load_base_datasets(args):
     biomass_dataset = gdal.Open(args['base_biomass_filename'])
     biomass_nodata = biomass_dataset.GetRasterBand(1).GetNoDataValue()
     landcover_dataset = gdal.Open(args['base_landcover_filename'])
+    landcover_nodata = landcover_dataset.GetRasterBand(1).GetNoDataValue()
     biomass_array = biomass_dataset.GetRasterBand(1).ReadAsArray()
     landcover_array = landcover_dataset.GetRasterBand(1).ReadAsArray()
 
@@ -809,8 +847,29 @@ if __name__ == '__main__':
     ARGS['scenario_lulc_base_map_filename'] = 'MG_Soy_Exp_07122013/mg_lulc0'
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['converting_crop'] = 120,
+    
+    #set up args for the composite scenario
     ARGS['output_table_filename'] = (
-        'composite_carbon_stock_change.csv')
+        'composite_carbon_stock_change_20_80_50.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_80_50_pixel_count.csv')
+    ARGS['land_cover_start_fractions'] = {
+        2: .2,
+        9: .8
+        }
+    
+    ARGS['land_cover_end_fractions'] = {
+        2: .5,
+        9: .2
+        }
+    analyze_composite_carbon_stock_change(ARGS)
+   
+   
+    #set up args for the composite scenario
+    ARGS['output_table_filename'] = (
+        'composite_carbon_stock_change_20_80.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_80_pixel_count.csv')
     ARGS['land_cover_start_fractions'] = {
         2: .2,
         9: .8
@@ -820,8 +879,29 @@ if __name__ == '__main__':
         2: .8,
         9: .2
         }
+        
     analyze_composite_carbon_stock_change(ARGS)
-    sys.exit(0)
+ 
+    
+    
+    ARGS['output_table_filename'] = (
+        'composite_carbon_stock_change_20_60.csv')
+    ARGS['output_pixel_count_filename'] = (
+        'composite_carbon_stock_change_20_60_pixel_count.csv')
+    ARGS['land_cover_start_fractions'] = {
+        2: .2,
+        9: .6
+        }
+    
+    ARGS['land_cover_end_fractions'] = {
+        2: .6,
+        9: .2
+        }
+    analyze_composite_carbon_stock_change(ARGS)
+    
+    os.exit(-1)
+    
+ 
     
     #Set up the args for the disk based scenario
     ARGS['scenario_path'] = './MG_Soy_Exp_07122013/'
