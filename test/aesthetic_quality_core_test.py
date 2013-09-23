@@ -498,6 +498,13 @@ class TestAestheticQualityCore(unittest.TestCase):
                     str(right if right is None else right['distance']), \
                     'down ' + str(current['down']['distance']))
         # 2.3.1- Finds the appropriate value
+        distance = 4
+        found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
+            skip_nodes, distance)
+        expected = aesthetic_quality_core.find_active_pixel(sweep_line, distance)
+        print('looking for', distance)
+        print('expected', expected if expected is None else expected['distance'])
+        print('found', found if found is None else found['distance'])
         # 2.3.2- O(log n) performance is maintained
 
 
