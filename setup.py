@@ -187,20 +187,29 @@ if platform.system() == 'Windows':
             # the data files provided by default in setup.py.
             py2exeCommand.create_binaries(self, py_files, extensions, dlls)
 
+    from distutils.command.bdist_wininst import bdist_wininst
+    class CustomBdistWininst(bdist_wininst):
+        """A custom distutils command class for placing the correct stdlib c and
+        c++ dlls in the correct place for the binary distribution for Windows.
+        We only need this for bdist_wininst, so that's why we have the custom
+        command."""
+        def run(self):
+            if self.distribution.data_files == None:
+                self.distribution.data_files = []
+
+            # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
+            # Only necessary for binary package installer.
+            self.distribution.data_files.append(('lib/site-packages',
+                ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+            self.distribution.data_files.append(('lib',
+                ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+            bdist_wininst.run(self)
 
     # Now the we've declared our custom Py2exe command, we need to let the
     # Setup() function know that we want to use it in place of the normal py2exe
     # command.
     CMD_CLASSES['py2exe'] = CustomPy2exe
-
-    # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
-    # Only necessary for binary package installer, but I can't seem to figure
-    # out how to do that only for the binary package installer.
-    data_files.append(('lib/site-packages',
-        ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
-    data_files.append(('lib',
-        ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
-
+    CMD_CLASSES['bdist_wininst'] = CustomBdistWininst
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
