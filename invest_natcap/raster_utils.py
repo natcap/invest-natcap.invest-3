@@ -1012,7 +1012,7 @@ def aggregate_raster_values_uri(
     num_features = shapefile_layer.GetFeatureCount()
     feature_areas = {}
     for index in xrange(num_features):
-        feature = layer.GetFeature(index)
+        feature = shapefile_layer.GetFeature(index)
         feature_id = feature.GetField(shapefile_field)
         geom = feature.GetGeometryRef()
         feature_areas[feature_id] = geom.GetArea()
