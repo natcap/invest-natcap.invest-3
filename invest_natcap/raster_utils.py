@@ -1094,7 +1094,7 @@ def aggregate_raster_values_uri(
             #divide by 10000 to get Ha.  Notice that's in the denominator
             #so the * 10000 goes on the top
             result_tuple.hectare_mean[attribute_id] = (
-                adjusted_amount / (n_pixels * out_pixel_size ) * 10000)
+                adjusted_amount / (n_pixels * out_pixel_size ** 2) * 10000)
         else:
             result_tuple.pixel_mean[attribute_id] = 0.0
             result_tuple.hectare_mean[attribute_id] = 0.0
