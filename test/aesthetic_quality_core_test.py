@@ -472,7 +472,18 @@ class TestAestheticQualityCore(unittest.TestCase):
         sweep_line[4]['up'] = skip_nodes[0][1]
         # Check all the skip levels are accessible:
         current_node = skip_nodes[0][-1]
-        print(current_node)
+        # -- Debug info for sanity check:
+        print('Skip pointers hierarchy:')
+        print('active pixels:')
+        current = sweep_line['closest']
+        right = current['next']
+        print('distance ' + str(current['distance']) + ', next ' + \
+            str(right if right is None else right['distance']))
+        while(right is not None):
+            current = current['next']
+            right = current['next']
+            print('distance ' + str(current['distance']) + ', next ' + \
+                str(right if right is None else right['distance']))
         # 2.3.1- Finds the appropriate value
         # 2.3.2- O(log n) performance is maintained
 
