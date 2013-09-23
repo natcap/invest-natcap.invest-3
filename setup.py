@@ -103,6 +103,18 @@ packages = ['invest_natcap',
             'invest_natcap.ntfp',
             ]
 
+def get_iui_resource_data_files(lib_path):
+    """Returns a list of tuples for all the files to be added to iui_resources.
+     Use the input virtualenv site-packages path to add all files in the
+     IUI resources directory to our setup.py data files.
+    """
+    data_list = []
+    directory = 'invest_natcap/iui/iui_resources'
+    for root_dir, sub_folders, file_list in os.walk(directory):
+        data_list.append((os.path.join(lib_path, root_dir), map(lambda x:
+            os.path.join(root_dir, x), file_list)))
+    return data_list
+
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
     py2exe_args['options'] = \
@@ -177,6 +189,8 @@ if platform.system() == 'Windows':
 
             ] + matplotlib.get_py2exe_datafiles()
 
+            self.distribution.data_files.extend(get_iui_resource_data_files(''))
+
             # If we're building InVEST on 64-bit Windows, we need to also include the
             # 64-bit GEOS DLL.  See issue 2027.
             if platform.architecture()[0] == '64bit':
@@ -217,13 +231,7 @@ else:
     python_version = 'python%s' % '.'.join([str(r) for r in
         sys.version_info[:2]])
     lib_path = os.path.join('lib', python_version, 'site-packages')
-
-# Use the determined virtualenv site-packages path to add all files in the
-# IUI resources directory to our setup.py data files.
-directory = 'invest_natcap/iui/iui_resources'
-for root_dir, sub_folders, file_list in os.walk(directory):
-    data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
-        os.path.join(root_dir, x), file_list)))
+    data_files.extend(get_iui_resource_data_files(lib_path))
 
 #The standard distutils setup command
 setup(name='invest_natcap',
