@@ -288,7 +288,10 @@ class Executor(threading.Thread):
             self.write(format_str % (name, value))
         self.write("\n\n")
 
-    def print_system_info(self):
+    def print_system_info(self, function=None):
+        if function == None:
+            function = lambda x: self.write(x + '\n')
+
         system_details = [
             ('OS', platform.platform()),
             ('Processor architecture', platform.machine()),
@@ -317,19 +320,19 @@ class Executor(threading.Thread):
             ('InVEST', invest_natcap.__version__),
         ]
 
-        self.write('Build details\n')
+        function('Build details')
         detail_lists = [
             ('System', system_details),
             ('Python', python_details),
             ('Packages',packages),
         ]
         for list_name, detail_list in detail_lists:
-            self.write(list_name + '\n')
-            fmt_string = '%-16s: %s\n'
+            function(list_name)
+            fmt_string = '%-16s: %s'
             for detail_name, detail in detail_list:
-                self.write(fmt_string % (detail_name, detail))
-            self.write('\n')
-        self.write('\n\n')
+                function(fmt_string % (detail_name, detail))
+            function('')
+        function('')
 
     def format_time(self, seconds):
         """Render the integer number of seconds in a string.  Returns a string.
@@ -524,32 +527,7 @@ class Executor(threading.Thread):
             LOGGER.error('---------------------------------------------------')
             LOGGER.error('Error: exception found while running %s', model_name)
             LOGGER.debug('')
-            LOGGER.debug('System')
-            fmt_string = '%-16s: %s'
-            LOGGER.debug(fmt_string, 'Disk space free', fileio.get_free_space(workspace))
-            LOGGER.debug(fmt_string, 'OS', platform.platform())
-            LOGGER.debug(fmt_string, 'Machine type', platform.machine())
-            LOGGER.debug(fmt_string, 'FS encoding', sys.getfilesystemencoding())
-            LOGGER.debug('')
-            LOGGER.debug('Python')
-            LOGGER.debug(fmt_string, 'Version', platform.python_version())
-            LOGGER.debug(fmt_string, 'Build', platform.python_build())
-            LOGGER.debug(fmt_string, 'Compiler', platform.python_compiler())
-            LOGGER.debug(fmt_string, 'Implementation', platform.python_implementation())
-            LOGGER.debug(fmt_string, 'Architecture', platform.architecture()[0])
-            LOGGER.debug(fmt_string, 'Linkage format', platform.architecture()[1])
-            LOGGER.debug(fmt_string, 'InVEST version', invest_natcap.__version__)
-
-            def pkg_ver(name):
-                try:
-                    return __import__(name).__version__
-                except ImportError:
-                    return '?'
-            LOGGER.debug(fmt_string, 'Cython version', pkg_ver('Cython'))
-            LOGGER.debug(fmt_string, 'Numpy version', pkg_ver('numpy'))
-            LOGGER.debug(fmt_string, 'Scipy version', pkg_ver('scipy'))
-            LOGGER.debug(fmt_string, 'OSGEO version', pkg_ver('osgeo'))
-            LOGGER.debug('')
+            self.print_system_info(LOGGER.debug)
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
