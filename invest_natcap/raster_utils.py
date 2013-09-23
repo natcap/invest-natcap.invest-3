@@ -960,8 +960,9 @@ def aggregate_raster_values_uri(
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
-        raster - a uri to a GDAL dataset of some sort of value
-        shapefile - a uri to a OGR datasource that probably overlaps raster 
+        raster_uri - a uri to a GDAL dataset
+        shapefile_uri - a uri to a OGR datasource that should overlap raster; raises
+           an exception if not.
         shapefile_field - a string indicating which key in shapefile to associate
            the output dictionary values with whose values are associated with ints
         ignore_nodata - (optional) if operation == 'mean' then it does not account
@@ -976,7 +977,8 @@ def aggregate_raster_values_uri(
            Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
            shapefile_field value to either the total, pixel mean, hecatare mean, pixel max,
            and pixel min of the values under that feature.  'n_pixels' contains the
-           total number of valid pixels used in that calculation.
+           total number of valid pixels used in that calculation.  hectare_mean is None if
+           raster_uri is unprojected.
         """
 
     #Generate a temporary mask filename
@@ -1099,6 +1101,15 @@ def aggregate_raster_values_uri(
             result_tuple.pixel_mean[attribute_id] = 0.0
             result_tuple.hectare_mean[attribute_id] = 0.0
 
+    try:
+        assert_datasets_in_same_projection([raster_uri])
+    except DatasetUnprojected:
+        #doesn't make sense to calculate the hectare mean
+        LOGGER.warn(
+            'aggregate raster %s is not projected setting hectare_mean to None'
+            % raster_uri)
+        result_tuple.hectare_mean = None
+    
     mask_band = None
     mask_dataset = None
     clipped_band = None
