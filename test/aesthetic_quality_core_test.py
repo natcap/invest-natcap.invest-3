@@ -457,14 +457,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         # skip_nodes[0][0]
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
             'distance':sweep_line[0]['distance']})
-        # skip_nodes[0][1]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[2], \
-            'distance':sweep_line[2]['distance']})
-        skip_nodes[0][0]['next'] = skip_nodes[0][1]
-        # skip_nodes[0][2]
+        # skip_nodes[0][1
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
             'distance':sweep_line[4]['distance']})
-        skip_nodes[0][1]['next'] = skip_nodes[0][2]
+        skip_nodes[0][0]['next'] = skip_nodes[0][1]
         # skip_nodes[1]
         skip_nodes.append([])
         # skip_nodes[1][0]
@@ -573,7 +569,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            print('  adding', c)
             active_cells.add(c)
             d = distances[c]
             v = visibility[c]
