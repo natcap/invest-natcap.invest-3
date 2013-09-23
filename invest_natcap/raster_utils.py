@@ -1002,7 +1002,7 @@ def aggregate_raster_values_uri(
     shapefile_layer = shapefile.GetLayer()
     gdal.RasterizeLayer(
         mask_dataset, [1], shapefile_layer, 
-        options=['ATTRIBUTE=%s' % shapefile_field])
+        options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
 
     mask_dataset.FlushCache()
     mask_band = mask_dataset.GetRasterBand(1)
