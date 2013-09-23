@@ -92,6 +92,32 @@ linked_cell_factory = collections.namedtuple('linked_cell', \
 cell_link_factory = collections.namedtuple('cell_link', \
     ['top', 'right', 'bottom', 'level', 'distance'])
 
+def find_active_pixel_fast(sweep_line, skip_nodes, distance):
+    """Find an active pixel based on distance. Return None if can't be found"""
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        if len(skip_nodes) > 0:
+            pixel = skip_nodes[-1][0]
+            return pixel
+        else:
+            pixel = sweep_line[sweep_line['closest']['distance']]
+            # Move on to next pixel if we're not done
+            while (pixel is not None) and \
+                (pixel['distance'] < distance):
+                pixel = pixel['next']
+            # We reached the end and didn't find anything
+            if pixel is None:
+                return None
+            # We didn't reach the end: either pixel doesn't exist...
+            if pixel['distance'] != distance:
+                return None
+            # ...or we found it
+            else:
+                return pixel
+    else:
+        print('list is empty: returning None')
+        return None
+
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
     if 'closest' in sweep_line:
@@ -111,7 +137,6 @@ def find_active_pixel(sweep_line, distance):
         else:
             return pixel
     else:
-        pintenancerint('list is empty: returning None')
         return None
 
 
