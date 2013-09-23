@@ -966,14 +966,16 @@ def aggregate_raster_values_uri(
         shapefile_field - a string indicating which key in shapefile to associate
            the output dictionary values with whose values are associated with ints
         ignore_nodata - (optional) if operation == 'mean' then it does not account
-            for nodata pixels when determing the average, otherwise all pixels in
-            the AOI are used for calculation of the mean.
+            for nodata pixels when determing the pixel_mean, otherwise all pixels in
+            the AOI are used for calculation of the mean.  This does not affect 
+            hectare_mean which is calculated from the geometrical area of the feature.
         threshold_amount_lookup - (optional) a dictionary indexing the shapefile_field's
             to threshold amounts to subtract from the aggregate value.  The result
             will be clamped to zero.
 
         returns a named tuple of the form 
-           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels pixel_min pixel_max')
+           ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
+            pixel_min pixel_max')
            Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
            shapefile_field value to either the total, pixel mean, hecatare mean, pixel max,
            and pixel min of the values under that feature.  'n_pixels' contains the
@@ -1005,6 +1007,16 @@ def aggregate_raster_values_uri(
     gdal.RasterizeLayer(
         mask_dataset, [1], shapefile_layer, 
         options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
+
+    #get feature areas
+    num_features = shapefile_layer.GetFeatureCount()
+    feature_areas = {}
+    for index in xrange(num_features):
+        feature = layer.GetFeature(index)
+        feature_id = feature.GetField(shapefile_field)
+        geom = feature.GetGeometryRef()
+        feature_areas[feature_id] = geom.GetArea()
+    geom = None
 
     mask_dataset.FlushCache()
     mask_band = mask_dataset.GetRasterBand(1)
@@ -1096,7 +1108,7 @@ def aggregate_raster_values_uri(
             #divide by 10000 to get Ha.  Notice that's in the denominator
             #so the * 10000 goes on the top
             result_tuple.hectare_mean[attribute_id] = (
-                adjusted_amount / (n_pixels * out_pixel_size ** 2) * 10000)
+                adjusted_amount / feature_areas[attribute_id] * 10000)
         else:
             result_tuple.pixel_mean[attribute_id] = 0.0
             result_tuple.hectare_mean[attribute_id] = 0.0
