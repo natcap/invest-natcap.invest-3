@@ -288,6 +288,49 @@ class Executor(threading.Thread):
             self.write(format_str % (name, value))
         self.write("\n\n")
 
+    def print_system_info(self):
+        system_details = [
+            ('OS', platform.platform()),
+            ('Processor architecture', platform.machine()),
+            ('FS encoding', sys.getfilesystemencoding()),
+        ]
+
+        python_details = [
+            ('Version', platform.python_version()),
+            ('Build', platform.python_build()),
+            ('Compiler', platform.python_compiler()),
+            ('Implementation', platform.python_implementation()),
+            ('Architecture', platform.architecture()[0]),
+            ('Linkage format', platform.architecture()[1]),
+        ]
+
+        def pkg_ver(name):
+            try:
+                return __import__(name).__version__
+            except ImportError:
+                return '?'
+        packages = [
+            ('Cython', pkg_ver('Cython')),
+            ('Numpy', pkg_ver('numpy')),
+            ('Scipy', pkg_ver('scipy')),
+            ('OSGEO', pkg_ver('osgeo')),
+            ('InVEST', invest_natcap.__version__),
+        ]
+
+        self.write('Build details\n')
+        detail_lists = [
+            ('System', system_details),
+            ('Python', python_details),
+            ('Packages',packages),
+        ]
+        for list_name, detail_list in detail_lists:
+            self.write(list_name + '\n')
+            fmt_string = '%-16s: %s\n'
+            for detail_name, detail in detail_list:
+                self.write(fmt_string % (detail_name, detail))
+            self.write('\n')
+        self.write('\n\n')
+
     def format_time(self, seconds):
         """Render the integer number of seconds in a string.  Returns a string.
         """
@@ -497,14 +540,15 @@ class Executor(threading.Thread):
             LOGGER.debug(fmt_string, 'Linkage format', platform.architecture()[1])
             LOGGER.debug(fmt_string, 'InVEST version', invest_natcap.__version__)
 
-            import Cython
-            import numpy
-            import scipy
-            import osgeo
-            LOGGER.debug(fmt_string, 'Cython version', Cython.__version__)
-            LOGGER.debug(fmt_string, 'Numpy version', numpy.__version__)
-            LOGGER.debug(fmt_string, 'Scipy version', scipy.__version__)
-            LOGGER.debug(fmt_string, 'OSGEO version', osgeo.__version__)
+            def pkg_ver(name):
+                try:
+                    return __import__(name).__version__
+                except ImportError:
+                    return '?'
+            LOGGER.debug(fmt_string, 'Cython version', pkg_ver('Cython'))
+            LOGGER.debug(fmt_string, 'Numpy version', pkg_ver('numpy'))
+            LOGGER.debug(fmt_string, 'Scipy version', pkg_ver('scipy'))
+            LOGGER.debug(fmt_string, 'OSGEO version', pkg_ver('osgeo'))
             LOGGER.debug('')
 
             # If the exception indicates that we ran out of disk space, convert
