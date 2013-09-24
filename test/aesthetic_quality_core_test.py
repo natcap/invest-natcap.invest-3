@@ -456,7 +456,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes.append([])
         # skip_nodes[0][0]
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
-            'span':0, 'distance':sweep_line[0]['distance']})
+            'span':2, 'distance':sweep_line[0]['distance']})
         # skip_nodes[0][1
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
             'span':2, 'distance':sweep_line[4]['distance']})
@@ -498,7 +498,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                 right = current['next']
                 print('distance ' + str(current['distance']) + ', next ' + \
                     str(right if right is None else right['distance']), \
-                    'down ' + str(current['down']['distance']))
+                    'down ' + str(current['down']['distance']), 'span', span)
         # 2.3.1- Finds the appropriate value
         distance = 2
         found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \

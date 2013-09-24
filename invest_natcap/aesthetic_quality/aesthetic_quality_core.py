@@ -111,15 +111,29 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
             span = len(sweep_line)
         previous = pixel
 
+        # found distance, return the pixel
+        if pixel['distance'] == distance:
+            print('found the value we wanted.')
+            while (pixel['down'] is not None):
+                print('We have to go down')
+                pixel = pixel['down']
+            print('done, returning pixel', pixel['distance'])
+            return pixel
+
+        # Didn't find distance, continue
         while (pixel['distance'] != distance):
-            print("didn't find distance yet. Keep on going.")
+            print("didn't find distance yet (" + str(pixel['distance']) + \
+                "). Keep on going.")
             # go right until distance is passed
             print('max span is', span)
             iteration = 0
             while (iteration < span) and (pixel['distance'] < distance):
                 print('pixel distance ' + str(pixel['distance']) + ' < ' + \
                     str(distance) + ', moving on to next pixel')
-                print("pixel['next']", pixel['next'])
+                if pixel['next'] is None:
+                    print("pixel['next']", None)
+                else:
+                    print("pixel['next']", pixel['next']['distance'])
                 previous = pixel
                 pixel = pixel['next']
                 iteration += 1
