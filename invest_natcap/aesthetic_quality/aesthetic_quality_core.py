@@ -111,6 +111,10 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
             span = len(sweep_line)
         previous = pixel
 
+        # Looking for a distance smaller than smallest.
+        if pixel['distance'] > distance:
+            return None
+
         # found distance, return the pixel
         if pixel['distance'] == distance:
             print('found the value we wanted.')
@@ -154,14 +158,14 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
             # Went too far, backtrack 
             if pixel['distance'] > distance:
                 print('Went too far (' + str(pixel['distance']) + ')')
-                pixel = previous['down']
+                pixel = previous
             # Go down 1 level
             if pixel['down'] is None:
                 print("can't go further down: value doesn't exist. Return None.")
                 return None
             print("Going down from", pixel['distance'])
             span = pixel['span']
-            
+            pixel = pixel['down']
             message = 'Error: span cannot be zero on an intermediate node'
             assert span != 0, message
     else:
