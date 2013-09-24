@@ -501,12 +501,12 @@ class TestAestheticQualityCore(unittest.TestCase):
                     'down ' + str(current['down']['distance']), 'span', span)
         # 2.3.1- Finds the appropriate value
         for distance in [0, 2, 4, 6, -1, 3, 7]:
-            print('distance', distance)
             found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
                 skip_nodes, distance)
             expected = aesthetic_quality_core.find_active_pixel(sweep_line, distance)
-            print('  expected', expected if expected is None else expected['distance'])
-            print('  found', found if found is None else found['distance'])
+            message = 'Error: return value is ' + str(found) + \
+            ', expected is ' + str(expected)
+            assert found == expected, message
         # 2.3.2- O(log n) performance is maintained
 
 
