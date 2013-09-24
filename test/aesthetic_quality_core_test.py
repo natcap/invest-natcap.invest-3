@@ -442,13 +442,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Create a hierarchy that can be searched:
         # The basal sweep line:
         sweep_line = {}
-        sweep_line[0] = {'next':None, 'up':None, 'distance':0}
+        sweep_line[0] = {'next':None, 'up':None, 'down':None, 'distance':0}
         sweep_line['closest'] = sweep_line[0]
-        sweep_line[2] = {'next':None, 'up':None, 'distance':2}
+        sweep_line[2] = {'next':None, 'up':None, 'down':None, 'distance':2}
         sweep_line[0]['next'] = sweep_line[2]
-        sweep_line[4] = {'next':None, 'up':None, 'distance':4}
+        sweep_line[4] = {'next':None, 'up':None, 'down':None, 'distance':4}
         sweep_line[2]['next'] = sweep_line[4]
-        sweep_line[6] = {'next':None, 'up':None, 'distance':6}
+        sweep_line[6] = {'next':None, 'up':None, 'down':None, 'distance':6}
         sweep_line[4]['next'] = sweep_line[6]
         # Creating the skip node hierarchy:
         skip_nodes = []
@@ -456,16 +456,18 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes.append([])
         # skip_nodes[0][0]
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
-            'distance':sweep_line[0]['distance']})
+            'span':0, 'distance':sweep_line[0]['distance']})
+        print('max span is', span)
         # skip_nodes[0][1
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
-            'distance':sweep_line[4]['distance']})
-        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+            'span':2, 'distance':sweep_line[4]['distance']})
+        skip_nodes[0][2]['next'] = skip_nodes[0][1]
         # skip_nodes[1]
         skip_nodes.append([])
         # skip_nodes[1][0]
         skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][0], 'distance':skip_nodes[0][0]['distance']})
+        'down':skip_nodes[0][0], 'span':2, \
+        'distance':skip_nodes[0][0]['distance']})
         skip_nodes[0][0]['up'] = skip_nodes[1][0]
         # Adjusting the 'up' fields in sweep_line elements:
         sweep_line[0]['up'] = skip_nodes[0][0]
