@@ -96,65 +96,57 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
     print(' ----- Looking for distance', distance)
     if 'closest' in sweep_line:
-        print("sweep_line non empty: pick sweep_lie['closest']")
+        print("sweep_line non empty: pick sweep_line['closest']")
+        # Find the starting point
         if len(skip_nodes) > 0:
+            level = len(skip_nodes) -1
             print('Skip nodes non empty: pick skip_nodes[' + \
-                str(len(skip_nodes) - 1) + '][0]')
+                str(level) + '][0]')
             # Get information about first pixel in the list
-            pixel = skip_nodes[-1][0]
+            pixel = skip_nodes[level][0]
+            span = len(skip_nodes[level])
         else:
             print("skip nodes empty, use sweep_line['closest']")
             pixel = sweep_line['closest']
+            span = len(sweep_line)
         previous = pixel
 
-        # go right until distance is passed
-        while (pixel is not None) and (pixel['distance'] < distance):
-            print('pixel distance ' + str(pixel['distance']) + ' < ' + \
-                str(distance) + ', moving on to next pixel')
-            print("pixel['next']", pixel['next'])
-            previous = pixel
-            pixel = pixel['next']
-        # If we've reached the end, backtrack one step
-        if pixel is None:
-            pixel = previous
-        print('stopped at pixel', pixel['distance'])
-        if pixel['distance'] == distance:
-            print('found the value we wanted.')
-            while (pixel['down'] is not None):
-                print('We have to go down')
-                pixel = pixel['down']
-            print('done, returning pixel', pixel['distance'])
-            return pixel
-        
-        # Go down 1 level
-        print(pixel['distance'], "is too far.")
-        if previous['down'] is None:
-            print("can't go further down: value doesn't exist. Return None.")
-            return None
-        print("Going down from", previous['distance'])
-        pixel = previous['down']
-        span = previous['span']
-        print('max span is', span)
-        iteration = 0
-        while (iteration < span) and (pixel['distance'] < distance):
-            print('pixel distance is too small', pixel['distance'], \
-                'moving forward')
-            pixel = pixel['next']
-            iteration += 1
-            print('moved forward', iteration, 'times')
-        print('Done moving forward')
-        if pixel['distance'] == distance:
-            print('Found the value we wanted.')
-            while (pixel['down'] is not None):
-                print('Not down enough. Going further down.')
-                pixel = pixel['down']
-            print('Found the pixel on sweep_line, returning it.')
-            return pixel
-        if pixel['distance'] > distance:
-            print('Pixel distance', pixel['distance'], \
-                'is too high, returning None')
-            return None
-        return pixel
+        while (pixel['distance'] != distance):
+            print("didn't find distance yet. Keep on going.")
+            # go right until distance is passed
+            print('max span is', span)
+            iteration = 0
+            while (iteration < span) and (pixel['distance'] < distance):
+                print('pixel distance ' + str(pixel['distance']) + ' < ' + \
+                    str(distance) + ', moving on to next pixel')
+                print("pixel['next']", pixel['next'])
+                previous = pixel
+                pixel = pixel['next']
+                iteration += 1
+                print('moved forward', iteration, 'times')
+            print('Done moving forward')
+            # If we've reached the end, backtrack one step
+            if pixel is None:
+                pixel = previous
+            print('stopped at pixel', pixel['distance'])
+            if pixel['distance'] == distance:
+                print('found the value we wanted.')
+                while (pixel['down'] is not None):
+                    print('We have to go down')
+                    pixel = pixel['down']
+                print('done, returning pixel', pixel['distance'])
+                return pixel
+            
+            # Go down 1 level
+            print(pixel['distance'], "is too far.")
+            if previous['down'] is None:
+                print("can't go further down: value doesn't exist. Return None.")
+                return None
+            print("Going down from", previous['distance'])
+            pixel = previous['down']
+            span = previous['span']
+            if span == 0:
+                return pixel
     else:
         print('list is empty: returning None')
         return None
