@@ -500,7 +500,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     str(right if right is None else right['distance']), \
                     'down ' + str(current['down']['distance']), 'span', span)
         # 2.3.1- Finds the appropriate value
-        distance = 2
+        distance = 6
         found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
             skip_nodes, distance)
         expected = aesthetic_quality_core.find_active_pixel(sweep_line, distance)
