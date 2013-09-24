@@ -67,7 +67,10 @@ console = []
 py2exe_args = {}
 data_files = []
 lib_path = ''
-
+CMD_CLASSES = {
+    'build_ext': build_ext,
+    'zip': ZipCommand,
+}
 
 packages = ['invest_natcap',
             'invest_natcap.carbon',
@@ -100,9 +103,20 @@ packages = ['invest_natcap',
             'invest_natcap.ntfp',
             ]
 
+def get_iui_resource_data_files(lib_path):
+    """Returns a list of tuples for all the files to be added to iui_resources.
+     Use the input virtualenv site-packages path to add all files in the
+     IUI resources directory to our setup.py data files.
+    """
+    data_list = []
+    directory = 'invest_natcap/iui/iui_resources'
+    for root_dir, sub_folders, file_list in os.walk(directory):
+        data_list.append((os.path.join(lib_path, root_dir), map(lambda x:
+            os.path.join(root_dir, x), file_list)))
+    return data_list
+
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
-    import py2exe
     py2exe_args['options'] = \
         {'py2exe':{
             'includes': ['sip',
@@ -145,62 +159,71 @@ if platform.system() == 'Windows':
     py2exe_args['windows'] = [
         'invest_pollination.py',
     ]
+    from py2exe.build_exe import py2exe as py2exeCommand
 
-    #Need to manually bring along the json configuration files to
-    #the current build directory
-    data_files.append(
-        ('.',['invest_natcap/iui/carbon.json',
-              'invest_natcap/iui/timber.json',
-              'invest_natcap/iui/aesthetic_quality.json',
-              'invest_natcap/iui/wave_energy.json',
-              'invest_natcap/iui/hydropower_water_yield.json',
-              'invest_natcap/iui/recreation-client-init.json',
-              'invest_natcap/iui/recreation-client-scenario.json',
-              'invest_natcap/iui/pollination.json',
-              'invest_natcap/iui/finfish_aquaculture.json',
-              'invest_natcap/iui/marine_water_quality_biophysical.json',
-              'invest_natcap/iui/monthly_water_yield.json',
-              'invest_natcap/iui/biodiversity_biophysical.json',
-              'invest_natcap/iui/overlap_analysis.json',
-              'invest_natcap/iui/hra.json',
-              'invest_natcap/iui/hra_preprocessor.json',
-              'invest_natcap/iui/overlap_analysis_mz.json',
-              'invest_natcap/iui/sediment.json',
-              'invest_natcap/iui/malaria.json',
-              'invest_natcap/iui/nutrient.json',
-              'invest_natcap/iui/wind_energy.json',
-              'invest_natcap/iui/coastal_vulnerability.json',
-              'invest_natcap/iui/ntfp.json',
-              'geos_c.dll',
-              'libgcc_s_dw2-1.dll',
-              'libstdc++-6.dll',
-              ]))
+    class CustomPy2exe(py2exeCommand):
+        """This is a custom Py2exe command that allows us to define data files
+        that are only used for the built executeables.  This is especially
+        important now that we include 30MB or so of GDAL DLLs that we don't need
+        for any other distribution scheme."""
 
-    # These are the GDAL DLLs.  They are absolutely required for running the
-    # Windows executeables on XP.  For whatever reason, they do not appear to be
-    # required for running GDAL stuff on Windows 7.  Not sure why that is.
-    data_files.append(('.', glob.glob('%s/*.dll' %
-        'gdal_dlls')))
+        def create_binaries(self, py_files, extensions, dlls):
+            if self.distribution.data_files == None:
+                self.distribution.data_files = []
 
-    # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
-    # Only necessary for binary package installer, but I can't seem to figure
-    # out how to do that only for the binary package installer.
-    data_files.append(('lib/site-packages',
-        ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
-    data_files.append(('lib',
-        ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+            # This block defines the data files that only apply to the Py2exe distribution
+            # of InVEST.  These are files that are really only needed for the standalone
+            # executeables and otherwise muck up our other distributions.
+            self.distribution.data_files += [
+                ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.json')),
+                ('.', ['geos_c.dll', 'libgcc_s_dw2-1.dll', 'libstdc++-6.dll']),
+                ('invest_natcap/recreation',
+                    ['invest_natcap/recreation/recreation_client_config.json']),
+                ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
+                ('installer', glob.glob('installer/*')),
 
-    data_files.append(('invest_natcap/recreation',
-          ['invest_natcap/recreation/recreation_client_config.json']))
-    data_files.extend(matplotlib.get_py2exe_datafiles())
-    data_files.append(
-        ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
-    data_files.append(('installer', glob.glob('installer/*')))
+            # These are the GDAL DLLs.  They are absolutely required for running the
+            # Windows executeables on XP.  For whatever reason, they do not appear to be
+            # required for running GDAL stuff on Windows 7.  Not sure why that is.
+                ('.', glob.glob('gdal_dlls/*.dll')),
 
-    # If we're building InVEST on 64-bit Windows, we need to also include the
-    # 64-bit GEOS DLL.  See issue 2027.
-    if platform.architecture()[0] == '64bit':
-        data_files.append(('shapely', ['x64_build/geos_c.dll']))
+            ] + matplotlib.get_py2exe_datafiles()
+
+            self.distribution.data_files.extend(get_iui_resource_data_files(''))
+
+            # If we're building InVEST on 64-bit Windows, we need to also include the
+            # 64-bit GEOS DLL.  See issue 2027.
+            if platform.architecture()[0] == '64bit':
+                self.distribution.data_files.append(
+                    ('shapely', ['x64_build/geos_c.dll']))
+
+            # After we've defined all our custom data files, we can now add on
+            # the data files provided by default in setup.py.
+            py2exeCommand.create_binaries(self, py_files, extensions, dlls)
+
+    from distutils.command.bdist_wininst import bdist_wininst
+    class CustomBdistWininst(bdist_wininst):
+        """A custom distutils command class for placing the correct stdlib c and
+        c++ dlls in the correct place for the binary distribution for Windows.
+        We only need this for bdist_wininst, so that's why we have the custom
+        command."""
+        def run(self):
+            if self.distribution.data_files == None:
+                self.distribution.data_files = []
+
+            # Put the c/c++ libraries where we need them, in lib/site-packages and lib.
+            # Only necessary for binary package installer.
+            self.distribution.data_files.append(('lib/site-packages',
+                ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+            self.distribution.data_files.append(('lib',
+                ['libgcc_s_dw2-1.dll', 'libstdc++-6.dll']))
+            bdist_wininst.run(self)
+
+    # Now the we've declared our custom Py2exe command, we need to let the
+    # Setup() function know that we want to use it in place of the normal py2exe
+    # command.
+    CMD_CLASSES['py2exe'] = CustomPy2exe
+    CMD_CLASSES['bdist_wininst'] = CustomBdistWininst
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
@@ -208,20 +231,13 @@ else:
     python_version = 'python%s' % '.'.join([str(r) for r in
         sys.version_info[:2]])
     lib_path = os.path.join('lib', python_version, 'site-packages')
-
-# Use the determined virtualenv site-packages path to add all files in the
-# IUI resources directory to our setup.py data files.
-directory = 'invest_natcap/iui/iui_resources'
-for root_dir, sub_folders, file_list in os.walk(directory):
-    data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
-        os.path.join(root_dir, x), file_list)))
+    data_files.extend(get_iui_resource_data_files(lib_path))
 
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
       packages=packages,
-      cmdclass={'build_ext': build_ext,
-                'zip': ZipCommand},
+      cmdclass=CMD_CLASSES,
       requires=['cython (>=0.19.1)', 'scipy (>=0.12.0)', 'nose (>=1.2.1)', 'osgeo (>=1.9.2)'],
       include_dirs = [np.get_include()],
       data_files=data_files,
