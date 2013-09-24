@@ -94,10 +94,11 @@ cell_link_factory = collections.namedtuple('cell_link', \
 
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
+    print(' ----- Looking for distance', distance)
     if 'closest' in sweep_line:
-        print('closest exist in sweep_line')
+        print("sweep_line non empty: pick sweep_lie['closest']")
         if len(skip_nodes) > 0:
-            print('Skip nodes non empty: pick the one at [' + \
+            print('Skip nodes non empty: pick skip_nodes[' + \
                 str(len(skip_nodes) - 1) + '][0]')
             # Get information about first pixel in the list
             pixel = skip_nodes[-1][0]
@@ -107,11 +108,15 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
         previous = pixel
 
         # go right until distance is passed
-        while (pixel['distance'] < distance):
+        while (pixel is not None) and (pixel['distance'] < distance):
             print('pixel distance ' + str(pixel['distance']) + ' < ' + \
                 str(distance) + ', moving on to next pixel')
+            print("pixel['next']", pixel['next'])
             previous = pixel
             pixel = pixel['next']
+        # If we've reached the end, backtrack one step
+        if pixel is None:
+            pixel = previous
         print('stopped at pixel', pixel['distance'])
         if pixel['distance'] == distance:
             print('found the value we wanted.')
@@ -128,8 +133,8 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
             return None
         print("Going down from", previous['distance'])
         pixel = previous['down']
-        print('max span is', span)
         span = previous['span']
+        print('max span is', span)
         iteration = 0
         while (iteration < span) and (pixel['distance'] < distance):
             print('pixel distance is too small', pixel['distance'], \
