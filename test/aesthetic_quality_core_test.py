@@ -510,6 +510,51 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.3.2- O(log n) performance is maintained
 
 
+    def skip_list_is_consistent(self, linked_list, skip_nodes):
+        """Function that checks for skip list inconsistencies.
+        
+            Inputs: 
+                -sweep_line: the container proper which is a dictionary
+                    implementing a linked list that contains the items 
+                    ordered in increasing distance
+                -skip_nodes: python dict that is the hierarchical structure 
+                    that sitting on top of the sweep_line to allow O(log n) 
+                    operations.
+            
+            Returns True if list is consistent, False otherwise"""
+        # 1-Testing linked_list:
+        #   1.1-If len(linked_list) > 0 then len(linked_list) >= 2
+        #   1.1-If len(linked_list) > 0 then 'closest' exists
+        #   1.1-down is None
+        #   1.2-linked_list['closest'] is the smallest distance
+        #   1.3-No negative distances
+        #   1.5-distances increase
+        #   1.6-chain length is 1 less than len(linked_list)
+        #   1.7-The non-linked element is the same as linked_list['closest']
+        #   1.8-Last element has 'next' set to None
+        if len(linked_list) == 0:
+            return True
+        
+        assert len(linked_list) >= 2
+        assert linked_list.has_key('closest')
+
+        pixel = linked_list['closest']
+        chain_length = 1
+        assert pixel['down'] in None
+
+        last_distance = pixel['distance']
+        assert last_distance >= 0
+
+        while pixel['next'] is not None:
+            pixel = pixel['next']
+            chain_length += 1
+            assert pixel['down'] is None
+            assert (pixel['distance'] - last_distance) > 0.
+            last_distance = pixel['distance']
+
+        assert (chain_length == len(linked_list) -1)
+        assert linked_list.has_key(linked_list['closest']['distance'])
+
     def test_viewshed(self):
         array_shape = (6,6)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
