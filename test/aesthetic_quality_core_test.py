@@ -631,24 +631,38 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.2-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
         node = linked_list['closest']
+        lower_level_size = 1
         up_count = 0
         if node['up'] is not None:
             up_count += 1
         while node['next'] is not None:
             node = node['next']
+            lower_level_size += 1
             if node['up'] is not None:
                 up_count += 1
 
         skip_nodes_size = 0
         print('up_count', up_count)
         for level in range(len(skip_nodes)):
+            # Count the number of 'up' that are not None at this level
             level_up_count = 0
             node = skip_nodes[level][0]
             while node['next'] is not None:
                 node = node['next']
-                level_up_count += 1
+                if node['up'] is not None:
+                    level_up_count += 1
+            # 2.2-The 'up' entries at a lower level match the # higher entries
             if up_count != len(skip_nodes[level]):
                 return False
+            # Minimum and maximum number of allowed up pointers
+            min_up_count = math.ceil(float((lower_level_size -1) / 3))
+            max_up_count = math.ceil(float((lower_level_size -1) / 2))
+            # 2.3-The number of pointers at each level has to be valid
+            if level_up_count > max_up_count:
+                return False
+            if level_up_count < min_up_count:
+                return False
+            lower_level_size = len(skip_nodes[level]) # update for next iter
             up_count = level_up_count
             print('up_count', up_count)
 
