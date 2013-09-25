@@ -621,6 +621,48 @@ class TestAestheticQualityCore(unittest.TestCase):
         #   2.10-The last node spanned by a higher skip node is right before the
         #       first node spanned by the next higher skip node
         #   2.11-The first top level node always point to 'closest'
+
+        # 2.1-The entry 'down' is never None
+        for l in range(len(skip_nodes)):
+            for n in range(len(skip_nodes[l])):
+                if skip_nodes[l][n]['down'] is None:
+                    return False
+
+        # 2.2-The 'up' entries at a lower level match the # of higher entries
+        # Find the number of 'up' entries in linked_list
+        node = linked_list['closest']
+        up_count = 0
+        if node['up'] is not None:
+            up_count += 1
+        while node['next'] is not None:
+            node = node['next']
+            if node['up'] is not None:
+                up_count += 1
+
+        skip_nodes_size = 0
+        print('up_count', up_count)
+        for level in range(len(skip_nodes)):
+            level_up_count = 0
+            node = skip_nodes[level][0]
+            while node['next'] is not None:
+                node = node['next']
+                level_up_count += 1
+            if up_count != len(skip_nodes[level]):
+                return False
+            up_count = level_up_count
+            print('up_count', up_count)
+
+        # 2.3-The number of pointers at each level has to be valid
+        # 2.4-The gaps between each pointer at each level has to be valid
+        # 2.5-Each skip node references the right element in the linked list
+        # 2.6-Each skip node at the end of its level has 'next' == None
+        # 2.7-All the skip nodes can be reached from the first one on top
+        # 2.8-All the distances at a given level increase
+        # 2.9-The span at each skip node is either 2 or 3
+        # 2.10-The last node spanned by a higher skip node is right before the
+        #     first node spanned by the next higher skip node
+        # 2.11-The first top level node always point to 'closest'
+
         return True
 
     def test_viewshed(self):
