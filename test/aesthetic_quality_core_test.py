@@ -499,7 +499,10 @@ class TestAestheticQualityCore(unittest.TestCase):
                 print('distance ' + str(current['distance']) + ', next ' + \
                     str(right if right is None else right['distance']), \
                     'down ' + str(current['down']['distance']), 'span', span)
-        # 2.3.1- Finds the appropriate value
+        # Test the data structure is valid
+        print('skip list is consistent', \
+            self.skip_list_is_consistent(sweep_line, skip_nodes))
+        # 2.3.1- Find the appropriate value
         for distance in [0, 2, 4, 6, -1, 3, 7]:
             found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
                 skip_nodes, distance)
@@ -538,18 +541,22 @@ class TestAestheticQualityCore(unittest.TestCase):
             return True
         
         # 1.1-If len(linked_list) > 0 then len(linked_list) >= 2
-        assert len(linked_list) >= 2
+        if len(linked_list) < 2:
+            return False
         # 1.2-If len(linked_list) > 0 then 'closest' exists
-        assert linked_list.has_key('closest')
+        if not linked_list.has_key('closest'):
+            return False
 
         pixel = linked_list['closest']
         chain_length = 1
         # 1.3-down is None
-        assert pixel['down'] is None
+        if pixel['down'] is not None:
+            return False
 
         last_distance = pixel['distance']
         # 1.4-No negative distances
-        assert last_distance >= 0
+        if last_distance < 0:
+            return False
 
         # Minimum and maximum number of allowed up pointers
         min_up_count = math.ceil(float((len(linked_list) -1) / 3))
@@ -563,17 +570,21 @@ class TestAestheticQualityCore(unittest.TestCase):
             pixel = pixel['next']
             chain_length += 1
             # 1.3-down is None
-            assert pixel['down'] is None
+            if pixel['down'] is not None:
+                return False
             # 1.5-distances increase
-            assert (pixel['distance'] - last_distance) > 0.
+            if (pixel['distance'] - last_distance) <= 0.:
+                return False
             last_distance = pixel['distance']
             # Updating the number of 'up' pointers and the gap between them
             if pixel['up'] is not None:
                 # It's not the first 'up' pointer, so check the gap is ok
                 # 1.6-Check the gaps between the up pointers
                 if up_count > 0:
-                    assert up_gap >= 2
-                    assert up_gap <= 3
+                    if up_gap < 1:
+                        return False
+                    if up_gap > 2:
+                        return False
                 up_count += 1
                 up_gap = -1
             # If there are up pointers, updating the gap
@@ -581,17 +592,22 @@ class TestAestheticQualityCore(unittest.TestCase):
                 up_gap += 1
 
         # 1.7-Check the number of up pointers is valid
-        assert up_count <= max_up_count
-        assert up_count >= min_up_count
+        if up_count > max_up_count:
+            return False
+        if up_count < min_up_count:
+            return False
 
         # 1.8-chain length is 1 less than len(linked_list)
-        assert (chain_length == len(linked_list) -1)
+        if (chain_length != len(linked_list) -1):
+            return False
         # 1.9-linked_list['closest'] is the smallest distance
         # True if 1.5 and 1.8 are true
         # 1.10-The non-linked element is the same as linked_list['closest']
-        assert linked_list.has_key(linked_list['closest']['distance'])
+        if not linked_list.has_key(linked_list['closest']['distance']):
+            return False
         # 1.11-Last element has 'next' set to None
         # True if 1.8 and 1.10 are true
+        return True
 
     def test_viewshed(self):
         array_shape = (6,6)
