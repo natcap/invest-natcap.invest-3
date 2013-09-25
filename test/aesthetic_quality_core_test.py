@@ -524,14 +524,16 @@ class TestAestheticQualityCore(unittest.TestCase):
             Returns True if list is consistent, False otherwise"""
         # 1-Testing linked_list:
         #   1.1-If len(linked_list) > 0 then len(linked_list) >= 2
-        #   1.1-If len(linked_list) > 0 then 'closest' exists
-        #   1.1-down is None
-        #   1.2-linked_list['closest'] is the smallest distance
-        #   1.3-No negative distances
-        #   1.5-distances increase
-        #   1.6-chain length is 1 less than len(linked_list)
-        #   1.7-The non-linked element is the same as linked_list['closest']
-        #   1.8-Last element has 'next' set to None
+        #   1.2-If len(linked_list) > 0 then 'closest' exists
+        #   1.3-down is None
+        #   1.4-linked_list['closest'] is the smallest distance
+        #   1.5-No negative distances
+        #   1.6-distances increase
+        #   1.7-Check the number of up pointers is valid
+        #   1.8-Check the position of the up pointers
+        #   1.9-chain length is 1 less than len(linked_list)
+        #   1.10-The non-linked element is the same as linked_list['closest']
+        #   1.11-Last element has 'next' set to None
         if len(linked_list) == 0:
             return True
         
@@ -545,12 +547,32 @@ class TestAestheticQualityCore(unittest.TestCase):
         last_distance = pixel['distance']
         assert last_distance >= 0
 
+        # Minimum and maximum number of allowed up pointers
+        min_up_count = math.ceil(float((len(linked_list) -1) / 3))
+        max_up_count = math.ceil(float((len(linked_list) -1) / 2))
+
+        up_count = 0    # actual number of up pointers
+        up_gap = -1     # gap since last up pointer
         while pixel['next'] is not None:
             pixel = pixel['next']
             chain_length += 1
             assert pixel['down'] is None
             assert (pixel['distance'] - last_distance) > 0.
             last_distance = pixel['distance']
+            # Updating the number of 'up' pointers and the gap between them
+            if pixel['up'] is not None:
+                # It's not the first 'up' pointer, so check the gap is ok
+                if up_count > 0:
+                    assert up_gap >= 2
+                    assert up_gap <= 3
+                up_count += 1
+                up_gap = -1
+            # If there are up pointers, updating the gap
+            if up_count:
+                up_gap += 1
+
+        assert up_count <= max_up_count
+        assert up_count >= min_up_count
 
         assert (chain_length == len(linked_list) -1)
         assert linked_list.has_key(linked_list['closest']['distance'])
