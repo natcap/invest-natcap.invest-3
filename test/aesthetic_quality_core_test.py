@@ -643,6 +643,29 @@ class TestAestheticQualityCore(unittest.TestCase):
                 # 2.9-The span at each skip node is either 2 or 3
                 if (node['span'] != 2) and (node['span'] != 3):
                     return False
+                # 2.10-The last node spanned by a higher skip node is right
+                # before the first node spanned by the next higher skip node
+                # How to test:
+                #
+                # level |     nodes
+                #   2   |   0------->5----->
+                #   1   |   0->2->3->5->6->8 
+                #
+                # Node 0 at level 2 has a span of 3:
+                #  1-From level 2, go down from node 0 until node 3
+                #  2-From level 2, go down from node 5
+                # See if node 3's next (from step 1) is the same as the node 
+                # from step 2.
+                if n < (len(skip_nodes[l])-1):
+                    # Step 1, get 
+                    last_node = node['down']
+                    for i in range(node['span'] -1):
+                        last_node = last_node['next']
+                    next_node = node['next']['down']
+                    # Last spanned node is connected to the next one. See if
+                    # the node after the last is 
+                    if last_node['next']['distance'] != next_node['distance']:
+                        return False
                 # 2.5-Each skip node references the right element in the 
                 # linked list, i.e. each node's distance values are identical
                 while node['down'] is not None:
@@ -727,9 +750,6 @@ class TestAestheticQualityCore(unittest.TestCase):
                 nodes_reached += 1
         if nodes_reached != total_skip_nodes:
             return False
-
-        # 2.10-The last node spanned by a higher skip node is right before the
-        #     first node spanned by the next higher skip node
 
         return True
 
