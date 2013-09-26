@@ -635,25 +635,53 @@ class TestAestheticQualityCore(unittest.TestCase):
         node = linked_list['closest']
         lower_level_size = 1
         up_count = 0
+        up_gap = -1
         if node['up'] is not None:
             up_count += 1
         while node['next'] is not None:
             node = node['next']
             lower_level_size += 1
             if node['up'] is not None:
+                # It's not the first 'up' pointer, so check the gap is ok
+                # 2.4-Check the gaps between the up pointers
+                if up_count > 0:
+                    if up_gap < 1:
+                        print('1', up_gap)
+                        return False
+                    if up_gap > 2:
+                        print('2', up_gap)
+                        return False
                 up_count += 1
+                up_gap = -1
+            # If there are up pointers, updating the gap
+            if up_count:
+                up_gap += 1
 
         skip_nodes_size = 0
         for level in range(len(skip_nodes)):
             # Count the number of 'up' that are not None at this level
             level_up_count = 0
+            up_gap = -1
             node = skip_nodes[level][0]
             if node['up'] is not None:
                 level_up_count += 1
             while node['next'] is not None:
                 node = node['next']
                 if node['up'] is not None:
+                    # It's not the first 'up' pointer, so check the gap is ok
+                    # 2.4-Check the gaps between the up pointers
+                    if level_up_count > 0:
+                        if up_gap < 1:
+                            print('3', up_gap)
+                            return False
+                        if up_gap > 2:
+                            print('4', up_gap)
+                            return False
                     level_up_count += 1
+                    up_gap = -1
+                # If there are up pointers, updating the gap
+                if level_up_count:
+                    up_gap += 1
             # 2.2-The 'up' entries at a lower level match the # higher entries
             if up_count != len(skip_nodes[level]):
                 return False
@@ -675,7 +703,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             up_count = level_up_count
             print('up_count', up_count)
 
-        # 2.3-The number of pointers at each level has to be valid
         # 2.4-The gaps between each pointer at each level has to be valid
         # 2.5-Each skip node references the right element in the linked list
         # 2.6-Each skip node at the end of its level has 'next' == None
