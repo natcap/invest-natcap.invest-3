@@ -635,27 +635,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         node = linked_list['closest']
         lower_level_size = 1
         up_count = 0
-        up_gap = -1
         if node['up'] is not None:
             up_count += 1
         while node['next'] is not None:
             node = node['next']
             lower_level_size += 1
             if node['up'] is not None:
-                # It's not the first 'up' pointer, so check the gap is ok
-                # 2.4-Check the gaps between the up pointers
-                if up_count > 0:
-                    if up_gap < 1:
-                        print('1', up_gap)
-                        return False
-                    if up_gap > 2:
-                        print('2', up_gap)
-                        return False
                 up_count += 1
-                up_gap = -1
-            # If there are up pointers, updating the gap
-            if up_count:
-                up_gap += 1
 
         skip_nodes_size = 0
         for level in range(len(skip_nodes)):
