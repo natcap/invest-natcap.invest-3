@@ -627,8 +627,16 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.1-The entry 'down' is never None
         for l in range(len(skip_nodes)):
             for n in range(len(skip_nodes[l])):
-                if skip_nodes[l][n]['down'] is None:
+                node = skip_nodes[l][n]
+                if node['down'] is None:
                     return False
+                # 2.5-Each skip node references the right element in the 
+                # linked list, i.e. each node's distance values are identical
+                distance = node['distance']
+                while node['down'] is not None:
+                    node = node['down']
+                    if node['distance'] != distance:
+                        return False
 
         # 2.2-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
@@ -642,6 +650,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             lower_level_size += 1
             if node['up'] is not None:
                 up_count += 1
+        print('up_count', up_count)
 
         skip_nodes_size = 0
         for level in range(len(skip_nodes)):
@@ -658,10 +667,8 @@ class TestAestheticQualityCore(unittest.TestCase):
                     # 2.4-Check the gaps between the up pointers
                     if level_up_count > 0:
                         if up_gap < 1:
-                            print('3', up_gap)
                             return False
                         if up_gap > 2:
-                            print('4', up_gap)
                             return False
                     level_up_count += 1
                     up_gap = -1
@@ -689,8 +696,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             up_count = level_up_count
             print('up_count', up_count)
 
-        # 2.4-The gaps between each pointer at each level has to be valid
-        # 2.5-Each skip node references the right element in the linked list
         # 2.6-Each skip node at the end of its level has 'next' == None
         # 2.7-All the skip nodes can be reached from the first one on top
         # 2.8-All the distances at a given level increase
