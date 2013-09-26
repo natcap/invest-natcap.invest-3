@@ -622,7 +622,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         #   2.9-The span at each skip node is either 2 or 3
         #   2.10-The last node spanned by a higher skip node is right before the
         #       first node spanned by the next higher skip node
-        #   2.11-The first top level node always point to 'closest'
+        #   2.11-The first top level node always points to 'closest'
 
         total_skip_nodes = 0
         for l in range(len(skip_nodes)):
@@ -650,7 +650,9 @@ class TestAestheticQualityCore(unittest.TestCase):
                     if node['distance'] != distance:
                         return False
                 previous_distance = distance
-
+        # 2.11-The first top level node always points to 'closest'
+        if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
+            return False
         # 2.2-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
         node = linked_list['closest']
@@ -728,7 +730,6 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         # 2.10-The last node spanned by a higher skip node is right before the
         #     first node spanned by the next higher skip node
-        # 2.11-The first top level node always point to 'closest'
 
         return True
 
