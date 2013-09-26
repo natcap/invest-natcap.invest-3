@@ -624,10 +624,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         #       first node spanned by the next higher skip node
         #   2.11-The first top level node always point to 'closest'
 
-        # 2.1-The entry 'down' is never None
         for l in range(len(skip_nodes)):
+            # 2.6-Each skip node at the end of its level has 'next' == None
+            if skip_nodes[l][-1]['next'] is not None:
+                return False
             for n in range(len(skip_nodes[l])):
                 node = skip_nodes[l][n]
+                # 2.1-The entry 'down' is never None
                 if node['down'] is None:
                     return False
                 # 2.5-Each skip node references the right element in the 
@@ -696,7 +699,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             up_count = level_up_count
             print('up_count', up_count)
 
-        # 2.6-Each skip node at the end of its level has 'next' == None
         # 2.7-All the skip nodes can be reached from the first one on top
         # 2.8-All the distances at a given level increase
         # 2.9-The span at each skip node is either 2 or 3
