@@ -622,14 +622,60 @@ class TestAestheticQualityCore(unittest.TestCase):
         #   2.9-The span at each skip node is either 2 or 3
         #   2.10-The last node spanned by a higher skip node is right before the
         #       first node spanned by the next higher skip node
-        #   2.11-The first top level node always point to 'closest'
+        #   2.11-The first top level node always points to 'closest'
 
-        # 2.1-The entry 'down' is never None
+        total_skip_nodes = 0
         for l in range(len(skip_nodes)):
+            total_skip_nodes += len(skip_nodes[l])
+            # 2.6-Each skip node at the end of its level has 'next' == None
+            if skip_nodes[l][-1]['next'] is not None:
+                return False
+            previous_distance = skip_nodes[l][0]['distance'] -1
             for n in range(len(skip_nodes[l])):
-                if skip_nodes[l][n]['down'] is None:
+                node = skip_nodes[l][n]
+                # 2.1-The entry 'down' is never None
+                if node['down'] is None:
                     return False
-
+                # 2.8-All the distances at a given level increase
+                distance = node['distance']
+                if distance <= previous_distance:
+                    return False
+                # 2.9-The span at each skip node is either 2 or 3
+                if (node['span'] != 2) and (node['span'] != 3):
+                    return False
+                # 2.10-The last node spanned by a higher skip node is right
+                # before the first node spanned by the next higher skip node
+                # How to test:
+                #
+                # level |     nodes
+                #   2   |   0------->5----->
+                #   1   |   0->2->3->5->6->8 
+                #
+                # Node 0 at level 2 has a span of 3:
+                #  1-From level 2, go down from node 0 until node 3
+                #  2-From level 2, go down from node 5
+                # See if node 3's next (from step 1) is the same as the node 
+                # from step 2.
+                if n < (len(skip_nodes[l])-1):
+                    # Step 1, get 
+                    last_node = node['down']
+                    for i in range(node['span'] -1):
+                        last_node = last_node['next']
+                    next_node = node['next']['down']
+                    # Last spanned node is connected to the next one. See if
+                    # the node after the last is 
+                    if last_node['next']['distance'] != next_node['distance']:
+                        return False
+                # 2.5-Each skip node references the right element in the 
+                # linked list, i.e. each node's distance values are identical
+                while node['down'] is not None:
+                    node = node['down']
+                    if node['distance'] != distance:
+                        return False
+                previous_distance = distance
+        # 2.11-The first top level node always points to 'closest'
+        if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
+            return False
         # 2.2-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
         node = linked_list['closest']
@@ -642,18 +688,31 @@ class TestAestheticQualityCore(unittest.TestCase):
             lower_level_size += 1
             if node['up'] is not None:
                 up_count += 1
+        print('up_count', up_count)
 
         skip_nodes_size = 0
         for level in range(len(skip_nodes)):
             # Count the number of 'up' that are not None at this level
             level_up_count = 0
+            up_gap = -1
             node = skip_nodes[level][0]
             if node['up'] is not None:
                 level_up_count += 1
             while node['next'] is not None:
                 node = node['next']
                 if node['up'] is not None:
+                    # It's not the first 'up' pointer, so check the gap is ok
+                    # 2.4-Check the gaps between the up pointers
+                    if level_up_count > 0:
+                        if up_gap < 1:
+                            return False
+                        if up_gap > 2:
+                            return False
                     level_up_count += 1
+                    up_gap = -1
+                # If there are up pointers, updating the gap
+                if level_up_count:
+                    up_gap += 1
             # 2.2-The 'up' entries at a lower level match the # higher entries
             if up_count != len(skip_nodes[level]):
                 return False
@@ -675,16 +734,22 @@ class TestAestheticQualityCore(unittest.TestCase):
             up_count = level_up_count
             print('up_count', up_count)
 
-        # 2.3-The number of pointers at each level has to be valid
-        # 2.4-The gaps between each pointer at each level has to be valid
-        # 2.5-Each skip node references the right element in the linked list
-        # 2.6-Each skip node at the end of its level has 'next' == None
         # 2.7-All the skip nodes can be reached from the first one on top
-        # 2.8-All the distances at a given level increase
-        # 2.9-The span at each skip node is either 2 or 3
-        # 2.10-The last node spanned by a higher skip node is right before the
-        #     first node spanned by the next higher skip node
-        # 2.11-The first top level node always point to 'closest'
+        first_nodes = []
+        # Create a list of first nodes for each level
+        first_nodes.append(linked_list['closest']['up'])
+        while first_nodes[-1]['up'] is not None:
+            first_nodes.append(first_nodes[-1]['up'])
+        # Traverse a level from the first node of a given level and count the
+        # nodes encontered
+        nodes_reached = 0
+        for node in first_nodes:
+            nodes_reached += 1
+            while node['next'] is not None:
+                node = node['next']
+                nodes_reached += 1
+        if nodes_reached != total_skip_nodes:
+            return False
 
         return True
 
