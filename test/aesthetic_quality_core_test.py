@@ -628,18 +628,23 @@ class TestAestheticQualityCore(unittest.TestCase):
             # 2.6-Each skip node at the end of its level has 'next' == None
             if skip_nodes[l][-1]['next'] is not None:
                 return False
+            previous_distance = skip_nodes[l][0]['distance'] -1
             for n in range(len(skip_nodes[l])):
                 node = skip_nodes[l][n]
                 # 2.1-The entry 'down' is never None
                 if node['down'] is None:
                     return False
+                # 2.8-All the distances at a given level increase
+                distance = node['distance']
+                if distance <= previous_distance:
+                    return False
                 # 2.5-Each skip node references the right element in the 
                 # linked list, i.e. each node's distance values are identical
-                distance = node['distance']
                 while node['down'] is not None:
                     node = node['down']
                     if node['distance'] != distance:
                         return False
+                previous_distance = distance
 
         # 2.2-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
@@ -700,7 +705,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             print('up_count', up_count)
 
         # 2.7-All the skip nodes can be reached from the first one on top
-        # 2.8-All the distances at a given level increase
         # 2.9-The span at each skip node is either 2 or 3
         # 2.10-The last node spanned by a higher skip node is right before the
         #     first node spanned by the next higher skip node
