@@ -640,6 +640,9 @@ class TestAestheticQualityCore(unittest.TestCase):
                 distance = node['distance']
                 if distance <= previous_distance:
                     return False
+                # 2.9-The span at each skip node is either 2 or 3
+                if (node['span'] != 2) and (node['span'] != 3):
+                    return False
                 # 2.5-Each skip node references the right element in the 
                 # linked list, i.e. each node's distance values are identical
                 while node['down'] is not None:
@@ -723,7 +726,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         if nodes_reached != total_skip_nodes:
             return False
 
-        # 2.9-The span at each skip node is either 2 or 3
         # 2.10-The last node spanned by a higher skip node is right before the
         #     first node spanned by the next higher skip node
         # 2.11-The first top level node always point to 'closest'
