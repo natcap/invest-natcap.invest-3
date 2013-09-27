@@ -654,19 +654,25 @@ class TestAestheticQualityCore(unittest.TestCase):
             total_skip_nodes += len(skip_nodes[l])
             # 2.6-Each skip node at the end of its level has 'next' == None
             if skip_nodes[l][-1]['next'] is not None:
+                print('Last skip node at level', l, 'is not None')
                 return False
             previous_distance = skip_nodes[l][0]['distance'] -1
             for n in range(len(skip_nodes[l])):
                 node = skip_nodes[l][n]
                 # 2.1-The entry 'down' is never None
                 if node['down'] is None:
+                    print('Entry', l, n, 'has a "down" entry that is not None')
                     return False
                 # 2.8-All the distances at a given level increase
                 distance = node['distance']
                 if distance <= previous_distance:
+                    print('distance at node', l, n, 'decreased', \
+                    previous_distance, distance)
                     return False
                 # 2.9-The span at each skip node is either 2 or 3
                 if (node['span'] != 2) and (node['span'] != 3):
+                    print('Wrong span: should be either 2 or 3, but is', \
+                        node['span'])
                     return False
                 # 2.10-The last node spanned by a higher skip node is right
                 # before the first node spanned by the next higher skip node
@@ -682,14 +688,17 @@ class TestAestheticQualityCore(unittest.TestCase):
                 # See if node 3's next (from step 1) is the same as the node 
                 # from step 2.
                 if n < (len(skip_nodes[l])-1):
-                    # Step 1, get 
+                    # Step 1, get the last node of the current higher node
                     last_node = node['down']
                     for i in range(node['span'] -1):
                         last_node = last_node['next']
                     next_node = node['next']['down']
-                    # Last spanned node is connected to the next one. See if
-                    # the node after the last is 
+                    # Last spanned node should be connected to the first one \
+                    # from the next higher node.
                     if last_node['next']['distance'] != next_node['distance']:
+                        print('Last node of', l, n, \
+                        'is different from first of', l, n+1, ':', \
+                        last_node['next']['distance'], next_node['distance'])
                         return False
                 # 2.5-Each skip node references the right element in the 
                 # linked list, i.e. each node's distance values are identical
