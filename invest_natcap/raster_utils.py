@@ -2550,6 +2550,8 @@ def vectorize_datasets(
         mask_dataset = None
         os.remove(mask_uri)
     aligned_bands = None
+    for ds in aligned_datasets:
+        gdal.Dataset.__swig_destroy__(ds)
     aligned_datasets = None
     for temp_dataset_uri in dataset_out_uri_list:
         LOGGER.debug('removing %s' % temp_dataset_uri)

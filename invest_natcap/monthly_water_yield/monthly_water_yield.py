@@ -117,9 +117,9 @@ def execute(args):
     # Create initial S_t-1 for now. Set all values to 0.0
     soil_storage_uri = os.path.join(
             intermediate_dir, 'soil_storage%s.tif' % file_suffix)
-    _ = raster_utils.new_raster_from_base_uri(
-            dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
-            gdal.GDT_Float32, fill_value=0.0)
+    raster_utils.new_raster_from_base_uri(
+        dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
+        gdal.GDT_Float32, fill_value=0.0)
    
     # Create a URI to hold the previous months soil storage
     prev_soil_uri = os.path.join(
@@ -273,17 +273,18 @@ def execute(args):
                 soil_storage_uri, smax_uri, water_uri, eto_uri, etk_uri,
                 evap_uri, etc_uri, float_nodata)
         
-        # Calculate Intermediate Interflow
-        clean_uri([intermed_interflow_uri])
-        calculate_intermediate_interflow(
-                alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
-                intermed_interflow_uri, float_nodata)
-
         # Calculate Baseflow
         clean_uri([baseflow_uri])
         calculate_baseflow(
-                alpha_three_uri, soil_storage_uri, beta, baseflow_uri,
+                alpha_three_uri, soil_storage_uri, evap_uri, beta, baseflow_uri,
                 float_nodata)
+
+        # Calculate Intermediate Interflow
+        clean_uri([intermed_interflow_uri])
+        calculate_intermediate_interflow(
+                alpha_two_uri, soil_storage_uri, water_uri, evap_uri, baseflow_uri, beta,
+                intermed_interflow_uri, float_nodata)
+
         
         # Calculate Final Interflow
         clean_uri([interflow_uri])
@@ -630,7 +631,7 @@ def calculate_final_interflow(
             'intersection')
 
 def calculate_baseflow(
-        alpha_three_uri, soil_storage_uri, beta, baseflow_out_uri,  out_nodata):
+        alpha_three_uri, soil_storage_uri, evap_uri, beta, baseflow_out_uri,  out_nodata):
     """This function calculates the baseflow
 
         alpha_three_uri - a URI to a gdal dataset of alpha_three values
@@ -653,7 +654,7 @@ def calculate_baseflow(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def baseflow_op(alpha_pix, soil_pix):
+    def baseflow_op(alpha_pix, soil_pix, evap_pix):
         """A vectorize operation for calculating the baseflow value
 
             alpha_pix - a float value for the alpha coefficients
@@ -665,18 +666,20 @@ def calculate_baseflow(
             if pix == pix_nodata: 
                 return out_nodata
 
-        return alpha_pix * soil_pix**beta
+        if evap_pix < soil_pix:
+            return alpha_pix * (soil_pix - evap_pix)**beta
+        return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_three_uri)
 
     raster_utils.vectorize_datasets(
-            [alpha_three_uri, soil_storage_uri], baseflow_op,
+            [alpha_three_uri, soil_storage_uri, evap_uri], baseflow_op,
             baseflow_out_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
 def calculate_intermediate_interflow(
-        alpha_two_uri, soil_storage_uri, water_uri, evap_uri, beta,
-        interflow_out_uri,  out_nodata):
+        alpha_two_uri, soil_storage_uri, water_uri, evap_uri, baseflow_uri,
+        beta, interflow_out_uri, out_nodata):
     """This function calculates the intermediate interflow
 
         alpha_two_uri - a URI to a gdal dataset of alpha_two values
@@ -703,7 +706,7 @@ def calculate_intermediate_interflow(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix):
+    def interflow_op(alpha_pix, soil_pix, water_pix, evap_pix, baseflow_pix):
         """A vectorize operation for calculating the interflow value
 
             alpha_pix - a float value for the alpha coefficients
@@ -717,17 +720,15 @@ def calculate_intermediate_interflow(
                 [alpha_pix, soil_pix, water_pix, evap_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
-       
-        result = alpha_pix * soil_pix**beta * (
-            water_pix - evap_pix * (1.0 - math.exp(
-                    -1.0 * (water_pix / evap_pix))))
 
-        return result
+        if evap_pix + baseflow_pix < soil_pix + water_pix:
+            return alpha_pix * (soil_pix + water_pix - evap_pix - baseflow_pix) ** beta
+        return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
 
     raster_utils.vectorize_datasets(
-            [alpha_two_uri, soil_storage_uri, water_uri, evap_uri],
+            [alpha_two_uri, soil_storage_uri, water_uri, evap_uri, baseflow_uri],
             interflow_op, interflow_out_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
 

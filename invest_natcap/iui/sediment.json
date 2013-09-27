@@ -111,16 +111,6 @@
 		    "helpText": "The number of upstream cells that must flow into a cell before it's considered part of a stream such that retention stops and the remaining export is exported to the stream. Used to define streams from the DEM."
 		},
 		{        
-		    "id" : "slope_threshold",
-		    "args_id" : "slope_threshold",
-		    "type": "text",
-		    "label": "Slope Threshold",
-		    "defaultValue": "75",
-		    "required": true,
-		    "validText": "^[0-9]+$",
-		    "helpText": "An integer slope value describing landscape characteristics such as slope management practices including terracing and slope stabilization techniques.  Internally it is used to determine where we use a different USLE runoff.  See the sediment user's guide for more details."
-		},
-		{        
 		    "id" : "sediment_threshold_table_uri",
 		    "args_id" : "sediment_threshold_table_uri",
 		    "type": "file",
