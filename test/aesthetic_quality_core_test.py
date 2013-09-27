@@ -715,9 +715,16 @@ class TestAestheticQualityCore(unittest.TestCase):
                 previous_distance = distance
             # 2.10-The spans at a level is the size of the level below
             if l > 0:
+                # Comparing two levels in skip_nodes
                 if total_span != len(skip_nodes[l-1]):
                     print('Span of', total_span, \
                     'disagrees with size of lower level', len(skip_nodes[l-1]))
+                    return False
+            else:
+                # Comparing first level in skip_nodes with linked_list
+                if total_span != len(linked_list) -1:
+                    print('Span of', total_span, \
+                    'disagrees with size of lower level', len(linked_list) -1)
                     return False
         # 2.11-The first top level node always points to 'closest'
         if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
