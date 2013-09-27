@@ -454,6 +454,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         sweep_line[6]['next'] = sweep_line[8]
         sweep_line[10] = {'next':None, 'up':None, 'down':None, 'distance':10}
         sweep_line[8]['next'] = sweep_line[10]
+        sweep_line[12] = {'next':None, 'up':None, 'down':None, 'distance':12}
+        sweep_line[10]['next'] = sweep_line[12]
+        sweep_line[14] = {'next':None, 'up':None, 'down':None, 'distance':14}
+        sweep_line[12]['next'] = sweep_line[14]
         # Creating the skip node hierarchy:
         skip_nodes = []
         # skip_nodes[0]
@@ -469,18 +473,27 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[8], \
             'span':2, 'distance':sweep_line[8]['distance']})
         skip_nodes[0][1]['next'] = skip_nodes[0][2]
+        # skip_nodes[0][3]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[12], \
+            'span':2, 'distance':sweep_line[12]['distance']})
+        skip_nodes[0][2]['next'] = skip_nodes[0][3]
         # skip_nodes[1]
         skip_nodes.append([])
         # skip_nodes[1][0]
         skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][0], 'span':3, \
+        'down':skip_nodes[0][0], 'span':2, \
+        'distance':skip_nodes[0][0]['distance']})
+        skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        # skip_nodes[1][1]
+        skip_nodes[1].append({'next':None, 'up':None, \
+        'down':skip_nodes[0][1], 'span':2, \
         'distance':skip_nodes[0][0]['distance']})
         skip_nodes[0][0]['up'] = skip_nodes[1][0]
         # Adjusting the 'up' fields in sweep_line elements:
         sweep_line[0]['up'] = skip_nodes[0][0]
         sweep_line[4]['up'] = skip_nodes[0][1]
         sweep_line[8]['up'] = skip_nodes[0][2]
-        # Check all the skip levels are accessible:
+        # All the skip levels are accessible:
         current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
         print('Skip pointers hierarchy:')
@@ -645,6 +658,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         #   2.6-Each skip node at the end of its level has 'next' == None
         #   2.7-All the skip nodes can be reached from the first one on top
         #   2.8-All the distances at a given level increase
+        #   2.8-equality ['distances'] == ['down']['distance'] should be True
         #   2.9-The span at each skip node is either 2 or 3
         #   2.10-The spans at a level is the size of the level below
         #   2.11-The last node spanned by a higher skip node is right before the
@@ -658,7 +672,22 @@ class TestAestheticQualityCore(unittest.TestCase):
             if skip_nodes[l][-1]['next'] is not None:
                 print('Last skip node at level', l, 'is not None')
                 return False
+            # 2.10-The spans at a level is the size of the level below
             total_span = 0
+            for n in range(len(skip_nodes[l])):
+                total_span += skip_nodes[l][n]['span']
+            if l > 0:
+                # Comparing two levels in skip_nodes
+                if total_span != len(skip_nodes[l-1]):
+                    print('Level', l, ': span of', total_span, \
+                    'disagrees with size of level below', len(skip_nodes[l-1]))
+                    return False
+            else:
+                # Comparing first level in skip_nodes with linked_list
+                if total_span != len(linked_list) -1:
+                    print('Level', l, ': span of', total_span, \
+                    'disagrees with entries in linked_list', len(linked_list) -1)
+                    return False
             previous_distance = skip_nodes[l][0]['distance'] -1
             for n in range(len(skip_nodes[l])):
                 node = skip_nodes[l][n]
@@ -666,18 +695,23 @@ class TestAestheticQualityCore(unittest.TestCase):
                 if node['down'] is None:
                     print('Entry', l, n, 'has a "down" entry that is not None')
                     return False
+                # 2.8-equality ['distances'] == ['down']['distance'] should be True
+                if node['distance'] != node['down']['distance']:
+                    print('node', l, n, "Inconsistent values between " + \
+                    "node['distance'] and node['down']['distance']", \
+                    node['distance'], node['down']['distance'])
+                    return False
                 # 2.8-All the distances at a given level increase
                 distance = node['distance']
                 if distance <= previous_distance:
-                    print('distance at node', l, n, 'decreased', \
-                    previous_distance, distance)
+                    print('node', l, n, "'s distance", distance, '<=', \
+                    previous_distance, 'instead of increasing.')
                     return False
                 # 2.9-The span at each skip node is either 2 or 3
                 if (node['span'] != 2) and (node['span'] != 3):
                     print('Wrong span: should be either 2 or 3, but is', \
                         node['span'])
                     return False
-                total_span += node['span']
                 # 2.10-The last node spanned by a higher skip node is right
                 # before the first node spanned by the next higher skip node
                 # How to test:
@@ -701,7 +735,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     # from the next higher node.
                     if last_node['next']['distance'] != next_node['distance']:
                         print('Last node of', l, n, \
-                            'is different from first of', l, n+1, ':', \
+                            "['next'] is different from first of", l, n+1, ':', \
                             last_node['next']['distance'], next_node['distance'])
                         return False
                 # 2.5-Each skip node references the correct element below it,
@@ -713,19 +747,6 @@ class TestAestheticQualityCore(unittest.TestCase):
                             distance, 'expected', node['distance'])
                         return False
                 previous_distance = distance
-            # 2.10-The spans at a level is the size of the level below
-            if l > 0:
-                # Comparing two levels in skip_nodes
-                if total_span != len(skip_nodes[l-1]):
-                    print('Span of', total_span, \
-                    'disagrees with size of lower level', len(skip_nodes[l-1]))
-                    return False
-            else:
-                # Comparing first level in skip_nodes with linked_list
-                if total_span != len(linked_list) -1:
-                    print('Span of', total_span, \
-                    'disagrees with size of lower level', len(linked_list) -1)
-                    return False
         # 2.11-The first top level node always points to 'closest'
         if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
             print("First top level node doesn't point to \
