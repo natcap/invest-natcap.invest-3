@@ -473,12 +473,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes.append([])
         # skip_nodes[1][0]
         skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][0], 'span':2, \
+        'down':skip_nodes[0][0], 'span':3, \
         'distance':skip_nodes[0][0]['distance']})
         skip_nodes[0][0]['up'] = skip_nodes[1][0]
         # Adjusting the 'up' fields in sweep_line elements:
         sweep_line[0]['up'] = skip_nodes[0][0]
         sweep_line[4]['up'] = skip_nodes[0][1]
+        sweep_line[8]['up'] = skip_nodes[0][2]
         # Check all the skip levels are accessible:
         current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
@@ -645,9 +646,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         #   2.7-All the skip nodes can be reached from the first one on top
         #   2.8-All the distances at a given level increase
         #   2.9-The span at each skip node is either 2 or 3
-        #   2.10-The last node spanned by a higher skip node is right before the
+        #   2.10-The spans at a level is the size of the level below
+        #   2.11-The last node spanned by a higher skip node is right before the
         #       first node spanned by the next higher skip node
-        #   2.11-The first top level node always points to 'closest'
+        #   2.12-The first top level node always points to 'closest'
 
         total_skip_nodes = 0
         for l in range(len(skip_nodes)):
@@ -656,6 +658,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             if skip_nodes[l][-1]['next'] is not None:
                 print('Last skip node at level', l, 'is not None')
                 return False
+            total_span = 0
             previous_distance = skip_nodes[l][0]['distance'] -1
             for n in range(len(skip_nodes[l])):
                 node = skip_nodes[l][n]
@@ -674,6 +677,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     print('Wrong span: should be either 2 or 3, but is', \
                         node['span'])
                     return False
+                total_span += node['span']
                 # 2.10-The last node spanned by a higher skip node is right
                 # before the first node spanned by the next higher skip node
                 # How to test:
@@ -709,6 +713,12 @@ class TestAestheticQualityCore(unittest.TestCase):
                             distance, 'expected', node['distance'])
                         return False
                 previous_distance = distance
+            # 2.10-The spans at a level is the size of the level below
+            if l > 0:
+                if total_span != len(skip_nodes[l-1]):
+                    print('Span of', total_span, \
+                    'disagrees with size of lower level', len(skip_nodes[l-1]))
+                    return False
         # 2.11-The first top level node always points to 'closest'
         if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
             print("First top level node doesn't point to \
