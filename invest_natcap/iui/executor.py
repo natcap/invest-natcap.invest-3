@@ -413,19 +413,6 @@ class Executor(threading.Thread):
         self.outputObj.saveLastRun()
         LOGGER.info('Parameters saved to disk')
 
-    def move_log_file(self, workspace):
-        workspace = workspace.decode(ENCODING)
-        try:
-            self.log_file.flush()
-            os.fsync(self.log_file)
-            self.log_file.close()
-            shutil.move(self.log_file.name, workspace)
-            log_file_name = os.path.basename(self.log_file.name)
-            log_file_uri = os.path.join(workspace, log_file_name)
-            LOGGER.info('Saving log file to %s', log_file_uri)
-        except WindowsError as e:
-            LOGGER.warn(e)
-
     def runModel(self, module, args):
         try:
             workspace = args['workspace_dir']
@@ -442,6 +429,14 @@ class Executor(threading.Thread):
             # correctly decoded according to the filesystem's encoding.
             LOGGER.warn('Cannot decode workspace with the fs encoding. '
                         'workspace=%s, Encoding=%s' % (workspace, ENCODING))
+
+        try:
+            os.makedirs(workspace)
+        except OSError as exception:
+            #It's okay if the directory already exists, if it fails for
+            #some other reason, raise that exception
+            if exception.errno != errno.EEXIST:
+                raise
 
         # the module name needs to be extracted differently if it's a python
         # module or if it's a file on disk.  While we're at it, we can also
@@ -469,13 +464,8 @@ class Executor(threading.Thread):
         # whenever self.write() is called.
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
         filename = '%s-log-%s.txt' % (model_name, timestamp)
-
-        # we want to save this file to the current directory until the model
-        # finishes, when we copy the log into the model's workspace
-        settings_folder = iui_fileio.settings_folder()
-        settings_folder = settings_folder.decode(ENCODING)
-        log_file_uri = os.path.abspath(os.path.join(settings_folder,
-            filename))
+        log_file_uri = os.path.abspath(
+            os.path.join(workspace, filename))
         self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8')
 
         # Now that the log file is open, write the arguments to it.
@@ -555,7 +545,6 @@ class Executor(threading.Thread):
             #This intentionally handles all exceptions
             self.printTraceback()
             self.setThreadFailed(True, e)
-            self.move_log_file(workspace)
             #Quit the rest of the function
             return
 
@@ -584,4 +573,3 @@ class Executor(threading.Thread):
         elapsed_time = round(time.time() - model_start_time, 2)
         LOGGER.info('Elapsed time: %s', self.format_time(elapsed_time))
         LOGGER.info('Finished.')
-        self.move_log_file(workspace)
