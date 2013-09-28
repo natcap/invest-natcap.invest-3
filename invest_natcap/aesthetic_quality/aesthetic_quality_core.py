@@ -92,8 +92,30 @@ linked_cell_factory = collections.namedtuple('linked_cell', \
 cell_link_factory = collections.namedtuple('cell_link', \
     ['top', 'right', 'bottom', 'level', 'distance'])
 
+def add_active_pixel(sweep_line, skip_nodes, distance):
+    """Insert an active pixel in the sweep_line and update the skip_nodes.
+    
+            -sweep_line: a linked list of linked_cell as created by the
+                linked_cell_factory.
+            -skip_list: an array of linked lists that constitutes the hierarchy
+                of skip pointers in the skip list. Each cell is defined as ???
+            -distance: the value to be added to the sweep_line
+
+            Return the updated sweep_line"""
+            pass
+
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
-    """Find an active pixel based on distance. Return None if can't be found"""
+    """Find an active pixel based on distance. 
+        
+        Inputs:
+            -sweep_line: a linked list of linked_cell as created by the
+                linked_cell_factory.
+            -skip_list: an array of linked lists that constitutes the hierarchy
+                of skip pointers in the skip list. Each cell is defined as ???
+            -distance: the key used to search the sweep_line
+
+            Return the linked_cell associated to 'distance', or None if such
+            cell doesn't exist"""
     if 'closest' in sweep_line:
         # Find the starting point
         if len(skip_nodes) > 0:
