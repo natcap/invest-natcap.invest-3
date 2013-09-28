@@ -495,7 +495,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes.append([])
         # skip_nodes[2][0]
         skip_nodes[2].append({'next':None, 'up':None, \
-        'down':skip_nodes[1][0], 'span':2, \
+        'down':skip_nodes[1][0], 'span':1, \
         'distance':skip_nodes[1][0]['distance']})
         skip_nodes[1][0]['up'] = skip_nodes[2][0]
         # Adjusting the 'up' fields in sweep_line elements:
@@ -660,26 +660,26 @@ class TestAestheticQualityCore(unittest.TestCase):
         # True if 1.8 and 1.10 are true
 
         # 2-Testing the skip pointers
-        #   2.1-The entry 'down' is never None
-        #   2.2-The 'up' entries at a lower level match the # of higher entries
-        #   2.3-The number of pointers at each level has to be valid
-        #   2.4-The gaps between each pointer at each level has to be valid
-        #   2.5-Each skip node references the right element in the linked list
-        #   2.6-Each skip node before last has 'next' != None
-        #   2.6-Each skip node at the end of its level has 'next' == None
-        #   2.7-All the skip nodes can be reached from the first one on top
-        #   2.8-All the distances at a given level increase
-        #   2.8-equality ['distances'] == ['down']['distance'] should be True
-        #   2.9-The span at each skip node is either 2 or 3
-        #   2.10-The spans at a level is the size of the level below
-        #   2.11-The last node spanned by a higher skip node is right before the
+        #   2.1-The spans at a level is the size of the level below
+        #   2.2-The entry 'down' is never None
+        #   2.3-Each skip node before last has 'next' != None
+        #   2.4-Each skip node at the end of its level has 'next' == None
+        #   2.5-Equality ['distances'] == ['down']['distance'] should be True
+        #   2.6-All the distances at a given level increase
+        #   2.7-The span at each skip node is either 2 or 3
+        #   2.8-The last node spanned by a higher skip node is right before the
         #       first node spanned by the next higher skip node
-        #   2.12-The first top level node always points to 'closest'
+        #   2.9-Each skip node references the right element in the linked list
+        #   2.10-The first top level node always points to 'closest'
+        #   2.11-The 'up' entries at a lower level match the # of higher entries
+        #   2.12-The gaps between each pointer at each level has to be valid
+        #   2.13-The number of pointers at each level has to be valid
+        #   2.14-All the skip nodes can be reached from the first one on top
 
         total_skip_nodes = 0
         for l in range(len(skip_nodes)):
             total_skip_nodes += len(skip_nodes[l])
-            # 2.10-The spans at a level is the size of the level below
+            # 2.1-The spans at a level is the size of the level below
             total_span = 0
             for n in range(len(skip_nodes[l])):
                 total_span += skip_nodes[l][n]['span']
@@ -690,7 +690,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     'disagrees with size of level below', len(skip_nodes[l-1]))
                     return False
             else:
-                # Comparing first level in skip_nodes with linked_list
+                # 2.1- Comparing first level in skip_nodes with linked_list
                 if total_span != len(linked_list) -1:
                     print('Level', l, ': span of', total_span, \
                     'disagrees with entries in linked_list', len(linked_list) -1)
@@ -698,41 +698,41 @@ class TestAestheticQualityCore(unittest.TestCase):
             previous_distance = skip_nodes[l][0]['distance'] -1
             for n in range(len(skip_nodes[l])):
                 node = skip_nodes[l][n]
-                # 2.1-The entry 'down' is never None
+                # 2.2-The entry 'down' is never None
                 if node['down'] is None:
                     print('Entry', l, n, 'has a "down" entry that is not None')
                     return False
                 # Looking at the skip node 'next' values:
                 if n < len(skip_nodes[l]) -1:
-                    # 2.6-Each skip node before the last one has 'next' != None
+                    # 2.3-Each skip node before the last one has 'next' != None
                     if skip_nodes[l][n]['next'] is None:
                         print('Skip node', len(skip_nodes[l]) -1, \
                         'before last at level', l, 'is None')
                         return False
                 else:
-                    # 2.6-Last skip node of its level has 'next' == None
+                    # 2.4-Last skip node at the end of its level has 'next' == None
                     if skip_nodes[l][n]['next'] is not None:
                         print('Last skip node', len(skip_nodes[l]) -1, \
                         'at level', l, 'is not None')
                         return False
-                # 2.8-equality ['distances'] == ['down']['distance'] should be True
+                # 2.5-Equality ['distances'] == ['down']['distance'] should be True
                 if node['distance'] != node['down']['distance']:
                     print('node', l, n, "Inconsistent values between " + \
                     "node['distance'] and node['down']['distance']", \
                     node['distance'], node['down']['distance'])
                     return False
-                # 2.8-All the distances at a given level increase
+                # 2.6-All the distances at a given level increase
                 distance = node['distance']
                 if distance <= previous_distance:
                     print('node', l, n, "'s distance", distance, '<=', \
                     previous_distance, 'instead of increasing.')
                     return False
-                # 2.9-The span at each skip node is either 2 or 3
+                # 2.7-The span at each skip node is either 2 or 3
                 if (node['span'] != 2) and (node['span'] != 3):
                     print('Wrong span: should be either 2 or 3, but is', \
                         node['span'])
                     return False
-                # 2.10-The last node spanned by a higher skip node is right
+                # 2.8-The last node spanned by a higher skip node is right
                 # before the first node spanned by the next higher skip node
                 # How to test:
                 #
@@ -758,7 +758,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                             "['next'] is different from first of", l, n+1, ':', \
                             last_node['next']['distance'], next_node['distance'])
                         return False
-                # 2.5-Each skip node references the correct element below it,
+                # 2.9-Each skip node references the correct element below it,
                 # i.e. each node's distance values are identical
                 while node['down'] is not None:
                     node = node['down']
@@ -767,13 +767,13 @@ class TestAestheticQualityCore(unittest.TestCase):
                             distance, 'expected', node['distance'])
                         return False
                 previous_distance = distance
-        # 2.11-The first top level node always points to 'closest'
+        # 2.10-The first top level node always points to 'closest'
         if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
             print("First top level node doesn't point to \
                 linked_list['closest']", skip_nodes[-1][0]['distance'], \
                 linked_list['closest']['distance'])
             return False
-        # 2.2-The 'up' entries at a lower level match the # of higher entries
+        # 2.11-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
         node = linked_list['closest']
         lower_level_size = 1
@@ -802,7 +802,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     up_gap += 1
                 if node['up'] is not None:
                     # It's not the first 'up' pointer, so check the gap is ok
-                    # 2.4-Check the gaps between the up pointers
+                    # 2.12-Check the gaps between the up pointers
                     if level_up_count > 0:
                         if up_gap < 1:
                             print('Skip node', node['distance'], 'at level', \
@@ -814,7 +814,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                             return False
                     level_up_count += 1
                     up_gap = -1
-            # 2.2-The 'up' entries at a lower level match the # higher entries
+            # 2.11-The 'up' entries at a lower level match the # higher entries
             if up_count != len(skip_nodes[level]):
                 print('level', level, ": the number of 'up' entries", \
                 up_count, 'disagrees with the number of skip nodes above', \
@@ -823,7 +823,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             # Minimum and maximum number of allowed up pointers
             min_up_count = math.ceil(float(len(skip_nodes[level])-1) / 3)
             max_up_count = math.ceil(float(len(skip_nodes[level])-1) / 2)
-            # 2.3-The number of pointers at each level has to be valid
+            # 2.13-The number of pointers at each level has to be valid
             if level_up_count > max_up_count:
                 print('len(skip_nodes[level])',len(skip_nodes[level]) )
                 print(level, 'Error: level_up_count', level_up_count, \
@@ -838,7 +838,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             up_count = level_up_count
             print('up_count', up_count)
 
-        # 2.7-All the skip nodes can be reached from the first one on top
+        # 2.14-All the skip nodes can be reached from the first one on top
         first_nodes = []
         # Create a list of first nodes for each level
         first_nodes.append(linked_list['closest']['up'])
