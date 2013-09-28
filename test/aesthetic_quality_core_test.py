@@ -495,7 +495,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes.append([])
         # skip_nodes[2][0]
         skip_nodes[2].append({'next':None, 'up':None, \
-        'down':skip_nodes[1][0], 'span':1, \
+        'down':skip_nodes[1][0], 'span':2, \
         'distance':skip_nodes[1][0]['distance']})
         skip_nodes[1][0]['up'] = skip_nodes[2][0]
         # Adjusting the 'up' fields in sweep_line elements:
@@ -579,21 +579,21 @@ class TestAestheticQualityCore(unittest.TestCase):
             return False
         # 1.2-If len(linked_list) > 0 then 'closest' exists
         if not linked_list.has_key('closest'):
-            print("no key 'closest'")
-            return False
+            message = "Missing key linked_list['closest']"
+            return (False, message)
 
         pixel = linked_list['closest']
         chain_length = 1
         # 1.3-down is None
         if pixel['down'] is not None:
-            print("linked_list['closest'] is not None")
-            return False
+            message = "linked_list['closest']['down'] is not None"
+            return (False, message)
 
         last_distance = pixel['distance']
         # 1.4-No negative distances
         if last_distance < 0:
-            print("linked_list['closest'] has a negative distance")
-            return False
+            message = "linked_list['closest'] has a negative distance"
+            return (False, message)
 
         # Minimum and maximum number of allowed up pointers
         min_up_count = math.ceil(float((len(linked_list) -1) / 3))
@@ -608,13 +608,13 @@ class TestAestheticQualityCore(unittest.TestCase):
             chain_length += 1
             # 1.3-down is None
             if pixel['down'] is not None:
-                print("pixel['down'] is None")
-                return False
+                message = "pixel['down'] is None"
+                return (False, message)
             # 1.5-distances increase
             if (pixel['distance'] - last_distance) <= 0.:
-                print("Distance in the linked list decreased!", \
-                    last_distance, pixel['distance'])
-                return False
+                message = "Distance in the linked list decreased!" + \
+                    str(last_distance) + ' > ' + str(pixel['distance'])
+                return (False, message)
             last_distance = pixel['distance']
             # Updating the number of 'up' pointers and the gap between them
             if pixel['up'] is not None:
@@ -622,11 +622,13 @@ class TestAestheticQualityCore(unittest.TestCase):
                 # 1.6-Check the gaps between the up pointers
                 if up_count > 0:
                     if up_gap < 1:
-                        print("gap in the linked_list is < 1", up_gap)
-                        return False
+                        message = "gap in the linked_list (" + str(up_gap) + \
+                            ") is < 1"
+                        return (False, message)
                     if up_gap > 2:
-                        print("gap in the linked_list is > 2", up_gap)
-                        return False
+                        message = "gap in the linked_list (" + str(up_gap) + \
+                        ") is > 2"
+                        return (False, message)
                 up_count += 1
                 up_gap = -1
             # If there are up pointers, updating the gap
@@ -635,27 +637,27 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         # 1.7-Check the number of up pointers is valid
         if up_count > max_up_count:
-            print("Too many up pointers in linked_list", up_count, \
-                'max is', max_up_count)
-            return False
+            message = "Too many up pointers in linked_list (" + str(up_count)+\
+                ') max is ' + str(max_up_count)
+            return (False, message)
         if up_count < min_up_count:
-            print("Too few up pointers in linked_list", up_count, \
-                'min is', min_up_count)
-            return False
+            message = "Too few up pointers in linked_list (" + str(up_count) +\
+                ') min is ' + str(min_up_count)
+            return (False, message)
 
         # 1.8-chain length is 1 less than len(linked_list)
         if (chain_length != len(linked_list) -1):
-            print('Discrepancy between the size of the linked list \
-            and the number of nodes chained together.', \
-            len(linked_list), chain_length)
-            return False
+            message = 'Discrepancy between the size of the linked list (' + \
+            len(linked_list) + 'and the number of nodes chained together ' + \
+            str(chain_length)
+            return (False, message)
         # 1.9-linked_list['closest'] is the smallest distance
         # True if 1.5 and 1.8 are true
         # 1.10-The non-linked element is the same as linked_list['closest']
         if not linked_list.has_key(linked_list['closest']['distance']):
-            print('The element not linked to the list is not the same \
-            as closest', linked_list['closest']['distance'])
-            return False
+            message = 'The element not linked to the list is not the same' + \
+            'as closest (' + str(linked_list['closest']['distance']) + ')'
+            return (False, message)
         # 1.11-Last element has 'next' set to None
         # True if 1.8 and 1.10 are true
 
@@ -686,9 +688,10 @@ class TestAestheticQualityCore(unittest.TestCase):
             if l > 0:
                 # Comparing two levels in skip_nodes
                 if total_span != len(skip_nodes[l-1]):
-                    print('Level', l, ': span of', total_span, \
-                    'disagrees with size of level below', len(skip_nodes[l-1]))
-                    return False
+                    message = 'Level '+ str(l) + ': span of ' + \
+                    str(total_span) + ' disagrees with size of level below '+\
+                    str(len(skip_nodes[l-1]))
+                    return (False, message)
             else:
                 # 2.1- Comparing first level in skip_nodes with linked_list
                 if total_span != len(linked_list) -1:
@@ -706,32 +709,34 @@ class TestAestheticQualityCore(unittest.TestCase):
                 if n < len(skip_nodes[l]) -1:
                     # 2.3-Each skip node before the last one has 'next' != None
                     if skip_nodes[l][n]['next'] is None:
-                        print('Skip node', len(skip_nodes[l]) -1, \
-                        'before last at level', l, 'is None')
-                        return False
+                        message = 'Skip node ' + str(len(skip_nodes[l]) -1) + \
+                        ' before last at level ' + str(l) + ' is None.'
+                        return (False, message)
                 else:
                     # 2.4-Last skip node at the end of its level has 'next' == None
                     if skip_nodes[l][n]['next'] is not None:
-                        print('Last skip node', len(skip_nodes[l]) -1, \
-                        'at level', l, 'is not None')
-                        return False
+                        message = 'Last skip node '+str(len(skip_nodes[l])-1)+\
+                        ' at level ' + str(l) + ' is not None'
+                        return (False, message)
                 # 2.5-Equality ['distances'] == ['down']['distance'] should be True
                 if node['distance'] != node['down']['distance']:
-                    print('node', l, n, "Inconsistent values between " + \
-                    "node['distance'] and node['down']['distance']", \
-                    node['distance'], node['down']['distance'])
-                    return False
+                    message = 'Node [' + str(l) + '][' + str(n) + '] has ' + \
+                    'inconsistent values between ' + \
+                    "node['distance'] = " + str(node['distance']) + ' and ' + \
+                    "node['down']['distance'] = " + str(node['down']['distance'])
+                    return (False, message)
                 # 2.6-All the distances at a given level increase
                 distance = node['distance']
                 if distance <= previous_distance:
-                    print('node', l, n, "'s distance", distance, '<=', \
-                    previous_distance, 'instead of increasing.')
-                    return False
+                    message = 'Node [' + str(l) + '][' + str(n) + \
+                    "]'s distance " + str(distance) + ' <= ' + \
+                    str(previous_distance) + ' instead of increasing.'
+                    return (False, message)
                 # 2.7-The span at each skip node is either 2 or 3
                 if (node['span'] != 2) and (node['span'] != 3):
-                    print('Wrong span: should be either 2 or 3, but is', \
-                        node['span'])
-                    return False
+                    message = 'Wrong span: should be either 2 or 3, but is' + \
+                        str(node['span'])
+                    return (False, message)
                 # 2.8-The last node spanned by a higher skip node is right
                 # before the first node spanned by the next higher skip node
                 # How to test:
@@ -754,25 +759,27 @@ class TestAestheticQualityCore(unittest.TestCase):
                     # Last spanned node should be connected to the first one \
                     # from the next higher node.
                     if last_node['next']['distance'] != next_node['distance']:
-                        print('Last node of', l, n, \
-                            "['next'] is different from first of", l, n+1, ':', \
-                            last_node['next']['distance'], next_node['distance'])
-                        return False
+                        message = 'Last node of [' +  str(l) + '][' + str(n) + \
+                        "]['next'] = " + str(last_node['next']['distance']) + \
+                        " is different from first of [" + str(l) + '][' + \
+                        str(n+1) + '] = ' + str(next_node['distance'])
+                        return (False, message)
                 # 2.9-Each skip node references the correct element below it,
                 # i.e. each node's distance values are identical
                 while node['down'] is not None:
                     node = node['down']
                     if node['distance'] != distance:
-                        print("Node['down'] refers a node with another value", \
-                            distance, 'expected', node['distance'])
-                        return False
+                        message = "Node['down'] refers a node with another " +\
+                        'value (' + str(distance) + ' expected ' + \
+                        str(node['distance'])
+                        return (False, message)
                 previous_distance = distance
         # 2.10-The first top level node always points to 'closest'
         if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
-            print("First top level node doesn't point to \
-                linked_list['closest']", skip_nodes[-1][0]['distance'], \
-                linked_list['closest']['distance'])
-            return False
+            message="First top level node "+str(skip_nodes[-1][0]['distance'])\
+            + " doesn't point to linked_list['closest'] (" + \
+            str(linked_list['closest']['distance']) + ')'
+            return (False, message)
         # 2.11-The 'up' entries at a lower level match the # of higher entries
         # Find the number of 'up' entries in linked_list
         node = linked_list['closest']
@@ -785,7 +792,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             lower_level_size += 1
             if node['up'] is not None:
                 up_count += 1
-        print('up_count', up_count)
 
         skip_nodes_size = 0
         for level in range(len(skip_nodes)):
@@ -805,38 +811,40 @@ class TestAestheticQualityCore(unittest.TestCase):
                     # 2.12-Check the gaps between the up pointers
                     if level_up_count > 0:
                         if up_gap < 1:
-                            print('Skip node', node['distance'], 'at level', \
-                            level, 'has a gap too small:', up_gap, '< 1')
-                            return False
+                            message = 'Skip node ' + str(node['distance']) + \
+                            ' at level ' +str(level) +' has a gap too small:'+\
+                            str(up_gap) + ' < 1'
+                            return (False, message)
                         if up_gap > 2:
-                            print('Skip node', node['distance'], 'at level', \
-                            level, 'has a gap too large:', up_gap, '> 2')
-                            return False
+                            message = 'Skip node ' + str(node['distance']) + \
+                            ' at level ' +str(level) +' has a gap too large:'+\
+                            str(up_gap) + ' > 2'
+                            return (False. message)
                     level_up_count += 1
                     up_gap = -1
             # 2.11-The 'up' entries at a lower level match the # higher entries
             if up_count != len(skip_nodes[level]):
-                print('level', level, ": the number of 'up' entries", \
-                up_count, 'disagrees with the number of skip nodes above', \
-                    len(skip_nodes[level]))
-                return False
+                message = 'Level ' + str(level) + \
+                ": the number of 'up' entries " + str(up_count) + \
+                ' disagrees with the number of skip nodes above ' + \
+                    str(len(skip_nodes[level]))
+                return (False, message)
             # Minimum and maximum number of allowed up pointers
             min_up_count = math.ceil(float(len(skip_nodes[level])-1) / 3)
             max_up_count = math.ceil(float(len(skip_nodes[level])-1) / 2)
             # 2.13-The number of pointers at each level has to be valid
             if level_up_count > max_up_count:
-                print('len(skip_nodes[level])',len(skip_nodes[level]) )
-                print(level, 'Error: level_up_count', level_up_count, \
-                    '> max_up_count', max_up_count)
-                return False
+                message = 'Level ' + str(level) + ': level_up_count = ' + \
+                str(level_up_count) + ' > max_up_count = ' + \
+                str(max_up_count)
+                return (False, message)
             if level_up_count < min_up_count:
-                print('len(skip_nodes[level])', len(skip_nodes[level]))
-                print(level, 'Error: level_up_count', level_up_count, \
-                    '< min_up_count', min_up_count)
-                return False
+                message = 'Level ' + str(level) + ': level_up_count = ' + \
+                str(level_up_count) + ' < min_up_count = ' + \
+                str(min_up_count)
+                return (False, message)
             lower_level_size = len(skip_nodes[level]) # update for next iter
             up_count = level_up_count
-            print('up_count', up_count)
 
         # 2.14-All the skip nodes can be reached from the first one on top
         first_nodes = []
@@ -853,11 +861,13 @@ class TestAestheticQualityCore(unittest.TestCase):
                 node = node['next']
                 nodes_reached += 1
         if nodes_reached != total_skip_nodes:
-            print('Number of nodes reached in the skip_list', nodes_reached, \
-            "doesn't agree with the total number of nodes", total_skip_nodes)
-            return False
+            message = 'Number of nodes reached in the skip_list ' + \
+            str(nodes_reached) + \
+            "doesn't agree with the total number of nodes" + \
+            str(total_skip_nodes)
+            return (False, message)
 
-        return True
+        return (True, 'All good')
 
     def test_viewshed(self):
         array_shape = (6,6)
