@@ -486,14 +486,23 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes[0][0]['up'] = skip_nodes[1][0]
         # skip_nodes[1][1]
         skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][1], 'span':2, \
-        'distance':skip_nodes[0][0]['distance']})
+        'down':skip_nodes[0][2], 'span':2, \
+        'distance':skip_nodes[0][2]['distance']})
         skip_nodes[1][0]['next'] = skip_nodes[1][1]
         skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        skip_nodes[0][2]['up'] = skip_nodes[1][1]
+        # skip_nodes[2]
+        skip_nodes.append([])
+        # skip_nodes[2][0]
+        skip_nodes[2].append({'next':None, 'up':None, \
+        'down':skip_nodes[1][0], 'span':2, \
+        'distance':skip_nodes[1][0]['distance']})
+        skip_nodes[1][0]['up'] = skip_nodes[2][0]
         # Adjusting the 'up' fields in sweep_line elements:
         sweep_line[0]['up'] = skip_nodes[0][0]
         sweep_line[4]['up'] = skip_nodes[0][1]
         sweep_line[8]['up'] = skip_nodes[0][2]
+        sweep_line[12]['up'] = skip_nodes[0][3]
         # All the skip levels are accessible:
         current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
@@ -788,27 +797,27 @@ class TestAestheticQualityCore(unittest.TestCase):
                 level_up_count += 1
             while node['next'] is not None:
                 node = node['next']
+                # If there are up pointers, updating the gap
+                if level_up_count:
+                    up_gap += 1
                 if node['up'] is not None:
                     # It's not the first 'up' pointer, so check the gap is ok
                     # 2.4-Check the gaps between the up pointers
                     if level_up_count > 0:
                         if up_gap < 1:
-                            print('Skip node gap too small at level', level, \
-                            up_gap, '< 1')
+                            print('Skip node', node['distance'], 'at level', \
+                            level, 'has a gap too small:', up_gap, '< 1')
                             return False
                         if up_gap > 2:
-                            print('Skip node gap too large at level', level, \
-                            up_gap, '> 2')
+                            print('Skip node', node['distance'], 'at level', \
+                            level, 'has a gap too large:', up_gap, '> 2')
                             return False
                     level_up_count += 1
                     up_gap = -1
-                # If there are up pointers, updating the gap
-                if level_up_count:
-                    up_gap += 1
             # 2.2-The 'up' entries at a lower level match the # higher entries
             if up_count != len(skip_nodes[level]):
-                print("The number of 'up' entries", up_count, \
-                    'disagrees with the number of skip nodes above', \
+                print('level', level, ": the number of 'up' entries", \
+                up_count, 'disagrees with the number of skip nodes above', \
                     len(skip_nodes[level]))
                 return False
             # Minimum and maximum number of allowed up pointers
