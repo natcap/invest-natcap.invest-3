@@ -1308,6 +1308,7 @@ def clip_dataset_uri(
             pixel_size, 'intersection', aoi_uri=aoi_datasource_uri,
             assert_datasets_projected=assert_projections)
 
+
 def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     """This function will clip source_dataset to the bounding box of the
         polygons in aoi_datasource and mask out the values in source_dataset
@@ -1329,9 +1330,9 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
     def op(x):
         return x
 
-    clipped_dataset = vectorize_rasters([source_dataset], op, aoi=aoi_datasource,
-                      raster_out_uri = out_dataset_uri,
-                      datatype = band.DataType, nodata=nodata)
+    clipped_dataset = vectorize_rasters(
+        [source_dataset], op, aoi=aoi_datasource,
+        raster_out_uri=out_dataset_uri, datatype=band.DataType, nodata=nodata)
     return clipped_dataset
 
 def extract_band_and_nodata(dataset, get_array=False):
@@ -1381,7 +1382,7 @@ def calculate_value_not_in_array(array):
         array - a numpy array
 
         returns a number not in array that is not "close" to any value in array
-            ideally calculated in the middle of the maximum delta between any two
+            calculated in the middle of the maximum delta between any two
             consecutive numbers in the array"""
 
     sorted_array = numpy.sort(numpy.unique(array.flatten()))
@@ -1539,7 +1540,8 @@ def resample_dataset(
     output_dataset.GetRasterBand(1).SetNoDataValue(original_nodata)
 
     # Calculate the new geotransform
-    output_geo = (geo_t[0], pixel_size, geo_t[2], geo_t[3], geo_t[4], -pixel_size)
+    output_geo = (
+        geo_t[0], pixel_size, geo_t[2], geo_t[3], geo_t[4], -pixel_size)
 
     # Set the geotransform
     output_dataset.SetGeoTransform(output_geo)
@@ -1568,16 +1570,13 @@ def _experimental_reproject_dataset_uri(
     """A function to reproject and resample a GDAL dataset given an output
         pixel size and output reference. Will use the datatype and nodata value
         from the original dataset.
+        
+        original_dataset_uri - a URI to a gdal Dataset to written to disk
+        pixel_spacing - output dataset pixel size in projected linear units
+        output_wkt - output project in Well Known Text 
+        output_uri - location on disk to dump the reprojected dataset
 
-       original_dataset_uri - a URI to a gdal Dataset to written to disk
-
-       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
-
-       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
-
-       output_uri - location on disk to dump the reprojected dataset
-
-       return projected dataset"""
+        return projected dataset"""
     # Get the nodata value and datatype from the original dataset
     output_type = get_datatype_from_uri(original_dataset_uri)
     out_nodata = get_nodata_from_uri(original_dataset_uri)
@@ -1630,12 +1629,12 @@ def _experimental_reproject_dataset_uri(
 
 def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
-    """A function to reproject and resample a GDAL dataset given an output pixel size
+    """Reproject and resample a GDAL dataset given an output pixel size
         and output reference and uri.
 
        original_dataset - a gdal Dataset to reproject
-       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
-       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
+       pixel_spacing - output dataset pixel size in projected linear units
+       output_wkt - output project in Well Known Text
        output_uri - location on disk to dump the reprojected dataset
        output_type - gdal type of the output
 
@@ -1665,8 +1664,9 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
 
     LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
 
-    output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing),
-                              int((uly - lry)/pixel_spacing), 1, output_type)
+    output_dataset = gdal_driver.Create(
+        output_uri, int((lrx - ulx)/pixel_spacing),
+        int((uly - lry)/pixel_spacing), 1, output_type)
 
     # Set the nodata value
     out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
@@ -1681,9 +1681,9 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
     output_dataset.SetProjection (output_sr.ExportToWkt())
 
     # Perform the projection/resampling
-    gdal.ReprojectImage(original_dataset, output_dataset,
-                        original_sr.ExportToWkt(), output_sr.ExportToWkt(),
-                        gdal.GRA_Bilinear)
+    gdal.ReprojectImage(
+        original_dataset, output_dataset, original_sr.ExportToWkt(),
+        output_sr.ExportToWkt(), gdal.GRA_Bilinear)
 
     return output_dataset
 
@@ -1714,8 +1714,8 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         original_datasource - a ogr datasource
         output_wkt - the desired projection as Well Known Text
             (by layer.GetSpatialRef().ExportToWkt())
-        output_uri - The path to where the new shapefile should be written to disk.
-
+        output_uri - The filepath to the output shapefile
+        
         returns - The reprojected shapefile.
     """
     # if this file already exists, then remove it
@@ -1768,7 +1768,8 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
             geom.Transform(coord_trans)
 
             #Copy original_datasource's feature and set as new shapes feature
-            output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
+            output_feature = ogr.Feature(
+                feature_def=output_layer.GetLayerDefn())
             output_feature.SetFrom(original_feature)
             output_feature.SetGeometry(geom)
 
@@ -2002,9 +2003,9 @@ def reclassify_dataset(
         out_datatype - the type for the output dataset
         out_nodata - the nodata value for the output raster.  Must be the same
             type as out_datatype
-        exception_flag - either 'none' or 'values_required'.  if 'values_required'
-            raise an exception if there is a value in the raster that is not
-            found in value_map
+        exception_flag - either 'none' or 'values_required'.
+            If 'values_required' raise an exception if there is a value in the
+            raster that is not found in value_map
 
        returns the new reclassified dataset GDAL raster, or raises an Exception
            if exception_flag == 'values_required' and the value from
@@ -2026,7 +2027,8 @@ def reclassify_dataset(
     valid_set = set(value_map.keys())
     map_array_size = max(dataset_max, max(valid_set)) + 2
     valid_set.add(map_array_size - 1) #add the index for nodata
-    map_array = numpy.empty((1,map_array_size), dtype = type(value_map.values()[0]))
+    map_array = numpy.empty(
+        (1,map_array_size), dtype=type(value_map.values()[0]))
     map_array[:] = out_nodata
 
     for key, value in value_map.iteritems():
@@ -2198,14 +2200,16 @@ def assert_datasets_in_same_projection(dataset_uri_list):
             "These datasets are unprojected %s" % (unprojected_datasets))
 
     for index in range(len(dataset_projections)-1):
-        if not dataset_projections[index][0].IsSame(dataset_projections[index+1][0]):
+        if not dataset_projections[index][0].IsSame(
+            dataset_projections[index+1][0]):
             LOGGER.warn(
                 "These two datasets are not in the same projection."
-                " The different projections are:\n\n'filename: %s'\n%s\n\nand:\n\n'filename:%s'\n%s\n\n"
-                "Note there may be other files not projected, this function reports the first"
-                " two that have been seen." %
-                (dataset_projections[index][1], dataset_projections[index][0].ExportToPrettyWkt(),
-                 dataset_projections[index+1][1], dataset_projections[index+1][0].ExportToPrettyWkt()))
+                " The different projections are:\n\n'filename: %s'\n%s\n\n"
+                "and:\n\n'filename:%s'\n%s\n\n" %
+                (dataset_projections[index][1],
+                    dataset_projections[index][0].ExportToPrettyWkt(),
+                    dataset_projections[index+1][1],
+                    dataset_projections[index+1][0].ExportToPrettyWkt()))
 
     return True
 
@@ -2214,7 +2218,8 @@ def get_bounding_box(dataset_uri):
 
         dataset_uri - a uri to a GDAL dataset
 
-        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in projected coordinates"""
+        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
+            projected coordinates"""
 
     dataset = gdal.Open(dataset_uri)
 
@@ -2234,7 +2239,8 @@ def get_datasource_bounding_box(datasource_uri):
 
         dataset_uri - a uri to a GDAL dataset
 
-        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in projected coordinates"""
+        returns [upper_left_x, upper_left_y, lower_right_x, lower_right_y] in
+            projected coordinates"""
 
     datasource = ogr.Open(datasource_uri)
     layer = datasource.GetLayer(0)
@@ -2253,7 +2259,8 @@ def resize_and_resample_dataset(
     """A function to resample a datsaet to larger or smaller pixel sizes
 
         original_dataset_uri - a GDAL dataset
-        bounding_box - [upper_left_x, upper_left_y, lower_right_x, lower_right_y]
+        bounding_box - [upper_left_x, upper_left_y, lower_right_x,
+            lower_right_y]
         out_pixel_size - the pixel size in projected linear units
         output_uri - the location of the new resampled GDAL dataset
         resample_method - the resampling technique, one of
@@ -2275,9 +2282,12 @@ def resize_and_resample_dataset(
     original_sr = osr.SpatialReference()
     original_sr.ImportFromWkt(original_dataset.GetProjection())
 
-    output_geo_transform = [bounding_box[0], out_pixel_size, 0.0, bounding_box[1], 0.0, -out_pixel_size]
-    new_x_size = abs(int(math.ceil((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
-    new_y_size = abs(int(math.ceil((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
+    output_geo_transform = [bounding_box[0], out_pixel_size, 0.0,
+        bounding_box[1], 0.0, -out_pixel_size]
+    new_x_size = abs(
+        int(math.ceil((bounding_box[2] - bounding_box[0]) / out_pixel_size)))
+    new_y_size = abs(
+        int(math.ceil((bounding_box[3] - bounding_box[1]) / out_pixel_size)))
 
     #create the new x and y size
     gdal_driver = gdal.GetDriverByName('GTiff')
@@ -2286,7 +2296,8 @@ def resize_and_resample_dataset(
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
         LOGGER.debug('original nodata is %s' % original_nodata)
-        original_nodata = float(calculate_value_not_in_dataset(original_dataset))
+        original_nodata = float(
+            calculate_value_not_in_dataset(original_dataset))
         LOGGER.debug('setting new nodata to %s' % original_nodata)
     output_band.SetNoDataValue(original_nodata)
     output_band.Fill(original_nodata)
@@ -2341,15 +2352,14 @@ def align_dataset_list(
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
         raise Exception("Unknown mode %s" % (str(mode)))
-    # :NIC: The code was breaking because of dataset_to_align_index == -1,
-    # which seems a legit value
-    #if dataset_to_align_index >= len(dataset_uri_list) or dataset_to_align_index < 0:
+    
     if dataset_to_align_index >= len(dataset_uri_list):
         raise Exception(
             "Alignment index is out of bounds of the datasets index: %s"
             "n_elements %s" % (dataset_to_align_index, len(dataset_uri_list)))
     if mode == "dataset" and dataset_to_bound_index is None:
-        raise Exception("Mode is 'dataset' but dataset_to_bound_index is not defined")
+        raise Exception(
+            "Mode is 'dataset' but dataset_to_bound_index is not defined")
     if mode == "dataset" and (dataset_to_bound_index < 0 or
                               dataset_to_bound_index >= len(dataset_uri_list)):
         raise Exception(
@@ -2409,7 +2419,6 @@ def align_dataset_list(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
 
-
     #If there's an AOI, mask it out
     if aoi_uri != None:
         first_dataset = gdal.Open(dataset_out_uri_list[0])
@@ -2447,8 +2456,8 @@ def align_dataset_list(
 
 
 def vectorize_datasets(
-    dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out, nodata_out,
-    pixel_size_out, bounding_box_mode, resample_method_list=None,
+    dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
+    nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, aoi_uri=None, assert_datasets_projected=True):
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
@@ -2500,7 +2509,6 @@ def vectorize_datasets(
             test if any datasets are not projected and raise an exception
             if so."""
 
-
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
@@ -2510,7 +2518,6 @@ def vectorize_datasets(
         resample_method_list = ["nearest"] * len(dataset_uri_list)
     if dataset_to_align_index == None:
         dataset_to_align_index = -1
-
 
     #Align and resample the datasets, then load datasets into a list
     align_dataset_list(
@@ -2622,9 +2629,11 @@ def get_lookup_from_table(table_uri, key_field):
         key_value = smart_cast(key)
         #Map an entire row to its lookup values
         lookup_dict[key_value] = (
-            dict([(sub_key, smart_cast(value)) for sub_key, value in sub_dict.iteritems()]))
+            dict([(sub_key, smart_cast(value)) 
+                for sub_key, value in sub_dict.iteritems()]))
     return lookup_dict
 
+    
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
         csv table indexed by the given key_field
