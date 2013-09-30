@@ -567,6 +567,30 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert found == expected, message
         # 2.3.2- O(log n) performance is maintained
 
+    def test_find_pixel_before(self):
+        """Test the function that finds the pixel with the immediate smaller
+        distance than what is specified by the user. This si useful in 2
+        functions:  1- find_active_pixel_fast: the distance we're looking for
+                        is right after this pixel,
+                    2- insert_active_pixel_fast: the new pixel to insert is
+                        right after this pixel.
+        Very useful."""
+        sweep_line, skip_nodes = aesthetic_quality_core.builf_skip_list()
+        
+        test_values = [0, 2, 4, 6, -1, 3, 7]
+        values = []
+        pixel = sweep_line['closest']
+        sweep_line_values.append(pixel['distance'])
+        while pixel['next'] is not None:
+            pixel = pixel['next']
+            sweep_line_values.append(pixel['distance'])
+        for distance in [0, 2, 4, 6, -1, 3, 7]:
+            found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
+                skip_nodes, distance)
+            #message = 'Error: return value is ' + str(found) + \
+            #', expected is ' + str(expected)
+            #assert found == expected, message
+        print('sweep_line contents', sweep_line_values)
 
     def test_viewshed(self):
         array_shape = (6,6)
