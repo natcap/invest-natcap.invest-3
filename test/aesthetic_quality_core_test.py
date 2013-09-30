@@ -342,6 +342,78 @@ class TestAestheticQualityCore(unittest.TestCase):
             if breadth == 0:
                 return index
 
+    def build_skip_list(self):
+        """Build a valid skip list for test purposes.
+        
+            Return a tuple (sweep_line, skip_nodes) where the sweep_line is
+            where the data is stored, and skip_nodes contains the hierarchy of
+            skip pointers."""
+        # The basal sweep line:
+        sweep_line = {}
+        sweep_line[0] = {'next':None, 'up':None, 'down':None, 'distance':0}
+        sweep_line['closest'] = sweep_line[0]
+        sweep_line[2] = {'next':None, 'up':None, 'down':None, 'distance':2}
+        sweep_line[0]['next'] = sweep_line[2]
+        sweep_line[4] = {'next':None, 'up':None, 'down':None, 'distance':4}
+        sweep_line[2]['next'] = sweep_line[4]
+        sweep_line[6] = {'next':None, 'up':None, 'down':None, 'distance':6}
+        sweep_line[4]['next'] = sweep_line[6]
+        sweep_line[8] = {'next':None, 'up':None, 'down':None, 'distance':8}
+        sweep_line[6]['next'] = sweep_line[8]
+        sweep_line[10] = {'next':None, 'up':None, 'down':None, 'distance':10}
+        sweep_line[8]['next'] = sweep_line[10]
+        sweep_line[12] = {'next':None, 'up':None, 'down':None, 'distance':12}
+        sweep_line[10]['next'] = sweep_line[12]
+        sweep_line[14] = {'next':None, 'up':None, 'down':None, 'distance':14}
+        sweep_line[12]['next'] = sweep_line[14]
+        # Creating the skip node hierarchy:
+        skip_nodes = []
+        # skip_nodes[0]
+        skip_nodes.append([])
+        # skip_nodes[0][0]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
+            'span':2, 'distance':sweep_line[0]['distance']})
+        # skip_nodes[0][1]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
+            'span':2, 'distance':sweep_line[4]['distance']})
+        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+        # skip_nodes[0][2]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[8], \
+            'span':2, 'distance':sweep_line[8]['distance']})
+        skip_nodes[0][1]['next'] = skip_nodes[0][2]
+        # skip_nodes[0][3]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[12], \
+            'span':2, 'distance':sweep_line[12]['distance']})
+        skip_nodes[0][2]['next'] = skip_nodes[0][3]
+        # skip_nodes[1]
+        skip_nodes.append([])
+        # skip_nodes[1][0]
+        skip_nodes[1].append({'next':None, 'up':None, \
+        'down':skip_nodes[0][0], 'span':2, \
+        'distance':skip_nodes[0][0]['distance']})
+        skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        # skip_nodes[1][1]
+        skip_nodes[1].append({'next':None, 'up':None, \
+        'down':skip_nodes[0][2], 'span':2, \
+        'distance':skip_nodes[0][2]['distance']})
+        skip_nodes[1][0]['next'] = skip_nodes[1][1]
+        skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        skip_nodes[0][2]['up'] = skip_nodes[1][1]
+        # skip_nodes[2]
+        skip_nodes.append([])
+        # skip_nodes[2][0]
+        skip_nodes[2].append({'next':None, 'up':None, \
+        'down':skip_nodes[1][0], 'span':2, \
+        'distance':skip_nodes[1][0]['distance']})
+        skip_nodes[1][0]['up'] = skip_nodes[2][0]
+        # Adjusting the 'up' fields in sweep_line elements:
+        sweep_line[0]['up'] = skip_nodes[0][0]
+        sweep_line[4]['up'] = skip_nodes[0][1]
+        sweep_line[8]['up'] = skip_nodes[0][2]
+        sweep_line[12]['up'] = skip_nodes[0][3]
+
+        return (sweep_line, skip_nodes)
+
     def test_skip_list(self):
         """Test the data structure that holds active pixels in the sweep line
         What is tested:
@@ -437,72 +509,21 @@ class TestAestheticQualityCore(unittest.TestCase):
             str(pixel)
         assert pixel is None, message
         # 1.3.3- O(log n) performance is maintained
-        # 2- Intermediate nodes insertion 
+        # 2- In the intermediate levels:
+        # 2.1- creation of skip links after leaf insertions:
+        sweep_line = {}
+        skip_nodes = []
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
+        # 2.1.1- insert new leaf in the right place
+        # 2.1.2- create intermediate links when and where expected
+        # 2.1.3- O(log n) performance is maintained
+        # 2.2- deletion of skip links after leaf deletions:
+        # 2.2.1- delete the correct leaf
+        # 2.2.2- trim intermediate links: the skip list reduces to 1
+        # 2.2.3- O(log n) performance is maintained
         # 2.3- fast access:
         # Create a hierarchy that can be searched:
-        # The basal sweep line:
-        sweep_line = {}
-        sweep_line[0] = {'next':None, 'up':None, 'down':None, 'distance':0}
-        sweep_line['closest'] = sweep_line[0]
-        sweep_line[2] = {'next':None, 'up':None, 'down':None, 'distance':2}
-        sweep_line[0]['next'] = sweep_line[2]
-        sweep_line[4] = {'next':None, 'up':None, 'down':None, 'distance':4}
-        sweep_line[2]['next'] = sweep_line[4]
-        sweep_line[6] = {'next':None, 'up':None, 'down':None, 'distance':6}
-        sweep_line[4]['next'] = sweep_line[6]
-        sweep_line[8] = {'next':None, 'up':None, 'down':None, 'distance':8}
-        sweep_line[6]['next'] = sweep_line[8]
-        sweep_line[10] = {'next':None, 'up':None, 'down':None, 'distance':10}
-        sweep_line[8]['next'] = sweep_line[10]
-        sweep_line[12] = {'next':None, 'up':None, 'down':None, 'distance':12}
-        sweep_line[10]['next'] = sweep_line[12]
-        sweep_line[14] = {'next':None, 'up':None, 'down':None, 'distance':14}
-        sweep_line[12]['next'] = sweep_line[14]
-        # Creating the skip node hierarchy:
-        skip_nodes = []
-        # skip_nodes[0]
-        skip_nodes.append([])
-        # skip_nodes[0][0]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
-            'span':2, 'distance':sweep_line[0]['distance']})
-        # skip_nodes[0][1]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
-            'span':2, 'distance':sweep_line[4]['distance']})
-        skip_nodes[0][0]['next'] = skip_nodes[0][1]
-        # skip_nodes[0][2]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[8], \
-            'span':2, 'distance':sweep_line[8]['distance']})
-        skip_nodes[0][1]['next'] = skip_nodes[0][2]
-        # skip_nodes[0][3]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[12], \
-            'span':2, 'distance':sweep_line[12]['distance']})
-        skip_nodes[0][2]['next'] = skip_nodes[0][3]
-        # skip_nodes[1]
-        skip_nodes.append([])
-        # skip_nodes[1][0]
-        skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][0], 'span':2, \
-        'distance':skip_nodes[0][0]['distance']})
-        skip_nodes[0][0]['up'] = skip_nodes[1][0]
-        # skip_nodes[1][1]
-        skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][2], 'span':2, \
-        'distance':skip_nodes[0][2]['distance']})
-        skip_nodes[1][0]['next'] = skip_nodes[1][1]
-        skip_nodes[0][0]['up'] = skip_nodes[1][0]
-        skip_nodes[0][2]['up'] = skip_nodes[1][1]
-        # skip_nodes[2]
-        skip_nodes.append([])
-        # skip_nodes[2][0]
-        skip_nodes[2].append({'next':None, 'up':None, \
-        'down':skip_nodes[1][0], 'span':2, \
-        'distance':skip_nodes[1][0]['distance']})
-        skip_nodes[1][0]['up'] = skip_nodes[2][0]
-        # Adjusting the 'up' fields in sweep_line elements:
-        sweep_line[0]['up'] = skip_nodes[0][0]
-        sweep_line[4]['up'] = skip_nodes[0][1]
-        sweep_line[8]['up'] = skip_nodes[0][2]
-        sweep_line[12]['up'] = skip_nodes[0][3]
+        sweep_line, skip_nodes = self.build_skip_list()
         # All the skip levels are accessible:
         current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
