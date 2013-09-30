@@ -61,71 +61,71 @@ LOGGER = logging.getLogger('raster_utils')
 #until we know what's happening
 #gdal.UseExceptions()
 
-def get_nodata_from_uri(ds_uri):
+def get_nodata_from_uri(dataset_uri):
     """Returns the nodata value for the first band from a gdal dataset
 
-        ds_uri - a uri to a gdal dataset
+        dataset_uri - a uri to a gdal dataset
 
-        returns nodata value for ds band 1"""
+        returns nodata value for dataset band 1"""
 
-    ds = gdal.Open(ds_uri)
-    band = ds.GetRasterBand(1)
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     return nodata
 
-def get_datatype_from_uri(ds_uri):
+def get_datatype_from_uri(dataset_uri):
     """Returns the datatype for the first band from a gdal dataset
 
-        ds_uri - a uri to a gdal dataset
+        dataset_uri - a uri to a gdal dataset
 
-        returns the datatype for ds band 1"""
+        returns the datatype for dataset band 1"""
 
-    ds = gdal.Open(ds_uri)
-    band = ds.GetRasterBand(1)
+    dataset = gdal.Open(dataset_uri)
+    band = dataset.GetRasterBand(1)
     datatype = band.DataType
     return datatype
 
-def get_row_col_from_uri(ds_uri):
+def get_row_col_from_uri(dataset_uri):
     """Returns a tuple of number of rows and columns of that dataset
         uri.
 
-        ds_uri - a uri to a gdal dataset
+        dataset_uri - a uri to a gdal dataset
 
-        returns nodata value for ds band 1"""
+        returns nodata value for dataset band 1"""
 
-    ds = gdal.Open(ds_uri)
-    n_rows = ds.RasterYSize
-    n_cols = ds.RasterXSize
-    ds = None
+    dataset = gdal.Open(dataset_uri)
+    n_rows = dataset.RasterYSize
+    n_cols = dataset.RasterXSize
+    dataset = None
     return (n_rows, n_cols)
 
 
-def calculate_raster_stats(ds):
-    """Calculates and sets the min, max, stdev, and mean for the bands in
+def calculate_raster_stats(dataset):
+    """Calculates and sets the min, max, stdev, and mean for the bandataset in
        the raster.
 
-       ds - a GDAL raster dataset that will be modified by having its band
+       dataset - a GDAL raster dataset that will be modified by having its band
             statistics set
 
         returns nothing"""
 
-    for band_number in range(ds.RasterCount):
-        band = ds.GetRasterBand(band_number + 1)
+    for band_number in range(dataset.RasterCount):
+        band = dataset.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
-def calculate_raster_stats_uri(ds_uri):
+def calculate_raster_stats_uri(dataset_uri):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
 
-       ds_uri - a uri to a GDAL raster dataset that will be modified by having
+       dataset_uri - a uri to a GDAL raster dataset that will be modified by having
             its band statistics set
 
         returns nothing"""
 
-    ds = gdal.Open(ds_uri, gdal.GA_Update)
+    dataset = gdal.Open(dataset_uri, gdal.GA_Update)
 
-    for band_number in range(ds.RasterCount):
-        band = ds.GetRasterBand(band_number + 1)
+    for band_number in range(dataset.RasterCount):
+        band = dataset.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
 def get_statistics_from_uri(dataset_uri):
@@ -386,7 +386,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #don't need to interpolate them, but if there's an AOI you always need to
     #interpolate so initializing to aoi == None (True if no aoi)
     all_equal = aoi == None
-    for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
+    for dim_fun in [lambda dataset: dataset.RasterXSize, lambda dataset: dataset.RasterYSize]:
         sizes = map(dim_fun, dataset_list)
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
 
@@ -1357,8 +1357,8 @@ def calculate_value_not_in_dataset_uri(dataset_uri):
         dataset - a GDAL dataset
 
         returns a number not contained in the dataset"""
-    ds = gdal.Open(dataset_uri)
-    return calculate_value_not_in_dataset(ds)
+    dataset = gdal.Open(dataset_uri)
+    return calculate_value_not_in_dataset(dataset)
 
 def calculate_value_not_in_dataset(dataset):
     """Calcualte a value not contained in a dataset.  Useful for calculating
@@ -1683,12 +1683,12 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
 
     return output_dataset
 
-def reproject_datasource_uri(original_ds_uri, output_wkt, output_uri):
+def reproject_datasource_uri(original_dataset_uri, output_wkt, output_uri):
     """URI wrapper for reproject_datasource that takes in the uri for the
         datasource that is to be projected instead of the datasource itself.
         This function directly calls reproject_datasource.
 
-        original_ds_uri - a uri to an ogr datasource
+        original_dataset_uri - a uri to an ogr datasource
 
         output_wkt - the desired projection as Well Known Text
             (by layer.GetSpatialRef().ExportToWkt())
@@ -1698,8 +1698,8 @@ def reproject_datasource_uri(original_ds_uri, output_wkt, output_uri):
 
         returns - Nothing."""
 
-    original_ds = ogr.Open(original_ds_uri)
-    _ = reproject_datasource(original_ds, output_wkt, output_uri)
+    original_dataset = ogr.Open(original_dataset_uri)
+    _ = reproject_datasource(original_dataset, output_wkt, output_uri)
 
 def reproject_datasource(original_datasource, output_wkt, output_uri):
     """Changes the projection of an ogr datasource by creating a new
@@ -2580,8 +2580,8 @@ def vectorize_datasets(
         mask_dataset = None
         os.remove(mask_uri)
     aligned_bands = None
-    for ds in aligned_datasets:
-        gdal.Dataset.__swig_destroy__(ds)
+    for dataset in aligned_datasets:
+        gdal.Dataset.__swig_destroy__(dataset)
     aligned_datasets = None
     for temp_dataset_uri in dataset_out_uri_list:
         LOGGER.debug('removing %s' % temp_dataset_uri)
@@ -2720,26 +2720,26 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
     datasource = None
     return attribute_dictionary
 
-def get_geotransform_uri(ds_uri):
+def get_geotransform_uri(dataset_uri):
     """Get the geotransform from a gdal dataset
 
-        ds_uri - A URI for the dataset
+        dataset_uri - A URI for the dataset
 
         returns - a dataset geotransform list"""
 
-    raster_ds = gdal.Open(ds_uri)
-    raster_gt = raster_ds.GetGeoTransform()
+    raster_dataset = gdal.Open(dataset_uri)
+    raster_gt = raster_dataset.GetGeoTransform()
     return raster_gt
 
-def get_spatial_ref_uri(ds_uri):
+def get_spatial_ref_uri(dataset_uri):
     """Get the spatial reference of an OGR datasource
 
-        ds_uri - A URI to an ogr datasource
+        dataset_uri - A URI to an ogr datasource
 
         returns - a spatial reference"""
 
-    shape_ds = ogr.Open(ds_uri)
-    layer = shape_ds.GetLayer()
+    shape_dataset = ogr.Open(dataset_uri)
+    layer = shape_dataset.GetLayer()
     spat_ref = layer.GetSpatialRef()
     return spat_ref
 
@@ -2891,15 +2891,15 @@ def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
 
     output_layer.SyncToDisk()
 
-def get_dataset_projection_wkt_uri(ds_uri):
+def get_dataset_projection_wkt_uri(dataset_uri):
     """Get the projection of a GDAL dataset as well known text (WKT)
 
-        ds_uri - A URI for the GDAL dataset
+        dataset_uri - A URI for the GDAL dataset
 
         returns - a string for the WKT"""
 
-    raster_ds = gdal.Open(ds_uri)
-    proj_wkt = raster_ds.GetProjection()
+    raster_dataset = gdal.Open(dataset_uri)
+    proj_wkt = raster_dataset.GetProjection()
     return proj_wkt
 
 
