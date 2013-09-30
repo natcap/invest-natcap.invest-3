@@ -102,7 +102,7 @@ def add_active_pixel(sweep_line, skip_nodes, distance):
             -distance: the value to be added to the sweep_line
 
             Return the updated sweep_line"""
-            pass
+    pass
 
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Find an active pixel based on distance. 
