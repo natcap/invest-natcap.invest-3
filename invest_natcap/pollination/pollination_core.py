@@ -256,9 +256,8 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # apply a gaussian filter and save the floral resources raster to the
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
-    floral_raster = gdal.Open(floral_raster_temp_uri)
-    raster_utils.gaussian_filter_dataset(
-        floral_raster, sigma, uris['floral'], nodata, uris['temp'])
+    raster_utils.gaussian_filter_dataset_uri(
+        floral_raster_temp_uri, sigma, uris['floral'], nodata, uris['temp'])
 
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
