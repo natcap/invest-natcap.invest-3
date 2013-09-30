@@ -242,27 +242,6 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
     LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
     return (pixel_diff_x, pixel_diff_y)
 
-def interpolate_matrix(x, y, z, newx, newy, degree=1):
-    """Takes a matrix of values from a rectangular grid along with new
-        coordinates and returns a matrix with those values interpolated along
-        the new axis points.
-
-        x - an array of x points on the grid
-        y - an array of y points on the grid
-        z - the values on the grid
-        newx- the new x points for the interpolated grid
-        newy - the new y points for the interpolated grid
-
-        returns a matrix of size len(newx)*len(newy) whose values are
-            interpolated from z"""
-
-    #Create an interpolator for the 2D data.  Here's a reference
-    #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
-    #not using interp2d because this bug: http://projects.scipy.org/scipy/ticket/898
-    spl = scipy.interpolate.RectBivariateSpline(
-        x, y, z.transpose(), kx=degree, ky=degree)
-    return spl(newx, newy).transpose()
-
 
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):

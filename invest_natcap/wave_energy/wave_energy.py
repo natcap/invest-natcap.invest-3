@@ -12,6 +12,7 @@ import osgeo.osr as osr
 from osgeo import ogr
 from scipy import stats
 from bisect import bisect
+import scipy
 
 from invest_natcap.dbfpy import dbf
 from invest_natcap import raster_utils
@@ -1361,11 +1362,13 @@ def wave_energy_interp(wave_data, machine_perf):
     # Get new ranges to interpolate to, from wave_data table
     new_x = wave_data['periods']
     new_y = wave_data['heights']
+    
     # Interpolate machine performance table and return the interpolated matrix
-    interp_z = raster_utils.interpolate_matrix(
-            x_range, y_range, z_matrix, new_x, new_y)
-    return interp_z
+    interp_z_spl = scipy.interpolate.RectBivariateSpline(
+        x_range, y_range, z_matrix.transpose(), kx=1, ky=1)
+    return interp_z_spl(new_x, new_y).transpose()
 
+    
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     """Computes the wave energy capacity for each point and
         generates a dictionary whos keys are the points (I,J) and whos value
