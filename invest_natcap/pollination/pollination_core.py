@@ -15,7 +15,7 @@ def execute_model(args):
     """Execute the biophysical component of the pollination model.
 
         args - a python dictionary with at least the following entries:
-            'landuse' - a GDAL dataset
+            'landuse' - a URI to a GDAL dataset
             'landuse_attributes' - A fileio AbstractTableHandler object
             'guilds' - A fileio AbstractTableHandler object
             'ag_classes' - a python list of ints representing agricultural
@@ -95,7 +95,6 @@ def execute_model(args):
 
         # We need the guild dictionary for a couple different things later on
         guild_dict = args['guilds'].get_table_row('species', species)
-        LOGGER.debug('Guild dictionary=%s', guild_dict)
 
         # Calculate species abundance.  This represents the relative index of
         # how much of a species we can expect to find across the landscape given
@@ -203,7 +202,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     """Calculate pollinator abundance on the landscape.  The calculated
     pollinator abundance raster will be created at uris['species_abundance'].
 
-        landuse - a GDAL dataset of the LULC.
+        landuse - a URI to a GDAL dataset of the LULC.
         lu_attr - a TableHandler
         guild - a dictionary containing information about the pollinator.  All
             entries are required:
@@ -248,7 +247,9 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # The sigma size is 2 times the pixel size, presumable since the
     # raster's pixel width is a radius for the gaussian blur when we want
     # the diameter of the blur.
-    pixel_size = abs(landuse.GetGeoTransform()[1])
+    lulc_ds = gdal.Open(landuse)
+    pixel_size = abs(lulc_ds.GetGeoTransform()[1])
+    lulc_ds = None
     sigma = float(guild['alpha'] / (2 * pixel_size))
     LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
 
@@ -343,6 +344,7 @@ def reclass_ag_raster(landuse, uri, ag_classes, nodata):
         Returns nothing."""
 
     # mask agricultural classes to ag_map.
+    landuse = gdal.Open(landuse)
     LOGGER.debug('Starting to create an ag raster at %s. Nodata=%s',
         uri, nodata)
     if len(ag_classes) > 0:
@@ -561,7 +563,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
-        base_raster - a GDAL dataset
+        base_raster - a URI to a GDAL dataset
         attr_table - a subclass of fileio.AbstractTableHandler
         guild_dict - a python dictionary representing the guild row for this
             species.
@@ -573,7 +575,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         returns nothing."""
 
     # Get the input raster's nodata value
-    base_nodata = base_raster.GetRasterBand(1).GetNoDataValue()
+    base_nodata = raster_utils.get_nodata_from_uri(base_raster)
 
     # Get the output raster's nodata value
 
@@ -589,5 +591,5 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 
     # Use the rules dictionary to reclassify the LULC accordingly.  This
     # calls the cythonized functionality in raster_utils.
-    raster_utils.reclassify_by_dictionary(base_raster,
+    raster_utils.reclassify_by_dictionary(gdal.Open(base_raster),
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
