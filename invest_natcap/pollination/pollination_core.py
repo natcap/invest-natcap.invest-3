@@ -273,12 +273,12 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         # species weights should be equal (1.0).
         species_weight = 1.0
 
-    floral_raster = gdal.Open(uris['floral'])
-    nesting_raster = gdal.Open(uris['nesting'])
-    raster_utils.vectorize_rasters(
-        [nesting_raster, floral_raster],
+    raster_utils.vectorize_datasets(
+        [uris['nesting'], uris['floral']],
         lambda x, y: (x * y) * species_weight if x != nodata else nodata,
-        raster_out_uri=uris['species_abundance'], nodata=nodata)
+        dataset_out_uri=uris['species_abundance'],
+        datatype_out=gdal.GDT_Float32, nodata_out=nodata,
+        pixel_size_out=pixel_size, bounding_box_mode='intersection')
 
 
 def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
