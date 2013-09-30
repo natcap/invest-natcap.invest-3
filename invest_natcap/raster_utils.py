@@ -46,8 +46,8 @@ class SpatialExtentOverlapException(Exception):
     pass
 
 class UndefinedValue(Exception):
-        """Used to indicate values that are not defined in dictionary
-            structures"""
+    """Used to indicate values that are not defined in dictionary
+        structures"""
     pass
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
