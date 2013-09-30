@@ -110,11 +110,7 @@ def execute(args):
         # Open the landcover raster
         uri = args['landuse_' + scenario +'_uri'].encode('utf-8')
         LOGGER.debug('Opening landuse raster from %s', uri)
-        landcover = gdal.Open(uri, gdal.GA_ReadOnly)
-        biophysical_args['landuse'] = landcover
-        x_size = landcover.GetRasterBand(1).XSize
-        y_size = landcover.GetRasterBand(1).YSize
-        LOGGER.debug('Landcover raster is of size (%s, %s)', x_size, y_size)
+        biophysical_args['landuse'] = uri
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
