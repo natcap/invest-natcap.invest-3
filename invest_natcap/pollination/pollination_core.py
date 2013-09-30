@@ -437,41 +437,50 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
     # Open the species foraging matrix and then divide
     # the yield matrix by the foraging matrix for this pollinator.
     LOGGER.debug('Calculating pollinator value to farms')
-    farm_value = gdal.Open(rasters['farm_value'])
-    farm_abundance = gdal.Open(rasters['farm_abundance'])
-    raster_utils.vectorize_rasters(
-        [farm_value, farm_abundance],
-        lambda x, y: x / y if x != nodata else nodata,
-        raster_out_uri=out_uris['species_value'], nodata=nodata)
+    min_pixel_size = min(map(raster_utils.get_cell_size_from_uri,
+        [rasters['farm_value'], rasters['farm_abundance']]))
+
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[rasters['farm_value'], rasters['farm_abundance']],
+        dataset_pixel_op=lambda x, y: x / y if x != nodata else nodata,
+        dataset_out_uri=out_uris['species_value'],
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=nodata,
+        pixel_size_out=min_pixel_size,
+        bounding_box_mode='intersection')
 
     LOGGER.debug('Applying a gaussian filter to the ratio raster.')
     ratio_raster = gdal.Open(out_uris['species_value'])
-    raster_utils.gaussian_filter_dataset(
-        ratio_raster, sigma, out_uris['species_value_blurred'],
+    raster_utils.gaussian_filter_dataset_uri(
+        out_uris['species_value'], sigma, out_uris['species_value_blurred'],
         nodata, out_uris['temp'])
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
 
-    temp_service_uri = raster_utils.temporary_filename() 
+    temp_service_uri = raster_utils.temporary_filename()
 
     LOGGER.debug('Saving service value raster to %s', temp_service_uri)
-    species_abundance = gdal.Open(rasters['species_abundance'])
-    blurred_ratio_raster = gdal.Open(out_uris['species_value_blurred'])
-    raster_utils.vectorize_rasters(
-        [species_abundance, blurred_ratio_raster],
-        lambda x, y: part_wild * x * y if x != nodata else nodata,
-        raster_out_uri=temp_service_uri,
-        nodata=nodata)
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[rasters['species_abundance'],
+            out_uris['species_value_blurred']],
+        dataset_pixel_op=lambda x, y: part_wild * x * y if x != nodata else nodata,
+        dataset_out_uri=temp_service_uri,
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=nodata,
+        pixel_size_out=min_pixel_size,
+        bounding_box_mode='intersection')
 
     # Set all agricultural pixels to 0.  This is according to issue 761.
     LOGGER.debug('Marking the value of all non-ag pixels as 0.0.')
-    ag_map = gdal.Open(rasters['ag_map'])
-    service_value_raster = gdal.Open(temp_service_uri)
-    raster_utils.vectorize_rasters(
-        [ag_map, service_value_raster],
-        lambda x, y: 0.0 if x == 0 else y,
-        raster_out_uri=out_uris['service_value'], nodata=nodata)
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[rasters['ag_map'], temp_service_uri],
+        dataset_pixel_op=lambda x, y: 0.0 if x == 0 else y,
+        dataset_out_uri=out_uris['service_value'],
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=nodata,
+        pixel_size_out=min_pixel_size,
+        bounding_box_mode='intersection')
 
     service_value_raster = None
     LOGGER.debug('Finished calculating service value')
