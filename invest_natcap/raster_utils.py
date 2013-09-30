@@ -2673,16 +2673,6 @@ def get_lookup_from_csv(csv_table_uri, key_field):
         return lookup_dict
 
 
-def viewshed(dem_uri, shapefile_uri, z_factor, curvature_correction, refractivity_coefficient, visible_feature_count_uri,
-             out_cell_size=None, aoi_uri=None):
-    """FILL IN"""
-
-    out_pixel_size = get_cell_size_from_uri(dem_uri)
-    vectorize_datasets(
-        [dem_uri], lambda x: int(abs(x))%10, visible_feature_count_uri,
-        gdal.GDT_Byte, 255, out_pixel_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=aoi_uri, assert_datasets_projected=False)
-
 def extract_datasource_table_by_key(datasource_uri, key_field):
     """Create a dictionary lookup table of the features in the attribute table
         of the datasource referenced by datasource_uri.
