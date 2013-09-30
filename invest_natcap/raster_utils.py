@@ -2678,8 +2678,8 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
         of the datasource referenced by datasource_uri.
 
         datasource_uri - a uri to an OGR datasource
-        key_field - a field in datasource_uri that refers to a key (unique) value
-            for each row; for example, a polygon id.
+        key_field - a field in datasource_uri that refers to a key value
+            for each row such as a polygon id.
 
         returns a dictionary of the form {key_field_0:
             {field_0: value0, field_1: value1}...}"""
@@ -2780,12 +2780,12 @@ def vectorize_points_uri(
     vectorize_points(
             datasource, field, output_raster, interpolation=interpolation)
 
-def create_directories(directory_list):
-    """This function is inspired from this thread
-        http://stackoverflow.com/questions/273192/python-best-way-to-create-directory-if-it-doesnt-exist-for-file-write
-        it will create any of the directories in the directory list if possible
-        and raise exceptions if something Bad happens.
 
+def create_directories(directory_list):
+    """This function will create any of the directories in the directory list
+        if possible and raise exceptions if something exception other than
+        the directory previously existing occurs.
+        
         directory_list - a list of string uri paths
 
         returns nothing"""
@@ -2799,6 +2799,7 @@ def create_directories(directory_list):
             if exception.errno != errno.EEXIST:
                 raise
 
+                
 def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
     """Creates a point shapefile from a dictionary. The point shapefile created
         is not projected and uses latitude and longitude for its geometry.
