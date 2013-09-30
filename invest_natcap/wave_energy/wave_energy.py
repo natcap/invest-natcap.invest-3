@@ -34,34 +34,34 @@ def execute(args):
 
         args['workspace_dir'] - Where the intermediate and output folder/files  
             will be saved. (required)
-        
-        args['wave_base_data_uri'] - Directory location of wave base data 
+
+        args['wave_base_data_uri'] - Directory location of wave base data
             including WW3 data and analysis area shapefile. (required)
-        
-        args['analysis_area_uri'] - A string identifying the analysis area of 
+
+        args['analysis_area_uri'] - A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
-        
-        args['machine_perf_uri'] - The path of a CSV file that holds the 
+
+        args['machine_perf_uri'] - The path of a CSV file that holds the
             machine performance table. (required)
-        
-        args['machine_param_uri'] - The path of a CSV file that holds the 
+
+        args['machine_param_uri'] - The path of a CSV file that holds the
             machine parameter table. (required)
-        
+
         args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
             (required)
 
-        args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
+        args['aoi_uri'] - A polygon shapefile outlining a more detailed area
             within the analysis area. This shapefile should be projected with
             linear units being in meters. (required to run Valuation model)
 
-        args['land_gridPts_uri'] - A CSV file path containing the Landing and 
+        args['land_gridPts_uri'] - A CSV file path containing the Landing and
             Power Grid Connection Points table. (required for Valuation)
 
-        args['machine_econ_uri'] - A CSV file path for the machine economic 
+        args['machine_econ_uri'] - A CSV file path for the machine economic
             parameters table. (required for Valuation)
 
-        args['number_of_machines'] - An integer specifying the number of 
+        args['number_of_machines'] - An integer specifying the number of
             machines for a wave farm site. (required for Valuation)
 
         args['suffix'] - A python string of characters to append to each output
@@ -70,7 +70,7 @@ def execute(args):
         returns nothing."""
 
     # Create the Output and Intermediate directories if they do not exist.
-    workspace = args['workspace_dir'] 
+    workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
     for directory in [output_dir, intermediate_dir]:
@@ -89,7 +89,7 @@ def execute(args):
     dem_uri = args['dem_uri']
 
     # Create a dictionary that stores the wave periods and wave heights as
-    # arrays. Also store the amount of energy the machine produces 
+    # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
     machine_perf_file = open(args['machine_perf_uri'])
@@ -110,7 +110,7 @@ def execute(args):
     machine_perf_file.close()
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
-    
+
     # Create a dictionary whose keys are the 'NAMES' from the machine parameter
     # table and whose values are from the corresponding 'VALUES' field.
     machine_param_dict = {}
@@ -120,10 +120,10 @@ def execute(args):
         row_name = row['NAME'].strip().lower()
         machine_param_dict[row_name] = row['VALUE']
     machine_param_file.close()
-   
+
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
-    # that stores the related uri paths to the needed inputs 
+    # that stores the related uri paths to the needed inputs
     wave_base_data_uri = args['wave_base_data_uri']
     analysis_dict = {
             'West Coast of North America and Hawaii': {
@@ -185,11 +185,11 @@ def execute(args):
     analysis_area_points_uri = analysis_dict[analysis_area_uri]['point_shape']
     analysis_area_extract_uri = \
             analysis_dict[analysis_area_uri]['extract_shape']
-    
+
     # Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = os.path.join(
             intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
-    
+
     # Intermediate paths for wave energy and wave power rasters
     wave_energy_unclipped_path = os.path.join(
             intermediate_dir, 'capwe_mwh_unclipped%s.tif' % file_suffix)
@@ -199,11 +199,11 @@ def execute(args):
     # Final output paths for wave energy and wave power rasters
     wave_energy_path = os.path.join(output_dir, 'capwe_mwh%s.tif' % file_suffix)
     wave_power_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
-    
+
     # Paths for wave energy and wave power percentile rasters
     wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
-    
+
     # Set nodata value and datatype for new rasters
     nodata = float(np.finfo(np.float32).min) + 1.0
     datatype = gdal.GDT_Float32
@@ -211,12 +211,12 @@ def execute(args):
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
     dem_gt = raster_utils.get_geotransform_uri(dem_uri)
-    
+
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
     analysis_area_sr = raster_utils.get_spatial_ref_uri(
             analysis_area_points_uri)
-    
+
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
     # args['analysis_area'].
@@ -231,7 +231,7 @@ def execute(args):
         # not corrupted
         raster_utils.copy_datasource_uri(
                 analysis_area_points_uri, clipped_wave_shape_path)
-        
+
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = (float(dem_gt[1]) + np.absolute(float(dem_gt[5]))) / 2.0
         LOGGER.debug('Pixel size in meters : %f', pixel_size)
@@ -249,19 +249,19 @@ def execute(args):
         # changing the projection
         projected_wave_shape_path = os.path.join(
                 intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
-        
-        # Set the wave data shapefile to the same projection as the 
+
+        # Set the wave data shapefile to the same projection as the
         # area of interest
-        temp_sr = raster_utils.get_spatial_ref_uri(aoi_shape_path)     
+        temp_sr = raster_utils.get_spatial_ref_uri(aoi_shape_path)
         output_wkt = temp_sr.ExportToWkt()
         raster_utils.reproject_datasource_uri(
                 analysis_area_points_uri, output_wkt, projected_wave_shape_path)
 
-        # Clip the wave data shape by the bounds provided from the 
+        # Clip the wave data shape by the bounds provided from the
         # area of interest
         clip_shape(projected_wave_shape_path, aoi_shape_path,
                 clipped_wave_shape_path)
-       
+
         aoi_proj_uri = os.path.join(
                 intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
 
@@ -269,7 +269,7 @@ def execute(args):
         # use in reprojecting the AOI
         extract_sr = raster_utils.get_spatial_ref_uri(analysis_area_extract_uri)
         extract_wkt = extract_sr.ExportToWkt()
-        
+
         # Project AOI to Extract shape
         raster_utils.reproject_datasource_uri(
                 aoi_shape_path, extract_wkt, aoi_proj_uri)
@@ -283,7 +283,7 @@ def execute(args):
         clip_shape(
                 aoi_proj_uri, analysis_area_extract_uri,
                 aoi_clipped_to_extract_uri)
-       
+
         aoi_clip_proj_uri = os.path.join(
                 intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
 
@@ -299,10 +299,10 @@ def execute(args):
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
                 analysis_area_sr, aoi_sr)
 
-        # Get the size of the pixels in meters, to be used for creating 
+        # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
         pixel_xsize, pixel_ysize = pixel_size_helper(
-                clipped_wave_shape_path, coord_trans, coord_trans_opposite, 
+                clipped_wave_shape_path, coord_trans, coord_trans_opposite,
                 dem_uri)
 
         # Average the pixel sizes incase they are of different sizes
@@ -313,7 +313,7 @@ def execute(args):
     # the wave data shapefile, thus we need to add proper depth values
     # from the raster DEM
     LOGGER.debug('Adding a depth field to the shapefile from the DEM raster')
-    
+
     def index_dem_uri(point_shape_uri, dataset_uri, field_name, coord_trans):
         """Index into a gdal raster and where a point from an ogr datasource
             overlays a pixel, add that pixel value to the point feature
@@ -331,7 +331,7 @@ def execute(args):
         # efficiency and the global dem is being dumped into an array. This may
         # cause the global biophysical run to crash
         tmp_dem_path = raster_utils.temporary_filename()
-        
+
         clipped_wave_shape = ogr.Open(point_shape_uri, 1)
         dem_gt = raster_utils.get_geotransform_uri(dataset_uri)
         dem_matrix = raster_utils.load_memory_mapped_array(
@@ -343,7 +343,7 @@ def execute(args):
         clipped_wave_layer = clipped_wave_shape.GetLayer()
         clipped_wave_layer.CreateField(field_defn)
         feature = clipped_wave_layer.GetNextFeature()
-        
+
         # For all the features (points) add the proper depth value from the DEM
         while feature is not None:
             depth_index = feature.GetFieldIndex(field_name)
@@ -378,7 +378,7 @@ def execute(args):
                 'REPACK ' + clipped_wave_layer.GetName())
 
         dem_matrix = None
-    
+
     # Add the depth value to the wave points by indexing into the DEM dataset
     index_dem_uri(
             clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
@@ -399,14 +399,14 @@ def execute(args):
     LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
     captured_wave_energy_to_shape(energy_cap, clipped_wave_shape_path)
 
-    # Calculate wave power for each wave point and add it as a field 
+    # Calculate wave power for each wave point and add it as a field
     # to the shapefile
     LOGGER.info('Calculating Wave Power.')
     wave_power(clipped_wave_shape_path)
 
     # Create blank rasters bounded by the shape file of analyis area
     raster_utils.create_raster_from_vector_extents_uri(
-            aoi_shape_path, pixel_size, datatype, nodata, 
+            aoi_shape_path, pixel_size, datatype, nodata,
             wave_energy_unclipped_path)
 
     raster_utils.create_raster_from_vector_extents_uri(
@@ -415,14 +415,14 @@ def execute(args):
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
-    
+
     raster_utils.vectorize_points_uri(
             clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
-    
+
     raster_utils.vectorize_points_uri(
             clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
-    
-    # Clip the wave energy and wave power rasters so that they are confined 
+
+    # Clip the wave energy and wave power rasters so that they are confined
     # to the AOI
     raster_utils.clip_dataset_uri(
             wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
@@ -431,7 +431,7 @@ def execute(args):
             wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
 
     # Create the percentile rasters for wave energy and wave power
-    # These values are hard coded in because it's specified explicitly in  
+    # These values are hard coded in because it's specified explicitly in
     # the user's guide what the percentile ranges are and what the units
     # will be.
     percentiles = [25, 50, 75, 90]
@@ -440,15 +440,15 @@ def execute(args):
     wp_units_short = ' (kW/m)'
     wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
     starting_percentile_range = '1'
-    
+
     create_percentile_rasters(wave_energy_path, capwe_rc_path,
             capwe_units_short, capwe_units_long, starting_percentile_range,
             percentiles, aoi_shape_path)
-    
+
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
             wp_units_long, starting_percentile_range, percentiles,
             aoi_shape_path)
-    
+
     LOGGER.info('Completed Wave Energy Biophysical')
 
     valuation_checked = args.pop('valuation_container', False)
@@ -567,7 +567,7 @@ def execute(args):
             land_to_grid_dist - a numpy array of distance values
 
             returns - Nothing"""
-        wave_data_shape = ogr.Open(wave_shape_uri, 1)    
+        wave_data_shape = ogr.Open(wave_shape_uri, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
         # Add three new fields to the shapefile that will store
         # the distances
@@ -608,7 +608,7 @@ def execute(args):
         """Calculates the NPV for a wave farm site based on the
             annual revenue and annual cost
 
-            annual_revenue - A numpy array of the annual revenue for 
+            annual_revenue - A numpy array of the annual revenue for
                 the first 25 years
             annual_cost - A numpy array of the annual cost for the
                 first 25 years
@@ -695,8 +695,8 @@ def execute(args):
             raster_projected_path)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
 
-    # Interpolate the NPV values based on the dimensions and 
-    # corresponding points of the raster, then write the interpolated 
+    # Interpolate the NPV values based on the dimensions and
+    # corresponding points of the raster, then write the interpolated
     # values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
 
@@ -712,11 +712,11 @@ def execute(args):
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
-    
+
     create_percentile_rasters(npv_out_uri, npv_rc_path, ' (US$)',
             ' thousands of US dollars (US$)', '1', percentiles,
             aoi_shape_path)
-    
+
     LOGGER.debug('End of wave_energy_core.valuation')
 
 def build_point_shapefile(
@@ -724,7 +724,7 @@ def build_point_shapefile(
     """This function creates and saves a point geometry shapefile to disk.
         It specifically only creates one 'Id' field and creates as many features
         as specified in 'data'
-    
+
         driver_name - A string specifying a valid ogr driver type
         layer_name - A string representing the name of the layer
         path - A string of the output path of the file
@@ -733,7 +733,7 @@ def build_point_shapefile(
             latitude and longitude
         prj - A spatial reference acting as the projection/datum
         coord_trans - A coordinate transformation
-    
+
         returns - Nothing """
     #If the shapefile exists, remove it.
     if os.path.isfile(path):
@@ -765,11 +765,11 @@ def build_point_shapefile(
 def get_points_geometries(shape_uri):
     """This function takes a shapefile and for each feature retrieves
         the X and Y value from it's geometry. The X and Y value are stored in
-        a numpy array as a point [x_location,y_location], which is returned 
+        a numpy array as a point [x_location,y_location], which is returned
         when all the features have been iterated through.
-    
+
         shape_uri - An uri to an OGR shapefile datasource
-    
+
         returns - A numpy array of points, which represent the shape's feature's
               geometries.
     """
@@ -792,12 +792,12 @@ def calculate_distance(xy_1, xy_2):
         and stores the shortest distances found in a list min_dist.
         The function also stores the index from which ever point in xy_2
         was closest, as an id in a list that corresponds to min_dist.
-    
+
         xy_1 - A numpy array of points in the form [x,y]
         xy_2 - A numpy array of points in the form [x,y]
-    
+
         returns - A numpy array of shortest distances and a numpy array
-              of id's corresponding to the array of shortest distances  
+              of id's corresponding to the array of shortest distances
     """
     #Create two numpy array of zeros with length set to as many points in xy_1
     min_dist = np.zeros(len(xy_1))
@@ -816,9 +816,9 @@ def load_binary_wave_data(wave_file_uri):
         of the number of hours a seastate occurs over a 5 year period.
         The row and column headers are extracted once and stored in the
         dictionary as well.
-    
+
         wave_file_uri - The path to a pickled binary WW3 file.
-    
+
         returns - A dictionary of matrices representing hours of specific seastates,
               as well as the period and height ranges.  It has the following
               structure:
@@ -829,7 +829,7 @@ def load_binary_wave_data(wave_file_uri):
                                  ...
                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
                               }
-               }  
+               }
     """
     LOGGER.debug('Extrapolating wave data from text to a dictionary')
     wave_file = open(wave_file_uri, 'rb')
@@ -885,17 +885,17 @@ def load_binary_wave_data(wave_file_uri):
 
 
 def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
-    """This function helps retrieve the pixel sizes of the global DEM 
+    """This function helps retrieve the pixel sizes of the global DEM
         when given an area of interest that has a certain projection.
-    
+
         shape_path - A uri to a point shapefile datasource indicating where
             in the world we are interested in
         coord_trans - A coordinate transformation
         coord_trans_opposite - A coordinate transformation that transforms in the
                            opposite direction of 'coord_trans'
         ds_uri - A uri to a gdal dataset to get the pixel size from
-    
-        returns - A tuple of the x and y pixel sizes of the global DEM 
+
+        returns - A tuple of the x and y pixel sizes of the global DEM
               given in the units of what 'shape' is projected in"""
     shape = ogr.Open(shape_path)
     global_dem = gdal.Open(ds_uri)
@@ -905,41 +905,41 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
     geom = feat.GetGeometryRef()
     reference_point_x = geom.GetX()
     reference_point_y = geom.GetY()
-    
+
     # Convert the point from meters to geom_x/long
     reference_point_latlng = coord_trans_opposite.TransformPoint(
             reference_point_x, reference_point_y)
-        
+
     # Get the size of the pixels in meters, to be used for creating rasters
     pixel_size_tuple = raster_utils.pixel_size_based_on_coordinate_transform(
             global_dem, coord_trans, reference_point_latlng)
-    
+
     return pixel_size_tuple
 
 
 def get_coordinate_transformation(source_sr, target_sr):
     """This function takes a source and target spatial reference and creates
-        a coordinate transformation from source to target, and one from target 
+        a coordinate transformation from source to target, and one from target
         to source.
-    
+
         source_sr - A spatial reference
         target_sr - A spatial reference
-    
-        return - A tuple, coord_trans (source to target) and coord_trans_opposite 
+
+        return - A tuple, coord_trans (source to target) and coord_trans_opposite
              (target to source)
     """
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     return (coord_trans, coord_trans_opposite)
-    
+
 def create_percentile_rasters(
-        raster_path, output_path, units_short, units_long, start_value, 
+        raster_path, output_path, units_short, units_long, start_value,
         percentile_list, aoi_shape_path):
-    """Creates a percentile (quartile) raster based on the raster_dataset. An 
+    """Creates a percentile (quartile) raster based on the raster_dataset. An
         attribute table is also constructed for the raster_dataset that
-        displays the ranges provided by taking the quartile of values.  
+        displays the ranges provided by taking the quartile of values.
         The following inputs are required:
-    
+
         raster_path - A uri to a gdal raster dataset with data of type integer
         output_path - A String for the destination of new raster
         units_short - A String that represents the shorthand for the units
@@ -947,28 +947,28 @@ def create_percentile_rasters(
         units_long - A String that represents the description of the units
             of the raster values (ex: wave power per unit width of
             wave crest length (kW/m))
-        start_value - A String representing the first value that goes to the 
+        start_value - A String representing the first value that goes to the
             first percentile range (start_value - percentile_one)
         percentile_list - a python list of the percentiles ranges
             ex: [25, 50, 75, 90]
         aoi_shape_path - a uri to an OGR polygon shapefile to clip the
             rasters to
-                  
+
         return - Nothing """
-    
+
     LOGGER.debug('Create Perctile Rasters')
-    
+
     # If the output_path is already a file, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
-    
+
     def raster_percentile(band):
         """Operation to use in vectorize_datasets that takes
-            the pixels of 'band' and groups them together based on 
+            the pixels of 'band' and groups them together based on
             their percentile ranges.
-        
+
             band - A gdal raster band
-        
+
             returns - An integer that places each pixel into a group
         """
         return bisect(percentiles, band)
@@ -977,32 +977,32 @@ def create_percentile_rasters(
     tmp_matrix_file = raster_utils.temporary_filename()
     matrix = raster_utils.load_memory_mapped_array(
             raster_path, tmp_matrix_file, array_type=None)
-    
+
     # Get the shape of the matrix to create future memory mapped arrays from
     n_rows, n_cols = matrix.shape
-    
+
     # Create two more memory mapped arrays for storing operations done on the
     # original matrix. This helps avoid memory errors.
     tmp_mask_file = raster_utils.temporary_filename()
     matrix_mask = np.memmap(
         tmp_mask_file, dtype=bool, mode='w+', shape=(n_rows, n_cols))
-    
+
     # Flatten each array before doing operations so that it can be passed to
     # scipy.scoreatpercentiles later
     dataset_array = np.reshape(matrix, (-1,))
     dataset_nodata_flat = np.reshape(matrix_mask, (-1))
-    
+
     # Create a very large negative number to replace the nodata values, so that
     # they are not used when computing the percentiles later
     neg_float = float(np.finfo(np.float32).min) + 1.0
     ds_nodata = raster_utils.get_nodata_from_uri(raster_path)
-    
+
     # Create a mask of where the nodata values are
     np.equal(dataset_array, ds_nodata, dataset_nodata_flat)
-    
+
     # Using the above mask, replace the nodata values with a very large negative
     # number
-    dataset_array[dataset_nodata_flat] = neg_float 
+    dataset_array[dataset_nodata_flat] = neg_float
     # Create a masked array based on the array with the redefined nodata values
     # and the nodata mask. This will be helpful when getting the proper min /
     # max value of the array which will be used later.
@@ -1015,29 +1015,29 @@ def create_percentile_rasters(
     min_val = dataset_mask.min()
     max_val = dataset_mask.max()
     LOGGER.debug('MIN:MAX : %s:%s', min_val, max_val)
-    
+
     # Get the percentiles based on the data and percentile ranges we are looking
     # for
     percentiles = get_percentiles(
             dataset_array, percentile_list, min_val, max_val)
-    
+
     LOGGER.debug('percentiles_list : %s', percentiles)
-    
+
     # Get the percentile ranges as strings so that they can be added to a output
     # table
     percentile_ranges = create_percentile_ranges(
             percentiles, units_short, units_long, start_value)
-    
+
     # Add the start_value to the beginning of the percentiles so that any value
     # before the start value is set to nodata
     percentiles.insert(0, int(start_value))
 
     # Set nodata to a very small negative number
     nodata = np.iinfo(np.int32).min
-    
+
     pixel_size = raster_utils.get_cell_size_from_uri(raster_path)
-    
-    # Classify the pixels of raster_dataset into groups and write 
+
+    # Classify the pixels of raster_dataset into groups and write
     # then to output
     raster_utils.vectorize_datasets(
             [raster_path], raster_percentile, output_path, gdal.GDT_Int32,
@@ -1049,41 +1049,41 @@ def create_percentile_rasters(
     tmp_perc_file = raster_utils.temporary_filename()
     perc_array = raster_utils.load_memory_mapped_array(
             output_path, tmp_perc_file, array_type=None)
-    
+
     # Get the shape of the array so that future memory mapped arrays can be
     # based on it
     count_rows, count_cols = perc_array.shape
 
     # Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
-    
+
     percentile_groups = np.arange(1, len(percentiles) + 1)
-    
+
     LOGGER.debug('Percentile Groups : %s', percentile_groups)
     for percentile_class in percentile_groups:
-        # This line of code takes the numpy array 'perc_array', which holds 
-        # the values from the percentile_band after being grouped, and checks 
-        # to see where the values are equal to a certain group. 
-        # This check gives an array of indices where the case was true, 
-        # so we take the size of that array to give us the number of pixels 
+        # This line of code takes the numpy array 'perc_array', which holds
+        # the values from the percentile_band after being grouped, and checks
+        # to see where the values are equal to a certain group.
+        # This check gives an array of indices where the case was true,
+        # so we take the size of that array to give us the number of pixels
         # that fall in that group.
-        
+
         tmp_count_file = raster_utils.temporary_filename()
         count_mask = np.memmap(
             tmp_count_file, dtype = np.int32, mode = 'w+',
             shape = (count_rows, count_cols))
-   
+
         np.equal(perc_array, percentile_class, count_mask)
         pixel_count[percentile_class - 1] = np.count_nonzero(count_mask)
-    
+
     LOGGER.debug('number of pixels per group: : %s', pixel_count)
-    
+
     # Generate the attribute table for the percentile raster
     create_attribute_table(output_path, percentile_ranges, pixel_count)
 
 def get_percentiles(value_list, percentile_list, min_val, max_val):
     """Creates a list of integers of the percentile marks
-    
+
         value_list - A list of numbers
         percentile_list - A list of ascending integers of the desired
             percentiles
@@ -1091,7 +1091,7 @@ def get_percentiles(value_list, percentile_list, min_val, max_val):
             percentile. Values lower will be ignored
         max_val - a int/float indicating the upper limit for computing the
             percentile. Values greater will be ignored
-                      
+
         returns - A list of integers which are the percentile marks"""
 
     pct_list = []
@@ -1104,16 +1104,16 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     """Constructs the percentile ranges as Strings, with the first
         range starting at 1 and the last range being greater than the last
         percentile mark.  Each string range is stored in a list that gets returned
-    
+
         percentiles - A list of the percentile marks in ascending order
         units_short - A String that represents the shorthand for the units of
             the raster values (ex: kW/m)
         units_long - A String that represents the description of the units of
-            the raster values (ex: wave power per unit width of 
+            the raster values (ex: wave power per unit width of
             wave crest length (kW/m))
-        start_value - A String representing the first value that goes to the 
+        start_value - A String representing the first value that goes to the
                  first percentile range (start_value - percentile_one)
-                  
+
         returns - A list of Strings representing the ranges of the percentiles
         """
     length = len(percentiles)
@@ -1133,17 +1133,17 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
 
 def create_attribute_table(raster_uri, percentile_ranges, counter):
     """Creates an attribute table of type '.vat.dbf'.  The attribute table
-        created is tied to the dataset of the raster_uri provided as input. 
+        created is tied to the dataset of the raster_uri provided as input.
         The table has 3 fields (VALUE, COUNT, VAL_RANGE) where VALUE acts as
         an ID, COUNT is the number of pixels, and VAL_RANGE is the corresponding
         percentile range
-    
+
         raster_uri - A String of the raster file the table should be associated with
         percentile_ranges - A list of Strings representing the percentile ranges
         counter - A list of integers that represent the pixel count
-    
+
         returns - nothing"""
-    
+
     # Create a new dbf file with the same name as the GTiff plus a .vat.dbf
     output_path = raster_uri + '.vat.dbf'
     # If the dbf file already exists, delete it
@@ -1172,12 +1172,12 @@ def create_attribute_table(raster_uri, percentile_ranges, counter):
 def wave_power(shape_uri):
     """Calculates the wave power from the fields in the shapefile
         and writes the wave power value to a field for the corresponding
-        feature. 
-    
+        feature.
+
         shape_uri - A uri to a Shapefile that has all the attributes
             represented in fields to calculate wave power at a specific
             wave farm
-    
+
         returns - Nothing"""
     shape = ogr.Open(shape_uri, 1)
 
@@ -1207,7 +1207,7 @@ def wave_power(shape_uri):
         depth = np.absolute(depth)
         # wave frequency calculation (used to calculate wave number k)
         tem = (2.0 * math.pi) / (period * alfa)
-        # wave number calculation (expressed as a function of 
+        # wave number calculation (expressed as a function of
         # wave frequency and water depth)
         k = np.square(tem) / (grav * np.sqrt(np.tanh((np.square(tem)) *
                                                      (depth / grav))))
@@ -1215,16 +1215,16 @@ def wave_power(shape_uri):
         # gets a really large number it pushes a warning, but Rich
         # and Doug have agreed it's nothing we need to worry about.
         np.seterr(over='ignore')
-        
-        # wave group velocity calculation (expressed as a 
+
+        # wave group velocity calculation (expressed as a
         # function of wave energy period and water depth)
         wave_group_velocity = (
             ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) *
              np.sqrt((grav / k) * np.tanh(k * depth))) / 2)
-       
+
         # Reset the overflow error to print future warnings
         np.seterr(over='print')
-       
+
         # wave power calculation
         wave_pow = ((((swd * grav) / 16) * (np.square(height)) *
                     wave_group_velocity) / 1000)
@@ -1236,16 +1236,16 @@ def wave_power(shape_uri):
 def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
         that intersect or are within a binding polygon shape.
-    
+
         shape_to_clip_uri - A uri to a point or polygon shapefile to clip
         binding_shape_uri - A uri to a polygon shapefile indicating the
             bounds for the shape_to_clip features
         output_path  - The path for the clipped output shapefile
-    
+
         returns - Nothing"""
     shape_to_clip = ogr.Open(shape_to_clip_uri)
     binding_shape = ogr.Open(binding_shape_uri)
-    
+
     shape_source = output_path
     # If the output_path is already a file, remove it
     if os.path.isfile(shape_source):
@@ -1256,7 +1256,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     in_defn = in_layer.GetLayerDefn()
     # Get the layer of the polygon (binding) geometry shape
     clip_layer = binding_shape.GetLayer(0)
-    # Create a new shapefile with similar properties of the 
+    # Create a new shapefile with similar properties of the
     # current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
@@ -1264,7 +1264,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
                                    in_defn.GetGeomType())
     # Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
-    # For every field, create a duplicate field and add it to the 
+    # For every field, create a duplicate field and add it to the
     # new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
@@ -1276,7 +1276,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
                  clip_layer.GetFeatureCount())
     LOGGER.debug('Shape to be Bounds Feature Count : %s',
                  in_layer.GetFeatureCount())
-    # Retrieve all the binding polygon features and save their cloned 
+    # Retrieve all the binding polygon features and save their cloned
     # geometry references to a list
     clip_feat = clip_layer.GetNextFeature()
     clip_geom_list = []
@@ -1284,7 +1284,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         clip_geom = clip_feat.GetGeometryRef()
         # Get the spatial reference of the geometry to use in transforming
         source_sr = clip_geom.GetSpatialReference()
-        # Retrieve the current point shapes feature and get it's 
+        # Retrieve the current point shapes feature and get it's
         # geometry reference
         in_layer.ResetReading()
         in_feat = in_layer.GetNextFeature()
@@ -1295,7 +1295,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
         in_feat = None
         # Create a coordinate transformation
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-        # Transform the polygon geometry into the same format as the 
+        # Transform the polygon geometry into the same format as the
         # point shape geometry
         clip_geom.Transform(coord_trans)
         # Add geometry to list
@@ -1305,7 +1305,7 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
     in_layer.ResetReading()
     in_feat = in_layer.GetNextFeature()
     # For all the features in the current point shape (for all the points)
-    # Check to see if they Intersect with any of the binding polygons geometry 
+    # Check to see if they Intersect with any of the binding polygons geometry
     # and if they do, copy that point and it's fields to the new shape
     while in_feat is not None:
         # Check to see if the point falls in any of the polygons
@@ -1315,17 +1315,17 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
             # otherwise.
             geom = geom.Intersection(clip_geom)
             if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
-                # Create a new feature from the input feature and set 
+                # Create a new feature from the input feature and set
                 # its geometry
                 out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
                 out_feat.SetFrom(in_feat)
                 out_feat.SetGeometryDirectly(geom)
-                # For all the fields in the feature set the field values from 
+                # For all the fields in the feature set the field values from
                 # the source field
                 for fld_index2 in range(out_feat.GetFieldCount()):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
-    
+
                 shp_layer.CreateFeature(out_feat)
                 out_feat = None
                 break
@@ -1335,8 +1335,8 @@ def clip_shape(shape_to_clip_uri, binding_shape_uri, output_path):
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
         machine performance table using new ranges from wave watch data.
-    
-        wave_data - A dictionary holding the new x range (period) and 
+
+        wave_data - A dictionary holding the new x range (period) and
             y range (height) values for the interpolation.  The
             dictionary has the following structure:
               {'periods': [1,2,3,4,...],
@@ -1352,7 +1352,7 @@ def wave_energy_interp(wave_data, machine_perf):
                 machine_perf['periods'] - [1,2,3,...]
                 machine_perf['heights'] - [.5,1,1.5,...]
                 machine_perf['bin_matrix'] - [[1,2,3,...],[5,6,7,...],...].
-    
+
     returns - The interpolated matrix
     """
     # Get ranges and matrix for machine performance table
@@ -1362,18 +1362,18 @@ def wave_energy_interp(wave_data, machine_perf):
     # Get new ranges to interpolate to, from wave_data table
     new_x = wave_data['periods']
     new_y = wave_data['heights']
-    
+
     # Interpolate machine performance table and return the interpolated matrix
     interp_z_spl = scipy.interpolate.RectBivariateSpline(
         x_range, y_range, z_matrix.transpose(), kx=1, ky=1)
     return interp_z_spl(new_x, new_y).transpose()
 
-    
+
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     """Computes the wave energy capacity for each point and
         generates a dictionary whos keys are the points (I,J) and whos value
         is the wave energy capacity.
-    
+
         wave_data - A dictionary containing wave watch data with the following
                     structure:
                {'periods': [1,2,3,4,...],
@@ -1388,8 +1388,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
             performance table
         machine_param - A dictionary containing the restrictions for the
             machines (CapMax, TpMax, HsMax)
-                    
-    returns - A dictionary representing the wave energy capacity at 
+
+    returns - A dictionary representing the wave energy capacity at
               each wave point"""
 
     energy_cap = {}
@@ -1410,7 +1410,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     # restricted the following line will do it
     interp_z = np.array(interp_z)
     interp_z[interp_z > cap_max] = cap_max
-    
+
     # Set position variables to use as a check and as an end
     # point for rows/cols if restrictions limit the ranges
     period_max_index = -1
@@ -1432,13 +1432,13 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     LOGGER.debug('Position of max period : %f', period_max_index)
     LOGGER.debug('Position of max height : %f', height_max_index)
 
-    # For all the wave watch points, multiply the occurence matrix by the 
+    # For all the wave watch points, multiply the occurence matrix by the
     # interpolated machine performance matrix to get the captured wave energy
     for key, val in wave_data['bin_matrix'].iteritems():
         # Convert all values to type float
         temp_matrix = np.array(val, dtype='f')
         mult_matrix = np.multiply(temp_matrix, interp_z)
-        # Set any value that is outside the restricting ranges provided by 
+        # Set any value that is outside the restricting ranges provided by
         # machine parameters to zero
         if period_max_index != -1:
             mult_matrix[:, period_max_index:] = 0
@@ -1450,7 +1450,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
         # we drive any negative values to zero.
         mult_matrix[mult_matrix < 0] = 0
 
-        # Sum all of the values from the matrix to get the total 
+        # Sum all of the values from the matrix to get the total
         # captured wave energy and convert into mega watts
         sum_we = (mult_matrix.sum() / 1000)
         energy_cap[key] = sum_we
@@ -1462,21 +1462,21 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         energy_cap to a field of the shapefile wave_shape. The values are
         set corresponding to the same I,J values which is the key of the
         dictionary and used as the unique identier of the shape.
-    
-        energy_cap - A dictionary with keys (I,J), representing the 
+
+        energy_cap - A dictionary with keys (I,J), representing the
             wave energy capacity values.
-        wave_shape_uri  - A uri to a point geometry shapefile to 
+        wave_shape_uri  - A uri to a point geometry shapefile to
             write the new field/values to
-    
+
         returns - Nothing"""
-    
+
     cap_we_field = 'CAPWE_MWHY'
     wave_shape = ogr.Open(wave_shape_uri, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
     field_def = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
     wave_layer.CreateField(field_def)
-    # For all of the features (points) in the shapefile, get the 
+    # For all of the features (points) in the shapefile, get the
     # corresponding point/value from the dictionary and set the 'capWE_Sum'
     # field as the value from the dictionary
     for feat in wave_layer:
