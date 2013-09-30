@@ -3,7 +3,6 @@
 import traceback
 import logging
 import random
-import string
 import os
 import time
 import tempfile
@@ -276,7 +275,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             cases, otherwise the behavior of this function is undefined.
         aoi - an OGR polygon datasource that will clip the output raster to no
             larger than the extent of the file and restricts the processing of
-            op to those output pixels that will lie within the polygons.  the 
+            op to those output pixels that will lie within the polygons.  the
             rest will be nodata values.  Must be in the same projection as
             dataset_list rasters.
         raster_out_uri - the desired URI to the output current_dataset.  If
@@ -522,7 +521,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
-    
+
 def new_raster_from_base_uri(base_uri, *args, **kwargs):
     """A wrapper for the function new_raster_from_base that opens up
         the base_uri before passing it to new_raster_from_base.
@@ -658,7 +657,7 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
         #Left can't be greater than right or bottom greater than top
         if not valid_bounding_box(bounding_box):
             raise SpatialExtentOverlapException(
-                "These rasters %s don't overlap with this one %s" % 
+                "These rasters %s don't overlap with this one %s" %
                 (unicode(dataset_files[0:-1]), dataset_files[-1]))
 
     if aoi != None:
@@ -846,7 +845,7 @@ def vectorize_points(
         value_array, (grid_y, grid_x), interpolation, nodata)
     band.WriteArray(raster_out_array,0,0)
 
-    
+
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
                             aggregate_uri = None, intermediate_directory = '',
                             ignore_nodata=True):
@@ -855,7 +854,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
         raster - a GDAL dataset of some sort of value
         shapefile - an OGR datasource that probably overlaps raster
-        shapefile_field - a string indicating which key in shapefile to 
+        shapefile_field - a string indicating which key in shapefile to
            associate the output dictionary values with whose values are
            associated with ints
         operation - a string of one of ['mean', 'sum']
@@ -871,13 +870,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             values are  aggregated values over raster.  Contains 0 if no values
             are aggregated"""
 
-    #Generate a temporary mask filename
-    temporary_mask_filename = 'aggr_mask_%s.tif' % \
-        ''.join([random.choice(string.letters) for i in range(6)])
-
-    temporary_mask_filename = os.path.join(intermediate_directory,
-                                           temporary_mask_filename)
-
+    temporary_mask_filename = temporary_filename()
     raster_band = raster.GetRasterBand(1)
     raster_nodata = float(raster_band.GetNoDataValue())
 
@@ -1570,10 +1563,10 @@ def _experimental_reproject_dataset_uri(
     """A function to reproject and resample a GDAL dataset given an output
         pixel size and output reference. Will use the datatype and nodata value
         from the original dataset.
-        
+
         original_dataset_uri - a URI to a gdal Dataset to written to disk
         pixel_spacing - output dataset pixel size in projected linear units
-        output_wkt - output project in Well Known Text 
+        output_wkt - output project in Well Known Text
         output_uri - location on disk to dump the reprojected dataset
 
         return projected dataset"""
@@ -1715,7 +1708,7 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         output_wkt - the desired projection as Well Known Text
             (by layer.GetSpatialRef().ExportToWkt())
         output_uri - The filepath to the output shapefile
-        
+
         returns - The reprojected shapefile.
     """
     # if this file already exists, then remove it
@@ -2352,7 +2345,7 @@ def align_dataset_list(
         assert_datasets_in_same_projection(dataset_uri_list)
     if mode not in ["union", "intersection", "dataset"]:
         raise Exception("Unknown mode %s" % (str(mode)))
-    
+
     if dataset_to_align_index >= len(dataset_uri_list):
         raise Exception(
             "Alignment index is out of bounds of the datasets index: %s"
@@ -2629,11 +2622,11 @@ def get_lookup_from_table(table_uri, key_field):
         key_value = smart_cast(key)
         #Map an entire row to its lookup values
         lookup_dict[key_value] = (
-            dict([(sub_key, smart_cast(value)) 
+            dict([(sub_key, smart_cast(value))
                 for sub_key, value in sub_dict.iteritems()]))
     return lookup_dict
 
-    
+
 def get_lookup_from_csv(csv_table_uri, key_field):
     """Creates a python dictionary to look up the rest of the fields in a
         csv table indexed by the given key_field
@@ -2785,7 +2778,7 @@ def create_directories(directory_list):
     """This function will create any of the directories in the directory list
         if possible and raise exceptions if something exception other than
         the directory previously existing occurs.
-        
+
         directory_list - a list of string uri paths
 
         returns nothing"""
@@ -2799,7 +2792,7 @@ def create_directories(directory_list):
             if exception.errno != errno.EEXIST:
                 raise
 
-                
+
 def dictionary_to_point_shapefile(dict_data, layer_name, output_uri):
     """Creates a point shapefile from a dictionary. The point shapefile created
         is not projected and uses latitude and longitude for its geometry.
