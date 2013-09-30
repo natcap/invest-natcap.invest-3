@@ -382,16 +382,18 @@ def add_two_rasters(raster_1, raster_2, out_uri):
         out_uri = raster_utils.temporary_filename()
         LOGGER.debug('Sum will be saved to temp file %s', out_uri)
 
-    raster_1 = gdal.Open(raster_1)
-    raster_2 = gdal.Open(raster_2)
-    nodata = raster_1.GetRasterBand(1).GetNoDataValue()
+    nodata = raster_utils.get_nodata_from_uri(raster_1)
+    min_pixel_size = min(map(raster_utils.get_cell_size_from_uri, [raster_1,
+        raster_2]))
 
-    raster_utils.vectorize_rasters(
-        [raster_1, raster_2], lambda x, y: x + y if y != nodata else nodata,
-        raster_out_uri=out_uri, nodata=nodata)
-
-    raster_1 = None
-    raster_2 = None
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[raster_1, raster_2],
+        dataset_pixel_op=lambda x, y: x + y if y != nodata else nodata,
+        dataset_out_uri=out_uri,
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=nodata,
+        pixel_size_out=min_pixel_size,
+        bounding_box_mode='intersection')
 
     # If we saved the output file to a temp folder, remove the file that we're
     # trying to avoid and save the temp file to the old file's location.
