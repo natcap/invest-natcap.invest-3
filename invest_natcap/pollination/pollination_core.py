@@ -503,8 +503,7 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     # Calculate the yield raster
     kappa_c = float(half_sat)
     nu_c = float(wild_poll)
-    in_raster = gdal.Open(in_raster)
-    in_nodata = in_raster.GetRasterBand(1).GetNoDataValue()
+    in_nodata = raster_utils.get_nodata_from_uri(in_raster)
 
     # This function is a vectorize-compatible implementation of the yield
     # function from the documentation.
@@ -518,8 +517,14 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
         return (1.0 - nu_c) + (nu_c * (frm_avg / (frm_avg + kappa_c)))
 
     # Apply the yield calculation to the foraging_average raster
-    raster_utils.vectorize_rasters([in_raster], calc_yield,
-        raster_out_uri=out_uri, nodata=out_nodata)
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[in_raster],
+        dataset_pixel_op=calc_yield,
+        dataset_out_uri=out_uri,
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=out_nodata,
+        pixel_size_out=raster_utils.get_cell_size_from_uri(in_raster),
+        bounding_box_mode='intersection')
 
 
 def divide_raster(raster, divisor, uri):
