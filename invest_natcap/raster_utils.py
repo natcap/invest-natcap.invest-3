@@ -115,8 +115,8 @@ def calculate_raster_stats_uri(ds_uri):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
 
-       ds_uri - a uri to a GDAL raster dataset that will be modified by having its band
-            statistics set
+       ds_uri - a uri to a GDAL raster dataset that will be modified by having
+            its band statistics set
 
         returns nothing"""
 
@@ -199,13 +199,14 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
         if dataset is not already in a meter coordinate system, for example
         dataset may be in lat/long (WGS84).
 
-       dataset - A projected GDAL dataset in the form of lat/long decimal degrees
-       coord_trans - An OSR coordinate transformation from dataset coordinate
+        dataset - A projected GDAL dataset in the form of lat/long decimal
+            degrees
+        coord_trans - An OSR coordinate transformation from dataset coordinate
            system to meters
-       point - a reference point close to the coordinate transform coordinate
+        point - a reference point close to the coordinate transform coordinate
            system.  must be in the same coordinate system as dataset.
 
-       returns a tuple containing (pixel width in meters, pixel height in
+        returns a tuple containing (pixel width in meters, pixel height in
            meters)"""
     #Get the first points (x,y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
@@ -254,7 +255,8 @@ def interpolate_matrix(x, y, z, newx, newy, degree=1):
     #Create an interpolator for the 2D data.  Here's a reference
     #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
     #not using interp2d because this bug: http://projects.scipy.org/scipy/ticket/898
-    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
+    spl = scipy.interpolate.RectBivariateSpline(
+        x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
 
@@ -262,23 +264,25 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
         datasets contained in dataset_list where the arguments to `op` are
-        brodcasted pixels from each current_dataset in dataset_list in the order they
-        exist in the list
+        brodcasted pixels from each current_dataset in dataset_list in the
+        order they exist in the list
 
         dataset_list - list of GDAL input datasets, requires that they'are all
             in the same projection.
         op - numpy vectorized operation, takes broadcasted pixels from
-            the first bands in dataset_list in order and returns a new pixel.  It is
-            critical that the value returned by `op` match datatype in all cases,
-            otherwise the behavior of this function is undefined.
-        aoi - an OGR polygon datasource that will clip the output raster to no larger
-            than the extent of the file and restricts the processing of op to those
-            output pixels that will lie within the polygons.  the rest will be nodata
-            values.  Must be in the same projection as dataset_list rasters.
-        raster_out_uri - the desired URI to the output current_dataset.  If None then
-            resulting current_dataset is only mapped to MEM
-        datatype - the GDAL datatype of the output current_dataset.  By default this
-            is a 32 bit float.
+            the first bands in dataset_list in order and returns a new pixel.
+            It is
+            critical that the value returned by `op` match datatype in all
+            cases, otherwise the behavior of this function is undefined.
+        aoi - an OGR polygon datasource that will clip the output raster to no
+            larger than the extent of the file and restricts the processing of
+            op to those output pixels that will lie within the polygons.  the 
+            rest will be nodata values.  Must be in the same projection as
+            dataset_list rasters.
+        raster_out_uri - the desired URI to the output current_dataset.  If
+            None then resulting current_dataset is only mapped to MEM
+        datatype - the GDAL datatype of the output current_dataset.  By default
+            this is a 32 bit float.
         nodata - the nodata value for the output current_dataset
 
         returns a single band current_dataset"""
@@ -290,8 +294,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #vice versa
     nodata = gdal_cast(nodata, datatype)
 
-    #create a new current_dataset with the minimum resolution of dataset_list and
-    #bounding box that contains aoi_box
+    #create a new current_dataset with the minimum resolution of dataset_list
+    #and bounding box that contains aoi_box
     #gt: left, pixelxwidth, pixelywidthforx, top, pixelxwidthfory, pixelywidth
     #generally pixelywidthforx and pixelxwidthfory are zero for maps where
     #north is up if that's not the case for us, we'll have a few bugs to deal
@@ -358,12 +362,13 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         vectorized_op = op
 
     #If there's an AOI, we need to mask out values
-    mask_dataset = new_raster_from_base(out_dataset, '', 'MEM', 255, gdal.GDT_Byte)
+    mask_dataset = new_raster_from_base(
+        out_dataset, '', 'MEM', 255, gdal.GDT_Byte)
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     if aoi != None:
-        #Only mask AOI as 0 everything else is 1 to correspond to numpy masked arrays
-        #that say '1' is invalid
+        #Only mask AOI as 0 everything else is 1 to correspond to numpy masked
+        #arrays that say '1' is invalid
         mask_dataset_band.Fill(1)
         aoi_layer = aoi.GetLayer()
         gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[0])
@@ -376,15 +381,16 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     #Check to see if all the input datasets are equal, if so then we
-    #don't need to interpolate them, but if there's an AOI you always need to interpolate,
-    #so initializing to aoi == None (True if no aoi)
+    #don't need to interpolate them, but if there's an AOI you always need to
+    #interpolate so initializing to aoi == None (True if no aoi)
     all_equal = aoi == None
     for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
         sizes = map(dim_fun, dataset_list)
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
 
     if all_equal:
-        LOGGER.info("All input rasters are equal size, not interpolating and vectorizing directly")
+        LOGGER.info("All input rasters are equal size, not interpolating and "
+            "vectorizing directly")
 
         #Loop over each row in out_band
         n_cols = mask_dataset_band.XSize
@@ -393,7 +399,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             raster_array_stack = []
             mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,n_cols,1)
             matrix_array_list = \
-                map(lambda x: x.GetRasterBand(1).ReadAsArray(0, out_row_index, n_cols, 1), dataset_list)
+                map(lambda x: x.GetRasterBand(1).ReadAsArray(
+                    0, out_row_index, n_cols, 1), dataset_list)
             out_row = vectorized_op(*matrix_array_list)
             out_row[mask_array == 1] = nodata
             out_band.WriteArray(out_row, xoff=0, yoff=out_row_index)
@@ -405,13 +412,15 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         return out_dataset
 
     #Otherwise they're misaligned and we need to do lots of interpolation
-    LOGGER.info("Input rasters do not align perfectly.  Interpolating the pixel stack.  This is normal behavior.")
+    LOGGER.info("Input rasters do not align perfectly.  Interpolating the pixel"
+        "stack.  This is normal behavior.")
 
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
         out_row_coord = out_gt[3] + out_gt[5] * out_row_index
         raster_array_stack = []
-        mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,mask_dataset_band.XSize,1)
+        mask_array = mask_dataset_band.ReadAsArray(
+            0,out_row_index,mask_dataset_band.XSize,1)
         #Loop over each input raster
         for current_dataset in dataset_list:
             current_band = current_dataset.GetRasterBand(1)
@@ -419,18 +428,18 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #Determine left and right indexes by calculating distance from
             #out left edget to current left edge and dividing by the width
             #of current pixel.
-            current_left_index = \
-                int(numpy.round((out_left_coord - current_gt[0])/current_gt[1]))
-            current_right_index = \
-                int(numpy.round((out_right_coord - current_gt[0])/current_gt[1]))
+            current_left_index = int(
+                numpy.round((out_left_coord - current_gt[0])/current_gt[1]))
+            current_right_index = int(
+                numpy.round((out_right_coord - current_gt[0])/current_gt[1]))
 
-            current_top_index = \
-                int(numpy.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
+            current_top_index = int(
+                numpy.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
 
             #The +1 ensures the count of indexes are correct otherwise subtracting
             #top and bottom index that differ by 1 are always 0 and sometimes -1
-            current_bottom_index = \
-                int(numpy.ceil((out_row_coord - current_gt[3])/current_gt[5]))+1
+            current_bottom_index = int(
+                numpy.ceil((out_row_coord - current_gt[3])/current_gt[5]))+1
 
             #We might be at the top or bottom edge, so shift the window up or down
             #We need at least 3 rows because the interpolator requires it.
@@ -460,7 +469,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #Equivalent of
             #    numpy.array([current_left_coordinate + index * current_gt[1] \
             #         for index in range(current_col_steps)])
-            current_col_coordinates = numpy.arange(current_col_steps, dtype=numpy.float)
+            current_col_coordinates = numpy.arange(
+                current_col_steps, dtype=numpy.float)
             current_col_coordinates *= current_gt[1]
             current_col_coordinates += current_left_coordinate
 
@@ -468,7 +478,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #Equivalent of
             #    numpy.array([current_top_coordinate + index * current_gt[5] \
             #         for index in range(current_row_steps)])
-            current_row_coordinates = numpy.arange(current_row_steps, dtype=numpy.float)
+            current_row_coordinates = numpy.arange(
+                current_row_steps, dtype=numpy.float)
             current_row_coordinates *= current_gt[5]
             current_row_coordinates += current_top_coordinate
 
@@ -486,11 +497,10 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                               numpy.tile(current_col_coordinates,
                                         len(current_row_coordinates))])
 
-            nearest_interpolator = \
-                scipy.interpolate.NearestNDInterpolator(input_points,
-                                                        current_array.flatten())
-            output_points = \
-                numpy.transpose([numpy.repeat(out_row_coord, len(out_col_coordinates)),
+            nearest_interpolator = scipy.interpolate.NearestNDInterpolator(
+                input_points, current_array.flatten())
+            output_points = numpy.transpose(
+                [numpy.repeat(out_row_coord, len(out_col_coordinates)),
                               out_col_coordinates])
 
             interpolated_row = nearest_interpolator(output_points)
@@ -498,8 +508,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
         #Vectorize the stack of rows and write to out_band
         out_row = vectorized_op(*raster_array_stack)
-        #We need to resize because GDAL expects to write 2D arrays even though our
-        #interpolator builds 1D arrays.
+        #We need to resize because GDAL expects to write 2D arrays even though
+        #our interpolator builds 1D arrays.
         out_row.resize((1,len(out_col_coordinates)))
         #Mask out_row based on AOI
         out_row[mask_array == 1] = nodata
@@ -512,6 +522,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
+    
 def new_raster_from_base_uri(base_uri, *args, **kwargs):
     """A wrapper for the function new_raster_from_base that opens up
         the base_uri before passing it to new_raster_from_base.
@@ -525,7 +536,8 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
     base_raster = gdal.Open(base_uri)
     new_raster_from_base(base_raster, *args, **kwargs)
 
-def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_value=None):
+def new_raster_from_base(
+    base, output_uri, gdal_format, nodata, datatype, fill_value=None):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
 
@@ -550,7 +562,8 @@ def new_raster_from_base(base, output_uri, gdal_format, nodata, datatype, fill_v
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
     driver = gdal.GetDriverByName(gdal_format)
-    new_raster = driver.Create(output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
+    new_raster = driver.Create(
+        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     band = new_raster.GetRasterBand(1)
@@ -588,7 +601,8 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
         returns a new GDAL raster with the parameters as described above"""
 
     driver = gdal.GetDriverByName(format)
-    new_raster = driver.Create(outputURI.encode('utf-8'), cols, rows, bands, datatype)
+    new_raster = driver.Create(
+        outputURI.encode('utf-8'), cols, rows, bands, datatype)
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -643,8 +657,9 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
 
         #Left can't be greater than right or bottom greater than top
         if not valid_bounding_box(bounding_box):
-            raise SpatialExtentOverlapException("These rasters %s don't overlap with this one %s" % \
-                                (unicode(dataset_files[0:-1]), dataset_files[-1]))
+            raise SpatialExtentOverlapException(
+                "These rasters %s don't overlap with this one %s" % 
+                (unicode(dataset_files[0:-1]), dataset_files[-1]))
 
     if aoi != None:
         aoi_layer = aoi.GetLayer(0)
@@ -654,16 +669,20 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
                        min(aoi_extent[1], bounding_box[2]),
                        max(aoi_extent[2], bounding_box[3])]
         if not valid_bounding_box(bounding_box):
-            raise SpatialExtentOverlapException("The aoi layer %s doesn't overlap with %s" % \
-                                (aoi, unicode(dataset_files)))
+            raise SpatialExtentOverlapException(
+                "The aoi layer %s doesn't overlap with %s" %
+                (aoi, unicode(dataset_files)))
 
     return bounding_box
 
-def create_raster_from_vector_extents_uri(shapefile_uri, pixel_size, gdal_format, nodata_out_value, output_uri):
+def create_raster_from_vector_extents_uri(
+    shapefile_uri, pixel_size, gdal_format, nodata_out_value, output_uri):
     """A wrapper for create_raster_from_vector_extents
 
-        shapefile_uri - uri to an OGR datasource to use as the extents of the raster
-        pixel_size - size of output pixels in the projected units of shapefile_uri
+        shapefile_uri - uri to an OGR datasource to use as the extents of the
+            raster
+        pixel_size - size of output pixels in the projected units of
+            shapefile_uri
         gdal_format - the raster pixel format, something like gdal.GDT_Float32
         nodata_out_value - the output nodata value
         output_uri - the URI to write the gdal dataset
@@ -704,21 +723,22 @@ def create_raster_from_vector_extents(
 
                 #feature_extent = [xmin, xmax, ymin, ymax]
                 feature_extent = geometry.GetEnvelope()
-                #This is an array based way of mapping the right funciton
+                #This is an array based way of mapping the right function
                 #to the right index.
                 functions = [min, max, min, max]
                 for i in range(len(functions)):
                     try:
-                        shp_extent[i] = functions[i](shp_extent[i],feature_extent[i])
+                        shp_extent[i] = functions[i](
+                            shp_extent[i],feature_extent[i])
                     except TypeError:
-                        #need to cast to list becuase it gets returned as a tuple
+                        #need to cast to list because returned as a tuple
                         #and we can't assign to a tuple's index, also need to
                         #define this as the initial state
                         shp_extent = list(feature_extent)
             except AttributeError as e:
-                #For some valid OGR objects the geometry can be undefined because
-                #it's valid ot have a NULL entry in the attribute table
-                #this is expressed in ogr as a None value in the geometry reference
+                #For some valid OGR objects the geometry can be undefined since
+                #it's valid to have a NULL entry in the attribute table
+                #this is expressed as a None value in the geometry reference
                 #this feature won't contribute
                 LOGGER.warn(e)
 
@@ -826,28 +846,30 @@ def vectorize_points(
         value_array, (grid_y, grid_x), interpolation, nodata)
     band.WriteArray(raster_out_array,0,0)
 
+    
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
                             aggregate_uri = None, intermediate_directory = '',
                             ignore_nodata=True):
-    """Collect all the raster values that lie in shapefile depending on the value
-        of operation
+    """Collect all the raster values that lie in shapefile depending on the
+        value of operation
 
         raster - a GDAL dataset of some sort of value
         shapefile - an OGR datasource that probably overlaps raster
-        shapefile_field - a string indicating which key in shapefile to associate
-           the output dictionary values with whose values are associated with ints
+        shapefile_field - a string indicating which key in shapefile to 
+           associate the output dictionary values with whose values are
+           associated with ints
         operation - a string of one of ['mean', 'sum']
-        aggregate_uri - (optional) a uri to an output raster that has the aggreate
-            values burned onto the masked raster
+        aggregate_uri - (optional) a uri to an output raster that has the
+            aggregate values burned onto the masked raster
         intermediate_directory - (optional) a path to a directory to hold
             intermediate files
-        ignore_nodata - (optional) if operation == 'mean' then it does not account
-            for nodata pixels when determing the average, otherwise all pixels in
-            the AOI are used for calculation of the mean.
+        ignore_nodata - (optional) if operation == 'mean' then it does not
+            account for nodata pixels when determing the average, otherwise
+            all pixels in the AOI are used for calculation of the mean.
 
-        returns a dictionary whose keys are the values in shapefile_field and values
-            are the aggregated values over raster.  If no values are aggregated
-            contains 0."""
+        returns a dictionary whose keys are the values in shapefile_field and
+            values are  aggregated values over raster.  Contains 0 if no values
+            are aggregated"""
 
     #Generate a temporary mask filename
     temporary_mask_filename = 'aggr_mask_%s.tif' % \
@@ -886,7 +908,8 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     #Loop over each row in out_band
     for row_index in range(clipped_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
-        clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
+        clipped_array = clipped_band.ReadAsArray(
+            0,row_index,clipped_band.XSize,1)
 
 
         for attribute_id in numpy.unique(mask_array):
@@ -919,8 +942,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             result_dict[attribute_id] = aggregate_dict_values[attribute_id]
         elif operation == 'mean':
             if aggregate_dict_counts[attribute_id] != 0.0:
-                result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
-                    aggregate_dict_counts[attribute_id]
+                result_dict[attribute_id] = (
+                    aggregate_dict_values[attribute_id] /
+                    aggregate_dict_counts[attribute_id])
             else:
                 result_dict[attribute_id] = 0.0
         else:
@@ -935,8 +959,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
         vop = numpy.vectorize(aggregate_map_function)
 
-        aggregate_dataset = new_raster_from_base(clipped_raster, aggregate_uri,
-            'GTiff', raster_nodata, gdal.GDT_Float32)
+        aggregate_dataset = new_raster_from_base(
+            clipped_raster, aggregate_uri, 'GTiff', raster_nodata,
+            gdal.GDT_Float32)
         aggregate_band = aggregate_dataset.GetRasterBand(1)
 
         for row_index in range(aggregate_band.YSize):
@@ -957,33 +982,34 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field, ignore_nodata=True,
     threshold_amount_lookup=None):
-    """Collect all the raster values that lie in shapefile depending on the value
-        of operation
+    """Collect all the raster values that lie in shapefile depending on the
+        value of operation
 
         raster_uri - a uri to a GDAL dataset
-        shapefile_uri - a uri to a OGR datasource that should overlap raster; raises
-           an exception if not.
-        shapefile_field - a string indicating which key in shapefile to associate
-           the output dictionary values with whose values are associated with ints
-        ignore_nodata - (optional) if operation == 'mean' then it does not account
-            for nodata pixels when determing the pixel_mean, otherwise all pixels in
-            the AOI are used for calculation of the mean.  This does not affect
-            hectare_mean which is calculated from the geometrical area of the feature.
-        threshold_amount_lookup - (optional) a dictionary indexing the shapefile_field's
-            to threshold amounts to subtract from the aggregate value.  The result
-            will be clamped to zero.
+        shapefile_uri - a uri to a OGR datasource that should overlap raster;
+            raises an exception if not.
+        shapefile_field - a string indicating which key in shapefile to
+            associate the output dictionary values with whose values are
+            associated with ints
+        ignore_nodata - (optional) if operation == 'mean' then it does not
+            account for nodata pixels when determing the pixel_mean, otherwise
+            all pixels in the AOI are used for calculation of the mean.  This
+            does not affect hectare_mean which is calculated from the
+            geometrical area of the feature.
+        threshold_amount_lookup - (optional) a dictionary indexing the
+            shapefile_field's to threshold amounts to subtract from the
+            aggregate value.  The result will be clamped to zero.
 
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
             pixel_min pixel_max')
-           Each of [sum pixel_mean hectare_mean] contains a dictionary that maps the
-           shapefile_field value to either the total, pixel mean, hecatare mean, pixel max,
-           and pixel min of the values under that feature.  'n_pixels' contains the
-           total number of valid pixels used in that calculation.  hectare_mean is None if
-           raster_uri is unprojected.
+           Each of [sum pixel_mean hectare_mean] contains a dictionary that maps
+           shapefile_field value to the total, pixel mean, hecatare mean,
+           pixel max, and pixel min of the values under that feature.
+           'n_pixels' contains the total number of valid pixels used in that
+           calculation.  hectare_mean is None if raster_uri is unprojected.
         """
 
-    #Generate a temporary mask filename
     raster_nodata = get_nodata_from_uri(raster_uri)
 
     out_pixel_size = get_cell_size_from_uri(raster_uri)
@@ -1038,7 +1064,8 @@ def aggregate_raster_values_uri(
     pixel_max_dict = pixel_min_dict.copy()
     for row_index in range(clipped_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
-        clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
+        clipped_array = clipped_band.ReadAsArray(
+            0,row_index,clipped_band.XSize,1)
 
         for attribute_id in numpy.unique(mask_array):
             #ignore masked values
@@ -1134,7 +1161,6 @@ def aggregate_raster_values_uri(
     return result_tuple
 
 
-
 def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     datatype, default_value=None):
     """Convert all the non-nodata values in dataset to the values mapped to
@@ -1187,7 +1213,8 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
                                           datatype)
     LOGGER.info('Starting cythonized reclassification')
     raster_cython_utils.reclassify_by_dictionary(
-        dataset, rules, output_uri, format, default_value, datatype, output_dataset,)
+        dataset, rules, output_uri, format, default_value, datatype,
+        output_dataset,)
     LOGGER.info('Finished reclassification')
 
     calculate_raster_stats(output_dataset)
