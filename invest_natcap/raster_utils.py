@@ -56,7 +56,7 @@ LOGGER = logging.getLogger('raster_utils')
 #The following line of code hides some errors that seem important and doesn't
 #raise exceptions on them.  FOr example:
 #ERROR 5: Access window out of range in RasterIO().  Requested
-#(1,15) of size 25x3 on raster of 26x17.
+#(1, 15) of size 25x3 on raster of 26x17.
 #disappears when this line is turned on.  Probably not a good idea to uncomment
 #until we know what's happening
 #gdal.UseExceptions()
@@ -137,7 +137,7 @@ def get_statistics_from_uri(dataset_uri):
 
     dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
-    statistics = band.GetStatistics(0,1)
+    statistics = band.GetStatistics(0, 1)
     band = None
     dataset = None
     return statistics
@@ -210,7 +210,7 @@ def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
 
         returns a tuple containing (pixel width in meters, pixel height in
            meters)"""
-    #Get the first points (x,y) from geoTransform
+    #Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
@@ -399,7 +399,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         for out_row_index in range(out_band.YSize):
             out_row_coord = out_gt[3] + out_gt[5] * out_row_index
             raster_array_stack = []
-            mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,n_cols,1)
+            mask_array = mask_dataset_band.ReadAsArray(0, out_row_index, n_cols, 1)
             matrix_array_list = \
                 map(lambda x: x.GetRasterBand(1).ReadAsArray(
                     0, out_row_index, n_cols, 1), dataset_list)
@@ -422,7 +422,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         out_row_coord = out_gt[3] + out_gt[5] * out_row_index
         raster_array_stack = []
         mask_array = mask_dataset_band.ReadAsArray(
-            0,out_row_index,mask_dataset_band.XSize,1)
+            0, out_row_index, mask_dataset_band.XSize, 1)
         #Loop over each input raster
         for current_dataset in dataset_list:
             current_band = current_dataset.GetRasterBand(1)
@@ -512,10 +512,10 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         out_row = vectorized_op(*raster_array_stack)
         #We need to resize because GDAL expects to write 2D arrays even though
         #our interpolator builds 1D arrays.
-        out_row.resize((1,len(out_col_coordinates)))
+        out_row.resize((1, len(out_col_coordinates)))
         #Mask out_row based on AOI
         out_row[mask_array == 1] = nodata
-        out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
+        out_band.WriteArray(out_row, xoff=0, yoff=out_row_index)
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
@@ -731,7 +731,7 @@ def create_raster_from_vector_extents(
                 for i in range(len(functions)):
                     try:
                         shp_extent[i] = functions[i](
-                            shp_extent[i],feature_extent[i])
+                            shp_extent[i], feature_extent[i])
                     except TypeError:
                         #need to cast to list because returned as a tuple
                         #and we can't assign to a tuple's index, also need to
@@ -806,7 +806,7 @@ def vectorize_points(
     #Calculate a small amount to perturb points by so that we don't
     #get a linear Delauney triangle, the 1e-6 is larger than eps for
     #floating point, but large enough not to cause errors in interpolation.
-    delta_difference = 1e-6 * min(abs(gt[1]),abs(gt[5]))
+    delta_difference = 1e-6 * min(abs(gt[1]), abs(gt[5]))
     if randomize_points:
         random_array = numpy.random.randn(layer.GetFeatureCount(), 2)
         random_offsets = random_array*delta_difference
@@ -816,13 +816,13 @@ def vectorize_points(
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
         geometry = feature.GetGeometryRef()
-        #Here the point geometry is in the form x,y (col, row)
+        #Here the point geometry is in the form x, y (col, row)
         point = geometry.GetPoint()
         if in_bounds(point):
             value = feature.GetField(datasource_field)
             #Add in the numpy notation which is row, col
-            point_list.append([point[1]+random_offsets[feature_id,1],
-                               point[0]+random_offsets[feature_id,0]])
+            point_list.append([point[1]+random_offsets[feature_id, 1],
+                               point[0]+random_offsets[feature_id, 0]])
             value_list.append(value)
 
     point_array = numpy.array(point_list)
@@ -846,7 +846,7 @@ def vectorize_points(
 
     raster_out_array = scipy.interpolate.griddata(point_array,
         value_array, (grid_y, grid_x), interpolation, nodata)
-    band.WriteArray(raster_out_array,0,0)
+    band.WriteArray(raster_out_array, 0, 0)
 
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
@@ -903,9 +903,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     #Loop over each row in out_band
     for row_index in range(clipped_band.YSize):
-        mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
+        mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
         clipped_array = clipped_band.ReadAsArray(
-            0,row_index,clipped_band.XSize,1)
+            0, row_index, clipped_band.XSize, 1)
 
 
         for attribute_id in numpy.unique(mask_array):
@@ -961,10 +961,10 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
         aggregate_band = aggregate_dataset.GetRasterBand(1)
 
         for row_index in range(aggregate_band.YSize):
-            mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
+            mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
 
             aggregate_array = vop(mask_array)
-            aggregate_band.WriteArray(aggregate_array, 0,row_index)
+            aggregate_band.WriteArray(aggregate_array, 0, row_index)
 
         calculate_raster_stats(aggregate_dataset)
 
@@ -1059,9 +1059,9 @@ def aggregate_raster_values_uri(
         [(shapefile_id, None) for shapefile_id in shapefile_table.iterkeys()])
     pixel_max_dict = pixel_min_dict.copy()
     for row_index in range(clipped_band.YSize):
-        mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
+        mask_array = mask_band.ReadAsArray(0, row_index, mask_band.XSize, 1)
         clipped_array = clipped_band.ReadAsArray(
-            0,row_index,clipped_band.XSize,1)
+            0, row_index, clipped_band.XSize, 1)
 
         for attribute_id in numpy.unique(mask_array):
             #ignore masked values
@@ -1368,7 +1368,7 @@ def calculate_value_not_in_dataset(dataset):
 
         returns a number not contained in the dataset"""
 
-    band,nodata,array = extract_band_and_nodata(dataset, get_array = True)
+    band, nodata, array = extract_band_and_nodata(dataset, get_array = True)
     return calculate_value_not_in_array(array)
 
 def calculate_value_not_in_array(array):
@@ -1386,7 +1386,7 @@ def calculate_value_not_in_array(array):
     #1 at the end
     if len(sorted_array) > 1:
         array_type = type(sorted_array[0])
-        diff_array = numpy.array([-1,1])
+        diff_array = numpy.array([-1, 1])
         deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
 
         max_delta_index = numpy.argmax(deltas)
@@ -1943,10 +1943,10 @@ def gaussian_filter_dataset(
         #Just the mask for this row
         mask_row = row_array == source_nodata
         row_array[mask_row] = 0.0
-        source_array[row_index,:] = row_array
+        source_array[row_index, :] = row_array
 
         #remember the mask in the memory mapped array
-        mask_array[row_index,:] = mask_row
+        mask_array[row_index, :] = mask_row
 
     LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
@@ -2024,11 +2024,11 @@ def reclassify_dataset(
     map_array_size = max(dataset_max, max(valid_set)) + 2
     valid_set.add(map_array_size - 1) #add the index for nodata
     map_array = numpy.empty(
-        (1,map_array_size), dtype=type(value_map.values()[0]))
+        (1, map_array_size), dtype=type(value_map.values()[0]))
     map_array[:] = out_nodata
 
     for key, value in value_map.iteritems():
-        map_array[0,key] = value
+        map_array[0, key] = value
 
     LOGGER.info('Looping through rows in the input data')
 
@@ -2050,7 +2050,7 @@ def reclassify_dataset(
                     "The following values were in the raster but not in the "
                     "value_map %s" % (undefined_set))
 
-        row_array = map_array[numpy.ix_([0],row_array[0])]
+        row_array = map_array[numpy.ix_([0], row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
 
     LOGGER.info('Flushing the cache and exiting reclassification')
@@ -2382,7 +2382,7 @@ def align_dataset_list(
             dataset_uri_list[dataset_to_bound_index])
     else:
         bounding_box = reduce(
-            functools.partial(merge_bounding_boxes,mode=mode),
+            functools.partial(merge_bounding_boxes, mode=mode),
             [get_bounding_box(dataset_uri) for dataset_uri in dataset_uri_list])
 
     if aoi_uri != None:
