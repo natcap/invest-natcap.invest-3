@@ -110,6 +110,53 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     
     return sweep_line
 
+def find_pixel_before_fast(sweep_line, skip_nodes, distance):
+    """Find the active pixel before the one with distance. 
+        
+        Inputs:
+            -sweep_line: a linked list of linked_cell as created by the
+                linked_cell_factory.
+            -skip_list: an array of linked lists that constitutes the hierarchy
+                of skip pointers in the skip list. Each cell is defined as ???
+            -distance: the key used to search the sweep_line
+
+            Return the linked_cell right before 'distance', or None if it
+            doesn't exist (either 'distance' is the first cell, or the
+            sweep_line is empty."""
+    if 'closest' in sweep_line:
+        # Find the starting point
+        if len(skip_nodes) > 0:
+            level = len(skip_nodes) -1
+            # Get information about first pixel in the list
+            pixel = skip_nodes[level][0]
+            span = len(skip_nodes[level])
+        else:
+            pixel = sweep_line['closest']
+            span = len(sweep_line)
+        previous = pixel
+        # No smaller distance available
+        if pixel['distance'] >= distance:
+            return None
+        # Didn't find distance, continue
+        while (pixel['distance'] < distance):
+            # go right before distance is passed
+            iteration = 0
+            while (iteration < span -1) and (pixel['distance'] < distance):
+                previous = pixel
+                pixel = pixel['next']
+                iteration += 1
+            # Went too far, backtrack 
+            if pixel['distance'] >= distance:
+                pixel = previous
+            # Try to go down 1 level
+            # If not possible, return the pixel itself.
+            if pixel['down'] is None:
+                return pixel
+            span = pixel['span']
+            pixel = pixel['down']
+    else:
+        return None
+
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Find an active pixel based on distance. 
         
