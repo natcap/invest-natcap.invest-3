@@ -138,7 +138,7 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
         if pixel['distance'] >= distance:
             return None
         # Didn't find distance, continue
-        while (pixel['distance'] < distance):
+        while (pixel['distance'] <= distance):
             # go right before distance is passed
             iteration = 0
             while (iteration < span -1) and (pixel['distance'] < distance):

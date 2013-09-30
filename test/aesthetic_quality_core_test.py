@@ -568,29 +568,55 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.3.2- O(log n) performance is maintained
 
     def test_find_pixel_before(self):
-        """Test the function that finds the pixel with the immediate smaller
+        """Test find_pixel_before_fast
+        Test the function that finds the pixel with the immediate smaller
         distance than what is specified by the user. This si useful in 2
         functions:  1- find_active_pixel_fast: the distance we're looking for
                         is right after this pixel,
                     2- insert_active_pixel_fast: the new pixel to insert is
                         right after this pixel.
         Very useful."""
-        sweep_line, skip_nodes = aesthetic_quality_core.builf_skip_list()
+        sweep_line, skip_nodes = self.build_skip_list()
         
-        test_values = [0, 2, 4, 6, -1, 3, 7]
-        values = []
+        test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+        sweep_line_values = []
         pixel = sweep_line['closest']
         sweep_line_values.append(pixel['distance'])
         while pixel['next'] is not None:
             pixel = pixel['next']
             sweep_line_values.append(pixel['distance'])
-        for distance in [0, 2, 4, 6, -1, 3, 7]:
-            found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
+        found = []
+        before = []
+        after = []
+        for distance in test_values:
+            node = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
                 skip_nodes, distance)
-            #message = 'Error: return value is ' + str(found) + \
-            #', expected is ' + str(expected)
-            #assert found == expected, message
+            found.append(node['distance'] if node is not None else None)
+            node = aesthetic_quality_core.find_pixel_before_fast(sweep_line,
+                skip_nodes, distance)
+            before.append(node['distance'] if node is not None else None)
+            after.append((node['next']['distance'] if node['next'] is not None
+            else node['distance']) if node is not None else
+            sweep_line['closest']['distance'])
+            print('distance', distance, 'closest', \
+            sweep_line['closest']['distance'])
+            if distance < sweep_line['closest']['distance']:
+                message = 'Error: value before is ' + str(before[-1]) + \
+                ' but should be None'
+                assert before[-1] is None, message
+            else:
+                message = 'Error: value of "before" is ' + str(before[-1]) + \
+                    ' < ' + str(distance)
+                assert before[-1] < distance
+                message = 'Error: value of "after" is ' + str(after[-1]) + \
+                    ' < ' + str(distance)
+                assert after[-1] > distance
         print('sweep_line contents', sweep_line_values)
+        print('test_values', test_values)
+        print('found      ', found)
+        print('before     ', before)
+        print('after      ', after)
+        
 
     def test_viewshed(self):
         array_shape = (6,6)
