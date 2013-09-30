@@ -2038,27 +2038,6 @@ def reclassify_dataset(
     out_dataset.FlushCache()
     return out_dataset
 
-def align_datasets(datasets, dataset_uris):
-    """Takes a list of datasets and writes interpolated aligned versions of
-        them in the corresponding dataset_uris list
-
-        datasets - a list of GDAL datasets
-        dataset_uris - a list of output dataset uris
-
-        returns a list of the aligned datasets in the same order they are
-            passed in"""
-
-    dataset_list = [None] * len(datasets)
-    for index in range(len(datasets)):
-        def op(*x):
-            return x[index]
-        LOGGER.debug("aligning raster %s" % (unicode(dataset_uris[index])))
-        band, nodata = extract_band_and_nodata(datasets[index])
-        dataset_list[index] = vectorize_rasters(
-            datasets, op, raster_out_uri=dataset_uris[index],
-            datatype=band.DataType, nodata=nodata)
-
-    return dataset_list
 
 def load_memory_mapped_array(dataset_uri, memory_file, array_type=None):
     """This function loads the first band of a dataset into a memory mapped
