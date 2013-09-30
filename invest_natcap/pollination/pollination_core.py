@@ -544,12 +544,15 @@ def divide_raster(raster, divisor, uri):
         uri = raster_utils.temporary_filename()
         LOGGER.debug('Quotient raster will be saved to temp file %s', uri)
 
-    raster = gdal.Open(raster)
-    nodata = raster.GetRasterBand(1).GetNoDataValue()
-
-    raster_utils.vectorize_rasters(
-        [raster], lambda x: x / divisor if x != nodata else nodata,
-        raster_out_uri=uri, nodata=nodata)
+    nodata = raster_utils.get_nodata_from_uri(raster)
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[raster],
+        dataset_pixel_op=lambda x: x / divisor if x != nodata else nodata,
+        dataset_out_uri=uri,
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=nodata,
+        pixel_size_out=raster_utils.get_cell_size_from_uri(raster),
+        bounding_box_mode='intersection')
 
     raster = None
     if temp_dir != None:
