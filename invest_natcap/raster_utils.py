@@ -40,7 +40,10 @@ GDAL_TO_NUMPY_TYPE = {
 
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
-class SpatialExtentOverlapException(Exception): pass
+class SpatialExtentOverlapException(Exception):
+    """An exeception class for cases when datasets or datasources don't overlap
+        in space"""
+    pass
 
 #Used to indicate values that are not defined in dictionary structures
 class UndefinedValue(Exception): pass
