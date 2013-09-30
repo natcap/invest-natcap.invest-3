@@ -6,7 +6,6 @@ from osgeo import gdal
 
 import shutil
 import os
-import tempfile
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -239,7 +238,8 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
 
     LOGGER.debug('Mapping floral attributes to landcover, writing to %s',
         floral_raster_temp_uri)
-    map_attribute(landuse, lu_attr, guild, floral_fields, floral_raster_temp_uri, sum)
+    map_attribute(landuse, lu_attr, guild, floral_fields,
+        floral_raster_temp_uri, sum)
     map_attribute(landuse, lu_attr, guild, nesting_fields, uris['nesting'], max)
 
     # Now that the per-pixel nesting and floral resources have been
@@ -328,7 +328,6 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
         nodata_out=nodata,
         pixel_size_out=pixel_size,
         bounding_box_mode='intersection')
-    farm_abundance = None
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
@@ -450,7 +449,6 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
         bounding_box_mode='intersection')
 
     LOGGER.debug('Applying a gaussian filter to the ratio raster.')
-    ratio_raster = gdal.Open(out_uris['species_value'])
     raster_utils.gaussian_filter_dataset_uri(
         out_uris['species_value'], sigma, out_uris['species_value_blurred'],
         nodata, out_uris['temp'])
@@ -462,9 +460,8 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
 
     LOGGER.debug('Saving service value raster to %s', temp_service_uri)
     raster_utils.vectorize_datasets(
-        dataset_uri_list=[rasters['species_abundance'],
-            out_uris['species_value_blurred']],
-        dataset_pixel_op=lambda x, y: part_wild * x * y if x != nodata else nodata,
+        [rasters['species_abundance'], out_uris['species_value_blurred']],
+        lambda x, y: part_wild * x * y if x != nodata else nodata,
         dataset_out_uri=temp_service_uri,
         datatype_out=gdal.GDT_Float32,
         nodata_out=nodata,
@@ -482,7 +479,6 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
         pixel_size_out=min_pixel_size,
         bounding_box_mode='intersection')
 
-    service_value_raster = None
     LOGGER.debug('Finished calculating service value')
 
 
