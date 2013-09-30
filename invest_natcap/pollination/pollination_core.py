@@ -295,11 +295,12 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
 
     LOGGER.debug('Starting to calculate farm abundance')
 
-    farm_abundance_temp_uri = raster_utils.temporary_filename() 
+    farm_abundance_temp_uri = raster_utils.temporary_filename()
     LOGGER.debug('Farm abundance temp file saved to %s',
         farm_abundance_temp_uri)
 
-    species_abundance = gdal.Open(species_abundance)
+    species_abundance_uri = species_abundance
+    species_abundance = gdal.Open(species_abundance_uri)
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
     sigma = float(alpha / (2 * pixel_size))
@@ -312,19 +313,21 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     # gaussian filter to the foraging raster and then culling all pixels
     # that are not agricultural before saving it to the output raster.
     LOGGER.debug('Calculating foraging/farm abundance index')
-    raster_utils.gaussian_filter_dataset(
-        species_abundance, sigma, farm_abundance_temp_uri, nodata, temp_dir)
+    raster_utils.gaussian_filter_dataset_uri(
+        species_abundance_uri, sigma, farm_abundance_temp_uri, nodata, temp_dir)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
     LOGGER.debug('Setting all agricultural pixels to 0')
-    farm_abundance = gdal.Open(farm_abundance_temp_uri)
-    ag_map_raster = gdal.Open(ag_map)
-    raster_utils.vectorize_rasters(
-        [farm_abundance, ag_map_raster],
-        lambda x, y: x if y == 1.0 else nodata,
-        raster_out_uri=uri, nodata=nodata)
+    raster_utils.vectorize_datasets(
+        dataset_uri_list=[farm_abundance_temp_uri, ag_map],
+        dataset_pixel_op=lambda x, y: x if y == 1.0 else nodata,
+        dataset_out_uri=uri,
+        datatype_out=gdal.GDT_Float32,
+        nodata_out=nodata,
+        pixel_size_out=pixel_size,
+        bounding_box_mode='intersection')
     farm_abundance = None
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
