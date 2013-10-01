@@ -531,7 +531,7 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(
                 self, expected_uri, out_dir)
     
-    def test_experimental_reproject_dataset(self):
+    def test_warp_reproject_dataset(self):
         """A regression test using some data that Martin and Nic were having
             trouble reprojecting"""
        
