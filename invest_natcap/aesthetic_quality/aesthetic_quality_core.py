@@ -115,7 +115,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         return sweep_line
 
     # Need to re-organize the sweep line:
-
+    pixel, hierarchy = aesthetic_quality_core.find_pixel_before_last( \
+        sweep_line, skip_nodes, distance)
 
 
     return sweep_line
@@ -321,7 +322,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     #   1.10-linked_list['closest'] is the smallest distance
     #   1.11-Last element has 'next' set to None
     if len(linked_list) == 0:
-        return True
+        return (True, 'Empty list is fine')
     
     # 1.1-If len(linked_list) > 0 then len(linked_list) >= 2
     if len(linked_list) < 2:
