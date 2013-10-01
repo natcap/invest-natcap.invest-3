@@ -596,26 +596,32 @@ class TestAestheticQualityCore(unittest.TestCase):
                 skip_nodes, distance)
             before.append(node['distance'] if node is not None else None)
             after.append((node['next']['distance'] if node['next'] is not None
-            else node['distance']) if node is not None else
-            sweep_line['closest']['distance'])
+            else None) if node is not None else 
+                sweep_line['closest']['distance'])
+        for i in range(len(test_values)):
+            distance = test_values[i]
             print('distance', distance, 'closest', \
             sweep_line['closest']['distance'])
             if distance < sweep_line['closest']['distance']:
-                message = 'Error: value before is ' + str(before[-1]) + \
+                message = 'Error: value before is ' + str(before[i]) + \
                 ' but should be None'
-                assert before[-1] is None, message
+                assert before[i] is None, message
             else:
-                message = 'Error: value of "before" is ' + str(before[-1]) + \
+                message = 'Error for distance ' + str(distance) + \
+                ': value of "before" is ' + str(before[i]) + \
                     ' < ' + str(distance)
-                assert before[-1] < distance
-                message = 'Error: value of "after" is ' + str(after[-1]) + \
-                    ' < ' + str(distance)
-                assert after[-1] > distance
-        print('sweep_line contents', sweep_line_values)
-        print('test_values', test_values)
-        print('found      ', found)
-        print('before     ', before)
-        print('after      ', after)
+                assert before[i] < distance, message
+                if after[i] is None:
+                    message = \
+                    'Error for distance ' + str(distance) + \
+                    ': after is None, but before is not highest, ' + \
+                    str(before[i])
+                    assert before[i] == sweep_line_values[-1], message
+                else:
+                    message = 'Error for distance ' + str(distance) \
+                    + ': value of "after" is ' + str(after[i]) + \
+                        ' < ' + str(distance)
+                    assert after[i] >= distance, message
         
 
     def test_viewshed(self):
