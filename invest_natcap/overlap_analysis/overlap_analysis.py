@@ -83,9 +83,6 @@ def execute(args):
     #one to the combine unweighted function, and then the option call for the
     #weighted raster combination that uses the unweighted pre-created rasters.
 
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_dataset_uri = os.path.join(inter_dir, 'AOI_dataset.tif')
     
