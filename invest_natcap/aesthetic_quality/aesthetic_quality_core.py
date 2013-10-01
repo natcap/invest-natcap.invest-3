@@ -154,6 +154,7 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
                 return pixel
             span = pixel['span']
             pixel = pixel['down']
+    # Empty sweep_line, there's no cell to return
     else:
         return None
 
@@ -169,48 +170,27 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
 
             Return the linked_cell associated to 'distance', or None if such
             cell doesn't exist"""
-    if 'closest' in sweep_line:
-        # Find the starting point
-        if len(skip_nodes) > 0:
-            level = len(skip_nodes) -1
-            # Get information about first pixel in the list
-            pixel = skip_nodes[level][0]
-            span = len(skip_nodes[level])
-        else:
-            pixel = sweep_line['closest']
-            span = len(sweep_line)
-        previous = pixel
-        # Looking for a distance smaller than smallest.
-        if pixel['distance'] > distance:
-            return None
-        # found distance, return the pixel
-        if pixel['distance'] == distance:
-            while (pixel['down'] is not None):
-                pixel = pixel['down']
-            return pixel
-        # Didn't find distance, continue
-        while (pixel['distance'] != distance):
-            # go right until distance is passed
-            iteration = 0
-            while (iteration < span -1) and (pixel['distance'] < distance):
-                previous = pixel
-                pixel = pixel['next']
-                iteration += 1
-            # Found distance
-            if pixel['distance'] == distance:
-                while (pixel['down'] is not None):
-                    pixel = pixel['down']
-                return pixel
-            # Went too far, backtrack 
-            if pixel['distance'] > distance:
-                pixel = previous
-            # Go down 1 level
-            if pixel['down'] is None:
-                return None
-            span = pixel['span']
-            pixel = pixel['down']
+    # Empty sweep_line, nothing to return
+    if not sweep_line:
+        return None
+        
+    pixel = find_pixel_before_fast(sweep_line, skip_nodes, distance)
+
+    # Sweep-line is non-empty:
+    # Pixel is None: could be first element
+    if pixel is None:
+        return sweep_line['closest'] if \
+            sweep_line['closest']['distance'] == distance else None
+    # Could be an existing pixel in the sweep_line
+    elif pixel['next'] is not None:
+        return pixel['next'] if \
+            pixel['next']['distance'] == distance else None
+    # Can't be a pixel in sweep_line, since it should be after last
     else:
         return None
+    
+    # Return the distance if valid, or None if it doesn't exist in sweep_line
+    return pixel if pixel['distance'] == distance else None
 
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
