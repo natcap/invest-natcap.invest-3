@@ -70,19 +70,10 @@ def execute(args):
     args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
-    args['do_inter'] = args['do_inter']
-    
     if args['do_inter']:
-        args['over_layer_dict'] = \
-                format_over_table(args['overlap_layer_tbl'])
-        
-    args['do_intra'] = args['do_intra']
-
+        args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
     if args['do_intra']:
         args['intra_name'] = args['intra_name']
-
-    args['do_hubs'] = args['do_hubs']
-
     if args['do_hubs']:
         args['hubs_file'] = ogr.Open(args['hubs_uri'])
         args['decay'] = float(args['decay_amt'])
@@ -96,12 +87,12 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
-    aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
+    aoi_dataset_uri = os.path.join(inter_dir, 'AOI_dataset.tif')
     
     aoi_raster =  \
         raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
                                     int(args['grid_size']), gdal.GDT_Int32, 0,
-                                    aoi_rast_file, args['zone_layer_file'])
+                                    aoi_dataset_uri, args['zone_layer_file'])
 
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     aoi_band.Fill(aoi_nodata)
