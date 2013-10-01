@@ -592,7 +592,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             node = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
                 skip_nodes, distance)
             found.append(node['distance'] if node is not None else None)
-            node = aesthetic_quality_core.find_pixel_before_fast(sweep_line,
+            node, _ = aesthetic_quality_core.find_pixel_before_fast(sweep_line,
                 skip_nodes, distance)
             before.append(node['distance'] if node is not None else None)
             after.append((node['next']['distance'] if node['next'] is not None

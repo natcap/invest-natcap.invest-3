@@ -102,12 +102,22 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             -distance: the value to be added to the sweep_line
 
             Return the updated sweep_line"""
-    sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
-        'distance':distance}
-    # Add the field 'closest' to the sweep line
-    if len(sweep_line) == 0:
-        sweep_line['closest'] = sweep_line[0]
+    sweep_line = {}
+    # Add the field 'closest' to the empty sweep line
+    if not sweep_line:
+        sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
+            'distance':distance}
+        sweep_line['closest'] = sweep_line[distance]
     
+    # If distance already exist in sweep_line, no need to re-organize
+    if distance in sweep_line:
+        # Code to update visibility here
+        return sweep_line
+
+    # Need to re-organize the sweep line:
+
+
+
     return sweep_line
 
 def find_pixel_before_fast(sweep_line, skip_nodes, distance):
@@ -120,9 +130,14 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
                 of skip pointers in the skip list. Each cell is defined as ???
             -distance: the key used to search the sweep_line
 
-            Return the linked_cell right before 'distance', or None if it
-            doesn't exist (either 'distance' is the first cell, or the
-            sweep_line is empty."""
+            Return a tuple (pixel, hierarchy) where: 
+                -pixel is the linked_cell right before 'distance', or None if 
+                it doesn't exist (either 'distance' is the first cell, or the 
+                sweep_line is empty).
+                -hierarchy is the list of intermediate skip nodes starting from
+                the top node up to the node right above the pixel.
+            """
+    hierarchy = []
     if 'closest' in sweep_line:
         # Find the starting point
         if len(skip_nodes) > 0:
@@ -133,10 +148,11 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
         else:
             pixel = sweep_line['closest']
             span = len(sweep_line)
+        hierarchy.append(pixel)
         previous = pixel
         # No smaller distance available
         if pixel['distance'] >= distance:
-            return None
+            return (None, hierarchy)
         # Didn't find distance, continue
         while (pixel['distance'] <= distance):
             # go right before distance is passed
@@ -148,15 +164,16 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
             # Went too far, backtrack 
             if pixel['distance'] >= distance:
                 pixel = previous
+            hierarchy.append(pixel)
             # Try to go down 1 level
             # If not possible, return the pixel itself.
             if pixel['down'] is None:
-                return pixel
+                return (pixel, hierarchy)
             span = pixel['span']
             pixel = pixel['down']
     # Empty sweep_line, there's no cell to return
     else:
-        return None
+        return (None, hierarchy)
 
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Find an active pixel based on distance. 
@@ -174,7 +191,7 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     if not sweep_line:
         return None
         
-    pixel = find_pixel_before_fast(sweep_line, skip_nodes, distance)
+    pixel, _ = find_pixel_before_fast(sweep_line, skip_nodes, distance)
 
     # Sweep-line is non-empty:
     # Pixel is None: could be first element
@@ -189,8 +206,6 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     else:
         return None
     
-    # Return the distance if valid, or None if it doesn't exist in sweep_line
-    return pixel if pixel['distance'] == distance else None
 
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
