@@ -28,11 +28,11 @@ def execute(args):
             It will contain the following data.
         args['workspace_dir']- The directory in which to place all resulting files,
             will come in as a string.
-        args['zone_layer_loc']- A URI pointing to a shapefile with the analysis
+        args['zone_layer_uri']- A URI pointing to a shapefile with the analysis
             zones on it.
         args['grid_size']- This is an int specifying how large the gridded 
             squares over the shapefile should be.
-        args['overlap_data_dir_loc']- URI pointing to a directory where multiple
+        args['overlap_data_dir_uri']- URI pointing to a directory where multiple
             shapefiles are located. Each shapefile represents an activity of
             interest for the model.
         args['do-inter']-Boolean that indicates whether or not inter-activity
@@ -40,7 +40,7 @@ def execute(args):
             created.
         args['do_intra']- Boolean which indicates whether or not intra-activity
             weighting is desired. This will will pull attributes from shapefiles
-            passed in in 'zone_layer_loc'
+            passed in in 'zone_layer_uri'
             
         --Optional--
         args['overlap_layer_tbl'] URI to a CSV file that holds relational data
@@ -63,11 +63,10 @@ def execute(args):
 
     #We are passing in the AOI shapefile, as well as the dimension that we want
     #the raster pixels to be. 
-    args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
-    args['grid_size'] = args['grid_size']
+    args['zone_layer_file'] = ogr.Open(args['zone_layer_uri'])
       
     #Abstracting this to its own function for use in testing. Returns dictionary.
-    file_dict = overlap_core.get_files_dict(args['overlap_data_dir_loc'])
+    file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
     args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
