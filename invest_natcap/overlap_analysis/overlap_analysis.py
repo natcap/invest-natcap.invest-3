@@ -61,10 +61,6 @@ def execute(args):
     inter_dir = os.path.join(workspace, 'intermediate')
     raster_utils.create_directories([output_dir, inter_dir])
 
-    #We are passing in the AOI shapefile, as well as the dimension that we want
-    #the raster pixels to be. 
-    args['zone_layer_file'] = ogr.Open(args['zone_layer_uri'])
-      
     #Abstracting this to its own function for use in testing. Returns dictionary.
     file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
     args['overlap_files'] = file_dict
@@ -83,32 +79,34 @@ def execute(args):
     #one to the combine unweighted function, and then the option call for the
     #weighted raster combination that uses the unweighted pre-created rasters.
 
-    aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_dataset_uri = os.path.join(inter_dir, 'AOI_dataset.tif')
-    
-    aoi_raster =  \
-        raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
-                                    int(args['grid_size']), gdal.GDT_Int32, 0,
-                                    aoi_dataset_uri, args['zone_layer_file'])
+    grid_size = float(args['grid_size'])
+    raster_utils.create_raster_from_vector_extents_uri(
+        args['zone_layer_uri'], grid_size, gdal.GDT_Int32, 0,
+        aoi_dataset_uri)
 
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
-    aoi_band.Fill(aoi_nodata)
-    
-    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_values=[1])
-    
+    aoi_dataset = gdal.Open(aoi_dataset_uri, gdal.GA_Update)
+    aoi_band = aoi_dataset.GetRasterBand(1)
+    aoi_band.Fill(0)
+
+    aoi_shp = ogr.Open(args['zone_layer_uri'])
+    aoi_shp_layer = aoi_shp.GetLayer()
+    gdal.RasterizeLayer(aoi_dataset, [1], aoi_shp_layer, burn_values=[1])
+
+
     #Want to get each interest layer, and rasterize them, then combine them all
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
-    raster_files, raster_names = make_indiv_rasters(inter_dir, 
-                                    args['overlap_files'], aoi_raster)
+    raster_files, raster_names = make_indiv_rasters(
+        inter_dir, args['overlap_files'], aoi_dataset)
 
-    create_unweighted_raster(output_dir, aoi_raster, raster_files)
+    create_unweighted_raster(output_dir, aoi_dataset, raster_files)
 
     #Want to make sure we're passing the open hubs raster to the combining
     #weighted raster file
     if args['do_hubs']:
         hubs_out_uri = os.path.join(inter_dir, "hubs_raster.tif")
-        create_hubs_raster(args['hubs_file'], args['decay'], aoi_raster,
+        create_hubs_raster(args['hubs_file'], args['decay'], aoi_dataset,
                                 hubs_out_uri)
         hubs_rast = gdal.Open(hubs_out_uri)
     else:
@@ -130,7 +128,7 @@ def execute(args):
         
         #Now we want to create a second raster that includes all of the
         #weighting information
-        create_weighted_raster(output_dir, weighted_dir, aoi_raster, 
+        create_weighted_raster(output_dir, weighted_dir, aoi_dataset, 
                                layer_dict, args['overlap_files'], 
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
