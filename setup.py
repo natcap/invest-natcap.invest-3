@@ -97,6 +97,7 @@ packages = ['invest_natcap',
             'invest_natcap.wind_energy',
             'invest_natcap.aesthetic_quality',
             'invest_natcap.habitat_risk_assessment',
+            'invest_natcap.fisheries',
             'invest_natcap.report_generation',
             'invest_natcap.routing',
             'invest_natcap.flood_mitigation',
@@ -153,13 +154,47 @@ if platform.system() == 'Windows':
          'invest_sediment.py',
          'invest_nutrient.py',
          'invest_wind_energy.py',
+         'invest_natcap.fisheries.py',
          'invest_ntfp.py',
          'invest_test_all.py']
 
+<<<<<<< local
     py2exe_args['windows'] = [
         'invest_pollination.py',
     ]
     from py2exe.build_exe import py2exe as py2exeCommand
+=======
+    #Need to manually bring along the json configuration files to
+    #the current build directory
+    data_files.append(
+        ('.',['invest_natcap/iui/carbon_combined.json',
+              'invest_natcap/iui/timber.json',
+              'invest_natcap/iui/aesthetic_quality.json',
+              'invest_natcap/iui/wave_energy.json',
+              'invest_natcap/iui/hydropower_water_yield.json',
+              'invest_natcap/iui/recreation-client-init.json',
+              'invest_natcap/iui/recreation-client-scenario.json',
+              'invest_natcap/iui/pollination.json',
+              'invest_natcap/iui/finfish_aquaculture.json',
+              'invest_natcap/iui/marine_water_quality_biophysical.json',
+              'invest_natcap/iui/monthly_water_yield.json',
+              'invest_natcap/iui/biodiversity_biophysical.json',
+              'invest_natcap/iui/overlap_analysis.json',
+              'invest_natcap/iui/hra.json',
+              'invest_natcap/iui/hra_preprocessor.json',
+              'invest_natcap/iui/overlap_analysis_mz.json',
+              'invest_natcap/iui/sediment.json',
+              'invest_natcap/iui/malaria.json',
+              'invest_natcap/iui/nutrient.json',
+              'invest_natcap/iui/wind_energy.json',
+              'invest_natcap/iui/coastal_vulnerability.json',
+              'invest_natcap/iui/fisheries.json',
+              'invest_natcap/iui/ntfp.json',
+              'geos_c.dll',
+              'libgcc_s_dw2-1.dll',
+              'libstdc++-6.dll',
+              ]))
+>>>>>>> other
 
     class CustomPy2exe(py2exeCommand):
         """This is a custom Py2exe command that allows us to define data files
