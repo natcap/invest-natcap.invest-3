@@ -57,16 +57,9 @@ def execute(args):
     Returns nothing.'''
 
     workspace = args['workspace_dir']
-    output_dir = workspace + os.sep + 'Output'
-    inter_dir = workspace + os.sep + 'Intermediate'
-        
-    for folder in (inter_dir, output_dir):
-        if (os.path.exists(folder)):
-            shutil.rmtree(folder) 
-
-        os.makedirs(folder)
-
-    args['workspace_dir'] = args['workspace_dir']
+    output_dir = os.path.join(workspace, 'output')
+    inter_dir = os.path.join(workspace, 'intermediate')
+    raster_utils.create_directories([output_dir, inter_dir])
 
     #We are passing in the AOI shapefile, as well as the dimension that we want
     #the raster pixels to be. 
