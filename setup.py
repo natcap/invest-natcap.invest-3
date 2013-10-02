@@ -189,7 +189,7 @@ if platform.system() == 'Windows':
             # Windows executeables on XP.  For whatever reason, they do not appear to be
             # required for running GDAL stuff on Windows 7.  Not sure why that is.
             # I'm only including them here for the 32-bit windows build.
-            if platform.architecture()[0] == '32-bit':
+            if platform.architecture()[0] == '32bit':
                 self.distribution.data_files.append(('.', glob.glob('gdal_dlls/*.dll')))
 
 
