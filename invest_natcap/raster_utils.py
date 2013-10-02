@@ -2785,7 +2785,7 @@ def rasterize_layer_uri(
 
         returns - Nothing"""
 
-    raster = gdal.Open(raster_uri, 1)
+    raster = gdal.Open(raster_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
     layer = shapefile.GetLayer()
 
