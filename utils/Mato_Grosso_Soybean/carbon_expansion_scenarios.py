@@ -21,6 +21,32 @@ import os
 import sys
 import collections
 
+def new_raster_from_base_uri(
+    base_uri, output_uri, gdal_format, nodata, datatype, fill_value=None):
+
+    base_raster = gdal.Open(base_uri)
+    new_raster_from_base(base_raster, *args, **kwargs)
+    
+    n_cols = base.RasterXSize
+    n_rows = base.RasterYSize
+    projection = base.GetProjection()
+    geotransform = base.GetGeoTransform()
+    driver = gdal.GetDriverByName(gdal_format)
+    new_raster = driver.Create(
+        output_uri.encode('utf-8'), n_cols, n_rows, 1, datatype)
+    new_raster.SetProjection(projection)
+    new_raster.SetGeoTransform(geotransform)
+    band = new_raster.GetRasterBand(1)
+    band.SetNoDataValue(nodata)
+    if fill_value != None:
+        band.Fill(fill_value)
+    else:
+        band.Fill(nodata)
+    band = None
+
+    return new_raster
+
+    
 def expand_lu_type(
     base_array, nodata, expansion_id, current_step, pixels_per_step,
     land_cover_start_fractions=None, land_cover_end_fractions=None,
@@ -180,6 +206,18 @@ def analyze_composite_carbon_stock_change(args):
         print 'total stocks %.2f' % total_stocks
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
+        
+        if percent % 100 == 0:
+            print 'dumping a raster at percent %s%%' % percent
+            output_uri = os.path.join(os.path.dirname(
+                args['scenario_lulc_base_map_filename']),
+                'composite_lulc_80_20_%s_.tif' % percent)
+            lulc_out_ds = new_raster_from_base_uri(
+                args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+            lulc_band = lulc_out_ds.GetRasterBand(1)
+            lulc_band.WriteArray(expanded_lulc_array)
+            lulc_band = None
+            lulc_out_ds = None
 
     
 def regression_builder(slope, intercept):
@@ -862,7 +900,7 @@ if __name__ == '__main__':
         2: .5,
         9: .2
         }
-    analyze_composite_carbon_stock_change(ARGS)
+    #analyze_composite_carbon_stock_change(ARGS)
    
    
     #set up args for the composite scenario
@@ -882,7 +920,7 @@ if __name__ == '__main__':
         
     analyze_composite_carbon_stock_change(ARGS)
  
-    
+    sys.exit(-1)
     
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_60.csv')
