@@ -24,8 +24,7 @@ import collections
 def new_raster_from_base_uri(
     base_uri, output_uri, gdal_format, nodata, datatype, fill_value=None):
 
-    base_raster = gdal.Open(base_uri)
-    new_raster_from_base(base_raster, *args, **kwargs)
+    base = gdal.Open(base_uri)
     
     n_cols = base.RasterXSize
     n_rows = base.RasterYSize
@@ -209,9 +208,7 @@ def analyze_composite_carbon_stock_change(args):
         
         if percent % 100 == 0:
             print 'dumping a raster at percent %s%%' % percent
-            output_uri = os.path.join(os.path.dirname(
-                args['scenario_lulc_base_map_filename']),
-                'composite_lulc_80_20_%s_.tif' % percent)
+            output_uri = 'composite_lulc_80_20_%s_.tif' % percent
             lulc_out_ds = new_raster_from_base_uri(
                 args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
             lulc_band = lulc_out_ds.GetRasterBand(1)
@@ -616,6 +613,16 @@ def analyze_forest_expansion(args):
         scenario_lulc_array.flat[
             increasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
+                
+        if percent % 100 == 0:
+            print 'dumping a raster at percent %s%%' % percent
+            output_uri = 'edge_lulc_%s.tif' % percent
+            lulc_out_ds = new_raster_from_base_uri(
+                args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+            lulc_band = lulc_out_ds.GetRasterBand(1)
+            lulc_band.WriteArray(scenario_lulc_array)
+            lulc_band = None
+            lulc_out_ds = None
 
 
 def analyze_forest_core_expansion(args):
@@ -693,6 +700,16 @@ def analyze_forest_core_expansion(args):
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
+                
+        if percent % 100 == 0:
+            print 'dumping a raster at percent %s%%' % percent
+            output_uri = 'core_lulc_%s.tif' % percent
+            lulc_out_ds = new_raster_from_base_uri(
+                args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+            lulc_band = lulc_out_ds.GetRasterBand(1)
+            lulc_band.WriteArray(scenario_lulc_array)
+            lulc_band = None
+            lulc_out_ds = None
 
 
 def analyze_forest_core_fragmentation(args):
@@ -744,7 +761,8 @@ def analyze_forest_core_fragmentation(args):
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
-    for percent in range(args['scenario_conversion_steps'] + 1):
+    percent_per_step = 10
+    for percent in range(0, args['scenario_conversion_steps'] + 1, percent_per_step):
         print 'calculating carbon stocks for expansion step %s' % percent
 
         #Calcualte the carbon stocks based on the regression functions, lookup
@@ -761,7 +779,7 @@ def analyze_forest_core_fragmentation(args):
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
 
-        deepest_edge_index += args['pixels_to_convert_per_step']
+        deepest_edge_index += args['pixels_to_convert_per_step'] * percent_per_step
 
         scenario_edge_distance = calculate_forest_edge_distance(
             scenario_lulc_array, args['forest_lucodes'], cell_size)
@@ -772,6 +790,16 @@ def analyze_forest_core_fragmentation(args):
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
+                
+        if percent % 100 == 0:
+            print 'dumping a raster at percent %s%%' % percent
+            output_uri = 'frag_lulc_%s.tif' % percent
+            lulc_out_ds = new_raster_from_base_uri(
+                args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+            lulc_band = lulc_out_ds.GetRasterBand(1)
+            lulc_band.WriteArray(scenario_lulc_array)
+            lulc_band = None
+            lulc_out_ds = None
 
 
 def analyze_lu_expansion(args):
@@ -886,6 +914,11 @@ if __name__ == '__main__':
     ARGS['pixels_to_convert_per_step'] = 2608
     ARGS['converting_crop'] = 120,
     
+    #Set up args for the forest core scenario
+    ARGS['output_table_filename'] = (
+        'forest_core_fragmentation_carbon_stock_change.csv')
+    analyze_forest_core_fragmentation(ARGS)
+    
     #set up args for the composite scenario
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_80_50.csv')
@@ -919,8 +952,6 @@ if __name__ == '__main__':
         }
         
     analyze_composite_carbon_stock_change(ARGS)
- 
-    sys.exit(-1)
     
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_60.csv')
@@ -935,23 +966,14 @@ if __name__ == '__main__':
         2: .6,
         9: .2
         }
-    analyze_composite_carbon_stock_change(ARGS)
-    
-    os.exit(-1)
-    
- 
+    #analyze_composite_carbon_stock_change(ARGS)
     
     #Set up the args for the disk based scenario
     ARGS['scenario_path'] = './MG_Soy_Exp_07122013/'
     ARGS['scenario_file_pattern'] = 'mg_lulc%n'
     ARGS['output_table_filename'] = (
         'pre_calculated_scenarios_carbon_stock_change.csv')
-    analyze_premade_lulc_scenarios(ARGS)
-      
-    #Set up args for the forest core scenario
-    ARGS['output_table_filename'] = (
-        'forest_core_fragmentation_carbon_stock_change.csv')
-    analyze_forest_core_fragmentation(ARGS)
+    #analyze_premade_lulc_scenarios(ARGS)
 
     #Set up args for the forest core scenario
     ARGS['output_table_filename'] = (
@@ -961,7 +983,7 @@ if __name__ == '__main__':
     #Set up args for the savanna scenario
     ARGS['output_table_filename'] = (
         'savanna_expansion_carbon_stock_change.csv')
-    analyze_lu_expansion(ARGS)
+    #analyze_lu_expansion(ARGS)
     
     #Set up args for the forest only scenario
     ARGS['output_table_filename'] = (
@@ -971,5 +993,5 @@ if __name__ == '__main__':
     #Set up args for the grassland/forest scenario
     ARGS['output_table_filename'] = (
         'grassland_expansion_carbon_stock_change.csv')
-    analyze_grassland_expansion_forest_erosion(ARGS)
+    #analyze_grassland_expansion_forest_erosion(ARGS)
 
