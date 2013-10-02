@@ -761,7 +761,7 @@ def analyze_forest_core_fragmentation(args):
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
-    percent_per_step = 10
+    percent_per_step = 1
     for percent in range(0, args['scenario_conversion_steps'] + 1, percent_per_step):
         print 'calculating carbon stocks for expansion step %s' % percent
 
