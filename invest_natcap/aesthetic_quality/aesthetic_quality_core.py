@@ -431,6 +431,15 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     #   2.13-The number of pointers at each level has to be valid
     #   2.14-All the skip nodes can be reached from the first one on top
 
+    # Empty skip node
+    if not skip_nodes:
+        # Small enough: good, we can return
+        if len(linked_list) < 4:
+            return (True, 'All is well')
+        # Linked list is big enough and should have skip pointers
+        else:
+            return (False, 'Linked list needs skip pointers.')
+
     total_skip_nodes = 0
     for l in range(len(skip_nodes)):
         total_skip_nodes += len(skip_nodes[l])

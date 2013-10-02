@@ -515,17 +515,16 @@ class TestAestheticQualityCore(unittest.TestCase):
         skip_nodes = []
         #aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
         # 2.1.1- insert new leaf in the right place
-        sweep_length = len(sweep_line)
         message = 'Initial skip list is not consistent before addition.'
         assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)[0] is True, message
+        sweep_length = len(sweep_line)
         
         sweep_line = \
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
-        message = str(sweep_line.keys())
-        assert 6 in sweep_line, message
-        assert sweep_length == len(sweep_line) + 1
-        sweep_lingth += 1
+        assert 6 in sweep_line
+        assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
+        sweep_length += 1
         message = 'Skip list is not consistent after adding 6'
         assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)[0] is True, message
