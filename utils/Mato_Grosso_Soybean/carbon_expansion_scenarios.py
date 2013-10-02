@@ -779,7 +779,7 @@ def analyze_forest_core_fragmentation(args):
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
 
-        deepest_edge_index += args['pixels_to_convert_per_step'] * percent_per_step
+        deepest_edge_index = args['pixels_to_convert_per_step'] * percent_per_step
 
         scenario_edge_distance = calculate_forest_edge_distance(
             scenario_lulc_array, args['forest_lucodes'], cell_size)
