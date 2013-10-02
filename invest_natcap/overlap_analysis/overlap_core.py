@@ -36,6 +36,8 @@ def get_files_dict(folder):
         #path.splitext returns a tuple such that the first element is what comes
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(file)[1])[0]
+  
+
         file_dict[name] = ogr.Open(file)
    
     return file_dict
