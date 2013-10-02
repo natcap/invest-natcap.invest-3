@@ -1,0 +1,13 @@
+{
+    "id" : "window",
+    "label": "Fisheries",
+    "targetScript" : "invest_natcap.fisheries.fisheries",
+    "modelName" : "fisheries",
+    "localDocURI": "../documentation/habitat_risk_assessment.html",
+    "height": 550,
+    "width" : 700,
+    "elements": [
+    
+    
+    ]
+}
