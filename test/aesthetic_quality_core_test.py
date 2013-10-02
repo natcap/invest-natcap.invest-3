@@ -513,11 +513,32 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.1- creation of skip links after leaf insertions:
         sweep_line = {}
         skip_nodes = []
-        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
+        #aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
         # 2.1.1- insert new leaf in the right place
+        sweep_length = len(sweep_line)
         message = 'Initial skip list is not consistent before addition.'
         assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)[0] is True, message
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
+        message = str(sweep_line.keys())
+        assert 6 in sweep_line, message
+        assert sweep_length == len(sweep_line) + 1
+        sweep_lingth += 1
+        message = 'Skip list is not consistent after adding 6'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
+        assert 8 in sweep_line
+        assert sweep_length == len(sweep_line) + 1
+        sweep_lingth += 1
+        message = 'Skip list is not consistent after adding 8'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        
         # 2.1.2- create intermediate links when and where expected
         # 2.1.3- O(log n) performance is maintained
         # 2.2- deletion of skip links after leaf deletions:

@@ -117,7 +117,10 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Need to re-organize the sweep line:
     pixel, hierarchy = aesthetic_quality_core.find_pixel_before_last( \
         sweep_line, skip_nodes, distance)
-
+    # Add at the beginning of the list
+    #if pixel is None:
+    #    sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
+    #        'distance':distance}
 
     return sweep_line
 
