@@ -183,13 +183,15 @@ if platform.system() == 'Windows':
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
+            ] + matplotlib.get_py2exe_datafiles()
 
             # These are the GDAL DLLs.  They are absolutely required for running the
             # Windows executeables on XP.  For whatever reason, they do not appear to be
             # required for running GDAL stuff on Windows 7.  Not sure why that is.
-                ('.', glob.glob('gdal_dlls/*.dll')),
+            # I'm only including them here for the 32-bit windows build.
+            if platform.architecture()[0] == '32-bit':
+                self.distribution.data_files.append(('.', glob.glob('gdal_dlls/*.dll')))
 
-            ] + matplotlib.get_py2exe_datafiles()
 
             self.distribution.data_files.extend(get_iui_resource_data_files(''))
 
