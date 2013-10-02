@@ -23,7 +23,7 @@
                 },
                 {
                     "id" : "aoi",
-                    "args_id" : "zone_layer_loc",
+                    "args_id" : "zone_layer_uri",
                     "type": "file",
                     "label": "Analysis Zones Layer",
                     "defaultValue": "../OverlapAnalysis_3_0/Input/AOI_WCVI.shp",
@@ -43,7 +43,7 @@
                 },
                 {
                     "id" : "data_dir",
-                    "args_id" : "overlap_data_dir_loc",
+                    "args_id" : "overlap_data_dir_uri",
                     "type": "folder",
                     "label": "Overlap Analysis Data Directory",
                     "defaultValue": "../OverlapAnalysis_3_0/Input/FisheriesLayers_RI",

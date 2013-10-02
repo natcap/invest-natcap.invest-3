@@ -100,6 +100,7 @@ packages = ['invest_natcap',
             'invest_natcap.report_generation',
             'invest_natcap.routing',
             'invest_natcap.flood_mitigation',
+            'invest_natcap.fisheries',
             'invest_natcap.ntfp',
             ]
 
@@ -153,6 +154,7 @@ if platform.system() == 'Windows':
          'invest_sediment.py',
          'invest_nutrient.py',
          'invest_wind_energy.py',
+         'invest_fisheries.py',
          'invest_ntfp.py',
          'invest_test_all.py']
 
