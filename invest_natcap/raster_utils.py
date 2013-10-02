@@ -1377,31 +1377,35 @@ def resample_dataset(
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_method)
 
-def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
-    """A URI wrapper for reproject dataset that opens the original_dataset_uri
-        before passing it to reproject_dataset.
-
-       original_dataset_uri - a URI to a gdal Dataset on disk
-
-       All other arguments to reproject_dataset are passed in.
-
-       return - nothing"""
-
-    original_dataset = gdal.Open(original_dataset_uri)
-    reproject_dataset(original_dataset, *args, **kwargs)
-
-def _experimental_reproject_dataset_uri(
-        original_dataset_uri, pixel_spacing, output_wkt, output_uri):
+def warp_reproject_dataset_uri(
+        original_dataset_uri, pixel_spacing, output_wkt, resampling_method,
+        output_uri):
     """A function to reproject and resample a GDAL dataset given an output
         pixel size and output reference. Will use the datatype and nodata value
         from the original dataset.
 
         original_dataset_uri - a URI to a gdal Dataset to written to disk
+        
         pixel_spacing - output dataset pixel size in projected linear units
+        
         output_wkt - output project in Well Known Text
+        
+        resampling_method - a String representing the one of the following
+            resampling methods: "nearest|bilinear|cubic|cubic_spline|lanczos"
+        
         output_uri - location on disk to dump the reprojected dataset
 
         return projected dataset"""
+    
+    # A dictionary to map the resampling method input string to the gdal type
+    resample_dict = {
+        "nearest": gdal.GRA_NearestNeighbour,
+        "bilinear": gdal.GRA_Bilinear,
+        "cubic": gdal.GRA_Cubic,
+        "cubic_spline": gdal.GRA_CubicSpline,
+        "lanczos": gdal.GRA_Lanczos
+        }
+    
     # Get the nodata value and datatype from the original dataset
     output_type = get_datatype_from_uri(original_dataset_uri)
     out_nodata = get_nodata_from_uri(original_dataset_uri)
@@ -1448,9 +1452,25 @@ def _experimental_reproject_dataset_uri(
     # Perform the projection/resampling
     gdal.ReprojectImage(
             original_dataset, output_dataset, original_wkt, output_wkt,
-            gdal.GRA_Bilinear)
+            resample_dict[resampling_method])
 
-    calculate_raster_stats(output_dataset)
+    output_dataset.FlushCache()
+    output_dataset = None
+
+    calculate_raster_stats_uri(output_uri)
+
+def reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
+    """A URI wrapper for reproject dataset that opens the original_dataset_uri
+        before passing it to reproject_dataset.
+
+       original_dataset_uri - a URI to a gdal Dataset on disk
+
+       All other arguments to reproject_dataset are passed in.
+
+       return - nothing"""
+
+    original_dataset = gdal.Open(original_dataset_uri)
+    reproject_dataset(original_dataset, *args, **kwargs)
 
 def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
                       output_type = gdal.GDT_Float32):
@@ -2765,7 +2785,7 @@ def rasterize_layer_uri(
 
         returns - Nothing"""
 
-    raster = gdal.Open(raster_uri, 1)
+    raster = gdal.Open(raster_uri, gdal.GA_Update)
     shapefile = ogr.Open(shapefile_uri)
     layer = shapefile.GetLayer()
 

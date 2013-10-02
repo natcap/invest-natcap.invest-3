@@ -531,7 +531,7 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(
                 self, expected_uri, out_dir)
     
-    def test_experimental_reproject_dataset(self):
+    def test_warp_reproject_dataset(self):
         """A regression test using some data that Martin and Nic were having
             trouble reprojecting"""
        
@@ -555,8 +555,8 @@ class TestRasterUtils(unittest.TestCase):
         out_uri = os.path.join(out_dir, 'reprojected_pop.tif')
         regression_uri = os.path.join(data_dir, 'projected_pop.tif')
 
-        raster_utils._experimental_reproject_dataset_uri(
-                clipped_pop_uri, pixel_spacing, out_wkt, out_uri)
+        raster_utils.warp_reproject_dataset_uri(
+                clipped_pop_uri, pixel_spacing, out_wkt, 'bilinear', out_uri)
 
         invest_test_core.assertTwoDatasetEqualURI(
                 self, out_uri, regression_uri)

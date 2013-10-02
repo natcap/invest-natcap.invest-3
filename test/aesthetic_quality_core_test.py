@@ -513,8 +513,31 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.1- creation of skip links after leaf insertions:
         sweep_line = {}
         skip_nodes = []
-        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
+        #aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
         # 2.1.1- insert new leaf in the right place
+        message = 'Initial skip list is not consistent before addition.'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        sweep_length = len(sweep_line)
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
+        assert 6 in sweep_line
+        assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
+        sweep_length += 1
+        message = 'Skip list is not consistent after adding 6'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
+        assert 8 in sweep_line
+        assert sweep_length == len(sweep_line) + 1
+        sweep_lingth += 1
+        message = 'Skip list is not consistent after adding 8'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        
         # 2.1.2- create intermediate links when and where expected
         # 2.1.3- O(log n) performance is maintained
         # 2.2- deletion of skip links after leaf deletions:
@@ -592,30 +615,36 @@ class TestAestheticQualityCore(unittest.TestCase):
             node = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
                 skip_nodes, distance)
             found.append(node['distance'] if node is not None else None)
-            node = aesthetic_quality_core.find_pixel_before_fast(sweep_line,
+            node, _ = aesthetic_quality_core.find_pixel_before_fast(sweep_line,
                 skip_nodes, distance)
             before.append(node['distance'] if node is not None else None)
             after.append((node['next']['distance'] if node['next'] is not None
-            else node['distance']) if node is not None else
-            sweep_line['closest']['distance'])
+            else None) if node is not None else 
+                sweep_line['closest']['distance'])
+        for i in range(len(test_values)):
+            distance = test_values[i]
             print('distance', distance, 'closest', \
             sweep_line['closest']['distance'])
             if distance < sweep_line['closest']['distance']:
-                message = 'Error: value before is ' + str(before[-1]) + \
+                message = 'Error: value before is ' + str(before[i]) + \
                 ' but should be None'
-                assert before[-1] is None, message
+                assert before[i] is None, message
             else:
-                message = 'Error: value of "before" is ' + str(before[-1]) + \
+                message = 'Error for distance ' + str(distance) + \
+                ': value of "before" is ' + str(before[i]) + \
                     ' < ' + str(distance)
-                assert before[-1] < distance
-                message = 'Error: value of "after" is ' + str(after[-1]) + \
-                    ' < ' + str(distance)
-                assert after[-1] > distance
-        print('sweep_line contents', sweep_line_values)
-        print('test_values', test_values)
-        print('found      ', found)
-        print('before     ', before)
-        print('after      ', after)
+                assert before[i] < distance, message
+                if after[i] is None:
+                    message = \
+                    'Error for distance ' + str(distance) + \
+                    ': after is None, but before is not highest, ' + \
+                    str(before[i])
+                    assert before[i] == sweep_line_values[-1], message
+                else:
+                    message = 'Error for distance ' + str(distance) \
+                    + ': value of "after" is ' + str(after[i]) + \
+                        ' < ' + str(distance)
+                    assert after[i] >= distance, message
         
 
     def test_viewshed(self):

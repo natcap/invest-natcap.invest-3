@@ -78,8 +78,8 @@ def execute(args):
     for row in csv_dict_reader:
         biophysical_table[int(row['lucode'])] = row
 
-    intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'output')
 
     #Sets up the intermediate and output directory structure for the workspace
     for directory in [output_dir, intermediate_dir]:
