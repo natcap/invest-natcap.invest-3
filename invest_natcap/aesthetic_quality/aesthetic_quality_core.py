@@ -108,7 +108,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
             'distance':distance}
         sweep_line['closest'] = sweep_line[distance]
-    
+        return sweep_line
+
     # If distance already exist in sweep_line, no need to re-organize
     if distance in sweep_line:
         # Code to update visibility here
@@ -118,9 +119,30 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     pixel, hierarchy = aesthetic_quality_core.find_pixel_before_last( \
         sweep_line, skip_nodes, distance)
     # Add at the beginning of the list
-    #if pixel is None:
-    #    sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
-    #        'distance':distance}
+    if pixel is None:
+        # New pixel points to previously first pixel
+        second = sweep_line['closest']['distance']
+        sweep_line[distance] = {'next':sweep_line[second], 'up':None, \
+            'down':None, 'distance':distance}
+        # Move skip pointers to the pixel
+        sweep_line[distance]['up'] = sweep_line[second]['up']
+        # Updating span
+        if sweep_line[distance]['up'] is not None:
+            sweep_line[distance]['up']['span'] += 1
+        sweep_line[second]['up'] = None
+        # pixel 'closest' points to first
+        sweep_distance['closest'] = sweep_line[distance]
+    # Add after the beginning
+    else:
+        # Connecting new pixel to next one
+        sweep_line[distance] = {'next':pixel['next'], 'up':None, \
+            'down':None, 'distance':distance}
+        # Connecting previous pixel to new one
+        pixel['next'] = sweep_line[distance]
+        # Update the span if necessary
+        if pixel['up'] is not None:
+            pixel['up']['span'] += 1
+        
 
     return sweep_line
 

@@ -532,8 +532,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         sweep_line = \
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
         assert 8 in sweep_line
-        assert sweep_length == len(sweep_line) + 1
-        sweep_lingth += 1
+        assert sweep_length + 1 == len(sweep_line)
+        sweep_length += 1
         message = 'Skip list is not consistent after adding 8'
         assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)[0] is True, message
@@ -546,7 +546,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         # 2.2.3- O(log n) performance is maintained
         # 2.3- fast access:
         # Create a hierarchy that can be searched:
-        sweep_line, skip_nodes = self.build_skip_list()
+        #sweep_line, skip_nodes = self.build_skip_list()
         # All the skip levels are accessible:
         current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
