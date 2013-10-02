@@ -93,7 +93,6 @@ def execute(args):
     aoi_shp_layer = aoi_shp.GetLayer()
     gdal.RasterizeLayer(aoi_dataset, [1], aoi_shp_layer, burn_values=[1])
 
-
     #Want to get each interest layer, and rasterize them, then combine them all
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
