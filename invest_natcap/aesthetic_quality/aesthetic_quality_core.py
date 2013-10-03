@@ -117,6 +117,10 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Need to re-organize the sweep line:
     pixel, hierarchy = find_pixel_before_fast( \
         sweep_line, skip_nodes, distance)
+    print('---pixel', pixel if pixel is None else pixel['distance'])
+    print('before change')
+    for key in sweep_line.keys():
+        print(key, sweep_line[key]['next'])
     # Add at the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
@@ -130,13 +134,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             sweep_line[distance]['up']['span'] += 1
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
-        sweep_distance['closest'] = sweep_line[distance]
+        sweep_line['closest'] = sweep_line[distance]
     # Add after the beginning
     else:
-        print('before change')
-        for key in sweep_line.keys():
-            print(key, sweep_line[key]['next'])
-
         # Connecting new pixel to next one
         sweep_line[distance] = {'next':pixel['next'], 'up':None, \
             'down':None, 'distance':distance}
@@ -145,10 +145,40 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         # Update the span if necessary
         if pixel['up'] is not None:
             pixel['up']['span'] += 1
-        
-        print('after change')
-        for key in sweep_line.keys():
-            print(key, sweep_line[key]['next'])
+         
+    print('after change')
+    for key in sweep_line.keys():
+        print(key, sweep_line[key]['next'])
+
+
+    # Creating first up pointers
+    if (len(sweep_line) > 3) and (sweep_line['closest']['up'] is None):
+        message = 'Expecting sweep line of size 4 but is ' + \
+            str(len(sweep_line))
+        assert len(sweep_line) == 4, message
+        # Preparing the skip_list to receive the new skip pointers
+        skip_list = []
+        skip_list.append([])
+        pixel = sweep_line['closest']
+        # First skip node points to the first element in sweep_line
+        skip_node = {'next':None, 'up':None, \
+        'down':sweep_line[pixel['distance']], \
+        'distance':sweep_line[pixel['distance']], \
+        'span':3}
+        skip_list[0].append(skip_node)
+        pixel['up'] = skip_list[0][0]
+        # Second skip node points to the last element in sweep_line
+        # Find last element
+        last_element = sweep_line[distance]
+        while last_element['next'] is not None:
+            last_element = last_element['next']
+        # Create the skip node
+        skip_node = {'next':None, 'up':None, \
+        'down':sweep_line[pixel['distance']], \
+        'distance':sweep_line[pixel['distance']], \
+        'span':1}
+        skip_list[0].append(skip_node)
+        last_element['up'] = skip_list[0][1]
 
     return sweep_line
 

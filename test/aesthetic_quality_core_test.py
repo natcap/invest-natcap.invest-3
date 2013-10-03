@@ -537,7 +537,18 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'Skip list is not consistent after adding 8'
         consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)
-        print('consistency', consistency)
+        print('consistency for 8', consistency)
+        assert consistency[0] is True, message
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 4)
+        assert 4 in sweep_line
+        assert sweep_length + 1 == len(sweep_line)
+        sweep_length += 1
+        message = 'Skip list is not consistent after adding 4'
+        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)
+        print('consistency for 4', consistency)
         assert consistency[0] is True, message
         # 2.1.2- create intermediate links when and where expected
         # 2.1.3- O(log n) performance is maintained
