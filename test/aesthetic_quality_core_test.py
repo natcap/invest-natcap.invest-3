@@ -520,7 +520,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             skip_nodes)[0] is True, message
         sweep_length = len(sweep_line)
         
-        sweep_line = \
+        sweep_line, skip_nodes = \
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
         assert 6 in sweep_line
         assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
@@ -529,7 +529,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)[0] is True, message
         
-        sweep_line = \
+        sweep_line, skip_nodes = \
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
         assert 8 in sweep_line
         assert sweep_length + 1 == len(sweep_line)
@@ -540,7 +540,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('consistency for 8', consistency)
         assert consistency[0] is True, message
         
-        sweep_line = \
+        sweep_line, skip_nodes = \
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 4)
         assert 4 in sweep_line
         assert sweep_length + 1 == len(sweep_line)

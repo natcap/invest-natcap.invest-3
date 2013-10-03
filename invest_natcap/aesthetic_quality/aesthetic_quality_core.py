@@ -97,22 +97,23 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     
             -sweep_line: a linked list of linked_cell as created by the
                 linked_cell_factory.
-            -skip_list: an array of linked lists that constitutes the hierarchy
+            -skip_nodes: an array of linked lists that constitutes the hierarchy
                 of skip pointers in the skip list. Each cell is defined as ???
             -distance: the value to be added to the sweep_line
 
-            Return the updated sweep_line"""
+            Return a tuple (sweep_line, skip_nodes) with the updated sweep_line
+            and skip_nodes"""
     # Add the field 'closest' to the empty sweep line
     if not sweep_line:
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
             'distance':distance}
         sweep_line['closest'] = sweep_line[distance]
-        return sweep_line
+        return (sweep_line, skip_nodes)
 
     # If distance already exist in sweep_line, no need to re-organize
     if distance in sweep_line:
         # Code to update visibility here
-        return sweep_line
+        return (sweep_line, skip_nodes)
 
     # Need to re-organize the sweep line:
     pixel, hierarchy = find_pixel_before_fast( \
@@ -157,16 +158,16 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             str(len(sweep_line))
         assert len(sweep_line) == 4, message
         # Preparing the skip_list to receive the new skip pointers
-        skip_list = []
-        skip_list.append([])
+        skip_nodes = []
+        skip_nodes.append([])
         pixel = sweep_line['closest']
         # First skip node points to the first element in sweep_line
         skip_node = {'next':None, 'up':None, \
         'down':sweep_line[pixel['distance']], \
         'distance':sweep_line[pixel['distance']], \
         'span':3}
-        skip_list[0].append(skip_node)
-        pixel['up'] = skip_list[0][0]
+        skip_nodes[0].append(skip_node)
+        pixel['up'] = skip_nodes[0][0]
         # Second skip node points to the last element in sweep_line
         # Find last element
         last_element = sweep_line[distance]
@@ -177,10 +178,10 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         'down':sweep_line[pixel['distance']], \
         'distance':sweep_line[pixel['distance']], \
         'span':1}
-        skip_list[0].append(skip_node)
-        last_element['up'] = skip_list[0][1]
+        skip_nodes[0].append(skip_node)
+        last_element['up'] = skip_nodes[0][1]
 
-    return sweep_line
+    return (sweep_line, skip_nodes)
 
 def find_pixel_before_fast(sweep_line, skip_nodes, distance):
     """Find the active pixel before the one with distance. 
@@ -387,7 +388,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     
     # 1.1-If len(linked_list) > 0 then len(linked_list) >= 2
     if len(linked_list) < 2:
-        return False
+        return (False, 'Linked list size is not valid: ' + \
+            str(len(linked_list)))
     # 1.2-If len(linked_list) > 0 then 'closest' exists
     if not linked_list.has_key('closest'):
         message = "Missing key linked_list['closest']"
@@ -515,16 +517,18 @@ def skip_list_is_consistent(linked_list, skip_nodes):
         else:
             # 2.1- Comparing first level in skip_nodes with linked_list
             if total_span != len(linked_list) -1:
-                print('Level', l, ': span of', total_span, \
-                'disagrees with entries in linked_list', len(linked_list) -1)
-                return False
+                message = 'Level ' + str(l) + ': span of ' + str(total_span) + \
+                ' disagrees with entries in linked_list ' + \
+                    str(len(linked_list) -1)
+                return (False, message)
         previous_distance = skip_nodes[l][0]['distance'] -1
         for n in range(len(skip_nodes[l])):
             node = skip_nodes[l][n]
             # 2.2-The entry 'down' is never None
             if node['down'] is None:
-                print('Entry', l, n, 'has a "down" entry that is not None')
-                return False
+                message = 'Entry ' + str(l) + str(n) + \
+                'has a "down" entry that is not None'
+                return (False, message)
             # Looking at the skip node 'next' values:
             if n < len(skip_nodes[l]) -1:
                 # 2.3-Each skip node before the last one has 'next' != None
