@@ -102,7 +102,6 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             -distance: the value to be added to the sweep_line
 
             Return the updated sweep_line"""
-    sweep_line = {}
     # Add the field 'closest' to the empty sweep line
     if not sweep_line:
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
@@ -116,7 +115,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         return sweep_line
 
     # Need to re-organize the sweep line:
-    pixel, hierarchy = aesthetic_quality_core.find_pixel_before_last( \
+    pixel, hierarchy = find_pixel_before_fast( \
         sweep_line, skip_nodes, distance)
     # Add at the beginning of the list
     if pixel is None:
@@ -134,6 +133,10 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_distance['closest'] = sweep_line[distance]
     # Add after the beginning
     else:
+        print('before change')
+        for key in sweep_line.keys():
+            print(key, sweep_line[key]['next'])
+
         # Connecting new pixel to next one
         sweep_line[distance] = {'next':pixel['next'], 'up':None, \
             'down':None, 'distance':distance}
@@ -143,6 +146,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         if pixel['up'] is not None:
             pixel['up']['span'] += 1
         
+        print('after change')
+        for key in sweep_line.keys():
+            print(key, sweep_line[key]['next'])
 
     return sweep_line
 
@@ -188,7 +194,7 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
                 pixel = pixel['next']
                 iteration += 1
             # Went too far, backtrack 
-            if pixel['distance'] >= distance:
+            if (pixel is None) or (pixel['distance'] >= distance):
                 pixel = previous
             hierarchy.append(pixel)
             # Try to go down 1 level

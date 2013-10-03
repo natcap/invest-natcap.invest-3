@@ -524,7 +524,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
         assert 6 in sweep_line
         assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
-        sweep_length += 1
+        sweep_length += 2
         message = 'Skip list is not consistent after adding 6'
         assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
             skip_nodes)[0] is True, message
@@ -535,9 +535,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert sweep_length + 1 == len(sweep_line)
         sweep_length += 1
         message = 'Skip list is not consistent after adding 8'
-        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
-            skip_nodes)[0] is True, message
-        
+        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)
+        print('consistency', consistency)
+        assert consistency[0] is True, message
         # 2.1.2- create intermediate links when and where expected
         # 2.1.3- O(log n) performance is maintained
         # 2.2- deletion of skip links after leaf deletions:
@@ -548,7 +549,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Create a hierarchy that can be searched:
         #sweep_line, skip_nodes = self.build_skip_list()
         # All the skip levels are accessible:
-        current_node = skip_nodes[0][-1]
+        #current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
         print('Skip pointers hierarchy:')
         print('active pixels:')
@@ -623,8 +624,6 @@ class TestAestheticQualityCore(unittest.TestCase):
                 sweep_line['closest']['distance'])
         for i in range(len(test_values)):
             distance = test_values[i]
-            print('distance', distance, 'closest', \
-            sweep_line['closest']['distance'])
             if distance < sweep_line['closest']['distance']:
                 message = 'Error: value before is ' + str(before[i]) + \
                 ' but should be None'
