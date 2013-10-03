@@ -53,7 +53,7 @@ class ImproperECSelection(Exception):
 class MissingEOrCException(Exception):
     '''An exception for hra_preprocessor that catches h-s pairings who are
     missing either E or C criteria, though not both. The user must either zero
-    all criteria for that paoir, or make sure that both E and C are represented.
+    all criteria for that pair, or make sure that both E and C are represented.
     '''
     pass
 
@@ -615,7 +615,7 @@ def zero_check(h_s_c, h_s_e, habs):
             for key_2, subdict_lvl_2 in subdict_lvl_1.items():
 
                 #Only want to check for 0 ratings if they're giving a single
-                #xplicit rating. If they gave a shapefile, they're on their own.
+                #explicit rating. If they gave a shapefile, they're on their own.
                 if key_2 == 'Crit_Ratings':
 
                     #These are key, value pairs of crit_name, dict containing
@@ -656,7 +656,7 @@ def zero_check(h_s_c, h_s_e, habs):
             del h_s_c[pair]
        
         #We know at this point that both are not 0. So at least one is 1+.
-        #If either h_s_c/habs or h_s_e has no criteria. criteria, but not both.
+        #If either h_s_c/habs or h_s_e has no criteria, but not both.
         elif e_crit_count == 0 ^ (c_crit_count + h_crit_count == 0):
             raise MissingEOrCException("For a given habitat-stressor pairing, \
                     there must be at least one relevant exposure criteria, \
