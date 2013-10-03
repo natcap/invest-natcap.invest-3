@@ -4,6 +4,7 @@ import os
 import csv
 import logging
 import shutil
+import fnmatch
 
 import numpy
 from osgeo import ogr
@@ -61,9 +62,12 @@ def execute(args):
     inter_dir = os.path.join(workspace, 'intermediate')
     raster_utils.create_directories([output_dir, inter_dir])
 
-    #Abstracting this to its own function for use in testing. Returns dictionary.
-    file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
-    args['overlap_files'] = file_dict
+    overlap_uris = map(
+        lambda x: os.path.join(args['overlap_data_dir_uri'], x),
+        os.listdir(args['overlap_data_dir_uri']))
+    overlap_shape_uris = fnmatch.filter(args['overlap_data_dir_uri'], '*.shp')
+    #file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
+    #args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
     if args['do_inter']:
@@ -97,7 +101,7 @@ def execute(args):
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
     raster_files, raster_names = make_indiv_rasters(
-        inter_dir, args['overlap_files'], aoi_dataset)
+        inter_dir, overlap_shape_uris, aoi_dataset_uri)
 
     create_unweighted_raster(output_dir, aoi_dataset, raster_files)
 
@@ -128,7 +132,7 @@ def execute(args):
         #Now we want to create a second raster that includes all of the
         #weighting information
         create_weighted_raster(output_dir, weighted_dir, aoi_dataset, 
-                               layer_dict, args['overlap_files'], 
+                               layer_dict, overlap_shape_uris, 
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
                                hubs_rast, raster_files, raster_names)
@@ -518,8 +522,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         
         try:
             os.remove(temp_uri)
-
-        except WindowsError as e:
+        except OSError as e:
             LOGGER.warn("in create_weighted_raster %s on file %s" % (e, 
                 temp_uri))
 
@@ -591,21 +594,22 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         weighted_names.append(element)
    
     return weighted_raster_files, weighted_names
+
         
-def make_indiv_rasters(dir, overlap_files, aoi_raster):
+def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     '''This will pluck each of the files out of the dictionary and create a new
     raster file out of them. The new file will be named the same as the original
     shapefile, but with a .tif extension, and will be placed in the intermediate
     directory that is being passed in as a parameter.
     
     Input:
-        dir- This is the directory into which our completed raster files should
+        out_dir- This is the directory into which our completed raster files should
             be placed when completed.
-        overlap_files- This is a dictionary containing all of the open 
+        overlap_shape_uris- This is a dictionary containing all of the open 
             shapefiles which need to be rasterized. The key for this dictionary
             is the name of the file itself, minus the .shp extension. This key 
             maps to the open shapefile of that name.
-        aoi_raster- The dataset for our AOI. This will be the base map for
+        aoi_raster_uri- The dataset for our AOI. This will be the base map for
             all following datasets.
             
     Returns:
@@ -619,18 +623,18 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''    
     #aoi_raster has to be the first so that we can use it as an easy "weed out"
     #for pixel summary later
-    raster_files = [aoi_raster]
+    raster_files = [aoi_raster_uri]
     raster_names = ['aoi']
     
     #Remember, this defaults to element being the keys of the dictionary
-    for element, datasource in overlap_files.iteritems():
+    for overlap_uri in overlap_shape_uris:
 
-        datasource = overlap_files[element]
+        datasource = overlap_shape_uris[element]
         layer = datasource.GetLayer()       
 
-        outgoing_uri = os.path.join(dir, element + ".tif")        
+        outgoing_uri = os.path.join(out_dir, element + ".tif")        
         
-        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 
+        dataset = raster_utils.new_raster_from_base(aoi_raster_uri, outgoing_uri, 
                           'GTiff', 0, gdal.GDT_Int32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
         
