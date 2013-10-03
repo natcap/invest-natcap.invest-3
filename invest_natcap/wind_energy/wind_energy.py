@@ -1709,8 +1709,8 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Reprojecting dataset')
     # Reproject the raster to the projection of the AOI
-    raster_utils._experimental_reproject_dataset_uri(
-            clipped_uri, pixel_size[0], aoi_wkt, projected_uri)
+    raster_utils.warp_reproject_dataset_uri(
+            clipped_uri, pixel_size[0], aoi_wkt, 'bilinear', projected_uri)
     
     LOGGER.debug('Leaving clip_and_reproject_dataset')
     

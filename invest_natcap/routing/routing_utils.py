@@ -27,7 +27,6 @@
 
 import logging
 import tempfile
-import os
 
 from osgeo import gdal
 import numpy
@@ -67,9 +66,6 @@ def route_flux(in_dem_uri, in_source_uri, in_absorption_rate_uri, loss_uri,
             non-contibuting inputs depending on the orientation of the DEM.
 
         returns nothing"""
-
-    #this is for debugging the routing issues
-    out_dir = os.path.dirname(in_dem_uri)
 
     dem_uri = raster_utils.temporary_filename()
     source_uri = raster_utils.temporary_filename()
@@ -173,7 +169,7 @@ def stream_threshold(flow_accumulation_uri, flow_threshold, stream_uri):
 
 
 def calculate_flow_length(flow_direction_uri, flow_length_uri):
-    """Calcualte the flow length of a cell given the flow direction
+    """Calculate the flow length of a cell given the flow direction
 
         flow_direction_uri - uri to a gdal dataset that represents the
             d_inf flow direction of each pixel
@@ -200,13 +196,13 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         cos_val = numpy.abs(numpy.cos(flow_direction))
         return flow_length_pixel_size / numpy.maximum(sin_val, cos_val)
 
-    raster_utils.vectorize_rasters(
-        [flow_direction_dataset], flow_length, aoi=None,
-        raster_out_uri=flow_length_uri, datatype=gdal.GDT_Float32,
-        nodata=flow_length_nodata)
+    cell_size = raster_utils.get_cell_size_from_uri(flow_direction_uri)
+    raster_utils.vectorize_datasets(
+        [flow_direction_uri], flow_length, flow_length_uri, gdal.GDT_Float32,
+        flow_length_nodata, cell_size, "intersection")
 
 
-def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri, 
+def pixel_amount_exported(in_dem_uri, in_stream_uri, in_retention_rate_uri,
                           in_source_uri, pixel_export_uri, aoi_uri=None):
     """Calculates flow and absorption rates to determine the amount of source
         exported to the stream.  All datasets must be in the same projection.

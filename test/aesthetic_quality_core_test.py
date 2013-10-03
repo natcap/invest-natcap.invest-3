@@ -342,6 +342,78 @@ class TestAestheticQualityCore(unittest.TestCase):
             if breadth == 0:
                 return index
 
+    def build_skip_list(self):
+        """Build a valid skip list for test purposes.
+        
+            Return a tuple (sweep_line, skip_nodes) where the sweep_line is
+            where the data is stored, and skip_nodes contains the hierarchy of
+            skip pointers."""
+        # The basal sweep line:
+        sweep_line = {}
+        sweep_line[0] = {'next':None, 'up':None, 'down':None, 'distance':0}
+        sweep_line['closest'] = sweep_line[0]
+        sweep_line[2] = {'next':None, 'up':None, 'down':None, 'distance':2}
+        sweep_line[0]['next'] = sweep_line[2]
+        sweep_line[4] = {'next':None, 'up':None, 'down':None, 'distance':4}
+        sweep_line[2]['next'] = sweep_line[4]
+        sweep_line[6] = {'next':None, 'up':None, 'down':None, 'distance':6}
+        sweep_line[4]['next'] = sweep_line[6]
+        sweep_line[8] = {'next':None, 'up':None, 'down':None, 'distance':8}
+        sweep_line[6]['next'] = sweep_line[8]
+        sweep_line[10] = {'next':None, 'up':None, 'down':None, 'distance':10}
+        sweep_line[8]['next'] = sweep_line[10]
+        sweep_line[12] = {'next':None, 'up':None, 'down':None, 'distance':12}
+        sweep_line[10]['next'] = sweep_line[12]
+        sweep_line[14] = {'next':None, 'up':None, 'down':None, 'distance':14}
+        sweep_line[12]['next'] = sweep_line[14]
+        # Creating the skip node hierarchy:
+        skip_nodes = []
+        # skip_nodes[0]
+        skip_nodes.append([])
+        # skip_nodes[0][0]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
+            'span':2, 'distance':sweep_line[0]['distance']})
+        # skip_nodes[0][1]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
+            'span':2, 'distance':sweep_line[4]['distance']})
+        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+        # skip_nodes[0][2]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[8], \
+            'span':2, 'distance':sweep_line[8]['distance']})
+        skip_nodes[0][1]['next'] = skip_nodes[0][2]
+        # skip_nodes[0][3]
+        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[12], \
+            'span':2, 'distance':sweep_line[12]['distance']})
+        skip_nodes[0][2]['next'] = skip_nodes[0][3]
+        # skip_nodes[1]
+        skip_nodes.append([])
+        # skip_nodes[1][0]
+        skip_nodes[1].append({'next':None, 'up':None, \
+        'down':skip_nodes[0][0], 'span':2, \
+        'distance':skip_nodes[0][0]['distance']})
+        skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        # skip_nodes[1][1]
+        skip_nodes[1].append({'next':None, 'up':None, \
+        'down':skip_nodes[0][2], 'span':2, \
+        'distance':skip_nodes[0][2]['distance']})
+        skip_nodes[1][0]['next'] = skip_nodes[1][1]
+        skip_nodes[0][0]['up'] = skip_nodes[1][0]
+        skip_nodes[0][2]['up'] = skip_nodes[1][1]
+        # skip_nodes[2]
+        skip_nodes.append([])
+        # skip_nodes[2][0]
+        skip_nodes[2].append({'next':None, 'up':None, \
+        'down':skip_nodes[1][0], 'span':2, \
+        'distance':skip_nodes[1][0]['distance']})
+        skip_nodes[1][0]['up'] = skip_nodes[2][0]
+        # Adjusting the 'up' fields in sweep_line elements:
+        sweep_line[0]['up'] = skip_nodes[0][0]
+        sweep_line[4]['up'] = skip_nodes[0][1]
+        sweep_line[8]['up'] = skip_nodes[0][2]
+        sweep_line[12]['up'] = skip_nodes[0][3]
+
+        return (sweep_line, skip_nodes)
+
     def test_skip_list(self):
         """Test the data structure that holds active pixels in the sweep line
         What is tested:
@@ -437,42 +509,47 @@ class TestAestheticQualityCore(unittest.TestCase):
             str(pixel)
         assert pixel is None, message
         # 1.3.3- O(log n) performance is maintained
-        # 2- Intermediate nodes insertion 
+        # 2- In the intermediate levels:
+        # 2.1- creation of skip links after leaf insertions:
+        sweep_line = {}
+        skip_nodes = []
+        #aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 0)
+        # 2.1.1- insert new leaf in the right place
+        message = 'Initial skip list is not consistent before addition.'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        sweep_length = len(sweep_line)
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
+        assert 6 in sweep_line
+        assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
+        sweep_length += 2
+        message = 'Skip list is not consistent after adding 6'
+        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)[0] is True, message
+        
+        sweep_line = \
+        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
+        assert 8 in sweep_line
+        assert sweep_length + 1 == len(sweep_line)
+        sweep_length += 1
+        message = 'Skip list is not consistent after adding 8'
+        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)
+        print('consistency', consistency)
+        assert consistency[0] is True, message
+        # 2.1.2- create intermediate links when and where expected
+        # 2.1.3- O(log n) performance is maintained
+        # 2.2- deletion of skip links after leaf deletions:
+        # 2.2.1- delete the correct leaf
+        # 2.2.2- trim intermediate links: the skip list reduces to 1
+        # 2.2.3- O(log n) performance is maintained
         # 2.3- fast access:
         # Create a hierarchy that can be searched:
-        # The basal sweep line:
-        sweep_line = {}
-        sweep_line[0] = {'next':None, 'up':None, 'down':None, 'distance':0}
-        sweep_line['closest'] = sweep_line[0]
-        sweep_line[2] = {'next':None, 'up':None, 'down':None, 'distance':2}
-        sweep_line[0]['next'] = sweep_line[2]
-        sweep_line[4] = {'next':None, 'up':None, 'down':None, 'distance':4}
-        sweep_line[2]['next'] = sweep_line[4]
-        sweep_line[6] = {'next':None, 'up':None, 'down':None, 'distance':6}
-        sweep_line[4]['next'] = sweep_line[6]
-        # Creating the skip node hierarchy:
-        skip_nodes = []
-        # skip_nodes[0]
-        skip_nodes.append([])
-        # skip_nodes[0][0]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
-            'span':2, 'distance':sweep_line[0]['distance']})
-        # skip_nodes[0][1
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
-            'span':2, 'distance':sweep_line[4]['distance']})
-        skip_nodes[0][0]['next'] = skip_nodes[0][1]
-        # skip_nodes[1]
-        skip_nodes.append([])
-        # skip_nodes[1][0]
-        skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][0], 'span':2, \
-        'distance':skip_nodes[0][0]['distance']})
-        skip_nodes[0][0]['up'] = skip_nodes[1][0]
-        # Adjusting the 'up' fields in sweep_line elements:
-        sweep_line[0]['up'] = skip_nodes[0][0]
-        sweep_line[4]['up'] = skip_nodes[0][1]
-        # Check all the skip levels are accessible:
-        current_node = skip_nodes[0][-1]
+        #sweep_line, skip_nodes = self.build_skip_list()
+        # All the skip levels are accessible:
+        #current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
         print('Skip pointers hierarchy:')
         print('active pixels:')
@@ -492,14 +569,19 @@ class TestAestheticQualityCore(unittest.TestCase):
             span = current['span']
             print('distance ' + str(current['distance']) + ', next ' + \
                 str(right if right is None else right['distance']), \
-                'down ' + str(current['down']['distance']), 'span', span)
+                'down ' + str(current['down']['distance']), \
+                'span', span)
             while(right is not None):
                 current = current['next']
                 right = current['next']
                 print('distance ' + str(current['distance']) + ', next ' + \
                     str(right if right is None else right['distance']), \
-                    'down ' + str(current['down']['distance']), 'span', span)
-        # 2.3.1- Finds the appropriate value
+                    'down ' + str(current['down']['distance']), \
+                    'span', span)
+        # Test the data structure is valid
+        print('skip list is consistent', \
+            aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
+        # 2.3.1- Find the appropriate value
         for distance in [0, 2, 4, 6, -1, 3, 7]:
             found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
                 skip_nodes, distance)
@@ -509,6 +591,60 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert found == expected, message
         # 2.3.2- O(log n) performance is maintained
 
+    def test_find_pixel_before(self):
+        """Test find_pixel_before_fast
+        Test the function that finds the pixel with the immediate smaller
+        distance than what is specified by the user. This si useful in 2
+        functions:  1- find_active_pixel_fast: the distance we're looking for
+                        is right after this pixel,
+                    2- insert_active_pixel_fast: the new pixel to insert is
+                        right after this pixel.
+        Very useful."""
+        sweep_line, skip_nodes = self.build_skip_list()
+        
+        test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+        sweep_line_values = []
+        pixel = sweep_line['closest']
+        sweep_line_values.append(pixel['distance'])
+        while pixel['next'] is not None:
+            pixel = pixel['next']
+            sweep_line_values.append(pixel['distance'])
+        found = []
+        before = []
+        after = []
+        for distance in test_values:
+            node = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
+                skip_nodes, distance)
+            found.append(node['distance'] if node is not None else None)
+            node, _ = aesthetic_quality_core.find_pixel_before_fast(sweep_line,
+                skip_nodes, distance)
+            before.append(node['distance'] if node is not None else None)
+            after.append((node['next']['distance'] if node['next'] is not None
+            else None) if node is not None else 
+                sweep_line['closest']['distance'])
+        for i in range(len(test_values)):
+            distance = test_values[i]
+            if distance < sweep_line['closest']['distance']:
+                message = 'Error: value before is ' + str(before[i]) + \
+                ' but should be None'
+                assert before[i] is None, message
+            else:
+                message = 'Error for distance ' + str(distance) + \
+                ': value of "before" is ' + str(before[i]) + \
+                    ' < ' + str(distance)
+                assert before[i] < distance, message
+                if after[i] is None:
+                    message = \
+                    'Error for distance ' + str(distance) + \
+                    ': after is None, but before is not highest, ' + \
+                    str(before[i])
+                    assert before[i] == sweep_line_values[-1], message
+                else:
+                    message = 'Error for distance ' + str(distance) \
+                    + ': value of "after" is ' + str(after[i]) + \
+                        ' < ' + str(distance)
+                    assert after[i] >= distance, message
+        
 
     def test_viewshed(self):
         array_shape = (6,6)
