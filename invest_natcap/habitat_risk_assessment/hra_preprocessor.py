@@ -109,17 +109,7 @@ def execute(args):
                 either habitat or species information for comparison against \
                 potential stressors.")
     
-    #2. There should be criteria of each type (exposure, sensitivity,
-    # resilience). Exposure can be either a C applied criteria or an E applied
-    #criteria.
-    if (len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
-            or len(args['sensitivity_crits']) == 0):
-
-        raise ImproperCriteriaSpread("This model requires there to be one \
-                criteria in each of the following catagories: Exposure, \
-                Sensitivity, and Resilience.")
-    
-    #3. There should be > 4 criteria total.
+    #2. There should be > 4 criteria total.
     total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) + \
                 len(args['sensitivity_crits'])
    
@@ -552,10 +542,6 @@ def parse_hra_tables(folder_uri):
         #Instead of having to know what came from where, let's just have it update
         #the global dictionaries while the function is running. 
         parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
-
-    LOGGER.debug("h_s_c: %s" % h_s_c_dict)
-    LOGGER.debug("h_s_e: %s" % h_s_e_dict)
-    LOGGER.debug("habs: %s" % habitat_dict)
     
     zero_check(h_s_c_dict, h_s_e_dict, habitat_dict)
 
@@ -644,8 +630,6 @@ def zero_check(h_s_c, h_s_e, habs):
         c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
         h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
 
-        LOGGER.debug("E_Count is %s, and C_Count is %s, and H_Count is %s" % (e_crit_count, c_crit_count, h_crit_count))
-
         #First case should be if a dict pair's own Rasters/Ratings dictionaries
         #are empty, and h_s_c[pair] are also empty.
         if e_crit_count == 0 and c_crit_count == 0:
@@ -663,9 +647,6 @@ def zero_check(h_s_c, h_s_e, habs):
                     and at least one relevant sensitivity or resilience criteria. \
                     Currently, the (%s, %s) pairing is missing one or the other. \
                     This can be corrected in the %s ratings csv file." % (h, s, h))
-
-    LOGGER.debug(h_s_e)
-    LOGGER.debug(h_s_c)
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
