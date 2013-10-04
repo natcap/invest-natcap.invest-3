@@ -108,17 +108,6 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
             'distance':distance}
         sweep_line['closest'] = sweep_line[distance]
-        # Preparing the skip_list to receive the new skip pointers
-        skip_nodes = []
-        skip_nodes.append([])
-        pixel = sweep_line['closest']
-        # First skip node points to the first element in sweep_line
-        skip_node = {'next':None, 'up':None, \
-        'down':sweep_line[pixel['distance']], \
-        'distance':sweep_line[pixel['distance']]['distance'], \
-        'span':1}
-        skip_nodes[0].append(skip_node)
-        pixel['up'] = skip_nodes[0][0]
         return (sweep_line, skip_nodes)
 
     # If distance already exist in sweep_line, no need to re-organize
@@ -158,11 +147,34 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         if pixel['up'] is not None:
             pixel['up']['span'] += 1
          
-    print('after change:')
+    if len(sweep_line) == 5:
+        # Preparing the skip_list to receive the new skip pointers
+        skip_nodes = []
+        skip_nodes.append([])
+        pixel = sweep_line['closest']
+        # First skip node points to the first element in sweep_line
+        skip_node = {'next':None, 'up':None, \
+        'down':sweep_line[pixel['distance']], \
+        'distance':sweep_line[pixel['distance']]['distance'], 'span':2}
+        skip_nodes[0].append(skip_node)
+        sweep_line[pixel['distance']]['up'] = skip_nodes[0][0]
+        # Second skip node points to the second last element in sweep_line
+        second_last = sweep_line['closest']
+        while second_last['next']['next'] is not None:
+            second_last = second_last['next']
+        skip_node = {'next':None, 'up':None, 'down':second_last, \
+        'distance':second_last['distance'], 'span':2}
+        skip_nodes[0].append(skip_node)
+        sweep_line[second_last['distance']]['up'] = skip_nodes[0][1]
+        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+
+    print('--after change:')
     print('closest points to ', sweep_line['closest']['distance'])
     for key in sweep_line.keys():
         print(key, 'next', sweep_line[key]['next'] if sweep_line[key]['next'] is None
-            else sweep_line[key]['next']['distance'])
+            else sweep_line[key]['next']['distance'], \
+            'up', None if sweep_line[key]['up'] is None else \
+            sweep_line[key]['up'])
     print('--skip_nodes:')
     for level in range(len(skip_nodes)):
         print('level', level)
@@ -398,7 +410,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
         return (False, message)
 
     # Minimum and maximum number of allowed up pointers
-    min_up_count = math.ceil(float(len(linked_list) -1) / 3)
+    min_up_count = 0 if len(linked_list) < 5 else \
+        math.ceil(float(len(linked_list) -1) / 3)
     max_up_count = math.ceil(float(len(linked_list) -1) / 2)
 
     up_count = 0    # actual number of up pointers
@@ -483,7 +496,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     # Empty skip node
     if not skip_nodes:
         # Small enough: good, we can return
-        if len(linked_list) < 4:
+        if len(linked_list) < 5:
             return (True, 'All is well')
         # Linked list is big enough and should have skip pointers
         else:
@@ -643,7 +656,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 str(len(skip_nodes[level]))
             return (False, message)
         # Minimum and maximum number of allowed up pointers
-        min_up_count = math.ceil(float(len(skip_nodes[level])-1) / 3)
+        min_up_count = 0 if len(skip_nodes[level]) < 4 else \
+            math.ceil(float(len(skip_nodes[level])) / 3)
         max_up_count = math.ceil(float(len(skip_nodes[level])-1) / 2)
         # 2.13-The number of pointers at each level has to be valid
         if level_up_count > max_up_count:
