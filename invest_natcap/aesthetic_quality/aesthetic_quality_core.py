@@ -108,6 +108,17 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
             'distance':distance}
         sweep_line['closest'] = sweep_line[distance]
+        # Preparing the skip_list to receive the new skip pointers
+        skip_nodes = []
+        skip_nodes.append([])
+        pixel = sweep_line['closest']
+        # First skip node points to the first element in sweep_line
+        skip_node = {'next':None, 'up':None, \
+        'down':sweep_line[pixel['distance']], \
+        'distance':sweep_line[pixel['distance']]['distance'], \
+        'span':1}
+        skip_nodes[0].append(skip_node)
+        pixel['up'] = skip_nodes[0][0]
         return (sweep_line, skip_nodes)
 
     # If distance already exist in sweep_line, no need to re-organize
@@ -147,39 +158,17 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         if pixel['up'] is not None:
             pixel['up']['span'] += 1
          
-    print('after change')
+    print('after change:')
+    print('closest points to ', sweep_line['closest']['distance'])
     for key in sweep_line.keys():
-        print(key, sweep_line[key]['next'])
-
-
-    # Creating first up pointers
-    if (len(sweep_line) > 3) and (sweep_line['closest']['up'] is None):
-        message = 'Expecting sweep line of size 4 but is ' + \
-            str(len(sweep_line))
-        assert len(sweep_line) == 4, message
-        # Preparing the skip_list to receive the new skip pointers
-        skip_nodes = []
-        skip_nodes.append([])
-        pixel = sweep_line['closest']
-        # First skip node points to the first element in sweep_line
-        skip_node = {'next':None, 'up':None, \
-        'down':sweep_line[pixel['distance']], \
-        'distance':sweep_line[pixel['distance']], \
-        'span':3}
-        skip_nodes[0].append(skip_node)
-        pixel['up'] = skip_nodes[0][0]
-        # Second skip node points to the last element in sweep_line
-        # Find last element
-        last_element = sweep_line[distance]
-        while last_element['next'] is not None:
-            last_element = last_element['next']
-        # Create the skip node
-        skip_node = {'next':None, 'up':None, \
-        'down':sweep_line[pixel['distance']], \
-        'distance':sweep_line[pixel['distance']], \
-        'span':1}
-        skip_nodes[0].append(skip_node)
-        last_element['up'] = skip_nodes[0][1]
+        print(key, 'next', sweep_line[key]['next'] if sweep_line[key]['next'] is None
+            else sweep_line[key]['next']['distance'])
+    print('--skip_nodes:')
+    for level in range(len(skip_nodes)):
+        print('level', level)
+        for skip_node in skip_nodes[level]:
+            print('node', skip_node['distance'], 'span', skip_node['span'], \
+            None if skip_node['next'] is None else skip_node['next']['distance'])
 
     return (sweep_line, skip_nodes)
 
@@ -409,8 +398,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
         return (False, message)
 
     # Minimum and maximum number of allowed up pointers
-    min_up_count = math.ceil(float((len(linked_list) -1) / 3))
-    max_up_count = math.ceil(float((len(linked_list) -1) / 2))
+    min_up_count = math.ceil(float(len(linked_list) -1) / 3)
+    max_up_count = math.ceil(float(len(linked_list) -1) / 2)
 
     up_count = 0    # actual number of up pointers
     up_gap = -1     # gap since last up pointer
@@ -558,7 +547,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 return (False, message)
             # 2.7-The span at each skip node is either 2 or 3
             if (node['span'] != 2) and (node['span'] != 3):
-                message = 'Wrong span: should be either 2 or 3, but is' + \
+                message = 'Wrong span: should be either 2 or 3, but is ' + \
                     str(node['span'])
                 return (False, message)
             # 2.8-The last node spanned by a higher skip node is right

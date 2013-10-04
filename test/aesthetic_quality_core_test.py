@@ -526,8 +526,10 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
         sweep_length += 2
         message = 'Skip list is not consistent after adding 6'
-        assert aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
-            skip_nodes)[0] is True, message
+        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+            skip_nodes)
+        print('consistency for 6', consistency)
+        assert consistency[0] is True, message
         
         sweep_line, skip_nodes = \
         aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
