@@ -417,6 +417,11 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     up_count = 0    # actual number of up pointers
     up_gap = -1     # gap since last up pointer
     
+    # Counting the first 'up' pointer
+    if pixel['up'] is not None:
+        up_count += 1
+        up_gap = 0
+
     # Traverse the linked list
     while pixel['next'] is not None:
         pixel = pixel['next']
