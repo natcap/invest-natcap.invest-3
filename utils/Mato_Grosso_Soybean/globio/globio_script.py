@@ -297,8 +297,6 @@ def globio_analyze_premade_lulc_scenarios(args):
             converts this many pixels
         args['output_table_filename'] - this is the filename of the CSV
             output table.
-        args['scenario_lulc_base_map_filename'] - the base LULC map used for
-            the scenario runs
         args['scenario_path'] - the path to the directory that holds the
             scenarios
         args['scenario_file_pattern'] - the filename pattern to load the
@@ -451,8 +449,6 @@ def globio_analyze_forest_core_expansion(args):
             converts this many pixels
         args['output_table_filename'] - this is the filename of the CSV
             output table.
-        args['scenario_lulc_base_map_filename'] - the base LULC map used for
-            the scenario runs
         """
 
     scenario_name = "globio_forest_core_expansion"
@@ -529,8 +525,6 @@ def globio_analyze_forest_core_fragmentation(args):
             converts this many pixels
         args['output_table_filename'] - this is the filename of the CSV
             output table.
-        args['scenario_lulc_base_map_filename'] - the base LULC map used for
-            the scenario runs
         """
 
     scenario_name = "globio_forest_core_fragmentation"
@@ -692,131 +686,76 @@ if __name__ == '__main__':
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
+            
+    #This set of ARGS are shared by all of the LULC-generating-scenarios
+    ARGS = {
+        #define which lu  codes count as forest when calculating distance to forest edge.
+        'forest_lucodes' : [1,2,3,4,5],
+        #number of iterations to run.
+        'scenario_conversion_steps': 400, 
+        #how many pixels should be converted to crop in each iteration step
+        'pixels_to_convert_per_step': 2608,
+        #identify a new lu code for newly-created crop that we add via the simulation
+        'converting_crop': 120,
+        #a unique string based on unix-timestamp that i postpend to each filename to avoid accidental overwriting.
+        'run_id': str(time.time()).split(".")[0],  
+        #location where all data not specified below are stored 
+        'data_location': './',
+        #a table that indicates which of the input lu codes should be mapped to which intermediate lu codes (see documentation). First row reserved for labels.
+        'lulc_conversion_table_uri': './lulc_conversion_table.csv',
+        #export location
+        'export_folder': './export/',    
+        #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
+        'sum_yieldgap_uri': './sum_yieldgap.tif', #TODO: fix so that this smartly chooses to load premade or folder-based calculation  
+        #if sum_yieldgap_uri is None, this variable indicates where crop-specific yieldgap maps (available at earthstat.org, see documentation) are placed. The script then aggregates them to creat sum_yieldgap.tif
+        'yield_gap_data_folder': './', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
+        #uri to geotiff  of potential vegetation
+        'potential_vegetation_uri': './potential_vegetation.tif',  
+        #uri to geotiff of proportion in pasture
+        'pasture_uri': './pasture.tif',
+        #uri to geotiff that defines the zone of interest. Can be  constructed from any shapefile of any region, defined as 1 = within region, 0 = not in region.  If data need to be buffered, ensure that the extent of this map is not at the border, but rather at the extent of the buffered border.
+        'mg_definition_uri': './mg_definition.tif',
+        #uri to geotiff of lulc data. the values in this map must correspond to the values in lulc_conversion_table_uri 
+        'input_lulc_uri': './lulc_2008.tif',
+    }            
 
-    #sets up forest expansion scenario
-    args = {}
-    args['forest_lucodes'] = [1,2,3,4,5]
-    args['scenario_conversion_steps'] = 400
-    args['run_id'] = str(time.time()).split(".")[0]
-    args['input_lulc_uri'] = './lulc_2008.tif'
-    args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
-    args['pixels_to_convert_per_step'] = 2608 #default 2608. 
-    args['converting_crop'] = 120,
-    args['data_location'] = './'
-    args['output_table_filename'] = (
-        './export/globio_forest_expansion_msa_change_'+args['run_id']+'.csv')
-    args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './export/'
-    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
-    args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './potential_vegetation.tif'
-    args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './pasture.tif'
-    args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './mg_definition.tif'
-    args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
-    #globio_analyze_forest_expansion(args)
+    #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
+    ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri']) #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
+    ARGS['sum_yieldgap_array']= geotiff_to_array(ARGS['sum_yieldgap_uri'])
+    ARGS['potential_vegetation_array']= geotiff_to_array(ARGS['potential_vegetation_uri'])
+    ARGS['pasture_array']= geotiff_to_array(ARGS['pasture_uri'])
+    ARGS['mg_definition_array']= geotiff_to_array(ARGS['mg_definition_uri']) #1 = in MG, 0 = notprintin MG
 
-    #set up args for forest core expansion scenario using GLOBIO
-    args = {}
-    args['forest_lucodes'] = [1,2,3,4,5]
-    args['scenario_conversion_steps'] = 400
-    args['run_id'] = str(time.time()).split(".")[0]
-    args['input_lulc_uri'] = './lulc_2008.tif'
-    args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
-    args['pixels_to_convert_per_step'] = 2608 #default 2608. 
-    args['converting_crop'] = 120,
-    args['data_location'] = './'
-    args['output_table_filename'] = (
-        './export/globio_forest_core_expansion_msa_change_'+args['run_id']+'.csv')
-    args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './export/'
-    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
-    args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './potential_vegetation.tif'
-    args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './pasture.tif'
-    args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './mg_definition.tif'
-    args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
-    #globio_analyze_forest_core_expansion(args)
+    #Make all arrays exactly the right shape. This shouldn't matter, but it fixes a mistake Justin made when clipping the data.
+    if not ARGS['input_lulc_array'].shape == (2528, 2695): ARGS['input_lulc_array'] = ARGS['input_lulc_array'][0:2528:1,0:2695:1] 
+    if not ARGS['sum_yieldgap_array'].shape == (2528, 2695): ARGS['sum_yieldgap_array'] = ARGS['sum_yieldgap_array'][0:2528:1,0:2695:1] 
+    if not ARGS['potential_vegetation_array'].shape == (2528, 2695): ARGS['potential_vegetation_array'] = ARGS['potential_vegetation_array'][0:2528:1,0:2695:1] 
+    if not ARGS['pasture_array'].shape == (2528, 2695): ARGS['pasture_array'] = ARGS['pasture_array'][0:2528:1,0:2695:1] 
+    if not ARGS['mg_definition_array'].shape == (2528, 2695): ARGS['mg_definition_array'] = ARGS['mg_definition_array'][0:2528:1,0:2695:1] 
 
-    #set up args for forest core fragmentation scenario using GLOBIO
-    args = {}
-    args['forest_lucodes'] = [1,2,3,4,5]
-    args['scenario_conversion_steps'] = 400
-    args['run_id'] = str(time.time()).split(".")[0]
-    args['input_lulc_uri'] = './lulc_2008.tif'
-    args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
-    args['pixels_to_convert_per_step'] = 2608 #default 2608. 
-    args['converting_crop'] = 120,
-    args['data_location'] = './'
-    args['output_table_filename'] = (
-        './export/globio_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv')
-    args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './export/'
-    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
-    args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './potential_vegetation.tif'
-    args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './pasture.tif'
-    args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './mg_definition.tif'
-    args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
-    #globio_analyze_forest_core_fragmentation(args)
+    #Set up the ARGS for the disk based scenario
+    ARGS['scenario_path'] = './data/MG_Soy_Exp_07122013/'
+    ARGS['scenario_file_pattern'] = 'mg_lulc%n'
+    ARGS['output_table_filename'] = ('./export/globio_premade_lulc_scenarios_msa_change_'+ARGS['run_id']+'.csv')
+    globio_analyze_premade_lulc_scenarios(ARGS) 
 
-    #set up args for forest lu expansion scenario using GLOBIO
-    args = {}
-    args['forest_lucodes'] = [1,2,3,4,5]
-    args['scenario_conversion_steps'] = 400
-    args['run_id'] = str(time.time()).split(".")[0]
-    args['input_lulc_uri'] = './lulc_2008.tif'
-    args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
-    args['pixels_to_convert_per_step'] = 2608 #default 2608. 
-    args['converting_crop'] = 120,
-    args['data_location'] = './'
-    args['output_table_filename'] = (
-        './export/globio_lu_expansion_msa_change_'+args['run_id']+'.csv')
-    args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './export/'
-    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
-    args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './potential_vegetation.tif'
-    args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './pasture.tif'
-    args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './mg_definition.tif'
-    args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
-    args['conversion_lucode'] = 9
-    #globio_analyze_lu_expansion(args)
+    #Set up ARGS for the forest core expansion scenario
+    ARGS['output_table_filename'] = (
+        'forest_core_expansion_msa_change_'+ARGS['run_id']+'.csv')
+    globio_analyze_forest_core_expansion(ARGS)
     
-    #set up args for premade lulc scenario using GLOBIO
-    args = {}
-    args['forest_lucodes'] = [1,2,3,4,5]
-    args['scenario_conversion_steps'] = 400
-    args['run_id'] = str(time.time()).split(".")[0]
-    args['input_lulc_uri'] = './lulc_2008.tif'
-    args['input_lulc_array'] = geotiff_to_array(args['input_lulc_uri'])[0:2528:1,0:2695:1] #TODO: This was a bad hack I had to do because I accidentally made my data wrong sizes by 1 pixel but didn't  have time to fix.
-    args['pixels_to_convert_per_step'] = 2608 #default 2608. 
-    args['converting_crop'] = 120,
-    args['data_location'] = './'
-    args['output_table_filename'] = (
-        './export/globio_premade_lulc_scenarios_msa_change_'+args['run_id']+'.csv')
-    args['lulc_conversion_table_uri'] = './lulc_conversion_table.csv'
-    args['export_folder'] = './export/'
-    args['sum_yieldgap_uri'] = './sum_yieldgap.tif' 
-    args['sum_yieldgap_array'] = geotiff_to_array(args['sum_yieldgap_uri'])[0:2528:1,0:2695:1]
-    args['yield_gap_data_folder'] = './' #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. 
-    args['potential_vegetation_uri'] = './potential_vegetation.tif'
-    args['potential_vegetation_array'] = geotiff_to_array(args['potential_vegetation_uri'])[0:2528:1,0:2695:1]
-    args['pasture_uri'] = './pasture.tif'
-    args['pasture_array'] = geotiff_to_array(args['pasture_uri'])[0:2528:1,0:2695:1]
-    args['mg_definition_uri'] = './mg_definition.tif'
-    args['mg_definition_array'] = geotiff_to_array(args['mg_definition_uri'])[0:2528:1,0:2695:1] #1 = in MG, 0 = not in MG
-    args['scenario_path'] = './data/MG_Soy_Exp_07122013/'
-    args['scenario_file_pattern'] = 'mg_lulc%n'
-    globio_analyze_premade_lulc_scenarios(args) #Currently, this does not work with the projection Brad used ( I couldn't figure out which it was), so I just randomly crop the image to be the right size. This  makes the results here inaccurate, but if the user were to supply a set of maps with known projections, it would  be accurate.
+     #Set up ARGS for the savanna scenario (via lu_expansion function)
+    ARGS['output_table_filename'] = (
+       './export/globio_lu_expansion_msa_change_'+ARGS['run_id']+'.csv')
+    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
+    ARGS['conversion_lucode'] = 9
+    globio_analyze_lu_expansion(ARGS)
+       
+    #Set up ARGS for the forest (edge) expansion scenario
+    ARGS['output_table_filename'] = (
+        './export/globio_forest_expansion_msa_change_'+ARGS['run_id']+'.csv')
+    globio_analyze_forest_expansion(ARGS)
+
+    ARGS['output_table_filename'] = (
+        './export/globio_forest_core_fragmentation_msa_change_'+ARGS['run_id']+'.csv')
+    globio_analyze_forest_core_fragmentation(ARGS)

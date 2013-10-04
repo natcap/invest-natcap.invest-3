@@ -679,7 +679,8 @@ def analyze_forest_core_expansion(args):
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
-    for percent in range(args['scenario_conversion_steps'] + 1):
+    percent_per_step = 10
+    for percent in range(0, args['scenario_conversion_steps'] + 1, percent_per_step):
         print 'calculating carbon stocks for expansion step %s' % percent
 
         #Calcualte the carbon stocks based on the regression functions, lookup
@@ -696,7 +697,7 @@ def analyze_forest_core_expansion(args):
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
 
-        deepest_edge_index += args['pixels_to_convert_per_step']
+        deepest_edge_index += args['pixels_to_convert_per_step'] * percent_per_step
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
@@ -761,7 +762,7 @@ def analyze_forest_core_fragmentation(args):
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
-    percent_per_step = 1
+    percent_per_step = 10
     for percent in range(0, args['scenario_conversion_steps'] + 1, percent_per_step):
         print 'calculating carbon stocks for expansion step %s' % percent
 
@@ -917,7 +918,8 @@ if __name__ == '__main__':
     #Set up args for the forest core scenario
     ARGS['output_table_filename'] = (
         'forest_core_fragmentation_carbon_stock_change.csv')
-    analyze_forest_core_fragmentation(ARGS)
+    #analyze_forest_core_fragmentation(ARGS)
+    #sys.exit(-1)
     
     #set up args for the composite scenario
     ARGS['output_table_filename'] = (
@@ -951,7 +953,7 @@ if __name__ == '__main__':
         9: .2
         }
         
-    analyze_composite_carbon_stock_change(ARGS)
+    #analyze_composite_carbon_stock_change(ARGS)
     
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_60.csv')
@@ -977,9 +979,9 @@ if __name__ == '__main__':
 
     #Set up args for the forest core scenario
     ARGS['output_table_filename'] = (
-        'forest_core_degredation_carbon_stock_change.csv')
+        'forest_core_degredation_carbon_stock_change_10.csv')
     analyze_forest_core_expansion(ARGS)
-
+    sys.exit(-1)
     #Set up args for the savanna scenario
     ARGS['output_table_filename'] = (
         'savanna_expansion_carbon_stock_change.csv')

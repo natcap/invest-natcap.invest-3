@@ -1345,6 +1345,7 @@ def resample_dataset(
             gdal.GRA_Bilinear
 
         returns nothing"""
+
     original_dataset = gdal.Open(original_dataset_uri)
     original_band, original_nodata = extract_band_and_nodata(original_dataset)
 
