@@ -1048,27 +1048,25 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
     and the base raster.
     '''
     base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+    c_nodata = raster_utils.get_nodata_from_uri(c_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+   
+    #Rules should be similar to euclidean risk in that nothing happens
+    #without there being c_pixels there.
+    def combine_risk_mult(b_pix, e_pix, c_pix):
+
+        if c_pix == c_nodata:
+            return base_nodata
     
-    #Since we aren't necessarily sure what base nodata is coming in as, just
-    #want to be sure that this will output 0.
-    def combine_risk_mult(*pixels):
+        #Here, we know that c_pix is not nodata, but want to return 0 if
+        #there is habitat without overlap.
+        elif b_pix == base_nodata:
+            return 0
 
-        #since the E and C are created within this module, we are very sure
-        #that their nodata will be -1. Just need to check base, which we know
-        #was the first ds passed.
-        b_pixel = pixels[0]
-        if b_pixel == base_nodata:
-            return base_nodata       
-
-        #Otherwise, straight multiply all of the pixel values. We assume that
-        #base could potentially be decayed.
-        value = 1.
- 
-        for p in pixels:
-            value = value * p
-
-        return value
+        #Here, we know that c_pix isn't nodata, and that overlap exists, so
+        #can just straight multiply.
+        else:
+            return e_pix * c_pix
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult, risk_uri, 
                     gdal.GDT_Float32, -1., grid_size, "union", 
@@ -1094,42 +1092,44 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     #Already have base open for nodata values, just using pixel_size
     #version of the function.
     base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-    e_nodata = raster_utils.get_nodata_from_uri(e_uri)
+    c_nodata = raster_utils.get_nodata_from_uri(c_uri)
     grid_size = raster_utils.get_cell_size_from_uri(base_uri)
-
-    LOGGER.debug("Base Nodata: %s, E_Nodata: %s, Grid_Size: %s" % (base_nodata, e_nodata, grid_size))
 
     #we need to know very explicitly which rasters are being passed in which
     #order. However, since it's all within the make_risk_euc function, should
     #be safe.
     def combine_risk_euc(b_pix, e_pix, c_pix):
 
-        #Want to make sure we return nodata if there is no base, or no exposure
-        if b_pix == base_nodata or e_pix == e_nodata:
+        #If there is no C data (no habitat/overlap), we will always be 
+        #returning nodata.
+        if c_pix == c_nodata:
             return base_nodata
         
-        #Want to make sure that the decay is applied to E first, then that product
-        #is what is used as the new E
-        e_val = b_pix * e_pix
-
-        #Only want to perform these operation if there is data in the cell, else
-        #we end up with false positive data when we subtract 1. 
-        if c_pix == 0. and e_pix == 0.:
-            LOGGER.debug("There's a 0 in the cell. How did you get that?")
-            c_val = 0.
-            e_val = 0.
+        #Already know here that c_pix (hab/hab-overlap) exists.
+        #If habitat exists without stressor, want to return 0 as the overall
+        #risk, so that it will show up as "no risk" but still show up.
+        elif b_pix == base_nodata:
+            return 0
+        
+        #At this point, we know that there is data in c_pix, and we know that
+        #there is overlap. So now can do the euc. equation.
         else:
+            
+            #Want to make sure that the decay is applied to E first, then that product
+            #is what is used as the new E
+            e_val = b_pix * e_pix
+
             c_val = c_pix - 1
             e_val -= 1
 
-        #Now square both.
-        c_val = c_val ** 2
-        e_val = e_val ** 2
-        
-        #Combine, and take the sqrt
-        value = math.sqrt(e_val + c_val)
-        
-        return value
+            #Now square both.
+            c_val = c_val ** 2
+            e_val = e_val ** 2
+            
+            #Combine, and take the sqrt
+            value = math.sqrt(e_val + c_val)
+            
+            return value
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
                     combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., grid_size,
