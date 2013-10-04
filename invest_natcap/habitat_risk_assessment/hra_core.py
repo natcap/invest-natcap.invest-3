@@ -1105,15 +1105,15 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
     #be safe.
     def combine_risk_euc(b_pix, e_pix, c_pix):
 
+        #If there is no C data (no habitat/overlap), we will always be 
+        #returning nodata.
+        if c_pix == c_nodata:
+            return base_nodata
+        
         #If habitat exists without stressor, want to return 0 as the overall
         #risk, so that it will show up as "no risk" but still show up.
-        if b_pix == base_nodata and not c_pix == c_nodata:
+        elif b_pix == base_nodata and not c_pix == c_nodata:
             return 0
-
-        #If, however, there is no C data (no habitat/overlap), we will always be
-        #returning nodata.
-        elif c_pix == c_nodata:
-            return base_nodata
         
         #At this point, we know that there is data in c_pix, and we know that
         #there is overlap. So now can do the euc. equation.
