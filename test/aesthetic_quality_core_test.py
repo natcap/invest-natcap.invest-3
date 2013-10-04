@@ -520,49 +520,26 @@ class TestAestheticQualityCore(unittest.TestCase):
             skip_nodes)[0] is True, message
         sweep_length = len(sweep_line)
         
-        sweep_line, skip_nodes = \
-        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 6)
-        assert 6 in sweep_line
-        assert sweep_length + 2 == len(sweep_line), str(len(sweep_line))
-        sweep_length += 2
-        message = 'Skip list is not consistent after adding 6'
-        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
-            skip_nodes)
-        print('consistency for 6', consistency)
-        assert consistency[0] is True, message
-        
-        sweep_line, skip_nodes = \
-        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 8)
-        assert 8 in sweep_line
-        assert sweep_length + 1 == len(sweep_line)
-        sweep_length += 1
-        message = 'Skip list is not consistent after adding 8'
-        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
-            skip_nodes)
-        print('consistency for 8', consistency)
-        assert consistency[0] is True, message
-        
-        sweep_line, skip_nodes = \
-        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 4)
-        assert 4 in sweep_line
-        assert sweep_length + 1 == len(sweep_line)
-        sweep_length += 1
-        message = 'Skip list is not consistent after adding 4'
-        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
-            skip_nodes)
-        print('consistency for 4', consistency)
-        assert consistency[0] is True, message
-        
-        sweep_line, skip_nodes = \
-        aesthetic_quality_core.add_active_pixel_fast(sweep_line, skip_nodes, 10)
-        assert 10 in sweep_line
-        assert sweep_length + 1 == len(sweep_line)
-        sweep_length += 1
-        message = 'Skip list is not consistent after adding 10'
-        consistency = aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
-            skip_nodes)
-        print('consistency for 10', consistency)
-        assert consistency[0] is True, message
+        test_values = [6, 8, 4, 10, 2]
+        for value in test_values:
+            sweep_line, skip_nodes = \
+            aesthetic_quality_core.add_active_pixel_fast(sweep_line, \
+            skip_nodes, value)
+            assert value in sweep_line
+            if sweep_length == 0:
+                increment = 2
+            else: 
+                increment = 1
+            assert sweep_length + increment == len(sweep_line), \
+                str(len(sweep_line))
+            sweep_length += increment
+            message = 'Skip list is not consistent after adding ' + str(value)
+            consistency = \
+            aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
+                skip_nodes)
+            print('consistency for ' + str(value), consistency)
+            assert consistency[0] is True, message
+
         # 2.1.2- create intermediate links when and where expected
         # 2.1.3- O(log n) performance is maintained
         # 2.2- deletion of skip links after leaf deletions:

@@ -121,8 +121,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     print('---pixel', pixel if pixel is None else pixel['distance'])
     print('before change')
     for key in sweep_line.keys():
-        print(key, sweep_line[key]['next'])
-    # Add at the beginning of the list
+        print(key, None if sweep_line[key]['next'] is None else \
+            sweep_line[key]['next']['distance'])
+    # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
         second = sweep_line['closest']['distance']
@@ -130,6 +131,17 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             'down':None, 'distance':distance}
         # Move skip pointers to the pixel
         sweep_line[distance]['up'] = sweep_line[second]['up']
+        # Update the skip pointer's distances:
+        skip_node = sweep_line[distance]['up']
+        if skip_node is not None:
+            skip_node['distance'] = distance
+            skip_node['down'] = sweep_line[distance]
+            print('skip_node', None if skip_node is None else skip_node['distance'])
+            while skip_node['up'] is not None:
+                skip_node = skip_node['up']
+                print('skip_node', None if skip_node is None else skip_node['distance'])
+                skip_node['distance'] = distance
+                skip_node['down'] = sweep_line[distance]
         # Updating span
         if sweep_line[distance]['up'] is not None:
             sweep_line[distance]['up']['span'] += 1
