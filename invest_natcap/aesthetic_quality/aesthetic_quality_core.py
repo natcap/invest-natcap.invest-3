@@ -174,7 +174,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         print(key, 'next', sweep_line[key]['next'] if sweep_line[key]['next'] is None
             else sweep_line[key]['next']['distance'], \
             'up', None if sweep_line[key]['up'] is None else \
-            sweep_line[key]['up'])
+            sweep_line[key]['up']['distance'])
     print('--skip_nodes:')
     for level in range(len(skip_nodes)):
         print('level', level)
