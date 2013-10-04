@@ -118,7 +118,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         distance = node_below['distance']
         # create new skip node
         new_node = {'next':skip_node['next'], 'up':None, 'down':node_below, \
-            'distance':distance, 'span':2})
+            'distance':distance, 'span':2}
         # Insert new node in skip_node_level
         skip_node_level[distance] = new_node
         # set the node below's 'up' field
