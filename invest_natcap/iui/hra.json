@@ -37,7 +37,7 @@
                     "args_id" : "grid_size",
                     "type": "text",
                     "label": "Resolution of Analysis (meters sq.)",
-                    "defaultValue": "100",
+                    "defaultValue": "200",
                     "required": true,
                     "validateAs": {"type": "number"},
                     "dataType": "int",
