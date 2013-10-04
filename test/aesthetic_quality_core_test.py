@@ -575,6 +575,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             while(right is not None):
                 current = current['next']
                 right = current['next']
+                span = current['span']
                 print('distance ' + str(current['distance']) + ', next ' + \
                     str(right if right is None else right['distance']), \
                     'down ' + str(current['down']['distance']), \

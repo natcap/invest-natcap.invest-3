@@ -535,6 +535,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 return (False, message)
         else:
             # 2.1- Comparing first level in skip_nodes with linked_list
+            print('linked list', len(linked_list), 'total span', total_span)
             if total_span != len(linked_list) -1:
                 message = 'Level ' + str(l) + ': span of ' + str(total_span) + \
                 ' disagrees with entries in linked_list ' + \
