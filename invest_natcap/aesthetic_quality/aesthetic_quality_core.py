@@ -103,7 +103,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
 
             Return a tuple (sweep_line, skip_nodes) with the updated sweep_line
             and skip_nodes"""
-    def add_intermediate_skip_pointer(skip_node):
+    def add_intermediate_skip_pointer(skip_node, skip_node_level):
         """Add an intermediate skip node to the current list of skip pointers.
         
             Inputs:
@@ -113,15 +113,20 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         message = 'Expecting a span of 4 but instead is ' + \
             str(skip_node['span'])
         assert skip_node['span'] == 4, message
-        # create new skip node
         # find the node pointed to by the new skip node
+        node_below = skip_node['down']['next']['next']
+        distance = node_below['distance']
+        # create new skip node
+        new_node = {'next':skip_node['next'], 'up':None, 'down':node_below, \
+            'distance':distance, 'span':2})
+        # Insert new node in skip_node_level
+        skip_node_level[distance] = new_node
         # set the node below's 'up' field
-        # set the new node's 'down' field
-        # set the new node's 'distance' field
-        # set the new node's 'span' field 
-        # set the new node's 'next field'
+        node_below['up'] = skip_node_level[distance]
         # set the previous node's 'span' field
+        skip_node['span'] = 2
         # set the previous node's 'next' field
+        skip_node['next'] = skip_node_level[distance]
         
     # Add the field 'closest' to the empty sweep line
     if not sweep_line:
