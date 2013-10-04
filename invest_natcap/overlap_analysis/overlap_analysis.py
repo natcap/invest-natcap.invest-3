@@ -66,6 +66,7 @@ def execute(args):
         lambda x: os.path.join(args['overlap_data_dir_uri'], x),
         os.listdir(args['overlap_data_dir_uri']))
     overlap_shape_uris = fnmatch.filter(args['overlap_data_dir_uri'], '*.shp')
+    LOGGER.debug(overlap_shape_uris)
     #file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
     #args['overlap_files'] = file_dict
     

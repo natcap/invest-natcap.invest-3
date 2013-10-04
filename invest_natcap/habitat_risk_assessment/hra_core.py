@@ -151,7 +151,7 @@ def execute(args):
     unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
     os.remove(unnecessary_file)
     '''
-def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
+def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
     '''This function will produce risk plots when the risk equation is
     euclidean.
 
@@ -210,8 +210,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
         for element in aoi_list:
             if element == aoi_list[0]:
 
-                max_risk = max_h_s_risk * num_stress[curr_hab_name]
-
                 #Want to have two across, and make sure there are enough spaces
                 #going down for each of the subplots 
                 matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
@@ -238,8 +236,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
         
             curr_hab_name = hab_name
 
-            max_risk = max_h_s_risk * num_stress[curr_hab_name]
-            
             matplotlib.pyplot.title(curr_hab_name)
             matplotlib.pyplot.xlim([0.5, max_risk])
             matplotlib.pyplot.ylim([0.5, max_risk])
@@ -254,7 +250,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_h_s_risk, num_stress, num_habs):
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
     plot_index += 1
-    max_tot_risk = max_h_s_risk * max(num_stress.values()) * num_habs 
+    max_tot_risk = max_risk * max(num_stress.values()) * num_habs 
     
     matplotlib.pyplot.figure(plot_index)
     matplotlib.pyplot.suptitle("Ecosystem Risk")
