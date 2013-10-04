@@ -100,10 +100,10 @@ def execute(args):
     #Want to get each interest layer, and rasterize them, then combine them all
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
-    raster_files, raster_names = make_indiv_rasters(
+    raster_uris, raster_names = make_indiv_rasters(
         inter_dir, overlap_shape_uris, aoi_dataset_uri)
 
-    create_unweighted_raster(output_dir, aoi_dataset, raster_files)
+    create_unweighted_raster(output_dir, aoi_dataset_uri, raster_uris)
 
     #Want to make sure we're passing the open hubs raster to the combining
     #weighted raster file
@@ -227,7 +227,7 @@ def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
 
     band.WriteArray(decay_matrix)
 
-def create_unweighted_raster(output_dir, aoi_raster, raster_files):
+def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
     '''This will create the set of unweighted rasters- both the AOI and
     individual rasterizations of the activity layers. These will all be
     combined to output a final raster displaying unweighted activity frequency
@@ -236,10 +236,10 @@ def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     Input:
         output_dir- This is the directory in which the final frequency raster will
             be placed. That file will be named 'hu_freq.tif'.
-        aoi_raster- The rasterized version of the AOI file passed in with
+        aoi_raster_uri- The uri to the rasterized version of the AOI file passed in with
             args['zone_layer_file']. We will use this within the combination
             function to determine where to place nodata values.
-        raster_files- The rasterized version of the files passed in through
+        raster_files_uri - The uris to the rasterized version of the files passed in through
             args['over_layer_dict']. Each raster file shows the presence or
             absence of the activity that it represents.
     Output:
@@ -249,8 +249,10 @@ def create_unweighted_raster(output_dir, aoi_raster, raster_files):
 
     Returns nothing. 
     '''
-    aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)[1]
     
+    aoi_pixel_size = raster_utils.get_cell_size_from_uri(aoi_raster_uri)
+    aoi_nodata = raster_utils.get_nodata_from_uri(aoi_raster_uri)
+
     #When we go to actually burn, should have a "0" where there is AOI, not 
     #same as nodata. Need the 0 for later combination function.
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
@@ -289,10 +291,10 @@ def create_unweighted_raster(output_dir, aoi_raster, raster_files):
          
         return sum_pixel   
         
-    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
-                                   raster_out_uri = activities_uri, 
-                                   datatype = gdal.GDT_Int32, 
-                                   nodata = aoi_nodata)
+    raster_utils.vectorize_datasets(
+        raster_files_uri, get_raster_sum, activities_uri, gdal.GDT_Int32,
+        aoi_nodata, aoi_pixel_size, "intersection")
+
 
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, 
@@ -623,7 +625,7 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     '''    
     #aoi_raster has to be the first so that we can use it as an easy "weed out"
     #for pixel summary later
-    raster_files = [aoi_raster_uri]
+    raster_uris = [aoi_raster_uri]
     raster_names = ['aoi']
     
     #Remember, this defaults to element being the keys of the dictionary
@@ -645,8 +647,8 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
         #this should do something about flushing the buffer
         dataset.FlushCache()
         
-        raster_files.append(dataset)
+        raster_uris.append(outgoing_uri)
         raster_names.append(element)
    
-    LOGGER.debug(raster_files)
-    return raster_files, raster_names
+    LOGGER.debug(raster_uris)
+    return raster_uris, raster_names
