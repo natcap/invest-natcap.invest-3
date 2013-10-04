@@ -7,7 +7,38 @@
     "height": 550,
     "width" : 700,
     "elements": [
-    
-    
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "../HabitatRiskAssess_3_0",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                },
+                {
+                    "id" : "aoi",
+                    "args_id" : "aoi_uri",
+                    "type": "file",
+                    "label": "Area of Interest",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+                    "helpText": "This is a shapefile which will be used to display outputs within the region of interest."
+                },
+                {
+                    "id" : "rec_eq",
+                    "args_id" : "rec_eq",
+                    "type": "dropdown",
+                    "label": "Recruitment Equation",
+                    "required": true,
+                    "helpText": "This is a shapefile which will be used to display outputs within the region of interest."
+                }
+            ]
+        }    
     ]
 }
