@@ -520,7 +520,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             skip_nodes)[0] is True, message
         sweep_length = len(sweep_line)
         
-        test_values = [6, 8, 4, 10, 2]
+        test_values = [6, 8, 4, 10, 2, 7]
         for value in test_values:
             sweep_line, skip_nodes = \
             aesthetic_quality_core.add_active_pixel_fast(sweep_line, \

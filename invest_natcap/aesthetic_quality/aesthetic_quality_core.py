@@ -103,6 +103,26 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
 
             Return a tuple (sweep_line, skip_nodes) with the updated sweep_line
             and skip_nodes"""
+    def add_intermediate_skip_pointer(skip_node):
+        """Add an intermediate skip node to the current list of skip pointers.
+        
+            Inputs:
+                -skip_node: the node in from of which to add an intermediate
+                
+            Returns nothing"""
+        message = 'Expecting a span of 4 but instead is ' + \
+            str(skip_node['span'])
+        assert skip_node['span'] == 4, message
+        # create new skip node
+        # find the node pointed to by the new skip node
+        # set the node below's 'up' field
+        # set the new node's 'down' field
+        # set the new node's 'distance' field
+        # set the new node's 'span' field 
+        # set the new node's 'next field'
+        # set the previous node's 'span' field
+        # set the previous node's 'next' field
+        
     # Add the field 'closest' to the empty sweep line
     if not sweep_line:
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
@@ -143,8 +163,12 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 skip_node['distance'] = distance
                 skip_node['down'] = sweep_line[distance]
         # Updating span
+        print('adjusting span for first pixel', sweep_line[distance]['distance'])
         if sweep_line[distance]['up'] is not None:
             sweep_line[distance]['up']['span'] += 1
+            # Adjusting span if too large
+            if sweep_line[distance]['up']['span'] > 3:
+                print('should adjust span')
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
         sweep_line['closest'] = sweep_line[distance]
@@ -156,8 +180,13 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         # Connecting previous pixel to new one
         pixel['next'] = sweep_line[distance]
         # Update the span if necessary
-        if pixel['up'] is not None:
-            pixel['up']['span'] += 1
+        if hierarchy:
+            pixel = hierarchy[-1]['down']
+            if pixel['up'] is not None:
+                pixel['up']['span'] += 1
+                # Adjusting span if too large
+                if pixel['up']['span'] > 3:
+                    print('should adjust span')
          
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
@@ -221,10 +250,10 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
             # Get information about first pixel in the list
             pixel = skip_nodes[level][0]
             span = len(skip_nodes[level])
+            hierarchy.append(pixel)
         else:
             pixel = sweep_line['closest']
             span = len(sweep_line)
-        hierarchy.append(pixel)
         previous = pixel
         # No smaller distance available
         if pixel['distance'] >= distance:
@@ -240,11 +269,11 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
             # Went too far, backtrack 
             if (pixel is None) or (pixel['distance'] >= distance):
                 pixel = previous
-            hierarchy.append(pixel)
             # Try to go down 1 level
             # If not possible, return the pixel itself.
             if pixel['down'] is None:
                 return (pixel, hierarchy)
+            hierarchy.append(pixel)
             span = pixel['span']
             pixel = pixel['down']
     # Empty sweep_line, there's no cell to return
