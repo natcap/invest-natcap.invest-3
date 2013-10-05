@@ -159,6 +159,13 @@ def execute(args):
     unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
     os.remove(unnecessary_file)
     '''
+
+    #Want to print out our warnings as the last possible things in the
+    #console window.
+    for text in args['warnings']['print']:
+
+        LOGGER.warn(text)
+
 def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
     '''This function will produce risk plots when the risk equation is
     euclidean.
