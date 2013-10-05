@@ -50,10 +50,11 @@ class ImproperECSelection(Exception):
     this with an 'E' or 'C'. '''
     pass
 
-class MissingEOrCException(Exception):
+class MissingSensOrResilException(Exception):
     '''An exception for hra_preprocessor that catches h-s pairings who are
-    missing either E or C criteria, though not both. The user must either zero
-    all criteria for that pair, or make sure that both E and C are represented.
+    missing either Sensitivity or Resilience or C criteria, though not both. 
+    The user must either zero all criteria for that pair, or make sure that 
+    both E and C are represented.
     '''
     pass
 
@@ -552,6 +553,7 @@ def parse_hra_tables(folder_uri):
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h_s_e'] = h_s_e_dict
     parse_dictionary['h_s_c'] = h_s_c_dict
+    parse_dictionary['warnings'] = warnings
 
     return parse_dictionary
 
@@ -589,7 +591,16 @@ def zero_check(h_s_c, h_s_e, habs):
         Will update each of the three dictionaries by deleting any criteria where
         the rating aspect is 0.
 
-    Returns nothing.
+    Returns:
+        warnings- A dictionary containing items which need to be acted upon by
+            hra_core. These will be split into two categories. 'print' contains
+            statements which will be printed using logger.warn() at the end of a
+            run. 'unbuff' is for pairs which should use the unbuffered stressor
+            file in lieu of the decayed rated raster.
+
+            {'print': ['This is a warning to the user.', 'This is another.'],
+              'unbuff': [(HabA, Stress1), (HabC, Stress2)]
+            }
     '''
 
     #Want to do zero checks for each of the criteria dictionaries.
