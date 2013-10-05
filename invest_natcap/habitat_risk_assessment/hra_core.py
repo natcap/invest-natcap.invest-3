@@ -728,6 +728,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         else:
             num_stress[h] = 1
     
+    LOGGER.debug("Num Stress: %s" % num_stress)
+
     curr_top_risk = None
 
     def high_risk_raster(pixel):
@@ -752,7 +754,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
-        curr_top_risk = num_stress[h] * max_risk
+        #curr_top_risk = num_stress[h] * max_risk
+        curr_top_risk = 3 * max_risk
         old_ds_uri = h_dict[h]
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
@@ -769,7 +772,6 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #a shapefile. 
         raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
 
-        
         #Now, want to do the low + medium areas as well.
         l_out_uri_r = os.path.join(dir, 'H[' + h + ']_LOW_RISK.tif') 
         l_out_uri = os.path.join(dir, 'H[' + h + ']_LOW_RISK.shp')
