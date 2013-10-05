@@ -1024,7 +1024,6 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
         #If, however, the pair contained no e criteria data, we are using spatial
         #overlap to substitute for the criteria burned raster.
         if pair in warnings[unbuff]:
-            _, s = pair
 
             unbuff_stress_uri = os.path.join(inter_dir, 'Stressor_Rasters', s + '.tif')
             copy_raster(unbuff_stress_uri, e_out_uri)
@@ -1283,6 +1282,13 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
+def copy_raster(in_uri, out_uri):
+    '''Quick function that will copy the raster in in_raster, and put it
+    into out_raster.'''
+    
+    raster = gdal.Open(in_uri)
+    drv = gdal.GetDriverByName('GTiff')
+    drv.CreateCopy(out_uri, raster)
 
 def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
     '''Want to return two dictionaries in the format of the following:
