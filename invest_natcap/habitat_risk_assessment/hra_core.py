@@ -109,7 +109,7 @@ def execute(args):
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
     risk_dict = make_risk_rasters(args['h_s_c'], inter_dir, crit_lists, denoms, 
-                                    args['risk_eq'])
+                                    args['risk_eq'], args['warnings'])
 
     #Know at this point that the non-core has re-created the ouput directory
     #So we can go ahead and make the maps directory without worrying that
@@ -1023,7 +1023,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
         #subdictionary data, and return a raster to be used in risk calculation. 
         #If, however, the pair contained no e criteria data, we are using spatial
         #overlap to substitute for the criteria burned raster.
-        if pair in warnings[unbuff]:
+        if pair in warnings['unbuff']:
 
             unbuff_stress_uri = os.path.join(inter_dir, 'Stressor_Rasters', s + '.tif')
             copy_raster(unbuff_stress_uri, e_out_uri)
