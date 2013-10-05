@@ -551,7 +551,7 @@ def globio_analyze_forest_core_fragmentation(args):
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating change in MSA for expansion step %s' % percent
         
-        deepest_edge_index += args['pixels_to_convert_per_step']
+        deepest_edge_index = args['pixels_to_convert_per_step']
         
         scenario_edge_distance = calculate_forest_edge_distance(
             scenario_lulc_array, args['forest_lucodes'], cell_size)        
