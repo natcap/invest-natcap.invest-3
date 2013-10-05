@@ -511,6 +511,13 @@ def parse_hra_tables(folder_uri):
                 },
             }
         }
+     'warnings':
+        {'print': 
+            ['This is a warning to the user.', 'This is another.'],
+          'unbuff': 
+            [(HabA, Stress1), (HabC, Stress2)]
+        }
+
     }
     '''
     #Create the dictionary in which everything will be stored.
