@@ -26,7 +26,7 @@ def execute(args):
             complete the rest of the model run. It will contain the following.
         args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be subfolders of this one.
-        hra_args['h_s_c']- The same as intermediate/'h-s', but with the addition
+        args['h_s_c']- The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
             a dataset URI that shows the potentially buffered overlap between the 
             habitat and stressor. Additionally, any raster criteria will
@@ -45,12 +45,12 @@ def execute(args):
                     'DS':  "A-1 Dataset URI"
                     }
             }
-        hra_args['habitats']- Similar to the h-s dictionary, a multi-level
+        args['habitats']- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
             rasters. In this case, however, the outermost key is by habitat
             name, and habitats['habitatName']['DS'] points to the rasterized
             habitat shapefile URI provided by the user.
-        hra_args['h_s_e']- Similar to the h_s_c dictionary, a multi-level
+        args['h_s_e']- Similar to the h_s_c dictionary, a multi-level
             dictionary containing habitat-stressor-specific criteria ratings and
             shapes. The same as intermediate/'h-s', but with the addition
             of a 3rd key 'DS' to the outer dictionary layer. This will map to
@@ -71,7 +71,15 @@ def execute(args):
             table for either 'Euclidean' or 'Multiplicative.'
         args['aoi_key']- The form of the word 'Name' that the aoi layer uses
             for this particular model run. 
-    
+        args['warnings']- A dictionary containing items which need to be acted upon by
+            hra_core. These will be split into two categories. 'print' contains
+            statements which will be printed using logger.warn() at the end of a
+            run. 'unbuff' is for pairs which should use the unbuffered stressor
+            file in lieu of the decayed rated raster.
+
+            {'print': ['This is a warning to the user.', 'This is another.'],
+              'unbuff': [(HabA, Stress1), (HabC, Stress2)]
+            }
     Outputs:
         --Intermediate--
             These should be the temp risk and criteria files needed for the 
@@ -923,7 +931,7 @@ def make_hab_risk_raster(dir, risk_dict):
     return h_rasters
 
 
-def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
+def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselves. The way in which the E/C rasters
@@ -971,6 +979,15 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
             }
         risk_eq- A string description of the desired equation to use when
             preforming risk calculation. 
+        warnings- A dictionary containing items which need to be acted upon by
+            hra_core. These will be split into two categories. 'print' contains
+            statements which will be printed using logger.warn() at the end of a
+            run. 'unbuff' is for pairs which should use the unbuffered stressor
+            file in lieu of the decayed rated raster.
+
+            {'print': ['This is a warning to the user.', 'This is another.'],
+              'unbuff': [(HabA, Stress1), (HabC, Stress2)]
+            }
     Output:
         A new raster file for each overlapping of habitat and stressor. This
         file will be the overall risk for that pairing from all H/S/H-S 
@@ -1004,7 +1021,16 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq):
 
         #Each of the E/C calculations should take in all of the relevant 
         #subdictionary data, and return a raster to be used in risk calculation. 
-        calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
+        #If, however, the pair contained no e criteria data, we are using spatial
+        #overlap to substitute for the criteria burned raster.
+        if pair in warnings[unbuff]:
+            _, s = pair
+
+            unbuff_stress_uri = os.path.join(inter_dir, 'Stressor_Rasters', s + '.tif')
+            copy_raster(unbuff_stress_uri, e_out_uri)
+
+        else:
+            calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
                         denoms['Risk']['h_s_e'][pair])
 
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
