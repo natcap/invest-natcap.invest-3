@@ -132,11 +132,11 @@ def execute(args):
         
         #Now we want to create a second raster that includes all of the
         #weighting information
-        create_weighted_raster(output_dir, weighted_dir, aoi_dataset, 
-                               layer_dict, overlap_shape_uris, 
+        create_weighted_raster(output_dir, weighted_dir, aoi_dataset,
+                               layer_dict, overlap_shape_uris,
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
-                               hubs_rast, raster_files, raster_names)
+                               hubs_rast, raster_uris, raster_names)
 
 
 def format_over_table(over_tbl):
@@ -297,10 +297,10 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
         aoi_nodata, aoi_pixel_size, "intersection")
 
 
-def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
-                           layers_dict, intra_name, do_inter, do_intra, 
-                           do_hubs, hubs_raster, raster_files, 
-                           raster_names):
+def create_weighted_raster(
+    out_dir, inter_dir, aoi_raster, inter_weights_dict, layers_dict,
+    intra_name, do_inter, do_intra, do_hubs, hubs_raster,
+    raster_uris, raster_names):
     '''This function will create an output raster that takes into account both
     inter-activity weighting and intra-activity weighting. This will produce a
     map that looks both at where activities are occurring, and how much people 
@@ -328,9 +328,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             desired.
         aoi_raster- The dataset for our Area Of Interest. This will be the base
             map for all following datasets.
-        raster_files- A list of open unweighted raster files created by 
-            make_indiv_rasters that begins with the AOI raster. This will be used 
-            when intra-activity weighting is not desired.
+        raster_uris - A list of uris to the open unweighted raster files
+            created by make_indiv_rasters that begins with the AOI raster. This
+            will be used when intra-activity weighting is not desired.
         raster_names- A list of file names that goes along with the unweighted 
             raster files. These strings can be used as keys to the other ID-based
             dictionaries, and will be in the same order as the 'raster_files' list.
@@ -378,25 +378,20 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #will be a list of the original file names in the same order as the layers 
     #so that the dictionaries with other weights can be cross referenced. 
     if do_intra:
-        weighted_raster_files, weighted_raster_names = \
-            make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict, 
-                                  intra_name)
-      
+        weighted_raster_files, weighted_raster_names = (
+            make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict,
+                                      intra_name))
+
     #Need to get the X{max} now, so iterate through the features on a layer, and
     #make a dictionary that maps the name of the layer to the max potential 
     #intra-activity weight
     if do_intra:
         max_intra_weights = {}
-        
         for layer_name in layers_dict:
-            
             datasource = layers_dict[layer_name]
             layer = datasource.GetLayer()
-            
             for feature in layer:
-                
                 attribute = feature.items()[intra_name]
-                
                 try:
                     max_intra_weights[layer_name] = \
                         max(attribute, max_intra_weights[layer_name])
@@ -476,8 +471,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             #division in the calculations.  
             curr_pix_sum += ((1/float(n)) * U * I)
         return curr_pix_sum
-
+            
     if do_intra:
+                
         raster_utils.vectorize_rasters(weighted_raster_files, 
                     combine_weighted_pixels_intra,
                     aoi = None, raster_out_uri = outgoing_uri, 
