@@ -108,8 +108,8 @@ def execute(args):
 
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
-    risk_dict = make_risk_rasters(args['h_s_c'], inter_dir, crit_lists, denoms, 
-                                    args['risk_eq'], args['warnings'])
+    risk_dict = make_risk_rasters(args['h_s_c'], args['h_s_e'], args['habitats'],
+        inter_dir, crit_lists, denoms, args['risk_eq'], args['warnings'])
 
     #Know at this point that the non-core has re-created the ouput directory
     #So we can go ahead and make the maps directory without worrying that
@@ -938,14 +938,14 @@ def make_hab_risk_raster(dir, risk_dict):
     return h_rasters
 
 
-def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
+def make_risk_rasters(h_s_c, h_s_e, habs, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselves. The way in which the E/C rasters
     are combined depends on the risk equation desired.
 
     Input:
-        h_s- Args dictionary containing much of the H-S overlap data in
+        h_s_c- Args dictionary containing much of the H-S overlap data in
             addition to the H-S base rasters. (In this function, we are only
             using it for the base h-s raster information.)
         inter_dir- Intermediate directory in which the H_S risk-burned rasters
@@ -1038,6 +1038,14 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
         else:
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
                         denoms['Risk']['h_s_e'][pair])
+        
+        #Want to do some checking before we pass in the layers to make_risk_rasters. Only
+        #want to pass in h_s_c or habs subdictionaries if they contain ratings data.
+
+        e_crit_count = len(h_s_e[pair]['Crit_Rasters']) + len(h_s_e[pair]['Crit_Ratings'])
+        c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
+        h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
+        
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
                     denoms['Risk']['h'][h])
@@ -1047,9 +1055,7 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
         risk_uri = os.path.join(inter_dir, 'H[' + h + ']_S[' + s + ']_Risk.tif')
 
         #Want to get the relevant ds for this H-S pair.
-        #We arbitrarily passed in the h_s_c dictionary as h_s, but it exists in 
-        #h_s_e too.
-        base_ds_uri = h_s[pair]['DS']
+        base_ds_uri = h_s_c[pair]['DS']
 
         if risk_eq == 'Multiplicative':
             
