@@ -378,9 +378,9 @@ def create_weighted_raster(
     #will be a list of the original file names in the same order as the layers 
     #so that the dictionaries with other weights can be cross referenced. 
     if do_intra:
-        weighted_raster_files, weighted_raster_names = (
-            make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict,
-                                      intra_name))
+        weighted_raster_uris, weighted_raster_names = (
+            make_indiv_weight_rasters(
+                inter_dir, aoi_raster_uri, layers_dict, intra_name))
 
     #Need to get the X{max} now, so iterate through the features on a layer, and
     #make a dictionary that maps the name of the layer to the max potential 
@@ -525,7 +525,8 @@ def create_weighted_raster(
             LOGGER.warn("in create_weighted_raster %s on file %s" % (e, 
                 temp_uri))
 
-def make_indiv_weight_rasters(input_dir, aoi_raster, layers_dict, intra_name):
+def make_indiv_weight_rasters(
+    input_dir, aoi_raster_uri, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts 
     some of the work for getting the intra-activity weights per pixel to a 
     separate function. This function will take in a list of the activities
@@ -541,8 +542,9 @@ def make_indiv_weight_rasters(input_dir, aoi_raster, layers_dict, intra_name):
     
     Input:
         input_dir: The directory into which the weighted rasters should be placed.
-        aoi_raster: The razterized version of the area of interest. This will be
-            used as a basis for all following rasterizations.
+        aoi_raster_uri: The uri to the rasterized version of the area of
+            interest. This will be used as a basis for all following
+            rasterizations.
         layers_dict: A dictionary of all shapefiles to be rasterized. The key is
             the name of the original file, minus the file extension. The value
             is an open shapefile datasource.
@@ -562,7 +564,7 @@ def make_indiv_weight_rasters(input_dir, aoi_raster, layers_dict, intra_name):
        
     #aoi_raster has to be the first so that we can easily pull it out later when
     #we go to combine them. Will need the aoi_nodata for later as well.
-    weighted_raster_files = [aoi_raster]
+    weighted_raster_uris = [aoi_raster_uri]
     #Inserting 'aoi' as a placeholder so that when I go through the list, I can
     #reference other indicies without having to convert for the missing first 
     #element in names.
@@ -577,14 +579,14 @@ def make_indiv_weight_rasters(input_dir, aoi_raster, layers_dict, intra_name):
         #Setting nodata value to 0 so that the nodata pixels can be used 
         #directly in calculations without messing up the weighted total 
         #equations for the second output file.
-        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 
-                                'GTiff', 0, gdal.GDT_Float32)
+        dataset = raster_utils.new_raster_from_base_uri(
+            aoi_raster_uri, outgoing_uri, 'GTiff', 0, gdal.GDT_Float32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
         
         band.Fill(nodata)
         
-        gdal.RasterizeLayer(dataset, [1], layer, 
-                                options = ["ATTRIBUTE=%s" %intra_name])
+        gdal.RasterizeLayer(
+            dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
         #this should do something about flushing the buffer
         dataset.FlushCache()
        
