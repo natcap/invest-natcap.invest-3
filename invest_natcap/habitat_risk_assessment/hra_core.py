@@ -98,7 +98,7 @@ def execute(args):
 
     Returns nothing.
     '''
-
+    LOGGER.debug("WARNINGS DICTIONARY: %s" % args['warnings'])
 
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -1038,7 +1038,6 @@ def make_risk_rasters(h_s, inter_dir, crit_lists, denoms, risk_eq, warnings):
         else:
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
                         denoms['Risk']['h_s_e'][pair])
-
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
                     denoms['Risk']['h'][h])
@@ -1233,17 +1232,18 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
         out_uri- The location to which the calculated C raster should be burned.
         h_s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that h, s pair.
-        h_s_denom- A dictionary containing criteria names applicable to this
+        h_s_denom_dict- A dictionary containing criteria names applicable to this
             particular h,s pair. Each criteria string name maps to a double
             representing the denominator for that raster, using the equation 1/dq*w.
         h_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that s.
-        h_denom- A dictionary containing criteria names applicable to this
+        h_denom_dict- A dictionary containing criteria names applicable to this
             particular habitat. Each criteria string name maps to a double
             representing the denominator for that raster, using the equation 1/dq*w.
 
     Returns nothing.
     '''
+    LOGGER.debug("H_List: %s, H_Denoms_List: %s" % (h_list, h_denom_dict))    
     tot_crit_list = h_s_list + h_list
 
     h_s_names = map(lambda uri: re.match(
@@ -1427,7 +1427,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #For the summed individual ratings, want the denominator to be concatonated
         #only with the other individual scores. Will make a single entry that will
         #correspond to the file name being output.
-        denoms['Risk']['h_s_c'][pair]['Indiv'] = 0.
+        if not (len(h_s_c[pair]['Crit_Ratings']) == 0 and 
+            len(h_s_c[pair]['Crit_Rasters']) == 0):
+            denoms['Risk']['h_s_c'][pair]['Indiv'] = 0.
 
         for crit_dict in (h_s_c[pair]['Crit_Ratings']).values():
                     
@@ -1515,8 +1517,10 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         rec_crit_rate_numerator = 0
         risk_crit_rate_numerator = 0
         
-        denoms['Risk']['h'][h]['Indiv'] = 0.
-        denoms['Recovery'][h]['Indiv'] = 0.
+        if not (len(hab[h]['Crit_Ratings']) == 0 and 
+            len(hab[h]['Crit_Rasters']) == 0):
+            denoms['Risk']['h'][h]['Indiv'] = 0.
+            denoms['Recovery'][h]['Indiv'] = 0.
 
         for crit_dict in hab[h]['Crit_Ratings'].values():
                     
@@ -1643,7 +1647,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         the individual numerical criteria, and then the raster criteria.'''
 
         crit_rate_numerator = 0
-        denoms['Risk']['h_s_e'][pair]['Indiv'] = 0
+        if not (len(h_s_e[pair]['Crit_Ratings']) == 0 and 
+            len(h_s_e[pair]['Crit_Rasters']) == 0):
+            denoms['Risk']['h_s_e'][pair]['Indiv'] = 0
         
         #H-S-E dictionary, Numerical Criteria: should output a 
         #single raster that equals to the sum of r/dq*w for all single number 
