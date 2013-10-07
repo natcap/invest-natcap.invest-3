@@ -1042,7 +1042,7 @@ def make_risk_rasters(h_s_c, h_s_e, habs, inter_dir, crit_lists, denoms, risk_eq
         #Want to do some checking before we pass in the layers to make_risk_rasters. Only
         #want to pass in h_s_c or habs subdictionaries if they contain ratings data.
 
-        e_crit_count = len(overlap_dict['Crit_Rasters']) + len(overlap_dict['Crit_Ratings'])
+        e_crit_count = len(h_s_e[pair]['Crit_Rasters']) + len(h_s_e[pair]['Crit_Ratings'])
         c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
         h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
         
