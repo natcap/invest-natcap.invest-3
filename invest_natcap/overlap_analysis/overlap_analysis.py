@@ -132,7 +132,7 @@ def execute(args):
         
         #Now we want to create a second raster that includes all of the
         #weighting information
-        create_weighted_raster(output_dir, weighted_dir, aoi_dataset,
+        create_weighted_raster(output_dir, weighted_dir, aoi_dataset_uri,
                                layer_dict, overlap_shape_uris,
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
@@ -298,7 +298,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
 
 
 def create_weighted_raster(
-    out_dir, inter_dir, aoi_raster, inter_weights_dict, layers_dict,
+    out_dir, inter_dir, aoi_raster_uri, inter_weights_dict, layers_dict,
     intra_name, do_inter, do_intra, do_hubs, hubs_raster,
     raster_uris, raster_names):
     '''This function will create an output raster that takes into account both
@@ -326,8 +326,8 @@ def create_weighted_raster(
             desired.
         do_intra- A boolean that indicates whether intra-activity weighting is 
             desired.
-        aoi_raster- The dataset for our Area Of Interest. This will be the base
-            map for all following datasets.
+        aoi_raster_uri - The uri to the dataset for our Area Of Interest.
+            This will be the base map for all following datasets.
         raster_uris - A list of uris to the open unweighted raster files
             created by make_indiv_rasters that begins with the AOI raster. This
             will be used when intra-activity weighting is not desired.
@@ -525,7 +525,7 @@ def create_weighted_raster(
             LOGGER.warn("in create_weighted_raster %s on file %s" % (e, 
                 temp_uri))
 
-def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
+def make_indiv_weight_rasters(input_dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts 
     some of the work for getting the intra-activity weights per pixel to a 
     separate function. This function will take in a list of the activities
@@ -540,7 +540,7 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     raster calculation.
     
     Input:
-        dir: The directory into which the weighted rasters should be placed.
+        input_dir: The directory into which the weighted rasters should be placed.
         aoi_raster: The razterized version of the area of interest. This will be
             used as a basis for all following rasterizations.
         layers_dict: A dictionary of all shapefiles to be rasterized. The key is
@@ -567,13 +567,12 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     #reference other indicies without having to convert for the missing first 
     #element in names.
     weighted_names = ['aoi']
-    
     for element in layers_dict:
         
         datasource = layers_dict[element]
         layer = datasource.GetLayer()
         
-        outgoing_uri = os.path.join(dir, element + ".tif")
+        outgoing_uri = os.path.join(input_dir, element + ".tif")
 
         #Setting nodata value to 0 so that the nodata pixels can be used 
         #directly in calculations without messing up the weighted total 
