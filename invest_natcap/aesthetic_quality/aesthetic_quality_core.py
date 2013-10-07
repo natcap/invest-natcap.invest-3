@@ -196,23 +196,24 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
         skip_nodes = []
-        skip_nodes.append([])
+        skip_nodes.append({})
         pixel = sweep_line['closest']
+        distance = pixel['distance']
         # First skip node points to the first element in sweep_line
         skip_node = {'next':None, 'up':None, \
-        'down':sweep_line[pixel['distance']], \
-        'distance':sweep_line[pixel['distance']]['distance'], 'span':2}
-        skip_nodes[0].append(skip_node)
-        sweep_line[pixel['distance']]['up'] = skip_nodes[0][0]
+        'down':sweep_line[distance], 'distance':distance, 'span':2}
+        skip_nodes[0][distance] = skip_node
+        sweep_line[distance]['up'] = skip_nodes[0][distance]
         # Second skip node points to the second last element in sweep_line
         second_last = sweep_line['closest']
         while second_last['next']['next'] is not None:
             second_last = second_last['next']
+        second_distance = second_last['distance']
         skip_node = {'next':None, 'up':None, 'down':second_last, \
-        'distance':second_last['distance'], 'span':2}
-        skip_nodes[0].append(skip_node)
-        sweep_line[second_last['distance']]['up'] = skip_nodes[0][1]
-        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+        'distance':second_distance, 'span':2}
+        skip_nodes[0][second_distance] = skip_node
+        sweep_line[second_distance]['up'] = skip_nodes[0][second_distance]
+        skip_nodes[0][distance]['next'] = skip_nodes[0][second_distance]
 
     print('--after change:')
     print('closest points to ', sweep_line['closest']['distance'])
@@ -224,7 +225,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     print('--skip_nodes:')
     for level in range(len(skip_nodes)):
         print('level', level)
-        for skip_node in skip_nodes[level]:
+        for key in skip_nodes[level]:
+            skip_node = skip_nodes[level][key]
             print('node', skip_node['distance'], 'span', skip_node['span'], \
             None if skip_node['next'] is None else skip_node['next']['distance'])
 
