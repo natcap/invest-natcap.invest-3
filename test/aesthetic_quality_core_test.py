@@ -542,6 +542,12 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert sweep_length + increment == len(sweep_line), \
                 str(len(sweep_line))
             sweep_length += increment
+            print('----- test skip nodes -----')
+            for l in range(len(skip_nodes)):
+                values = [skip_nodes[l][i]['distance'] for i in sorted(skip_nodes[l].keys())]
+                print('distances', sorted(skip_nodes[l].keys()))
+                print('values   ', values)
+            print('---------------------------')
             message = 'Skip list is not consistent after adding ' + str(value)
             consistency = \
             aesthetic_quality_core.skip_list_is_consistent(sweep_line, \

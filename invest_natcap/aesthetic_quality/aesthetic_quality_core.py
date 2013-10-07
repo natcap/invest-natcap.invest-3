@@ -156,6 +156,12 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             'down':None, 'distance':distance}
         # Move skip pointers to the pixel
         sweep_line[distance]['up'] = sweep_line[second]['up']
+        sweep_line[second]['up'] = None
+        print('sweep_line[' + str(distance) + '][up]', \
+        None if sweep_line[distance]['up'] is None else \
+        sweep_line[distance]['up']['distance'])
+        print('sweep_line[' + str(second) + '][up]', \
+        sweep_line[second]['up'])
         # Update the skip pointer's distances:
         skip_node = sweep_line[distance]['up']
         if skip_node is not None:
@@ -167,6 +173,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 print('skip_node', None if skip_node is None else skip_node['distance'])
                 skip_node['distance'] = distance
                 skip_node['down'] = sweep_line[distance]
+        print('after: sweep_line[' + str(distance) + '][up]', \
+        None if sweep_line[distance]['up'] is None else \
+        sweep_line[distance]['up']['distance'])
         # Updating span
         print('adjusting span for first pixel', sweep_line[distance]['distance'])
         if sweep_line[distance]['up'] is not None:
@@ -215,9 +224,16 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_line[second_distance]['up'] = skip_nodes[0][second_distance]
         skip_nodes[0][distance]['next'] = skip_nodes[0][second_distance]
 
+    print('----- test skip nodes -----')
+    for l in range(len(skip_nodes)):
+        values = [skip_nodes[l][i]['distance'] for i in sorted(skip_nodes[l].keys())]
+        print('distances', sorted(skip_nodes[l].keys()))
+        print('values   ', values)
+    print('---------------------------')
     print('--after change:')
     print('closest points to ', sweep_line['closest']['distance'])
-    for key in sweep_line.keys():
+    sorted_keys = sorted(sweep_line.keys())
+    for key in sorted_keys:
         print(key, 'next', sweep_line[key]['next'] if sweep_line[key]['next'] is None
             else sweep_line[key]['next']['distance'], \
             'up', None if sweep_line[key]['up'] is None else \
@@ -225,7 +241,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     print('--skip_nodes:')
     for level in range(len(skip_nodes)):
         print('level', level)
-        for key in skip_nodes[level]:
+        sorted_keys = sorted(skip_nodes[level])
+        for key in sorted_keys:
             skip_node = skip_nodes[level][key]
             print('node', skip_node['distance'], 'span', skip_node['span'], \
             None if skip_node['next'] is None else skip_node['next']['distance'])
@@ -531,6 +548,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     # True if 1.8 and 1.10 are true
 
     # 2-Testing the skip pointers
+    #   2.0-Check skip_nodes are properly indexed by their distance
     #   2.1-The spans at a level is the size of the level below
     #   2.2-The entry 'down' is never None
     #   2.3-Each skip node before last has 'next' != None
@@ -558,6 +576,13 @@ def skip_list_is_consistent(linked_list, skip_nodes):
 
     total_skip_nodes = 0
     for l in range(len(skip_nodes)):
+        ascending_distances = sorted(skip_nodes[l].keys())
+        print('ascending distances', ascending_distances)
+        # 2.0-Check skip_nodes are properly indexed by their distance
+        for n in skip_nodes[l]:
+            message = 'skip_nodes[' + str(n) + '] is not ' + str(n) + '.' + \
+            ' Instead, it is ' + str(skip_nodes[l][n]['distance'])
+            assert n == skip_nodes[l][n]['distance'], message
         total_skip_nodes += len(skip_nodes[l])
         # 2.1-The spans at a level is the size of the level below
         total_span = 0
@@ -578,9 +603,9 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 ' disagrees with entries in linked_list ' + \
                     str(len(linked_list) -1)
                 return (False, message)
-        ascending_distances = sorted(skip_nodes[l].keys())
         previous_distance = ascending_distances[0] -1 # smallest distance
         for n in ascending_distances:
+            print('node', l, n, 'distance', skip_nodes[l][n]['distance'])
             node = skip_nodes[l][n]
             # 2.2-The entry 'down' is never None
             if node['down'] is None:
