@@ -255,7 +255,8 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
         if len(skip_nodes) > 0:
             level = len(skip_nodes) -1
             # Get information about first pixel in the list
-            pixel = skip_nodes[level][0]
+            first = sorted(skip_nodes[level].keys())[0]
+            pixel = skip_nodes[level][first]
             span = len(skip_nodes[level])
             hierarchy.append(pixel)
         else:
@@ -560,7 +561,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
         total_skip_nodes += len(skip_nodes[l])
         # 2.1-The spans at a level is the size of the level below
         total_span = 0
-        for n in range(len(skip_nodes[l])):
+        for n in skip_nodes[l]:
             total_span += skip_nodes[l][n]['span']
         if l > 0:
             # Comparing two levels in skip_nodes
@@ -577,16 +578,18 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 ' disagrees with entries in linked_list ' + \
                     str(len(linked_list) -1)
                 return (False, message)
-        previous_distance = skip_nodes[l][0]['distance'] -1
-        for n in range(len(skip_nodes[l])):
+        ascending_distances = sorted(skip_nodes[l].keys())
+        previous_distance = ascending_distances[0] -1 # smallest distance
+        for n in ascending_distances:
             node = skip_nodes[l][n]
             # 2.2-The entry 'down' is never None
             if node['down'] is None:
                 message = 'Entry ' + str(l) + str(n) + \
-                'has a "down" entry that is not None'
+                'has a "down" entry that is not None (' + \
+                str(node['down']['distance']) + ')'
                 return (False, message)
             # Looking at the skip node 'next' values:
-            if n < len(skip_nodes[l]) -1:
+            if n != ascending_distances[-1]:
                 # 2.3-Each skip node before the last one has 'next' != None
                 if skip_nodes[l][n]['next'] is None:
                     message = 'Skip node ' + str(len(skip_nodes[l]) -1) + \
@@ -596,7 +599,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 # 2.4-Last skip node at the end of its level has 'next' == None
                 if skip_nodes[l][n]['next'] is not None:
                     message = 'Last skip node '+str(len(skip_nodes[l])-1)+\
-                    ' at level ' + str(l) + ' is not None'
+                    ' at level ' + str(l) + ' is not None (' + \
+                    str(skip_nodes[l][n]['next']['distance']) + ')'
                     return (False, message)
             # 2.5-Equality ['distances'] == ['down']['distance'] should be True
             if node['distance'] != node['down']['distance']:
@@ -630,7 +634,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
             #  2-From level 2, go down from node 5
             # See if node 3's next (from step 1) is the same as the node 
             # from step 2.
-            if n < (len(skip_nodes[l]) -1):
+            if n != ascending_distances[-1]:
                 # Step 1, get the last node of the current higher node
                 last_node = node['down']
                 for i in range(node['span'] -1):
@@ -655,8 +659,9 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                     return (False, message)
             previous_distance = distance
     # 2.10-The first top level node always points to 'closest'
-    if (skip_nodes[-1][0]['distance'] !=linked_list['closest']['distance']):
-        message="First top level node "+str(skip_nodes[-1][0]['distance'])\
+    first = sorted(skip_nodes[-1].keys())[0]
+    if (skip_nodes[-1][first]['distance'] !=linked_list['closest']['distance']):
+        message="First top level node "+str(skip_nodes[-1][first]['distance'])\
         + " doesn't point to linked_list['closest'] (" + \
         str(linked_list['closest']['distance']) + ')'
         return (False, message)
@@ -678,7 +683,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
         # Count the number of 'up' that are not None at this level
         level_up_count = 0
         up_gap = -1
-        node = skip_nodes[level][0]
+        first = sorted(skip_nodes[level].keys())[0]
+        node = skip_nodes[level][first]
         if node['up'] is not None:
             level_up_count += 1
         while node['next'] is not None:

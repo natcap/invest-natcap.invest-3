@@ -368,49 +368,58 @@ class TestAestheticQualityCore(unittest.TestCase):
         sweep_line[12]['next'] = sweep_line[14]
         # Creating the skip node hierarchy:
         skip_nodes = []
+        i = []
         # skip_nodes[0]
-        skip_nodes.append([])
+        skip_nodes.append({})
+        s = sorted(sweep_line.keys()) # sorted index
+        i.append(s)
         # skip_nodes[0][0]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[0], \
-            'span':2, 'distance':sweep_line[0]['distance']})
+        skip_nodes[0][s[0]] = {'next':None, 'up':None, \
+        'down':sweep_line[0], 'span':2, 'distance':sweep_line[0]['distance']}
         # skip_nodes[0][1]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[4], \
-            'span':2, 'distance':sweep_line[4]['distance']})
-        skip_nodes[0][0]['next'] = skip_nodes[0][1]
+        skip_nodes[0][s[1]] = {'next':None, 'up':None, 'down':sweep_line[4], \
+            'span':2, 'distance':sweep_line[4]['distance']}
+        skip_nodes[0][s[0]]['next'] = skip_nodes[0][s[1]]
         # skip_nodes[0][2]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[8], \
-            'span':2, 'distance':sweep_line[8]['distance']})
-        skip_nodes[0][1]['next'] = skip_nodes[0][2]
+        skip_nodes[0][s[2]] = {'next':None, 'up':None, 'down':sweep_line[8], \
+            'span':2, 'distance':sweep_line[8]['distance']}
+        skip_nodes[0][s[1]]['next'] = skip_nodes[0][s[2]]
         # skip_nodes[0][3]
-        skip_nodes[0].append({'next':None, 'up':None, 'down':sweep_line[12], \
-            'span':2, 'distance':sweep_line[12]['distance']})
-        skip_nodes[0][2]['next'] = skip_nodes[0][3]
-        # skip_nodes[1]
-        skip_nodes.append([])
-        # skip_nodes[1][0]
-        skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][0], 'span':2, \
-        'distance':skip_nodes[0][0]['distance']})
-        skip_nodes[0][0]['up'] = skip_nodes[1][0]
-        # skip_nodes[1][1]
-        skip_nodes[1].append({'next':None, 'up':None, \
-        'down':skip_nodes[0][2], 'span':2, \
-        'distance':skip_nodes[0][2]['distance']})
-        skip_nodes[1][0]['next'] = skip_nodes[1][1]
-        skip_nodes[0][0]['up'] = skip_nodes[1][0]
-        skip_nodes[0][2]['up'] = skip_nodes[1][1]
-        # skip_nodes[2]
-        skip_nodes.append([])
-        # skip_nodes[2][0]
-        skip_nodes[2].append({'next':None, 'up':None, \
-        'down':skip_nodes[1][0], 'span':2, \
-        'distance':skip_nodes[1][0]['distance']})
-        skip_nodes[1][0]['up'] = skip_nodes[2][0]
+        skip_nodes[0][s[3]] = {'next':None, 'up':None, 'down':sweep_line[12], \
+            'span':2, 'distance':sweep_line[12]['distance']}
+        skip_nodes[0][s[2]]['next'] = skip_nodes[0][s[3]]
         # Adjusting the 'up' fields in sweep_line elements:
-        sweep_line[0]['up'] = skip_nodes[0][0]
-        sweep_line[4]['up'] = skip_nodes[0][1]
-        sweep_line[8]['up'] = skip_nodes[0][2]
-        sweep_line[12]['up'] = skip_nodes[0][3]
+        sweep_line[0]['up'] = skip_nodes[0][s[0]]
+        sweep_line[4]['up'] = skip_nodes[0][s[1]]
+        sweep_line[8]['up'] = skip_nodes[0][s[2]]
+        sweep_line[12]['up'] = skip_nodes[0][s[3]]
+        # skip_nodes[1]
+        s = sorted(skip_nodes[-1].keys()) # sorted index
+        i.append(s)
+        skip_nodes.append({})
+        # skip_nodes[1][0]
+        node_below = skip_nodes[0][i[0][0]]
+        skip_nodes[1][s[0]] = {'next':None, 'up':None, \
+        'down':node_below, 'span':2, \
+        'distance':node_below['distance']}
+        node_below['up'] = skip_nodes[1][s[0]]
+        # skip_nodes[1][1]
+        node_below = skip_nodes[0][i[0][2]]
+        skip_nodes[1][s[1]] = {'next':None, 'up':None, \
+        'down':node_below, 'span':2, \
+        'distance':node_below['distance']}
+        skip_nodes[1][i[0][0]]['next'] = skip_nodes[1][s[1]]
+        skip_nodes[0][i[0][0]]['up'] = skip_nodes[1][s[0]]
+        skip_nodes[0][i[0][2]]['up'] = skip_nodes[1][s[1]]
+        # skip_nodes[2]
+        s = sorted(skip_nodes[-1].keys()) # sorted index
+        i.append(s)
+        skip_nodes.append({})
+        # skip_nodes[2][0]
+        skip_nodes[2][s[0]] = {'next':None, 'up':None, \
+        'down':skip_nodes[1][i[1][0]], 'span':2, \
+        'distance':skip_nodes[1][i[1][0]]['distance']}
+        skip_nodes[1][i[1][0]]['up'] = skip_nodes[2][s[0]]
 
         return (sweep_line, skip_nodes)
 
