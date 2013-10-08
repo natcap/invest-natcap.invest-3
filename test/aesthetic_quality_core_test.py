@@ -573,8 +573,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             print('distance ' + str(current['distance']) + ', next ' + \
                 str(right if right is None else right['distance']))
         for level in range(len(skip_nodes)):
+            first = sorted(skip_nodes[level].keys())[0]
             print('skip nodes level ' + str(level) + ':')
-            current = skip_nodes[level][0]
+            current = skip_nodes[level][first]
             right = current['next']
             span = current['span']
             print('distance ' + str(current['distance']) + ', next ' + \

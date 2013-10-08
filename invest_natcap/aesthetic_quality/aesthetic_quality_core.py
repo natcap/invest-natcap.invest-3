@@ -189,10 +189,11 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 after = before['next']
                 below = sweep_line[distance]['next']['next']
                 current_distance = below['distance']
-                skip_nodes[0][current_distance] = {'next':after, \
-                    'up':None, 'down':below, 'distance':current_distance}
+                skip_nodes[0][current_distance] = {'next':after, 'up':None, \
+                'down':below, 'distance':current_distance, 'span':2}
                 below['up'] = skip_nodes[0][current_distance]
                 before['next'] = skip_nodes[0][current_distance]
+                before['span'] = 2
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
         sweep_line['closest'] = sweep_line[distance]
@@ -218,10 +219,11 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     after = before['next']
                     below = pixel['next']['next']
                     current_distance = below['distance']
-                    skip_nodes[0][current_distance] = {'next':after, \
-                        'up':None, 'down':below, 'distance':current_distance}
+                    skip_nodes[0][current_distance] = {'next':after,'up':None,\
+                    'down':below, 'distance':current_distance, 'span':2}
                     below['up'] = skip_nodes[0][current_distance]
                     before['next'] = skip_nodes[0][current_distance]
+                    before['span'] = 2
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
         skip_nodes = []
