@@ -610,9 +610,12 @@ def make_recov_potent_raster(dir, crit_lists, denoms):
                     value += p
                     denom_val += curr_denoms[curr_crit_names[i]]
 
-            value = value / denom_val
-
-            return value
+            if value in [0, 0.]:
+                return 0
+            else:
+        
+                value = value / denom_val
+                return value
 
         #Need to get the arbitrary first element in order to have a pixel size
         #to use in vectorize_datasets. One hopes that we have at least 1 thing
