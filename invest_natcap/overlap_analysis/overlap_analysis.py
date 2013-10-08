@@ -367,7 +367,8 @@ def create_weighted_raster(
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
     outgoing_uri = os.path.join(out_dir, 'hu_impscore.tif') 
-    aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)[1]
+    aoi_nodata = raster_utils.get_nodata_from_uri(aoi_raster_uri)
+    pixel_size_out = raster_utils.get_cell_size_from_uri(aoi_raster_uri)
 
     #If intra-activity weighting is desired, we need to create a whole new set 
     #of values, where the burn value of each pixel is the attribute value of the
@@ -411,14 +412,10 @@ def create_weighted_raster(
     #use 1 in our equation.
     
     def combine_weighted_pixels(*pixel_parameter_list):
-        
         aoi_pixel = pixel_parameter_list[0]
-        
         curr_pix_sum = 0
-
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
-
         for i in range(1, n+1):
             #This will either be a 0 or 1, since the burn value for the 
             #unweighted raster files was a 1.
@@ -438,14 +435,10 @@ def create_weighted_raster(
         return curr_pix_sum    
 
     def combine_weighted_pixels_intra(*pixel_parameter_list):
-    
         aoi_pixel = pixel_parameter_list[0]
-
         curr_pix_sum = 0.0
-
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
-
         for i in range(1, n+1):
 
             #Can assume that if we have gotten here, that intra-activity 
@@ -471,17 +464,26 @@ def create_weighted_raster(
             #division in the calculations.  
             curr_pix_sum += ((1/float(n)) * U * I)
         return curr_pix_sum
-            
+        
     if do_intra:
-                
-        raster_utils.vectorize_rasters(weighted_raster_files, 
-                    combine_weighted_pixels_intra,
-                    aoi = None, raster_out_uri = outgoing_uri, 
-                    datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+        raster_utils.vectorize_datasets(
+            weighted_raster_uris, combine_weighted_pixels_intra, outgoing_uri,
+            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
+            dataset_to_align_index=0)
+                    
+        #raster_utils.vectorize_rasters(weighted_raster_files, 
+        #            combine_weighted_pixels_intra,
+        #            aoi = None, raster_out_uri = outgoing_uri, 
+        #            datatype = gdal.GDT_Float32, nodata = aoi_nodata)
     else:
-        raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
-                   aoi = None, raster_out_uri = outgoing_uri,
-                   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+        raster_utils.vectorize_datasets(
+            weighted_raster_uris, combine_weighted_pixels, outgoing_uri,
+            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
+            dataset_to_align_index=0)
+            
+        #raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
+        #           aoi = None, raster_out_uri = outgoing_uri,
+        #           datatype = gdal.GDT_Float32, nodata = aoi_nodata)
  
     #Now want to check if hu_impscore exists. If it does, use that as the
     #multiplier against the hubs raster. If not, use the hu_freq raster and
@@ -589,11 +591,11 @@ def make_indiv_weight_rasters(
             dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
         #this should do something about flushing the buffer
         dataset.FlushCache()
-       
-        weighted_raster_files.append(dataset)
+        dataset = None
+        weighted_raster_uris.append(outgoing_uri)
         weighted_names.append(element)
    
-    return weighted_raster_files, weighted_names
+    return weighted_raster_uris, weighted_names
 
         
 def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
@@ -603,8 +605,8 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     directory that is being passed in as a parameter.
     
     Input:
-        out_dir- This is the directory into which our completed raster files should
-            be placed when completed.
+        out_dir- This is the directory into which our completed raster files
+            should be placed when completed.
         overlap_shape_uris- This is a dictionary containing all of the open 
             shapefiles which need to be rasterized. The key for this dictionary
             is the name of the file itself, minus the .shp extension. This key 
