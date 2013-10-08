@@ -59,8 +59,8 @@ def execute(args):
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
-    inter_dir = os.path.join(workspace, 'intermediate')
-    raster_utils.create_directories([output_dir, inter_dir])
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    raster_utils.create_directories([output_dir, intermediate_dir])
 
     overlap_uris = map(
         lambda x: os.path.join(args['overlap_data_dir_uri'], x),
@@ -84,7 +84,7 @@ def execute(args):
     #one to the combine unweighted function, and then the option call for the
     #weighted raster combination that uses the unweighted pre-created rasters.
 
-    aoi_dataset_uri = os.path.join(inter_dir, 'AOI_dataset.tif')
+    aoi_dataset_uri = os.path.join(intermediate_dir, 'AOI_dataset.tif')
     grid_size = float(args['grid_size'])
     raster_utils.create_raster_from_vector_extents_uri(
         args['zone_layer_uri'], grid_size, gdal.GDT_Int32, 0,
@@ -102,14 +102,14 @@ def execute(args):
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
     raster_uris, raster_names = make_indiv_rasters(
-        inter_dir, overlap_shape_uris, aoi_dataset_uri)
+        intermediate_dir, overlap_shape_uris, aoi_dataset_uri)
 
     create_unweighted_raster(output_dir, aoi_dataset_uri, raster_uris)
 
     #Want to make sure we're passing the open hubs raster to the combining
     #weighted raster file
     if args['do_hubs']:
-        hubs_out_uri = os.path.join(inter_dir, "hubs_raster.tif")
+        hubs_out_uri = os.path.join(intermediate_dir, "hubs_raster.tif")
         create_hubs_raster(args['hubs_file'], args['decay'], aoi_dataset,
                                 hubs_out_uri)
         hubs_rast = gdal.Open(hubs_out_uri)
@@ -125,7 +125,7 @@ def execute(args):
         
         #Want some place to put weighted rasters so we aren't blasting over the
         #unweighted rasters
-        weighted_dir = os.path.join(inter_dir, 'Weighted')
+        weighted_dir = os.path.join(intermediate_dir, 'Weighted')
         
         if not (os.path.exists(weighted_dir)):
             os.makedirs(weighted_dir)
@@ -298,7 +298,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
 
 
 def create_weighted_raster(
-    out_dir, inter_dir, aoi_raster_uri, inter_weights_dict, layers_dict,
+    out_dir, intermediate_dir, aoi_raster_uri, inter_weights_dict, layers_dict,
     intra_name, do_inter, do_intra, do_hubs, hubs_raster,
     raster_uris, raster_names):
     '''This function will create an output raster that takes into account both
@@ -309,7 +309,7 @@ def create_weighted_raster(
     Input:
         out_dir- This is the directory into which our completed raster file 
             should be placed when completed.
-        inter_dir- The directory in which the weighted raster files can be stored.
+        intermediate_dir- The directory in which the weighted raster files can be stored.
         inter_weights_dict- The dictionary that holds the mappings from layer 
             names to the inter-activity weights passed in by CSV. The dictionary
             key is the string name of each shapefile, minus the .shp extension.
@@ -381,7 +381,7 @@ def create_weighted_raster(
     if do_intra:
         weighted_raster_uris, weighted_raster_names = (
             make_indiv_weight_rasters(
-                inter_dir, aoi_raster_uri, layers_dict, intra_name))
+                intermediate_dir, aoi_raster_uri, layers_dict, intra_name))
 
     #Need to get the X{max} now, so iterate through the features on a layer, and
     #make a dictionary that maps the name of the layer to the max potential 
@@ -502,7 +502,7 @@ def create_weighted_raster(
         if os.path.isfile(outgoing_uri):
             #Make a copy of the file so that we can use it to re-create the hub
             #weighted raster file.
-            temp_uri = os.path.join(inter_dir, "temp_rast.tif")
+            temp_uri = os.path.join(intermediate_dir, "temp_rast.tif")
             shutil.copyfile(outgoing_uri, temp_uri)
 
             base_raster = gdal.Open(temp_uri)
