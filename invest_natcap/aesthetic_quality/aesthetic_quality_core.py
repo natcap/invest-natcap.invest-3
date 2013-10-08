@@ -143,11 +143,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Need to re-organize the sweep line:
     pixel, hierarchy = find_pixel_before_fast( \
         sweep_line, skip_nodes, distance)
-    print('---pixel', pixel if pixel is None else pixel['distance'])
-    print('before change')
-    for key in sweep_line.keys():
-        print(key, None if sweep_line[key]['next'] is None else \
-            sweep_line[key]['next']['distance'])
+    print('---pixel before addition', pixel if pixel is None else pixel['distance'])
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
@@ -206,7 +202,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         pixel['next'] = sweep_line[distance]
         # Update the span if necessary
         if hierarchy:
-            pixel = hierarchy[0]['down']
+            for p in range(len(hierarchy)):
+                print('hierarchy', p, hierarchy[p]['distance'])
+            pixel = hierarchy[-1]['down']
             if pixel['up'] is not None:
                 pixel['up']['span'] += 1
                 # Adjusting span if too large
@@ -218,6 +216,10 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     before = pixel['up']
                     after = before['next']
                     below = pixel['next']['next']
+                    print('pixel', pixel['distance'], \
+                    'before', before['distance'], \
+                    'after', after['distance'], \
+                    'below', below['distance'])
                     current_distance = below['distance']
                     skip_nodes[0][current_distance] = {'next':after,'up':None,\
                     'down':below, 'distance':current_distance, 'span':2}
@@ -247,7 +249,6 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         skip_nodes[0][distance]['next'] = skip_nodes[0][second_distance]
 
     print('--after change:')
-    print('closest points to ', sweep_line['closest']['distance'])
     sorted_keys = sorted(sweep_line.keys())
     for key in sorted_keys:
         print(key, 'next', sweep_line[key]['next'] if sweep_line[key]['next'] is None
@@ -260,8 +261,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sorted_keys = sorted(skip_nodes[level])
         for key in sorted_keys:
             skip_node = skip_nodes[level][key]
-            print('node', skip_node['distance'], 'span', skip_node['span'], \
-            None if skip_node['next'] is None else skip_node['next']['distance'])
+            print(skip_node['distance'], 'span', skip_node['span'], \
+            'next', None if skip_node['next'] is None else \
+            skip_node['next']['distance'])
 
     return (sweep_line, skip_nodes)
 
