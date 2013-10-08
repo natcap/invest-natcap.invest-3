@@ -158,27 +158,28 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         print('---------------------------')
         # New pixel points to previously first pixel
         second = sweep_line['closest']['distance']
-        print('distance', distance, 'second', second)
-        sweep_line[distance] = {'next':sweep_line[second], 'up':None, \
+        sweep_line[distance] = {'next':sweep_line[second], \
+            'up':sweep_line[second]['up'], \
             'down':None, 'distance':distance}
         # Move skip pointers to the pixel
-        sweep_line[distance]['up'] = sweep_line[second]['up']
         sweep_line[second]['up'] = None
         # Update the skip pointer's distances:
         skip_node = sweep_line[distance]['up']
         if skip_node is not None:
-            print('adjusting skip node', skip_node['distance'])
+            level = 0
             skip_node['distance'] = distance
             skip_node['down'] = sweep_line[distance]
-            print('adjusted skip_node', None if skip_node is None else skip_node['distance'])
+            skip_nodes[level][distance] = skip_node
+            del skip_nodes[level][second]
+            sweep_line[distance]['up'] = skip_nodes[level][distance]
             while skip_node['up'] is not None:
+                level += 1
                 skip_node = skip_node['up']
-                print('skip_node', None if skip_node is None else skip_node['distance'])
                 skip_node['distance'] = distance
                 skip_node['down'] = sweep_line[distance]
-        print('after: sweep_line[' + str(distance) + '][up]', \
-        None if sweep_line[distance]['up'] is None else \
-        sweep_line[distance]['up']['distance'])
+                skip_nodes[level][distance] = skip_node
+                del skip_nodes[level][second]
+                skip_nodes[level][distance]['up'] = skip_nodes[level][distance]
         print('----- skip nodes after appending -----')
         for l in range(len(skip_nodes)):
             values = [skip_nodes[l][i]['distance'] for i in sorted(skip_nodes[l].keys())]
