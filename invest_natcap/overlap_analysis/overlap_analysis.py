@@ -90,14 +90,9 @@ def execute(args):
         args['zone_layer_uri'], grid_size, gdal.GDT_Int32, 0,
         aoi_dataset_uri)
 
-    aoi_dataset = gdal.Open(aoi_dataset_uri, gdal.GA_Update)
-    aoi_band = aoi_dataset.GetRasterBand(1)
-    aoi_band.Fill(0)
-
-    aoi_shp = ogr.Open(args['zone_layer_uri'])
-    aoi_shp_layer = aoi_shp.GetLayer()
-    gdal.RasterizeLayer(aoi_dataset, [1], aoi_shp_layer, burn_values=[1])
-
+    raster_utils.rasterize_layer_uri(
+        aoi_dataset_uri, args['zone_layer_uri'], burn_values=[1])
+    
     #Want to get each interest layer, and rasterize them, then combine them all
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
