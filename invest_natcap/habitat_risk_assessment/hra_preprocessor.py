@@ -50,10 +50,11 @@ class ImproperECSelection(Exception):
     this with an 'E' or 'C'. '''
     pass
 
-class MissingEOrCException(Exception):
+class MissingSensOrResilException(Exception):
     '''An exception for hra_preprocessor that catches h-s pairings who are
-    missing either E or C criteria, though not both. The user must either zero
-    all criteria for that pair, or make sure that both E and C are represented.
+    missing either Sensitivity or Resilience or C criteria, though not both. 
+    The user must either zero all criteria for that pair, or make sure that 
+    both E and C are represented.
     '''
     pass
 
@@ -109,17 +110,7 @@ def execute(args):
                 either habitat or species information for comparison against \
                 potential stressors.")
     
-    #2. There should be criteria of each type (exposure, sensitivity,
-    # resilience). Exposure can be either a C applied criteria or an E applied
-    #criteria.
-    if (len(args['exposure_crits']) == 0 or len(args['resilience_crits']) == 0 \
-            or len(args['sensitivity_crits']) == 0):
-
-        raise ImproperCriteriaSpread("This model requires there to be one \
-                criteria in each of the following catagories: Exposure, \
-                Sensitivity, and Resilience.")
-    
-    #3. There should be > 4 criteria total.
+    #2. There should be > 4 criteria total.
     total_crits = len(args['exposure_crits']) + len(args['resilience_crits']) + \
                 len(args['sensitivity_crits'])
    
@@ -520,6 +511,13 @@ def parse_hra_tables(folder_uri):
                 },
             }
         }
+     'warnings':
+        {'print': 
+            ['This is a warning to the user.', 'This is another.'],
+          'unbuff': 
+            [(HabA, Stress1), (HabC, Stress2)]
+        }
+
     }
     '''
     #Create the dictionary in which everything will be stored.
@@ -552,18 +550,17 @@ def parse_hra_tables(folder_uri):
         #Instead of having to know what came from where, let's just have it update
         #the global dictionaries while the function is running. 
         parse_overlaps(habitat_uri, habitat_dict, h_s_e_dict, h_s_c_dict)
-
-    LOGGER.debug("h_s_c: %s" % h_s_c_dict)
-    LOGGER.debug("h_s_e: %s" % h_s_e_dict)
-    LOGGER.debug("habs: %s" % habitat_dict)
-    
-    zero_check(h_s_c_dict, h_s_e_dict, habitat_dict)
+   
+    #Creating a dictionary structure to hold warnings that will get passed back
+    #to the core and used there.
+    warnings = zero_check(h_s_c_dict, h_s_e_dict, habitat_dict)
 
     #Add everything to the parse dictionary
     parse_dictionary['buffer_dict'] = stress_dict
     parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h_s_e'] = h_s_e_dict
     parse_dictionary['h_s_c'] = h_s_c_dict
+    parse_dictionary['warnings'] = warnings
 
     return parse_dictionary
 
@@ -601,7 +598,16 @@ def zero_check(h_s_c, h_s_e, habs):
         Will update each of the three dictionaries by deleting any criteria where
         the rating aspect is 0.
 
-    Returns nothing.
+    Returns:
+        warnings- A dictionary containing items which need to be acted upon by
+            hra_core. These will be split into two categories. 'print' contains
+            statements which will be printed using logger.warn() at the end of a
+            run. 'unbuff' is for pairs which should use the unbuffered stressor
+            file in lieu of the decayed rated raster.
+
+            {'print': ['This is a warning to the user.', 'This is another.'],
+              'unbuff': [(HabA, Stress1), (HabC, Stress2)]
+            }
     '''
 
     #Want to do zero checks for each of the criteria dictionaries.
@@ -634,6 +640,9 @@ def zero_check(h_s_c, h_s_e, habs):
 
                 del dictionary[key_1]
             '''
+    
+    warnings = {'print':[], 'unbuff':[]}
+
     #At this point, the pair keys for h_s_c and h_s_e should be identical.
     #Going to use h_s_e as the iterator.
     for pair, overlap_dict in h_s_e.items():
@@ -644,28 +653,28 @@ def zero_check(h_s_c, h_s_e, habs):
         c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
         h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
 
-        LOGGER.debug("E_Count is %s, and C_Count is %s, and H_Count is %s" % (e_crit_count, c_crit_count, h_crit_count))
+        #If there are no sens. and no resilience, ERROR.
+        if h_crit_count == 0 and c_crit_count == 0:
+            raise MissingSensOrResilException("For a given habitat-stressor \
+                    pairing, there must be at least one relevant resilience \
+                    or sensitivity criteria. Currently, the (%s, %s) pairing is \
+                    missing one or the other. This can be corrected in the %s \
+                    ratings csv file." % (h, s, h))
 
-        #First case should be if a dict pair's own Rasters/Ratings dictionaries
-        #are empty, and h_s_c[pair] are also empty.
-        if e_crit_count == 0 and c_crit_count == 0:
+        #The next two are not mutually exclusive
+        if e_crit_count == 0:
+            #Will store this for later to be checked against when we go to do
+            #the risk calculation.
+            warnings['unbuff'].append(pair)
+            
+        if e_crit_count == 0 and (c_crit_count == 0 or h_crit_count == 0):
+            #Any strings put in here will be printed out using a logger.warn()
+            #at the end of the core function.
+            warnings['print'].append("Please note that the (%s, %s) is being run \
+                with insufficient data. We recommend entering criteria scores for \
+                exposure and consequence." % (h, s))
 
-            #Want to remove the pair from the assessment, can do this by removing
-            #from both h_s_c and h_s_e.
-            del h_s_e[pair]
-            del h_s_c[pair]
-       
-        #We know at this point that both are not 0. So at least one is 1+.
-        #If either h_s_c/habs or h_s_e has no criteria, but not both.
-        elif e_crit_count == 0 ^ (c_crit_count + h_crit_count == 0):
-            raise MissingEOrCException("For a given habitat-stressor pairing, \
-                    there must be at least one relevant exposure criteria, \
-                    and at least one relevant sensitivity or resilience criteria. \
-                    Currently, the (%s, %s) pairing is missing one or the other. \
-                    This can be corrected in the %s ratings csv file." % (h, s, h))
-
-    LOGGER.debug(h_s_e)
-    LOGGER.debug(h_s_c)
+    return warnings
 
 def parse_overlaps(uri, habs, h_s_e, h_s_c):
     '''This function will take in a location, and update the dictionaries being 
