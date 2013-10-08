@@ -867,7 +867,7 @@ def aggregate_raster_values_uri(
     clipped_raster_uri = temporary_filename()
     vectorize_datasets(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
-        raster_nodata, out_pixel_size, "intersection",
+        raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
         assert_datasets_projected=False)
     clipped_raster = gdal.Open(clipped_raster_uri)
