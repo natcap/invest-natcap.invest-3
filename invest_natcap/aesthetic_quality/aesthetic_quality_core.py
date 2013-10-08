@@ -128,6 +128,30 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         # set the previous node's 'next' field
         skip_node['next'] = skip_node_level[distance]
         
+    def insert_new_skip_node(node, skip_nodes):
+        """Add a new skip node after 'node'. Assumes node's span is 4
+        
+            Inputs: 
+                -node: the overstretched node (span is too large) that needs 
+                    to be offloaded by a new intermediate node.
+                -skip_nodes: dictionary of skip nodes to which the new skip
+                node should be added.
+            
+            Returns nothing"""
+        message = 'Span for node ' + str(node['distance']) + \
+        ' expected to be 4, instead is ' + \
+        str(node['up']['span'])
+        assert node['up']['span'] == 4, message
+        before = node['up']
+        after = before['next']
+        below = node['next']['next']
+        current_distance = below['distance']
+        skip_nodes[current_distance] = {'next':after, 'up':None, \
+        'down':below, 'distance':current_distance, 'span':2}
+        below['up'] = skip_nodes[current_distance]
+        before['next'] = skip_nodes[current_distance]
+        before['span'] = 2
+
     # Add the field 'closest' to the empty sweep line
     if not sweep_line:
         sweep_line[distance] = {'next':None, 'up':None, 'down':None, \
@@ -177,19 +201,21 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             sweep_line[distance]['up']['span'] += 1
             # Adjusting span if too large
             if sweep_line[distance]['up']['span'] > 3:
-                message = 'Span for node ' + str(distance) + \
-                ' expected to be 4, instead is ' + \
-                str(sweep_line[distance]['up']['span'])
-                assert sweep_line[distance]['up']['span'] == 4, message
-                before = skip_nodes[0][distance]
-                after = before['next']
-                below = sweep_line[distance]['next']['next']
-                current_distance = below['distance']
-                skip_nodes[0][current_distance] = {'next':after, 'up':None, \
-                'down':below, 'distance':current_distance, 'span':2}
-                below['up'] = skip_nodes[0][current_distance]
-                before['next'] = skip_nodes[0][current_distance]
-                before['span'] = 2
+                #message = 'Span for node ' + str(distance) + \
+                #' expected to be 4, instead is ' + \
+                #str(sweep_line[distance]['up']['span'])
+                #assert sweep_line[distance]['up']['span'] == 4, message
+                #before = skip_nodes[0][distance]
+                #after = before['next']
+                #below = sweep_line[distance]['next']['next']
+                #current_distance = below['distance']
+                #skip_nodes[0][current_distance] = {'next':after, 'up':None, \
+                #'down':below, 'distance':current_distance, 'span':2}
+                #below['up'] = skip_nodes[0][current_distance]
+                #before['next'] = skip_nodes[0][current_distance]
+                #before['span'] = 2
+                insert_new_skip_node(skip_nodes[0][distance], skip_nodes[0])
+
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
         sweep_line['closest'] = sweep_line[distance]
@@ -216,10 +242,6 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     before = pixel['up']
                     after = before['next']
                     below = pixel['next']['next']
-                    print('pixel', pixel['distance'], \
-                    'before', before['distance'], \
-                    'after', after['distance'], \
-                    'below', below['distance'])
                     current_distance = below['distance']
                     skip_nodes[0][current_distance] = {'next':after,'up':None,\
                     'down':below, 'distance':current_distance, 'span':2}
