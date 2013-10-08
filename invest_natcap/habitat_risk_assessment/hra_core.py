@@ -1141,7 +1141,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #If habitat exists without stressor, want to return 0 as the overall
         #risk, so that it will show up as "no risk" but still show up.
         elif b_pix == base_nodata:
-            return 0
+            return c_pix
         
         #At this point, we know that there is data in c_pix, and we know that
         #there is overlap. So now can do the euc. equation.
@@ -1281,8 +1281,14 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                 else:
                     value += p
                     denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
-        
-        return value / denom_val
+       
+        #Special case for 0 value inputs coming in. Know that val=0 will only
+        #be the case when we have no resil. crits, and habitat not covered by
+        #stressor. Need to set to 0 here, and bypass in the risk calc for euc.
+        if value in [0, 0.]:
+            return 0
+        else:
+            return value / denom_val
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
