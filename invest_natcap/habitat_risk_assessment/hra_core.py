@@ -108,7 +108,7 @@ def execute(args):
 
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
-    risk_dict = make_risk_rasters(args['h_s_c'], args['h_s_e'], args['habitats'],
+    risk_dict = make_risk_rasters(args['h_s_c'],
         inter_dir, crit_lists, denoms, args['risk_eq'], args['warnings'])
 
     #Know at this point that the non-core has re-created the ouput directory
@@ -938,7 +938,7 @@ def make_hab_risk_raster(dir, risk_dict):
     return h_rasters
 
 
-def make_risk_rasters(h_s_c, h_s_e, habs, inter_dir, crit_lists, denoms, risk_eq, warnings):
+def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselves. The way in which the E/C rasters
@@ -1038,13 +1038,6 @@ def make_risk_rasters(h_s_c, h_s_e, habs, inter_dir, crit_lists, denoms, risk_eq
         else:
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
                         denoms['Risk']['h_s_e'][pair])
-        
-        #Want to do some checking before we pass in the layers to make_risk_rasters. Only
-        #want to pass in h_s_c or habs subdictionaries if they contain ratings data.
-
-        e_crit_count = len(h_s_e[pair]['Crit_Rasters']) + len(h_s_e[pair]['Crit_Ratings'])
-        c_crit_count = len(h_s_c[pair]['Crit_Rasters']) + len(h_s_c[pair]['Crit_Ratings'])
-        h_crit_count = len(habs[h]['Crit_Rasters']) + len(habs[h]['Crit_Ratings'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
