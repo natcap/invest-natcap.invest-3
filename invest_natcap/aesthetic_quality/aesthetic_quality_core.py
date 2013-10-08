@@ -214,7 +214,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 #below['up'] = skip_nodes[0][current_distance]
                 #before['next'] = skip_nodes[0][current_distance]
                 #before['span'] = 2
-                insert_new_skip_node(skip_nodes[0][distance], skip_nodes[0])
+                insert_new_skip_node(sweep_line[distance], skip_nodes[0])
 
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
@@ -235,19 +235,20 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 pixel['up']['span'] += 1
                 # Adjusting span if too large
                 if pixel['up']['span'] > 3:
-                    message = 'Span for node ' + str(distance) + \
-                    ' expected to be 4, instead is ' + \
-                    str(pixel['up']['span'])
-                    assert pixel['up']['span'] == 4, message
-                    before = pixel['up']
-                    after = before['next']
-                    below = pixel['next']['next']
-                    current_distance = below['distance']
-                    skip_nodes[0][current_distance] = {'next':after,'up':None,\
-                    'down':below, 'distance':current_distance, 'span':2}
-                    below['up'] = skip_nodes[0][current_distance]
-                    before['next'] = skip_nodes[0][current_distance]
-                    before['span'] = 2
+                    #message = 'Span for node ' + str(distance) + \
+                    #' expected to be 4, instead is ' + \
+                    #str(pixel['up']['span'])
+                    #assert pixel['up']['span'] == 4, message
+                    #before = pixel['up']
+                    #after = before['next']
+                    #below = pixel['next']['next']
+                    #current_distance = below['distance']
+                    #skip_nodes[0][current_distance] = {'next':after,'up':None,\
+                    #'down':below, 'distance':current_distance, 'span':2}
+                    #below['up'] = skip_nodes[0][current_distance]
+                    #before['next'] = skip_nodes[0][current_distance]
+                    #before['span'] = 2
+                    insert_new_skip_node(pixel, skip_nodes[0])
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
         skip_nodes = []
