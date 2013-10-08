@@ -774,8 +774,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         old_ds_uri = h_dict[h]
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
-        h_out_uri_r = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.tif') 
-        h_out_uri = os.path.join(dir, 'H[' + h + ']_HIGH_RISK.shp')
+        h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif') 
+        h_out_uri = os.path.join(dir, '[' + h + ']_HIGH_RISK.shp')
         
         raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, h_out_uri_r,
                         gdal.GDT_Float32, -1., grid_size, "union", 
@@ -788,8 +788,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
 
         #Now, want to do the low + medium areas as well.
-        l_out_uri_r = os.path.join(dir, 'H[' + h + ']_LOW_RISK.tif') 
-        l_out_uri = os.path.join(dir, 'H[' + h + ']_LOW_RISK.shp')
+        l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
+        l_out_uri = os.path.join(dir, '[' + h + ']_LOW_RISK.shp')
         
         raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, l_out_uri_r,
                         gdal.GDT_Float32, -1., grid_size, "union", 
@@ -926,7 +926,7 @@ def make_hab_risk_raster(dir, risk_dict):
             ds_list.append(risk_dict[pair])
 
         #Once we have the complete list, we can pass it to vectorize.
-        out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
+        out_uri = os.path.join(dir, 'cum_risk_[' + h + '].tif')
 
         raster_utils.vectorize_datasets(ds_list, add_risk_pixels, out_uri,
                         gdal.GDT_Float32, -1., pixel_size, "union", 
