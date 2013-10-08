@@ -2219,8 +2219,8 @@ def align_dataset_list(
             bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
 
 
-    if bounding_box[0] >= bounding_box[2] or \
-            bounding_box[1] <= bounding_box[3] and mode == "intersection":
+    if (bounding_box[0] >= bounding_box[2] or 
+            bounding_box[1] <= bounding_box[3]) and mode == "intersection":
         raise Exception("The datasets' intersection is empty "
                         "(i.e., not all the datasets touch each other).")
 
