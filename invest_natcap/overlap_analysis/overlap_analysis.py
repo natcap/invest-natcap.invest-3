@@ -76,7 +76,6 @@ def execute(args):
     if args['do_intra']:
         args['intra_name'] = args['intra_name']
     if args['do_hubs']:
-        args['hubs_file'] = ogr.Open(args['hubs_uri'])
         args['decay'] = float(args['decay_amt'])
 
     #Create the unweighted rasters, since that will be one of the outputs
@@ -105,8 +104,8 @@ def execute(args):
     #weighted raster file
     if args['do_hubs']:
         hubs_out_uri = os.path.join(intermediate_dir, "hubs_raster.tif")
-        create_hubs_raster(args['hubs_file'], args['decay'], aoi_dataset,
-                                hubs_out_uri)
+        create_hubs_raster(
+            args['hubs_uri'], args['decay'], aoi_dataset_uri, hubs_out_uri)
         hubs_rast = gdal.Open(hubs_out_uri)
     else:
         hubs_rast = None
@@ -181,47 +180,46 @@ def format_over_table(over_tbl):
     return over_dict
 
 
-def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
+def create_hubs_raster(hubs_shape_uri, decay, aoi_raster_uri, hubs_out_uri):
     '''This will create a rasterized version of the hubs shapefile where each pixel
     on the raster will be set accourding to the decay function from the point
     values themselves. We will rasterize the shapefile so that all land is 0, and
     nodata is the distance from the closest point.
     
         Input:
-            hubs_shape- Open point shapefile containing the hub locations as points.
-                decay- Double representing the rate at which the hub importance 
+            hubs_shape_uri - Open point shapefile containing the hub locations
+                as points.
+            decay - Double representing the rate at which the hub importance 
                 depreciates relative to the distance from the location.
-            aoi_raster- The area of interest raster on which we want to base our new
-                hubs raster.
-            hubs_out_uri- The URI location at which the new hubs raster should be
-                placed.
+            aoi_raster_uri - The URI to the area interest raster on which we
+                want to base our new hubs raster.
+            hubs_out_uri - The URI location at which the new hubs raster should
+                be placed.
 
         Output:
             This creates a raster within hubs_out_uri whose data will be a function
             of the decay around points provided from hubs shape.
 
         Returns nothing. '''
-    layer = hubs_shape.GetLayer()
     
     #In this case, want to change the nodata value to 1, and the points
     #themselves to 0, since this is what the distance tranform function expects.
-    dataset = raster_utils.new_raster_from_base(aoi_raster, hubs_out_uri, 
-                            'GTiff', -1, gdal.GDT_Float32)
-    band, nodata = raster_utils.extract_band_and_nodata(dataset)
-    band.Fill(nodata)
+    nodata = raster_utils.get_nodata_from_uri(aoi_raster_uri)
+    raster_utils.new_raster_from_base_uri(
+        aoi_raster_uri, hubs_out_uri, 'GTiff', -1, gdal.GDT_Float32,
+        fill_value=1)
     
-    gdal.RasterizeLayer(dataset, [1], layer, burn_values=[0])
-    #this should do something about flushing the buffer
-    dataset.FlushCache()
+    raster_utils.rasterize_layer_uri(
+        hubs_out_uri, hubs_shape_uri, burn_values=[0])
 
+    dataset = gdal.Open(hubs_out_uri, gdal.GA_Update)
+    band = dataset.GetRasterBand(1)
     matrix = band.ReadAsArray()
-
-    cell_size = raster_utils.pixel_size(aoi_raster)
-
-    decay_matrix = numpy.exp(-decay *  
-                    ndimage.distance_transform_edt(matrix, sampling=cell_size))
-
+    cell_size = raster_utils.get_cell_size_from_uri(aoi_raster_uri)
+    decay_matrix = numpy.exp(
+        -decay * ndimage.distance_transform_edt(matrix, sampling=cell_size))
     band.WriteArray(decay_matrix)
+
 
 def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
     '''This will create the set of unweighted rasters- both the AOI and
