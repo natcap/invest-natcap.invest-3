@@ -257,14 +257,14 @@ def execute(args):
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster 
             rasterize_layer_uri(
-                aoi_raster_uri, aoi_uri, 1, field=None,
+                aoi_raster_uri, aoi_uri, 1,
                 option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
             rasterize_layer_uri(
-                aoi_raster_uri, land_poly_proj_uri, 0, field=None,
+                aoi_raster_uri, land_poly_proj_uri, 0,
                 option_list=["ALL_TOUCHED=TRUE"])
 
             dist_mask_uri = os.path.join(

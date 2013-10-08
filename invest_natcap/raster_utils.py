@@ -2767,7 +2767,7 @@ def unique_raster_values_count(dataset_uri, ignore_nodata=True):
     return itemfreq
 
 def rasterize_layer_uri(
-        raster_uri, shapefile_uri, burn_value, field=None, option_list=None):
+        raster_uri, shapefile_uri, burn_value, option_list=None):
     """Burn the layer from 'shapefile_uri' onto the raster from 'raster_uri'.
         Will burn 'burn_value' onto the raster unless 'field' is not None,
         in which case it will burn the value from shapefiles field.
@@ -2777,9 +2777,6 @@ def rasterize_layer_uri(
         shapefile_uri - a URI to an ogr datasource
 
         burn_value - a Python number to burn into the raster
-
-        field - the name of a field from 'shapefile_uri' to use as the burn
-            value (optional)
 
         option_list - a Python list of options for the operation. Example:
             ["ATTRIBUTE=NPV", "ALL_TOUCHED=TRUE"]
