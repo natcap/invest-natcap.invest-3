@@ -102,6 +102,9 @@ def expand_lu_type(
             increasing_distances = numpy.argsort(lu_edge_distance.flat)
             lu_pixels_to_convert = int(round(step_percent(lu_code)))
             print lu_code, lu_pixels_to_convert
+            if increasing_distances[deepest_edge_index - 1] is numpy.inf:
+                print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+                break
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
             pixels_converted_so_far += int(lu_pixels_to_convert)
             pixel_count[lu_code] += int(lu_pixels_to_convert)
@@ -610,6 +613,9 @@ def analyze_forest_edge_erosion(args):
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step']
+        if increasing_distances[deepest_edge_index - 1] is numpy.inf:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
         scenario_lulc_array.flat[
             increasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
@@ -698,6 +704,9 @@ def analyze_forest_core_expansion(args):
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step'] * percent_per_step
+        if decreasing_distances[deepest_edge_index - 1] is 0:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
@@ -788,6 +797,9 @@ def analyze_forest_core_fragmentation(args):
         #We want to visit the edge pixels in decreasing distance order starting
         #from the core pixel in.
         decreasing_distances = numpy.argsort(scenario_edge_distance.flat)[::-1]
+        if decreasing_distances[deepest_edge_index - 1] is 0:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
