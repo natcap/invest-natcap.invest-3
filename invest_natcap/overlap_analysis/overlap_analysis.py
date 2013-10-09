@@ -568,10 +568,10 @@ def make_indiv_weight_rasters(
             aoi_raster_uri, outgoing_uri, 'GTiff', nodata, gdal.GDT_Float32,
             fill_value=nodata)
 
-            raster_utils.rasterize_layer_uri(
+        raster_utils.rasterize_layer_uri(
             outgoing_uri, layer_uri, option_list=["ATTRIBUTE=%s" %intra_name])
 
-            weighted_raster_uris.append(outgoing_uri)
+        weighted_raster_uris.append(outgoing_uri)
         weighted_names.append(basename)
    
     return weighted_raster_uris, weighted_names
