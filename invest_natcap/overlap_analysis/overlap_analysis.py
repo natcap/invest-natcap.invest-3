@@ -381,7 +381,6 @@ def create_weighted_raster(
         max_intra_weights = {}
         for layer_uri in layers_dict:
             layer_name = os.path.splitext(os.path.basename(layer_uri))[0]
-            #datasource = layers_dict[layer_name]
             datasource = ogr.Open(layer_uri)
             layer = datasource.GetLayer()
             for feature in layer:
@@ -463,21 +462,12 @@ def create_weighted_raster(
             weighted_raster_uris, combine_weighted_pixels_intra, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             dataset_to_align_index=0)
-                    
-        #raster_utils.vectorize_rasters(weighted_raster_files, 
-        #            combine_weighted_pixels_intra,
-        #            aoi = None, raster_out_uri = outgoing_uri, 
-        #            datatype = gdal.GDT_Float32, nodata = aoi_nodata)
     else:
         raster_utils.vectorize_datasets(
             weighted_raster_uris, combine_weighted_pixels, outgoing_uri,
             gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
             dataset_to_align_index=0)
-            
-        #raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
-        #           aoi = None, raster_out_uri = outgoing_uri,
-        #           datatype = gdal.GDT_Float32, nodata = aoi_nodata)
- 
+             
     #Now want to check if hu_impscore exists. If it does, use that as the
     #multiplier against the hubs raster. If not, use the hu_freq raster and
     #multiply against that.
@@ -567,8 +557,6 @@ def make_indiv_weight_rasters(
     LOGGER.debug('layers_dict %s', layers_dict)
     for layer_uri in layers_dict:
         basename = os.path.splitext(os.path.basename(layer_uri))[0]
-        #datasource = layers_dict[element]
-        #layer = datasource.GetLayer()
         
         outgoing_uri = os.path.join(input_dir, basename + ".tif")
 
@@ -579,17 +567,11 @@ def make_indiv_weight_rasters(
         raster_utils.new_raster_from_base_uri(
             aoi_raster_uri, outgoing_uri, 'GTiff', nodata, gdal.GDT_Float32,
             fill_value=nodata)
-        #band, nodata = raster_utils.extract_band_and_nodata(dataset)
-        
-        #band.Fill(nodata)
-        raster_utils.rasterize_layer_uri(
+
+            raster_utils.rasterize_layer_uri(
             outgoing_uri, layer_uri, option_list=["ATTRIBUTE=%s" %intra_name])
-        #gdal.RasterizeLayer(
-        #    dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
-        #this should do something about flushing the buffer
-        #dataset.FlushCache()
-        #dataset = None
-        weighted_raster_uris.append(outgoing_uri)
+
+            weighted_raster_uris.append(outgoing_uri)
         weighted_names.append(basename)
    
     return weighted_raster_uris, weighted_names
