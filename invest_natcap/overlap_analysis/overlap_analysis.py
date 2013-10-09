@@ -379,8 +379,10 @@ def create_weighted_raster(
     #intra-activity weight
     if do_intra:
         max_intra_weights = {}
-        for layer_name in layers_dict:
-            datasource = layers_dict[layer_name]
+        for layer_uri in layers_dict:
+            layer_name = os.path.splitext(os.path.basename(layer_uri))[0]
+            #datasource = layers_dict[layer_name]
+            datasource = ogr.Open(layer_uri)
             layer = datasource.GetLayer()
             for feature in layer:
                 attribute = feature.items()[intra_name]
