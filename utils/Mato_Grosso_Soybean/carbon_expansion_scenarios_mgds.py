@@ -101,10 +101,6 @@ def expand_lu_type(
             lu_edge_distance[base_array != lu_code] = numpy.inf
             increasing_distances = numpy.argsort(lu_edge_distance.flat)
             lu_pixels_to_convert = int(round(step_percent(lu_code)))
-            print lu_code, lu_pixels_to_convert, lu_edge_distance.flat[increasing_distances[lu_pixels_to_convert - 1]]
-            if lu_edge_distance.flat[increasing_distances[lu_pixels_to_convert - 1]] == numpy.inf:
-                raise Exception('WARNING: All the forest has been converted, stopping at step')
-                
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
             pixels_converted_so_far += int(lu_pixels_to_convert)
             pixel_count[lu_code] += int(lu_pixels_to_convert)
@@ -923,7 +919,7 @@ if __name__ == '__main__':
         'percent_per_step': 1,
         'converting_crop': 17,
         'scenario_lulc_base_map_filename': 'lulc',
-        'scenario_conversion_steps': 3,
+        'scenario_conversion_steps': 400,
     }
 
     
@@ -974,3 +970,4 @@ if __name__ == '__main__':
     ARGS['output_table_filename'] = (
         'forest_edge_erosion_carbon_stock_change.csv')
     analyze_forest_edge_erosion(ARGS)
+    
