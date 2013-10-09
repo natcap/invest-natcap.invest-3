@@ -468,6 +468,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
     #component parts across our AOI. Want to make sure to use our new field as
     #the index.
     avgs_dict = {}
+    avgs_r_sum = {}
 
     for pair in risk_dict:
         h, s = pair
@@ -481,21 +482,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         #entry for any AOI feature that does not overlap a valid pixel.
         #Thus, we want to initialize ALL to 0, then just update if there is any
         #change.
-        r_agg_dict = dict.fromkeys(ids, 0)
         e_agg_dict = dict.fromkeys(ids, 0)
         c_agg_dict = dict.fromkeys(ids, 0)
 
-        #GETTING MEANS OF THE RISK RASTERS HERE
-
-        r_raster_uri = risk_dict[pair]
-
-        #We explicitly placed the 'BURN_ID' feature on each layer. Since we know
-        #currently there is a 0 value for all means, can just update each entry
-        #if there is a real mean found.
-        r_agg_dict.update(raster_utils.aggregate_raster_values_uri(
-                r_raster_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
-
         #GETTING MEANS OF THE E RASTERS HERE
+
+        LOGGER.debug("Currently working with: %s, %s" % (h, s))
 
         #Just going to have to pull explicitly. Too late to go back and
         #rejigger now.
@@ -511,15 +503,21 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
 
+        #For the average risk, want to use the avg. E and C values that we 
+        #just got.
+        #r_val = math.sqrt((c_agg_dict['C'] - 1)**2 + (e_agg_dict['E'] -1) **2)
+
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
-        for ident in r_agg_dict:
+        for ident in c_agg_dict:
             
             name = name_map[ident]
            
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
-                           'C': c_agg_dict[ident], 'Risk': r_agg_dict[ident]})
+                           'C': c_agg_dict[ident]})
+        
+    LOGGER.debug("AVGS DICT: %s" % avgs_dict)
 
     return avgs_dict, name_map.values()
 
