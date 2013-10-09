@@ -6,7 +6,7 @@ import numpy
 
 if __name__ == '__main__':
 
-    ascii_raster_uri = 'sugarcane_harea.asc'
+    ascii_raster_uri = 'sugarcane_yield.asc'
     ascii_file = open(ascii_raster_uri, 'r')
     ascii_headers = [
         'ncols', 'nrows', 'xllcorner', 'yllcorner', 'cellsize', 'NODATA_value']
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     out_array = numpy.zeros(
         (raster_properties['nrows'], raster_properties['ncols']))
     
-    output_uri = os.path.basename(ascii_raster_uri + '.tif')
+    output_uri = os.path.splitext(os.path.basename(ascii_raster_uri))[0] + '.tif'
 
     driver = gdal.GetDriverByName('GTiff')
     dataset = driver.Create(
