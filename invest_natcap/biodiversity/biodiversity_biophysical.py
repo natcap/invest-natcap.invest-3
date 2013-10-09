@@ -1,4 +1,4 @@
-"""InVEST Biophysical model file handler module"""
+"""InVEST Habitat Quality model"""
 import math
 import os.path
 import logging
@@ -15,10 +15,10 @@ from invest_natcap import raster_utils
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('biodiversity_biophysical')
+LOGGER = logging.getLogger('habitat_quality')
 
 def execute(args):
-    """Open files necessary for the biophysical portion of the biodiversity
+    """Open files necessary for the portion of the habitat_quality
         model.
 
         args - a python dictionary with at least the following components:
@@ -300,7 +300,7 @@ def threat_names_match(threat_dict, sens_dict, prefix):
     return True
 
 def biophysical(args):
-    """Execute the biophysical component of the biodiversity model.
+    """Execute the biophysical component of the habitat_quality model.
 
        args - a python dictionary with at least the following components:
        args['workspace_dir'] - a uri to the directory that will write output
@@ -335,7 +335,7 @@ def biophysical(args):
 
        returns nothing."""
 
-    LOGGER.debug('Starting biodiversity biophysical calculations')
+    LOGGER.debug('Starting habitat_quality biophysical calculations')
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -684,7 +684,7 @@ def biophysical(args):
     except KeyError:
         LOGGER.info('Baseline not provided to compute Rarity')
 
-    LOGGER.debug('Finished biodiversity biophysical calculations')
+    LOGGER.debug('Finished habitat_quality biophysical calculations')
 
 def raster_pixel_count(dataset):
     """Determine how many of each unique pixel lies in the dataset (dataset)
