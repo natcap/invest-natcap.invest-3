@@ -536,7 +536,7 @@ def analyze_premade_lulc_scenarios(args):
         output_table.flush()
 
 
-def analyze_forest_expansion(args):
+def analyze_forest_edge_erosion(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges.
 
@@ -955,7 +955,7 @@ if __name__ == '__main__':
     
     #Set up args for the forest only scenario
     ARGS['output_table_filename'] = (
-        'forest_degredation_carbon_stock_change.csv')
-    analyze_forest_expansion(ARGS)
+        'forest_edge_erosion_carbon_stock_change.csv')
+    analyze_forest_edge_erosion(ARGS)
 
     
