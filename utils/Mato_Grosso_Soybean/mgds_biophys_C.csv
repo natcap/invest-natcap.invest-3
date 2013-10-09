@@ -1,0 +1,16 @@
+LULC,LULC_name,C_ABOVE_MEAN,C_below,C_dead,C_soil
+0,Water,0,0,0,0
+1,Evergreen needleleaf forest,,31.40833333,12.79596,105.3366667
+2,Deciduous needleleaf forest,,31.40833333,12.79596,105.3366667
+3,Evergreen boradleaf forest,,31.40833333,12.79596,105.3366667
+4,Deciduous broadleaf forest,,31.40833333,12.79596,105.3366667
+5,Mixed forest,,31.40833333,12.79596,105.3366667
+6,Closed shrublands,3.653333333,5.349,2.675,98.88888889
+7,Open shrublands,3.653333333,5.349,2.675,98.88888889
+8,Woody savannas,33.5,7.711,2.675,109.0422593
+9,Savannas,11.605,22.70888889,2.675,117.2037654
+10,Grassland,1.884714286,4.391666667,0.0625,117.9660572
+12,Croplands,3,0.75,0,90.93089444
+13,Urban and built-up land,5.5,3.5,0.25,21.25
+16,Barren or sparsely vegetated,0,0,0,0
+17,sugarcane,8.8,3.263675,0,99.7777765
