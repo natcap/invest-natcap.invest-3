@@ -6,7 +6,7 @@ import numpy
 
 if __name__ == '__main__':
 
-    ascii_raster_uri = 'sugarcane_yield.asc'
+    ascii_raster_uri = 'sugarcane_harea.asc'
     ascii_file = open(ascii_raster_uri, 'r')
     ascii_headers = [
         'ncols', 'nrows', 'xllcorner', 'yllcorner', 'cellsize', 'NODATA_value']
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     dataset.SetGeoTransform(
         [raster_properties['xllcorner'], raster_properties['cellsize'], 0.0,
-        raster_properties['yllcorner'], 0.0, -raster_properties['cellsize']]) 
+        raster_properties['yllcorner'] + raster_properties['cellsize'] * raster_properties['nrows'], 0.0, -raster_properties['cellsize']]) 
     spat_ref = osr.SpatialReference()
     spat_ref.SetWellKnownGeogCS("WGS84")
     dataset.SetProjection(spat_ref.ExportToWkt())
