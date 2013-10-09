@@ -201,6 +201,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         level = 0
         while pixel['up'] is not None:
             pixel['up']['span'] += 1
+            print('span is now', pixel['up']['span'])
             # Adjusting span if too large
             if pixel['up']['span'] > 3:
                 # Insert the missing skip_node
@@ -219,6 +220,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     #('< min_up_count' in message), error_message
                     pixel = pixel['up']
                     level += 1
+            # Nothing to adjust, break outpof the while
+            else:
+                break
 
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
@@ -256,6 +260,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                         #('< min_up_count' in message), error_message
                         pixel = pixel['up']
                         level += 1
+                # Nothing to adjust, break outpof the while
+                else:
+                    break
 
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
@@ -583,7 +590,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     # 1.8-chain length is 1 less than len(linked_list)
     if (chain_length != len(linked_list) -1):
         message = 'Discrepancy between the size of the linked list (' + \
-        len(linked_list) + 'and the number of nodes chained together ' + \
+        str(len(linked_list)) + 'and the number of nodes chained together ' + \
         str(chain_length)
         return (False, message)
     # 1.9-linked_list['closest'] is the smallest distance
