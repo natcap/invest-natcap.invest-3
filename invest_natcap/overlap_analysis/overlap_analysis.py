@@ -562,29 +562,33 @@ def make_indiv_weight_rasters(
     #reference other indicies without having to convert for the missing first 
     #element in names.
     weighted_names = ['aoi']
-    for element in layers_dict:
+    LOGGER.debug('layers_dict %s', layers_dict)
+    for layer_uri in layers_dict:
+        basename = os.path.splitext(os.path.basename(layer_uri))[0]
+        #datasource = layers_dict[element]
+        #layer = datasource.GetLayer()
         
-        datasource = layers_dict[element]
-        layer = datasource.GetLayer()
-        
-        outgoing_uri = os.path.join(input_dir, element + ".tif")
+        outgoing_uri = os.path.join(input_dir, basename + ".tif")
 
         #Setting nodata value to 0 so that the nodata pixels can be used 
         #directly in calculations without messing up the weighted total 
         #equations for the second output file.
-        dataset = raster_utils.new_raster_from_base_uri(
-            aoi_raster_uri, outgoing_uri, 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(dataset)
+        nodata = 0
+        raster_utils.new_raster_from_base_uri(
+            aoi_raster_uri, outgoing_uri, 'GTiff', nodata, gdal.GDT_Float32,
+            fill_value=nodata)
+        #band, nodata = raster_utils.extract_band_and_nodata(dataset)
         
-        band.Fill(nodata)
-        
-        gdal.RasterizeLayer(
-            dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
+        #band.Fill(nodata)
+        raster_utils.rasterize_layer_uri(
+            outgoing_uri, layer_uri, option_list=["ATTRIBUTE=%s" %intra_name])
+        #gdal.RasterizeLayer(
+        #    dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
         #this should do something about flushing the buffer
-        dataset.FlushCache()
-        dataset = None
+        #dataset.FlushCache()
+        #dataset = None
         weighted_raster_uris.append(outgoing_uri)
-        weighted_names.append(element)
+        weighted_names.append(basename)
    
     return weighted_raster_uris, weighted_names
 
