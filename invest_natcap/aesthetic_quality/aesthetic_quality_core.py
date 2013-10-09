@@ -214,7 +214,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     pixel = pixel['up']
                     distance = pixel['distance']
                     # First skip node points to the first element in sweep_line
-                    skip_node = {'next':None, 'up':None, 'down':pixel,
+                    skip_node = {'next':None, 'up':None, 'down':pixel, \
                     'distance':pixel['distance'], 'span':2}
                     skip_nodes[-1][distance] = skip_node
                     pixel['up'] = skip_nodes[-1][distance]
@@ -224,7 +224,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     skip_node = {'next':None, 'up':None, 'down':second_last, \
                     'distance':second_distance, 'span':2}
                     skip_nodes[-1][second_distance] = skip_node
-                    sweep_line[second_distance]['up'] = skip_nodes[-1][second_distance]
+                    second_last['up'] = skip_nodes[-1][second_distance]
                     skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
                 # Check whether we should keep updating the skip_nodes
                 list_is_consistent, message = \
@@ -284,7 +284,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                         skip_node = {'next':None, 'up':None, 'down':second_last, \
                         'distance':second_distance, 'span':2}
                         skip_nodes[-1][second_distance] = skip_node
-                        sweep_line[second_distance]['up'] = skip_nodes[-1][second_distance]
+                        second_last['up'] = skip_nodes[-1][second_distance]
                         skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
                         # Check whether we should keep updating the skip_nodes
                         list_is_consistent, message = \
