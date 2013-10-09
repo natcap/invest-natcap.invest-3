@@ -529,7 +529,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             skip_nodes)[0] is True, message
         sweep_length = len(sweep_line)
         
-        test_values = [6, 8, 4, 10, 2, 7]
+        test_values = [9, 8, 7, 6, 5, 4, 3, 2, 1] #[12, 16, 8, 20, 4, 14, 10, 13, 22, 15]
         for value in test_values:
             sweep_line, skip_nodes = \
             aesthetic_quality_core.add_active_pixel_fast(sweep_line, \
@@ -542,12 +542,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert sweep_length + increment == len(sweep_line), \
                 str(len(sweep_line))
             sweep_length += increment
-            print('----- test skip nodes -----')
-            for l in range(len(skip_nodes)):
-                values = [skip_nodes[l][i]['distance'] for i in sorted(skip_nodes[l].keys())]
-                print('distances', sorted(skip_nodes[l].keys()))
-                print('values   ', values)
-            print('---------------------------')
             message = 'Skip list is not consistent after adding ' + str(value)
             consistency = \
             aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
@@ -579,8 +573,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             print('distance ' + str(current['distance']) + ', next ' + \
                 str(right if right is None else right['distance']))
         for level in range(len(skip_nodes)):
+            first = sorted(skip_nodes[level].keys())[0]
             print('skip nodes level ' + str(level) + ':')
-            current = skip_nodes[level][0]
+            current = skip_nodes[level][first]
             right = current['next']
             span = current['span']
             print('distance ' + str(current['distance']) + ', next ' + \

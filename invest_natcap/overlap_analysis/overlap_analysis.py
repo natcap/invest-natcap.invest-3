@@ -59,16 +59,14 @@ def execute(args):
 
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
-    inter_dir = os.path.join(workspace, 'intermediate')
-    raster_utils.create_directories([output_dir, inter_dir])
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    raster_utils.create_directories([output_dir, intermediate_dir])
 
     overlap_uris = map(
         lambda x: os.path.join(args['overlap_data_dir_uri'], x),
         os.listdir(args['overlap_data_dir_uri']))
-    overlap_shape_uris = fnmatch.filter(args['overlap_data_dir_uri'], '*.shp')
+    overlap_shape_uris = fnmatch.filter(overlap_uris, '*.shp')
     LOGGER.debug(overlap_shape_uris)
-    #file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
-    #args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
     if args['do_inter']:
@@ -76,7 +74,6 @@ def execute(args):
     if args['do_intra']:
         args['intra_name'] = args['intra_name']
     if args['do_hubs']:
-        args['hubs_file'] = ogr.Open(args['hubs_uri'])
         args['decay'] = float(args['decay_amt'])
 
     #Create the unweighted rasters, since that will be one of the outputs
@@ -84,34 +81,29 @@ def execute(args):
     #one to the combine unweighted function, and then the option call for the
     #weighted raster combination that uses the unweighted pre-created rasters.
 
-    aoi_dataset_uri = os.path.join(inter_dir, 'AOI_dataset.tif')
+    aoi_dataset_uri = os.path.join(intermediate_dir, 'AOI_dataset.tif')
     grid_size = float(args['grid_size'])
     raster_utils.create_raster_from_vector_extents_uri(
         args['zone_layer_uri'], grid_size, gdal.GDT_Int32, 0,
         aoi_dataset_uri)
 
-    aoi_dataset = gdal.Open(aoi_dataset_uri, gdal.GA_Update)
-    aoi_band = aoi_dataset.GetRasterBand(1)
-    aoi_band.Fill(0)
-
-    aoi_shp = ogr.Open(args['zone_layer_uri'])
-    aoi_shp_layer = aoi_shp.GetLayer()
-    gdal.RasterizeLayer(aoi_dataset, [1], aoi_shp_layer, burn_values=[1])
-
+    raster_utils.rasterize_layer_uri(
+        aoi_dataset_uri, args['zone_layer_uri'], burn_values=[1])
+    
     #Want to get each interest layer, and rasterize them, then combine them all
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
     raster_uris, raster_names = make_indiv_rasters(
-        inter_dir, overlap_shape_uris, aoi_dataset_uri)
+        intermediate_dir, overlap_shape_uris, aoi_dataset_uri)
 
     create_unweighted_raster(output_dir, aoi_dataset_uri, raster_uris)
 
     #Want to make sure we're passing the open hubs raster to the combining
     #weighted raster file
     if args['do_hubs']:
-        hubs_out_uri = os.path.join(inter_dir, "hubs_raster.tif")
-        create_hubs_raster(args['hubs_file'], args['decay'], aoi_dataset,
-                                hubs_out_uri)
+        hubs_out_uri = os.path.join(intermediate_dir, "hubs_raster.tif")
+        create_hubs_raster(
+            args['hubs_uri'], args['decay'], aoi_dataset_uri, hubs_out_uri)
         hubs_rast = gdal.Open(hubs_out_uri)
     else:
         hubs_rast = None
@@ -125,7 +117,7 @@ def execute(args):
         
         #Want some place to put weighted rasters so we aren't blasting over the
         #unweighted rasters
-        weighted_dir = os.path.join(inter_dir, 'Weighted')
+        weighted_dir = os.path.join(intermediate_dir, 'Weighted')
         
         if not (os.path.exists(weighted_dir)):
             os.makedirs(weighted_dir)
@@ -186,47 +178,46 @@ def format_over_table(over_tbl):
     return over_dict
 
 
-def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
+def create_hubs_raster(hubs_shape_uri, decay, aoi_raster_uri, hubs_out_uri):
     '''This will create a rasterized version of the hubs shapefile where each pixel
     on the raster will be set accourding to the decay function from the point
     values themselves. We will rasterize the shapefile so that all land is 0, and
     nodata is the distance from the closest point.
     
         Input:
-            hubs_shape- Open point shapefile containing the hub locations as points.
-                decay- Double representing the rate at which the hub importance 
+            hubs_shape_uri - Open point shapefile containing the hub locations
+                as points.
+            decay - Double representing the rate at which the hub importance 
                 depreciates relative to the distance from the location.
-            aoi_raster- The area of interest raster on which we want to base our new
-                hubs raster.
-            hubs_out_uri- The URI location at which the new hubs raster should be
-                placed.
+            aoi_raster_uri - The URI to the area interest raster on which we
+                want to base our new hubs raster.
+            hubs_out_uri - The URI location at which the new hubs raster should
+                be placed.
 
         Output:
             This creates a raster within hubs_out_uri whose data will be a function
             of the decay around points provided from hubs shape.
 
         Returns nothing. '''
-    layer = hubs_shape.GetLayer()
     
     #In this case, want to change the nodata value to 1, and the points
     #themselves to 0, since this is what the distance tranform function expects.
-    dataset = raster_utils.new_raster_from_base(aoi_raster, hubs_out_uri, 
-                            'GTiff', -1, gdal.GDT_Float32)
-    band, nodata = raster_utils.extract_band_and_nodata(dataset)
-    band.Fill(nodata)
+    nodata = raster_utils.get_nodata_from_uri(aoi_raster_uri)
+    raster_utils.new_raster_from_base_uri(
+        aoi_raster_uri, hubs_out_uri, 'GTiff', -1, gdal.GDT_Float32,
+        fill_value=1)
     
-    gdal.RasterizeLayer(dataset, [1], layer, burn_values=[0])
-    #this should do something about flushing the buffer
-    dataset.FlushCache()
+    raster_utils.rasterize_layer_uri(
+        hubs_out_uri, hubs_shape_uri, burn_values=[0])
 
+    dataset = gdal.Open(hubs_out_uri, gdal.GA_Update)
+    band = dataset.GetRasterBand(1)
     matrix = band.ReadAsArray()
-
-    cell_size = raster_utils.pixel_size(aoi_raster)
-
-    decay_matrix = numpy.exp(-decay *  
-                    ndimage.distance_transform_edt(matrix, sampling=cell_size))
-
+    cell_size = raster_utils.get_cell_size_from_uri(aoi_raster_uri)
+    decay_matrix = numpy.exp(
+        -decay * ndimage.distance_transform_edt(matrix, sampling=cell_size))
     band.WriteArray(decay_matrix)
+
 
 def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
     '''This will create the set of unweighted rasters- both the AOI and
@@ -298,7 +289,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
 
 
 def create_weighted_raster(
-    out_dir, inter_dir, aoi_raster_uri, inter_weights_dict, layers_dict,
+    out_dir, intermediate_dir, aoi_raster_uri, inter_weights_dict, layers_dict,
     intra_name, do_inter, do_intra, do_hubs, hubs_raster,
     raster_uris, raster_names):
     '''This function will create an output raster that takes into account both
@@ -309,7 +300,7 @@ def create_weighted_raster(
     Input:
         out_dir- This is the directory into which our completed raster file 
             should be placed when completed.
-        inter_dir- The directory in which the weighted raster files can be stored.
+        intermediate_dir- The directory in which the weighted raster files can be stored.
         inter_weights_dict- The dictionary that holds the mappings from layer 
             names to the inter-activity weights passed in by CSV. The dictionary
             key is the string name of each shapefile, minus the .shp extension.
@@ -367,7 +358,8 @@ def create_weighted_raster(
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
     outgoing_uri = os.path.join(out_dir, 'hu_impscore.tif') 
-    aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)[1]
+    aoi_nodata = raster_utils.get_nodata_from_uri(aoi_raster_uri)
+    pixel_size_out = raster_utils.get_cell_size_from_uri(aoi_raster_uri)
 
     #If intra-activity weighting is desired, we need to create a whole new set 
     #of values, where the burn value of each pixel is the attribute value of the
@@ -380,15 +372,16 @@ def create_weighted_raster(
     if do_intra:
         weighted_raster_uris, weighted_raster_names = (
             make_indiv_weight_rasters(
-                inter_dir, aoi_raster_uri, layers_dict, intra_name))
+                intermediate_dir, aoi_raster_uri, layers_dict, intra_name))
 
     #Need to get the X{max} now, so iterate through the features on a layer, and
     #make a dictionary that maps the name of the layer to the max potential 
     #intra-activity weight
     if do_intra:
         max_intra_weights = {}
-        for layer_name in layers_dict:
-            datasource = layers_dict[layer_name]
+        for layer_uri in layers_dict:
+            layer_name = os.path.splitext(os.path.basename(layer_uri))[0]
+            datasource = ogr.Open(layer_uri)
             layer = datasource.GetLayer()
             for feature in layer:
                 attribute = feature.items()[intra_name]
@@ -411,14 +404,10 @@ def create_weighted_raster(
     #use 1 in our equation.
     
     def combine_weighted_pixels(*pixel_parameter_list):
-        
         aoi_pixel = pixel_parameter_list[0]
-        
         curr_pix_sum = 0
-
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
-
         for i in range(1, n+1):
             #This will either be a 0 or 1, since the burn value for the 
             #unweighted raster files was a 1.
@@ -438,14 +427,10 @@ def create_weighted_raster(
         return curr_pix_sum    
 
     def combine_weighted_pixels_intra(*pixel_parameter_list):
-    
         aoi_pixel = pixel_parameter_list[0]
-
         curr_pix_sum = 0.0
-
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
-
         for i in range(1, n+1):
 
             #Can assume that if we have gotten here, that intra-activity 
@@ -471,18 +456,18 @@ def create_weighted_raster(
             #division in the calculations.  
             curr_pix_sum += ((1/float(n)) * U * I)
         return curr_pix_sum
-            
+        
     if do_intra:
-                
-        raster_utils.vectorize_rasters(weighted_raster_files, 
-                    combine_weighted_pixels_intra,
-                    aoi = None, raster_out_uri = outgoing_uri, 
-                    datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+        raster_utils.vectorize_datasets(
+            weighted_raster_uris, combine_weighted_pixels_intra, outgoing_uri,
+            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
+            dataset_to_align_index=0)
     else:
-        raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
-                   aoi = None, raster_out_uri = outgoing_uri,
-                   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
- 
+        raster_utils.vectorize_datasets(
+            weighted_raster_uris, combine_weighted_pixels, outgoing_uri,
+            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection",
+            dataset_to_align_index=0)
+             
     #Now want to check if hu_impscore exists. If it does, use that as the
     #multiplier against the hubs raster. If not, use the hu_freq raster and
     #multiply against that.
@@ -500,7 +485,7 @@ def create_weighted_raster(
         if os.path.isfile(outgoing_uri):
             #Make a copy of the file so that we can use it to re-create the hub
             #weighted raster file.
-            temp_uri = os.path.join(inter_dir, "temp_rast.tif")
+            temp_uri = os.path.join(intermediate_dir, "temp_rast.tif")
             shutil.copyfile(outgoing_uri, temp_uri)
 
             base_raster = gdal.Open(temp_uri)
@@ -569,31 +554,27 @@ def make_indiv_weight_rasters(
     #reference other indicies without having to convert for the missing first 
     #element in names.
     weighted_names = ['aoi']
-    for element in layers_dict:
+    LOGGER.debug('layers_dict %s', layers_dict)
+    for layer_uri in layers_dict:
+        basename = os.path.splitext(os.path.basename(layer_uri))[0]
         
-        datasource = layers_dict[element]
-        layer = datasource.GetLayer()
-        
-        outgoing_uri = os.path.join(input_dir, element + ".tif")
+        outgoing_uri = os.path.join(input_dir, basename + ".tif")
 
         #Setting nodata value to 0 so that the nodata pixels can be used 
         #directly in calculations without messing up the weighted total 
         #equations for the second output file.
-        dataset = raster_utils.new_raster_from_base_uri(
-            aoi_raster_uri, outgoing_uri, 'GTiff', 0, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(dataset)
-        
-        band.Fill(nodata)
-        
-        gdal.RasterizeLayer(
-            dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
-        #this should do something about flushing the buffer
-        dataset.FlushCache()
-       
-        weighted_raster_files.append(dataset)
-        weighted_names.append(element)
+        nodata = 0
+        raster_utils.new_raster_from_base_uri(
+            aoi_raster_uri, outgoing_uri, 'GTiff', nodata, gdal.GDT_Float32,
+            fill_value=nodata)
+
+        raster_utils.rasterize_layer_uri(
+            outgoing_uri, layer_uri, option_list=["ATTRIBUTE=%s" %intra_name])
+
+        weighted_raster_uris.append(outgoing_uri)
+        weighted_names.append(basename)
    
-    return weighted_raster_files, weighted_names
+    return weighted_raster_uris, weighted_names
 
         
 def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
@@ -603,8 +584,8 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     directory that is being passed in as a parameter.
     
     Input:
-        out_dir- This is the directory into which our completed raster files should
-            be placed when completed.
+        out_dir- This is the directory into which our completed raster files
+            should be placed when completed.
         overlap_shape_uris- This is a dictionary containing all of the open 
             shapefiles which need to be rasterized. The key for this dictionary
             is the name of the file itself, minus the .shp extension. This key 
@@ -628,25 +609,21 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     
     #Remember, this defaults to element being the keys of the dictionary
     for overlap_uri in overlap_shape_uris:
+        element_name = os.path.splitext(
+            os.path.basename(overlap_uri))[0]
+        outgoing_uri = os.path.join(
+            out_dir, element_name + ".tif")
+        nodata = 0
+        raster_utils.new_raster_from_base_uri(aoi_raster_uri, outgoing_uri, 
+            'GTiff', nodata, gdal.GDT_Int32, fill_value=nodata)
 
-        datasource = overlap_shape_uris[element]
-        layer = datasource.GetLayer()       
-
-        outgoing_uri = os.path.join(out_dir, element + ".tif")        
-        
-        dataset = raster_utils.new_raster_from_base(aoi_raster_uri, outgoing_uri, 
-                          'GTiff', 0, gdal.GDT_Int32)
-        band, nodata = raster_utils.extract_band_and_nodata(dataset)
-        
-        band.Fill(nodata)
-        
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1], 
-                                        options=['ALL_TOUCHED=TRUE'])
-        #this should do something about flushing the buffer
-        dataset.FlushCache()
+        LOGGER.debug('rasterizing %s to %s' % (overlap_uri, outgoing_uri))
+        raster_utils.rasterize_layer_uri(
+            outgoing_uri, overlap_uri, burn_values=[1],
+            option_list=['ALL_TOUCHED=TRUE'])
         
         raster_uris.append(outgoing_uri)
-        raster_names.append(element)
+        raster_names.append(element_name)
    
-    LOGGER.debug(raster_uris)
+    LOGGER.debug("Just made the following URIs %s" % str(raster_uris))
     return raster_uris, raster_names
