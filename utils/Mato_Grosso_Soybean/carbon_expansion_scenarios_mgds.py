@@ -797,7 +797,7 @@ def analyze_forest_core_fragmentation(args):
         #We want to visit the edge pixels in decreasing distance order starting
         #from the core pixel in.
         decreasing_distances = numpy.argsort(scenario_edge_distance.flat)[::-1]
-        if decreasing_distances[deepest_edge_index - 1] is 0:
+        if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0:
             print 'WARNING: All the forest has been converted, stopping at step %s' % percent
             return
         scenario_lulc_array.flat[
