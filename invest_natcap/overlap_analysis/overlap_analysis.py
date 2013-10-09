@@ -65,10 +65,8 @@ def execute(args):
     overlap_uris = map(
         lambda x: os.path.join(args['overlap_data_dir_uri'], x),
         os.listdir(args['overlap_data_dir_uri']))
-    overlap_shape_uris = fnmatch.filter(args['overlap_data_dir_uri'], '*.shp')
+    overlap_shape_uris = fnmatch.filter(overlap_uris, '*.shp')
     LOGGER.debug(overlap_shape_uris)
-    #file_dict = overlap_core.get_files_dict(args['overlap_data_dir_uri'])
-    #args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
     if args['do_inter']:
@@ -623,25 +621,21 @@ def make_indiv_rasters(out_dir, overlap_shape_uris, aoi_raster_uri):
     
     #Remember, this defaults to element being the keys of the dictionary
     for overlap_uri in overlap_shape_uris:
+        element_name = os.path.splitext(
+            os.path.basename(overlap_uri))[0]
+        outgoing_uri = os.path.join(
+            out_dir, element_name + ".tif")
+        nodata = 0
+        raster_utils.new_raster_from_base_uri(aoi_raster_uri, outgoing_uri, 
+            'GTiff', nodata, gdal.GDT_Int32, fill_value=nodata)
 
-        datasource = overlap_shape_uris[element]
-        layer = datasource.GetLayer()       
-
-        outgoing_uri = os.path.join(out_dir, element + ".tif")        
-        
-        dataset = raster_utils.new_raster_from_base(aoi_raster_uri, outgoing_uri, 
-                          'GTiff', 0, gdal.GDT_Int32)
-        band, nodata = raster_utils.extract_band_and_nodata(dataset)
-        
-        band.Fill(nodata)
-        
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1], 
-                                        options=['ALL_TOUCHED=TRUE'])
-        #this should do something about flushing the buffer
-        dataset.FlushCache()
+        LOGGER.debug('rasterizing %s to %s' % (overlap_uri, outgoing_uri))
+        raster_utils.rasterize_layer_uri(
+            outgoing_uri, overlap_uri, burn_values=[1],
+            option_list=['ALL_TOUCHED=TRUE'])
         
         raster_uris.append(outgoing_uri)
-        raster_names.append(element)
+        raster_names.append(element_name)
    
-    LOGGER.debug(raster_uris)
+    LOGGER.debug("Just made the following URIs %s" % str(raster_uris))
     return raster_uris, raster_names
