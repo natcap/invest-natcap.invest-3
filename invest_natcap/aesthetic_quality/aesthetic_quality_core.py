@@ -206,6 +206,26 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             if pixel['up']['span'] > 3:
                 # Insert the missing skip_node
                 insert_new_skip_node(pixel, skip_nodes[level])
+                # Create a new level if needed
+                if (len(skip_nodes[level]) == 4) and \
+                    (len(skip_nodes) == level + 1):
+                    print('new level needed')
+                    skip_nodes.append({})
+                    pixel = pixel['up']
+                    distance = pixel['distance']
+                    # First skip node points to the first element in sweep_line
+                    skip_node = {'next':None, 'up':None, 'down':pixel,
+                    'distance':pixel['distance'], 'span':2}
+                    skip_nodes[-1][distance] = skip_node
+                    pixel['up'] = skip_nodes[-1][distance]
+                    # Second skip node points to the second last element in sweep_line
+                    second_last = pixel['next']['next']
+                    second_distance = second_last['distance']
+                    skip_node = {'next':None, 'up':None, 'down':second_last, \
+                    'distance':second_distance, 'span':2}
+                    skip_nodes[-1][second_distance] = skip_node
+                    sweep_line[second_distance]['up'] = skip_nodes[-1][second_distance]
+                    skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
                 # Check whether we should keep updating the skip_nodes
                 list_is_consistent, message = \
                     skip_list_is_consistent(sweep_line, skip_nodes)
@@ -246,8 +266,28 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 if pixel['up']['span'] > 3:
                     # Insert the missing skip_node
                     insert_new_skip_node(pixel, skip_nodes[level])
-                    # Check whether we should keep updating the skip_nodes
-                    list_is_consistent, message = \
+                    # Create a new level if needed
+                    if (len(skip_nodes[level]) == 4) and \
+                        (len(skip_nodes) == level + 1):
+                        print('new level needed')
+                        skip_nodes.append({})
+                        pixel = pixel['up']
+                        distance = pixel['distance']
+                        # First skip node points to the first element in sweep_line
+                        skip_node = {'next':None, 'up':None, 'down':pixel, \
+                        'distance':pixel[distance], 'span':2}
+                        skip_nodes[-1][distance] = skip_node
+                        pixel['up'] = skip_nodes[-1][distance]
+                        # Second skip node points to the second last element in sweep_line
+                        second_last = pixel['next']['next']
+                        second_distance = second_last['distance']
+                        skip_node = {'next':None, 'up':None, 'down':second_last, \
+                        'distance':second_distance, 'span':2}
+                        skip_nodes[-1][second_distance] = skip_node
+                        sweep_line[second_distance]['up'] = skip_nodes[-1][second_distance]
+                        skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
+                        # Check whether we should keep updating the skip_nodes
+                        list_is_consistent, message = \
                         skip_list_is_consistent(sweep_line, skip_nodes)
                     # List is consistent, we're done: break out of the while
                     if list_is_consistent:
@@ -301,7 +341,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             skip_node = skip_nodes[level][key]
             print(skip_node['distance'], 'span', skip_node['span'], \
             'next', None if skip_node['next'] is None else \
-            skip_node['next']['distance'])
+            skip_node['next']['distance'], 'up', None if skip_node['up'] \
+            is None else skip_node['up']['distance'])
 
     return (sweep_line, skip_nodes)
 
