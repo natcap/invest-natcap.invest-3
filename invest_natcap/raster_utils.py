@@ -867,7 +867,7 @@ def aggregate_raster_values_uri(
     clipped_raster_uri = temporary_filename()
     vectorize_datasets(
         [raster_uri], lambda x: x, clipped_raster_uri, gdal.GDT_Float32,
-        raster_nodata, out_pixel_size, "intersection",
+        raster_nodata, out_pixel_size, "union",
         dataset_to_align_index=0, aoi_uri=shapefile_uri,
         assert_datasets_projected=False)
     clipped_raster = gdal.Open(clipped_raster_uri)
@@ -2219,8 +2219,8 @@ def align_dataset_list(
             bounding_box, get_datasource_bounding_box(aoi_uri), "intersection")
 
 
-    if bounding_box[0] >= bounding_box[2] or \
-            bounding_box[1] <= bounding_box[3] and mode == "intersection":
+    if (bounding_box[0] >= bounding_box[2] or 
+            bounding_box[1] <= bounding_box[3]) and mode == "intersection":
         raise Exception("The datasets' intersection is empty "
                         "(i.e., not all the datasets touch each other).")
 

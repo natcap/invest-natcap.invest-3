@@ -427,6 +427,7 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         raster.SetProjection(srs.ExportToWkt())
 
         band = raster.GetRasterBand(1)
+        band.SetNoDataValue(nodata)
         band.Fill(nodata)
         band.FlushCache()
 
