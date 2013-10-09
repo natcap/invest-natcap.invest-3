@@ -25,6 +25,7 @@ import scipy.stats
 import os
 import errno
 import time
+import collections
 
 import numpy as np
 from numpy import copy
@@ -678,7 +679,173 @@ def globio_analyze_lu_expansion(args):
         export_array_as_geotiff(distance_to_infrastructure,args['export_folder']+scenario_name+"_distance_to_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
         export_array_as_geotiff(infrastructure,args['export_folder']+scenario_name+"_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
 
- 
+        
+def expand_lu_type(
+    base_array, nodata, expansion_id, current_step, pixels_per_step,
+    land_cover_start_fractions=None, land_cover_end_fractions=None,
+    end_step=None):
+    """Given a base array, and a number of pixels to expand
+        from, buffer out a conversion of that number of pixels
+        
+        base_array - a 2D array of integers that represent
+            land cover IDs
+        nodata - value in base_array to ignore
+        expansion_id - the ID type to expand
+        expansion_pixel_count - convert this number of pixels
+        land_cover_start_percentages/land_cover_end_percentages -
+            optional, if defined is a dictionary of land cover types
+            that are used for conversion during the start step
+        end_expansion_pixel_count - defined if land_cover_*_percentages are defined.  use to know what % of total conversion has been reached
+        
+        returns the new expanded array, the number of pixels per type that were converted to expansion_id
+        """
+        
+    def step_percent(lu_code):
+        total_pixels = 0
+        for step_id in range(current_step):
+            current_percent = float(step_id) / (end_step - 1)
+            print current_percent, pixels_per_step
+            total_pixels += pixels_per_step * (
+                land_cover_start_fractions[lu_code] * (1-current_percent) + 
+                land_cover_end_fractions[lu_code] * current_percent)
+        return total_pixels
+            
+    expansion_pixel_count = pixels_per_step * current_step
+
+    expansion_existance = (base_array != expansion_id) & (base_array != nodata)
+    edge_distance = scipy.ndimage.morphology.distance_transform_edt(
+        expansion_existance)
+    zero_distance_mask = edge_distance == 0
+    edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
+    edge_distance[zero_distance_mask] = numpy.inf
+    
+    result_array = base_array.copy()
+    if land_cover_start_fractions is None:
+        increasing_distances = numpy.argsort(edge_distance.flat)
+        
+        remaining_pixels = result_array.flat[increasing_distances[0:expansion_pixel_count]]
+        for lu_code in numpy.unique(remaining_pixels):
+            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
+        result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
+    else:
+        pixels_converted_so_far = 0
+        pixel_count = collections.defaultdict(int)
+        for lu_code in land_cover_start_fractions:
+            lu_edge_distance = edge_distance.copy()
+            lu_edge_distance[base_array != lu_code] = numpy.inf
+            increasing_distances = numpy.argsort(lu_edge_distance.flat)
+            lu_pixels_to_convert = int(round(step_percent(lu_code)))
+            print lu_code, lu_pixels_to_convert
+            result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
+            pixels_converted_so_far += int(lu_pixels_to_convert)
+            pixel_count[lu_code] += int(lu_pixels_to_convert)
+        edge_distance[result_array == expansion_id] = numpy.inf
+        increasing_distances = numpy.argsort(edge_distance.flat)
+        print expansion_pixel_count - pixels_converted_so_far
+        
+        remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
+        for lu_code in numpy.unique(remaining_pixels):
+            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
+        result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
+            
+    return result_array, pixel_count
+
+        
+def analyze_composite_globio_stock_change(args):
+    """This function loads scenarios from disk and calculates the carbon stocks
+        on them.
+
+        args['base_biomass_filename'] - a raster that contains carbon densities
+            per Ha.
+        args['base_landcover_filename'] - a raster of same dimensions as
+            'base_biomass_filename' that contains lucodes for the landscape
+            regression analysis
+        args['carbon_pool_table_filename'] - a CSV file containing carbon
+            biomass values for given lucodes.  Must contain at least the
+            columns 'LULC' and 'C_ABOVE_MEAN'
+        args['forest_lucodes'] - a list of lucodes that are used to determine
+            forest landcover types
+        args['regression_lucodes'] - a list of lucodes that will use the
+            linear regression to determine forest biomass given edge
+            distance
+        args['biomass_from_table_lucodes'] - a list of lucodes that will use
+            the carbon pool csv table to determine biomass
+        args['output_table_filename'] - this is the filename of the CSV
+            output table.
+        args['scenario_conversion_steps'] - the number of steps to run in
+            the simulation
+        args['scenario_path'] - the path to the directory that holds the
+            scenarios
+        args['converting_crop'] - when a pixel is converted to crop, it uses
+            this lucode.
+        args['pixels_to_convert_per_step'] - each step of the simulation
+            converts this many pixels
+        args['land_cover_start_fractions'] - a dictionary of landcover
+            types to conversion fractions per step for the first step
+            of land cover conversion.  The fractional amounts should
+            add up to less than or equal to 1.  If less than 1
+            land cover nearest to agriculture will be converted.
+        args['land_cover_end_fractions'] - a dictionary of landcover
+            types to conversion fractions per step for the last step
+            of land cover conversion.  Percent of landcover will be
+            linearly interpolated between 'start' and 'end' fractions.
+        args['output_pixel_count_filename'] - a report of the number of pixel
+            types changed per step
+        """
+    scenario_name = 'composite_scenarion'
+    print 'Starting GLOBIO', scenario_name,'scenario.'
+
+    #create static maps that only need to be calculated once.   
+    distance_to_infrastructure, infrastructure = create_globio_infrastructure(args)
+
+
+    #Load the base landcover map that we use in the scenarios
+    scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
+    cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
+    scenario_lulc_array = args['input_lulc_array']
+    scenario_nodata = scenario_lulc_dataset.GetRasterBand(1).GetNoDataValue()
+    
+    #Open a .csv file to dump the grassland expansion scenario
+    output_table = open(args['output_table_filename'], 'wb')
+    output_table.write(
+        'Percent Soy Expansion in LU Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
+
+    
+    unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
+
+
+    expansion_existance = (scenario_lulc_array != args['converting_crop']) & (scenario_lulc_array != scenario_nodata)
+
+    for percent in range(args['scenario_conversion_steps'] + 1):
+        print 'calculating change in MSA for expansion step %s' % percent
+
+        expanded_lulc_array, pixel_count = expand_lu_type(
+            scenario_lulc_array, scenario_nodata, args['converting_crop'], 
+            percent, args['pixels_to_convert_per_step'], 
+            args['land_cover_start_fractions'], 
+            args['land_cover_end_fractions'], 
+            args['scenario_conversion_steps'])        
+        
+        #Calcualte the carbon stocks based on the regression functions, lookup
+        #tables, and land cover raster.
+        
+        globio_lulc = create_globio_lulc(args, expanded_lulc_array) 
+        
+        msa_lu = calc_msa_lu(globio_lulc, args, percent)
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+        
+        msa_i = calc_msa_i(distance_to_infrastructure, expanded_lulc_array, args, percent)
+        avg_msa_i = str(float(np.mean(msa_i[np.where(args['mg_definition_array'] == 1)])))
+        
+        msa_f = calc_msa_f(infrastructure, expanded_lulc_array, args, percent)
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
+        
+        msa = msa_f * msa_lu * msa_i
+        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        
+        output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
+        output_table.flush()
+        
  
 if __name__ == '__main__':
     try:
@@ -733,12 +900,28 @@ if __name__ == '__main__':
     if not ARGS['pasture_array'].shape == (2528, 2695): ARGS['pasture_array'] = ARGS['pasture_array'][0:2528:1,0:2695:1] 
     if not ARGS['mg_definition_array'].shape == (2528, 2695): ARGS['mg_definition_array'] = ARGS['mg_definition_array'][0:2528:1,0:2695:1] 
 
+    
+    
+    
     #Set up the ARGS for the disk based scenario
     ARGS['scenario_path'] = './data/MG_Soy_Exp_07122013/'
     ARGS['scenario_file_pattern'] = 'mg_lulc%n'
     ARGS['output_table_filename'] = ('./export/globio_premade_lulc_scenarios_msa_change_'+ARGS['run_id']+'.csv')
-    globio_analyze_premade_lulc_scenarios(ARGS) 
+    #globio_analyze_premade_lulc_scenarios(ARGS) 
 
+    ARGS['output_table_filename'] = (
+        'composite_scenario_msa_change_'+ARGS['run_id']+'.csv')
+    ARGS['land_cover_start_fractions'] = {
+        2: .2,
+        9: .6
+        }
+    
+    ARGS['land_cover_end_fractions'] = {
+        2: .6,
+        9: .2
+        }
+    analyze_composite_globio_stock_change(ARGS)
+    
     #Set up ARGS for the forest core expansion scenario
     ARGS['output_table_filename'] = (
         'forest_core_expansion_msa_change_'+ARGS['run_id']+'.csv')
