@@ -141,6 +141,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 
             Returns nothing."""
         while pixel['up'] is not None:
+            print('adding span to node ' +str(pixel['up']['distance']) +' '+\
+            str(level) + ' which currently is ' + str(pixel['up']['span']))
             pixel['up']['span'] += 1
             # Adjusting span if too large
             if pixel['up']['span'] > 3:
@@ -149,23 +151,31 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 # Create a new level if needed
                 if (len(skip_nodes[level]) == 4) and \
                     (len(skip_nodes) == level + 1):
-                    print('new level needed')
+                    print('new level needed after ' + str(level))
                     skip_nodes.append({})
                     pixel = pixel['up']
                     distance = pixel['distance']
                     # First skip node points to the first element in sweep_line
-                    skip_node = {'next':None, 'up':None, 'down':pixel, \
+                    skip_node = {'next':None, 'up':None, \
+                    'down':skip_nodes[level][distance],\
                     'distance':pixel['distance'], 'span':2}
-                    skip_nodes[-1][distance] = skip_node
-                    pixel['up'] = skip_nodes[-1][distance]
+                    skip_nodes[level+1][distance] = skip_node
+                    pixel['up'] = skip_nodes[+1][distance]
                     # Second skip node points to the second last element in sweep_line
                     second_last = pixel['next']['next']
                     second_distance = second_last['distance']
-                    skip_node = {'next':None, 'up':None, 'down':second_last, \
+                    skip_node = {'next':None, 'up':None, \
+                    'down':skip_nodes[level][second_distance], \
                     'distance':second_distance, 'span':2}
-                    skip_nodes[-1][second_distance] = skip_node
-                    second_last['up'] = skip_nodes[-1][second_distance]
-                    skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
+                    skip_nodes[level+1][second_distance] = skip_node
+                    second_last['up'] = skip_nodes[level+1][second_distance]
+                    skip_nodes[level+1][distance]['next'] = skip_nodes[level+1][second_distance]
+                    # Check whether we should keep updating the skip_nodes
+                    list_is_consistent, message = \
+                        skip_list_is_consistent(sweep_line, skip_nodes)
+                    # List is consistent, we're done: break out of the while
+                    if not list_is_consistent:
+                        print('Error after creating new level: ' + message)
                 # Check whether we should keep updating the skip_nodes
                 list_is_consistent, message = \
                     skip_list_is_consistent(sweep_line, skip_nodes)
@@ -232,6 +242,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 else:
                     skip_nodes[level][distance]['up'] = None
         # Updating span
+        if sweep_line[distance]['up'] is not None:
+            print('Increasing span ' + str(sweep_line[distance]['up']['span']) + \
+            ' of new front pixel ' + str(distance))
         update_skip_node_span(sweep_line[distance], 0, skip_nodes)
         # The old first is not first anymore: shouldn't point up
         sweep_line[second]['up'] = None
