@@ -480,6 +480,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
 
         if h not in avgs_dict:
             avgs_dict[h] = {}
+            avgs_r_sum[h] = {}
         if s not in avgs_dict[h]:
             avgs_dict[h][s] = []
 
@@ -534,10 +535,10 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
 
                 sub_dict['Risk'] = r_val
 
-                if h in avgs_r_sum:
-                    avgs_r_sum[h] += r_val
+                if sub_dict['Name'] in avgs_r_sum[h]:
+                    avgs_r_sum[h][sub_dict['Name']] += r_val
                 else:
-                    avgs_r_sum[h] = r_val
+                    avgs_r_sum[h][sub_dict['Name']] = r_val
 
     LOGGER.debug("AVGS_R_Sum: %s" % avgs_r_sum)
 
@@ -545,7 +546,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
         
-                sub_dict['R_Pct'] = sub_dict['Risk']/ avgs_r_sum[h]
+                sub_dict['R_Pct'] = sub_dict['Risk']/ avgs_r_sum[h][sub_dict['Name']]
     
     LOGGER.debug("AVGS DICT: %s" % avgs_dict)
 
