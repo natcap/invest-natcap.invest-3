@@ -364,7 +364,7 @@ def make_aoi_tables(out_dir, aoi_pairs, max_risk):
             file.write("<td>" + str(round(element[2], 2)) + "</td>")
             file.write("<td>" + str(round(element[3], 2)) + "</td>")
             file.write("<td>" + str(round(element[4], 2)) + "</td>")
-            file.write("<td>" + str(round(element[4] * 100 / max_risk, 2)) + "</td>")
+            file.write("<td>" + str(round(element[5], 2)) + "</td>")
             file.write("</tr>")
             
         #End of the AOI-specific table
