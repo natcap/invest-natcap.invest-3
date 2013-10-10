@@ -395,7 +395,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
                         
                 for aoi_dict in s_list:
                     if aoi_dict['Name'] == aoi_name:
-                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']i, aoi_dict['R_Pct']))
+                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk'], aoi_dict['R_Pct']))
 
     return pair_dict
 
