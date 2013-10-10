@@ -81,24 +81,26 @@ def execute(args):
             break
     
     if input_dir is None:
-        raise Exception('The input directory where the threat rasters ' + \
-                        'should be located cannot be found.')
+        raise Exception(
+            'The input directory where the threat rasters '
+            'should be located cannot be found.')
     
-    biophysical_args['threat_dict'] = \
-        make_dictionary_from_csv(args['threats_uri'],'THREAT')
+    biophysical_args['threat_dict'] = make_dictionary_from_csv(
+        args['threats_uri'],'THREAT')
 
-    biophysical_args['sensitivity_dict'] = \
-        make_dictionary_from_csv(args['sensitivity_uri'],'LULC')
+    biophysical_args['sensitivity_dict'] = make_dictionary_from_csv(
+        args['sensitivity_uri'],'LULC')
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    if not threat_names_match(biophysical_args['threat_dict'], \
+    if not threat_names_match(biophysical_args['threat_dict'],
             biophysical_args['sensitivity_dict'], 'L_'):
-        raise Exception('The threat names in the threat table do ' + \
+        raise Exception(
+            'The threat names in the threat table do '
             'not match the columns in the sensitivity table')
 
-    biophysical_args['half_saturation'] = \
-           float(args['half_saturation_constant'])    
+    biophysical_args['half_saturation'] = float(
+        args['half_saturation_constant'])    
 
     # if the access shapefile was provided add it to the dictionary
     try:
@@ -110,7 +112,7 @@ def execute(args):
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
     landuse_scenarios = {'cur':'_c'}
-    scenario_constants = [('landuse_fut_uri', 'fut', '_f'), \
+    scenario_constants = [('landuse_fut_uri', 'fut', '_f'),
                           ('landuse_bas_uri', 'bas', '_b')]
     for lu_uri, lu_time, lu_ext in scenario_constants:
         if lu_uri in args:
@@ -125,9 +127,8 @@ def execute(args):
     # adding it to the dictionary. Also compile all the threat/density rasters
     # associated with the land cover
     for scenario, ext in landuse_scenarios.iteritems():
-        landuse_dict[ext] = \
-            gdal.Open(args['landuse_' + scenario + '_uri'], gdal.GA_ReadOnly)
-        
+        landuse_dict[ext] = args['landuse_' + scenario + '_uri']
+
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
         density_dict['density' + ext] = {}
