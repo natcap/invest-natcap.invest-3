@@ -141,7 +141,7 @@ def execute(args):
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
         avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], 
-                                args['aoi_key']i, args['risk_eq'])
+                                args['aoi_key'], args['risk_eq'])
         aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
 
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
@@ -399,7 +399,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
 
     return pair_dict
 
-def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
     '''This funtion is a helper to make_aoi_tables, and will just handle
     pre-calculation of the average values for each aoi zone.
 
@@ -420,6 +420,10 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         aoi_uri- The location of the AOI zone files. Each feature within this
             file (identified by a 'name' attribute) will be used to average 
             an area of E/C/Risk values.
+        risk_eq- A string identifier, either 'Euclidean' or 'Multiplicative'
+            that tells us which equation should be used for calculation of
+            risk. This will be used to get the risk value for the average E 
+            and C.
 
     Returns:
         avgs_dict- A multi level dictionary to hold the average values that
@@ -521,8 +525,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
 
-                r_val = math.sqrt((sub_dict['C'] - 1)**2 + \
+                if risk_eq == 'Euclidean':
+                    r_val = math.sqrt((sub_dict['C'] - 1)**2 + \
                                         (sub_dict['E'] -1) **2)
+                else:
+                    r_val = sub_dict['C'] * sub_dict['E']
 
                 sub_dict['Risk'] = r_val
 
