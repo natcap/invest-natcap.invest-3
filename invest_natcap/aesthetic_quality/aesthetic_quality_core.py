@@ -190,7 +190,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 level += 1
                 skip_node = skip_node['up']
                 skip_node['distance'] = distance
-                skip_node['down'] = sweep_line[distance]
+                skip_node['down'] = skip_nodes[level-1][distance]
                 print('level', level, 'levels available', len(skip_nodes))
                 skip_nodes[level][distance] = skip_node
                 del skip_nodes[level][second]
@@ -679,9 +679,6 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     total_skip_nodes = 0
     for l in range(len(skip_nodes)):
         ascending_distances = sorted(skip_nodes[l].keys())
-        print('ascending_distances', ascending_distances)
-        for key in ascending_distances:
-            print(key, skip_nodes[l][key]['distance'])
         # 2.0-Check skip_nodes are properly indexed by their distance
         for n in skip_nodes[l]:
             message = 'skip_nodes[' + str(n) + '] is not ' + str(n) + '.' + \
@@ -765,13 +762,13 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 # Step 1, get the last node of the current higher node
                 last_node = node['down']
                 print('level', l, 'n', n)
-                print('last_node', last_node['distance'])
+                #print('last_node', last_node['distance'])
                 for i in range(node['span'] -1):
                     last_node = last_node['next']
-                    print('last_node', last_node['distance'])
-                print('last_node[next]', last_node['next']['distance'])
+                    #print('last_node', last_node['distance'])
+                #print('last_node[next]', last_node['next']['distance'])
                 next_node = node['next']['down']
-                print('next_node', next_node['distance'])
+                #print('next_node', next_node['distance'])
                 # Last spanned node should be connected to the first one \
                 # from the next higher node.
                 if last_node['next']['distance'] != next_node['distance']:
