@@ -67,10 +67,7 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-
-    for folder in [inter_dir, out_dir]:
-        if not os.path.isdir(folder):
-            os.makedirs(folder)
+    raster_utils.create_directories([inter_dir, out_dir])
 
     # if the input directory is not present in the workspace then throw an
     # exception because the threat rasters can't be located.
