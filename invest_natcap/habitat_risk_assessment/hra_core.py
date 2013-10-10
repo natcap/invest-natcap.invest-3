@@ -365,7 +365,7 @@ def make_aoi_tables(out_dir, aoi_pairs, max_risk):
             file.write("<td>" + str(round(element[2], 2)) + "</td>")
             file.write("<td>" + str(round(element[3], 2)) + "</td>")
             file.write("<td>" + str(round(element[4], 2)) + "</td>")
-            file.write("<td>" + str(round(element[5], 2)) + "</td>")
+            file.write("<td>" + str(round(element[5] * 100, 2)) + "</td>")
             file.write("</tr>")
             
         #End of the AOI-specific table
@@ -519,12 +519,13 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
            
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                            'C': c_agg_dict[ident]})
-        #For the average risk, want to use the avg. E and C values that we 
-        #just got.
+    
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
 
+                #For the average risk, want to use the avg. E and C values that we 
+                #just got.
                 if risk_eq == 'Euclidean':
                     r_val = math.sqrt((sub_dict['C'] - 1)**2 + \
                                         (sub_dict['E'] -1) **2)
@@ -537,6 +538,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
                     avgs_r_sum[h] += r_val
                 else:
                     avgs_r_sum[h] = r_val
+
+    LOGGER.debug("AVGS_R_Sum: %s" % avgs_r_sum)
 
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
