@@ -529,11 +529,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
                 #just got.
                 if risk_eq == 'Euclidean':
 
-                    c_val = 0 if sub_dict['C'] == 0. else sub_dict['C']
-                    e_val = 0 if sub_dict['E'] == 0. else sub_dict['E']
+                    c_val = 0 if sub_dict['C'] == 0. else sub_dict['C'] - 1
+                    e_val = 0 if sub_dict['E'] == 0. else sub_dict['E'] - 1
                     
-                    r_val = math.sqrt((c_val - 1)**2 + \
-                                        (e_val -1) **2)
+                    r_val = math.sqrt((c_val)**2 + \
+                                        (e_val) **2)
                 else:
                     r_val = sub_dict['C'] * sub_dict['E']
 
