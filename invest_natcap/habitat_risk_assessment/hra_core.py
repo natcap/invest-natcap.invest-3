@@ -399,7 +399,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
 
     return pair_dict
 
-def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     '''This funtion is a helper to make_aoi_tables, and will just handle
     pre-calculation of the average values for each aoi zone.
 
@@ -424,6 +424,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
             that tells us which equation should be used for calculation of
             risk. This will be used to get the risk value for the average E 
             and C.
+        max_risk- The user reported highest risk score present in the CSVs. 
 
     Returns:
         avgs_dict- A multi level dictionary to hold the average values that
@@ -513,8 +514,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         h_agg_dict.update(raster_utils.aggregate_raster_values_uri(
                 h_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
         
-
-
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_C_Risk_Raster.tif')
@@ -529,7 +528,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
             
             name = name_map[ident]
            
-            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
+            frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            s_o_score = max_risk(frac_over) + (1-frac_over)
+
+            e_score = (e_agg_dict[ident] + s_o_score) / 2
+
+            avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
     
     for h, hab_dict in avgs_dict.iteritems():
