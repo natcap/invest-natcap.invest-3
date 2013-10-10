@@ -140,7 +140,8 @@ def execute(args):
 
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
-        avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], args['aoi_key'])
+        avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], 
+                                args['aoi_key'], args['risk_eq'])
         aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
 
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
@@ -364,7 +365,7 @@ def make_aoi_tables(out_dir, aoi_pairs, max_risk):
             file.write("<td>" + str(round(element[2], 2)) + "</td>")
             file.write("<td>" + str(round(element[3], 2)) + "</td>")
             file.write("<td>" + str(round(element[4], 2)) + "</td>")
-            file.write("<td>" + str(round(element[4] * 100 / max_risk, 2)) + "</td>")
+            file.write("<td>" + str(round(element[5] * 100, 2)) + "</td>")
             file.write("</tr>")
             
         #End of the AOI-specific table
@@ -380,7 +381,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
     centric instead. Should produce something like the following:
     
     {'AOIName':
-        [(HName, SName, E, C, Risk), ...],
+        [(HName, SName, E, C, Risk, R_Pct), ...],
         ....
     }
     '''
@@ -394,11 +395,11 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
                         
                 for aoi_dict in s_list:
                     if aoi_dict['Name'] == aoi_name:
-                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']))
+                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk'], aoi_dict['R_Pct']))
 
     return pair_dict
 
-def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
     '''This funtion is a helper to make_aoi_tables, and will just handle
     pre-calculation of the average values for each aoi zone.
 
@@ -419,6 +420,10 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         aoi_uri- The location of the AOI zone files. Each feature within this
             file (identified by a 'name' attribute) will be used to average 
             an area of E/C/Risk values.
+        risk_eq- A string identifier, either 'Euclidean' or 'Multiplicative'
+            that tells us which equation should be used for calculation of
+            risk. This will be used to get the risk value for the average E 
+            and C.
 
     Returns:
         avgs_dict- A multi level dictionary to hold the average values that
@@ -475,6 +480,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
 
         if h not in avgs_dict:
             avgs_dict[h] = {}
+            avgs_r_sum[h] = {}
         if s not in avgs_dict[h]:
             avgs_dict[h][s] = []
 
@@ -503,9 +509,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
 
-        #For the average risk, want to use the avg. E and C values that we 
-        #just got.
-        #r_val = math.sqrt((c_agg_dict['C'] - 1)**2 + (e_agg_dict['E'] -1) **2)
+        LOGGER.debug("C_AGG_Dict: %s, E_AGG_DICT: %s" % (c_agg_dict, e_agg_dict))
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
@@ -516,7 +520,38 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
            
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                            'C': c_agg_dict[ident]})
+    
+    for h, hab_dict in avgs_dict.iteritems():
+        for s, sub_list in hab_dict.iteritems():
+            for sub_dict in sub_list:
+
+                #For the average risk, want to use the avg. E and C values that we 
+                #just got.
+                if risk_eq == 'Euclidean':
+
+                    c_val = 0 if sub_dict['C'] == 0. else sub_dict['C'] - 1
+                    e_val = 0 if sub_dict['E'] == 0. else sub_dict['E'] - 1
+                    
+                    r_val = math.sqrt((c_val)**2 + \
+                                        (e_val) **2)
+                else:
+                    r_val = sub_dict['C'] * sub_dict['E']
+
+                sub_dict['Risk'] = r_val
+
+                if sub_dict['Name'] in avgs_r_sum[h]:
+                    avgs_r_sum[h][sub_dict['Name']] += r_val
+                else:
+                    avgs_r_sum[h][sub_dict['Name']] = r_val
+
+    LOGGER.debug("AVGS_R_Sum: %s" % avgs_r_sum)
+
+    for h, hab_dict in avgs_dict.iteritems():
+        for s, sub_list in hab_dict.iteritems():
+            for sub_dict in sub_list:
         
+                sub_dict['R_Pct'] = sub_dict['Risk']/ avgs_r_sum[h][sub_dict['Name']]
+    
     LOGGER.debug("AVGS DICT: %s" % avgs_dict)
 
     return avgs_dict, name_map.values()
