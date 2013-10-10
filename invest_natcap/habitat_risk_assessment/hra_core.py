@@ -141,7 +141,7 @@ def execute(args):
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
         avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], 
-                                args['aoi_key'], args['risk_eq'])
+                                args['aoi_key'], args['risk_eq'], args['max_risk'])
         aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
 
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
