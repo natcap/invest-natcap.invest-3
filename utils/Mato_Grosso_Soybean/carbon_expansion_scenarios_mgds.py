@@ -101,7 +101,6 @@ def expand_lu_type(
             lu_edge_distance[base_array != lu_code] = numpy.inf
             increasing_distances = numpy.argsort(lu_edge_distance.flat)
             lu_pixels_to_convert = int(round(step_percent(lu_code)))
-            print lu_code, lu_pixels_to_convert
             result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
             pixels_converted_so_far += int(lu_pixels_to_convert)
             pixel_count[lu_code] += int(lu_pixels_to_convert)
@@ -181,13 +180,16 @@ def analyze_composite_carbon_stock_change(args):
 
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for composite expansion step %s' % percent
-
-        expanded_lulc_array, pixel_count = expand_lu_type(
-            scenario_lulc_array, scenario_nodata, args['converting_crop'], 
-            percent, args['pixels_to_convert_per_step'], 
-            args['land_cover_start_fractions'], 
-            args['land_cover_end_fractions'], 
-            args['scenario_conversion_steps'])        
+        try:
+            expanded_lulc_array, pixel_count = expand_lu_type(
+                scenario_lulc_array, scenario_nodata, args['converting_crop'], 
+                percent, args['pixels_to_convert_per_step'], 
+                args['land_cover_start_fractions'], 
+                args['land_cover_end_fractions'], 
+                args['scenario_conversion_steps'])
+        except Exception as e:
+            print e
+            return
         for lu_code in unique_lucodes:
             output_count_table.write('%s,' % pixel_count[lu_code])
         output_count_table.write('\n')
@@ -536,7 +538,7 @@ def analyze_premade_lulc_scenarios(args):
         output_table.flush()
 
 
-def analyze_forest_expansion(args):
+def analyze_forest_edge_erosion(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges.
 
@@ -610,6 +612,9 @@ def analyze_forest_expansion(args):
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step']
+        if scenario_edge_distance.flat[increasing_distances[deepest_edge_index - 1]] == numpy.inf:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
         scenario_lulc_array.flat[
             increasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
@@ -679,8 +684,7 @@ def analyze_forest_core_expansion(args):
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
-    percent_per_step = 10
-    for percent in range(0, args['scenario_conversion_steps'] + 1, percent_per_step):
+    for percent in range(0, args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
 
         #Calcualte the carbon stocks based on the regression functions, lookup
@@ -697,7 +701,10 @@ def analyze_forest_core_expansion(args):
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
 
-        deepest_edge_index += args['pixels_to_convert_per_step'] * percent_per_step
+        deepest_edge_index += args['pixels_to_convert_per_step']
+        if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0.0:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
@@ -762,8 +769,7 @@ def analyze_forest_core_fragmentation(args):
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
-    percent_per_step = 10
-    for percent in range(0, args['scenario_conversion_steps'] + 1, percent_per_step):
+    for percent in range(0, args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
 
         #Calcualte the carbon stocks based on the regression functions, lookup
@@ -780,7 +786,7 @@ def analyze_forest_core_fragmentation(args):
         output_table.write('%s,%.2f\n' % (percent, total_stocks))
         output_table.flush()
 
-        deepest_edge_index = args['pixels_to_convert_per_step'] * percent_per_step
+        deepest_edge_index = args['pixels_to_convert_per_step']
 
         scenario_edge_distance = calculate_forest_edge_distance(
             scenario_lulc_array, args['forest_lucodes'], cell_size)
@@ -788,6 +794,9 @@ def analyze_forest_core_fragmentation(args):
         #We want to visit the edge pixels in decreasing distance order starting
         #from the core pixel in.
         decreasing_distances = numpy.argsort(scenario_edge_distance.flat)[::-1]
+        if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
         scenario_lulc_array.flat[
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
@@ -907,21 +916,27 @@ if __name__ == '__main__':
         #These are the LULCs to take directly from table, everything else is
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 17, 0],
+        'percent_per_step': 1,
+        'converting_crop': 17,
+        'scenario_lulc_base_map_filename': 'lulc',
         'scenario_conversion_steps': 400,
     }
 
+    
     #set up args for the composite scenario
-    ARGS['scenario_lulc_base_map_filename'] = 'lulc'
-    ARGS['pixels_to_convert_per_step'] = 2608
-    ARGS['converting_crop'] = 17,
+    lulc_ds = gdal.Open(ARGS['scenario_lulc_base_map_filename'])
+    lulc_band = lulc_ds.GetRasterBand(1)
+    
+    ARGS['pixels_to_convert_per_step'] = int(numpy.count_nonzero(lulc_band.ReadAsArray() == ARGS['converting_crop']) * ARGS['percent_per_step'] / 100.0)
+    lulc_band = None
+    lulc_ds = None
+    
+    print 'pixels_to_convert_per_step %s' % ARGS['pixels_to_convert_per_step']
     
     #Set up args for the forest core scenario
     ARGS['output_table_filename'] = (
         'forest_core_fragmentation_carbon_stock_change.csv')
     analyze_forest_core_fragmentation(ARGS)
-    #sys.exit(-1)
-    
-    
    
     #set up args for the composite scenario
     ARGS['output_table_filename'] = (
@@ -940,11 +955,9 @@ if __name__ == '__main__':
         
     analyze_composite_carbon_stock_change(ARGS)
     
-    
-    
     #Set up args for the forest core scenario
     ARGS['output_table_filename'] = (
-        'forest_core_degredation_carbon_stock_change_10.csv')
+        'forest_core_degredation_carbon_stock_change.csv')
     analyze_forest_core_expansion(ARGS)
     
     #Set up args for the savanna scenario
@@ -955,7 +968,6 @@ if __name__ == '__main__':
     
     #Set up args for the forest only scenario
     ARGS['output_table_filename'] = (
-        'forest_degredation_carbon_stock_change.csv')
-    analyze_forest_expansion(ARGS)
-
+        'forest_edge_erosion_carbon_stock_change.csv')
+    analyze_forest_edge_erosion(ARGS)
     
