@@ -672,7 +672,7 @@ def zero_check(h_s_c, h_s_e, habs):
             #at the end of the core function.
             warnings['print'].append("Please note that the (%s, %s) is being run \
                 with insufficient data. We recommend entering criteria scores for \
-                exposure and consequence." % (h, s))
+                both exposure and consequence." % (h, s))
 
     return warnings
 

@@ -490,10 +490,10 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         #change.
         e_agg_dict = dict.fromkeys(ids, 0)
         c_agg_dict = dict.fromkeys(ids, 0)
+        hs_agg_dict = dict.fromkeys(ids, 0)
+        h_agg_dict = dict.fromkeys(ids, 0)
 
         #GETTING MEANS OF THE E RASTERS HERE
-
-        LOGGER.debug("Currently working with: %s, %s" % (h, s))
 
         #Just going to have to pull explicitly. Too late to go back and
         #rejigger now.
@@ -502,14 +502,25 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
                 e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
 
+        #Now, we are going to modify the e value by the spatial overlap value.
+        #Get S.O value first.
+        h_rast_uri = os.path.join(inter_dir, 'Habitat_Rasters', h + '.tif')
+        h_s_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
+                                            h + ']_S[' + s + '].tif')
+
+        hs_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                hs_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
+        h_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                h_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
+        
+
+
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_C_Risk_Raster.tif')
 
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
-
-        LOGGER.debug("C_AGG_Dict: %s, E_AGG_DICT: %s" % (c_agg_dict, e_agg_dict))
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
@@ -544,16 +555,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
                 else:
                     avgs_r_sum[h][sub_dict['Name']] = r_val
 
-    LOGGER.debug("AVGS_R_Sum: %s" % avgs_r_sum)
-
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
         
                 sub_dict['R_Pct'] = sub_dict['Risk']/ avgs_r_sum[h][sub_dict['Name']]
     
-    LOGGER.debug("AVGS DICT: %s" % avgs_dict)
-
     return avgs_dict, name_map.values()
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
