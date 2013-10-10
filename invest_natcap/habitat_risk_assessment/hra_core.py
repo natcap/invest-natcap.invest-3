@@ -528,8 +528,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
                 #For the average risk, want to use the avg. E and C values that we 
                 #just got.
                 if risk_eq == 'Euclidean':
-                    r_val = math.sqrt((sub_dict['C'] - 1)**2 + \
-                                        (sub_dict['E'] -1) **2)
+
+                    c_val = 0 if sub_dict['C'] == 0. else sub_dict['C']
+                    e_val = 0 if sub_dict['E'] == 0. else sub_dict['E']
+                    
+                    r_val = math.sqrt((c_val - 1)**2 + \
+                                        (e_val -1) **2)
                 else:
                     r_val = sub_dict['C'] * sub_dict['E']
 
