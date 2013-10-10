@@ -614,12 +614,6 @@ if __name__ == '__main__':
     ARGS['potential_vegetation_array']= geotiff_to_array(ARGS['potential_vegetation_uri'])
     ARGS['pasture_array']= geotiff_to_array(ARGS['pasture_uri'])
     ARGS['mg_definition_array']= geotiff_to_array(ARGS['mg_definition_uri']) #1 = in MG, 0 = notprintin MG
-    ARGS['roads_array']= geotiff_to_array(ARGS['roads_uri'])
-    ARGS['highways_array']= geotiff_to_array(ARGS['highways_uri'])
-    ARGS['transmission_lines_array']= geotiff_to_array(ARGS['transmission_lines_uri'])
-    ARGS['canals_array']= geotiff_to_array(ARGS['canals_uri'])
-
-
 
     #Set up the ARGS for the disk based scenario
     ARGS['scenario_path'] = './data/MG_Soy_Exp_07122013/'
