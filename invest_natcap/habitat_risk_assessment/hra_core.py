@@ -380,7 +380,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
     centric instead. Should produce something like the following:
     
     {'AOIName':
-        [(HName, SName, E, C, Risk), ...],
+        [(HName, SName, E, C, Risk, R_Pct), ...],
         ....
     }
     '''
@@ -394,7 +394,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
                         
                 for aoi_dict in s_list:
                     if aoi_dict['Name'] == aoi_name:
-                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']))
+                        pair_dict[aoi_name].append((h_name, s_name, aoi_dict['E'], aoi_dict['C'], aoi_dict['Risk']i, aoi_dict['R_Pct']))
 
     return pair_dict
 
@@ -503,9 +503,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
 
-        #For the average risk, want to use the avg. E and C values that we 
-        #just got.
-        #r_val = math.sqrt((c_agg_dict['C'] - 1)**2 + (e_agg_dict['E'] -1) **2)
+        LOGGER.debug("C_AGG_Dict: %s, E_AGG_DICT: %s" % (c_agg_dict, e_agg_dict))
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
@@ -516,7 +514,28 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key):
            
             avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
                            'C': c_agg_dict[ident]})
+        #For the average risk, want to use the avg. E and C values that we 
+        #just got.
+    for h, hab_dict in avgs_dict.iteritems():
+        for s, sub_list in hab_dict.iteritems():
+            for sub_dict in sub_list:
+
+                r_val = math.sqrt((sub_dict['C'] - 1)**2 + \
+                                        (sub_dict['E'] -1) **2)
+
+                sub_dict['Risk'] = r_val
+
+                if h in avgs_r_sum:
+                    avgs_r_sum[h] += r_val
+                else:
+                    avgs_r_sum[h] = r_val
+
+    for h, hab_dict in avgs_dict.iteritems():
+        for s, sub_list in hab_dict.iteritems():
+            for sub_dict in sub_list:
         
+                sub_dict['R_Pct'] = sub_dict['Risk']/ avgs_r_sum[h]
+    
     LOGGER.debug("AVGS DICT: %s" % avgs_dict)
 
     return avgs_dict, name_map.values()
