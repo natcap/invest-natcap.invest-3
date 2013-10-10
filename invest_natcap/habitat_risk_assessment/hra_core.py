@@ -506,7 +506,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         #Now, we are going to modify the e value by the spatial overlap value.
         #Get S.O value first.
         h_rast_uri = os.path.join(inter_dir, 'Habitat_Rasters', h + '.tif')
-        h_s_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
+        hs_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
                                             h + ']_S[' + s + '].tif')
 
         hs_agg_dict.update(raster_utils.aggregate_raster_values_uri(
@@ -521,6 +521,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
 
+        LOGGER.debug("H_S_AGGDICT: %s, H_AGGDICT: %s" % (hs_agg_dict, h_agg_dict))
+
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
@@ -529,9 +531,11 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             name = name_map[ident]
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
-            s_o_score = max_risk(frac_over) + (1-frac_over)
+            LOGGER.debug("FRAC_OVER: %s" % frac_over)
+            s_o_score = max_risk * frac_over + (1-frac_over)
+            LOGGER.debug("SO: %s" % s_o_score)
 
-            e_score = (e_agg_dict[ident] + s_o_score) / 2
+            e_score = 0. if frac_over == 0 else (e_agg_dict[ident] + s_o_score) / 2
 
             avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
