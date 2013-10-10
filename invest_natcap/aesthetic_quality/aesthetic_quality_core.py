@@ -191,9 +191,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 skip_node = skip_node['up']
                 skip_node['distance'] = distance
                 skip_node['down'] = sweep_line[distance]
+                print('level', level, 'levels available', len(skip_nodes))
                 skip_nodes[level][distance] = skip_node
                 del skip_nodes[level][second]
-                skip_nodes[level][distance]['up'] = skip_nodes[level][distance]
+                if level < len(skip_nodes) -1:
+                    skip_nodes[level][distance]['up'] = \
+                        skip_nodes[level][distance]
+                else:
+                    skip_nodes[level][distance]['up'] = None
 
         # Updating span
         pixel = sweep_line[distance]
@@ -674,6 +679,9 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     total_skip_nodes = 0
     for l in range(len(skip_nodes)):
         ascending_distances = sorted(skip_nodes[l].keys())
+        print('ascending_distances', ascending_distances)
+        for key in ascending_distances:
+            print(key, skip_nodes[l][key]['distance'])
         # 2.0-Check skip_nodes are properly indexed by their distance
         for n in skip_nodes[l]:
             message = 'skip_nodes[' + str(n) + '] is not ' + str(n) + '.' + \
@@ -756,16 +764,22 @@ def skip_list_is_consistent(linked_list, skip_nodes):
             if n != ascending_distances[-1]:
                 # Step 1, get the last node of the current higher node
                 last_node = node['down']
+                print('level', l, 'n', n)
+                print('last_node', last_node['distance'])
                 for i in range(node['span'] -1):
                     last_node = last_node['next']
+                    print('last_node', last_node['distance'])
+                print('last_node[next]', last_node['next']['distance'])
                 next_node = node['next']['down']
+                print('next_node', next_node['distance'])
                 # Last spanned node should be connected to the first one \
                 # from the next higher node.
                 if last_node['next']['distance'] != next_node['distance']:
                     message = 'Last node of [' +  str(l) + '][' + str(n) + \
                     "]['next'] = " + str(last_node['next']['distance']) + \
                     " is different from first of [" + str(l) + '][' + \
-                    str(n+1) + '] = ' + str(next_node['distance'])
+                    str(node['next']['distance']) + '] = ' + \
+                    str(next_node['distance'])
                     return (False, message)
             # 2.9-Each skip node references the correct element below it,
             # i.e. each node's distance values are identical
