@@ -159,190 +159,15 @@ def execute(args):
         raise Exception('Land cover projections are not the same or are' +\
                         'not projected in meters')
 
-    biophysical(biophysical_args)
-
-def resolve_ambiguous_raster_path(uri, raise_error=True):
-    """Get the real uri for a raster when we don't know the extension of how 
-        the raster may be represented.
-
-        uri - a python string of the file path that includes the name of the
-              file but not its extension
-
-        raise_error - a Boolean that indicates whether the function should
-            raise an error if a raster file could not be opened. 
-
-        return - the resolved uri to the rasster"""
-        
-    # Turning on exceptions so that if an error occurs when trying to open a
-    # file path we can catch it and handle it properly
-    gdal.UseExceptions()
-    
-    # a list of possible suffixes for raster datasets. We currently can handle
-    # .tif and directory paths
-    possible_suffixes = ['', '.tif', '.img']
-    
-    # initialize dataset to None in the case that all paths do not exist
-    dataset = None
-    for suffix in possible_suffixes:
-        full_uri = uri + suffix
-        if not os.path.exists(full_uri):
-            continue
-        try:
-            dataset = gdal.Open(full_uri, gdal.GA_ReadOnly)
-        except:
-            dataset = None            
-        
-        # return as soon as a valid gdal dataset is found
-        if dataset is not None:
-            break
-
-    # Turning off exceptions because there is a known bug that will hide
-    # certain issues we care about later
-    gdal.DontUseExceptions()
-
-    # If a dataset comes back None, then it could not be found / opened and we
-    # should fail gracefully
-    if dataset is None and raise_error:
-        raise Exception('There was an Error locating a threat raster in the '
-        'input folder. One of the threat names in the CSV table does not match ' 
-        'to a threat raster in the input folder. Please check that the names '
-        'correspond. The threat raster that could not be found is : %s', uri)
-
-    dataset = None
-    return full_uri
-
-def make_dictionary_from_csv(csv_uri, key_field):
-    """Make a basic dictionary representing a CSV file, where the
-       keys are a unique field from the CSV file and the values are
-       a dictionary representing each row
-
-       csv_uri - a string for the path to the csv file
-       key_field - a string representing which field is to be used
-                   from the csv file as the key in the dictionary
-
-       returns - a python dictionary
-    """
-    out_dict = {}
-    csv_file = open(csv_uri)
-    reader = csv.DictReader(csv_file)
-    for row in reader:
-        out_dict[row[key_field]] = row
-    csv_file.close()
-    return out_dict
-
-def check_projections(ds_uri_dict, proj_unit):
-    """Check that a group of gdal datasets are projected and that they are
-        projected in a certain unit. 
-
-        ds_uri_dict - a dictionary of uris to gdal datasets
-        proj_unit - a float that specifies what units the projection should be
-            in. ex: 1.0 is meters.
-
-        returns - False if one of the datasets is not projected or not in the
-            correct projection type, otherwise returns True if datasets are
-            properly projected
-    """
-    # a list to hold the projection types to compare later
-    projections = []
-
-    for dataset_uri in ds_uri_dict.itervalues():
-        dataset = gdal.Open(dataset_uri)
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(dataset.GetProjection())
-        if not srs.IsProjected():
-            LOGGER.debug('A Raster is Not Projected')
-            return False
-        if srs.GetLinearUnits() != proj_unit:
-            LOGGER.debug('Proj units do not match %s:%s', \
-                         proj_unit, srs.GetLinearUnits())
-            return False
-        projections.append(srs.GetAttrValue("PROJECTION"))
-    
-    # check that all the datasets have the same projection type
-    for index in range(len(projections)):
-        if projections[0] != projections[index]:
-            LOGGER.debug('Projections are not the same')
-            return False
-
-    return True
-
-def threat_names_match(threat_dict, sens_dict, prefix):
-    """Check that the threat names in the threat table match the columns in the
-        sensitivity table that represent the sensitivity of each threat on a 
-        lulc.
-
-        threat_dict - a dictionary representing the threat table:
-            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
-             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
-             ... }
-        sens_dict - a dictionary representing the sensitivity table:
-            {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1', 
-                  'L_crp':'0.4', 'L_urb':'0.45'...},
-             '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1', 
-                   'L_crp':'0.6', 'L_urb':'0.3'...},
-             ...}
-
-        prefix - a string that specifies the prefix to the threat names that is
-            found in the sensitivity table
-
-        returns - False if there is a mismatch in threat names or True if
-            everything passes"""
-
-    # get a representation of a row from the sensitivity table where 'sens_row'
-    # will be a dictionary with the column headers as the keys
-    sens_row = sens_dict[sens_dict.keys()[0]]  
-    
-    for threat in threat_dict:
-        sens_key = prefix + threat
-        if not sens_key in sens_row:
-            return False
-    return True
-
-def biophysical(args):
-    """Execute the biophysical component of the habitat_quality model.
-
-       args - a python dictionary with at least the following components:
-       args['workspace_dir'] - a uri to the directory that will write output
-       args['landuse_uri_dict'] - a python dictionary with keys depicting the
-           landuse scenario (current, future, or baseline) and the values GDAL
-           datasets.
-           {'_c':current dataset, '_f':future dataset, '_b':baseline dataset}
-       args['threat_dict'] - a python dictionary representing the threats table
-            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
-             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
-             ... }
-       args['sensitivity_dict'] - a python dictionary representing the 
-           sensitivity table:
-           {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1', 
-                 'L_crp':'0.4', 'L_urb':'0.45'...},
-            '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1', 
-                  'L_crp':'0.6', 'L_urb':'0.3'...},
-             ...}
-       args['density_uri_dict'] - a python dictionary that stores any density
-           rasters (threat rasters) corresponding to the entries in the threat
-           table and whether the density raster belongs to the current, future,
-           or baseline raster. Example:
-           {'density_c': {'crp' : crp_c.tif, 'srds' : srds_c.tif, ...},
-            'density_f': {'crp' : crp_f.tif, 'srds' : srds_f.tif, ...},
-            'density_b': {'crp' : crp_b.tif, 'srds' : srds_b.tif, ...}
-           }
-       args['access_shape'] - an OGR datasource of polygons depicting any 
-           protected/reserved land boundaries
-       args['half_saturation'] - an float that determines the spread and
-           central tendency of habitat quality scores
-       args['suffix'] - a string of the desired suffix
-
-       returns nothing."""
-
     LOGGER.debug('Starting habitat_quality biophysical calculations')
 
-    output_dir = os.path.join(args['workspace_dir'], 'output')
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    cur_landuse = args['landuse_uri_dict']['_c']
-    threat_dict = args['threat_dict']
-    sensitivity_dict = args['sensitivity_dict']
-    half_saturation = args['half_saturation']
-    suffix = args['suffix'] + '.tif'
+    output_dir = os.path.join(biophysical_args['workspace_dir'], 'output')
+    intermediate_dir = os.path.join(biophysical_args['workspace_dir'], 'intermediate')
+    cur_landuse = biophysical_args['landuse_uri_dict']['_c']
+    threat_dict = biophysical_args['threat_dict']
+    sensitivity_dict = biophysical_args['sensitivity_dict']
+    half_saturation = biophysical_args['half_saturation']
+    suffix = biophysical_args['suffix'] + '.tif'
        
     out_nodata = -1.0
     
@@ -364,7 +189,7 @@ def biophysical(args):
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
         access_base.GetRasterBand(1).Fill(1.0)
-        access_shape = args['access_shape']
+        access_shape = biophysical_args['access_shape']
         access_raster = \
                 make_raster_from_shape(access_base, access_shape, 'ACCESS')
     except KeyError:
@@ -378,10 +203,10 @@ def biophysical(args):
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
     
-    LOGGER.debug('landuse_uri_dict : %s', args['landuse_uri_dict']) 
+    LOGGER.debug('landuse_uri_dict : %s', biophysical_args['landuse_uri_dict']) 
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds in args['landuse_uri_dict'].iteritems():
+    for lulc_key, lulc_ds in biophysical_args['landuse_uri_dict'].iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
         
         # get raster properties: cellsize, width, height, 
@@ -406,7 +231,7 @@ def biophysical(args):
             LOGGER.debug('Threat Data : %s', threat_data)
        
             # get the density raster for the specific threat
-            threat_raster = args['density_uri_dict']['density' + lulc_key][threat]
+            threat_raster = biophysical_args['density_uri_dict']['density' + lulc_key][threat]
        
             if threat_raster == None:
                 LOGGER.info(
@@ -578,7 +403,7 @@ def biophysical(args):
     #Compute Rarity if user supplied baseline raster
     try:    
         # will throw a KeyError exception if no base raster is provided
-        lulc_base = args['landuse_uri_dict']['_b']
+        lulc_base = biophysical_args['landuse_uri_dict']['_b']
         
         # get the area of a base pixel to use for computing rarity where the 
         # pixel sizes are different between base and cur/fut rasters
@@ -593,7 +418,7 @@ def biophysical(args):
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
-                lulc_x = args['landuse_uri_dict'][lulc_cover]
+                lulc_x = biophysical_args['landuse_uri_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
                 lulc_properties = raster_utils.get_raster_properties(lulc_x)
@@ -684,6 +509,144 @@ def biophysical(args):
         LOGGER.info('Baseline not provided to compute Rarity')
 
     LOGGER.debug('Finished habitat_quality biophysical calculations')
+
+def resolve_ambiguous_raster_path(uri, raise_error=True):
+    """Get the real uri for a raster when we don't know the extension of how 
+        the raster may be represented.
+
+        uri - a python string of the file path that includes the name of the
+              file but not its extension
+
+        raise_error - a Boolean that indicates whether the function should
+            raise an error if a raster file could not be opened. 
+
+        return - the resolved uri to the rasster"""
+        
+    # Turning on exceptions so that if an error occurs when trying to open a
+    # file path we can catch it and handle it properly
+    gdal.UseExceptions()
+    
+    # a list of possible suffixes for raster datasets. We currently can handle
+    # .tif and directory paths
+    possible_suffixes = ['', '.tif', '.img']
+    
+    # initialize dataset to None in the case that all paths do not exist
+    dataset = None
+    for suffix in possible_suffixes:
+        full_uri = uri + suffix
+        if not os.path.exists(full_uri):
+            continue
+        try:
+            dataset = gdal.Open(full_uri, gdal.GA_ReadOnly)
+        except:
+            dataset = None            
+        
+        # return as soon as a valid gdal dataset is found
+        if dataset is not None:
+            break
+
+    # Turning off exceptions because there is a known bug that will hide
+    # certain issues we care about later
+    gdal.DontUseExceptions()
+
+    # If a dataset comes back None, then it could not be found / opened and we
+    # should fail gracefully
+    if dataset is None and raise_error:
+        raise Exception('There was an Error locating a threat raster in the '
+        'input folder. One of the threat names in the CSV table does not match ' 
+        'to a threat raster in the input folder. Please check that the names '
+        'correspond. The threat raster that could not be found is : %s', uri)
+
+    dataset = None
+    return full_uri
+
+def make_dictionary_from_csv(csv_uri, key_field):
+    """Make a basic dictionary representing a CSV file, where the
+       keys are a unique field from the CSV file and the values are
+       a dictionary representing each row
+
+       csv_uri - a string for the path to the csv file
+       key_field - a string representing which field is to be used
+                   from the csv file as the key in the dictionary
+
+       returns - a python dictionary
+    """
+    out_dict = {}
+    csv_file = open(csv_uri)
+    reader = csv.DictReader(csv_file)
+    for row in reader:
+        out_dict[row[key_field]] = row
+    csv_file.close()
+    return out_dict
+
+def check_projections(ds_uri_dict, proj_unit):
+    """Check that a group of gdal datasets are projected and that they are
+        projected in a certain unit. 
+
+        ds_uri_dict - a dictionary of uris to gdal datasets
+        proj_unit - a float that specifies what units the projection should be
+            in. ex: 1.0 is meters.
+
+        returns - False if one of the datasets is not projected or not in the
+            correct projection type, otherwise returns True if datasets are
+            properly projected
+    """
+    # a list to hold the projection types to compare later
+    projections = []
+
+    for dataset_uri in ds_uri_dict.itervalues():
+        dataset = gdal.Open(dataset_uri)
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(dataset.GetProjection())
+        if not srs.IsProjected():
+            LOGGER.debug('A Raster is Not Projected')
+            return False
+        if srs.GetLinearUnits() != proj_unit:
+            LOGGER.debug('Proj units do not match %s:%s', \
+                         proj_unit, srs.GetLinearUnits())
+            return False
+        projections.append(srs.GetAttrValue("PROJECTION"))
+    
+    # check that all the datasets have the same projection type
+    for index in range(len(projections)):
+        if projections[0] != projections[index]:
+            LOGGER.debug('Projections are not the same')
+            return False
+
+    return True
+
+def threat_names_match(threat_dict, sens_dict, prefix):
+    """Check that the threat names in the threat table match the columns in the
+        sensitivity table that represent the sensitivity of each threat on a 
+        lulc.
+
+        threat_dict - a dictionary representing the threat table:
+            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
+             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
+             ... }
+        sens_dict - a dictionary representing the sensitivity table:
+            {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1', 
+                  'L_crp':'0.4', 'L_urb':'0.45'...},
+             '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1', 
+                   'L_crp':'0.6', 'L_urb':'0.3'...},
+             ...}
+
+        prefix - a string that specifies the prefix to the threat names that is
+            found in the sensitivity table
+
+        returns - False if there is a mismatch in threat names or True if
+            everything passes"""
+
+    # get a representation of a row from the sensitivity table where 'sens_row'
+    # will be a dictionary with the column headers as the keys
+    sens_row = sens_dict[sens_dict.keys()[0]]  
+    
+    for threat in threat_dict:
+        sens_key = prefix + threat
+        if not sens_key in sens_row:
+            return False
+    return True
+
 
 def raster_pixel_count(dataset):
     """Determine how many of each unique pixel lies in the dataset (dataset)
