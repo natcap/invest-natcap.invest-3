@@ -120,29 +120,29 @@ def execute(args):
 
     # declare dictionaries to store the land cover rasters and the density
     # rasters pertaining to the different threats
-    landuse_dict = {}
-    density_dict = {}
+    landuse_uri_dict = {}
+    density_uri_dict = {}
 
     # for each possible land cover that was provided try opening the raster and
     # adding it to the dictionary. Also compile all the threat/density rasters
     # associated with the land cover
     for scenario, ext in landuse_scenarios.iteritems():
-        landuse_dict[ext] = args['landuse_' + scenario + '_uri']
+        landuse_uri_dict[ext] = args['landuse_' + scenario + '_uri']
 
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
-        density_dict['density' + ext] = {}
+        density_uri_dict['density' + ext] = {}
 
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in workspace/input/
         for threat in biophysical_args['threat_dict']:
             try:
                 if ext == '_b':
-                    density_dict['density' + ext][threat] = open_ambiguous_raster(
+                    density_uri_dict['density' + ext][threat] = resolve_ambiguous_raster_path(
                             os.path.join(input_dir, threat + ext),
                             raise_error=False)
                 else:
-                    density_dict['density' + ext][threat] = open_ambiguous_raster(
+                    density_uri_dict['density' + ext][threat] = resolve_ambiguous_raster_path(
                             os.path.join(input_dir, threat + ext))
             except:
                 raise Exception('Error: Failed to open raster for the '
@@ -150,21 +150,20 @@ def execute(args):
                     'in the CSV table correspond to threat rasters in the input '
                     'folder.' % os.path.join(input_dir, threat + ext))
     
-    biophysical_args['landuse_dict'] = landuse_dict
-    biophysical_args['density_dict'] = density_dict
+    biophysical_args['landuse_uri_dict'] = landuse_uri_dict
+    biophysical_args['density_uri_dict'] = density_uri_dict
 
     # checking to make sure the land covers have the same projections and are
     # projected in meters. We pass in 1.0 because that is the unit for meters
-    if not check_projections(landuse_dict, 1.0):
+    if not check_projections(landuse_uri_dict, 1.0):
         raise Exception('Land cover projections are not the same or are' +\
                         'not projected in meters')
 
     biophysical(biophysical_args)
 
-def open_ambiguous_raster(uri, raise_error=True):
-    """Open and return a gdal dataset given a uri path that includes the file
-        name but not neccessarily the suffix or extension of how the raster may
-        be represented.
+def resolve_ambiguous_raster_path(uri, raise_error=True):
+    """Get the real uri for a raster when we don't know the extension of how 
+        the raster may be represented.
 
         uri - a python string of the file path that includes the name of the
               file but not its extension
@@ -172,8 +171,8 @@ def open_ambiguous_raster(uri, raise_error=True):
         raise_error - a Boolean that indicates whether the function should
             raise an error if a raster file could not be opened. 
 
-        return - a gdal dataset or NONE if no file is found with the pre-defined
-                 suffixes and 'uri'"""
+        return - the resolved uri to the rasster"""
+        
     # Turning on exceptions so that if an error occurs when trying to open a
     # file path we can catch it and handle it properly
     gdal.UseExceptions()
@@ -209,7 +208,8 @@ def open_ambiguous_raster(uri, raise_error=True):
         'to a threat raster in the input folder. Please check that the names '
         'correspond. The threat raster that could not be found is : %s', uri)
 
-    return dataset
+    dataset = None
+    return full_uri
 
 def make_dictionary_from_csv(csv_uri, key_field):
     """Make a basic dictionary representing a CSV file, where the
@@ -230,11 +230,11 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file.close()
     return out_dict
 
-def check_projections(ds_dict, proj_unit):
+def check_projections(ds_uri_dict, proj_unit):
     """Check that a group of gdal datasets are projected and that they are
         projected in a certain unit. 
 
-        ds_dict - a dictionary of gdal datasets
+        ds_uri_dict - a dictionary of uris to gdal datasets
         proj_unit - a float that specifies what units the projection should be
             in. ex: 1.0 is meters.
 
@@ -245,7 +245,8 @@ def check_projections(ds_dict, proj_unit):
     # a list to hold the projection types to compare later
     projections = []
 
-    for dataset in ds_dict.itervalues():
+    for dataset_uri in ds_uri_dict.itervalues():
+        dataset = gdal.Open(dataset_uri)
         srs = osr.SpatialReference()
         srs.ImportFromWkt(dataset.GetProjection())
         if not srs.IsProjected():
@@ -302,7 +303,7 @@ def biophysical(args):
 
        args - a python dictionary with at least the following components:
        args['workspace_dir'] - a uri to the directory that will write output
-       args['landuse_dict'] - a python dictionary with keys depicting the
+       args['landuse_uri_dict'] - a python dictionary with keys depicting the
            landuse scenario (current, future, or baseline) and the values GDAL
            datasets.
            {'_c':current dataset, '_f':future dataset, '_b':baseline dataset}
@@ -317,7 +318,7 @@ def biophysical(args):
             '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1', 
                   'L_crp':'0.6', 'L_urb':'0.3'...},
              ...}
-       args['density_dict'] - a python dictionary that stores any density
+       args['density_uri_dict'] - a python dictionary that stores any density
            rasters (threat rasters) corresponding to the entries in the threat
            table and whether the density raster belongs to the current, future,
            or baseline raster. Example:
@@ -337,7 +338,7 @@ def biophysical(args):
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    cur_landuse = args['landuse_dict']['_c']
+    cur_landuse = args['landuse_uri_dict']['_c']
     threat_dict = args['threat_dict']
     sensitivity_dict = args['sensitivity_dict']
     half_saturation = args['half_saturation']
@@ -377,10 +378,10 @@ def biophysical(args):
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
     
-    LOGGER.debug('landuse_dict : %s', args['landuse_dict']) 
+    LOGGER.debug('landuse_uri_dict : %s', args['landuse_uri_dict']) 
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds in args['landuse_dict'].iteritems():
+    for lulc_key, lulc_ds in args['landuse_uri_dict'].iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
         
         # get raster properties: cellsize, width, height, 
@@ -405,7 +406,7 @@ def biophysical(args):
             LOGGER.debug('Threat Data : %s', threat_data)
        
             # get the density raster for the specific threat
-            threat_raster = args['density_dict']['density' + lulc_key][threat]
+            threat_raster = args['density_uri_dict']['density' + lulc_key][threat]
        
             if threat_raster == None:
                 LOGGER.info(
@@ -577,7 +578,7 @@ def biophysical(args):
     #Compute Rarity if user supplied baseline raster
     try:    
         # will throw a KeyError exception if no base raster is provided
-        lulc_base = args['landuse_dict']['_b']
+        lulc_base = args['landuse_uri_dict']['_b']
         
         # get the area of a base pixel to use for computing rarity where the 
         # pixel sizes are different between base and cur/fut rasters
@@ -592,7 +593,7 @@ def biophysical(args):
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
-                lulc_x = args['landuse_dict'][lulc_cover]
+                lulc_x = args['landuse_uri_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
                 lulc_properties = raster_utils.get_raster_properties(lulc_x)
