@@ -163,7 +163,7 @@ def execute(args):
 
     output_dir = os.path.join(biophysical_args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(biophysical_args['workspace_dir'], 'intermediate')
-    cur_landuse = biophysical_args['landuse_uri_dict']['_c']
+    cur_landuse_uri = biophysical_args['landuse_uri_dict']['_c']
     threat_dict = biophysical_args['threat_dict']
     sensitivity_dict = biophysical_args['sensitivity_dict']
     half_saturation = biophysical_args['half_saturation']
@@ -175,7 +175,7 @@ def execute(args):
     habitat_uri = os.path.join(intermediate_dir, 'habitat' + suffix)
     
     habitat_raster = \
-       map_raster_to_dict_values(cur_landuse, habitat_uri, sensitivity_dict, \
+       map_raster_to_dict_values(cur_landuse_uri, habitat_uri, sensitivity_dict, \
                          'HABITAT', out_nodata, 'none')
     
     # If access_lyr: convert to raster, if value is null set to 1, 
@@ -184,7 +184,7 @@ def execute(args):
         LOGGER.debug('Handling Access Shape')
         access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
         access_base = \
-            raster_utils.new_raster_from_base(cur_landuse, access_uri, \
+            raster_utils.new_raster_from_base(cur_landuse_uri, access_uri, \
                 'GTiff', out_nodata, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
@@ -211,7 +211,7 @@ def execute(args):
         
         # get raster properties: cellsize, width, height, 
         # cells = width * height, extent    
-        lulc_prop = raster_utils.get_raster_properties(cur_landuse)
+        lulc_prop = raster_utils.get_raster_properties(cur_landuse_uri)
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -694,7 +694,7 @@ def make_raster_from_shape(base_raster, shape, attr):
 
     return base_raster 
        
-def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
+def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
         out_nodata, raise_error, error_message='An Error occured mapping' + \
         'a dictionary to a raster'):
     """Creates a new raster from 'key_raster' where the pixel values from
@@ -704,7 +704,7 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
        raise an Exception if 'raise_error' is True, otherwise return a
        'out_nodata'
     
-       key_raster - a GDAL raster dataset whose pixel values relate to the 
+       key_raster_uri - a GDAL raster uri dataset whose pixel values relate to the 
                      keys in 'attr_dict'
        out_uri - a string for the output path of the created raster
        attr_dict - a dictionary representing a table of values we are interested
@@ -728,8 +728,8 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
-    reclassified_dataset = raster_utils.reclassify_dataset(
-        key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
+    reclassified_dataset = raster_utils.reclassify_dataset_uri(
+        key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
 
     return reclassified_dataset
