@@ -96,24 +96,49 @@ def get_column_headers(col_dict):
     return col_list 
 
 def get_row_data(row_dict, col_headers):
-    """Get the row data using the col_headers as keys to keep ordering and
-        return a 2D list where each inner list is a row of data
+    """Construct the rows in a 2D List from the dictionary, using col_headers to
+        properly order the row data.
 
-        table_dict - a dictionary with the table data
-        col_headers - a list of the column header names
+        row_dict - a dictionary represting the row data in the following form:
+            {row_key_0: {'col_name_1':'9/13', 'col_name_3':'expensive', 
+                         'col_name_2':'chips'},
+             row_key_1: {'col_name_1':'3/13', 'col_name_2':'cheap', 
+                         'col_name_3':'peanuts'},
+             row_key_2: {'col_name_1':'5/12', 'col_name_2':'moderate', 
+                         'col_name_3':'mints'}}
+                         
+            Where the row_keys determine the order of how the rows will be
+            written and col_names match the names provided in col_headers
 
+        col_headers - a List of the names of the column headers in order
+            example : [col_name_1, col_name_2, col_name_3...]
+        
         return - a 2D list with each inner list representing a row"""
 
+    # Initialize a list to hold output rows represented as lists
     row_data = []
-
-    for key, value in row_dict.iteritems():
-        for col in col_headers:
-            row = []
-
+    # Get the keys of the row dictionary and sort them so that the row data is
+    # built up in proper order
+    row_keys = row_dict.keys()
+    row_keys.sort()
     
+    try:
+        for key in row_keys:
+            # Get the dictionary representation of a row
+            row_values = row_dict[key]
+            # Initialize a list to store our individual row values
+            row = []
+            # Iterate over col_headers to ensure that the row values are
+            # properly placed with the correct column header
+            for col in col_headers:
+                # Add value of row to list
+                row.append(row_values[col])
+            # Add the row to the list of rows
+            row_data.append(row)
+    except:
+        raise Exception('The dictionary is not constructed correctly')
 
-    return [['row_1', '12', '13'], ['row_2', '22', '23'], ['row_3', '32', '33']]
-
+    return row_data 
 
 def create_css_file(out_uri):
     """Write a cool css default file, has to have the sortable table definition
