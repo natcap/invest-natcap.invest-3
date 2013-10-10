@@ -191,30 +191,63 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 skip_node = skip_node['up']
                 skip_node['distance'] = distance
                 skip_node['down'] = sweep_line[distance]
+                print('level', level, 'levels available', len(skip_nodes))
                 skip_nodes[level][distance] = skip_node
                 del skip_nodes[level][second]
-                skip_nodes[level][distance]['up'] = skip_nodes[level][distance]
+                if level < len(skip_nodes) -1:
+                    skip_nodes[level][distance]['up'] = \
+                        skip_nodes[level][distance]
+                else:
+                    skip_nodes[level][distance]['up'] = None
 
         # Updating span
-        print('adjusting span for first pixel', sweep_line[distance]['distance'])
-        if sweep_line[distance]['up'] is not None:
-            sweep_line[distance]['up']['span'] += 1
+        pixel = sweep_line[distance]
+        print('adjusting span for first pixel', pixel['distance'])
+        level = 0
+        while pixel['up'] is not None:
+            pixel['up']['span'] += 1
+            print('span is now', pixel['up']['span'])
             # Adjusting span if too large
-            if sweep_line[distance]['up']['span'] > 3:
-                #message = 'Span for node ' + str(distance) + \
-                #' expected to be 4, instead is ' + \
-                #str(sweep_line[distance]['up']['span'])
-                #assert sweep_line[distance]['up']['span'] == 4, message
-                #before = skip_nodes[0][distance]
-                #after = before['next']
-                #below = sweep_line[distance]['next']['next']
-                #current_distance = below['distance']
-                #skip_nodes[0][current_distance] = {'next':after, 'up':None, \
-                #'down':below, 'distance':current_distance, 'span':2}
-                #below['up'] = skip_nodes[0][current_distance]
-                #before['next'] = skip_nodes[0][current_distance]
-                #before['span'] = 2
-                insert_new_skip_node(sweep_line[distance], skip_nodes[0])
+            if pixel['up']['span'] > 3:
+                # Insert the missing skip_node
+                insert_new_skip_node(pixel, skip_nodes[level])
+                # Create a new level if needed
+                if (len(skip_nodes[level]) == 4) and \
+                    (len(skip_nodes) == level + 1):
+                    print('new level needed')
+                    skip_nodes.append({})
+                    pixel = pixel['up']
+                    distance = pixel['distance']
+                    # First skip node points to the first element in sweep_line
+                    skip_node = {'next':None, 'up':None, 'down':pixel, \
+                    'distance':pixel['distance'], 'span':2}
+                    skip_nodes[-1][distance] = skip_node
+                    pixel['up'] = skip_nodes[-1][distance]
+                    # Second skip node points to the second last element in sweep_line
+                    second_last = pixel['next']['next']
+                    second_distance = second_last['distance']
+                    skip_node = {'next':None, 'up':None, 'down':second_last, \
+                    'distance':second_distance, 'span':2}
+                    skip_nodes[-1][second_distance] = skip_node
+                    second_last['up'] = skip_nodes[-1][second_distance]
+                    skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
+                # Check whether we should keep updating the skip_nodes
+                list_is_consistent, message = \
+                    skip_list_is_consistent(sweep_line, skip_nodes)
+                # List is consistent, we're done: break out of the while
+                if list_is_consistent:
+                    break
+                # We assume the only problem is potential intermediate skip
+                # nodes that might be missing in the upper levels
+                else:
+                    #error_message = 'unexpected error ' + str(message)
+                    #assert ('Level ' + str(level) + ':' in message) and \
+                    #('< min_up_count' in message), error_message
+                    pixel = pixel['up']
+                    level += 1
+            # Nothing to adjust, break outpof the while
+            else:
+                break
 
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
@@ -231,24 +264,51 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             for p in range(len(hierarchy)):
                 print('hierarchy', p, hierarchy[p]['distance'])
             pixel = hierarchy[-1]['down']
-            if pixel['up'] is not None:
+            level = 0
+            while pixel['up'] is not None:
                 pixel['up']['span'] += 1
                 # Adjusting span if too large
                 if pixel['up']['span'] > 3:
-                    #message = 'Span for node ' + str(distance) + \
-                    #' expected to be 4, instead is ' + \
-                    #str(pixel['up']['span'])
-                    #assert pixel['up']['span'] == 4, message
-                    #before = pixel['up']
-                    #after = before['next']
-                    #below = pixel['next']['next']
-                    #current_distance = below['distance']
-                    #skip_nodes[0][current_distance] = {'next':after,'up':None,\
-                    #'down':below, 'distance':current_distance, 'span':2}
-                    #below['up'] = skip_nodes[0][current_distance]
-                    #before['next'] = skip_nodes[0][current_distance]
-                    #before['span'] = 2
-                    insert_new_skip_node(pixel, skip_nodes[0])
+                    # Insert the missing skip_node
+                    insert_new_skip_node(pixel, skip_nodes[level])
+                    # Create a new level if needed
+                    if (len(skip_nodes[level]) == 4) and \
+                        (len(skip_nodes) == level + 1):
+                        print('new level needed')
+                        skip_nodes.append({})
+                        pixel = pixel['up']
+                        distance = pixel['distance']
+                        # First skip node points to the first element in sweep_line
+                        skip_node = {'next':None, 'up':None, 'down':pixel, \
+                        'distance':pixel[distance], 'span':2}
+                        skip_nodes[-1][distance] = skip_node
+                        pixel['up'] = skip_nodes[-1][distance]
+                        # Second skip node points to the second last element in sweep_line
+                        second_last = pixel['next']['next']
+                        second_distance = second_last['distance']
+                        skip_node = {'next':None, 'up':None, 'down':second_last, \
+                        'distance':second_distance, 'span':2}
+                        skip_nodes[-1][second_distance] = skip_node
+                        second_last['up'] = skip_nodes[-1][second_distance]
+                        skip_nodes[-1][distance]['next'] = skip_nodes[-1][second_distance]
+                        # Check whether we should keep updating the skip_nodes
+                        list_is_consistent, message = \
+                        skip_list_is_consistent(sweep_line, skip_nodes)
+                    # List is consistent, we're done: break out of the while
+                    if list_is_consistent:
+                        break
+                    # We assume the only problem is potential intermediate skip
+                    # nodes that might be missing in the upper levels
+                    else:
+                        #error_message = 'unexpected error ' + str(message)
+                        #assert ('Level ' + str(level) + ':' in message) and \
+                        #('< min_up_count' in message), error_message
+                        pixel = pixel['up']
+                        level += 1
+                # Nothing to adjust, break outpof the while
+                else:
+                    break
+
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
         skip_nodes = []
@@ -286,7 +346,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             skip_node = skip_nodes[level][key]
             print(skip_node['distance'], 'span', skip_node['span'], \
             'next', None if skip_node['next'] is None else \
-            skip_node['next']['distance'])
+            skip_node['next']['distance'], 'up', None if skip_node['up'] \
+            is None else skip_node['up']['distance'])
 
     return (sweep_line, skip_nodes)
 
@@ -575,7 +636,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     # 1.8-chain length is 1 less than len(linked_list)
     if (chain_length != len(linked_list) -1):
         message = 'Discrepancy between the size of the linked list (' + \
-        len(linked_list) + 'and the number of nodes chained together ' + \
+        str(len(linked_list)) + 'and the number of nodes chained together ' + \
         str(chain_length)
         return (False, message)
     # 1.9-linked_list['closest'] is the smallest distance
@@ -618,6 +679,9 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     total_skip_nodes = 0
     for l in range(len(skip_nodes)):
         ascending_distances = sorted(skip_nodes[l].keys())
+        print('ascending_distances', ascending_distances)
+        for key in ascending_distances:
+            print(key, skip_nodes[l][key]['distance'])
         # 2.0-Check skip_nodes are properly indexed by their distance
         for n in skip_nodes[l]:
             message = 'skip_nodes[' + str(n) + '] is not ' + str(n) + '.' + \
@@ -700,16 +764,22 @@ def skip_list_is_consistent(linked_list, skip_nodes):
             if n != ascending_distances[-1]:
                 # Step 1, get the last node of the current higher node
                 last_node = node['down']
+                print('level', l, 'n', n)
+                print('last_node', last_node['distance'])
                 for i in range(node['span'] -1):
                     last_node = last_node['next']
+                    print('last_node', last_node['distance'])
+                print('last_node[next]', last_node['next']['distance'])
                 next_node = node['next']['down']
+                print('next_node', next_node['distance'])
                 # Last spanned node should be connected to the first one \
                 # from the next higher node.
                 if last_node['next']['distance'] != next_node['distance']:
                     message = 'Last node of [' +  str(l) + '][' + str(n) + \
                     "]['next'] = " + str(last_node['next']['distance']) + \
                     " is different from first of [" + str(l) + '][' + \
-                    str(n+1) + '] = ' + str(next_node['distance'])
+                    str(node['next']['distance']) + '] = ' + \
+                    str(next_node['distance'])
                     return (False, message)
             # 2.9-Each skip node references the correct element below it,
             # i.e. each node's distance values are identical
