@@ -535,7 +535,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             s_o_score = max_risk * frac_over + (1-frac_over)
             LOGGER.debug("SO: %s" % s_o_score)
 
-            e_score = 0. if frac_over == 0 else (e_agg_dict[ident] + s_o_score) / 2
+            e_score = s_o_score if frac_over == 0 else (e_agg_dict[ident] + s_o_score) / 2
 
             avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
