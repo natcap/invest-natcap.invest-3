@@ -188,20 +188,13 @@ def execute(args):
             fill_value=1.0)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
-        #access_base.GetRasterBand(1).Fill(1.0)
- #       access_shape = biophysical_args['access_shape']
 
-#        args['access_uri']
-#        access_raster = 
-#                make_raster_from_shape(access_base, access_shape, 'ACCESS')
         raster_utils.rasterize_layer_uri(
             access_dataset_uri, args['access_uri'],
             option_list=['ATTRIBUTE=ACCESS'])
 
     except KeyError:
         LOGGER.debug('No Access Shape Provided, access raster filled with 1s.')
-#        access_shape = None
-#        access_raster = access_base
 
     # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
@@ -289,8 +282,6 @@ def execute(args):
             degradation_rasters.append(filtered_threat_uri)
             degradation_rasters.append(sens_uri)
 
-#            for item in [filtered_raster, sensitivity_raster]:
-
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
             weight_list.append(weight_avg)
@@ -352,10 +343,6 @@ def execute(args):
         raster_utils.vectorize_datasets(
             degradation_rasters, total_degradation, deg_sum_uri,
             gdal.GDT_Float32, out_nodata, cell_size, "intersection")
-#        sum_deg_raster = \
-#            raster_utils.vectorize_rasters(degradation_rasters, \
-#                total_degradation, raster_out_uri=deg_sum_uri, \
-#                nodata=out_nodata)
 
         LOGGER.debug('Finished vectorize on total_degradation') 
            
@@ -400,7 +387,6 @@ def execute(args):
     #Compute Rarity if user supplied baseline raster
     try:    
         # will throw a KeyError exception if no base raster is provided
-        #lulc_base = biophysical_args['landuse_uri_dict']['_b']
         lulc_base_uri = biophysical_args['landuse_uri_dict']['_b']
         
         # get the area of a base pixel to use for computing rarity where the 
@@ -417,10 +403,7 @@ def execute(args):
                 lulc_x = biophysical_args['landuse_uri_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
-                #lulc_properties = raster_utils.get_raster_properties(lulc_x)
-                #lulc_area = lulc_properties['width'] * lulc_properties['height']
                 lulc_area = raster_utils.get_cell_area_from_uri(lulc_x)
-                #lulc_nodata = int(lulc_x.GetRasterBand(1).GetNoDataValue())
                 lulc_nodata = raster_utils.get_nodata_from_uri(lulc_x)
                 
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
@@ -450,10 +433,6 @@ def execute(args):
                 
                 # set the current/future land cover to be masked to the base
                 # land cover
-#                new_cover = \
-#                    raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
-#                            raster_out_uri=new_cover_uri,
-#                            datatype=gdal.GDT_Int32, nodata=base_nodata)
 
                 raster_utils.vectorize_datasets(
                     [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
@@ -584,6 +563,7 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file.close()
     return out_dict
 
+
 def check_projections(ds_uri_dict, proj_unit):
     """Check that a group of gdal datasets are projected and that they are
         projected in a certain unit. 
@@ -680,6 +660,7 @@ def raster_pixel_count(dataset_uri):
     LOGGER.debug('Leaving raster_pixel_count')
     return counts
 
+
 def make_raster_from_shape(base_raster, shape, attr):
     """Burn an attribute value from a polygon shapefile onto an
        existing blank raster
@@ -699,6 +680,7 @@ def make_raster_from_shape(base_raster, shape, attr):
     LOGGER.debug('Leaving make_raster_from_shape')
 
     return base_raster 
+
        
 def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
         out_nodata, raise_error, error_message='An Error occured mapping' + \
