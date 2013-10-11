@@ -490,6 +490,7 @@ def execute(args):
 
     LOGGER.debug('Finished habitat_quality biophysical calculations')
 
+
 def resolve_ambiguous_raster_path(uri, raise_error=True):
     """Get the real uri for a raster when we don't know the extension of how 
         the raster may be represented.
@@ -661,27 +662,6 @@ def raster_pixel_count(dataset_uri):
     return counts
 
 
-def make_raster_from_shape(base_raster, shape, attr):
-    """Burn an attribute value from a polygon shapefile onto an
-       existing blank raster
-
-       base_raster - a gdal raster dataset to burn the shapefile
-                     values onto
-       shape - a ORG datasource polygon shapefile
-       attr - a python string of the attribute field to burn values
-              from
-
-       returns - a GDAL raster dataset"""
-    LOGGER.debug('Entering make_raster_from_shape')
-    
-    attribute_string = 'ATTRIBUTE=' + attr
-    gdal.RasterizeLayer(base_raster, [1], shape.GetLayer(0),
-                        options = [attribute_string])
-    LOGGER.debug('Leaving make_raster_from_shape')
-
-    return base_raster 
-
-       
 def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
         out_nodata, raise_error, error_message='An Error occured mapping' + \
         'a dictionary to a raster'):
