@@ -174,9 +174,9 @@ def execute(args):
     #Create raster of habitat based on habitat field
     habitat_uri = os.path.join(intermediate_dir, 'habitat' + suffix)
     
-    habitat_raster = \
-       map_raster_to_dict_values(cur_landuse_uri, habitat_uri, sensitivity_dict, \
-                         'HABITAT', out_nodata, 'none')
+    map_raster_to_dict_values(
+        cur_landuse_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
+        'none')
     
     # If access_lyr: convert to raster, if value is null set to 1, 
     # else set to value
@@ -212,7 +212,7 @@ def execute(args):
     LOGGER.debug('landuse_uri_dict : %s', biophysical_args['landuse_uri_dict']) 
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds in biophysical_args['landuse_uri_dict'].iteritems():
+    for lulc_key, lulc_ds_uri in biophysical_args['landuse_uri_dict'].iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
         
         # initialize a list that will store all the density/threat rasters
@@ -266,22 +266,19 @@ def execute(args):
             
             # blur the threat raster based on the effect of the threat over
             # distance
-            filtered_raster = raster_utils.gaussian_filter_dataset_uri(
+            raster_utils.gaussian_filter_dataset_uri(
                     threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
 
             # create sensitivity raster based on threat
-            sens_uri = \
-                os.path.join(intermediate_dir, 
-                        'sens_' + threat + lulc_key + suffix )
+            sens_uri = os.path.join(
+                intermediate_dir, 'sens_' + threat + lulc_key + suffix )
             
-            sensitivity_raster = map_raster_to_dict_values(
-                    lulc_ds, sens_uri, sensitivity_dict, 
+            map_raster_to_dict_values(
+                    lulc_ds_uri, sens_uri, sensitivity_dict, 
                     'L_' + threat, out_nodata, 'values_required',
                     error_message='A lulc type in the land cover with ' + \
                     'postfix, ' + lulc_key + ', was not found in the ' + \
                     'sensitivity table. The erroring value was : ')        
-
-            sensitivity_raster.FlushCache()
             
             # get the normalized weight for each threat
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
@@ -289,8 +286,10 @@ def execute(args):
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
             # vectorized_rasters below
-            for item in [filtered_raster, sensitivity_raster]:
-                degradation_rasters.append(item)
+            degradation_rasters.append(filtered_threat_uri)
+            degradation_rasters.append(sens_uri)
+
+#            for item in [filtered_raster, sensitivity_raster]:
 
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
@@ -729,8 +728,6 @@ def map_raster_to_dict_values(key_raster_uri, out_uri, attr_dict, field, \
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
-    reclassified_dataset = raster_utils.reclassify_dataset_uri(
+    raster_utils.reclassify_dataset_uri(
         key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
         exception_flag=raise_error)
-
-    return reclassified_dataset
