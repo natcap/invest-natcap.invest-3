@@ -63,7 +63,7 @@ def execute(args):
         This function has no return value, though it does save a number of
         rasters to disk.  See the user's guide for details."""
 
-        workspace = args['workspace_dir']
+    workspace = args['workspace_dir']
 
     # If the user has not provided a results suffix, assume it to be an empty
     # string.
