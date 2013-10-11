@@ -32,9 +32,11 @@ def generate_table(table_dict, attributes=None):
     table_string = ''
     # Create the table header, either with attributes or without
     if attributes != None:
+        attr_keys = attributes.keys()
+        attr_keys.sort()
         table_string = '<table'
-        for attr, val in attributes.iteritems():
-            table_string = '%s %s=%s' % (table_string, attr, val)
+        for attr in attr_keys:
+            table_string = '%s %s=%s' % (table_string, attr, attributes[attr])
 
         table_string = table_string + '>'
     else:
@@ -46,11 +48,12 @@ def generate_table(table_dict, attributes=None):
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
     for col in col_headers:
-        html_file.write('<th>%s</th>' % col)
+        table_string += '<th>%s</th>' % col
     
     table_string = table_string + '</tr></thead>'
 
     row_data = get_row_data(table_dict['rows'], col_headers)
+    
     table_string = table_string + '<tbody>'
    
     for row in row_data:
