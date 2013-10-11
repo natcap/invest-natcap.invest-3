@@ -85,19 +85,53 @@ class TestTableGenerator(unittest.TestCase):
     def test_generate_table(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                 'cols':{
                     'date' : {'id': 1, 'time':'day'},
-                    'price' : {'id': 6, 'price':'expensive'},
+                    'price' : {'id': 2, 'price':'expensive'},
                     'product' : {'id': 0, 'product':'chips'}},
                 'rows':{
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
                     1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
                     2: {'date':'5/12', 'price':'moderate', 'product':'mints'}}
                 }
-        expected_result = ['product', 'date', 'comments', 'price']
 
-        col_headers = table_generator.get_column_headers(sample_dict)
+        expected_result = ("<table><thead><tr><th>product</th>"
+                "<th>date</th><th>price</th></tr></thead>"
+                "<tbody><tr><td>chips</td><td>9/13</td><td>expensive</td></tr>"
+                "<tr><td>peanuts</td><td>3/13</td><td>cheap</td></tr>"
+                "<tr><td>mints</td><td>5/12</td><td>moderate</td></tr>"
+                "</tbody></table>")
 
-        self.assertEqual(expected_result, col_headers)
+        table_string = table_generator.generate_table(sample_dict)
+
+        self.assertEqual(expected_result, table_string)
+    
+    def test_generate_table_attributes(self):
+        """Unit test for creating a table from a dictionary as a string
+            representing html using attributes"""
+        #raise SkipTest
+        sample_dict = {
+                'cols':{
+                    'date' : {'id': 1, 'time':'day'},
+                    'price' : {'id': 2, 'price':'expensive'},
+                    'product' : {'id': 0, 'product':'chips'}},
+                'rows':{
+                    0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                    1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                    2: {'date':'5/12', 'price':'moderate', 'product':'mints'}}
+                }
+
+        attributes= {'class':'sortable', 'border':'1'}
+
+        expected_result = ("<table border=1 class=sortable><thead><tr>"
+                "<th>product</th><th>date</th><th>price</th></tr></thead>"
+                "<tbody><tr><td>chips</td><td>9/13</td><td>expensive</td></tr>"
+                "<tr><td>peanuts</td><td>3/13</td><td>cheap</td></tr>"
+                "<tr><td>mints</td><td>5/12</td><td>moderate</td></tr>"
+                "</tbody></table>")
+
+        table_string = table_generator.generate_table(sample_dict, attributes)
+
+        self.assertEqual(expected_result, table_string)
