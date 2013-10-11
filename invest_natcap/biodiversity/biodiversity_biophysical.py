@@ -245,15 +245,14 @@ def execute(args):
             
             # get the mean cell size, using absolute value because we could
             # get a negative for height or width
-            mean_cell_size = \
-                (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
+            cell_size = raster_utils.get_cell_size_from_uri(args['landuse_cur_uri'])
             
             # convert max distance (given in KM) to meters
             dr_max = float(threat_data['MAX_DIST']) * 1000.0
             
             # convert max distance from meters to the number of pixels that
             # represents on the raster
-            dr_pixel = dr_max / mean_cell_size
+            dr_pixel = dr_max / cell_size
             
             # compute sigma to be used in a gaussian filter.  Sigma is
             # derived from using equation 12.2 in users manual and the
