@@ -182,20 +182,26 @@ def execute(args):
     # else set to value
     try:
         LOGGER.debug('Handling Access Shape')
-        access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
-        access_base = \
-            raster_utils.new_raster_from_base(cur_landuse_uri, access_uri, \
-                'GTiff', out_nodata, gdal.GDT_Float32)
+        access_dataset_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
+        raster_utils.new_raster_from_base_uri(
+            cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata, gdal.GDT_Float32,
+            fill_value=1.0)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
-        access_base.GetRasterBand(1).Fill(1.0)
-        access_shape = biophysical_args['access_shape']
-        access_raster = \
-                make_raster_from_shape(access_base, access_shape, 'ACCESS')
+        #access_base.GetRasterBand(1).Fill(1.0)
+ #       access_shape = biophysical_args['access_shape']
+
+#        args['access_uri']
+#        access_raster = 
+#                make_raster_from_shape(access_base, access_shape, 'ACCESS')
+        raster_utils.rasterize_layer_uri(
+            access_dataset_uri, args['access_uri'],
+            option_list=['ATTRIBUTE=ACCESS'])
+
     except KeyError:
         LOGGER.debug('No Access Shape Provided')
-        access_shape = None
-        access_raster = access_base
+#        access_shape = None
+#        access_raster = access_base
 
     # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
