@@ -400,17 +400,16 @@ def execute(args):
     #Compute Rarity if user supplied baseline raster
     try:    
         # will throw a KeyError exception if no base raster is provided
-        lulc_base = biophysical_args['landuse_uri_dict']['_b']
+        #lulc_base = biophysical_args['landuse_uri_dict']['_b']
+        lulc_base_uri = biophysical_args['landuse_uri_dict']['_b']
         
         # get the area of a base pixel to use for computing rarity where the 
         # pixel sizes are different between base and cur/fut rasters
-        base_properties = raster_utils.get_raster_properties(lulc_base)
-        base_area = base_properties['width'] * base_properties['height']
-
-        base_nodata = int(lulc_base.GetRasterBand(1).GetNoDataValue())
+        base_area = raster_utils.get_cell_area_from_uri(lulc_base_uri)
+        base_nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
         rarity_nodata = float(np.finfo(np.float32).min)
         
-        lulc_code_count_b = raster_pixel_count(lulc_base)
+        lulc_code_count_b = raster_pixel_count(lulc_base_uri)
         
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
@@ -418,10 +417,11 @@ def execute(args):
                 lulc_x = biophysical_args['landuse_uri_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
-                lulc_properties = raster_utils.get_raster_properties(lulc_x)
-                lulc_area = lulc_properties['width'] * lulc_properties['height']
-                
-                lulc_nodata = int(lulc_x.GetRasterBand(1).GetNoDataValue())
+                #lulc_properties = raster_utils.get_raster_properties(lulc_x)
+                #lulc_area = lulc_properties['width'] * lulc_properties['height']
+                lulc_area = raster_utils.get_cell_area_from_uri(lulc_x)
+                #lulc_nodata = int(lulc_x.GetRasterBand(1).GetNoDataValue())
+                lulc_nodata = raster_utils.get_nodata_from_uri(lulc_x)
                 
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
                         lulc_nodata) 
@@ -443,22 +443,25 @@ def execute(args):
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 
-                new_cover_uri = \
-                    os.path.join(intermediate_dir, 
-                        'new_cover' + lulc_cover + suffix)
+                new_cover_uri = os.path.join(
+                    intermediate_dir, 'new_cover' + lulc_cover + suffix)
                 
                 LOGGER.debug('Starting vectorize on trim_op')
                 
                 # set the current/future land cover to be masked to the base
                 # land cover
-                new_cover = \
-                    raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
-                            raster_out_uri=new_cover_uri,
-                            datatype=gdal.GDT_Int32, nodata=base_nodata)
+#                new_cover = \
+#                    raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
+#                            raster_out_uri=new_cover_uri,
+#                            datatype=gdal.GDT_Int32, nodata=base_nodata)
+
+                raster_utils.vectorize_datasets(
+                    [lulc_base_uri, lulc_x], trim_op, new_cover_uri,
+                    gdal.GDT_Int32, base_nodata, cell_size, "intersection")
                 
                 LOGGER.debug('Finished vectorize on trim_op')
                 
-                lulc_code_count_x = raster_pixel_count(new_cover)
+                lulc_code_count_x = raster_pixel_count(new_cover_uri)
                 
                 # a dictionary to map LULC types to a number that depicts how
                 # rare they are considered                
@@ -489,13 +492,14 @@ def execute(args):
                         return code_index[cover]
                     return rarity_nodata
                 
-                rarity_uri = \
-                    os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
+                rarity_uri = os.path.join(
+                    output_dir, 'rarity' + lulc_cover + suffix)
                
                 LOGGER.debug('Starting vectorize on map_ratio')
                
-                _ = raster_utils.vectorize_rasters([new_cover], map_ratio, \
-                        raster_out_uri=rarity_uri, nodata=rarity_nodata)
+                raster_utils.vectorize_datasets(
+                    [new_cover_uri], map_ratio, rarity_uri, gdal.GDT_Float32,
+                    rarity_nodata, cell_size, "intersection")
                
                 LOGGER.debug('Finished vectorize on map_ratio')
                 
@@ -554,8 +558,12 @@ def resolve_ambiguous_raster_path(uri, raise_error=True):
         'to a threat raster in the input folder. Please check that the names '
         'correspond. The threat raster that could not be found is : %s', uri)
 
+    if dataset is None:
+        full_uri = None
+
     dataset = None
     return full_uri
+
 
 def make_dictionary_from_csv(csv_uri, key_field):
     """Make a basic dictionary representing a CSV file, where the
@@ -645,15 +653,16 @@ def threat_names_match(threat_dict, sens_dict, prefix):
     return True
 
 
-def raster_pixel_count(dataset):
+def raster_pixel_count(dataset_uri):
     """Determine how many of each unique pixel lies in the dataset (dataset)
     
-        dataset - a GDAL raster dataset
+        dataset_uri - a GDAL raster dataset
 
         returns -  a dictionary whose keys are the unique pixel values and whose
                    values are the number of occurrences
     """
     LOGGER.debug('Entering raster_pixel_count')
+    dataset = gdal.Open(dataset_uri)
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     counts = {}
