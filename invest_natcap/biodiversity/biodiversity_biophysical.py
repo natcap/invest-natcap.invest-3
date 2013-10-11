@@ -215,10 +215,6 @@ def execute(args):
     for lulc_key, lulc_ds in biophysical_args['landuse_uri_dict'].iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
         
-        # get raster properties: cellsize, width, height, 
-        # cells = width * height, extent    
-        lulc_prop = raster_utils.get_raster_properties(cur_landuse_uri)
-
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
         degradation_rasters = []
@@ -235,11 +231,11 @@ def execute(args):
 
             LOGGER.debug('Calculating threat : %s', threat)
             LOGGER.debug('Threat Data : %s', threat_data)
-       
+
             # get the density raster for the specific threat
-            threat_raster = biophysical_args['density_uri_dict']['density' + lulc_key][threat]
-       
-            if threat_raster == None:
+            threat_dataset_uri = biophysical_args['density_uri_dict']['density' + lulc_key][threat]
+            LOGGER.debug('threat_dataset_uri %s' % threat_dataset_uri)
+            if threat_dataset_uri == None:
                 LOGGER.info(
                 'A certain threat raster could not be found for the '
                 'Baseline Land Cover. Skipping Habitat Quality '
@@ -272,7 +268,7 @@ def execute(args):
             # blur the threat raster based on the effect of the threat over
             # distance
             filtered_raster = raster_utils.gaussian_filter_dataset(
-                    threat_raster, sigma, filtered_threat_uri, out_nodata)
+                    threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
 
             # create sensitivity raster based on threat
             sens_uri = \
