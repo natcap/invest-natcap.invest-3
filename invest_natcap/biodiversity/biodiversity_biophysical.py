@@ -266,7 +266,7 @@ def execute(args):
             
             # blur the threat raster based on the effect of the threat over
             # distance
-            filtered_raster = raster_utils.gaussian_filter_dataset(
+            filtered_raster = raster_utils.gaussian_filter_dataset_uri(
                     threat_dataset_uri, sigma, filtered_threat_uri, out_nodata)
 
             # create sensitivity raster based on threat
