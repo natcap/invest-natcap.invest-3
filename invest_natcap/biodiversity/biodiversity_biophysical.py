@@ -199,7 +199,7 @@ def execute(args):
             option_list=['ATTRIBUTE=ACCESS'])
 
     except KeyError:
-        LOGGER.debug('No Access Shape Provided')
+        LOGGER.debug('No Access Shape Provided, access raster filled with 1s.')
 #        access_shape = None
 #        access_raster = access_base
 
@@ -342,17 +342,20 @@ def execute(args):
         # add the access_raster onto the end of the collected raster list. The
         # access_raster will be values from the shapefile if provided or a
         # raster filled with all 1's if not
-        degradation_rasters.append(access_raster)
+        degradation_rasters.append(access_dataset_uri)
         
-        deg_sum_uri = \
-            os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
+        deg_sum_uri = os.path.join(
+            output_dir, 'deg_sum_out' + lulc_key + suffix)
 
         LOGGER.debug('Starting vectorize on total_degradation') 
         
-        sum_deg_raster = \
-            raster_utils.vectorize_rasters(degradation_rasters, \
-                total_degradation, raster_out_uri=deg_sum_uri, \
-                nodata=out_nodata)
+        raster_utils.vectorize_datasets(
+            degradation_rasters, total_degradation, deg_sum_uri,
+            gdal.GDT_Float32, out_nodata, cell_size, "intersection")
+#        sum_deg_raster = \
+#            raster_utils.vectorize_rasters(degradation_rasters, \
+#                total_degradation, raster_out_uri=deg_sum_uri, \
+#                nodata=out_nodata)
 
         LOGGER.debug('Finished vectorize on total_degradation') 
            
@@ -363,12 +366,6 @@ def execute(args):
         
         # a term used below to compute habitat quality
         ksq = float(half_saturation**scaling_param)
-        
-        sum_deg_nodata = \
-            sum_deg_raster.GetRasterBand(1).GetNoDataValue()
-        
-        habitat_nodata = \
-            habitat_raster.GetRasterBand(1).GetNoDataValue()
         
         def quality_op(degradation, habitat):
             """Vectorized function that computes habitat quality given
@@ -383,8 +380,7 @@ def execute(args):
                     score for a pixel
             """
             # there is a nodata value if this list is not empty
-            if degradation == sum_deg_nodata or \
-                    habitat == habitat_nodata:
+            if degradation == out_nodata or habitat == out_nodata:
                 return out_nodata
 
             return float(habitat) * (1.0 - ((degradation**scaling_param) / \
@@ -395,8 +391,9 @@ def execute(args):
         
         LOGGER.debug('Starting vectorize on quality_op') 
         
-        _ = raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
-                quality_op, raster_out_uri=quality_uri, nodata=out_nodata)
+        raster_utils.vectorize_datasets(
+            [deg_sum_uri, habitat_uri], quality_op, quality_uri,
+            gdal.GDT_Float32, out_nodata, cell_size, "intersection")
         
         LOGGER.debug('Finished vectorize on quality_op') 
 
