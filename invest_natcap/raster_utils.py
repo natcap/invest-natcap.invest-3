@@ -1288,6 +1288,7 @@ def get_raster_properties_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     return get_raster_properties(dataset)
 
+
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the
         values in a dictionary.
