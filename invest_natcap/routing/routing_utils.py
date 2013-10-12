@@ -189,7 +189,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
     flow_length_pixel_size = raster_utils.pixel_size(flow_length_dataset)
 
     def flow_length(flow_direction):
-        """Function to calculate flow length for vectorize_rasters"""
+        """Function to calculate flow length for vectorize_datasets"""
         if flow_direction == flow_direction_nodata:
             return flow_length_nodata
         sin_val = numpy.abs(numpy.sin(flow_direction))
