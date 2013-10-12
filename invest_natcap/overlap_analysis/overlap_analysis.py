@@ -128,7 +128,7 @@ def execute(args):
                                layer_dict, overlap_shape_uris,
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
-                               hubs_rast, raster_uris, raster_names)
+                               hubs_out_uri, raster_uris, raster_names)
 
 
 def format_over_table(over_tbl):
@@ -290,7 +290,7 @@ def create_unweighted_raster(output_dir, aoi_raster_uri, raster_files_uri):
 
 def create_weighted_raster(
     out_dir, intermediate_dir, aoi_raster_uri, inter_weights_dict, layers_dict,
-    intra_name, do_inter, do_intra, do_hubs, hubs_raster,
+    intra_name, do_inter, do_intra, do_hubs, hubs_raster_uri,
     raster_uris, raster_names):
     '''This function will create an output raster that takes into account both
     inter-activity weighting and intra-activity weighting. This will produce a
@@ -488,22 +488,22 @@ def create_weighted_raster(
             temp_uri = os.path.join(intermediate_dir, "temp_rast.tif")
             shutil.copyfile(outgoing_uri, temp_uri)
 
-            base_raster = gdal.Open(temp_uri)
+            base_raster_uri = temp_uri
         
         #Otherwise, if we don't have a weighted raster file, use the unweighted
         #frequency file.
         else:
-           
-            freq_out = os.path.join(out_dir, "hu_freq.tif")
-            base_raster = gdal.Open(freq_out)
+            base_raster_uri = os.path.join(out_dir, "hu_freq.tif")
             temp_uri = None
 
-        h_rast_list = [hubs_raster, base_raster]
+        #h_rast_list = [hubs_raster, base_raster]
+        h_rast_uri_list = [hubs_raster_uri, base_raster_uri]
 
-        raster_utils.vectorize_rasters(h_rast_list, combine_hubs_raster,
-                      aoi = None, raster_out_uri = outgoing_uri,
-                      datatype = gdal.GDT_Float32, nodata = aoi_nodata)
-        
+        LOGGER.debug("this is the list %s" % h_rast_uri_list)
+        raster_utils.vectorize_datasets(
+            h_rast_uri_list, combine_hubs_raster, outgoing_uri,
+            gdal.GDT_Float32, aoi_nodata, pixel_size_out, "intersection")
+
         try:
             os.remove(temp_uri)
         except OSError as e:
