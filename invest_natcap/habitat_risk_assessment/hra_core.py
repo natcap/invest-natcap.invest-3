@@ -141,7 +141,7 @@ def execute(args):
         #Let's pre-calc stuff so we don't have to worry about it in the middle of
         #the file creation.
         avgs_dict, aoi_names = pre_calc_avgs(inter_dir, risk_dict, args['aoi_tables'], 
-                                args['aoi_key'], args['risk_eq'])
+                                args['aoi_key'], args['risk_eq'], args['max_risk'])
         aoi_pairs = rewrite_avgs_dict(avgs_dict, aoi_names)
 
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
@@ -399,7 +399,7 @@ def rewrite_avgs_dict(avgs_dict, aoi_names):
 
     return pair_dict
 
-def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
+def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
     '''This funtion is a helper to make_aoi_tables, and will just handle
     pre-calculation of the average values for each aoi zone.
 
@@ -424,6 +424,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
             that tells us which equation should be used for calculation of
             risk. This will be used to get the risk value for the average E 
             and C.
+        max_risk- The user reported highest risk score present in the CSVs. 
 
     Returns:
         avgs_dict- A multi level dictionary to hold the average values that
@@ -490,10 +491,10 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         #change.
         e_agg_dict = dict.fromkeys(ids, 0)
         c_agg_dict = dict.fromkeys(ids, 0)
+        hs_agg_dict = dict.fromkeys(ids, 0)
+        h_agg_dict = dict.fromkeys(ids, 0)
 
         #GETTING MEANS OF THE E RASTERS HERE
-
-        LOGGER.debug("Currently working with: %s, %s" % (h, s))
 
         #Just going to have to pull explicitly. Too late to go back and
         #rejigger now.
@@ -502,6 +503,17 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         e_agg_dict.update(raster_utils.aggregate_raster_values_uri(
                 e_rast_uri, cp_aoi_uri, 'BURN_ID').pixel_mean)
 
+        #Now, we are going to modify the e value by the spatial overlap value.
+        #Get S.O value first.
+        h_rast_uri = os.path.join(inter_dir, 'Habitat_Rasters', h + '.tif')
+        hs_rast_uri = os.path.join(inter_dir, 'Overlap_Rasters', "H[" + 
+                                            h + ']_S[' + s + '].tif')
+
+        hs_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                hs_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
+        h_agg_dict.update(raster_utils.aggregate_raster_values_uri(
+                h_rast_uri, cp_aoi_uri, 'BURN_ID').n_pixels)
+        
         #GETTING MEANS OF THE C RASTER HERE
 
         c_rast_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_C_Risk_Raster.tif')
@@ -509,7 +521,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
         c_agg_dict.update(raster_utils.aggregate_raster_values_uri(c_rast_uri, 
                             cp_aoi_uri, 'BURN_ID').pixel_mean)
 
-        LOGGER.debug("C_AGG_Dict: %s, E_AGG_DICT: %s" % (c_agg_dict, e_agg_dict))
+        LOGGER.debug("H_S_AGGDICT: %s, H_AGGDICT: %s" % (hs_agg_dict, h_agg_dict))
 
         #Now, want to place all values into the dictionary. Since we know that
         #the names of the attributes will be the same for each dictionary, can
@@ -518,7 +530,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
             
             name = name_map[ident]
            
-            avgs_dict[h][s].append({'Name': name, 'E': e_agg_dict[ident],
+            frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            LOGGER.debug("FRAC_OVER: %s" % frac_over)
+            s_o_score = max_risk * frac_over + (1-frac_over)
+            LOGGER.debug("SO: %s" % s_o_score)
+
+            e_score = s_o_score if frac_over == 0 else (e_agg_dict[ident] + s_o_score) / 2
+
+            avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
     
     for h, hab_dict in avgs_dict.iteritems():
@@ -544,16 +563,12 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq):
                 else:
                     avgs_r_sum[h][sub_dict['Name']] = r_val
 
-    LOGGER.debug("AVGS_R_Sum: %s" % avgs_r_sum)
-
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
         
                 sub_dict['R_Pct'] = sub_dict['Risk']/ avgs_r_sum[h][sub_dict['Name']]
     
-    LOGGER.debug("AVGS DICT: %s" % avgs_dict)
-
     return avgs_dict, name_map.values()
 
 def make_recov_potent_raster(dir, crit_lists, denoms):
@@ -1177,7 +1192,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #If habitat exists without stressor, want to return 0 as the overall
         #risk, so that it will show up as "no risk" but still show up.
         elif b_pix == base_nodata:
-            return c_pix
+            #should calculate c within the equation by itself.
+            return c_pix - 1
         
         #At this point, we know that there is data in c_pix, and we know that
         #there is overlap. So now can do the euc. equation.
