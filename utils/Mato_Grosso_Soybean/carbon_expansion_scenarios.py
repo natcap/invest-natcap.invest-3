@@ -855,7 +855,7 @@ def run_mgds(number_of_steps):
         'biomass_from_table_lucodes': [10, 12, 17, 0],
         'converting_crop': 17,
         'scenario_lulc_base_map_filename': 'lulc',
-        'scenario_conversion_steps': 2,
+        'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
         #Becky calculated this for MGDS
         'pixels_to_convert_per_step': 208,

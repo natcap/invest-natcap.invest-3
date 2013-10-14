@@ -152,7 +152,6 @@ def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
     msa_f = np.where((ffqi>.578512) & (ffqi <= .89771),0.7,msa_f)
     msa_f = np.where((ffqi>.42877) & (ffqi <= .578512),0.6,msa_f)
     msa_f = np.where((ffqi <= .42877),0.3,msa_f)
-     
     return msa_f
     
 def calc_msa_i(distance_to_infrastructure, input_lulc, args, iteration_number):
@@ -178,7 +177,6 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, args, iteration_number):
     msa_i = np.zeros(input_lulc.shape)
     msa_i = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,1.0)
     msa_i = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i)
-    
     return msa_i
 
 
@@ -200,6 +198,7 @@ def calc_msa_lu(input_array, args, iteration_number):
  
     return msa_lu
 
+    
 def assign_values_by_csv(input_array, correspondenceURI): #If input_array is not set, it loads a raster. if outRaster = None, only returns an array, else outputs a geotiff
     array_out = copy(input_array)
     table = {} 
@@ -283,78 +282,6 @@ def make_map(array):
         plt.colorbar()
         plt.show()
         
-def globio_analyze_premade_lulc_scenarios(args):
-    """This function does a simulation of cropland expansion by
-        expanding into the forest edges and calculates MSA for each percent
-        cropland expansion.
-
-        args['converting_crop'] - when a pixel is converted to crop, it uses
-            this lucode.            
-        args['scenario_conversion_steps'] - the number of steps to run in
-            the simulation
-        args['pixels_to_convert_per_step'] - each step of the simulation
-            converts this many pixels
-        args['output_table_filename'] - this is the filename of the CSV
-            output table.
-        args['scenario_path'] - the path to the directory that holds the
-            scenarios
-        args['scenario_file_pattern'] - the filename pattern to load the
-            scenarios, a string of the form xxxxx%nxxxx, where %n is the
-            simulation step integer.            
-            
-        """
-
-    scenario_name = "premade_lulc_scenarios"
-    print 'Starting',scenario_name,'scenario. Note that this scenario will only work if the data in the input folder are the right shape. If you get a broadcasting shape error, it is because your inputs are not the same shape as the other GLOBIO files.'
-
-    #create static maps that only need to be calculated once.   
-    distance_to_infrastructure, infrastructure = create_globio_infrastructure(args)
-
-    #Open a .csv file to dump the grassland expansion scenario
-    output_table = open(args['output_table_filename'], 'wb')
-    output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
-
-    for percent in range(args['scenario_conversion_steps'] + 1):
-        print 'calculating change in MSA for expansion step %s' % percent
-
-        scenario_filename = os.path.join(
-            args['scenario_path'],
-            args['scenario_file_pattern'].replace('%n', str(percent)))
-        
-        scenario_dataset = gdal.Open(scenario_filename)
-        scenario_lulc_array = scenario_dataset.GetRasterBand(1).ReadAsArray()
-
-
-        #Calcualte the effect on MSA using calc_msa_lu function
-        globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
-        
-        msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
-        
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['mg_definition_array'] == 1)])))
-        
-        msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
-
-        
-        msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
-        
-        output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
-        output_table.flush()
-        if SAVE_MAPS >= 1 and (percent == 0 or percent == args['scenario_conversion_steps'] + 1) or SAVE_MAPS == 2:
-            export_array_as_geotiff(scenario_lulc_array,args['export_folder']+scenario_name+"_scenario_lulc_array_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(globio_lulc,args['export_folder']+scenario_name+"_globio_lulc_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_lu,args['export_folder']+scenario_name+"_msa_lu_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_i,args['export_folder']+scenario_name+"_msa_i_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_f,args['export_folder']+scenario_name+"_msa_f_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-            export_array_as_geotiff(msa,args['export_folder']+scenario_name+"_msa_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-    if SAVE_MAPS >= 1:
-        export_array_as_geotiff(distance_to_infrastructure,args['export_folder']+scenario_name+"_distance_to_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-        export_array_as_geotiff(infrastructure,args['export_folder']+scenario_name+"_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-        
         
 def globio_analyze_forest_expansion(args):
     """This function does a simulation of cropland expansion by
@@ -427,18 +354,8 @@ def globio_analyze_forest_expansion(args):
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
         output_table.flush()
-        if SAVE_MAPS >= 1 and (percent == 0 or percent == args['scenario_conversion_steps'] + 1) or SAVE_MAPS == 2:
-            export_array_as_geotiff(scenario_lulc_array,args['export_folder']+scenario_name+"_scenario_lulc_array_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(globio_lulc,args['export_folder']+scenario_name+"_globio_lulc_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_lu,args['export_folder']+scenario_name+"_msa_lu_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_i,args['export_folder']+scenario_name+"_msa_i_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_f,args['export_folder']+scenario_name+"_msa_f_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-            export_array_as_geotiff(msa,args['export_folder']+scenario_name+"_msa_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-    if SAVE_MAPS >= 1:
-        export_array_as_geotiff(distance_to_infrastructure,args['export_folder']+scenario_name+"_distance_to_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-        export_array_as_geotiff(infrastructure,args['export_folder']+scenario_name+"_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
 
-
+        
 def globio_analyze_forest_core_expansion(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges and calculates MSA for each percent
@@ -506,17 +423,8 @@ def globio_analyze_forest_core_expansion(args):
 
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
         output_table.flush()
-        if SAVE_MAPS >= 1 and (percent == 0 or percent == args['scenario_conversion_steps'] + 1) or SAVE_MAPS == 2:
-            export_array_as_geotiff(scenario_lulc_array,args['export_folder']+scenario_name+"_scenario_lulc_array_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(globio_lulc,args['export_folder']+scenario_name+"_globio_lulc_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_lu,args['export_folder']+scenario_name+"_msa_lu_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_i,args['export_folder']+scenario_name+"_msa_i_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_f,args['export_folder']+scenario_name+"_msa_f_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-            export_array_as_geotiff(msa,args['export_folder']+scenario_name+"_msa_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-    if SAVE_MAPS >= 1:
-        export_array_as_geotiff(distance_to_infrastructure,args['export_folder']+scenario_name+"_distance_to_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-        export_array_as_geotiff(infrastructure,args['export_folder']+scenario_name+"_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
 
+        
 def globio_analyze_forest_core_fragmentation(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges and calculates MSA for each percent
@@ -585,20 +493,11 @@ def globio_analyze_forest_core_fragmentation(args):
         msa = msa_f * msa_lu * msa_i
         avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
-
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
         output_table.flush()
-        if SAVE_MAPS >= 1 and (percent == 0 or percent == args['scenario_conversion_steps'] + 1) or SAVE_MAPS == 2:
-            export_array_as_geotiff(scenario_lulc_array,args['export_folder']+scenario_name+"_scenario_lulc_array_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(globio_lulc,args['export_folder']+scenario_name+"_globio_lulc_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_lu,args['export_folder']+scenario_name+"_msa_lu_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_i,args['export_folder']+scenario_name+"_msa_i_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_f,args['export_folder']+scenario_name+"_msa_f_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-            export_array_as_geotiff(msa,args['export_folder']+scenario_name+"_msa_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-    if SAVE_MAPS >= 1:
-        export_array_as_geotiff(distance_to_infrastructure,args['export_folder']+scenario_name+"_distance_to_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
- 
+
+        
 def globio_analyze_lu_expansion(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges.
@@ -679,22 +578,11 @@ def globio_analyze_lu_expansion(args):
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
         output_table.flush()
-        if SAVE_MAPS >= 1 and (percent == 0 or percent == args['scenario_conversion_steps'] + 1) or SAVE_MAPS == 2:
-            export_array_as_geotiff(scenario_lulc_array,args['export_folder']+scenario_name+"_scenario_lulc_array_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(globio_lulc,args['export_folder']+scenario_name+"_globio_lulc_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_lu,args['export_folder']+scenario_name+"_msa_lu_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_i,args['export_folder']+scenario_name+"_msa_i_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-            export_array_as_geotiff(msa_f,args['export_folder']+scenario_name+"_msa_f_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-            export_array_as_geotiff(msa,args['export_folder']+scenario_name+"_msa_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri']) 
-    if SAVE_MAPS >= 1:
-        export_array_as_geotiff(distance_to_infrastructure,args['export_folder']+scenario_name+"_distance_to_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-        export_array_as_geotiff(infrastructure,args['export_folder']+scenario_name+"_infrastructure_"+str(args['run_id'])+"_"+str(percent)+".tif",args['input_lulc_uri'])
-
  
  
 if __name__ == '__main__':
     try:
-        os.makedirs('./export')
+        os.makedirs('./globio_output')
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
@@ -714,9 +602,9 @@ if __name__ == '__main__':
         #location where all data not specified below are stored 
         'data_location': './',
         #a table that indicates which of the input lu codes should be mapped to which intermediate lu codes (see documentation). First row reserved for labels.
-        'lulc_conversion_table_uri': './lulc_conversion_table.csv',
+        'lulc_conversion_table_uri': './inputs_mg_globio/lulc_conversion_table.csv',
         #export location
-        'export_folder': './export/',    
+        'export_folder': './globio_output/',    
         #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
         'sum_yieldgap_uri': './sum_yieldgap.tif', #TODO: fix so that this smartly chooses to load premade or folder-based calculation  
         #if sum_yieldgap_uri is None, this variable indicates where crop-specific yieldgap maps (available at earthstat.org, see documentation) are placed. The script then aggregates them to creat sum_yieldgap.tif
@@ -742,7 +630,7 @@ if __name__ == '__main__':
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,
-  }            
+    }
 
     #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri'])
@@ -754,13 +642,6 @@ if __name__ == '__main__':
     ARGS['transmission_lines_array']= geotiff_to_array(ARGS['transmission_lines_uri'])
     ARGS['canals_array']= geotiff_to_array(ARGS['canals_uri'])
 
-
-
-    #Set up the ARGS for the disk based scenario
-    ARGS['scenario_path'] = './data/MG_Soy_Exp_07122013/'
-    ARGS['scenario_file_pattern'] = 'mg_lulc%n'
-    ARGS['output_table_filename'] = ('./export/globio_premade_lulc_scenarios_msa_change_'+ARGS['run_id']+'.csv')
-    #globio_analyze_premade_lulc_scenarios(ARGS) 
 
     #Set up ARGS for the forest core expansion scenario
     ARGS['output_table_filename'] = (
