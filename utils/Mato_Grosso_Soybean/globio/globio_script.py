@@ -357,17 +357,17 @@ def globio_analyze_forest_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
 
         
         msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
@@ -426,17 +426,17 @@ def globio_analyze_forest_core_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
 
         
         msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
 
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
@@ -499,17 +499,17 @@ def globio_analyze_forest_core_fragmentation(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
 
         
         msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
@@ -581,17 +581,17 @@ def globio_analyze_lu_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
 
         
         msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
@@ -614,11 +614,9 @@ if __name__ == '__main__':
         #how many pixels should be converted to crop in each iteration step
         'pixels_to_convert_per_step': 2608,
         #identify a new lu code for newly-created crop that we add via the simulation
-        'converting_crop': 120,
+        'converting_crop': 17,
         #a unique string based on unix-timestamp that i postpend to each filename to avoid accidental overwriting.
-        'run_id': str(time.time()).split(".")[0],  
-        #location where all data not specified below are stored 
-        'data_location': './',
+        'run_id': str(time.time()).split(".")[0],
         #a table that indicates which of the input lu codes should be mapped to which intermediate lu codes (see documentation). First row reserved for labels.
         'lulc_conversion_table_uri': './inputs_mg_globio/lulc_conversion_table.csv',
         #export location
@@ -628,11 +626,11 @@ if __name__ == '__main__':
         #uri to geotiff  of potential vegetation
         'potential_vegetation_uri': './inputs_mgds_globio/potential_vegetation_proj.tif',  
         #uri to geotiff of proportion in pasture
-        'pasture_uri': './pasture.tif',
+        'pasture_uri': './inputs_mgds_globio/pasture.tif',
         #uri to geotiff that defines the zone of interest. Can be  constructed from any shapefile of any region, defined as 1 = within region, 0 = not in region.  If data need to be buffered, ensure that the extent of this map is not at the border, but rather at the extent of the buffered border.
-        'mg_definition_uri': './mg_definition.tif',
+        'aoi_uri': './inputs_mgds_globio/mgds_proj.shp',
         #uri to geotiff of lulc data. the values in this map must correspond to the values in lulc_conversion_table_uri 
-        'input_lulc_uri': './lulc_2008.tif',
+        'input_lulc_uri': './inputs_mgds_globio/lulc_2008.tif',
         #the next 4 lines define the 4 elements that I used to construct a map of infrastructure. These were drawn from Digital Chart of the World and the EMBRAPA dataset from the Brazilian government. The globio script sums up these 4 sources to createa binary defined map of 1=is_infrastructure, 0=not_infrastructure and then applies the globio method to that.
         'roads_uri': './roads.tif',
         'highways_uri': './highways.tif',
@@ -650,7 +648,11 @@ if __name__ == '__main__':
 
     #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri'])
-    ARGS['mg_definition_array']= geotiff_to_array(ARGS['mg_definition_uri']) #1 = in MG, 0 = notprintin MG
+    aoi_raster_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], aoi_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        aoi_raster_uri, ARGS['aoi_uri'], burn_values=[1])
+    ARGS['aoi_array']= geotiff_to_array(aoi_raster_uri) #1 = in MG, 0 = notprintin MG
     ARGS['roads_array']= geotiff_to_array(ARGS['roads_uri'])
     ARGS['highways_array']= geotiff_to_array(ARGS['highways_uri'])
     ARGS['transmission_lines_array']= geotiff_to_array(ARGS['transmission_lines_uri'])
