@@ -79,10 +79,14 @@ def expand_lu_type(
         return total_pixels
             
     expansion_pixel_count = pixels_per_step * current_step
-
-    expansion_existance = (base_array != expansion_id) & (base_array != nodata)
+    
+    #Calculate the expansion distance
+    expansion_existance = base_array != nodata
+    for converting_id in converting_id_list:
+        expansion_existance = (base_array != converting_id) & expansion_existance
     edge_distance = scipy.ndimage.morphology.distance_transform_edt(
         expansion_existance)
+        
     zero_distance_mask = edge_distance == 0
     edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
     edge_distance[zero_distance_mask] = numpy.inf
@@ -116,6 +120,7 @@ def expand_lu_type(
         result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
             
     return result_array, pixel_count
+
 
 def analyze_composite_carbon_stock_change(args):
     """This function loads scenarios from disk and calculates the carbon stocks
@@ -196,7 +201,7 @@ def analyze_composite_carbon_stock_change(args):
             output_count_table.write('%s,' % pixel_count[lu_code])
         output_count_table.write('\n')
         output_count_table.flush()
-        #Calcualte the carbon stocks based on the regression functions, lookup
+        #Calculate the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
         carbon_stocks = calculate_carbon_stocks(
             expanded_lulc_array, args['forest_lucodes'],
