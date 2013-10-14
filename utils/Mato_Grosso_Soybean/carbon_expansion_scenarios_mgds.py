@@ -20,6 +20,9 @@ import csv
 import os
 import sys
 import collections
+import errno
+from multiprocessing import Process
+
 
 def new_raster_from_base_uri(
     base_uri, output_uri, gdal_format, nodata, datatype, fill_value=None):
@@ -835,7 +838,7 @@ def analyze_lu_expansion(args):
         scenario_lulc_array.flat[landcover_mask[0][
             0:args['pixels_to_convert_per_step']]] = args['converting_crop']
 
-def run_mgds():
+def run_mgds(number_of_steps):
     args = {
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
@@ -878,29 +881,97 @@ def run_mgds():
         2: .8,
         9: .2
         }
-    analyze_composite_carbon_stock_change(args)
+    Process(target=analyze_composite_carbon_stock_change, args=[args]).start()
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         './output/forest_core_fragmentation_carbon_stock_change_mgds.csv')
-    analyze_forest_core_fragmentation(args)
+    Process(target=analyze_forest_core_fragmentation, args=[args]).start()
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         './output/forest_core_degredation_carbon_stock_change_mgds.csv')
-    analyze_forest_core_expansion(args)
+    Process(target=analyze_forest_core_expansion, args=[args]).start()
     
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         './output/savanna_expansion_carbon_stock_change_mgds.csv')
     args['conversion_lucode'] = 9 #woody savannna    
-    analyze_lu_expansion(args)
+    Process(target=analyze_lu_expansion, args=[args]).start()
     
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         './output/forest_edge_erosion_carbon_stock_change_mgds.csv')
-    analyze_forest_edge_erosion(args)
+    Process(target=analyze_forest_edge_erosion, args=[args]).start()
     
-           
+    
+def run_mg(number_of_steps):
+    args = {
+        #the locations for the various filenames needed for the simulations
+        'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
+        'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
+        'carbon_pool_table_filename': './mato_grosso_carbon.csv',
+        #these are the landcover types that are used when determining edge
+        #effects from forests
+        'forest_lucodes': [1, 2, 3, 4, 5],
+        #These are the landcover types that should use the log regression
+        #when calculating storage biomass
+        'regression_lucodes': [2],
+        #These are the LULCs to take directly from table, everything else is
+        #mean from regression
+        'biomass_from_table_lucodes': [10, 12, 120, 0],
+        'converting_crop': 120,
+        'scenario_lulc_base_map_filename': 'MG_Soy_Exp_07122013/mg_lulc0',
+        'scenario_conversion_steps': number_of_steps,
+        'converting_id_list': [12, 17, 120],
+        #Becky calculated this for MGDS
+        'pixels_to_convert_per_step': 3046,
+    }
+
+    #set up args for the composite scenario
+    try:
+        os.makedirs('output')
+    except OSError as exception:
+        #It's okay if the directory already exists, if it fails for
+        #some other reason, raise that exception
+        if exception.errno != errno.EEXIST:
+            raise
+    args['output_table_filename'] = (
+        './output/composite_carbon_stock_change_20_80_mg.csv')
+    args['output_pixel_count_filename'] = (
+        './output/composite_carbon_stock_change_20_80_pixel_count_mg.csv')
+    args['land_cover_start_fractions'] = {
+        2: .2,
+        9: .8
+        }
+    args['land_cover_end_fractions'] = {
+        2: .8,
+        9: .2
+        }
+    Process(target=analyze_composite_carbon_stock_change, args=[args]).start()
+    
+    #Set up args for the forest core scenario
+    args['output_table_filename'] = (
+        './output/forest_core_fragmentation_carbon_stock_change_mg.csv')
+    Process(target=analyze_forest_core_fragmentation, args=[args]).start()
+    
+    #Set up args for the forest core scenario
+    args['output_table_filename'] = (
+        './output/forest_core_degredation_carbon_stock_change_mg.csv')
+    Process(target=analyze_forest_core_expansion, args=[args]).start()
+    
+    #Set up args for the savanna scenario
+    args['output_table_filename'] = (
+        './output/savanna_expansion_carbon_stock_change_mg.csv')
+    args['conversion_lucode'] = 9 #woody savannna    
+    Process(target=analyze_lu_expansion, args=[args]).start()
+    
+    #Set up args for the forest edge erosion scenario
+    args['output_table_filename'] = (
+        './output/forest_edge_erosion_carbon_stock_change_mg.csv')
+    Process(target=analyze_forest_edge_erosion, args=[args]).start()
+    
 if __name__ == '__main__':
-    run_mgds()
+    NUMBER_OF_STEPS = 2
+    Process(target=run_mg, args=[NUMBER_OF_STEPS]).start()
+    Process(target=run_mgds, args=[NUMBER_OF_STEPS]).start()
