@@ -972,6 +972,6 @@ def run_mg(number_of_steps):
     Process(target=analyze_forest_edge_erosion, args=[args]).start()
     
 if __name__ == '__main__':
-    NUMBER_OF_STEPS = 2
+    NUMBER_OF_STEPS = 200
     Process(target=run_mg, args=[NUMBER_OF_STEPS]).start()
     Process(target=run_mgds, args=[NUMBER_OF_STEPS]).start()
