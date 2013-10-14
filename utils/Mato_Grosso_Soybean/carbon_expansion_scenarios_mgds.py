@@ -835,9 +835,8 @@ def analyze_lu_expansion(args):
         scenario_lulc_array.flat[landcover_mask[0][
             0:args['pixels_to_convert_per_step']]] = args['converting_crop']
 
-
-if __name__ == '__main__':
-    ARGS = {
+def run_mgds():
+    args = {
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
         'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
@@ -853,45 +852,55 @@ if __name__ == '__main__':
         'biomass_from_table_lucodes': [10, 12, 17, 0],
         'converting_crop': 17,
         'scenario_lulc_base_map_filename': 'lulc',
-        'scenario_conversion_steps': 5,
+        'scenario_conversion_steps': 2,
         'converting_id_list': [12, 17, 120],
         #Becky calculated this for MGDS
         'pixels_to_convert_per_step': 208,
     }
 
     #set up args for the composite scenario
-    ARGS['output_table_filename'] = (
-        'composite_carbon_stock_change_20_80.csv')
-    ARGS['output_pixel_count_filename'] = (
-        'composite_carbon_stock_change_20_80_pixel_count.csv')
-    ARGS['land_cover_start_fractions'] = {
+    try:
+        os.makedirs('output')
+    except OSError as exception:
+        #It's okay if the directory already exists, if it fails for
+        #some other reason, raise that exception
+        if exception.errno != errno.EEXIST:
+            raise
+    args['output_table_filename'] = (
+        './output/composite_carbon_stock_change_20_80_mgds.csv')
+    args['output_pixel_count_filename'] = (
+        './output/composite_carbon_stock_change_20_80_pixel_count_mgds.csv')
+    args['land_cover_start_fractions'] = {
         2: .2,
         9: .8
         }
-    ARGS['land_cover_end_fractions'] = {
+    args['land_cover_end_fractions'] = {
         2: .8,
         9: .2
         }
-    analyze_composite_carbon_stock_change(ARGS)
+    analyze_composite_carbon_stock_change(args)
     
     #Set up args for the forest core scenario
-    ARGS['output_table_filename'] = (
-        'forest_core_fragmentation_carbon_stock_change.csv')
-    analyze_forest_core_fragmentation(ARGS)
+    args['output_table_filename'] = (
+        './output/forest_core_fragmentation_carbon_stock_change_mgds.csv')
+    analyze_forest_core_fragmentation(args)
     
     #Set up args for the forest core scenario
-    ARGS['output_table_filename'] = (
-        'forest_core_degredation_carbon_stock_change.csv')
-    analyze_forest_core_expansion(ARGS)
+    args['output_table_filename'] = (
+        './output/forest_core_degredation_carbon_stock_change_mgds.csv')
+    analyze_forest_core_expansion(args)
     
     #Set up args for the savanna scenario
-    ARGS['output_table_filename'] = (
-        'savanna_expansion_carbon_stock_change.csv')
-    ARGS['conversion_lucode'] = 9 #woody savannna    
-    analyze_lu_expansion(ARGS)
+    args['output_table_filename'] = (
+        './output/savanna_expansion_carbon_stock_change_mgds.csv')
+    args['conversion_lucode'] = 9 #woody savannna    
+    analyze_lu_expansion(args)
     
     #Set up args for the forest edge erosion scenario
-    ARGS['output_table_filename'] = (
-        'forest_edge_erosion_carbon_stock_change.csv')
-    analyze_forest_edge_erosion(ARGS)
+    args['output_table_filename'] = (
+        './output/forest_edge_erosion_carbon_stock_change_mgds.csv')
+    analyze_forest_edge_erosion(args)
     
+           
+if __name__ == '__main__':
+    run_mgds()
