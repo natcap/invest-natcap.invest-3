@@ -72,7 +72,7 @@ def expand_lu_type(
         total_pixels = 0
         for step_id in range(current_step):
             current_percent = float(step_id) / (end_step - 1)
-            print current_percent, pixels_per_step
+            #print current_percent, pixels_per_step
             total_pixels += pixels_per_step * (
                 land_cover_start_fractions[lu_code] * (1-current_percent) + 
                 land_cover_end_fractions[lu_code] * current_percent)
@@ -92,33 +92,25 @@ def expand_lu_type(
     edge_distance[zero_distance_mask] = numpy.inf
     
     result_array = base_array.copy()
-    if land_cover_start_fractions is None:
-        increasing_distances = numpy.argsort(edge_distance.flat)
+    pixels_converted_so_far = 0
+    pixel_count = collections.defaultdict(int)
+    for lu_code in land_cover_start_fractions:
+        lu_edge_distance = edge_distance.copy()
+        lu_edge_distance[base_array != lu_code] = numpy.inf
+        increasing_distances = numpy.argsort(lu_edge_distance.flat)
+        lu_pixels_to_convert = int(round(step_percent(lu_code)))
+        result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
+        pixels_converted_so_far += int(lu_pixels_to_convert)
+        pixel_count[lu_code] += int(lu_pixels_to_convert)
+    edge_distance[result_array == expansion_id] = numpy.inf
+    increasing_distances = numpy.argsort(edge_distance.flat)
+    #print expansion_pixel_count - pixels_converted_so_far
+    
+    remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
+    for lu_code in numpy.unique(remaining_pixels):
+        pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
+    result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
         
-        remaining_pixels = result_array.flat[increasing_distances[0:expansion_pixel_count]]
-        for lu_code in numpy.unique(remaining_pixels):
-            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
-        result_array.flat[increasing_distances[0:expansion_pixel_count]] = expansion_id
-    else:
-        pixels_converted_so_far = 0
-        pixel_count = collections.defaultdict(int)
-        for lu_code in land_cover_start_fractions:
-            lu_edge_distance = edge_distance.copy()
-            lu_edge_distance[base_array != lu_code] = numpy.inf
-            increasing_distances = numpy.argsort(lu_edge_distance.flat)
-            lu_pixels_to_convert = int(round(step_percent(lu_code)))
-            result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-            pixels_converted_so_far += int(lu_pixels_to_convert)
-            pixel_count[lu_code] += int(lu_pixels_to_convert)
-        edge_distance[result_array == expansion_id] = numpy.inf
-        increasing_distances = numpy.argsort(edge_distance.flat)
-        print expansion_pixel_count - pixels_converted_so_far
-        
-        remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
-        for lu_code in numpy.unique(remaining_pixels):
-            pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
-        result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
-            
     return result_array, pixel_count
 
 
@@ -859,29 +851,14 @@ if __name__ == '__main__':
         #These are the LULCs to take directly from table, everything else is
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 17, 0],
-        'percent_per_step': 1,
         'converting_crop': 17,
         'scenario_lulc_base_map_filename': 'lulc',
-        'scenario_conversion_steps': 400,
+        'scenario_conversion_steps': 5,
         'converting_id_list': [12, 17, 120],
+        #Becky calculated this for MGDS
+        'pixels_to_convert_per_step': 208,
     }
 
-    
-    #set up args for the composite scenario
-    lulc_ds = gdal.Open(ARGS['scenario_lulc_base_map_filename'])
-    lulc_band = lulc_ds.GetRasterBand(1)
-    
-    ARGS['pixels_to_convert_per_step'] = int(numpy.count_nonzero(lulc_band.ReadAsArray() == ARGS['converting_crop']) * ARGS['percent_per_step'] / 100.0)
-    lulc_band = None
-    lulc_ds = None
-    
-    print 'pixels_to_convert_per_step %s' % ARGS['pixels_to_convert_per_step']
-    
-    #Set up args for the forest core scenario
-    ARGS['output_table_filename'] = (
-        'forest_core_fragmentation_carbon_stock_change.csv')
-    analyze_forest_core_fragmentation(ARGS)
-   
     #set up args for the composite scenario
     ARGS['output_table_filename'] = (
         'composite_carbon_stock_change_20_80.csv')
@@ -891,13 +868,16 @@ if __name__ == '__main__':
         2: .2,
         9: .8
         }
-    
     ARGS['land_cover_end_fractions'] = {
         2: .8,
         9: .2
         }
-        
     analyze_composite_carbon_stock_change(ARGS)
+    
+    #Set up args for the forest core scenario
+    ARGS['output_table_filename'] = (
+        'forest_core_fragmentation_carbon_stock_change.csv')
+    analyze_forest_core_fragmentation(ARGS)
     
     #Set up args for the forest core scenario
     ARGS['output_table_filename'] = (
@@ -910,7 +890,7 @@ if __name__ == '__main__':
     ARGS['conversion_lucode'] = 9 #woody savannna    
     analyze_lu_expansion(ARGS)
     
-    #Set up args for the forest only scenario
+    #Set up args for the forest edge erosion scenario
     ARGS['output_table_filename'] = (
         'forest_edge_erosion_carbon_stock_change.csv')
     analyze_forest_edge_erosion(ARGS)
