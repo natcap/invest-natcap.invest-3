@@ -104,16 +104,16 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             Return a tuple (sweep_line, skip_nodes) with the updated sweep_line
             and skip_nodes"""
 
-    def insert_new_skip_node(node, skip_nodes):
-        """Add a new skip node after 'node'. Assumes node's span is 4
+    def insert_new_skip_node(node, upper_node, skip_nodes):
+        """Add a new skip node after 'node[up]'. Assumes node[up]'s span is 4
         
             Inputs: 
-                -node: the overstretched node (span is too large) that needs 
+                -node: the overstretched node (span is too large) that needs
                     to be offloaded by a new intermediate node.
                 -skip_nodes: dictionary of skip nodes to which the new skip
                 node should be added.
             
-            Returns nothing"""
+            Returns the span at the node above, otherwise 'None'"""
         message = 'Span for node ' + str(node['distance']) + \
         ' expected to be 4, instead is ' + \
         str(node['up']['span'])
@@ -127,8 +127,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         below['up'] = skip_nodes[current_distance]
         before['next'] = skip_nodes[current_distance]
         before['span'] = 2
+        span = None
+        if upper_node is not None:
+            upper_node['span'] += 1
+            span = upper_node['span']
+            
+        return span 
 
-    def update_skip_node_span(pixel, level, skip_nodes):
+    def update_skip_node_span(pixel, level, hierarchy, skip_nodes):
         """Update span for pixel and insert as many skip nodes as necessary. 
         Create additional hierarchical levels as necessary.
         
@@ -147,7 +153,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             # Adjusting span if too large
             if pixel['up']['span'] > 3:
                 # Insert the missing skip_node
-                insert_new_skip_node(pixel, skip_nodes[level])
+                upper_node = hierarchy[level-1]
+                span = insert_new_skip_node(pixel, skip_nodes[level])
                 # Create a new level if needed
                 if (len(skip_nodes[level]) == 4) and \
                     (len(skip_nodes) == level + 1):
