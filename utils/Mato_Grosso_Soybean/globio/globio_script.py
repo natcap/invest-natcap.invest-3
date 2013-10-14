@@ -15,8 +15,6 @@
    first the soybean expansion percent and the second, the amount of carbon
    stocks on the landscape for each of the three scenarios above"""
 
-SAVE_MAPS = 0 #0 = none, 1 only first and last, 2 = everything 
-
 import gdal
 import numpy
 import scipy.ndimage
@@ -72,23 +70,18 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #Step 1.2a: If there does not exist a pre-created sum_yieldgap or
     #Sum together EarthStat data on crop-specific yield gaps to get 
     #sum_yieldgap. Here, these 8 crops represent the only crops present in Mato 
-    #Grosso. 
+    #Grosso.
     
-    if not os.path.exists(args["sum_yieldgap_uri"]): #if the sum_yieldgap_uri does not point to a geotiff, the program will recreate it.
-        sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
-        crops_to_sum = os.listdir(args['yield_gap_data_folder'])
-        #crops_to_sum = ["cassava_yieldgap","groundnut_yieldgap","maize_yieldgap","rapeseed_yieldgap","rice_yieldgap","sorghum_yieldgap","soybean_yieldgap","sugarcane_yieldgap",]
-        for i in crops_to_sum:  
-            crop_yieldgap_uri = os.path.join(args["yield_gap_data_folder"],i)
-            print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
-            to_add = geotiff_to_array(crop_yieldgap_uri)
-            to_add_sized = np.zeros(sum_yieldgap.shape)
-            to_add_sized = to_add  #this line is a bad hack because my yieldgap data had 2 extra rows on the top and 1 on the bottom. I bet Rich has a much better solution to this in raster_utils, but I didn't have time to implement.
-            sum_yieldgap += to_add_sized
-        export_array_as_geotiff(sum_yieldgap,args["sum_yieldgap_uri"],args["input_lulc_uri"],0)     
-        args['sum_yieldgap_array'] = sum_yieldgap
-    else: 
-        args['sum_yieldgap_array']= geotiff_to_array(args['sum_yieldgap_uri'])
+    sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
+    crops_to_sum = os.listdir(args['yield_gap_data_folder'])
+    for crop_filename in crops_to_sum:  
+        crop_yieldgap_uri = os.path.join(args["yield_gap_data_folder"], crop_filename)
+        print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
+        crop_yieldgap_array = geotiff_to_array(crop_yieldgap_uri)
+        sum_yieldgap += crop_yieldgap_array
+    export_array_as_geotiff(sum_yieldgap, args["sum_yieldgap_uri"], args["input_lulc_uri"], 0)     
+    args['sum_yieldgap_array'] = sum_yieldgap
+
     #Step 1.2b: Assign high/low according to threshold based on yieldgap.    
     high_low_intensity_agriculture = np.zeros(args["input_lulc_array"].shape)
     #high_low_intensity_agriculture_uri = args["export_folder"]+"high_low_intensity_agriculture_"+args['run_id']+".tif"
@@ -127,7 +120,7 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #Step 1.4b: Stamp ag_split classes onto input LULC
     globio_lulc = np.where(broad_lulc_shrub_split == 130 ,four_types_of_forest, broad_lulc_shrub_split) #stamp primary vegetation
 
-    #export_array_as_geotiff(globio_lulc,args["export_folder"]+"globio_lulc_"+args['run_id']+".tif",args['input_lulc_uri'],0)    
+    #export_array_as_geotiff(globio_lulc,args["export_folder"]+"globio_lulc_"+args['run_id']+".tif",args['input_lulc_uri'],0)
     #make_map(globio_lulc)
     return globio_lulc 
 
@@ -608,7 +601,7 @@ if __name__ == '__main__':
         #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
         'sum_yieldgap_uri': './sum_yieldgap.tif', #TODO: fix so that this smartly chooses to load premade or folder-based calculation  
         #if sum_yieldgap_uri is None, this variable indicates where crop-specific yieldgap maps (available at earthstat.org, see documentation) are placed. The script then aggregates them to creat sum_yieldgap.tif
-        'yield_gap_data_folder': './crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
+        'yield_gap_data_folder': './inputs_mgds_globio/crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
         #uri to geotiff  of potential vegetation
         'potential_vegetation_uri': './potential_vegetation.tif',  
         #uri to geotiff of proportion in pasture
