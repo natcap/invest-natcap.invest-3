@@ -209,7 +209,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Need to re-organize the sweep line:
     pixel, hierarchy = find_pixel_before_fast( \
         sweep_line, skip_nodes, distance)
-    print('---pixel before addition', pixel if pixel is None else pixel['distance'])
+    #print('---pixel before addition', pixel if pixel is None else pixel['distance'])
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
@@ -233,7 +233,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 skip_node = skip_node['up']
                 skip_node['distance'] = distance
                 skip_node['down'] = skip_nodes[level-1][distance]
-                print('level', level, 'levels available', len(skip_nodes))
+                #print('level', level, 'levels available', len(skip_nodes))
                 skip_nodes[level][distance] = skip_node
                 del skip_nodes[level][second]
                 if level < len(skip_nodes) -1:
@@ -249,6 +249,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         # The old first is not first anymore: shouldn't point up
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
+        print('making closest point to ' + str(sweep_line[distance]['distance']))
         sweep_line['closest'] = sweep_line[distance]
     # Add after the beginning
     else:
@@ -589,9 +590,14 @@ def skip_list_is_consistent(linked_list, skip_nodes):
 
     # 1.8-chain length is 1 less than len(linked_list)
     if (chain_length != len(linked_list) -1):
-        message = 'Discrepancy between the size of the linked list (' + \
-        str(len(linked_list)) + 'and the number of nodes chained together ' + \
-        str(chain_length)
+        message = 'Discrepancy between the nodes in the linked list (' + \
+        str(len(linked_list)-1) + ') and the number of nodes chained together ' + \
+        str(chain_length) + ". Does 'closest' point to the second node?"
+        sorted_keys = sorted(linked_list.keys())
+        for key in sorted_keys:
+            node = linked_list[key]
+            next_node = None if node['next'] is None else node['next']['distance']
+            print('distance', key, 'next', next_node)
         return (False, message)
     # 1.9-linked_list['closest'] is the smallest distance
     # True if 1.5 and 1.8 are true
