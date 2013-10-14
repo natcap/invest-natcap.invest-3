@@ -110,6 +110,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             Inputs: 
                 -node: the overstretched node (span is too large) that needs
                     to be offloaded by a new intermediate node.
+                -upper_node: the upper skip node which span should be updated.
+                The variable is None if no upper node exists.
                 -skip_nodes: dictionary of skip nodes to which the new skip
                 node should be added.
             
@@ -132,7 +134,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             upper_node['span'] += 1
             span = upper_node['span']
             
-        return span 
+        return span
 
     def update_skip_node_span(pixel, level, hierarchy, skip_nodes):
         """Update span for pixel and insert as many skip nodes as necessary. 
@@ -153,8 +155,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             # Adjusting span if too large
             if pixel['up']['span'] > 3:
                 # Insert the missing skip_node
-                upper_node = hierarchy[level-1]
-                span = insert_new_skip_node(pixel, skip_nodes[level])
+                upper_node = None #hierarchy[level-1]
+                span = insert_new_skip_node(pixel, upper_node, skip_nodes[level])
                 # Create a new level if needed
                 if (len(skip_nodes[level]) == 4) and \
                     (len(skip_nodes) == level + 1):
@@ -252,7 +254,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         if sweep_line[distance]['up'] is not None:
             print('Increasing span ' + str(sweep_line[distance]['up']['span']) + \
             ' of new front pixel ' + str(distance))
-        update_skip_node_span(sweep_line[distance], 0, skip_nodes)
+        update_skip_node_span(sweep_line[distance], 0, hierarchy, skip_nodes)
         # The old first is not first anymore: shouldn't point up
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
@@ -269,7 +271,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         if hierarchy:
             #for p in range(len(hierarchy)):
             #    print('hierarchy', p, hierarchy[p]['distance'])
-            update_skip_node_span(hierarchy[-1]['down'], 0, skip_nodes)
+            update_skip_node_span(hierarchy[-1]['down'], 0, hierarchy, skip_nodes)
 
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
