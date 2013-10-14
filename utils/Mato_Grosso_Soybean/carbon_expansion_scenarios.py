@@ -172,7 +172,7 @@ def analyze_composite_carbon_stock_change(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
     
     output_count_table = open(args['output_pixel_count_filename'], 'wb')
     unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
@@ -207,7 +207,7 @@ def analyze_composite_carbon_stock_change(args):
         #Dump the current percent iteration's carbon stocks to the csv file
         total_stocks = numpy.sum(carbon_stocks)
         print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
         output_table.flush()
         
         if percent % 100 == 0:
@@ -528,7 +528,7 @@ def analyze_forest_edge_erosion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -546,7 +546,7 @@ def analyze_forest_edge_erosion(args):
         #Dump the current percent iteration's carbon stocks to the csv file
         total_stocks = numpy.sum(carbon_stocks)
         print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step']
@@ -618,7 +618,7 @@ def analyze_forest_core_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Total Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -636,7 +636,7 @@ def analyze_forest_core_expansion(args):
         #Dump the current percent iteration's carbon stocks to the csv file
         total_stocks = numpy.sum(carbon_stocks)
         print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step']
@@ -703,7 +703,7 @@ def analyze_forest_core_fragmentation(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -721,7 +721,7 @@ def analyze_forest_core_fragmentation(args):
         #Dump the current percent iteration's carbon stocks to the csv file
         total_stocks = numpy.sum(carbon_stocks)
         print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
         output_table.flush()
 
         deepest_edge_index = args['pixels_to_convert_per_step']
