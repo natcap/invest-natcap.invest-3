@@ -47,9 +47,9 @@ def new_raster_from_base_uri(
 
     
 def expand_lu_type(
-    base_array, nodata, expansion_id, current_step, pixels_per_step,
-    land_cover_start_fractions=None, land_cover_end_fractions=None,
-    end_step=None):
+    base_array, nodata, expansion_id, converting_id_list, current_step, 
+    pixels_per_step, land_cover_start_fractions=None,
+    land_cover_end_fractions=None, end_step=None):
     """Given a base array, and a number of pixels to expand
         from, buffer out a conversion of that number of pixels
         
@@ -57,6 +57,8 @@ def expand_lu_type(
             land cover IDs
         nodata - value in base_array to ignore
         expansion_id - the ID type to expand
+        converting_id_list - a list of land cover types that the simulation will
+            calculate distances from
         expansion_pixel_count - convert this number of pixels
         land_cover_start_percentages/land_cover_end_percentages -
             optional, if defined is a dictionary of land cover types
@@ -183,7 +185,7 @@ def analyze_composite_carbon_stock_change(args):
         try:
             expanded_lulc_array, pixel_count = expand_lu_type(
                 scenario_lulc_array, scenario_nodata, args['converting_crop'], 
-                percent, args['pixels_to_convert_per_step'], 
+                args['converting_id_list'], percent, args['pixels_to_convert_per_step'], 
                 args['land_cover_start_fractions'], 
                 args['land_cover_end_fractions'], 
                 args['scenario_conversion_steps'])
@@ -920,6 +922,7 @@ if __name__ == '__main__':
         'converting_crop': 17,
         'scenario_lulc_base_map_filename': 'lulc',
         'scenario_conversion_steps': 400,
+        'converting_id_list': [12, 17, 120],
     }
 
     
