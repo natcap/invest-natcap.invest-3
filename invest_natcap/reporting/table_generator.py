@@ -3,6 +3,8 @@ import sys
 import math
 import webbrowser
 
+from invest_natcap import raster_utils
+
 def generate_table(table_dict, attributes=None):
     """Takes in a dictionary representation of a table and generates a String of
         the the table in the form of hmtl
@@ -65,6 +67,26 @@ def generate_table(table_dict, attributes=None):
     table_string = table_string + '</tbody></table>'
 
     return table_string
+
+
+def process_table_input_csv(data_uri, key):
+    """Construct a dictionary representation of the CSV file
+
+        data_uri - a URI to a CSV file
+
+        key - a string that represents the column header for the unique rows
+
+        returns - a dictionary representation of the CSV file
+    """
+
+    inter_dict = raster_utils.get_lookup_from_csv(data_uri, key)
+
+    table_dict = {}
+
+    for key, value in inter_dict.iteritems():
+        break
+
+    pass
 
 def get_column_headers(col_dict):
     """Iterate through the dictionary and pull out the column headers and store
