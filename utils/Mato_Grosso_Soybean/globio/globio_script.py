@@ -81,7 +81,7 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     
     
     #sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
-    uris_to_align = [args['input_lulc_uri'], args['potential_vegetation_uri']] + [
+    uris_to_align = [args['input_lulc_uri'], args['potential_vegetation_uri'], args['pasture_uri']] + [
         os.path.join(args['yield_gap_data_folder'],
         crop_filename) for crop_filename in os.listdir(args['yield_gap_data_folder'])]
 
@@ -97,7 +97,7 @@ def create_globio_lulc(args, scenario_lulc_array=None):
         dataset_to_bound_index=0, assert_datasets_projected=False)
     
     sum_yieldgap = None
-    for crop_yieldgap_uri in aligned_uris[2::]:
+    for crop_yieldgap_uri in aligned_uris[3::]:
         print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
         if sum_yieldgap is None:
             sum_yieldgap = geotiff_to_array(crop_yieldgap_uri)
@@ -122,7 +122,8 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     print 'Splitting shrub/grassland into human-made pasture, grazing and pristine.'
     potential_vegetation_array = geotiff_to_array(aligned_uris[1])
     three_types_of_scrubland = np.where((potential_vegetation_array <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
-    three_types_of_scrubland = np.where((three_types_of_scrubland == 5.0) & (args['pasture_array'] < args['pasture_threshold']), 1.0, three_types_of_scrubland) 
+    pasture_array = geotiff_to_array(aligned_uris[2])
+    three_types_of_scrubland = np.where((three_types_of_scrubland == 5.0) & (pasture_array < args['pasture_threshold']), 1.0, three_types_of_scrubland) 
 
     #Step 1.3b: Stamp ag_split classes onto input LULC
     broad_lulc_shrub_split = np.where(broad_lulc_ag_split==131, three_types_of_scrubland, broad_lulc_ag_split)
@@ -649,7 +650,6 @@ if __name__ == '__main__':
 
     #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri'])
-    ARGS['pasture_array']= geotiff_to_array(ARGS['pasture_uri'])
     ARGS['mg_definition_array']= geotiff_to_array(ARGS['mg_definition_uri']) #1 = in MG, 0 = notprintin MG
     ARGS['roads_array']= geotiff_to_array(ARGS['roads_uri'])
     ARGS['highways_array']= geotiff_to_array(ARGS['highways_uri'])
