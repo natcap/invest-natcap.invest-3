@@ -81,8 +81,7 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     
     
     #sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
-    lulc_uri = args["input_lulc_uri"]
-    uris_to_align = [lulc_uri] + [
+    uris_to_align = [args['input_lulc_uri'], args['potential_vegetation_uri']] + [
         os.path.join(args['yield_gap_data_folder'],
         crop_filename) for crop_filename in os.listdir(args['yield_gap_data_folder'])]
 
@@ -90,7 +89,7 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     aligned_uris = [raster_utils.temporary_filename() for _ in uris_to_align] 
     print 'aligning yield gap uris %s' % (str(uris_to_align))
     
-    out_pixel_size = raster_utils.get_cell_size_from_uri(lulc_uri)
+    out_pixel_size = raster_utils.get_cell_size_from_uri(args["input_lulc_uri"])
     
     raster_utils.align_dataset_list(
         uris_to_align, aligned_uris, ['nearest'] * len(aligned_uris),
@@ -121,7 +120,8 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #livestock grazing areas, and man-made pastures. 
     three_types_of_scrubland = np.zeros(args['input_lulc_array'].shape)
     print 'Splitting shrub/grassland into human-made pasture, grazing and pristine.'
-    three_types_of_scrubland = np.where((args['potential_vegetation_array'] <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
+    potential_vegetation_array = geotiff_to_array(aligned_uris[1])
+    three_types_of_scrubland = np.where((potential_vegetation_array <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
     three_types_of_scrubland = np.where((three_types_of_scrubland == 5.0) & (args['pasture_array'] < args['pasture_threshold']), 1.0, three_types_of_scrubland) 
 
     #Step 1.3b: Stamp ag_split classes onto input LULC
@@ -625,7 +625,7 @@ if __name__ == '__main__':
         #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
         'yield_gap_data_folder': './inputs_mgds_globio/crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
         #uri to geotiff  of potential vegetation
-        'potential_vegetation_uri': './potential_vegetation.tif',  
+        'potential_vegetation_uri': './inputs_mgds_globio/potential_vegetation_proj.tif',  
         #uri to geotiff of proportion in pasture
         'pasture_uri': './pasture.tif',
         #uri to geotiff that defines the zone of interest. Can be  constructed from any shapefile of any region, defined as 1 = within region, 0 = not in region.  If data need to be buffered, ensure that the extent of this map is not at the border, but rather at the extent of the buffered border.
@@ -649,7 +649,6 @@ if __name__ == '__main__':
 
     #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri'])
-    ARGS['potential_vegetation_array']= geotiff_to_array(ARGS['potential_vegetation_uri'])
     ARGS['pasture_array']= geotiff_to_array(ARGS['pasture_uri'])
     ARGS['mg_definition_array']= geotiff_to_array(ARGS['mg_definition_uri']) #1 = in MG, 0 = notprintin MG
     ARGS['roads_array']= geotiff_to_array(ARGS['roads_uri'])
