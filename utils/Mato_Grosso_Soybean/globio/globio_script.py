@@ -97,7 +97,7 @@ def create_globio_lulc(args, scenario_lulc_array=None):
         dataset_to_bound_index=0, assert_datasets_projected=False)
     
     sum_yieldgap = None
-    for crop_yieldgap_uri in aligned_uris[1::]:
+    for crop_yieldgap_uri in aligned_uris[2::]:
         print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
         if sum_yieldgap is None:
             sum_yieldgap = geotiff_to_array(crop_yieldgap_uri)
