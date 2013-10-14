@@ -29,6 +29,8 @@ from numpy import copy
 import scipy
 import scipy.ndimage.filters
 import matplotlib.pyplot as plt
+from invest_natcap import raster_utils
+
 
 def create_globio_infrastructure(args):
     """Takes publicly available data and converts to a raster of infrastructure
@@ -51,7 +53,11 @@ def create_globio_infrastructure(args):
     
     
 def create_globio_lulc(args, scenario_lulc_array=None):
-    """Converts MODIS based LULC map into GLOBIO compatible LULC."""    
+    """Converts MODIS based LULC map into GLOBIO compatible LULC.
+    
+    normally gets lulc data from args['input_lulc_uri'] but ignores that
+    if scenario_lulc_array is defined. scenario_lulc_array should be the same
+    shape as args['input_lulc_array']"""    
     
     #Step 1: Calculate MSA(LU). This requires converting input LULC map to 
     #GLOBIO-compatible LULC classes and multiplying these classes by their MSA 
@@ -72,22 +78,40 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #sum_yieldgap. Here, these 8 crops represent the only crops present in Mato 
     #Grosso.
     
-    sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
-    crops_to_sum = os.listdir(args['yield_gap_data_folder'])
-    for crop_filename in crops_to_sum:  
-        crop_yieldgap_uri = os.path.join(args["yield_gap_data_folder"], crop_filename)
-        print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
-        crop_yieldgap_array = geotiff_to_array(crop_yieldgap_uri)
-        sum_yieldgap += crop_yieldgap_array
-    export_array_as_geotiff(sum_yieldgap, args["sum_yieldgap_uri"], args["input_lulc_uri"], 0)     
-    args['sum_yieldgap_array'] = sum_yieldgap
+    
+    
+    #sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
+    lulc_uri = args["input_lulc_uri"]
+    uris_to_align = [lulc_uri] + [
+        os.path.join(args['yield_gap_data_folder'],
+        crop_filename) for crop_filename in os.listdir(args['yield_gap_data_folder'])]
 
+    #stack lulc and yield gap rasters so they all align
+    aligned_uris = [raster_utils.temporary_filename() for _ in uris_to_align] 
+    print 'aligning yield gap uris %s' % (str(uris_to_align))
+    
+    out_pixel_size = raster_utils.get_cell_size_from_uri(lulc_uri)
+    
+    raster_utils.align_dataset_list(
+        uris_to_align, aligned_uris, ['nearest'] * len(aligned_uris),
+        out_pixel_size, "dataset", dataset_to_align_index=0,
+        dataset_to_bound_index=0, assert_datasets_projected=False)
+    
+    sum_yieldgap = None
+    for crop_yieldgap_uri in aligned_uris[1::]:
+        print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
+        if sum_yieldgap is None:
+            sum_yieldgap = geotiff_to_array(crop_yieldgap_uri)
+        else:
+            crop_yieldgap_array = geotiff_to_array(crop_yieldgap_uri)
+            sum_yieldgap += crop_yieldgap_array   
+    print 'total sum is %s' % numpy.sum(sum_yieldgap)
     #Step 1.2b: Assign high/low according to threshold based on yieldgap.    
     high_low_intensity_agriculture = np.zeros(args["input_lulc_array"].shape)
     #high_low_intensity_agriculture_uri = args["export_folder"]+"high_low_intensity_agriculture_"+args['run_id']+".tif"
     high_intensity_agriculture_threshold = 1 #hardcode for now until UI is determined. Eventually this is a user input. Do I bring it into the ARGS dict?
     print "Splitting agriculture into high/low intensity."
-    high_low_intensity_agriculture = np.where(args['sum_yieldgap_array'] < float(args['yieldgap_threshold']*high_intensity_agriculture_threshold), 9.0, 8.0) #45. = average yieldgap on global cells with nonzero yieldgap.
+    high_low_intensity_agriculture = np.where(sum_yieldgap < float(args['yieldgap_threshold']*high_intensity_agriculture_threshold), 9.0, 8.0) #45. = average yieldgap on global cells with nonzero yieldgap.
 
 
     #Step 1.2c: Stamp ag_split classes onto input LULC
@@ -599,8 +623,6 @@ if __name__ == '__main__':
         #export location
         'export_folder': './globio_output/',    
         #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
-        'sum_yieldgap_uri': './sum_yieldgap.tif', #TODO: fix so that this smartly chooses to load premade or folder-based calculation  
-        #if sum_yieldgap_uri is None, this variable indicates where crop-specific yieldgap maps (available at earthstat.org, see documentation) are placed. The script then aggregates them to creat sum_yieldgap.tif
         'yield_gap_data_folder': './inputs_mgds_globio/crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
         #uri to geotiff  of potential vegetation
         'potential_vegetation_uri': './potential_vegetation.tif',  
