@@ -131,8 +131,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         before['span'] = 2
         span = None
         if upper_node is not None:
+            print('Updating upper node ' + str(upper_node['distance']) + '-' + \
+            str(None) if upper_node['next'] is None else \
+            str(upper_node['next']['distance']) + ' span from ' + \
+            str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1))
             upper_node['span'] += 1
             span = upper_node['span']
+        else:
+            print('Upper node is None')
             
         return span
 
@@ -155,8 +161,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             # Adjusting span if too large
             if pixel['up']['span'] > 3:
                 # Insert the missing skip_node
-                upper_node = None #hierarchy[level-1]
-                span = insert_new_skip_node(pixel, upper_node, skip_nodes[level])
+                print('hierarchy depth is ' + str(len(hierarchy)))
+                for node in hierarchy:
+                    print('  node ', node['distance'], None if node['next'] is \
+                    None else node['next']['distance'])
+                upper_node = \
+                hierarchy[level+1] if (len(hierarchy)>level+1) else None
+                span = \
+                insert_new_skip_node(pixel, upper_node, skip_nodes[level])
                 # Create a new level if needed
                 if (len(skip_nodes[level]) == 4) and \
                     (len(skip_nodes) == level + 1):
@@ -189,7 +201,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 list_is_consistent, message = \
                     skip_list_is_consistent(sweep_line, skip_nodes)
                 # List is consistent, we're done: break out of the while
-                if list_is_consistent:
+                if (span == 2) or (span == 3):
                     break
                 # We assume the only problem is potential intermediate skip
                 # nodes that might be missing in the upper levels
@@ -258,7 +270,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         # The old first is not first anymore: shouldn't point up
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
-        print('making closest point to ' + str(sweep_line[distance]['distance']))
+        #print('making closest point to ' + str(sweep_line[distance]['distance']))
         sweep_line['closest'] = sweep_line[distance]
     # Add after the beginning
     else:
@@ -330,7 +342,7 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
                 it doesn't exist (either 'distance' is the first cell, or the 
                 sweep_line is empty).
                 -hierarchy is the list of intermediate skip nodes starting from
-                the top node up to the node right above the pixel.
+                the bottom node right above the active pixel up to the top node.
             """
     hierarchy = []
     if 'closest' in sweep_line:
@@ -348,7 +360,11 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
         previous = pixel
         # No smaller distance available
         if pixel['distance'] >= distance:
-            return (None, hierarchy)
+            # Add all the nodes all the way to the active pixel
+            while hierarchy and hierarchy[-1]['down'] is not None:
+                hierarchy.append(hierarchy[-1]['down'])
+            # Return the hierarchy list without the active pixel
+            return (None, hierarchy[-2::-1])
         # Didn't find distance, continue
         while (pixel['distance'] <= distance):
             # go right before distance is passed
@@ -363,13 +379,13 @@ def find_pixel_before_fast(sweep_line, skip_nodes, distance):
             # Try to go down 1 level
             # If not possible, return the pixel itself.
             if pixel['down'] is None:
-                return (pixel, hierarchy)
+                return (pixel, hierarchy[::-1])
             hierarchy.append(pixel)
             span = pixel['span']
             pixel = pixel['down']
     # Empty sweep_line, there's no cell to return
     else:
-        return (None, hierarchy)
+        return (None, hierarchy[::-1])
 
 def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Find an active pixel based on distance. 
@@ -606,7 +622,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
         for key in sorted_keys:
             node = linked_list[key]
             next_node = None if node['next'] is None else node['next']['distance']
-            print('distance', key, 'next', next_node)
+            #print('distance', key, 'next', next_node)
         return (False, message)
     # 1.9-linked_list['closest'] is the smallest distance
     # True if 1.5 and 1.8 are true
@@ -731,15 +747,15 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 # Step 1, get the last node of the current higher node
                 last_node = node['down']
                 #print('level', l, 'n', n)
-                print('first node spanned by [' + str(l) + ']['+str(n) + \
-                ']' , last_node['distance'])
+                #print('first node spanned by [' + str(l) + ']['+str(n) + \
+                #']' , last_node['distance'])
                 for i in range(node['span'] -1):
                     last_node = last_node['next']
-                    print('next is', last_node['distance'])
-                print('after last is', last_node['next']['distance'])
+                    #print('next is', last_node['distance'])
+                #print('after last is', last_node['next']['distance'])
                 next_node = node['next']['down']
-                print('first node spanned by [' + str(l) + \
-                ']['+str(next_node['distance']) + ']' , next_node['distance'])
+                #print('first node spanned by [' + str(l) + \
+                #']['+str(next_node['distance']) + ']' , next_node['distance'])
                 # Last spanned node should be connected to the first one \
                 # from the next higher node.
                 if last_node['next']['distance'] != next_node['distance']:
