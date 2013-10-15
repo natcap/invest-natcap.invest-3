@@ -172,7 +172,7 @@ def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
     msa_f = np.where((ffqi <= .42877),0.3,msa_f)
     return msa_f
     
-def calc_msa_i(distance_to_infrastructure, input_lulc, args, iteration_number):
+def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
     print "Calculating MSA(Infrastructure)"
    
     
@@ -364,7 +364,7 @@ def globio_analyze_forest_expansion(args):
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
+        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
@@ -433,7 +433,7 @@ def globio_analyze_forest_core_expansion(args):
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
+        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
@@ -506,7 +506,7 @@ def globio_analyze_forest_core_fragmentation(args):
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
+        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
@@ -588,7 +588,7 @@ def globio_analyze_lu_expansion(args):
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
+        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
