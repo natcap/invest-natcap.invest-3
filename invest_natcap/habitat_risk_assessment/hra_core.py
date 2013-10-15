@@ -808,12 +808,22 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         else:
             return -1.
 
-    def low_risk_raster(pixel):
+    def med_risk_raster(pixel):
 
         percent = float(pixel)/ curr_top_risk
 
         #low risk is classified as the bottom two thirds of risk
-        if 0 < percent <= .666:
+        if .333 < percent <= .666:
+            return 1
+        else:
+            return -1.
+    
+    def low_risk_raster(pixel):
+
+        percent = float(pixel)/ curr_top_risk
+
+        #low risk is classified as the bottom one third of risk
+        if 0 < percent <= .333:
             return 1
         else:
             return -1.
@@ -838,7 +848,21 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         #a shapefile. 
         raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
 
-        #Now, want to do the low + medium areas as well.
+        #Medium area would be here.
+        m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
+        m_out_uri = os.path.join(dir, '[' + h + ']_MED_RISK.shp')
+        
+        raster_utils.vectorize_datasets([old_ds_uri], med_risk_raster, m_out_uri_r,
+                        gdal.GDT_Float32, -1., grid_size, "union", 
+                        resample_method_list=None, dataset_to_align_index=0,
+                        aoi_uri=None)
+
+        #Use gdal.Polygonize to take the raster, which should have only
+        #data where there are high percentage risk values, and turn it into
+        #a shapefile. 
+        raster_to_polygon(m_out_uri_r, m_out_uri, h, 'VALUE')
+        
+        #Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
         l_out_uri = os.path.join(dir, '[' + h + ']_LOW_RISK.shp')
         
