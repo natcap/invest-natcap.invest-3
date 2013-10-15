@@ -637,10 +637,10 @@ if __name__ == '__main__':
         #uri to geotiff of lulc data. the values in this map must correspond to the values in lulc_conversion_table_uri 
         'input_lulc_uri': './inputs_mgds_globio/lulc_2008.tif',
         #the next 4 lines define the 4 elements that I used to construct a map of infrastructure. These were drawn from Digital Chart of the World and the EMBRAPA dataset from the Brazilian government. The globio script sums up these 4 sources to createa binary defined map of 1=is_infrastructure, 0=not_infrastructure and then applies the globio method to that.
-        'roads_uri': './roads.tif',
-        'highways_uri': './highways.tif',
-        'transmission_lines_uri': './transmission_lines.tif',
-        'canals_uri': './canals.tif',
+        'roads_uri': './inputs_mgds_globio/roads_proj.shp',
+        'highways_uri': './inputs_mgds_globio/highways_proj.shp',
+        'transmission_lines_uri': './inputs_mgds_globio/transmission_lines_proj.shp',
+        'canals_uri': './inputs_mgds_globio/canals_proj.shp',
         #Default of .5. pasture data is from Ramankutty  2008 and is defined as a proportion, (0,1). The threshold defined in this variable declares that any land less than the threshold is pristine vegetation, else it is defined as livestock grazing.
         'pasture_threshold': .5,   
         #areas with yieldgaps greater than this threshold are defined as low intensity (because they have not used intensification methods to reach their achievable yield) Defined in terms of tons not produed per 5min grid cell. 45.6 is the default value, representing 50% of the global average yieldgap.
@@ -658,12 +658,31 @@ if __name__ == '__main__':
     raster_utils.rasterize_layer_uri(
         aoi_raster_uri, ARGS['aoi_uri'], burn_values=[1])
     ARGS['aoi_array']= geotiff_to_array(aoi_raster_uri) #1 = in MG, 0 = notprintin MG
-    ARGS['roads_array']= geotiff_to_array(ARGS['roads_uri'])
-    ARGS['highways_array']= geotiff_to_array(ARGS['highways_uri'])
-    ARGS['transmission_lines_array']= geotiff_to_array(ARGS['transmission_lines_uri'])
-    ARGS['canals_array']= geotiff_to_array(ARGS['canals_uri'])
-
-
+    
+    roads_raster_uri = 'raster_roads.tif'#raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], roads_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        roads_raster_uri, ARGS['roads_uri'], burn_values=[1])
+    ARGS['roads_array']= geotiff_to_array(roads_raster_uri)
+    
+    highways_raster_uri = 'raster_highways.tif'#raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], highways_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        highways_raster_uri, ARGS['highways_uri'], burn_values=[1])
+    ARGS['highways_array']= geotiff_to_array(highways_raster_uri)
+    
+    transmission_lines_raster_uri = 'raster_transmission_lines.tif'#raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], transmission_lines_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        transmission_lines_raster_uri, ARGS['transmission_lines_uri'], burn_values=[1])
+    ARGS['transmission_lines_array']= geotiff_to_array(transmission_lines_raster_uri)
+    
+    canals_raster_uri = 'raster_canals.tif'#raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], canals_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        canals_raster_uri, ARGS['canals_uri'], burn_values=[1])
+    ARGS['canals_array']= geotiff_to_array(canals_raster_uri)
+    
     #Set up ARGS for the forest core expansion scenario
     ARGS['output_table_filename'] = (
         './export/globio_forest_core_expansion_msa_change_'+ARGS['run_id']+'.csv')
