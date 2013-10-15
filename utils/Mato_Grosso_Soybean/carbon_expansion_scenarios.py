@@ -23,6 +23,30 @@ import collections
 import errno
 from multiprocessing import Process
 
+def lowpriority():
+    """ Set the priority of the process to below-normal."""
+
+    import sys
+    try:
+        sys.getwindowsversion()
+    except:
+        isWindows = False
+    else:
+        isWindows = True
+
+    if isWindows:
+        # Based on:
+        #   "Recipe 496767: Set Process Priority In Windows" on ActiveState
+        #   http://code.activestate.com/recipes/496767/
+        import win32api,win32process,win32con
+
+        pid = win32api.GetCurrentProcessId()
+        handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, True, pid)
+        win32process.SetPriorityClass(handle, win32process.IDLE_PRIORITY_CLASS)
+    else:
+        import os
+
+        os.nice(1)
 
 def new_raster_from_base_uri(
     base_uri, output_uri, gdal_format, nodata, datatype, fill_value=None):
@@ -158,7 +182,7 @@ def analyze_composite_carbon_stock_change(args):
         args['output_pixel_count_filename'] - a report of the number of pixel
             types changed per step
         """
-
+    lowpriority()
     print 'starting composite expansion scenario'
     landcover_regression, landcover_mean, carbon_pool_table = (
         load_base_datasets(args))
@@ -506,7 +530,7 @@ def analyze_forest_edge_erosion(args):
         args['scenario_lulc_base_map_filename'] - the base LULC map used for
             the scenario runs
         """
-
+    lowpriority()
     print 'starting forest edge expansion scenario'
     landcover_regression, landcover_mean, carbon_pool_table = (
         load_base_datasets(args))
@@ -598,7 +622,7 @@ def analyze_forest_core_expansion(args):
         args['scenario_lulc_base_map_filename'] - the base LULC map used for
             the scenario runs
         """
-
+    lowpriority()
     print 'starting forest core expansion scenario'
     landcover_regression, landcover_mean, carbon_pool_table = (
         load_base_datasets(args))
@@ -689,7 +713,7 @@ def analyze_forest_core_fragmentation(args):
         args['scenario_lulc_base_map_filename'] - the base LULC map used for
             the scenario runs
         """
-
+    lowpriority()
     print 'starting forest core fragmentation scenario'
     landcover_regression, landcover_mean, carbon_pool_table = (
         load_base_datasets(args))
@@ -782,7 +806,7 @@ def analyze_lu_expansion(args):
         args['scenario_lulc_base_map_filename'] - the base LULC map used for
             the scenario runs
         """
-
+    lowpriority()
     print 'starting lucode expansion scenario'
     #Load the base biomass and landcover datasets
     landcover_regression, landcover_mean, carbon_pool_table = (
@@ -921,10 +945,10 @@ def run_mg(number_of_steps):
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 120, 0],
         'converting_crop': 120,
-        'scenario_lulc_base_map_filename': 'MG_Soy_Exp_07122013/mg_lulc0',
+        'scenario_lulc_base_map_filename': 'mg_lulc_base',
         'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
-        #Becky calculated this for MGDS
+        #Becky calculated this for MG
         'pixels_to_convert_per_step': 3046,
     }
 
