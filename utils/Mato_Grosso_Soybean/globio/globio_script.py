@@ -183,9 +183,13 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, args, iteration_number):
     msa_i_tropical_forest = np.where( (distance_to_infrastructure <= 1000.0), 0.4, msa_i_tropical_forest)
     
     msa_i_temperate_and_boreal_forest = np.zeros(input_lulc.shape)
+    print msa_i_temperate_and_boreal_forest.shape
     msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0), 0.9, 1.0)
+    print msa_i_temperate_and_boreal_forest.shape
     msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0), 0.8, msa_i_temperate_and_boreal_forest)
+    print msa_i_temperate_and_boreal_forest.shape
     msa_i_temperate_and_boreal_forest = np.where( (distance_to_infrastructure <= 300.0), 0.4, msa_i_temperate_and_boreal_forest)
+    print msa_i_temperate_and_boreal_forest.shape
 
     msa_i_cropland_and_grassland = np.zeros(input_lulc.shape)
     msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0), 0.9, 1.0)
@@ -193,6 +197,7 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, args, iteration_number):
     msa_i_cropland_and_grassland = np.where( (distance_to_infrastructure <= 500.0), 0.4, msa_i_cropland_and_grassland)
 
     msa_i = np.zeros(input_lulc.shape)
+    print msa_i.shape, input_lulc.shape, msa_i_temperate_and_boreal_forest.shape
     msa_i = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,1.0)
     msa_i = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i)
     return msa_i
