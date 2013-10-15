@@ -1,6 +1,6 @@
 """This script calculates the effect on biodiversity loss, measured
-   by Mean Species Abundance (MSA) for three drivers: Land Use Change, 
-   Infrastructure and Fragmentation. The GLOBIO methodology (2009, from UNEP) 
+   by Mean Species Abundance (MSA) for two drivers: Land Use Change, 
+   and Fragmentation. The GLOBIO methodology (2009, from UNEP) 
    is used to calculate MSA. The script can analyze scenarios of several types,
    including (identical to the scenario set used in the Carbon assessment):
 
@@ -14,6 +14,8 @@
    grassland_expansion_biodiversity_change.csv that contains two columns, the
    first the soybean expansion percent and the second, the amount of carbon
    stocks on the landscape for each of the three scenarios above"""
+
+SAVE_MAPS = 0 #0 = none, 1 only first and last, 2 = everything 
 
 import gdal
 import numpy
@@ -29,35 +31,9 @@ from numpy import copy
 import scipy
 import scipy.ndimage.filters
 import matplotlib.pyplot as plt
-from invest_natcap import raster_utils
 
-
-def create_globio_infrastructure(args):
-    """Takes publicly available data and converts to a raster of infrastructure
-    that is ready to be  inputted into calc_msa_i"""
-    print 'Creating GLOBIO Infrastructure.'
-    
-    infrastructure = np.zeros(args['roads_array'].shape)
-    infrastructure = np.where((args['roads_array'] >= 1.0) & (args['roads_array'] <= 2000.0), 1.0,infrastructure)
-    infrastructure = np.where((args['highways_array'] >= 1.0) & (args['highways_array'] <= 2000.0), 1.0,infrastructure)
-    infrastructure = np.where((args['transmission_lines_array'] >= 1.0) & (args['transmission_lines_array'] <= 2000.0), 1.0,infrastructure)
-    infrastructure = np.where((args['canals_array'] >= 1.0) & (args['canals_array'] <= 2000.0), 1.0,infrastructure)
-
-    #export_array_as_geotiff(infrastructure, args['export_folder']+'infrastructure_binary'+str(time.time()).split(",")[0]+'.tif', args["input_lulc_uri"])
-
-    not_infrastructure = (infrastructure - 1)*(-1) #flip 0 and 1
-    distance_to_infrastructure = scipy.ndimage.morphology.distance_transform_edt(not_infrastructure) * 500 #500 meter cell size
-    #export_array_as_geotiff(distance_to_infrastructure, args['export_folder']+'distance_to_infrastructure'+str(time.time()).split(",")[0]+'.tif', args["input_lulc_uri"])
-
-    return distance_to_infrastructure, infrastructure
-    
-    
 def create_globio_lulc(args, scenario_lulc_array=None):
-    """Converts MODIS based LULC map into GLOBIO compatible LULC.
-    
-    normally gets lulc data from args['input_lulc_uri'] but ignores that
-    if scenario_lulc_array is defined. scenario_lulc_array should be the same
-    shape as args['input_lulc_array']"""    
+    """Converts MODIS based LULC map into GLOBIO compatible LULC."""    
     
     #Step 1: Calculate MSA(LU). This requires converting input LULC map to 
     #GLOBIO-compatible LULC classes and multiplying these classes by their MSA 
@@ -76,41 +52,29 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #Step 1.2a: If there does not exist a pre-created sum_yieldgap or
     #Sum together EarthStat data on crop-specific yield gaps to get 
     #sum_yieldgap. Here, these 8 crops represent the only crops present in Mato 
-    #Grosso.
+    #Grosso. 
     
-    
-    
-    #sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
-    uris_to_align = [args['input_lulc_uri'], args['potential_vegetation_uri'], args['pasture_uri']] + [
-        os.path.join(args['yield_gap_data_folder'],
-        crop_filename) for crop_filename in os.listdir(args['yield_gap_data_folder'])]
-
-    #stack lulc and yield gap rasters so they all align
-    aligned_uris = [raster_utils.temporary_filename() for _ in uris_to_align] 
-    print 'aligning yield gap uris %s' % (str(uris_to_align))
-    
-    out_pixel_size = raster_utils.get_cell_size_from_uri(args["input_lulc_uri"])
-    
-    raster_utils.align_dataset_list(
-        uris_to_align, aligned_uris, ['nearest'] * len(aligned_uris),
-        out_pixel_size, "dataset", dataset_to_align_index=0,
-        dataset_to_bound_index=0, assert_datasets_projected=False)
-    
-    sum_yieldgap = None
-    for crop_yieldgap_uri in aligned_uris[3::]:
-        print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
-        if sum_yieldgap is None:
-            sum_yieldgap = geotiff_to_array(crop_yieldgap_uri)
-        else:
-            crop_yieldgap_array = geotiff_to_array(crop_yieldgap_uri)
-            sum_yieldgap += crop_yieldgap_array   
-    print 'total sum is %s' % numpy.sum(sum_yieldgap)
+    if not os.path.exists(args["sum_yieldgap_uri"]): #if the sum_yieldgap_uri does not point to a geotiff, the program will recreate it.
+        sum_yieldgap = np.zeros(args["input_lulc_array"].shape)
+        crops_to_sum = os.listdir(args['yield_gap_data_folder'])
+        #crops_to_sum = ["cassava_yieldgap","groundnut_yieldgap","maize_yieldgap","rapeseed_yieldgap","rice_yieldgap","sorghum_yieldgap","soybean_yieldgap","sugarcane_yieldgap",]
+        for i in crops_to_sum:  
+            crop_yieldgap_uri = os.path.join(args["yield_gap_data_folder"],i)
+            print "Adding " + crop_yieldgap_uri + " to sum_yieldgap."
+            to_add = geotiff_to_array(crop_yieldgap_uri)
+            to_add_sized = np.zeros(sum_yieldgap.shape)
+            to_add_sized = to_add  #this line is a bad hack because my yieldgap data had 2 extra rows on the top and 1 on the bottom. I bet Rich has a much better solution to this in raster_utils, but I didn't have time to implement.
+            sum_yieldgap += to_add_sized
+        export_array_as_geotiff(sum_yieldgap,args["sum_yieldgap_uri"],args["input_lulc_uri"],0)     
+        args['sum_yieldgap_array'] = sum_yieldgap
+    else: 
+        args['sum_yieldgap_array']= geotiff_to_array(args['sum_yieldgap_uri'])
     #Step 1.2b: Assign high/low according to threshold based on yieldgap.    
     high_low_intensity_agriculture = np.zeros(args["input_lulc_array"].shape)
     #high_low_intensity_agriculture_uri = args["export_folder"]+"high_low_intensity_agriculture_"+args['run_id']+".tif"
     high_intensity_agriculture_threshold = 1 #hardcode for now until UI is determined. Eventually this is a user input. Do I bring it into the ARGS dict?
     print "Splitting agriculture into high/low intensity."
-    high_low_intensity_agriculture = np.where(sum_yieldgap < float(args['yieldgap_threshold']*high_intensity_agriculture_threshold), 9.0, 8.0) #45. = average yieldgap on global cells with nonzero yieldgap.
+    high_low_intensity_agriculture = np.where(args['sum_yieldgap_array'] < float(args['yieldgap_threshold']*high_intensity_agriculture_threshold), 9.0, 8.0) #45. = average yieldgap on global cells with nonzero yieldgap.
 
 
     #Step 1.2c: Stamp ag_split classes onto input LULC
@@ -120,10 +84,8 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #livestock grazing areas, and man-made pastures. 
     three_types_of_scrubland = np.zeros(args['input_lulc_array'].shape)
     print 'Splitting shrub/grassland into human-made pasture, grazing and pristine.'
-    potential_vegetation_array = geotiff_to_array(aligned_uris[1])
-    three_types_of_scrubland = np.where((potential_vegetation_array <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
-    pasture_array = geotiff_to_array(aligned_uris[2])
-    three_types_of_scrubland = np.where((three_types_of_scrubland == 5.0) & (pasture_array < args['pasture_threshold']), 1.0, three_types_of_scrubland) 
+    three_types_of_scrubland = np.where((args['potential_vegetation_array'] <= 8) & (broad_lulc_ag_split== 131), 6.0, 5.0) # < 8 min potential veg means should have been forest, 131 in broad  is grass, so 1.0 implies man made pasture
+    three_types_of_scrubland = np.where((three_types_of_scrubland == 5.0) & (args['pasture_array'] < args['pasture_threshold']), 1.0, three_types_of_scrubland) 
 
     #Step 1.3b: Stamp ag_split classes onto input LULC
     broad_lulc_shrub_split = np.where(broad_lulc_ag_split==131, three_types_of_scrubland, broad_lulc_ag_split)
@@ -145,19 +107,16 @@ def create_globio_lulc(args, scenario_lulc_array=None):
     #Step 1.4b: Stamp ag_split classes onto input LULC
     globio_lulc = np.where(broad_lulc_shrub_split == 130 ,four_types_of_forest, broad_lulc_shrub_split) #stamp primary vegetation
 
-    #export_array_as_geotiff(globio_lulc,args["export_folder"]+"globio_lulc_"+args['run_id']+".tif",args['input_lulc_uri'],0)
+    #export_array_as_geotiff(globio_lulc,args["export_folder"]+"globio_lulc_"+args['run_id']+".tif",args['input_lulc_uri'],0)    
     #make_map(globio_lulc)
     return globio_lulc 
 
     
-def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
+def calc_msa_f(input_lulc, args, iteration_number):
     print "Calculating MSA(Fragmentation)"
-    not_infrastructure = (infrastructure - 1)*(-1)
-    not_infrastructure_buffered = np.where((scipy.ndimage.morphology.distance_transform_edt(not_infrastructure) * 500) < 1000,1.0,0.0)   #500 meter cell size, 3.1622 = 10^.5
-    infrastructure_buffered = (not_infrastructure_buffered-1)*(-1)
     
     is_natural = np.where((input_lulc <= 10.0) | (input_lulc == 16),1.0,0.0)
-    is_natural_buffered = np.where(infrastructure_buffered == 0.0,0.0,is_natural)
+    is_natural_buffered = is_natural
     sigma = 3
     ffqi = np.zeros(input_lulc.shape) 
     blurred = scipy.ndimage.filters.gaussian_filter(is_natural_buffered, sigma, mode='constant', cval=0.0)
@@ -170,37 +129,8 @@ def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
     msa_f = np.where((ffqi>.578512) & (ffqi <= .89771),0.7,msa_f)
     msa_f = np.where((ffqi>.42877) & (ffqi <= .578512),0.6,msa_f)
     msa_f = np.where((ffqi <= .42877),0.3,msa_f)
+     
     return msa_f
-    
-def calc_msa_i(distance_to_infrastructure, input_lulc, args, iteration_number):
-    print "Calculating MSA(Infrastructure)"
-   
-    
-    #Calculate msa_i effects for each relevant LULC. This is based on table 6 from UNEP 2009.
-    msa_i_tropical_forest = np.zeros(input_lulc.shape)
-    msa_i_tropical_forest = np.where((distance_to_infrastructure > 4000.0) & (distance_to_infrastructure <= 14000.0), 0.9, 1.0)
-    msa_i_tropical_forest = np.where((distance_to_infrastructure > 1000.0) & (distance_to_infrastructure <= 4000.0), 0.8, msa_i_tropical_forest)
-    msa_i_tropical_forest = np.where( (distance_to_infrastructure <= 1000.0), 0.4, msa_i_tropical_forest)
-    
-    msa_i_temperate_and_boreal_forest = np.zeros(input_lulc.shape)
-    print msa_i_temperate_and_boreal_forest.shape
-    msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0), 0.9, 1.0)
-    print msa_i_temperate_and_boreal_forest.shape
-    msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0), 0.8, msa_i_temperate_and_boreal_forest)
-    print msa_i_temperate_and_boreal_forest.shape
-    msa_i_temperate_and_boreal_forest = np.where( (distance_to_infrastructure <= 300.0), 0.4, msa_i_temperate_and_boreal_forest)
-    print msa_i_temperate_and_boreal_forest.shape
-
-    msa_i_cropland_and_grassland = np.zeros(input_lulc.shape)
-    msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0), 0.9, 1.0)
-    msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 500.0) & (distance_to_infrastructure <= 2000.0), 0.8, msa_i_cropland_and_grassland)
-    msa_i_cropland_and_grassland = np.where( (distance_to_infrastructure <= 500.0), 0.4, msa_i_cropland_and_grassland)
-
-    msa_i = np.zeros(input_lulc.shape)
-    print msa_i.shape, input_lulc.shape, msa_i_temperate_and_boreal_forest.shape
-    msa_i = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,1.0)
-    msa_i = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i)
-    return msa_i
 
 
 def calc_msa_lu(input_array, args, iteration_number):
@@ -221,7 +151,6 @@ def calc_msa_lu(input_array, args, iteration_number):
  
     return msa_lu
 
-    
 def assign_values_by_csv(input_array, correspondenceURI): #If input_array is not set, it loads a raster. if outRaster = None, only returns an array, else outputs a geotiff
     array_out = copy(input_array)
     table = {} 
@@ -305,6 +234,62 @@ def make_map(array):
         plt.colorbar()
         plt.show()
         
+def globio_analyze_premade_lulc_scenarios(args):
+    """This function does a simulation of cropland expansion by
+        expanding into the forest edges and calculates MSA for each percent
+        cropland expansion.
+
+        args['converting_crop'] - when a pixel is converted to crop, it uses
+            this lucode.            
+        args['scenario_conversion_steps'] - the number of steps to run in
+            the simulation
+        args['pixels_to_convert_per_step'] - each step of the simulation
+            converts this many pixels
+        args['output_table_filename'] - this is the filename of the CSV
+            output table.
+        args['scenario_path'] - the path to the directory that holds the
+            scenarios
+        args['scenario_file_pattern'] - the filename pattern to load the
+            scenarios, a string of the form xxxxx%nxxxx, where %n is the
+            simulation step integer.            
+            
+        """
+
+    scenario_name = "premade_lulc_scenarios"
+    print 'Starting',scenario_name,'scenario. Note that this scenario will only work if the data in the input folder are the right shape. If you get a broadcasting shape error, it is because your inputs are not the same shape as the other GLOBIO files.'
+
+    #Open a .csv file to dump the grassland expansion scenario
+    output_table = open(args['output_table_filename'], 'wb')
+    output_table.write(
+        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Fragmentation)\n')
+
+    for percent in range(args['scenario_conversion_steps'] + 1):
+        print 'calculating change in MSA for expansion step %s' % percent
+
+        scenario_filename = os.path.join(
+            args['scenario_path'],
+            args['scenario_file_pattern'].replace('%n', str(percent)))
+        
+        scenario_dataset = gdal.Open(scenario_filename)
+        scenario_lulc_array = scenario_dataset.GetRasterBand(1).ReadAsArray()
+
+
+        #Calcualte the effect on MSA using calc_msa_lu function
+        globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
+        
+        msa_lu = calc_msa_lu(globio_lulc, args, percent)
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+        
+        msa_f = calc_msa_f(scenario_lulc_array, args, percent)
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
+
+        
+        msa = msa_f * msa_lu
+        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        
+        output_table.write('%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_f))
+        output_table.flush()
+        
         
 def globio_analyze_forest_expansion(args):
     """This function does a simulation of cropland expansion by
@@ -325,9 +310,6 @@ def globio_analyze_forest_expansion(args):
     scenario_name = 'forest_edge_expansion'
     print '\nStarting GLOBIO', scenario_name,'scenario.\n'
 
-    #create static maps that only need to be calculated once.   
-    distance_to_infrastructure, infrastructure = create_globio_infrastructure(args)
-
     #Load the base landcover map that we use in the scenarios
     scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
@@ -345,7 +327,7 @@ def globio_analyze_forest_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
+        'Percent Soy Expansion in Forest Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Fragmentation)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -362,23 +344,19 @@ def globio_analyze_forest_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
-        
-        msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
+        msa_f = calc_msa_f(scenario_lulc_array, args, percent)
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
 
-        
-        msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
+        msa = msa_f * msa_lu
+        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
-        output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
+        output_table.write('%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_f))
         output_table.flush()
 
-        
+
 def globio_analyze_forest_core_expansion(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges and calculates MSA for each percent
@@ -397,9 +375,6 @@ def globio_analyze_forest_core_expansion(args):
     scenario_name = "globio_forest_core_expansion"
     print '\nStarting',scenario_name,'scenario\n.'
 
-    #create static maps that only need to be calculated once.   
-    distance_to_infrastructure, infrastructure = create_globio_infrastructure(args)
-
     #Load the base landcover map that we use in the scenarios
     scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
@@ -415,7 +390,7 @@ def globio_analyze_forest_core_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Fragmentation)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -431,20 +406,17 @@ def globio_analyze_forest_core_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
-        
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
-        
-        msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
+
+        msa_f = calc_msa_f(scenario_lulc_array, args, percent)
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
 
         
-        msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
+        msa = msa_f * msa_lu
+        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
 
-        output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
+        output_table.write('%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_f))
         output_table.flush()
 
         
@@ -466,9 +438,6 @@ def globio_analyze_forest_core_fragmentation(args):
     scenario_name = "globio_forest_core_fragmentation"
     print '\nStarting',scenario_name,'scenario.\n'
 
-    #create static maps that only need to be calculated once.   
-    distance_to_infrastructure, infrastructure = create_globio_infrastructure(args)
-
     #Load the base landcover map that we use in the scenarios
     scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
@@ -480,7 +449,7 @@ def globio_analyze_forest_core_fragmentation(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Fragmentation)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -504,20 +473,17 @@ def globio_analyze_forest_core_fragmentation(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        msa_f = calc_msa_f(scenario_lulc_array, args, percent)
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
         
-        msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
+        msa = msa_f * msa_lu
+        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
+        print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
 
         
-        msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
-        print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
-        
-        output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
+        output_table.write('%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_f))
         output_table.flush()
 
         
@@ -540,9 +506,6 @@ def globio_analyze_lu_expansion(args):
     scenario_name = 'lu_edge_expansion'
     print '\nStarting GLOBIO', scenario_name,'scenario.\n'
 
-    #create static maps that only need to be calculated once.   
-    distance_to_infrastructure, infrastructure = create_globio_infrastructure(args)
-
     #Load the base landcover map that we use in the scenarios
     scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
@@ -563,7 +526,7 @@ def globio_analyze_lu_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in LU Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
+        'Percent Soy Expansion in LU Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Fragmentation)\n')
 
     #This index will keep track of the number of forest pixels converted.
     pixels_converted = 0
@@ -586,17 +549,13 @@ def globio_analyze_lu_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['mg_definition_array'] == 1)])))
         
-        msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        msa_f = calc_msa_f(scenario_lulc_array, args, percent)
+        avg_msa_f = str(float(np.mean(msa_f[np.where(args['mg_definition_array'] == 1)])))
         
-        msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
-
-        
-        msa = msa_f * msa_lu * msa_i
-        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
+        msa = msa_f * msa_lu
+        avg_msa = str(float(np.mean(msa[np.where(args['mg_definition_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
         output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
@@ -605,7 +564,7 @@ def globio_analyze_lu_expansion(args):
  
 if __name__ == '__main__':
     try:
-        os.makedirs('./globio_output')
+        os.makedirs('./export')
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
@@ -619,28 +578,27 @@ if __name__ == '__main__':
         #how many pixels should be converted to crop in each iteration step
         'pixels_to_convert_per_step': 2608,
         #identify a new lu code for newly-created crop that we add via the simulation
-        'converting_crop': 17,
+        'converting_crop': 120,
         #a unique string based on unix-timestamp that i postpend to each filename to avoid accidental overwriting.
-        'run_id': str(time.time()).split(".")[0],
+        'run_id': str(time.time()).split(".")[0],  
+        #location where all data not specified below are stored 
+        'data_location': './',
         #a table that indicates which of the input lu codes should be mapped to which intermediate lu codes (see documentation). First row reserved for labels.
-        'lulc_conversion_table_uri': './inputs_mg_globio/lulc_conversion_table.csv',
+        'lulc_conversion_table_uri': './lulc_conversion_table.csv',
         #export location
-        'export_folder': './globio_output/',    
+        'export_folder': './export/',    
         #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
-        'yield_gap_data_folder': './inputs_mgds_globio/crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
+        'sum_yieldgap_uri': './sum_yieldgap.tif', #TODO: fix so that this smartly chooses to load premade or folder-based calculation  
+        #if sum_yieldgap_uri is None, this variable indicates where crop-specific yieldgap maps (available at earthstat.org, see documentation) are placed. The script then aggregates them to creat sum_yieldgap.tif
+        'yield_gap_data_folder': './crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
         #uri to geotiff  of potential vegetation
-        'potential_vegetation_uri': './inputs_mgds_globio/potential_vegetation_proj.tif',  
+        'potential_vegetation_uri': './potential_vegetation.tif',  
         #uri to geotiff of proportion in pasture
-        'pasture_uri': './inputs_mgds_globio/pasture.tif',
+        'pasture_uri': './pasture.tif',
         #uri to geotiff that defines the zone of interest. Can be  constructed from any shapefile of any region, defined as 1 = within region, 0 = not in region.  If data need to be buffered, ensure that the extent of this map is not at the border, but rather at the extent of the buffered border.
-        'aoi_uri': './inputs_mgds_globio/mgds_proj.shp',
+        'mg_definition_uri': './mg_definition.tif',
         #uri to geotiff of lulc data. the values in this map must correspond to the values in lulc_conversion_table_uri 
-        'input_lulc_uri': './inputs_mgds_globio/lulc_2008.tif',
-        #the next 4 lines define the 4 elements that I used to construct a map of infrastructure. These were drawn from Digital Chart of the World and the EMBRAPA dataset from the Brazilian government. The globio script sums up these 4 sources to createa binary defined map of 1=is_infrastructure, 0=not_infrastructure and then applies the globio method to that.
-        'roads_uri': './roads.tif',
-        'highways_uri': './highways.tif',
-        'transmission_lines_uri': './transmission_lines.tif',
-        'canals_uri': './canals.tif',
+        'input_lulc_uri': './lulc_2008.tif',
         #Default of .5. pasture data is from Ramankutty  2008 and is defined as a proportion, (0,1). The threshold defined in this variable declares that any land less than the threshold is pristine vegetation, else it is defined as livestock grazing.
         'pasture_threshold': .5,   
         #areas with yieldgaps greater than this threshold are defined as low intensity (because they have not used intensification methods to reach their achievable yield) Defined in terms of tons not produed per 5min grid cell. 45.6 is the default value, representing 50% of the global average yieldgap.
@@ -649,20 +607,19 @@ if __name__ == '__main__':
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,
-    }
+  }            
 
     #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri'])
-    aoi_raster_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], aoi_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
-    raster_utils.rasterize_layer_uri(
-        aoi_raster_uri, ARGS['aoi_uri'], burn_values=[1])
-    ARGS['aoi_array']= geotiff_to_array(aoi_raster_uri) #1 = in MG, 0 = notprintin MG
-    ARGS['roads_array']= geotiff_to_array(ARGS['roads_uri'])
-    ARGS['highways_array']= geotiff_to_array(ARGS['highways_uri'])
-    ARGS['transmission_lines_array']= geotiff_to_array(ARGS['transmission_lines_uri'])
-    ARGS['canals_array']= geotiff_to_array(ARGS['canals_uri'])
+    ARGS['potential_vegetation_array']= geotiff_to_array(ARGS['potential_vegetation_uri'])
+    ARGS['pasture_array']= geotiff_to_array(ARGS['pasture_uri'])
+    ARGS['mg_definition_array']= geotiff_to_array(ARGS['mg_definition_uri']) #1 = in MG, 0 = notprintin MG
 
+    #Set up the ARGS for the disk based scenario
+    ARGS['scenario_path'] = './data/MG_Soy_Exp_07122013/'
+    ARGS['scenario_file_pattern'] = 'mg_lulc%n'
+    ARGS['output_table_filename'] = ('./export/globio_premade_lulc_scenarios_msa_change_'+ARGS['run_id']+'.csv')
+    #globio_analyze_premade_lulc_scenarios(ARGS) 
 
     #Set up ARGS for the forest core expansion scenario
     ARGS['output_table_filename'] = (

@@ -1,10 +1,10 @@
 from urllib import urlencode
 from urllib2 import Request
 from urllib2 import urlopen
+import locale
+import os
 import platform
 import sys
-import os
-
 
 import build_utils
 
@@ -46,6 +46,7 @@ def log_model(model_name, model_version=None):
             'release': platform.release(),
             'full_platform_string': platform.platform(),
             'fs_encoding': sys.getfilesystemencoding(),
+            'default_language': locale.getdefaultlocale()[0],
             'python': {
                 'version': platform.python_version(),
                 'bits': platform.architecture()[0],
