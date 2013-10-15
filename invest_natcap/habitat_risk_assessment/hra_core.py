@@ -235,8 +235,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
                                         2, hab_index)
                 plot_background_circle(max_risk)
                 matplotlib.pyplot.title(curr_hab_name)
-                matplotlib.pyplot.xlim([0.5, max_risk])
-                matplotlib.pyplot.ylim([0.5, max_risk])
+                matplotlib.pyplot.xlim([0, max_risk])
+                matplotlib.pyplot.ylim([0, max_risk])
                 matplotlib.pyplot.xlabel("Exposure")
                 matplotlib.pyplot.ylabel("Consequence")
 
@@ -258,8 +258,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
             curr_hab_name = hab_name
 
             matplotlib.pyplot.title(curr_hab_name)
-            matplotlib.pyplot.xlim([0.5, max_risk])
-            matplotlib.pyplot.ylim([0.5, max_risk])
+            matplotlib.pyplot.xlim([0, max_risk])
+            matplotlib.pyplot.ylim([0, max_risk])
             matplotlib.pyplot.xlabel("Exposure")
             matplotlib.pyplot.ylabel("Consequence")
 
@@ -300,8 +300,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
                     xy=(p_dict['E'], p_dict['C']), 
                     xytext=(p_dict['E'], p_dict['C']+0.07))
                         
-    matplotlib.pyplot.xlim([0.5, max_tot_risk])
-    matplotlib.pyplot.ylim([0.5, max_tot_risk])
+    matplotlib.pyplot.xlim([0, max_tot_risk])
+    matplotlib.pyplot.ylim([0, max_tot_risk])
     matplotlib.pyplot.xlabel("Exposure (Cumulative)")
     matplotlib.pyplot.ylabel("Consequence (Cumulative)")
 
