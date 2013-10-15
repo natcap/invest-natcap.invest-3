@@ -99,13 +99,15 @@ def print_hierarchy(hierarchy):
         print('hierarchy node ', node['distance'], node['next']['distance'])
 
 def print_skip_list(sweep_line, skip_nodes):
-    sorted_keys = sorted(sweep_line.keys())
-    for key in sorted_keys:
-        if key != 'closest':
-            print('active pixel', key, 'next', sweep_line[key]['next'] if \
-            sweep_line[key]['next'] is None else \
-            sweep_line[key]['next']['distance'], 'up', None if \
-            sweep_line[key]['up'] is None else sweep_line[key]['up']['distance'])
+    if sweep_line:
+        sorted_keys = sorted(sweep_line.keys())
+        for key in sorted_keys:
+            if key != 'closest':
+                print('active pixel', key, 'next', sweep_line[key]['next'] if \
+                sweep_line[key]['next'] is None else \
+                sweep_line[key]['next']['distance'], 'up', None if \
+                sweep_line[key]['up'] is None else \
+                sweep_line[key]['up']['distance'])
     for level in range(len(skip_nodes)):
         sorted_keys = sorted(skip_nodes[level])
         for key in sorted_keys:
@@ -189,10 +191,11 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 hierarchy[level+1] if (len(hierarchy)>level+1) else None
                 span = \
                 insert_new_skip_node(pixel, upper_node, skip_nodes[level])
-                # Create a new level if needed
+                # Create a new level if last level has 4 nodes
                 if (len(skip_nodes[level]) == 4) and \
                     (len(skip_nodes) == level + 1):
-                    #print('new level needed after ' + str(level))
+                    print('new level needed after ' + str(level))
+                    print_skip_list(None, skip_nodes)
                     skip_nodes.append({})
                     distance = pixel['distance']
                     # First skip node points to the first element in sweep_line
