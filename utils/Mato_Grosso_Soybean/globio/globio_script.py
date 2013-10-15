@@ -659,25 +659,25 @@ if __name__ == '__main__':
         aoi_raster_uri, ARGS['aoi_uri'], burn_values=[1])
     ARGS['aoi_array']= geotiff_to_array(aoi_raster_uri) #1 = in MG, 0 = notprintin MG
     
-    roads_raster_uri = 'raster_roads.tif'#raster_utils.temporary_filename()
+    roads_raster_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], roads_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
         roads_raster_uri, ARGS['roads_uri'], burn_values=[1])
     ARGS['roads_array']= geotiff_to_array(roads_raster_uri)
     
-    highways_raster_uri = 'raster_highways.tif'#raster_utils.temporary_filename()
+    highways_raster_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], highways_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
         highways_raster_uri, ARGS['highways_uri'], burn_values=[1])
     ARGS['highways_array']= geotiff_to_array(highways_raster_uri)
     
-    transmission_lines_raster_uri = 'raster_transmission_lines.tif'#raster_utils.temporary_filename()
+    transmission_lines_raster_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], transmission_lines_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
         transmission_lines_raster_uri, ARGS['transmission_lines_uri'], burn_values=[1])
     ARGS['transmission_lines_array']= geotiff_to_array(transmission_lines_raster_uri)
     
-    canals_raster_uri = 'raster_canals.tif'#raster_utils.temporary_filename()
+    canals_raster_uri = raster_utils.temporary_filename()
     raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], canals_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
         canals_raster_uri, ARGS['canals_uri'], burn_values=[1])
