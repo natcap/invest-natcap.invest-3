@@ -23,6 +23,7 @@ import scipy.stats
 import os
 import errno
 import time
+from multiprocessing import Process
 
 import numpy as np
 from numpy import copy
@@ -31,6 +32,30 @@ import scipy.ndimage.filters
 import matplotlib.pyplot as plt
 from invest_natcap import raster_utils
 
+def lowpriority():
+    """ Set the priority of the process to below-normal."""
+
+    import sys
+    try:
+        sys.getwindowsversion()
+    except:
+        isWindows = False
+    else:
+        isWindows = True
+
+    if isWindows:
+        # Based on:
+        #   "Recipe 496767: Set Process Priority In Windows" on ActiveState
+        #   http://code.activestate.com/recipes/496767/
+        import win32api,win32process,win32con
+
+        pid = win32api.GetCurrentProcessId()
+        handle = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, True, pid)
+        win32process.SetPriorityClass(handle, win32process.IDLE_PRIORITY_CLASS)
+    else:
+        import os
+
+        os.nice(1)
 
 def create_globio_infrastructure(args):
     """Takes publicly available data and converts to a raster of infrastructure
@@ -322,6 +347,7 @@ def globio_analyze_forest_expansion(args):
             output table.
 
         """
+    lowpriority()
     scenario_name = 'forest_edge_expansion'
     print '\nStarting GLOBIO', scenario_name,'scenario.\n'
 
@@ -394,6 +420,7 @@ def globio_analyze_forest_core_expansion(args):
             output table.
         """
 
+    lowpriority()
     scenario_name = "globio_forest_core_expansion"
     print '\nStarting',scenario_name,'scenario\n.'
 
@@ -463,6 +490,7 @@ def globio_analyze_forest_core_fragmentation(args):
             output table.
         """
 
+    lowpriority()
     scenario_name = "globio_forest_core_fragmentation"
     print '\nStarting',scenario_name,'scenario.\n'
 
@@ -537,6 +565,7 @@ def globio_analyze_lu_expansion(args):
             output table. 
         args['conversion_lucode'] - Which LU we will be changing.
         """
+    lowpriority()
     scenario_name = 'lu_edge_expansion'
     print '\nStarting GLOBIO', scenario_name,'scenario.\n'
 
@@ -603,19 +632,20 @@ def globio_analyze_lu_expansion(args):
         output_table.flush()
  
  
-if __name__ == '__main__':
+def run_globio_mgds(number_of_steps):
+    output_folder = './globio_mgds_output'
     try:
-        os.makedirs('./globio_output')
+        os.makedirs(output_folder)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
             
-    #This set of ARGS are shared by all of the LULC-generating-scenarios
-    ARGS = {
+    #This set of args are shared by all of the LULC-generating-scenarios
+    args = {
         #define which lu  codes count as forest when calculating distance to forest edge.
         'forest_lucodes' : [1,2,3,4,5],
         #number of iterations to run.
-        'scenario_conversion_steps': 2, 
+        'scenario_conversion_steps': number_of_steps, 
         #how many pixels should be converted to crop in each iteration step
         'pixels_to_convert_per_step': 2608,
         #identify a new lu code for newly-created crop that we add via the simulation
@@ -625,7 +655,7 @@ if __name__ == '__main__':
         #a table that indicates which of the input lu codes should be mapped to which intermediate lu codes (see documentation). First row reserved for labels.
         'lulc_conversion_table_uri': './inputs_mg_globio/lulc_conversion_table.csv',
         #export location
-        'export_folder': './globio_output/',    
+        'export_folder': output_folder,    
         #if all-crop yield data have already been calculated for your region, fill this in with the URI to the data. If this doesn't yet exist, make this variable None
         'yield_gap_data_folder': './inputs_mgds_globio/crop_specific_yieldgap_data/', #this is here because EarthStat does not provided summed yield-gap data. Thus, I created it by placing the relevant layers into this folder, ready for summation. Will automatically sum this folder and save as sum_yieldgap.tif if sum_yieldgap.tif does not exist in the data location.
         #uri to geotiff  of potential vegetation
@@ -651,55 +681,59 @@ if __name__ == '__main__':
         'secondary_threshold':.33,
     }
 
-    #This set of ARGS store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
-    ARGS['input_lulc_array']= geotiff_to_array(ARGS['input_lulc_uri'])
+    #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
+    args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
     aoi_raster_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], aoi_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.new_raster_from_base_uri(args['input_lulc_uri'], aoi_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
-        aoi_raster_uri, ARGS['aoi_uri'], burn_values=[1])
-    ARGS['aoi_array']= geotiff_to_array(aoi_raster_uri) #1 = in MG, 0 = notprintin MG
+        aoi_raster_uri, args['aoi_uri'], burn_values=[1])
+    args['aoi_array']= geotiff_to_array(aoi_raster_uri) #1 = in MG, 0 = notprintin MG
     
     roads_raster_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], roads_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.new_raster_from_base_uri(args['input_lulc_uri'], roads_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
-        roads_raster_uri, ARGS['roads_uri'], burn_values=[1])
-    ARGS['roads_array']= geotiff_to_array(roads_raster_uri)
+        roads_raster_uri, args['roads_uri'], burn_values=[1])
+    args['roads_array']= geotiff_to_array(roads_raster_uri)
     
     highways_raster_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], highways_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.new_raster_from_base_uri(args['input_lulc_uri'], highways_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
-        highways_raster_uri, ARGS['highways_uri'], burn_values=[1])
-    ARGS['highways_array']= geotiff_to_array(highways_raster_uri)
+        highways_raster_uri, args['highways_uri'], burn_values=[1])
+    args['highways_array']= geotiff_to_array(highways_raster_uri)
     
     transmission_lines_raster_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], transmission_lines_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.new_raster_from_base_uri(args['input_lulc_uri'], transmission_lines_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
-        transmission_lines_raster_uri, ARGS['transmission_lines_uri'], burn_values=[1])
-    ARGS['transmission_lines_array']= geotiff_to_array(transmission_lines_raster_uri)
+        transmission_lines_raster_uri, args['transmission_lines_uri'], burn_values=[1])
+    args['transmission_lines_array']= geotiff_to_array(transmission_lines_raster_uri)
     
     canals_raster_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(ARGS['input_lulc_uri'], canals_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
+    raster_utils.new_raster_from_base_uri(args['input_lulc_uri'], canals_raster_uri, 'GTiff', 255, gdal.GDT_Byte, fill_value=0)
     raster_utils.rasterize_layer_uri(
-        canals_raster_uri, ARGS['canals_uri'], burn_values=[1])
-    ARGS['canals_array']= geotiff_to_array(canals_raster_uri)
+        canals_raster_uri, args['canals_uri'], burn_values=[1])
+    args['canals_array']= geotiff_to_array(canals_raster_uri)
     
-    #Set up ARGS for the forest core expansion scenario
-    ARGS['output_table_filename'] = (
-        './export/globio_forest_core_expansion_msa_change_'+ARGS['run_id']+'.csv')
-    globio_analyze_forest_core_expansion(ARGS)
+    #Set up args for the forest core expansion scenario
+    args['output_table_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
+    Process(target=globio_analyze_forest_core_expansion, args=[args]).start()
     
-     #Set up ARGS for the savanna scenario (via lu_expansion function)
-    ARGS['output_table_filename'] = (
-       './export/globio_lu_expansion_msa_change_'+ARGS['run_id']+'.csv')
+     #Set up args for the savanna scenario (via lu_expansion function)
+    args['output_table_filename'] = (
+       os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
-    ARGS['conversion_lucode'] = 9
-    globio_analyze_lu_expansion(ARGS)
+    args['conversion_lucode'] = 9
+    Process(target=globio_analyze_lu_expansion, args=[args]).start()
        
-    #Set up ARGS for the forest (edge) expansion scenario
-    ARGS['output_table_filename'] = (
-        './export/globio_forest_expansion_msa_change_'+ARGS['run_id']+'.csv')
-    globio_analyze_forest_expansion(ARGS)
+    #Set up args for the forest (edge) expansion scenario
+    args['output_table_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
+    Process(target=globio_analyze_forest_expansion, args=[args]).start()
 
-    ARGS['output_table_filename'] = (
-        './export/globio_forest_core_fragmentation_msa_change_'+ARGS['run_id']+'.csv')
-    globio_analyze_forest_core_fragmentation(ARGS)
+    args['output_table_filename'] = (
+        os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
+    Process(target=globio_analyze_forest_core_fragmentation, args=[args]).start()
+
+if __name__ == '__main__':
+    NUMBER_OF_STEPS = 200
+    Process(target=run_globio_mgds, args=[NUMBER_OF_STEPS]).start()
