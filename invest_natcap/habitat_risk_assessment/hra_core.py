@@ -150,7 +150,7 @@ def execute(args):
         make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
 
         if args['risk_eq'] == 'Euclidean':
-            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress, 
+            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress,
                         len(h_risk_dict))
     '''
     #Want to clean up the intermediate folder containing the added r/dq*w
@@ -251,7 +251,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
             
             #We get here once we get to the next habitat
             hab_index += 1
-            matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 2, hab_index)
+            matplotlib.pyplot.subplot(int(math.ceil(num_habs/2.0)), 
+                                        2, hab_index)
             plot_background_circle(max_risk)
         
             curr_hab_name = hab_name
@@ -1100,13 +1101,15 @@ def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
         #pre-calc'd rasters. We should be able to use vec_ds to straight add 
         #the pixels and divide by the saved denoms total. These are the URIs to
         #which these parts of the risk equation will be burned. 
-        c_out_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_C_Risk_Raster.tif')
-        e_out_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + ']_E_Risk_Raster.tif')
+        c_out_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + \
+                                ']_C_Risk_Raster.tif')
+        e_out_uri = os.path.join(inter_dir, "H[" + h + ']_S[' + s + \
+                                ']_E_Risk_Raster.tif')
 
         #Each of the E/C calculations should take in all of the relevant 
-        #subdictionary data, and return a raster to be used in risk calculation. 
-        #If, however, the pair contained no e criteria data, we are using spatial
-        #overlap to substitute for the criteria burned raster.
+        #subdictionary data, and return a raster to be used in risk calculation.
+        #If, however, the pair contained no e criteria data, we are using 
+        #spatial overlap to substitute for the criteria burned raster.
         if pair in warnings['unbuff']:
 
             unbuff_stress_uri = os.path.join(inter_dir, 'Stressor_Rasters', s + '.tif')
@@ -1176,8 +1179,8 @@ def make_risk_mult(base_uri, e_uri, c_uri, risk_uri):
         else:
             return e_pix * c_pix
 
-    raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult, risk_uri, 
-                    gdal.GDT_Float32, -1., grid_size, "union", 
+    raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], combine_risk_mult,
+                    risk_uri, gdal.GDT_Float32, -1., grid_size, "union", 
                     resample_method_list=None, dataset_to_align_index=0,
                     aoi_uri=None)
 
@@ -1224,8 +1227,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #there is overlap. So now can do the euc. equation.
         else:
             
-            #Want to make sure that the decay is applied to E first, then that product
-            #is what is used as the new E
+            #Want to make sure that the decay is applied to E first, then that
+            #product is what is used as the new E
             e_val = b_pix * e_pix
 
             c_val = c_pix - 1
@@ -1241,8 +1244,8 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
             return value
 
     raster_utils.vectorize_datasets([base_uri, e_uri, c_uri], 
-                    combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., grid_size,
-                    "union", resample_method_list=None, 
+                    combine_risk_euc, risk_uri, gdal.GDT_Float32, -1., 
+                    grid_size, "union", resample_method_list=None, 
                     dataset_to_align_index=0, aoi_uri=None)
 
 def calc_E_raster(out_uri, h_s_list, denom_dict):
@@ -1472,7 +1475,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
     #Now will iterrate through the dictionaries one at a time, since each has
     #to be placed uniquely.
 
-    #For Hab-Stress pairs that will be applied to the consequence portion of risk.
+    #For Hab-Stress pairs that will be applied to the consequence portion 
+    #of risk.
     for pair in h_s_c:
         h, s = pair
 
@@ -1499,9 +1503,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
         #single raster that equals to the sum of r/dq*w for all single number 
         #criteria in H-S
 
-        #For the summed individual ratings, want the denominator to be concatonated
-        #only with the other individual scores. Will make a single entry that will
-        #correspond to the file name being output.
+        #For the summed individual ratings, want the denominator to be 
+        #concatonated only with the other individual scores. Will make a single
+        #entry that will correspond to the file name being output.
         denoms['Risk']['h_s_c'][pair]['Indiv'] = 0.
 
         for crit_dict in (h_s_c[pair]['Crit_Ratings']).values():
@@ -1532,8 +1536,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 return crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
-                        single_crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size,
-                        "union", resample_method_list=None, 
+                        single_crit_C_uri, gdal.GDT_Float32, -1., 
+                        base_pixel_size, "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
 
         #Add the burned ds URI containing only the numerator burned ratings to
@@ -1616,9 +1620,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return risk_crit_rate_numerator
 
-        raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_risk_single,
-                            single_crit_C_uri, gdal.GDT_Float32, -1., 
-                            base_pixel_size, "union", 
+        raster_utils.vectorize_datasets([base_ds_uri], 
+                            burn_numerator_risk_single, single_crit_C_uri, 
+                            gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
                             dataset_to_align_index=0, aoi_uri=None)
 
@@ -1636,9 +1640,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             else:
                 return rec_crit_rate_numerator
 
-        raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_rec_single,
-                            single_crit_rec_uri, gdal.GDT_Float32, -1., 
-                            base_pixel_size, "union", 
+        raster_utils.vectorize_datasets([base_ds_uri], 
+                            burn_numerator_rec_single, single_crit_rec_uri, 
+                            gdal.GDT_Float32, -1., base_pixel_size, "union", 
                             resample_method_list=None, 
                             dataset_to_align_index=0, aoi_uri=None)
 
@@ -1657,8 +1661,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
             denoms['Recovery'][h][crit_name] = 1/ float(dq)
 
             #First the risk rasters
-            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + '_' + crit_name + \
-                                                    '_' + 'C_Raster.tif')
+            crit_C_uri = os.path.join(pre_raster_dir, 'H[' + h + ']' + '_' + \
+                                    crit_name + '_' + 'C_Raster.tif')
             def burn_numerator_risk(pixel):
             
                 if pixel == crit_nodata:
@@ -1669,15 +1673,17 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     return burn_rating
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_risk,
-                                crit_C_uri, gdal.GDT_Float32, -1., base_pixel_size, 
-                                "union", resample_method_list=None, 
+                                crit_C_uri, gdal.GDT_Float32, -1., 
+                                base_pixel_size, "union", 
+                                resample_method_list=None, 
                                 dataset_to_align_index=0, aoi_uri=None)
             
             crit_lists['Risk']['h'][h].append(crit_C_uri)
             
             #Then the recovery rasters
-            crit_recov_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_' + crit_name + \
-                                                    '_' + 'Recov_Raster.tif')
+            crit_recov_uri = os.path.join(pre_raster_dir, 'H[' + h + ']_' + \
+                                        crit_name + '_' + 'Recov_Raster.tif')
+            
             def burn_numerator_rec(pixel):
             
                 if pixel == crit_nodata:
@@ -1688,8 +1694,9 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                     return burn_rating
 
             raster_utils.vectorize_datasets([crit_ds_uri], burn_numerator_rec,
-                                crit_recov_uri, gdal.GDT_Float32, -1., base_pixel_size, 
-                                "union", resample_method_list=None, 
+                                crit_recov_uri, gdal.GDT_Float32, -1., 
+                                base_pixel_size, "union", 
+                                resample_method_list=None, 
                                 dataset_to_align_index=0, aoi_uri=None)
             
             crit_lists['Recovery'][h].append(crit_recov_uri)
@@ -1750,8 +1757,8 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                 return crit_rate_numerator
 
         raster_utils.vectorize_datasets([base_ds_uri], burn_numerator_single_hs,
-                        single_crit_E_uri, gdal.GDT_Float32, -1., base_pixel_size,
-                        "union", resample_method_list=None, 
+                        single_crit_E_uri, gdal.GDT_Float32, -1., 
+                        base_pixel_size, "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
 
         #Add the burned ds URI containing only the numerator burned ratings to
