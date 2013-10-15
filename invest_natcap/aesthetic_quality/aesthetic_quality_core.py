@@ -156,14 +156,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         before['span'] = 2
         span = None
         if upper_node is not None:
-            #print('Updating upper node ' + str(upper_node['distance']) + '-' + \
-            #str(None) if upper_node['next'] is None else \
-            #str(upper_node['next']['distance']) + ' span from ' + \
-            #str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1))
+            print('Updating upper node ' + str(upper_node['distance']) + '-' + \
+            str(None) if upper_node['next'] is None else \
+            str(upper_node['next']['distance']) + ' span from ' + \
+            str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1))
             upper_node['span'] += 1
             span = upper_node['span']
-        #else:
-        #    print('Upper node is None')
+        else:
+            print('Upper node is None')
             
         return span
 
@@ -179,12 +179,12 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 'distance' entry.
                 
             Returns nothing."""
-        while pixel is not None:
+        if pixel is not None:
             #print('adding span to node ' +str(pixel['up']['distance']) +' '+\
             #str(level) + ' which currently is ' + str(pixel['up']['span']))
             pixel['span'] += 1
             # Adjusting span if too large
-            if pixel['span'] > 3:
+            while pixel['span'] > 3:
                 # Insert the missing skip_node
                 #print_hierarchy(hierarchy)
                 upper_node = \
@@ -214,17 +214,15 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     second_last['up'] = skip_nodes[level+1][second_distance]
                     skip_nodes[level+1][distance]['next'] = skip_nodes[level+1][second_distance]
                 print('span after adding node ' + str(pixel['distance']) + ': ' + str(span))
+                print_skip_list(sweep_line, skip_nodes)
+
                 # List is consistent, we're done: break out of the while
-                if (span == 2) or (span == 3):
+                if span in  [2, 3, None]:
                     break
-                # We assume the only problem is potential intermediate skip
-                # nodes that might be missing in the upper levels
+                # Span is inconsistent: fix this at the upper level
                 else:
-                    pixel = pixel['up']
+                    pixel = upper_node
                     level += 1
-            # Nothing to adjust, break outpof the while
-            else:
-                break
 
     # Add the field 'closest' to the empty sweep line
     if not sweep_line:
@@ -321,7 +319,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_line[second_distance]['up'] = skip_nodes[0][second_distance]
         skip_nodes[0][distance]['next'] = skip_nodes[0][second_distance]
 
-    #print('--after change:')
+    #print('After adding pixel ' + str(distance) + ':')
     #print_skip_list(sweep_line, skip_nodes)
 
     return (sweep_line, skip_nodes)
@@ -854,7 +852,15 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     # Create a list of first nodes for each level
     first_nodes.append(linked_list['closest']['up'])
     while first_nodes[-1]['up'] is not None:
+        print('first node', first_nodes[-1]['distance'], \
+        first_nodes[-1]['next']['distance'], \
+        'up', first_nodes[-1]['up']['distance'], \
+        first_nodes[-1]['up']['next']['distance'])
         first_nodes.append(first_nodes[-1]['up'])
+        message = 'Stopping at ' + str(len(first_nodes)) + \
+        ' skip pointers on the first node.' + \
+        ' Infinite loop from inconsistent hierarchy?'
+        assert len(first_nodes) < 100, message
     # Traverse a level from the first node of a given level and count the
     # nodes encontered
     nodes_reached = 0
@@ -866,7 +872,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     if nodes_reached != total_skip_nodes:
         message = 'Number of nodes reached in the skip_list ' + \
         str(nodes_reached) + \
-        "doesn't agree with the total number of nodes" + \
+        " doesn't agree with the total number of nodes " + \
         str(total_skip_nodes)
         return (False, message)
 
