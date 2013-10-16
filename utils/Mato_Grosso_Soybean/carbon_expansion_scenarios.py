@@ -356,8 +356,10 @@ def build_biomass_forest_edge_regression(
             continue
         print ('regression for lucode(%s) f(d)=%.2f * d + %.2f' %
             (landcover_type, slope, intercept))
-        landcover_regression[landcover_type] = (
-            regression_builder(slope, intercept))
+        landcover_regression[landcover_type] = {
+            'median': regression_builder(slope, intercept)
+        }
+           
 
     return landcover_regression
 
@@ -445,6 +447,7 @@ def calculate_carbon_stocks(
             calculated from a lookup table
         carbon_pool_table - a dictionary of lucode to biomass
         landcover_regression - a dictionary mapping lucode to biomass regression
+            with both lower, median, and upper error limits 'lower', 'median', 'upper'
         landcover_mean - a dictionary mapping lucode to biomas mean
         cell_size - the cell size in meters
 
@@ -464,7 +467,7 @@ def calculate_carbon_stocks(
         landcover_mask = numpy.where(
             (scenario_lulc_array == landcover_type) * (edge_distance > 0))
         carbon_stocks[landcover_mask] = (
-            landcover_regression[landcover_type](
+            landcover_regression[landcover_type]['median'](
             edge_distance[landcover_mask]))
 
     #This section will calculate carbon stocks either from the mean
