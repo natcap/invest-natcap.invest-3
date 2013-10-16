@@ -891,7 +891,7 @@ def run_mgds(number_of_steps):
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
         'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
-        'carbon_pool_table_filename': './mgds_biophys_C.csv',
+        'carbon_pool_table_filename': './mgds_carbon.csv',
         #these are the landcover types that are used when determining edge
         #effects from forests
         'forest_lucodes': [1, 2, 3, 4, 5],
@@ -902,7 +902,7 @@ def run_mgds(number_of_steps):
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 17, 0],
         'converting_crop': 17,
-        'scenario_lulc_base_map_filename': 'lulc',
+        'scenario_lulc_base_map_filename': 'mgds_lulc_base',
         'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
         #Becky wants the average between MGDS and MG
@@ -961,7 +961,7 @@ def run_mg(number_of_steps):
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
         'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
-        'carbon_pool_table_filename': './mato_grosso_carbon.csv',
+        'carbon_pool_table_filename': './mg_carbon.csv',
         #these are the landcover types that are used when determining edge
         #effects from forests
         'forest_lucodes': [1, 2, 3, 4, 5],
