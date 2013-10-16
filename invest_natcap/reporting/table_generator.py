@@ -14,12 +14,8 @@ def generate_table(table_dict, attributes=None):
                       col_name_2 : {id: 1, sortable:True, editable:False},
                       ...
                      },
-             'rows': {row_id_0: {
-                        values: {col_name_1: value, col_name_2: value, ...},
-                        sortable: False},
-                      row_id_1: {
-                        values: {col_name_1: value, col_name_2: value, ...},
-                        sortable: False},
+             'rows': {row_id_0: {col_name_1: value, col_name_2: value, ...},
+                      row_id_1: {col_name_1: value, col_name_2: value, ...},
                      ...
                      },
              'totals': row_id_x
@@ -67,26 +63,6 @@ def generate_table(table_dict, attributes=None):
     table_string = table_string + '</tbody></table>'
 
     return table_string
-
-
-def process_table_input_csv(data_uri, key):
-    """Construct a dictionary representation of the CSV file
-
-        data_uri - a URI to a CSV file
-
-        key - a string that represents the column header for the unique rows
-
-        returns - a dictionary representation of the CSV file
-    """
-
-    inter_dict = raster_utils.get_lookup_from_csv(data_uri, key)
-
-    table_dict = {}
-
-    for key, value in inter_dict.iteritems():
-        break
-
-    pass
 
 def get_column_headers(col_dict):
     """Iterate through the dictionary and pull out the column headers and store
@@ -142,15 +118,9 @@ def get_row_data(row_dict, col_headers):
 
     # Initialize a list to hold output rows represented as lists
     row_data = []
-    # Get the keys of the row dictionary and sort them so that the row data is
-    # built up in proper order
-    row_keys = row_dict.keys()
-    row_keys.sort()
     
     try:
-        for key in row_keys:
-            # Get the dictionary representation of a row
-            row_values = row_dict[key]
+        for row_key, row_values in row_dict.iteritems():
             # Initialize a list to store our individual row values
             row = []
             # Iterate over col_headers to ensure that the row values are
@@ -170,6 +140,3 @@ def create_css_file(out_uri):
         it"""
     #css_file = open(out_uri, 'w')
 
-if __name__ == "__main__":
-    dict = {}
-    generate_table(dict, 'table_test_html.html')
