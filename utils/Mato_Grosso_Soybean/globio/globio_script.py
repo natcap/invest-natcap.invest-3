@@ -25,6 +25,7 @@ import errno
 import time
 from multiprocessing import Process, Pool
 import collections
+import signal
 
 import numpy as np
 from numpy import copy
@@ -32,6 +33,7 @@ import scipy
 import scipy.ndimage.filters
 import matplotlib.pyplot as plt
 from invest_natcap import raster_utils
+
 
 def expand_lu_type(
     base_array, nodata, expansion_id, converting_id_list, current_step, 
@@ -797,7 +799,7 @@ def analyze_composite_globio_change(args):
         output_table.flush()
 
  
-def run_globio_mgds(number_of_steps):
+def run_globio_mgds(number_of_steps, pool):
     output_folder = './globio_mgds_output'
     try:
         os.makedirs(output_folder)
@@ -881,9 +883,9 @@ def run_globio_mgds(number_of_steps):
     
     
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'composite_globio_change_20_80_mg.csv'))
+        os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
-        os.path.join(output_folder, 'composite_globio_change_20_80_pixel_count_mg.csv'))
+        os.path.join(output_folder, 'globio_mgds_composite_change_20_80_mg.csv'))
     args['land_cover_start_fractions'] = {
         2: .2,
         9: .8
@@ -892,35 +894,31 @@ def run_globio_mgds(number_of_steps):
         2: .8,
         9: .2
         }
-    processes=[]
-    processes.append(Process(target=analyze_composite_globio_change, args=[args.copy()]))
+    pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    processes.append(Process(target=globio_analyze_forest_core_expansion, args=[args.copy()]))
+    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    processes.append(Process(target=globio_analyze_lu_expansion, args=[args.copy()]))
+    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    processes.append(Process(target=globio_analyze_forest_expansion, args=[args.copy()]))
+    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    processes.append(Process(target=globio_analyze_forest_core_fragmentation, args=[args.copy()]))
-    
-    map(lambda x: x.start(), processes)
-    map(lambda x: x.join(), processes)
-    
-    
-def run_globio_mg(number_of_steps):
+    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
+ 
+ 
+def run_globio_mg(number_of_steps, pool):
     output_folder = './globio_mg_output'
     try:
         os.makedirs(output_folder)
@@ -1003,9 +1001,9 @@ def run_globio_mg(number_of_steps):
     args['canals_array']= geotiff_to_array(canals_raster_uri)
     
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'composite_globio_change_20_80_mg.csv'))
+        os.path.join(output_folder, 'globio_mg_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
-        os.path.join(output_folder, 'composite_globio_change_20_80_pixel_count_mg.csv'))
+        os.path.join(output_folder, 'globio_mg_composite_20_80_pixel_count.csv'))
     args['land_cover_start_fractions'] = {
         2: .2,
         9: .8
@@ -1015,37 +1013,44 @@ def run_globio_mg(number_of_steps):
         9: .2
         }
         
-    processes = []
-    processes.append(Process(target=analyze_composite_globio_change, args=[args.copy()]))
-    
+    pool.apply_async(analyze_composite_globio_change, [args.copy()])
+        
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    processes.append(Process(target=globio_analyze_forest_core_expansion, args=[args.copy()]))
+    pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
     
-     #Set up args for the savanna scenario (via lu_expansion function)
+    #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mg_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    processes.append(Process(target=globio_analyze_lu_expansion, args=[args.copy()]))
+    pool.apply_async(globio_analyze_lu_expansion, [args.copy()])
        
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    processes.append(Process(target=globio_analyze_forest_expansion, args=[args.copy()]))
-
+    pool.apply_async(globio_analyze_forest_expansion, [args.copy()])
+    
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mg_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    processes.append(Process(target=globio_analyze_forest_core_fragmentation, args=[args.copy()]))
+    pool.apply_async(globio_analyze_forest_core_fragmentation, [args.copy()])
 
-    map(lambda x: x.start(), processes)
-    map(lambda x: x.join(), processes)
+def main():
+    NUMBER_OF_STEPS = 2
     
-    
+    pool = Pool(2)
+    run_globio_mgds(NUMBER_OF_STEPS, pool)
+    print 'MGDS closing pool and joining'
+    pool.close()
+    pool.join()
+
+    pool = Pool(2)
+    run_globio_mg(NUMBER_OF_STEPS, pool)
+    print 'MG closing pool and joining'
+    pool.close()
+    pool.join()
+
+
 if __name__ == '__main__':
-    NUMBER_OF_STEPS = 200
-    run_globio_mgds(NUMBER_OF_STEPS)
-    run_globio_mg(NUMBER_OF_STEPS)
-    #Process(target=run_globio_mg, args=[NUMBER_OF_STEPS]).start()
-    #Process(target=run_globio_mgds, args=[NUMBER_OF_STEPS]).start()
+    main()
