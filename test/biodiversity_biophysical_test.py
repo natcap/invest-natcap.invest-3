@@ -589,7 +589,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         uri_results = [None, 1, 1, None, None]
         for uri, res in zip(uri_list, uri_results):
             ds = biodiversity_biophysical.open_ambiguous_raster(
-                    uri, #raise_error=False)
+                    uri) #raise_error=False)
             if not ds is None:
                 self.assertEqual(res, 1)
             else:
