@@ -814,7 +814,7 @@ def run_globio_mgds(number_of_steps, pool):
         #number of iterations to run.
         'scenario_conversion_steps': number_of_steps, 
         #how many pixels should be converted to crop in each iteration step
-        'pixels_to_convert_per_step': 208,
+        'pixels_to_convert_per_step': 932,
         #identify a new lu code for newly-created crop that we add via the simulation
         'converting_crop': 17,
         'converting_id_list': [12, 17, 120],
@@ -933,7 +933,7 @@ def run_globio_mg(number_of_steps, pool):
         #number of iterations to run.
         'scenario_conversion_steps': number_of_steps, 
         #how many pixels should be converted to crop in each iteration step
-        'pixels_to_convert_per_step': 3046,
+        'pixels_to_convert_per_step': 932,
         #identify a new lu code for newly-created crop that we add via the simulation
         'converting_crop': 17,
         'converting_id_list': [12, 17, 120],
