@@ -1023,16 +1023,11 @@ def run_mg(number_of_steps, pool):
     pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
     
 if __name__ == '__main__':
-    table = open('time_result.csv', 'wb')
-    table.write('cpus,time\n')
-    for CPUS in range(1, 6):
-        start = time.clock()
-        NUMBER_OF_STEPS = 1
-        POOL = Pool(CPUS)
-        run_mg(NUMBER_OF_STEPS, POOL)
-        run_mgds(NUMBER_OF_STEPS, POOL)
-        POOL.close()
-        POOL.join()
-        elapsed = (time.clock() - start)
-        table.write('%s,%s' % (CPUS, elapsed))
-        table.flush()
+    start = time.clock()
+    NUMBER_OF_STEPS = 1
+    POOL = Pool(3)
+    run_mg(NUMBER_OF_STEPS, POOL)
+    run_mgds(NUMBER_OF_STEPS, POOL)
+    POOL.close()
+    POOL.join()
+    elapsed = (time.clock() - start)
