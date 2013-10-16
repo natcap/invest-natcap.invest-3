@@ -346,9 +346,20 @@ def build_biomass_forest_edge_regression(
         #Fit a log function of edge distance to biomass for
         #landcover_type
         try:
+        
+            x = numpy.log(landcover_edge_distance.flat)
+            y = landcover_biomass.flat
+            
             slope, intercept, r_value, p_value, std_err = (
-                scipy.stats.linregress(numpy.log(landcover_edge_distance.flat),
-                landcover_biomass.flat))
+                scipy.stats.linregress(x, y))
+                
+            landcover_regression[landcover_type] = {
+                'median': regression_builder(slope, intercept),
+            }
+            
+            landcover_regression[landcover_type]['confidence'] = (
+                regression_builder_confidence(x, y, slope, intercept))
+                
         except ValueError:
             print (
                 "skipping landcover type %s because regression failed, "
@@ -356,13 +367,23 @@ def build_biomass_forest_edge_regression(
             continue
         print ('regression for lucode(%s) f(d)=%.2f * d + %.2f' %
             (landcover_type, slope, intercept))
-        landcover_regression[landcover_type] = {
-            'median': regression_builder(slope, intercept)
-        }
-           
 
     return landcover_regression
 
+def regression_builder_confidence(x, y, slope, intercept):
+    """Builds a confidence interval function given the log'd x's and y
+        along with the slope and intercept calculated from the linear
+        regression."""
+        
+    x_mean = numpy.mean(x)
+    n = x.size
+    denom = numpy.sum(numpy.power(x-x_mean, 2.0))
+    t_star = scipy.stats.t.ppf(0.975, n-2)
+    p_y = slope * x + intercept
+    y_err = y - p_y
+    sigma_e = numpy.sqrt(numpy.sum(numpy.power(y_err, 2)))
+    return lambda x_star: t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom)
+    
 
 def calculate_landcover_means(
     landcover_array, biomass_array, biomass_nodata, cell_size):
@@ -884,8 +905,8 @@ def run_mgds(number_of_steps):
         'scenario_lulc_base_map_filename': 'lulc',
         'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
-        #Becky calculated this for MGDS
-        'pixels_to_convert_per_step': 208,
+        #Becky wants the average between MGDS and MG
+        'pixels_to_convert_per_step': 932,
     }
 
     #set up args for the composite scenario
@@ -908,7 +929,10 @@ def run_mgds(number_of_steps):
         2: .8,
         9: .2
         }
-    Process(target=analyze_composite_carbon_stock_change, args=[args]).start()
+    p=Process(target=analyze_composite_carbon_stock_change, args=[args])
+    p.start()
+    p.join()
+    sys.exit(1)
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
@@ -952,7 +976,7 @@ def run_mg(number_of_steps):
         'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
         #Becky calculated this for MG
-        'pixels_to_convert_per_step': 3046,
+        'pixels_to_convert_per_step': 932,
     }
 
     #set up args for the composite scenario
@@ -1000,5 +1024,5 @@ def run_mg(number_of_steps):
     
 if __name__ == '__main__':
     NUMBER_OF_STEPS = 200
-    Process(target=run_mg, args=[NUMBER_OF_STEPS]).start()
+    #Process(target=run_mg, args=[NUMBER_OF_STEPS]).start()
     Process(target=run_mgds, args=[NUMBER_OF_STEPS]).start()
