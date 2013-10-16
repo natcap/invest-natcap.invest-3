@@ -172,6 +172,8 @@ def create_globio_lulc(args, scenario_lulc_array=None):
 
     #export_array_as_geotiff(globio_lulc,args["export_folder"]+"globio_lulc_"+args['run_id']+".tif",args['input_lulc_uri'],0)
     #make_map(globio_lulc)
+    for temp_uri in aligned_uris:
+        os.remove(temp_uri)
     return globio_lulc 
 
     
@@ -522,9 +524,7 @@ def globio_analyze_forest_core_fragmentation(args):
             scenario_edge_distance = calculate_forest_edge_distance(
                 scenario_lulc_array, args['forest_lucodes'], cell_size)        
             decreasing_distances = numpy.argsort(scenario_edge_distance.flat)[::-1]
-    
-            
-            
+
             scenario_lulc_array.flat[
                 decreasing_distances[0:deepest_edge_index]] = (
                     args['converting_crop'])
@@ -598,14 +598,7 @@ def globio_analyze_lu_expansion(args):
     pixels_converted = 0
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating change in MSA for expansion step %s' % percent
-        
-#        deepest_edge_index += args['pixels_to_convert_per_step']
-#        scenario_lulc_array.flat[
-#            increasing_distances[0:deepest_edge_index]] = (
-#                args['converting_crop'])
-#        #Calcualte the effect on MSA using calc_msa_lu function
-    #Convert lulc for the next iteration
-        #This section converts grassland
+
         if percent > 0:
             landcover_mask = numpy.where(
                 scenario_lulc_array.flat == args['conversion_lucode'])
@@ -667,10 +660,10 @@ def run_globio_mgds(number_of_steps):
         #uri to geotiff of lulc data. the values in this map must correspond to the values in lulc_conversion_table_uri 
         'input_lulc_uri': './inputs_mgds_globio/lulc_2008.tif',
         #the next 4 lines define the 4 elements that I used to construct a map of infrastructure. These were drawn from Digital Chart of the World and the EMBRAPA dataset from the Brazilian government. The globio script sums up these 4 sources to createa binary defined map of 1=is_infrastructure, 0=not_infrastructure and then applies the globio method to that.
-        'roads_uri': './inputs_mgds_globio/roads_proj.shp',
-        'highways_uri': './inputs_mgds_globio/highways_proj.shp',
-        'transmission_lines_uri': './inputs_mgds_globio/transmission_lines_proj.shp',
-        'canals_uri': './inputs_mgds_globio/canals_proj.shp',
+        'roads_uri': './brazil_infrastructure/roads_prj.shp',
+        'highways_uri': './brazil_infrastructure/highways_prj.shp',
+        'transmission_lines_uri': './brazil_infrastructure/transmission_lines_prj.shp',
+        'canals_uri': './brazil_infrastructure/canals_prj.shp',
         #Default of .5. pasture data is from Ramankutty  2008 and is defined as a proportion, (0,1). The threshold defined in this variable declares that any land less than the threshold is pristine vegetation, else it is defined as livestock grazing.
         'pasture_threshold': .5,   
         #areas with yieldgaps greater than this threshold are defined as low intensity (because they have not used intensification methods to reach their achievable yield) Defined in terms of tons not produed per 5min grid cell. 45.6 is the default value, representing 50% of the global average yieldgap.
