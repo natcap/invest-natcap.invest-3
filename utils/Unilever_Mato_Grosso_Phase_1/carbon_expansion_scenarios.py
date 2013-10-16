@@ -21,7 +21,8 @@ import os
 import sys
 import collections
 import errno
-from multiprocessing import Process
+from multiprocessing import Pool
+import time
 
 def lowpriority():
     """ Set the priority of the process to below-normal."""
@@ -886,7 +887,7 @@ def analyze_lu_expansion(args):
         scenario_lulc_array.flat[landcover_mask[0][
             0:args['pixels_to_convert_per_step']]] = args['converting_crop']
 
-def run_mgds(number_of_steps):
+def run_mgds(number_of_steps, pool):
     output_dir = './carbon_mgds_output'
     args = {
         #the locations for the various filenames needed for the simulations
@@ -930,32 +931,31 @@ def run_mgds(number_of_steps):
         2: .8,
         9: .2
         }
-    p=Process(target=analyze_composite_carbon_stock_change, args=[args])
-    p.start()
+    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mgds.csv'))
-    Process(target=analyze_forest_core_fragmentation, args=[args]).start()
+    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mgds.csv'))
-    Process(target=analyze_forest_core_expansion, args=[args]).start()
+    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
     
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mgds.csv'))
     args['conversion_lucode'] = 9 #woody savannna    
-    Process(target=analyze_lu_expansion, args=[args]).start()
+    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mgds.csv'))
-    Process(target=analyze_forest_edge_erosion, args=[args]).start()
+    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
     
     
-def run_mg(number_of_steps):
+def run_mg(number_of_steps, pool):
     output_dir = './carbon_mg_output'
     args = {
         #the locations for the various filenames needed for the simulations
@@ -999,30 +999,40 @@ def run_mg(number_of_steps):
         2: .8,
         9: .2
         }
-    Process(target=analyze_composite_carbon_stock_change, args=[args]).start()
+    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg.csv'))
-    Process(target=analyze_forest_core_fragmentation, args=[args]).start()
+    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mg.csv'))
-    Process(target=analyze_forest_core_expansion, args=[args]).start()
+    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
     
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mg.csv'))
     args['conversion_lucode'] = 9 #woody savannna    
-    Process(target=analyze_lu_expansion, args=[args]).start()
+    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg.csv'))
-    Process(target=analyze_forest_edge_erosion, args=[args]).start()
+    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
     
 if __name__ == '__main__':
-    NUMBER_OF_STEPS = 2
-    Process(target=run_mg, args=[NUMBER_OF_STEPS]).start()
-    Process(target=run_mgds, args=[NUMBER_OF_STEPS]).start()
+    table = open('time_result.csv', 'wb')
+    table.write('cpus,time\n')
+    for CPUS in range(1, 6):
+        start = time.clock()
+        NUMBER_OF_STEPS = 1
+        POOL = Pool(CPUS)
+        run_mg(NUMBER_OF_STEPS, POOL)
+        run_mgds(NUMBER_OF_STEPS, POOL)
+        POOL.close()
+        POOL.join()
+        elapsed = (time.clock() - start)
+        table.write('%s,%s' % (CPUS, elapsed))
+        table.flush()
