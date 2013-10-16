@@ -157,6 +157,7 @@ if platform.system() == 'Windows':
          'invest_wind_energy.py',
          'invest_fisheries.py',
          'invest_ntfp.py',
+         'invest_monthly_water_yield.py',
          'invest_test_all.py']
 
     py2exe_args['windows'] = [
