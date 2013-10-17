@@ -912,13 +912,7 @@ def run_mgds(number_of_steps, pool):
     }
 
     #set up args for the composite scenario
-    try:
-        os.makedirs(output_dir)
-    except OSError as exception:
-        #It's okay if the directory already exists, if it fails for
-        #some other reason, raise that exception
-        if exception.errno != errno.EEXIST:
-            raise
+    raster_utils.create_directories([output_folder])
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds.csv'))
     args['output_pixel_count_filename'] = (
@@ -980,13 +974,8 @@ def run_mg(number_of_steps, pool):
     }
 
     #set up args for the composite scenario
-    try:
-        os.makedirs(output_dir)
-    except OSError as exception:
-        #It's okay if the directory already exists, if it fails for
-        #some other reason, raise that exception
-        if exception.errno != errno.EEXIST:
-            raise
+    raster_utils.create_directories([output_folder])
+    
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg.csv'))
     args['output_pixel_count_filename'] = (
