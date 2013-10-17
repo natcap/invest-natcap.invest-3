@@ -906,7 +906,7 @@ def run_mgds(number_of_steps, pool):
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 17, 0],
         'converting_crop': 17,
-        'scenario_lulc_base_map_filename': 'mgds_lulc_base',
+        'scenario_lulc_base_map_filename': 'inputs/mgds_lulc_base',
         'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
         #Becky wants the average between MGDS and MG
@@ -968,7 +968,7 @@ def run_mg(number_of_steps, pool):
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 120, 0],
         'converting_crop': 120,
-        'scenario_lulc_base_map_filename': 'mg_lulc_base',
+        'scenario_lulc_base_map_filename': 'inputs/mg_lulc_base',
         'scenario_conversion_steps': number_of_steps,
         'converting_id_list': [12, 17, 120],
         #Becky calculated this for MG
