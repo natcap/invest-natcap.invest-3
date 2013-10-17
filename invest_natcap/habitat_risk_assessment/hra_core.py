@@ -541,7 +541,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
             s_o_score = max_risk * frac_over + (1-frac_over)
 
-            e_score = s_o_score if frac_over == 0 else (e_agg_dict[ident] + s_o_score) / 2
+            e_score = s_o_score if frac_over in [0, 0.] else \
+                            (e_agg_dict[ident] + s_o_score) / 2
 
             avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
