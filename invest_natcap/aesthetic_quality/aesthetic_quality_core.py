@@ -115,7 +115,10 @@ def print_skip_list(sweep_line, skip_nodes):
             print('skip node level ' + str(level), skip_node['distance'], \
             'span', skip_node['span'], 'next', None if skip_node['next'] \
             is None else skip_node['next']['distance'], 'up', \
-            None if skip_node['up'] is None else skip_node['up']['distance'])
+            None if skip_node['up'] is None else skip_node['up']['distance'], \
+            None if skip_node['up'] is None else \
+            None if skip_node['up']['next'] is None else \
+            skip_node['up']['next']['distance'])
 
 def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Insert an active pixel in the sweep_line and update the skip_nodes.
@@ -261,6 +264,13 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             skip_nodes[level][distance] = skip_node
             del skip_nodes[level][second]
             sweep_line[distance]['up'] = skip_nodes[level][distance]
+            print('0---skip node level ' + str(level), skip_node['distance'], \
+            'span', skip_node['span'], 'next', None if skip_node['next'] \
+            is None else skip_node['next']['distance'], 'up', \
+            None if skip_node['up'] is None else skip_node['up']['distance'], \
+            None if skip_node['up'] is None else \
+            None if skip_node['up']['next'] is None else \
+            skip_node['up']['next']['distance'])
             while skip_node['up'] is not None:
                 level += 1
                 skip_node = skip_node['up']
@@ -274,10 +284,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                         skip_nodes[level][distance]
                 else:
                     skip_nodes[level][distance]['up'] = None
+            print('1---skip node level ' + str(level), skip_node['distance'], \
+            'span', skip_node['span'], 'next', None if skip_node['next'] \
+            is None else skip_node['next']['distance'], 'up', \
+            None if skip_node['up'] is None else skip_node['up']['distance'], \
+            None if skip_node['up'] is None else \
+            None if skip_node['up']['next'] is None else \
+            skip_node['up']['next']['distance'])
         # Updating span
-        #if sweep_line[distance]['up'] is not None:
-            #print('Increasing span ' + str(sweep_line[distance]['up']['span']) + \
-            #' of new front pixel ' + str(distance))
         update_skip_node_span(sweep_line[distance]['up'], 0, hierarchy, skip_nodes)
         # The old first is not first anymore: shouldn't point up
         sweep_line[second]['up'] = None
