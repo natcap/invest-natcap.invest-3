@@ -100,7 +100,10 @@ def expand_lu_type(
     def step_percent(lu_code):
         total_pixels = 0
         for step_id in range(current_step):
-            current_percent = float(step_id) / (end_step - 1)
+            if end_step != 1:
+                current_percent = float(step_id) / (end_step - 1)
+            else:
+                current_percent = 0.0
             #print current_percent, pixels_per_step
             total_pixels += pixels_per_step * (
                 land_cover_start_fractions[lu_code] * (1-current_percent) + 
@@ -453,10 +456,28 @@ def load_base_datasets(args):
         landcover_array, biomass_array, biomass_nodata, cell_size)
 
     #Parse out the landcover pool table
-    carbon_pool_table = get_lookup_from_csv(
+    carbon_pool_table_raw = get_lookup_from_csv(
         args['carbon_pool_table_filename'], 'LULC')
+        
+    carbon_pool_table_confidence = {}
+    for lu_code in carbon_pool_table_raw:
+        try:
+            sd = float(carbon_pool_table_raw[lu_code]['C_ABOVE_SD'])
+            mn = float(carbon_pool_table_raw[lu_code]['C_ABOVE_MEAN'])
+            print lu_code, mn, sd
+            if sd == 0:
+                ci = (0.0, 0.0)
+            else:
+                ci = scipy.stats.norm.interval(0.95, loc=mn, scale=sd)
+            carbon_pool_table_confidence[lu_code] = {
+                'median': mn,
+                'lower': ci[0] if ci[0] > 0 else 0,
+                'upper': ci[1],
+                }
+        except ValueError:
+            print '%s not in table' % lu_code
 
-    return landcover_regression, landcover_mean, carbon_pool_table
+    return landcover_regression, landcover_mean, carbon_pool_table_confidence
 
 
 def calculate_carbon_stocks(
@@ -503,6 +524,7 @@ def calculate_carbon_stocks(
     #This section will calculate carbon stocks either from the mean
     #calculated during regression building, or from the table, depending
     #on how the parameters are set
+    print carbon_pool_table
     for landcover_type in numpy.unique(scenario_lulc_array):
         if landcover_type in regression_lucodes:
             #we already calculated earlier
@@ -514,7 +536,7 @@ def calculate_carbon_stocks(
         if landcover_type in biomass_from_table_lucodes:
             #convert from Mg/Ha to Mg/Pixel
             carbon_per_pixel = (
-                carbon_pool_table[landcover_type]['C_ABOVE_MEAN'] *
+                carbon_pool_table[landcover_type][tail] *
                 cell_size ** 2 / 10000)
         else:
             #look it up in the mean table
@@ -935,6 +957,7 @@ def run_mgds(number_of_steps, pool):
         9: .2
         }
     pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    #analyze_composite_carbon_stock_change(args)
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
@@ -988,7 +1011,7 @@ def run_mg(number_of_steps, pool):
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg.csv'))
     args['output_pixel_count_filename'] = (
-        os.path.join(output_dir, './output/composite_carbon_stock_change_20_80_pixel_count_mg.csv'))
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mg.csv'))
     args['land_cover_start_fractions'] = {
         2: .2,
         9: .8
@@ -998,6 +1021,7 @@ def run_mg(number_of_steps, pool):
         9: .2
         }
     pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    #analyze_composite_carbon_stock_change(args)
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
