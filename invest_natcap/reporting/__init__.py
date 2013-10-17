@@ -50,8 +50,6 @@ def generate_report(reporting_args):
                         }
 
         reporting_args[out_uri]
-
-    
     """
     html_obj = {'head':{}, 'body':{}}
     
