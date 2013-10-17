@@ -227,16 +227,21 @@ def analyze_composite_carbon_stock_change(args):
         output_count_table.flush()
         #Calculate the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
-        carbon_stocks = calculate_carbon_stocks(
-            expanded_lulc_array, args['forest_lucodes'],
-            args['regression_lucodes'],
-            args['biomass_from_table_lucodes'], carbon_pool_table,
-            landcover_regression, landcover_mean, cell_size)
+        output_table.write('%s,%s' % (percent, args['pixels_to_convert_per_step']*percent))
+        #Calcualte the carbon stocks based on the regression functions, lookup
+        #tables, and land cover raster.
+        for tail_type in ['median', 'lower', 'upper']:
+            carbon_stocks = calculate_carbon_stocks(
+                scenario_lulc_array, args['forest_lucodes'],
+                args['regression_lucodes'],
+                args['biomass_from_table_lucodes'], carbon_pool_table,
+                landcover_regression, landcover_mean, cell_size, tail=tail_type)
 
-        #Dump the current percent iteration's carbon stocks to the csv file
-        total_stocks = numpy.sum(carbon_stocks)
-        print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
+            #Dump the current percent iteration's carbon stocks to the csv file
+            total_stocks = numpy.sum(carbon_stocks)
+            print 'total %s stocks %.2f' % (tail_type, total_stocks)
+            output_table.write(',%.2f' % (total_stocks))
+        output_table.write('\n')
         output_table.flush()
         
         if percent % 100 == 0:
@@ -705,19 +710,21 @@ def analyze_forest_core_expansion(args):
     deepest_edge_index = 0
     for percent in range(0, args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
-
+        output_table.write('%s,%s' % (percent, args['pixels_to_convert_per_step']*percent))
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
-        carbon_stocks = calculate_carbon_stocks(
-            scenario_lulc_array, args['forest_lucodes'],
-            args['regression_lucodes'],
-            args['biomass_from_table_lucodes'], carbon_pool_table,
-            landcover_regression, landcover_mean, cell_size)
+        for tail_type in ['median', 'lower', 'upper']:
+            carbon_stocks = calculate_carbon_stocks(
+                scenario_lulc_array, args['forest_lucodes'],
+                args['regression_lucodes'],
+                args['biomass_from_table_lucodes'], carbon_pool_table,
+                landcover_regression, landcover_mean, cell_size, tail=tail_type)
 
-        #Dump the current percent iteration's carbon stocks to the csv file
-        total_stocks = numpy.sum(carbon_stocks)
-        print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
+            #Dump the current percent iteration's carbon stocks to the csv file
+            total_stocks = numpy.sum(carbon_stocks)
+            print 'total %s stocks %.2f' % (tail_type, total_stocks)
+            output_table.write(',%.2f' % (total_stocks))
+        output_table.write('\n')
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step']
@@ -790,19 +797,21 @@ def analyze_forest_core_fragmentation(args):
     deepest_edge_index = 0
     for percent in range(0, args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
-
+        output_table.write('%s,%s' % (percent, args['pixels_to_convert_per_step']*percent))
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
-        carbon_stocks = calculate_carbon_stocks(
-            scenario_lulc_array, args['forest_lucodes'],
-            args['regression_lucodes'],
-            args['biomass_from_table_lucodes'], carbon_pool_table,
-            landcover_regression, landcover_mean, cell_size)
+        for tail_type in ['median', 'lower', 'upper']:
+            carbon_stocks = calculate_carbon_stocks(
+                scenario_lulc_array, args['forest_lucodes'],
+                args['regression_lucodes'],
+                args['biomass_from_table_lucodes'], carbon_pool_table,
+                landcover_regression, landcover_mean, cell_size, tail=tail_type)
 
-        #Dump the current percent iteration's carbon stocks to the csv file
-        total_stocks = numpy.sum(carbon_stocks)
-        print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
+            #Dump the current percent iteration's carbon stocks to the csv file
+            total_stocks = numpy.sum(carbon_stocks)
+            print 'total %s stocks %.2f' % (tail_type, total_stocks)
+            output_table.write(',%.2f' % (total_stocks))
+        output_table.write('\n')
         output_table.flush()
 
         deepest_edge_index = args['pixels_to_convert_per_step']
@@ -898,19 +907,21 @@ def analyze_lu_expansion(args):
     pixels_converted = 0
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
-
+        output_table.write('%s,%s' % (percent, args['pixels_to_convert_per_step']*percent))
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
-        carbon_stocks = calculate_carbon_stocks(
-            scenario_lulc_array, args['forest_lucodes'],
-            args['regression_lucodes'],
-            args['biomass_from_table_lucodes'], carbon_pool_table,
-            landcover_regression, landcover_mean, cell_size)
+        for tail_type in ['median', 'lower', 'upper']:
+            carbon_stocks = calculate_carbon_stocks(
+                scenario_lulc_array, args['forest_lucodes'],
+                args['regression_lucodes'],
+                args['biomass_from_table_lucodes'], carbon_pool_table,
+                landcover_regression, landcover_mean, cell_size, tail=tail_type)
 
-        #Dump the current percent iteration's carbon stocks to the csv file
-        total_stocks = numpy.sum(carbon_stocks)
-        print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%.2f\n' % (percent, total_stocks))
+            #Dump the current percent iteration's carbon stocks to the csv file
+            total_stocks = numpy.sum(carbon_stocks)
+            print 'total %s stocks %.2f' % (tail_type, total_stocks)
+            output_table.write(',%.2f' % (total_stocks))
+        output_table.write('\n')
         output_table.flush()
 
         #Convert lulc for the next iteration
@@ -1049,7 +1060,7 @@ def run_mg(number_of_steps, pool):
     
 if __name__ == '__main__':
     start = time.clock()
-    NUMBER_OF_STEPS = 1
+    NUMBER_OF_STEPS = 200
     POOL = Pool(3)
     run_mg(NUMBER_OF_STEPS, POOL)
     run_mgds(NUMBER_OF_STEPS, POOL)
