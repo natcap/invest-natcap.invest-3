@@ -125,7 +125,6 @@ def lowpriority():
         win32process.SetPriorityClass(handle, win32process.IDLE_PRIORITY_CLASS)
     else:
         import os
-
         os.nice(1)
 
 def create_globio_infrastructure(args):
@@ -801,11 +800,7 @@ def analyze_composite_globio_change(args):
  
 def run_globio_mgds(number_of_steps, pool):
     output_folder = './globio_mgds_output'
-    try:
-        os.makedirs(output_folder)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+    raster_utils.create_directories([output_folder])
             
     #This set of args are shared by all of the LULC-generating-scenarios
     args = {
@@ -920,11 +915,7 @@ def run_globio_mgds(number_of_steps, pool):
  
 def run_globio_mg(number_of_steps, pool):
     output_folder = './globio_mg_output'
-    try:
-        os.makedirs(output_folder)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+    raster_utils.create_directories([output_folder])
             
     #This set of args are shared by all of the LULC-generating-scenarios
     args = {
