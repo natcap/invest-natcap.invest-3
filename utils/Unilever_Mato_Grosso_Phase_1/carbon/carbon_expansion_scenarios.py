@@ -893,9 +893,9 @@ def run_mgds(number_of_steps, pool):
     output_dir = './carbon_mgds_output'
     args = {
         #the locations for the various filenames needed for the simulations
-        'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
-        'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
-        'carbon_pool_table_filename': './brazil_carbon.csv',
+        'base_biomass_filename': './inputs/Carbon_MG_2008/mg_bio_2008',
+        'base_landcover_filename': './inputs/Carbon_MG_2008/mg_lulc_2008',
+        'carbon_pool_table_filename': './inputs/brazil_carbon.csv',
         #these are the landcover types that are used when determining edge
         #effects from forests
         'forest_lucodes': [1, 2, 3, 4, 5],
@@ -955,9 +955,9 @@ def run_mg(number_of_steps, pool):
     output_dir = './carbon_mg_output'
     args = {
         #the locations for the various filenames needed for the simulations
-        'base_biomass_filename': './Carbon_MG_2008/mg_bio_2008',
-        'base_landcover_filename': './Carbon_MG_2008/mg_lulc_2008',
-        'carbon_pool_table_filename': './brazil_carbon.csv',
+        'base_biomass_filename': './inputs/Carbon_MG_2008/mg_bio_2008',
+        'base_landcover_filename': './inputs/Carbon_MG_2008/mg_lulc_2008',
+        'carbon_pool_table_filename': './inputs/brazil_carbon.csv',
         #these are the landcover types that are used when determining edge
         #effects from forests
         'forest_lucodes': [1, 2, 3, 4, 5],
