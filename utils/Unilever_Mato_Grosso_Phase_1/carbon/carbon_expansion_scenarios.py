@@ -359,8 +359,10 @@ def build_biomass_forest_edge_regression(
                 'median': regression_builder(slope, intercept),
             }
             
-            landcover_regression[landcover_type]['confidence'] = (
-                regression_builder_confidence(x, y, slope, intercept))
+            landcover_regression[landcover_type]['lower'] = (
+                regression_builder_confidence(x, y, slope, intercept, 'lower'))
+            landcover_regression[landcover_type]['upper'] = (
+                regression_builder_confidence(x, y, slope, intercept, 'upper'))
                 
         except ValueError:
             print (
@@ -372,7 +374,7 @@ def build_biomass_forest_edge_regression(
 
     return landcover_regression
 
-def regression_builder_confidence(x, y, slope, intercept):
+def regression_builder_confidence(x, y, slope, intercept, mode):
     """Builds a confidence interval function given the log'd x's and y
         along with the slope and intercept calculated from the linear
         regression."""
@@ -384,7 +386,10 @@ def regression_builder_confidence(x, y, slope, intercept):
     p_y = slope * x + intercept
     y_err = y - p_y
     sigma_e = numpy.sqrt(numpy.sum(numpy.power(y_err, 2)))
-    return lambda x_star: t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom)
+    if mode == 'lower':
+        return lambda x_star: slope * numpy.log(x_star) + intercept - numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
+    elif mode == 'upper':
+        return lambda x_star: slope * numpy.log(x_star) + intercept + numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
     
 
 def calculate_landcover_means(
@@ -457,7 +462,7 @@ def load_base_datasets(args):
 def calculate_carbon_stocks(
     scenario_lulc_array, forest_lucodes, regression_lucodes,
     biomass_from_table_lucodes, carbon_pool_table, landcover_regression,
-    landcover_mean, cell_size):
+    landcover_mean, cell_size, tail='median'):
     """A helper function to calculate carbon stocks based on all the parameters
         that commonly go into each scenario.
 
@@ -473,6 +478,8 @@ def calculate_carbon_stocks(
             with both lower, median, and upper error limits 'lower', 'median', 'upper'
         landcover_mean - a dictionary mapping lucode to biomas mean
         cell_size - the cell size in meters
+        tail - (optional) can be 'lower' 'upper' or 'median' to give a CI on 
+            carbon stocks
 
         return array of carbon stocks in Mg/pixel the same size as
             scenario_lulc_array"""
@@ -490,7 +497,7 @@ def calculate_carbon_stocks(
         landcover_mask = numpy.where(
             (scenario_lulc_array == landcover_type) * (edge_distance > 0))
         carbon_stocks[landcover_mask] = (
-            landcover_regression[landcover_type]['median'](
+            landcover_regression[landcover_type][tail](
             edge_distance[landcover_mask]))
 
     #This section will calculate carbon stocks either from the mean
