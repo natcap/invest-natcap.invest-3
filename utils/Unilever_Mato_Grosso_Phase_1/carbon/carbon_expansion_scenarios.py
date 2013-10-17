@@ -201,7 +201,7 @@ def analyze_composite_carbon_stock_change(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg),Total Above Ground Carbon Stocks (Mg) (lower tail),Total Above Ground Carbon Stocks (Mg) (upper tail)\n')
     
     output_count_table = open(args['output_pixel_count_filename'], 'wb')
     unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
@@ -607,25 +607,27 @@ def analyze_forest_edge_erosion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg),Total Above Ground Carbon Stocks (Mg) (lower tail),Total Above Ground Carbon Stocks (Mg) (upper tail)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for expansion step %s' % percent
-
+        output_table.write('%s,%s' % (percent, args['pixels_to_convert_per_step']*percent))
         #Calcualte the carbon stocks based on the regression functions, lookup
         #tables, and land cover raster.
-        carbon_stocks = calculate_carbon_stocks(
-            scenario_lulc_array, args['forest_lucodes'],
-            args['regression_lucodes'],
-            args['biomass_from_table_lucodes'], carbon_pool_table,
-            landcover_regression, landcover_mean, cell_size)
+        for tail_type in ['median', 'lower', 'upper']:
+            carbon_stocks = calculate_carbon_stocks(
+                scenario_lulc_array, args['forest_lucodes'],
+                args['regression_lucodes'],
+                args['biomass_from_table_lucodes'], carbon_pool_table,
+                landcover_regression, landcover_mean, cell_size, tail=tail_type)
 
-        #Dump the current percent iteration's carbon stocks to the csv file
-        total_stocks = numpy.sum(carbon_stocks)
-        print 'total stocks %.2f' % total_stocks
-        output_table.write('%s,%s,%.2f\n' % (percent, args['pixels_to_convert_per_step']*percent, total_stocks))
+            #Dump the current percent iteration's carbon stocks to the csv file
+            total_stocks = numpy.sum(carbon_stocks)
+            print 'total %s stocks %.2f' % (tail_type, total_stocks)
+            output_table.write(',%.2f' % (total_stocks))
+        output_table.write('\n')
         output_table.flush()
 
         deepest_edge_index += args['pixels_to_convert_per_step']
@@ -697,7 +699,7 @@ def analyze_forest_core_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Crop Expansion,Total Pixels Converted,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg),Total Above Ground Carbon Stocks (Mg) (lower tail),Total Above Ground Carbon Stocks (Mg) (upper tail)\n')
 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
@@ -888,7 +890,8 @@ def analyze_lu_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion,Total Above Ground Carbon Stocks (Mg)\n')
+        'Percent Crop Expansion,Number of Pixels Converted,Total Above Ground Carbon Stocks (Mg),Total Above Ground Carbon Stocks (Mg) (lower tail),Total Above Ground Carbon Stocks (Mg) (upper tail)\n')
+
 
     #These two indexes will keep track of the number of grassland, and later
     #how deep into the forest we've converted.
