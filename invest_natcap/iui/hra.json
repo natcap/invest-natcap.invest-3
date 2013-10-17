@@ -67,7 +67,7 @@
                     "dataType": "string",
                     "helpText": "Each of these represents an option for decay equations for the buffered stressors. If stressor buffering is desired, these equtions will determine the rate at which stressor data is reduced."
                 },
-	        {
+	            {
                     "id" : "max_rating",
                     "args_id" : "max_rating",
                     "type": "text",
@@ -78,6 +78,18 @@
                     "validText": "[1-9][0-9]*",
                     "dataType": "int",
                     "helpText": "This is the highest score that is used to rate a criteria within this model run. These values would be placed within the Rating column of the habitat, species, and stressor CSVs."
+                },
+	            {
+                    "id" : "max_stress",
+                    "args_id" : "max_stress",
+                    "type": "text",
+                    "label": "Maximum Overlapping Stressors",
+                    "defaultValue": "3",
+                    "required": true,
+                    "validateAs": {"type": "number"},
+                    "validText": "[1-9][0-9]*",
+                    "dataType": "int",
+                    "helpText": "This is the largest number of stressors that are suspected to overlap. This will be used in order to make determinations of low, medium, and high risk for any given habitat."
                 },
                 {
                     "id": "aoi_tables",
