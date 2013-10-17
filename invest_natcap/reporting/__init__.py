@@ -25,12 +25,15 @@ def generate_report(reporting_args):
                         'type':'table',
                         'section': 'body',
                         'sortable':True,
-                        'data':{'dictionary':{},
-                                'shapefile':{'uri':'path.shp',
-                                            'key':'key_field'},
-                                'csv':{'uri':'path.csv', 'key':'key_field'}
-                        'position':2
-                        },
+                        'position':2,
+                        'data_type':'shapefile'|'csv'|'dictionary',
+                        'data':URI | dict,
+                        'key':'key_field',
+                        'columns':{'col_name_1':{'id':0,'editable':True},
+                                   'col_name_2':{'id':1,'editable':False},
+                                   ...},
+                        'total':{'row_name':'totals', 'columns':['col_name_1']}
+                        }
                         {
                         'type':'head',
                         'section': 'head',
@@ -72,101 +75,92 @@ def generate_report(reporting_args):
     return html_str
 
 def write_html(html_obj, out_uri, title):
+    """Write an html file by parsing through a dictionary that contains strings
+        and their proper structure
+
+        html_obj - a dictionary whose keys depict the structure for the html
+            page and whose values are sub dictionaries that hold the strings 
+            example: {'head':{0:'string', 1:'string', 2:'string'},
+                      'body':{0:'string', 1:'string', 2:'string'}}
+        
+        out_uri - a URI for the output html file
+
+        title - a string represting the title of the page
+
+        returns - nothing
     """
 
-    """
-
+    # Start the string that will be written as the html file by setting the
+    # title
     html_str = '<html><head><title>%s</title>' % title
     
-    # Write head elements
+    # Sort the head keys so that the head elements are written in the proper
+    # order
     head_keys = html_obj['head'].keys()
     head_keys.sort()
     for head_key in head_keys:
+        # Concatenate the output string with the head elements
         html_str += html_obj['head'][head_key]
-
+    
+    # End the head tag and start the body tag
     html_str += '</head><body>'
 
-    # Write body elements
+    # Sort the body keys so that the body elements are written in the proper
+    # order
     body_keys = html_obj['body'].keys()
     body_keys.sort()
     for body_key in body_keys:
+        # Concatenate the output string with the body elements
         html_str += html_obj['body'][body_key]
 
-    html_str += '</body>'
+    # Finish the body and the html tag
+    html_str += '</body></html>'
 
-    html_str += '</html>'
-
+    # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
         os.remove(out_uri)
 
+    # Open the file, write the string and close the file
     html_file = open(out_uri, 'w')
     html_file.write(html_str)
     html_file.close()
 
-    return html_str
-
-def initialize_html_string():
-    """
-    {
-        'head':{
-            0: ''
-            1: ''
-            2: ''
-               }
-        'body':{
-            0: ''
-            1: ''
-            2: ''
-               }
-    }
-    
-    """
-    html_str = '<html>'
-
-
 def build_table(param_args):
     """
-def generate_table(table_dict, attributes=None):
-    Takes in a dictionary representation of a table and generates a String of
-        the the table in the form of hmtl
-
-        table_dict - a dictionary with the following structure:
-            {'cols': {col_name_1 : {id: 0, sortable:True, editable:False},
-                      col_name_2 : {id: 1, sortable:True, editable:False},
-                      ...
-                     },
-             'rows': {row_id_0: {
-                        values: {col_name_1: value, col_name_2: value, ...},
-                        sortable: False},
-                      row_id_1: {
-                        values: {col_name_1: value, col_name_2: value, ...},
-                        sortable: False},
-                     ...
-                     },
-             'totals': row_id_x
-             }
-
-         attributes - a dictionary with keys being valid html table attributes
-             that point to proper values
 
     """
-    table_dict = None
+    inter_dict = {} 
+    table_dict = {} 
 
     # Pre-process input data if a CSV file or shapefile
-    data_type = param_args['data'].keys()
-    input_data = param_args['data'][data_type]
+    data_type = param_args['data_type']
+    input_data = param_args['data']
     
     if data_type == 'shapefile':
-        key = input_data['key']
-        table_dict = table_generator.process_table_input_shape(input_data, key)
+        key = param_args['key']
+        inter_dict = raster_utils.extract_datasource_table_by_key(input_data, key)
     elif data_type == 'CSV':
-        key = input_data['key']
-        table_dict = table_generator.process_table_input_csv(input_data, key)
+        key = param_args['key']
+        inter_dict = raster_utils.get_lookup_from_csv(input_data, key)
     else:
-        table_dict = input_data
-    
-    return table_generator.generate_table(table_dict)
+        inter_dict = input_data
+   
+    LOGGER.debug('INTER Dict: %s', inter_dict)
 
+    table_dict['cols'] = param_args['columns']
+    
+    table_dict['rows'] = inter_dict
+    
+    if 'totals' in param_args:
+        table_dict['totals'] = param_args['totals']
+    
+    LOGGER.debug('TABLE Dict: %s', table_dict)
+    attr = None
+
+    if param_args['sortable']:
+        attr = {"class":"sortable"}
+
+    return table_generator.generate_table(table_dict, attr)
 
 def add_text():
     """
