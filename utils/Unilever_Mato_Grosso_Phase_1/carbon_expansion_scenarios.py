@@ -23,6 +23,7 @@ import collections
 import errno
 from multiprocessing import Pool
 import time
+from invest_natcap import raster_utils
 
 def lowpriority():
     """ Set the priority of the process to below-normal."""
@@ -237,7 +238,7 @@ def analyze_composite_carbon_stock_change(args):
         
         if percent % 100 == 0:
             print 'dumping a raster at percent %s%%' % percent
-            output_uri = 'composite_lulc_80_20_%s_.tif' % percent
+            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'composite_lulc_80_20_%ss.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
                 args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
             lulc_band = lulc_out_ds.GetRasterBand(1)
@@ -608,7 +609,7 @@ def analyze_forest_edge_erosion(args):
                 
         if percent % 100 == 0:
             print 'dumping a raster at percent %s%%' % percent
-            output_uri = 'edge_lulc_%s.tif' % percent
+            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'edge_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
                 args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
             lulc_band = lulc_out_ds.GetRasterBand(1)
@@ -698,7 +699,7 @@ def analyze_forest_core_expansion(args):
                 
         if percent % 100 == 0:
             print 'dumping a raster at percent %s%%' % percent
-            output_uri = 'core_lulc_%s.tif' % percent
+            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'core_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
                 args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
             lulc_band = lulc_out_ds.GetRasterBand(1)
@@ -790,7 +791,7 @@ def analyze_forest_core_fragmentation(args):
                 
         if percent % 100 == 0:
             print 'dumping a raster at percent %s%%' % percent
-            output_uri = 'frag_lulc_%s.tif' % percent
+            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'frag_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
                 args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
             lulc_band = lulc_out_ds.GetRasterBand(1)
@@ -887,6 +888,7 @@ def analyze_lu_expansion(args):
         scenario_lulc_array.flat[landcover_mask[0][
             0:args['pixels_to_convert_per_step']]] = args['converting_crop']
 
+            
 def run_mgds(number_of_steps, pool):
     output_dir = './carbon_mgds_output'
     args = {
@@ -912,7 +914,7 @@ def run_mgds(number_of_steps, pool):
     }
 
     #set up args for the composite scenario
-    raster_utils.create_directories([output_folder])
+    raster_utils.create_directories([output_dir])
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds.csv'))
     args['output_pixel_count_filename'] = (
@@ -974,7 +976,7 @@ def run_mg(number_of_steps, pool):
     }
 
     #set up args for the composite scenario
-    raster_utils.create_directories([output_folder])
+    raster_utils.create_directories([output_dir])
     
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg.csv'))
@@ -1020,3 +1022,4 @@ if __name__ == '__main__':
     POOL.close()
     POOL.join()
     elapsed = (time.clock() - start)
+    print 'elsapsed time %ss' % elapsed
