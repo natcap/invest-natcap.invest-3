@@ -250,3 +250,58 @@ class TestTableGenerator(unittest.TestCase):
         table_string = reporting.generate_report(report_args)
 
         self.assertEqual(expected_result, table_string)
+    
+    def test_generate_html_shape(self):
+        """Unit test for creating a table from a dictionary as a string
+            representing html"""
+        #raise SkipTest
+        
+        out_dir = 'invest-data/test/data/test_out'
+        data_dir = 'invest-data/test/data/reporting_data'
+
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        output_uri = os.path.join(out_dir, 'html_test.html')
+        shape_uri = os.path.join(data_dir, 'shape_test.shp')
+
+        columns = {
+            'ws_id' : {'id': 0, 'editable':False},
+            'precip_mn' : {'id': 1, 'editable':False},
+            'wyield_mn' : {'id': 2, 'editable':False},
+            'wyield_vol' : {'id': 3, 'editable':True}}
+        
+        report_args = {
+                'title': 'Test Title',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': False,
+                        'data_type':'shapefile',
+                        'columns':columns,
+                        'key':'ws_id',
+                        'data': shape_uri,
+                        'position': 0},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'position': 0,
+                        'src': 'table_style.css'}
+                    ],
+                'out_uri': output_uri}
+
+
+        expected_result = ("<html><head><title>Test Title</title>"
+                "<link rel=stylesheet type=text/css href=table_style.css>"
+                "</head><body><table><thead><tr><th>ws_id</th>"
+                "<th>precip_mn</th><th>wyield_mn</th><th>wyield_vol</th></tr></thead>"
+                "<tbody><tr><td>0</td><td>1880.0</td><td>1070.0</td><td>4590</td></tr>"
+                "<tr><td>1</td><td>1892.0</td><td>1111.0</td><td>9420</td></tr>"
+                "<tr><td>2</td><td>1838.0</td><td>1010.0</td><td>1945</td></tr>"
+                "</tbody></table></body></html>")
+
+        table_string = reporting.generate_report(report_args)
+
+        self.assertEqual(expected_result, table_string)
