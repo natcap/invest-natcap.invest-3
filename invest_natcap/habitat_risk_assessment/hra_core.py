@@ -539,10 +539,19 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             name = name_map[ident]
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            LOGGER.debug("The frac overlap for %s is %s" % (ident, frac_over))
             s_o_score = max_risk * frac_over + (1-frac_over)
 
-            e_score = s_o_score if frac_over in [0, 0.] else \
-                            (e_agg_dict[ident] + s_o_score) / 2
+            if frac_over == 0.:
+                e_score == 0.
+            #Know here that there is overlap. So now check whether we have
+            #scoring from users. If no, just use spatial overlap. 
+            elif e_agg_dict[ident] in [0, 0.]:
+                e_score = s_o_score
+            #If there is, want to average the spatial overlap into everything
+            #else.
+            else:
+                e_score = (e_agg_dict[ident] + s_o_score) / 2
 
             avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
