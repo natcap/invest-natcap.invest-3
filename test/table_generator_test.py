@@ -223,7 +223,7 @@ class TestTableGenerator(unittest.TestCase):
                         'type': 'table',
                         'section': 'body',
                         'sortable': False,
-                        'data_type':'CSV',
+                        'data_type':'csv',
                         'columns':columns,
                         'key':'ws_id',
                         'data': csv_uri,
