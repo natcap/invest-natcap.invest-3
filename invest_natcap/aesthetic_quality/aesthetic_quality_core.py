@@ -287,6 +287,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     print('distance is', distance, 'keys are',
                     sorted(skip_nodes[level+1].keys()))
                     up_skip_node = skip_nodes[level][second].copy()
+                    up_skip_node['next'] = skip_nodes[level+1][second]['next']
                     skip_nodes[level+1][distance] = up_skip_node
                     skip_node['up'] = skip_nodes[level+1][distance]
                 else:
