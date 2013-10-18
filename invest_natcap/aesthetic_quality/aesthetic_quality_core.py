@@ -187,8 +187,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 
             Returns nothing."""
         if pixel is not None:
-            print('adding span to node ' +str(pixel['up']['distance']) +' '+\
-            str(level) + ' which currently is ' + str(pixel['up']['span']))
+            print('pixel', pixel)
+            print('adding span to node ' +str(pixel['distance']) +' '+\
+            str(level) + ' which currently is ' + str(pixel['span']))
             for key in pixel.keys():
                 print('pixel key:', key)
             pixel['span'] += 1
@@ -306,7 +307,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         pixel['next'] = sweep_line[distance]
         # Update the span if necessary
         if hierarchy:
-            update_skip_node_span(hierarchy[0]['down'], 0, hierarchy, skip_nodes)
+            update_skip_node_span(hierarchy[0], 0, hierarchy, skip_nodes)
 
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
