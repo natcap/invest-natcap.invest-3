@@ -23,9 +23,11 @@ import scipy.stats
 import os
 import errno
 import time
-from multiprocessing import Process, Pool
+from multiprocessing import Pool
 import collections
 import signal
+import logging
+import math
 
 import numpy as np
 from numpy import copy
@@ -33,6 +35,11 @@ import scipy
 import scipy.ndimage.filters
 import matplotlib.pyplot as plt
 from invest_natcap import raster_utils
+
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('globio_script')
 
 
 def expand_lu_type(
@@ -272,31 +279,58 @@ def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
 def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
     print "Calculating MSA(Infrastructure)"
    
+    #This is from the website and Becky says is okay
+    sample_n = 64
+    infrastructure_impact_zones = {
+        'median': {
+            'no impact': 1.0,
+            'low impact': 0.9,
+            'medium impact': 0.8,
+            'high impact': 0.4
+            },
+        'se': {
+            'no impact': 0.02,
+            'low impact': 0.06,
+            'medium impact': 0.13,
+            'high impact': 0.22
+            },
+        }
+
+    for index, impact_type in [(0, 'lower'), (1, 'upper')]:
+        infrastructure_impact_zones['low'] = {}
+        for impact_type, value in infrastructure_impact_zones['median'].iteritems():
+            infrastructure_impact_zones['low'][impact_type] = (
+                scipy.stats.norm.interval(
+                    0.95, loc=infrastructure_impact_zones['median'][impact_type],
+                    scale=infrastructure_impact_zones['se'][impact_type] / math.sqrt(sample_n)))[index]
+
+    LOGGER.debug(infrastructure_impact_zones)
     
+    for bound in ['median']:
     #Calculate msa_i effects for each relevant LULC. This is based on table 6 from UNEP 2009.
-    msa_i_tropical_forest = np.zeros(input_lulc.shape)
-    msa_i_tropical_forest = np.where((distance_to_infrastructure > 4000.0) & (distance_to_infrastructure <= 14000.0), 0.9, 1.0)
-    msa_i_tropical_forest = np.where((distance_to_infrastructure > 1000.0) & (distance_to_infrastructure <= 4000.0), 0.8, msa_i_tropical_forest)
-    msa_i_tropical_forest = np.where( (distance_to_infrastructure <= 1000.0), 0.4, msa_i_tropical_forest)
-    
-    msa_i_temperate_and_boreal_forest = np.zeros(input_lulc.shape)
-    print msa_i_temperate_and_boreal_forest.shape
-    msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0), 0.9, 1.0)
-    print msa_i_temperate_and_boreal_forest.shape
-    msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0), 0.8, msa_i_temperate_and_boreal_forest)
-    print msa_i_temperate_and_boreal_forest.shape
-    msa_i_temperate_and_boreal_forest = np.where( (distance_to_infrastructure <= 300.0), 0.4, msa_i_temperate_and_boreal_forest)
-    print msa_i_temperate_and_boreal_forest.shape
+        msa_i_tropical_forest = np.zeros(input_lulc.shape)
+        msa_i_tropical_forest = np.where((distance_to_infrastructure > 4000.0) & (distance_to_infrastructure <= 14000.0), infrastructure_impact_zones[bound]['low impact'], infrastructure_impact_zones[bound]['no impact'])
+        msa_i_tropical_forest = np.where((distance_to_infrastructure > 1000.0) & (distance_to_infrastructure <= 4000.0), infrastructure_impact_zones[bound]['medium impact'], msa_i_tropical_forest)
+        msa_i_tropical_forest = np.where( (distance_to_infrastructure <= 1000.0), infrastructure_impact_zones[bound]['high impact'], msa_i_tropical_forest)
 
-    msa_i_cropland_and_grassland = np.zeros(input_lulc.shape)
-    msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0), 0.9, 1.0)
-    msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 500.0) & (distance_to_infrastructure <= 2000.0), 0.8, msa_i_cropland_and_grassland)
-    msa_i_cropland_and_grassland = np.where( (distance_to_infrastructure <= 500.0), 0.4, msa_i_cropland_and_grassland)
+        msa_i_temperate_and_boreal_forest = np.zeros(input_lulc.shape)
+        print msa_i_temperate_and_boreal_forest.shape
+        msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0), infrastructure_impact_zones[bound]['low impact'], infrastructure_impact_zones[bound]['no impact'])
+        print msa_i_temperate_and_boreal_forest.shape
+        msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0), infrastructure_impact_zones[bound]['medium impact'], msa_i_temperate_and_boreal_forest)
+        print msa_i_temperate_and_boreal_forest.shape
+        msa_i_temperate_and_boreal_forest = np.where( (distance_to_infrastructure <= 300.0), infrastructure_impact_zones[bound]['high impact'], msa_i_temperate_and_boreal_forest)
+        print msa_i_temperate_and_boreal_forest.shape
 
-    msa_i = np.zeros(input_lulc.shape)
-    print msa_i.shape, input_lulc.shape, msa_i_temperate_and_boreal_forest.shape
-    msa_i = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,1.0)
-    msa_i = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i)
+        msa_i_cropland_and_grassland = np.zeros(input_lulc.shape)
+        msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0), infrastructure_impact_zones[bound]['low impact'], infrastructure_impact_zones[bound]['no impact'])
+        msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 500.0) & (distance_to_infrastructure <= 2000.0), infrastructure_impact_zones[bound]['medium impact'], msa_i_cropland_and_grassland)
+        msa_i_cropland_and_grassland = np.where( (distance_to_infrastructure <= 500.0), infrastructure_impact_zones[bound]['high impact'], msa_i_cropland_and_grassland)
+
+        msa_i = np.zeros(input_lulc.shape)
+        print msa_i.shape, input_lulc.shape, msa_i_temperate_and_boreal_forest.shape
+        msa_i = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,infrastructure_impact_zones[bound]['no impact'])
+        msa_i = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i)
     return msa_i
 
 
@@ -894,23 +928,24 @@ def run_globio_mgds(number_of_steps, pool):
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
+#    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
+    globio_analyze_forest_core_expansion(args)
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
+#    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
+#    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
+#    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
  
  
 def run_globio_mg(number_of_steps, pool):
@@ -1027,18 +1062,12 @@ def run_globio_mg(number_of_steps, pool):
         os.path.join(output_folder,'globio_mg_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
     pool.apply_async(globio_analyze_forest_core_fragmentation, [args.copy()])
 
-def main():
-    NUMBER_OF_STEPS = 2
-    
-    pool = Pool(2)
-    run_globio_mgds(NUMBER_OF_STEPS, pool)
-    print 'MGDS closing pool and joining'
-    pool.close()
-    pool.join()
 
-    pool = Pool(2)
-    run_globio_mg(NUMBER_OF_STEPS, pool)
-    print 'MG closing pool and joining'
+def main():
+    NUMBER_OF_STEPS = 1
+    pool = Pool(8)
+    run_globio_mgds(NUMBER_OF_STEPS, pool)
+#    run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
