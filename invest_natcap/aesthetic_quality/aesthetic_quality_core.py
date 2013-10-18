@@ -206,7 +206,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     'down':skip_nodes[level][distance],\
                     'distance':pixel['distance'], 'span':2}
                     skip_nodes[level+1][distance] = skip_node
-                    pixel['up'] = skip_nodes[+1][distance]
+                    pixel['up'] = skip_nodes[level+1][distance]
                     # Second skip node points to the second last element in sweep_line
                     second_last = pixel['next']['next']
                     second_distance = second_last['distance']
