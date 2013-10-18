@@ -1061,7 +1061,7 @@ def run_mg(number_of_steps, pool):
 if __name__ == '__main__':
     start = time.clock()
     NUMBER_OF_STEPS = 200
-    POOL = Pool(3)
+    POOL = Pool(7)
     run_mg(NUMBER_OF_STEPS, POOL)
     run_mgds(NUMBER_OF_STEPS, POOL)
     POOL.close()
