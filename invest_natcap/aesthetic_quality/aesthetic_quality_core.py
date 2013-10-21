@@ -162,8 +162,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         before['next'] = skip_nodes[current_distance]
         before['span'] = 2
         span = None
-        #print('Inserting new skip node: before', before['distance'], 'current', current_distance,
-        #'after', None if after is None else after['distance'])
+        print('Inserting new skip node: before', before['distance'], 'current', current_distance,
+        'after', None if after is None else after['distance'])
         if upper_node is not None:
             print('Updating upper node ' + str(upper_node['distance']) + '-' + \
             (str(None) if upper_node['next'] is None else \
@@ -195,7 +195,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             pixel['span'] += 1
             # Adjusting span if too large
             while pixel['span'] > 3:
-                #print('span is more than 3')
+                print('span is more than 3')
                 # Insert the missing skip_node
                 #print('using hierarchy level ' + str(level+1) + ' for node ' + \
                 #str(pixel['distance']) + ':')
@@ -261,8 +261,10 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     print('After finding ' + (str(None) if pixel is None else \
     str(pixel['distance'])) + ' before ' + str(distance) + \
     ', before any change:')
-    print_hierarchy(hierarchy)
     print_skip_list(sweep_line, skip_nodes)
+    print_hierarchy(hierarchy)
+    print('hierarchy is consistent:', \
+    hierarchy_is_consistent(pixel, hierarchy, skip_nodes))
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
@@ -531,6 +533,41 @@ def add_active_pixel(sweep_line, distance, visibility):
         sweep_line['closest'] = new_pixel
     return sweep_line
 
+def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
+    """Makes simple tests to ensure the the hierarchy is consistent"""
+    if pixel is None:
+        return (True, 'Hierarchy is consistent')
+
+    message = 'Hierarchy  size of ' + str(len(hierarchy)) + ' != ' + \
+    ' length of skip_nodes ' + str(len(skip_nodes))
+    if len(hierarchy) != len(skip_nodes):
+        return (False, message)
+    
+    # Test each level in the hierarchy
+    old_current = -1 # used to avoid repeats
+    old_after = -1 # used to avoid repeats
+    for level in hierarchy:
+        distance = pixel['distance']
+        current = None if level is None else level['distance']
+        after = None if distance is None else \
+        (None if level['next'] is None else level['next']['distance'])
+
+        message = \
+        'Repeats in hierarchy levels: ' + str(current) + '-' + str(after)
+        if (current != old_current) and (after != old_after): 
+            return (False, message)
+        message = "Current distance of " + str(distance) + \
+        " falls on or after the next pixel " + str(after)
+        if current < after:
+            return (False, message)
+
+        message = "Current distance of " + str(distance) + \
+        " falls before hierarchy node " + str(current)
+        if current >= distance: 
+            return (False, message)
+
+    return (True, 'Hierarchy is consistent')
+        
 def skip_list_is_consistent(linked_list, skip_nodes):
     """Function that checks for skip list inconsistencies.
     
