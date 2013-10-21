@@ -922,30 +922,30 @@ def run_globio_mgds(number_of_steps, pool):
     args['land_cover_end_fractions'] = {
         2: .8,
         9: .2
-        }
+p        }
     pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-#    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
-    globio_analyze_forest_core_expansion(args)
+    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
+#    globio_analyze_forest_core_expansion(args)
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-#    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
+    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-#    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
+    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-#    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
+    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
  
  
 def run_globio_mg(number_of_steps, pool):
@@ -1067,7 +1067,7 @@ def main():
     NUMBER_OF_STEPS = 1
     pool = Pool(8)
     run_globio_mgds(NUMBER_OF_STEPS, pool)
-#    run_globio_mg(NUMBER_OF_STEPS, pool)
+    run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
