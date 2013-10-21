@@ -145,11 +145,8 @@ def create_globio_infrastructure(args):
     infrastructure = np.where((args['transmission_lines_array'] >= 1.0) & (args['transmission_lines_array'] <= 2000.0), 1.0,infrastructure)
     infrastructure = np.where((args['canals_array'] >= 1.0) & (args['canals_array'] <= 2000.0), 1.0,infrastructure)
 
-    #export_array_as_geotiff(infrastructure, args['export_folder']+'infrastructure_binary'+str(time.time()).split(",")[0]+'.tif', args["input_lulc_uri"])
-
     not_infrastructure = (infrastructure - 1)*(-1) #flip 0 and 1
     distance_to_infrastructure = scipy.ndimage.morphology.distance_transform_edt(not_infrastructure) * 500 #500 meter cell size
-    #export_array_as_geotiff(distance_to_infrastructure, args['export_folder']+'distance_to_infrastructure'+str(time.time()).split(",")[0]+'.tif', args["input_lulc_uri"])
 
     return distance_to_infrastructure, infrastructure
     
@@ -306,6 +303,12 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
 
     LOGGER.debug(infrastructure_impact_zones)
     
+    msa_i = {
+        'median': np.zeros(input_lulc.shape),
+        'lower': np.zeros(input_lulc.shape),
+        'upper': np.zeros(input_lulc.shape),
+        }
+
     for bound in ['median']:
     #Calculate msa_i effects for each relevant LULC. This is based on table 6 from UNEP 2009.
         msa_i_tropical_forest = np.zeros(input_lulc.shape)
@@ -327,10 +330,9 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
         msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 500.0) & (distance_to_infrastructure <= 2000.0), infrastructure_impact_zones[bound]['medium impact'], msa_i_cropland_and_grassland)
         msa_i_cropland_and_grassland = np.where( (distance_to_infrastructure <= 500.0), infrastructure_impact_zones[bound]['high impact'], msa_i_cropland_and_grassland)
 
-        msa_i = np.zeros(input_lulc.shape)
         print msa_i.shape, input_lulc.shape, msa_i_temperate_and_boreal_forest.shape
-        msa_i = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,infrastructure_impact_zones[bound]['no impact'])
-        msa_i = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i)
+        msa_i[bound] = np.where((input_lulc >= 1) & (input_lulc <= 5), msa_i_temperate_and_boreal_forest,infrastructure_impact_zones[bound]['no impact'])
+        msa_i[bound] = np.where((input_lulc >= 6) & (input_lulc <= 12), msa_i_cropland_and_grassland,msa_i[bound])
     return msa_i
 
 
@@ -497,7 +499,7 @@ def globio_analyze_forest_expansion(args):
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
@@ -567,7 +569,7 @@ def globio_analyze_forest_core_expansion(args):
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
@@ -639,7 +641,7 @@ def globio_analyze_forest_core_fragmentation(args):
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
@@ -715,7 +717,7 @@ def globio_analyze_lu_expansion(args):
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
@@ -818,7 +820,7 @@ def analyze_composite_globio_change(args):
         avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, expanded_lulc_array, percent)
-        avg_msa_i = str(float(np.mean(msa_i[np.where(args['aoi_array'] == 1)])))
+        avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_f = calc_msa_f(infrastructure, expanded_lulc_array, args, percent)
         avg_msa_f = str(float(np.mean(msa_f[np.where(args['aoi_array'] == 1)])))
@@ -922,7 +924,7 @@ def run_globio_mgds(number_of_steps, pool):
     args['land_cover_end_fractions'] = {
         2: .8,
         9: .2
-p        }
+        }
     pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     
     #Set up args for the forest core expansion scenario
