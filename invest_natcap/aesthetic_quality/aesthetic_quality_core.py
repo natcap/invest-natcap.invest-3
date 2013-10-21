@@ -347,6 +347,11 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
 
     return (sweep_line, skip_nodes)
 
+def print_node(node):
+    """Printing a node by displaying its 'distance' and 'next' fields"""
+    print(str(None) if node is None else (node['distance'] + '-' + \
+    (str(None) if node['next'] is None else node['next']['distance'])))
+
 def find_pixel_before_fast(sweep_line, skip_nodes, distance):
     """Find the active pixel before the one with distance. 
         
