@@ -15,7 +15,7 @@ WRITING_ARCHIVES = os.path.join('invest-data/test/data', 'test_writing')
 TEST_INPUT = os.path.join('invest-data/test/data', 'data_storage', 'test_input')
 TEST_OUT = os.path.join('invest-data/test/data', 'test_out')
 BASE_DATA = os.path.join('invest-data/test/data', 'base_data')
-
+REGRESSION_INPUT = os.path.join('invest-data/test/data', 'testing_regression')
 
 class TestWritingTest(testing.GISTest):
     def test_file_has_class_pass(self):
@@ -493,3 +493,26 @@ class GISTestTester(testing.GISTest):
         self.assertRaises(AssertionError, self.assertFiles, base_file,
             different_file)
 
+    def test_assert_text_same(self):
+        """Check that asserting two identical text files passes"""
+        sample_file = os.path.join(REGRESSION_INPUT, 'sample_text_file.txt')
+        self.assertTextEqual(sample_file, sample_file)
+
+    def test_assert_text_different(self):
+        """Check that asserting two different text files fails."""
+        sample_file = os.path.join(REGRESSION_INPUT, 'sample_text_file.txt')
+        regression_file = os.path.join(REGRESSION_INPUT, 'sample_json.json')
+        self.assertRaises(AssertionError, self.assertTextEqual, sample_file,
+            regression_file)
+
+    def test_assert_files_text_same(self):
+        """Check that asserting two identical text files passes"""
+        sample_file = os.path.join(REGRESSION_INPUT, 'sample_text_file.txt')
+        self.assertFiles(sample_file, sample_file)
+
+    def test_assert_files_text_different(self):
+        """Check that asserting two different text files fails."""
+        sample_file = os.path.join(REGRESSION_INPUT, 'sample_text_file.txt')
+        regression_file = os.path.join(REGRESSION_INPUT, 'sample_json.json')
+        self.assertRaises(AssertionError, self.assertFiles, sample_file,
+            regression_file)
