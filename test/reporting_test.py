@@ -16,7 +16,7 @@ class TestReportingPackage(unittest.TestCase):
     def test_generate_html(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        raise SkipTest
+        #raise SkipTest
         
         out_dir = 'invest-data/test/data/test_out'
 
@@ -180,4 +180,28 @@ class TestReportingPackage(unittest.TestCase):
         table_string = reporting.generate_report(report_args)
 
         self.assertEqual(expected_result, table_string)
-    
+    def test_add_head_element_link(self):
+        """Unit test for adding link head elements to html file"""
+        #raise SkipTest
+       
+        args = {'format':'link', 'src':'example_style.css'}
+
+        expected_result = \
+                '<link rel=stylesheet type=text/css href=example_style.css'
+
+        result = reporting.add_head_element(args)
+
+        self.assertEqual(expected_result, result)
+
+    def test_add_head_element_script(self):
+        """Unit test for adding script head elements to html file"""
+        args = {'format':'script', 'src':'example_script.js'}
+        #raise SkipTest
+
+        expected_result = \
+                '<script type=text/javascript src=example_script.js></script>'
+
+        result = reporting.add_head_element(args)
+
+        self.assertEqual(expected_result, result)
+
