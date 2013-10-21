@@ -385,7 +385,14 @@ def build_biomass_forest_edge_regression(
 def regression_builder_confidence(x, y, slope, intercept, mode):
     """Builds a confidence interval function given the log'd x's and y
         along with the slope and intercept calculated from the linear
-        regression."""
+        regression.
+
+        x - an array of log(x') values
+        y - a parallel array to x of measured y values
+        slope - the regression slope of the pre-calcualted regression function of x and y
+        intercept - the y-intercept of the pre-calculated regression function of x and y
+        
+        returns a regression function as a function of un-logged x."""
         
     x_mean = numpy.mean(x)
     n = x.size
@@ -931,77 +938,14 @@ def analyze_lu_expansion(args):
         scenario_lulc_array.flat[landcover_mask[0][
             0:args['pixels_to_convert_per_step']]] = args['converting_crop']
 
-            
-def run_mgds(number_of_steps, pool):
-    output_dir = './carbon_mgds_output'
-    args = {
-        #the locations for the various filenames needed for the simulations
-        'base_biomass_filename': './inputs/Carbon_MG_2008/mg_bio_2008',
-        'base_landcover_filename': './inputs/Carbon_MG_2008/mg_lulc_2008',
-        'carbon_pool_table_filename': './inputs/brazil_carbon.csv',
-        #these are the landcover types that are used when determining edge
-        #effects from forests
-        'forest_lucodes': [1, 2, 3, 4, 5],
-        #These are the landcover types that should use the log regression
-        #when calculating storage biomass
-        'regression_lucodes': [2],
-        #These are the LULCs to take directly from table, everything else is
-        #mean from regression
-        'biomass_from_table_lucodes': [10, 12, 17, 0],
-        'converting_crop': 17,
-        'scenario_lulc_base_map_filename': 'inputs/mgds_lulc_base',
-        'scenario_conversion_steps': number_of_steps,
-        'converting_id_list': [12, 17, 120],
-        #Becky wants the average between MGDS and MG
-        'pixels_to_convert_per_step': 932,
-    }
 
-    #set up args for the composite scenario
-    raster_utils.create_directories([output_dir])
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds.csv'))
-    args['output_pixel_count_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mgds.csv'))
-    args['land_cover_start_fractions'] = {
-        2: .2,
-        9: .8
-        }
-    args['land_cover_end_fractions'] = {
-        2: .8,
-        9: .2
-        }
-    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    #analyze_composite_carbon_stock_change(args)
-    
-    #Set up args for the forest core scenario
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mgds.csv'))
-    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
-    
-    #Set up args for the forest core scenario
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mgds.csv'))
-    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
-    
-    #Set up args for the savanna scenario
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mgds.csv'))
-    args['conversion_lucode'] = 9 #woody savannna    
-    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
-    
-    #Set up args for the forest edge erosion scenario
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mgds.csv'))
-    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
-    
-    
-def run_mg(number_of_steps, pool):
+def run_mg(number_of_steps, pool, suffix, carbon_pool_filename):
     output_dir = './carbon_mg_output'
     args = {
         #the locations for the various filenames needed for the simulations
         'base_biomass_filename': './inputs/Carbon_MG_2008/mg_bio_2008',
         'base_landcover_filename': './inputs/Carbon_MG_2008/mg_lulc_2008',
-        'carbon_pool_table_filename': './inputs/brazil_carbon.csv',
+        'carbon_pool_table_filename': carbon_pool_filename,
         #these are the landcover types that are used when determining edge
         #effects from forests
         'forest_lucodes': [1, 2, 3, 4, 5],
@@ -1023,9 +967,9 @@ def run_mg(number_of_steps, pool):
     raster_utils.create_directories([output_dir])
     
     args['output_table_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg.csv'))
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mg.csv'))
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mg%s.csv' % suffix))
     args['land_cover_start_fractions'] = {
         2: .2,
         9: .8
@@ -1039,31 +983,103 @@ def run_mg(number_of_steps, pool):
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
-        os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg.csv'))
+        os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg%s.csv' % suffix))
     pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
-        os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mg.csv'))
+        os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mg%s.csv' % suffix))
     pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
     
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
-        os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mg.csv'))
+        os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mg%s.csv' % suffix))
     args['conversion_lucode'] = 9 #woody savannna    
     pool.apply_async(analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
-        os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg.csv'))
+        os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg%s.csv' % suffix))
     pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
+
+            
+def run_mgds(number_of_steps, pool, carbon_pool_filename, suffix):
+    output_dir = './carbon_mgds_output'
+    args = {
+        #the locations for the various filenames needed for the simulations
+        'base_biomass_filename': './inputs/Carbon_MG_2008/mg_bio_2008',
+        'base_landcover_filename': './inputs/Carbon_MG_2008/mg_lulc_2008',
+        'carbon_pool_table_filename': carbon_pool_filename,
+        #these are the landcover types that are used when determining edge
+        #effects from forests
+        'forest_lucodes': [1, 2, 3, 4, 5],
+        #These are the landcover types that should use the log regression
+        #when calculating storage biomass
+        'regression_lucodes': [2],
+        #These are the LULCs to take directly from table, everything else is
+        #mean from regression
+        'biomass_from_table_lucodes': [10, 12, 17, 0],
+        'converting_crop': 17,
+        'scenario_lulc_base_map_filename': 'inputs/mgds_lulc_base',
+        'scenario_conversion_steps': number_of_steps,
+        'converting_id_list': [12, 17, 120],
+        #Becky wants the average between MGDS and MG
+        'pixels_to_convert_per_step': 932,
+    }
+
+    #set up args for the composite scenario
+    raster_utils.create_directories([output_dir])
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mgds%s.csv' % suffix))
+    args['land_cover_start_fractions'] = {
+        2: .2,
+        9: .8
+        }
+    args['land_cover_end_fractions'] = {
+        2: .8,
+        9: .2
+        }
+    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    #analyze_composite_carbon_stock_change(args)
+    
+    #Set up args for the forest core scenario
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mgds%s.csv' % suffix))
+    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
+    
+    #Set up args for the forest core scenario
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mgds%s.csv' % suffix))
+    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
+    
+    #Set up args for the savanna scenario
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mgds%s.csv' % suffix))
+    args['conversion_lucode'] = 9 #woody savannna    
+    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
+    
+    #Set up args for the forest edge erosion scenario
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mgds%s.csv' % suffix))
+    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])    
+    
     
 if __name__ == '__main__':
     start = time.clock()
     NUMBER_OF_STEPS = 200
     POOL = Pool(7)
-    run_mg(NUMBER_OF_STEPS, POOL)
-    run_mgds(NUMBER_OF_STEPS, POOL)
+    SUFFIX = '_regression_uncertainty_only'
+    CARBON_POOL_FILENAME = './inputs/brazil_carbon_no_uncertainty.csv'
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+
+    SUFFIX = '_uncertainty_regression_and_table'
+    CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+
     POOL.close()
     POOL.join()
     elapsed = (time.clock() - start)
