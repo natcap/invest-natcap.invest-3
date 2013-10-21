@@ -103,6 +103,7 @@ packages = ['invest_natcap',
             'invest_natcap.flood_mitigation',
             'invest_natcap.fisheries',
             'invest_natcap.ntfp',
+            'invest_natcap.blue_carbon',
             ]
 
 def get_iui_resource_data_files(lib_path):
@@ -158,6 +159,8 @@ if platform.system() == 'Windows':
          'invest_fisheries.py',
          'invest_ntfp.py',
          'invest_monthly_water_yield.py',
+         'invest_natcap_blue_carbon.py',
+         'invest_natcap_blue_carbon_preprocessor.py',
          'invest_test_all.py']
 
     py2exe_args['windows'] = [
@@ -183,6 +186,9 @@ if platform.system() == 'Windows':
                 ('.', ['geos_c.dll', 'libgcc_s_dw2-1.dll', 'libstdc++-6.dll']),
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json']),
+                ('invest_natcap/blue_carbon',
+                    ['invest_natcap/blue_carbon/disturbance.csv',
+                     'invest_natcap/blue_carbon/preprocessor.csv']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
             ] + matplotlib.get_py2exe_datafiles()
