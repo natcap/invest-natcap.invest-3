@@ -159,8 +159,8 @@ if platform.system() == 'Windows':
          'invest_fisheries.py',
          'invest_ntfp.py',
          'invest_monthly_water_yield.py',
-         'invest_natcap_blue_carbon.py',
-         'invest_natcap_blue_carbon_preprocessor.py',
+         'invest_blue_carbon.py',
+         'invest_blue_carbon_preprocessor.py',
          'invest_test_all.py']
 
     py2exe_args['windows'] = [
