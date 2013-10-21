@@ -68,9 +68,7 @@ def generate_report(reporting_args):
 
     LOGGER.debug('HTML OBJECT : %s', html_obj)
 
-    html_str = write_html(
-            html_obj, reporting_args['out_uri'], reporting_args['title'])
-    return html_str
+    write_html(html_obj, reporting_args['out_uri'], reporting_args['title'])
 
 def write_html(html_obj, out_uri, title):
     """Write an html file by parsing through a dictionary that contains strings
