@@ -301,7 +301,7 @@ def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
         'lower': np.zeros(ffqi.shape),
         'upper': np.zeros(ffqi.shape),
         }
-    for bound in ['median']:
+    for bound in ['median', 'lower', 'upper']:
         msa_f[bound] = np.where((ffqi>.9825) & (ffqi <= .9984),0.95,1.0)
         msa_f[bound] = np.where((ffqi>.89771) & (ffqi <= .9825),0.90,msa_f[bound])
         msa_f[bound] = np.where((ffqi>.578512) & (ffqi <= .89771),0.7,msa_f[bound])
@@ -346,7 +346,7 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
         'upper': np.zeros(input_lulc.shape),
         }
 
-    for bound in ['median']:
+    for bound in ['median', 'lower', 'upper']:
     #Calculate msa_i effects for each relevant LULC. This is based on table 6 from UNEP 2009.
         msa_i_tropical_forest = np.zeros(input_lulc.shape)
         msa_i_tropical_forest = np.where((distance_to_infrastructure > 4000.0) & (distance_to_infrastructure <= 14000.0), infrastructure_impact_zones[bound]['low impact'], infrastructure_impact_zones[bound]['no impact'])
@@ -692,8 +692,8 @@ def globio_analyze_forest_core_fragmentation(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA,Average MSA(LU),Average MSA(Infrastructure),Average MSA(Fragmentation)\n')
-
+        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA (median),Average MSA (lower), Average MSA (upper)\n')
+ 
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
 
@@ -714,20 +714,18 @@ def globio_analyze_forest_core_fragmentation(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu['median'][np.where(args['aoi_array'] == 1)])))
-        
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
-        avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
-        
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
-        avg_msa_f = str(float(np.mean(msa_f['median'][np.where(args['aoi_array'] == 1)])))
-
-        
-        msa = msa_f['median'] * msa_lu['median'] * msa_i['median']
-        avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
-        print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
-        
-        output_table.write('%s,%s,%s,%s,%s\n' % (percent,avg_msa,avg_msa_lu,avg_msa_i,avg_msa_f))
+        output_table.write('%s' % (percent))
+        for tail_mode in ['median', 'lower', 'upper']:
+            avg_msa_lu = str(float(np.mean(msa_lu[tail_mode][np.where(args['aoi_array'] == 1)])))
+            avg_msa_i = str(float(np.mean(msa_i[tail_mode][np.where(args['aoi_array'] == 1)])))
+            avg_msa_f = str(float(np.mean(msa_f[tail_mode][np.where(args['aoi_array'] == 1)])))        
+            LOGGER.error('%s %s %s %s' % (tail_mode, avg_msa_lu, avg_msa_i, avg_msa_f))
+            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
+            avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
+            output_table.write(',%s' % (avg_msa))
+        output_table.write('\n')
         output_table.flush()
 
         
@@ -1005,26 +1003,27 @@ def run_globio_mgds(number_of_steps, pool):
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
-    globio_analyze_forest_core_expansion(args)
+    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
+ #   globio_analyze_forest_core_expansion(args)
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    #pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
+    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
+    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
- 
- 
+    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
+    #globio_analyze_forest_core_fragmentation(args)
+    
+    
 def run_globio_mg(number_of_steps, pool):
     output_folder = './globio_mg_output'
     raster_utils.create_directories([output_folder])
