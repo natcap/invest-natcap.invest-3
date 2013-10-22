@@ -28,6 +28,7 @@ import collections
 import signal
 import logging
 import math
+import itertools
 
 import numpy as np
 from numpy import copy
@@ -576,10 +577,6 @@ def globio_analyze_forest_expansion(args):
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
         for tail_mode in ['median', 'lower', 'upper']:
-            avg_msa_lu = str(float(np.mean(msa_lu[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_i = str(float(np.mean(msa_i[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_f = str(float(np.mean(msa_f[tail_mode][np.where(args['aoi_array'] == 1)])))        
-            LOGGER.error('%s %s %s %s' % (tail_mode, avg_msa_lu, avg_msa_i, avg_msa_f))
             msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
             avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
             output_table.write(',%s' % (avg_msa))
@@ -643,10 +640,6 @@ def globio_analyze_forest_core_expansion(args):
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
         for tail_mode in ['median', 'lower', 'upper']:
-            avg_msa_lu = str(float(np.mean(msa_lu[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_i = str(float(np.mean(msa_i[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_f = str(float(np.mean(msa_f[tail_mode][np.where(args['aoi_array'] == 1)])))        
-            LOGGER.error('%s %s %s %s' % (tail_mode, avg_msa_lu, avg_msa_i, avg_msa_f))
             msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
             avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
             output_table.write(',%s' % (avg_msa))
@@ -713,10 +706,6 @@ def globio_analyze_forest_core_fragmentation(args):
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
         for tail_mode in ['median', 'lower', 'upper']:
-            avg_msa_lu = str(float(np.mean(msa_lu[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_i = str(float(np.mean(msa_i[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_f = str(float(np.mean(msa_f[tail_mode][np.where(args['aoi_array'] == 1)])))        
-            LOGGER.error('%s %s %s %s' % (tail_mode, avg_msa_lu, avg_msa_i, avg_msa_f))
             msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
             avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
             output_table.write(',%s' % (avg_msa))
@@ -786,10 +775,6 @@ def globio_analyze_lu_expansion(args):
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
         for tail_mode in ['median', 'lower', 'upper']:
-            avg_msa_lu = str(float(np.mean(msa_lu[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_i = str(float(np.mean(msa_i[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_f = str(float(np.mean(msa_f[tail_mode][np.where(args['aoi_array'] == 1)])))        
-            LOGGER.error('%s %s %s %s' % (tail_mode, avg_msa_lu, avg_msa_i, avg_msa_f))
             msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
             avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
             output_table.write(',%s' % (avg_msa))
@@ -798,8 +783,8 @@ def globio_analyze_lu_expansion(args):
 
         
 def analyze_composite_globio_change(args):
-    """This function loads scenarios from disk and calculates the carbon stocks
-        on them.
+    """This function simulates land change as a given start and ending percent
+        of land cover types.
 
         args['base_biomass_filename'] - a raster that contains carbon densities
             per Ha.
@@ -856,14 +841,16 @@ def analyze_composite_globio_change(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA (median),Average MSA (lower), Average MSA (upper)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA Species Richness (median),Average MSA Species Richness (lower), Average MSA Species Richness (upper),Average MSA Endemic Species Richness (median),Average MSA Endemic Species Richness (lower), Average MSA Endemic Species Richness (upper)\n')
  
     output_count_table = open(args['output_pixel_count_filename'], 'wb')
     unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
     output_count_table.write(','.join(map(str,unique_lucodes)) + '\n')
 
-    for percent in range(args['scenario_conversion_steps'] + 1):
-        print 'calculating carbon stocks for composite expansion step %s' % percent
+    en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
+    sp_rich = geotiff_to_array(args['ecoregions_sp_rich_uri'])
+    for percent in range(args['scenario_conversion_steps']):
+        print 'calculating globio for composite expansion step %s' % percent
         try:
             scenario_lulc_array, pixel_count = expand_lu_type(
                 scenario_lulc_array, scenario_nodata, args['converting_crop'], 
@@ -886,13 +873,10 @@ def analyze_composite_globio_change(args):
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
-        for tail_mode in ['median', 'lower', 'upper']:
-            avg_msa_lu = str(float(np.mean(msa_lu[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_i = str(float(np.mean(msa_i[tail_mode][np.where(args['aoi_array'] == 1)])))
-            avg_msa_f = str(float(np.mean(msa_f[tail_mode][np.where(args['aoi_array'] == 1)])))        
-            LOGGER.error('%s %s %s %s' % (tail_mode, avg_msa_lu, avg_msa_i, avg_msa_f))
-            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
-            avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
+        for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
+            LOGGER.debug('%s %s' % (tail_mode, rich_factor))
+            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
+            avg_msa= str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
             output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
@@ -943,7 +927,7 @@ def run_globio_mgds(number_of_steps, pool):
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,
-        'ecoregions_shape_uri': 'inputs_mgds_globio/ecoregions_mgds.shp',
+        'ecoregions_shape_uri': 'inputs_mgds_globio/ecoregions_mgds_proj.shp',
     }
 
     args['ecoregions_en_rich_uri'] = raster_utils.temporary_filename()
@@ -1003,12 +987,13 @@ def run_globio_mgds(number_of_steps, pool):
         9: .2
         }
     #pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
+    analyze_composite_globio_change(args)
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
     #pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
-    globio_analyze_forest_core_expansion(args)
+    #globio_analyze_forest_core_expansion(args)
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
@@ -1072,7 +1057,7 @@ def run_globio_mg(number_of_steps, pool):
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,        
-        'ecoregions_shape_uri': 'inputs_mg_globio/ecoregions_mg.shp',
+        'ecoregions_shape_uri': 'inputs_mg_globio/ecoregions_mg_proj.shp',
     }
 
     args['ecoregions_en_rich_uri'] = raster_utils.temporary_filename()
