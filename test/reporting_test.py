@@ -5,25 +5,28 @@ from osgeo import gdal
 from osgeo import ogr
 import unittest
 from nose.plugins.skip import SkipTest
-import invest_natcap.testing
+import invest_natcap.testing as testing
 
 #from invest_natcap import reporting 
 import invest_natcap.reporting as reporting 
 from invest_natcap.reporting import table_generator
 import invest_test_core
 
-class TestReportingPackage(unittest.TestCase):
+REPORTING_DATA = os.path.join('invest-data/test/data', 'reporting_data')
+REGRESSION_DATA = os.path.join('invest-data/test/data', 'reporting_data', 'regression_data')
+TEST_OUT = os.path.join('invest-data/test/data', 'test_out')
+
+class TestReportingPackage(testing.GISTest):
     def test_generate_html(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        raise SkipTest
+        #raise SkipTest
         
-        out_dir = 'invest-data/test/data/test_out'
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        output_uri = os.path.join(out_dir, 'html_test.html')
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_dict.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_dict.html')
 
         columns = {
             'date' : {'id': 1, 'editable':False},
@@ -67,14 +70,16 @@ class TestReportingPackage(unittest.TestCase):
                 "<tr><td>mints</td><td>5/12</td><td>moderate</td></tr>"
                 "</tbody></table></body></html>")
 
-        table_string = reporting.generate_report(report_args)
+        reporting.generate_report(report_args)
 
-        self.assertEqual(expected_result, table_string)
+        self.assertFiles(output_uri, reg_uri)
+
+        #self.assertEqual(expected_result, table_string)
     
     def test_generate_html_csv(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        #raise SkipTest
+        raise SkipTest
         
         out_dir = 'invest-data/test/data/test_out'
         data_dir = 'invest-data/test/data/reporting_data'
@@ -82,7 +87,7 @@ class TestReportingPackage(unittest.TestCase):
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
 
-        output_uri = os.path.join(out_dir, 'html_test.html')
+        output_uri = os.path.join(out_dir, 'html_test_csv.html')
         csv_uri = os.path.join(data_dir, 'csv_test.csv')
 
         columns = {
@@ -129,7 +134,7 @@ class TestReportingPackage(unittest.TestCase):
     def test_generate_html_shape(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        #raise SkipTest
+        raise SkipTest
         
         out_dir = 'invest-data/test/data/test_out'
         data_dir = 'invest-data/test/data/reporting_data'
@@ -137,7 +142,7 @@ class TestReportingPackage(unittest.TestCase):
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
 
-        output_uri = os.path.join(out_dir, 'html_test.html')
+        output_uri = os.path.join(out_dir, 'html_test_shape.html')
         shape_uri = os.path.join(data_dir, 'shape_test.shp')
 
         columns = {
@@ -180,4 +185,28 @@ class TestReportingPackage(unittest.TestCase):
         table_string = reporting.generate_report(report_args)
 
         self.assertEqual(expected_result, table_string)
-    
+    def test_add_head_element_link(self):
+        """Unit test for adding link head elements to html file"""
+        raise SkipTest
+       
+        args = {'format':'link', 'src':'example_style.css'}
+
+        expected_result = \
+                '<link rel=stylesheet type=text/css href=example_style.css>'
+
+        result = reporting.add_head_element(args)
+
+        self.assertEqual(expected_result, result)
+
+    def test_add_head_element_script(self):
+        """Unit test for adding script head elements to html file"""
+        args = {'format':'script', 'src':'example_script.js'}
+        raise SkipTest
+
+        expected_result = \
+                '<script type=text/javascript src=example_script.js></script>'
+
+        result = reporting.add_head_element(args)
+
+        self.assertEqual(expected_result, result)
+

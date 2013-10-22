@@ -15,7 +15,7 @@ import invest_test_core
 class TestTableGenerator(unittest.TestCase):
     def test_get_column_headers(self):
         """Unit test for getting the column headers from a dictionary"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                 'col_1' : {'id': 0},
                 'col_2' : {'id': 2},
@@ -30,7 +30,7 @@ class TestTableGenerator(unittest.TestCase):
     def test_get_column_headers_robust(self):
         """Unit test for getting the column headers from a more complicated
             dictionary setup"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                 'date' : {'id': 1, 'time':'day'},
                 'price' : {'id': 6, 'price':'expensive'},
@@ -45,7 +45,7 @@ class TestTableGenerator(unittest.TestCase):
     
     def test_get_row_data(self):
         """Unit test for getting the row data from a dictionary"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                     0: {'col_1':'value_1', 'col_2':'value_4'},
                     1: {'col_1':'value_2', 'col_2':'value_5'},
@@ -65,7 +65,7 @@ class TestTableGenerator(unittest.TestCase):
     def test_get_row_data_robust(self):
         """Unit test for getting the row data from a more complicated
             dictionary"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                 3: {'date':'09-13', 'price':.54, 'product':'chips'},
                 0: {'date':'08-14', 'price':23.4, 'product':'mustard'},
@@ -87,7 +87,7 @@ class TestTableGenerator(unittest.TestCase):
     def test_generate_table(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                 'cols':{
                     'date' : {'id': 1, 'time':'day'},
@@ -113,7 +113,7 @@ class TestTableGenerator(unittest.TestCase):
     def test_generate_table_attributes(self):
         """Unit test for creating a table from a dictionary as a string
             representing html using attributes"""
-        raise SkipTest
+        #raise SkipTest
         sample_dict = {
                 'cols':{
                     'date' : {'id': 1, 'time':'day'},
