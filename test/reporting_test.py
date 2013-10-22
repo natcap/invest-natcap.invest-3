@@ -22,7 +22,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -35,7 +35,6 @@ class TestReportingPackage(testing.GISTest):
                     1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
                     2: {'date':'5/12', 'price':'moderate', 'product':'mints'}
                 }
-
 
         columns = {
             'date' : {'id': 1, 'editable':False},
@@ -71,7 +70,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
 
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -115,7 +114,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -155,9 +154,71 @@ class TestReportingPackage(testing.GISTest):
 
         self.assertFiles(output_uri, reg_uri)
 
+    def test_generate_html_robust(self):
+        """Regression test for making a robust html page. Pass in a table
+            element, css style, and javascript source. This table should be
+            sortable"""
+        
+        #raise SkipTest
+        
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_sorttable.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_sortable.html')
+        css_uri = '../reporting_data/table_style.css'
+        jsc_uri = '../reporting_data/sorttable.js'
+        
+        sample_dict = {
+                    0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                    1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                    2: {'date':'5/12', 'price':'moderate', 'product':'mints'}
+                }
+
+        columns = {
+            'date' : {'id': 1, 'editable':False},
+            'price' : {'id': 2, 'editable':False},
+            'product' : {'id': 0, 'editable':True}}
+        
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'ws_id',
+                        'data': sample_dict,
+                        'position': 1},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'position': 0,
+                        'text': 'Here is a sortable table!'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'position': 0,
+                        'src': css_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 1,
+                        'src': jsc_uri}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
     def test_add_head_element_link(self):
         """Unit test for adding link head elements to html file"""
-        #raise SkipTest
+        raise SkipTest
        
         args = {'format':'link', 'src':'example_style.css'}
 
@@ -170,7 +231,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_script(self):
         """Unit test for adding script head elements to html file"""
-        #raise SkipTest
+        raise SkipTest
 
         args = {'format':'script', 'src':'example_script.js'}
 
