@@ -696,6 +696,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             current_events = []
             while (add_event_id < add_event_count) and \
                 (add_events[arg_min[add_event_id]] < angles[a]):
+                # The active cell list is initialized with those at angle 0.
+                # Make sure to remove them from the cell_addition events to
+                # avoid duplicates. Do not remove them from remove_cell events.
                 #print(events[0][arg_min[add_event_id]], '< current angle')
                 if center_events[arg_min[add_event_id]] > 0.:
                     #print('add', arg_min[add_event_id],add_events[arg_min[add_event_id]])
@@ -731,21 +734,21 @@ class TestAestheticQualityCore(unittest.TestCase):
                 aesthetic_quality_core.add_active_pixel(active_line, d, v)
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
-            #print('sweep angle', a)
+            print('sweep angle', a, angles[a+1])
         #   2.1- add cells
             #print('  add cell events', add_cell_events[a])
             if add_cell_events[a].size > 0:
                 for c in add_cell_events[a]:
-                    #print('  adding', c)
+                    print('  adding', c, events[0][c])
                     d = distances[c]
                     v = visibility[c]
-                    #active_line = \
-                    #aesthetic_quality_core.add_active_pixel(active_line, d, v)
+                    active_line = \
+                    aesthetic_quality_core.add_active_pixel(active_line, d, v)
                     active_cells.add(c)
         #   2.2- remove cells
             #print('  remove cell events', remove_cell_events[a])
             for c in remove_cell_events[a]:
-                #print('  removing', c)
+                print('  removing', c, events[2][c])
                 d = distances[c]
                 v = visibility[c]
                 #active_line = \
