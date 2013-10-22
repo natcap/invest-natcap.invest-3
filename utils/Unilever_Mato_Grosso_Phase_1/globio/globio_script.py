@@ -842,7 +842,12 @@ def analyze_composite_globio_change(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA Species Richness (median),Average MSA Species Richness (lower), Average MSA Species Richness (upper),Average MSA Endemic Species Richness (median),Average MSA Endemic Species Richness (lower), Average MSA Endemic Species Richness (upper)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario')
+    for eco_name in args['ecoregion_mask_uris']:
+        for msa_type in ['Species', 'Endemic']:
+            for bound_type in ['(median)', '(lower)', '(upper)']:
+                output_table.write(',MSA %s - %s %s' % (msa_type, eco_name, bound_type))
+    output_table.write('\n')
  
     output_count_table = open(args['output_pixel_count_filename'], 'wb')
     unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
