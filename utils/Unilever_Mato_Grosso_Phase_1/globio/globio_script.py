@@ -941,6 +941,9 @@ def run_globio_mgds(number_of_steps, pool):
     raster_utils.rasterize_layer_uri(
         args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
 
+    args['ecoregions_areas'] = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
+
+
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
     aoi_raster_uri = raster_utils.temporary_filename()
@@ -1070,6 +1073,11 @@ def run_globio_mg(number_of_steps, pool):
         args['ecoregions_en_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=en_rich'])
     raster_utils.rasterize_layer_uri(
         args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
+
+    args['ecoregions_areas'] = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
+    LOGGER.debug(args['ecoregions_areas'])
+    sys.exit(1)
+
     
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
@@ -1117,12 +1125,13 @@ def run_globio_mg(number_of_steps, pool):
         }
         
     #pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    analyze_composite_globio_change(args)
         
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
     #pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
-    globio_analyze_forest_core_expansion(args)
+    #globio_analyze_forest_core_expansion(args)
     
     #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
@@ -1144,8 +1153,8 @@ def run_globio_mg(number_of_steps, pool):
 def main():
     NUMBER_OF_STEPS = 1
     pool = Pool(8)
-    run_globio_mgds(NUMBER_OF_STEPS, pool)
-    #run_globio_mg(NUMBER_OF_STEPS, pool)
+    #run_globio_mgds(NUMBER_OF_STEPS, pool)
+    run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
