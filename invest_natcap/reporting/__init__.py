@@ -47,6 +47,12 @@ def generate_report(reporting_args):
                         'format':'link',
                         'position':1,
                         'src':'table_style.css'
+                        },
+                        {
+                        'type':'text',
+                        'section': 'body',
+                        'text':'link',
+                        'position':4
                         }
 
         reporting_args[out_uri]
@@ -55,7 +61,7 @@ def generate_report(reporting_args):
     
     report = {
             'table': build_table,
-            'text' : add_text,
+            'text' : add_text_element,
             'head': add_head_element
             }
 
@@ -211,11 +217,19 @@ def build_table(param_args):
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)
 
-def add_text():
-    """
+def add_text_element(param_args):
+    """Generates a string that represents a html text block wrapped in
+        paragraph tags
 
+        param_args - a dictionary with the following arguments:
+            
+            param_args['text'] - a string
+
+        returns - a string
     """
-    pass
+    
+    html_str = '<p>%s</p>' % param_args['text']
+    return html_str
 
 def add_head_element(param_args):
     """Generates a string that represents a valid element in the head section of
