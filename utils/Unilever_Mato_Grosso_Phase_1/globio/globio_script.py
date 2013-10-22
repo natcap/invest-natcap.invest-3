@@ -943,8 +943,19 @@ def run_globio_mgds(number_of_steps, pool):
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,
-        'ecoregions_uri': 'inputs_mg_globio/ecoregions_mg.shp',
+        'ecoregions_shape_uri': 'inputs_mgds_globio/ecoregions_mgds.shp',
     }
+
+    args['ecoregions_en_rich_uri'] = raster_utils.temporary_filename()
+    args['ecoregions_sp_rich_uri'] = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(
+        args['input_lulc_uri'], args['ecoregions_en_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
+    raster_utils.new_raster_from_base_uri(
+        args['input_lulc_uri'], args['ecoregions_sp_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        args['ecoregions_en_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=en_rich'])
+    raster_utils.rasterize_layer_uri(
+        args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
 
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
@@ -991,29 +1002,29 @@ def run_globio_mgds(number_of_steps, pool):
         2: .8,
         9: .2
         }
-    pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
+    #pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
- #   globio_analyze_forest_core_expansion(args)
+    #pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
+    globio_analyze_forest_core_expansion(args)
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
+    #pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
+    #pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
+    #pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
     #globio_analyze_forest_core_fragmentation(args)
     
     
@@ -1061,7 +1072,7 @@ def run_globio_mg(number_of_steps, pool):
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,        
-        'ecoregions_uri': 'inputs_mg_globio/ecoregions_mg.shp',
+        'ecoregions_shape_uri': 'inputs_mg_globio/ecoregions_mg.shp',
     }
     
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
@@ -1137,7 +1148,7 @@ def main():
     NUMBER_OF_STEPS = 1
     pool = Pool(8)
     run_globio_mgds(NUMBER_OF_STEPS, pool)
-    run_globio_mg(NUMBER_OF_STEPS, pool)
+    #run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
