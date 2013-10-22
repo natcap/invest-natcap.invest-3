@@ -17,6 +17,8 @@ LOGGER = logging.getLogger('blue_carbon')
 def transition_soil_carbon(area_final, carbon_final, depth_final,
                            transition_rate, year, area_initial,
                            carbon_initial, depth_initial):
+    """This is the formula for calculating the transition of soil carbon
+    """
 
     return (area_final * carbon_final * depth_final) - \
            (1/((1 + transition_rate) ** year)) * \
@@ -24,7 +26,20 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
             (area_initial * carbon_initial * depth_initial))
 
 def execute(args):
-    disturbance_uri = os.path.join(os.path.dirname(__file__),"disturbance.csv")
+    #set path to default disturbance value table
+    disturbance_uri = args["disturbance_csv_uri"]
+
+    ### disturbance.csv ###
+    ##The disturbance.csv file contains columns in the following order:
+    ##veg type, veg name, low loss, medium loss, high loss,
+    ##low depth, medium depth, high depth,
+    ##biomass carbon half life, soil carbon half life
+    ##veg type is a unique integer for the vegetation
+    ##veg name is the name associated with the vegetation type
+    ##low, medium, and high loss is expressed as a coefficent between 0 and 1
+    ##low, medium, and high depth are in meters and >= 0
+    ##biomass and carbon half life are expressed in years or N/A if no decay
+    
     disturbance_key_field = "veg type"
     disturbance_loss_name = "%s loss"
     disturbance_depth_name = "%s depth"
@@ -146,7 +161,7 @@ def execute(args):
     #reassign nodata values in dictionary to raster nodata values
     for k in biomass_half_dict:
         if (type(biomass_half_dict[k]) == str):
-            if (biomass_half_dict[k].lower() == "nodata"):
+            if (biomass_half_dict[k].lower() == "n/a"):
                 biomass_half_dict[k] = nodata
             else:
                 msg = "Invalid biomass half life value."
@@ -155,7 +170,7 @@ def execute(args):
 
     for k in soil_half_dict:
         if  (type(soil_half_dict[k]) == str):
-            if (soil_half_dict[k].lower() == "nodata"):
+            if (soil_half_dict[k].lower() == "n/a"):
                 soil_half_dict[k] = nodata
             else:
                 msg = "Invalid soil hald life value."
