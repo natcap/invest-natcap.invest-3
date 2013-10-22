@@ -29,6 +29,7 @@ import signal
 import logging
 import math
 import itertools
+import sys
 
 import numpy as np
 from numpy import copy
@@ -941,7 +942,14 @@ def run_globio_mgds(number_of_steps, pool):
     raster_utils.rasterize_layer_uri(
         args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
 
-    args['ecoregions_areas'] = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
+    ecoregions_table = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
+    
+    unique_ecoregion_objectids = collections.defaultdict(list)
+    for record in ecoregions_table.itervalues():
+        unique_ecoregion_objectids[record['ECO_NAME']].append(record['OBJECTID'])
+    LOGGER.debug(unique_ecoregion_objectids)
+    sys.exit(1)
+    
 
 
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
@@ -1074,9 +1082,6 @@ def run_globio_mg(number_of_steps, pool):
     raster_utils.rasterize_layer_uri(
         args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
 
-    args['ecoregions_areas'] = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
-    LOGGER.debug(args['ecoregions_areas'])
-    sys.exit(1)
 
     
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
@@ -1153,8 +1158,8 @@ def run_globio_mg(number_of_steps, pool):
 def main():
     NUMBER_OF_STEPS = 1
     pool = Pool(8)
-    #run_globio_mgds(NUMBER_OF_STEPS, pool)
-    run_globio_mg(NUMBER_OF_STEPS, pool)
+    run_globio_mgds(NUMBER_OF_STEPS, pool)
+    #run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
