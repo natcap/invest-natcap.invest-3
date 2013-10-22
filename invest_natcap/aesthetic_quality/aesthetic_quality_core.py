@@ -96,7 +96,7 @@ def print_hierarchy(hierarchy):
     for node in hierarchy:
         next_distance = \
         None if node['next'] is None else node['next']['distance']
-        print('hierarchy node ', node['distance'], node['next']['distance'])
+        print('hierarchy node ', node['distance'], next_distance)
 
 def print_skip_list(sweep_line, skip_nodes):
     if sweep_line:
@@ -118,7 +118,11 @@ def print_skip_list(sweep_line, skip_nodes):
             None if skip_node['up'] is None else skip_node['up']['distance'], \
             None if skip_node['up'] is None else \
             None if skip_node['up']['next'] is None else \
-            skip_node['up']['next']['distance'])
+            skip_node['up']['next']['distance'], 'down', 
+            None if skip_node['down'] is None else skip_node['down']['distance'], \
+            None if skip_node['down'] is None else \
+            None if skip_node['down']['next'] is None else \
+            skip_node['down']['next']['distance'])
 
 def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     """Insert an active pixel in the sweep_line and update the skip_nodes.
@@ -158,16 +162,19 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         before['next'] = skip_nodes[current_distance]
         before['span'] = 2
         span = None
+        print('Inserting new skip node: before', before['distance'], 'current', current_distance,
+        'after', None if after is None else after['distance'])
         if upper_node is not None:
             print('Updating upper node ' + str(upper_node['distance']) + '-' + \
-            str(None) if upper_node['next'] is None else \
+            (str(None) if upper_node['next'] is None else \
             str(upper_node['next']['distance']) + ' span from ' + \
-            str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1))
+            str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1)))
             upper_node['span'] += 1
             span = upper_node['span']
         else:
             print('Upper node is None')
             
+        print('returning span of', span)
         return span
 
     def update_skip_node_span(pixel, level, hierarchy, skip_nodes):
@@ -182,23 +189,32 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                 'distance' entry.
                 
             Returns nothing."""
+        #print('updating skip node span')
         if pixel is not None:
-            #print('adding span to node ' +str(pixel['up']['distance']) +' '+\
-            #str(level) + ' which currently is ' + str(pixel['up']['span']))
+            # Update span
             pixel['span'] += 1
             # Adjusting span if too large
             while pixel['span'] > 3:
+                print('span is more than 3')
                 # Insert the missing skip_node
+                #print('using hierarchy level ' + str(level+1) + ' for node ' + \
+                #str(pixel['distance']) + ':')
                 #print_hierarchy(hierarchy)
                 upper_node = \
                 hierarchy[level+1] if (len(hierarchy)>level+1) else None
+                #print('before adding node ' + str(pixel['distance']) + '-' + \
+                #(str(None) if pixel['next'] is None else \
+                #str(pixel['next']['distance'])) + ':')
+                #print_skip_list(sweep_line, skip_nodes)
                 span = \
                 insert_new_skip_node(pixel, upper_node, skip_nodes[level])
+                #print('after adding node ' + str(pixel['distance']) + ':')
+                #print_skip_list(sweep_line, skip_nodes)
                 # Create a new level if last level has 4 nodes
                 if (len(skip_nodes[level]) == 4) and \
                     (len(skip_nodes) == level + 1):
-                    print('new level needed after ' + str(level))
-                    print_skip_list(None, skip_nodes)
+                    #print('new level needed after ' + str(level))
+                    #print_skip_list(None, skip_nodes)
                     skip_nodes.append({})
                     distance = pixel['distance']
                     # First skip node points to the first element in sweep_line
@@ -206,7 +222,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     'down':skip_nodes[level][distance],\
                     'distance':pixel['distance'], 'span':2}
                     skip_nodes[level+1][distance] = skip_node
-                    pixel['up'] = skip_nodes[+1][distance]
+                    pixel['up'] = skip_nodes[level+1][distance]
                     # Second skip node points to the second last element in sweep_line
                     second_last = pixel['next']['next']
                     second_distance = second_last['distance']
@@ -216,8 +232,8 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
                     skip_nodes[level+1][second_distance] = skip_node
                     second_last['up'] = skip_nodes[level+1][second_distance]
                     skip_nodes[level+1][distance]['next'] = skip_nodes[level+1][second_distance]
-                print('span after adding node ' + str(pixel['distance']) + ': ' + str(span))
-                print_skip_list(sweep_line, skip_nodes)
+                #print('span after adding node ' + str(pixel['distance']) + ': ' + str(span))
+                #print_skip_list(sweep_line, skip_nodes)
 
                 # List is consistent, we're done: break out of the while
                 if span in  [2, 3, None]:
@@ -242,10 +258,13 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Need to re-organize the sweep line:
     pixel, hierarchy = find_pixel_before_fast( \
         sweep_line, skip_nodes, distance)
-    print('After finding location before ' + str(distance) + ', before any change:')
+    print('After finding ' + (str(None) if pixel is None else \
+    str(pixel['distance'])) + ' before ' + str(distance) + \
+    ', before any change:')
     print_skip_list(sweep_line, skip_nodes)
     print_hierarchy(hierarchy)
-    #print('---pixel before addition', pixel if pixel is None else pixel['distance'])
+    print('hierarchy is consistent:', \
+    hierarchy_is_consistent(pixel, hierarchy, skip_nodes))
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
@@ -258,48 +277,43 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         # Update the skip pointer's distances:
         skip_node = sweep_line[distance]['up']
         if skip_node is not None:
+            # Create the node for the sweep_line
             level = 0
             skip_node['distance'] = distance
             skip_node['down'] = sweep_line[distance]
             skip_nodes[level][distance] = skip_node
             del skip_nodes[level][second]
             sweep_line[distance]['up'] = skip_nodes[level][distance]
-            print('0---skip node level ' + str(level), skip_node['distance'], \
-            'span', skip_node['span'], 'next', None if skip_node['next'] \
-            is None else skip_node['next']['distance'], 'up', \
-            None if skip_node['up'] is None else skip_node['up']['distance'], \
-            None if skip_node['up'] is None else \
-            None if skip_node['up']['next'] is None else \
-            skip_node['up']['next']['distance'])
+            # Update every skip pointer that is above the sweep_line
             while skip_node['up'] is not None:
+                # Update the skip node fields up, distance, down and up
                 level += 1
                 skip_node = skip_node['up']
                 skip_node['distance'] = distance
                 skip_node['down'] = skip_nodes[level-1][distance]
-                #print('level', level, 'levels available', len(skip_nodes))
+                # Set skip_node_up
+                if level < len(skip_nodes) -1:
+                    # There should be a skip_node above the current one: create
+                    # it
+                    up_skip_node = skip_nodes[level][second].copy()
+                    up_skip_node['next'] = skip_nodes[level+1][second]['next']
+                    skip_nodes[level+1][distance] = up_skip_node
+                    skip_node['up'] = skip_nodes[level+1][distance]
+                else:
+                    skip_node['up'] = None
+                # The creation of the current skip node is complete, insert it
+                # into skip_nodes and delete the old one.
                 skip_nodes[level][distance] = skip_node
                 del skip_nodes[level][second]
-                if level < len(skip_nodes) -1:
-                    skip_nodes[level][distance]['up'] = \
-                        skip_nodes[level][distance]
-                else:
-                    skip_nodes[level][distance]['up'] = None
-            print('1---skip node level ' + str(level), skip_node['distance'], \
-            'span', skip_node['span'], 'next', None if skip_node['next'] \
-            is None else skip_node['next']['distance'], 'up', \
-            None if skip_node['up'] is None else skip_node['up']['distance'], \
-            None if skip_node['up'] is None else \
-            None if skip_node['up']['next'] is None else \
-            skip_node['up']['next']['distance'])
         # Updating span
         update_skip_node_span(sweep_line[distance]['up'], 0, hierarchy, skip_nodes)
         # The old first is not first anymore: shouldn't point up
         sweep_line[second]['up'] = None
         # pixel 'closest' points to first
-        #print('making closest point to ' + str(sweep_line[distance]['distance']))
         sweep_line['closest'] = sweep_line[distance]
     # Add after the beginning
     else:
+        #print('adding pixel after beginning')
         # Connecting new pixel to next one
         sweep_line[distance] = {'next':pixel['next'], 'up':None, \
             'down':None, 'distance':distance}
@@ -307,9 +321,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         pixel['next'] = sweep_line[distance]
         # Update the span if necessary
         if hierarchy:
-            #for p in range(len(hierarchy)):
-            #    print('hierarchy', p, hierarchy[p]['distance'])
-            update_skip_node_span(hierarchy[0]['down'], 0, hierarchy, skip_nodes)
+            #print('incrementing span of pixel', hierarchy[0]['distance'],
+            #hierarchy[0]['span'])
+            update_skip_node_span(hierarchy[0], 0, hierarchy, skip_nodes)
 
     if len(sweep_line) == 5:
         # Preparing the skip_list to receive the new skip pointers
@@ -333,10 +347,12 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         sweep_line[second_distance]['up'] = skip_nodes[0][second_distance]
         skip_nodes[0][distance]['next'] = skip_nodes[0][second_distance]
 
-    #print('After adding pixel ' + str(distance) + ':')
-    #print_skip_list(sweep_line, skip_nodes)
-
     return (sweep_line, skip_nodes)
+
+def print_node(node):
+    """Printing a node by displaying its 'distance' and 'next' fields"""
+    print(str(None) if node is None else (node['distance'] + '-' + \
+    (str(None) if node['next'] is None else node['next']['distance'])))
 
 def find_pixel_before_fast(sweep_line, skip_nodes, distance):
     """Find the active pixel before the one with distance. 
@@ -517,6 +533,41 @@ def add_active_pixel(sweep_line, distance, visibility):
         sweep_line['closest'] = new_pixel
     return sweep_line
 
+def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
+    """Makes simple tests to ensure the the hierarchy is consistent"""
+    if pixel is None:
+        return (True, 'Hierarchy is consistent')
+
+    message = 'Hierarchy  size of ' + str(len(hierarchy)) + ' != ' + \
+    ' length of skip_nodes ' + str(len(skip_nodes))
+    if len(hierarchy) != len(skip_nodes):
+        return (False, message)
+    
+    # Test each level in the hierarchy
+    old_current = -1 # used to avoid repeats
+    old_after = -1 # used to avoid repeats
+    for level in hierarchy:
+        distance = pixel['distance']
+        current = None if level is None else level['distance']
+        after = None if distance is None else \
+        (None if level['next'] is None else level['next']['distance'])
+
+        message = \
+        'Repeats in hierarchy levels: ' + str(current) + '-' + str(after)
+        if (current != old_current) and (after != old_after): 
+            return (False, message)
+        message = "Current distance of " + str(distance) + \
+        " falls on or after the next pixel " + str(after)
+        if current < after:
+            return (False, message)
+
+        message = "Current distance of " + str(distance) + \
+        " falls before hierarchy node " + str(current)
+        if current >= distance: 
+            return (False, message)
+
+    return (True, 'Hierarchy is consistent')
+        
 def skip_list_is_consistent(linked_list, skip_nodes):
     """Function that checks for skip list inconsistencies.
     
@@ -758,6 +809,8 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                 # Step 1, get the last node of the current higher node
                 last_node = node['down']
                 #print('level', l, 'n', n)
+                #print('node', node['distance'], None if node['next'] is None
+                #else node['next']['distance'])
                 #print('first node spanned by [' + str(l) + ']['+str(n) + \
                 #']' , last_node['distance'])
                 for i in range(node['span'] -1):
@@ -775,6 +828,7 @@ def skip_list_is_consistent(linked_list, skip_nodes):
                     " is not before first node spanned by [" + str(l) + '][' + \
                     str(node['next']['distance']) + '] = ' + \
                     str(next_node['distance'])
+                    print_skip_list(linked_list, skip_nodes)
                     return (False, message)
             # 2.9-Each skip node references the correct element below it,
             # i.e. each node's distance values are identical

@@ -47,6 +47,12 @@ def generate_report(reporting_args):
                         'format':'link',
                         'position':1,
                         'src':'table_style.css'
+                        },
+                        {
+                        'type':'text',
+                        'section': 'body',
+                        'text':'link',
+                        'position':4
                         }
 
         reporting_args[out_uri]
@@ -55,8 +61,8 @@ def generate_report(reporting_args):
     
     report = {
             'table': build_table,
-            'text' : add_text,
-            'head': add_head
+            'text' : add_text_element,
+            'head': add_head_element
             }
 
     for element in reporting_args['elements']:
@@ -68,9 +74,7 @@ def generate_report(reporting_args):
 
     LOGGER.debug('HTML OBJECT : %s', html_obj)
 
-    html_str = write_html(
-            html_obj, reporting_args['out_uri'], reporting_args['title'])
-    return html_str
+    write_html(html_obj, reporting_args['out_uri'], reporting_args['title'])
 
 def write_html(html_obj, out_uri, title):
     """Write an html file by parsing through a dictionary that contains strings
@@ -213,28 +217,47 @@ def build_table(param_args):
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)
 
-def add_text():
-    """
+def add_text_element(param_args):
+    """Generates a string that represents a html text block wrapped in
+        paragraph tags
 
-    """
-    pass
+        param_args - a dictionary with the following arguments:
+            
+            param_args['text'] - a string
 
-def add_head(param_args):
+        returns - a string
     """
+    
+    html_str = '<p>%s</p>' % param_args['text']
+    return html_str
 
-    """
+def add_head_element(param_args):
+    """Generates a string that represents a valid element in the head section of
+        an html file. Currently handles 'link' and 'script' elements, where both
+        the script and link point to an external source
 
+        param_args - a dictionary that holds the following arguments:
+
+            param_args['format'] - a string representing the type of element to
+                be added. Currently : 'script', 'link'
+            
+            param_args['src'] - a string URI path for the external source of the
+                element.
+
+        returns - a string representation of the html head element"""
+
+    # Get the type of element to add
     form = param_args['format']
+    # Get the external file location for either the link or script reference
     src = param_args['src']
- 
-    html_str = '' 
-    #html_file.write('<link rel="stylesheet" type="text/css" href="table_style.css">')
 
     if form == 'link':
         html_str = '<link rel=stylesheet type=text/css href=%s>' % src
+    elif form == 'script':
+        html_str = '<script type=text/javascript src=%s></script>' % src
+    else:
+        raise Exception('Currently this type of head element is not supported')
 
-    LOGGER.debug('LINK STRING : %s', html_str)
+    LOGGER.debug('HEAD STRING : %s', html_str)
 
     return html_str
-
-

@@ -5,30 +5,30 @@ from osgeo import gdal
 from osgeo import ogr
 import unittest
 from nose.plugins.skip import SkipTest
-import invest_natcap.testing
+import invest_natcap.testing as testing
 
 #from invest_natcap import reporting 
 import invest_natcap.reporting as reporting 
 from invest_natcap.reporting import table_generator
 import invest_test_core
 
-class TestReportingPackage(unittest.TestCase):
+REPORTING_DATA = os.path.join('invest-data/test/data', 'reporting_data')
+REGRESSION_DATA = os.path.join(
+    'invest-data/test/data', 'reporting_data', 'regression_data')
+TEST_OUT = os.path.join('invest-data/test/data', 'test_out')
+
+class TestReportingPackage(testing.GISTest):
     def test_generate_html(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
+        
         raise SkipTest
         
-        out_dir = 'invest-data/test/data/test_out'
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        output_uri = os.path.join(out_dir, 'html_test.html')
-
-        columns = {
-            'date' : {'id': 1, 'editable':False},
-            'price' : {'id': 2, 'editable':False},
-            'product' : {'id': 0, 'editable':True}}
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_dict.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_dict.html')
         
         sample_dict = {
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
@@ -36,6 +36,11 @@ class TestReportingPackage(unittest.TestCase):
                     2: {'date':'5/12', 'price':'moderate', 'product':'mints'}
                 }
 
+        columns = {
+            'date' : {'id': 1, 'editable':False},
+            'price' : {'id': 2, 'editable':False},
+            'product' : {'id': 0, 'editable':True}}
+        
         report_args = {
                 'title': 'Test Title',
                 'elements': [
@@ -57,33 +62,22 @@ class TestReportingPackage(unittest.TestCase):
                     ],
                 'out_uri': output_uri}
 
+        reporting.generate_report(report_args)
 
-        expected_result = ("<html><head><title>Test Title</title>"
-                "<link rel=stylesheet type=text/css href=table_style.css>"
-                "</head><body><table><thead><tr><th>product</th>"
-                "<th>date</th><th>price</th></tr></thead>"
-                "<tbody><tr><td>chips</td><td>9/13</td><td>expensive</td></tr>"
-                "<tr><td>peanuts</td><td>3/13</td><td>cheap</td></tr>"
-                "<tr><td>mints</td><td>5/12</td><td>moderate</td></tr>"
-                "</tbody></table></body></html>")
-
-        table_string = reporting.generate_report(report_args)
-
-        self.assertEqual(expected_result, table_string)
+        self.assertFiles(output_uri, reg_uri)
     
     def test_generate_html_csv(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        #raise SkipTest
+
+        raise SkipTest
         
-        out_dir = 'invest-data/test/data/test_out'
-        data_dir = 'invest-data/test/data/reporting_data'
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        output_uri = os.path.join(out_dir, 'html_test.html')
-        csv_uri = os.path.join(data_dir, 'csv_test.csv')
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_csv.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_csv.html')
+        csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
         columns = {
             'ws_id' : {'id': 0, 'editable':False},
@@ -111,34 +105,23 @@ class TestReportingPackage(unittest.TestCase):
                         'src': 'table_style.css'}
                     ],
                 'out_uri': output_uri}
+        
+        reporting.generate_report(report_args)
 
-
-        expected_result = ("<html><head><title>Test Title</title>"
-                "<link rel=stylesheet type=text/css href=table_style.css>"
-                "</head><body><table><thead><tr><th>ws_id</th>"
-                "<th>precip_mn</th><th>wyield_mn</th><th>wyield_vol</th></tr></thead>"
-                "<tbody><tr><td>0</td><td>1880</td><td>1070</td><td>4590</td></tr>"
-                "<tr><td>1</td><td>1892</td><td>1111</td><td>9420</td></tr>"
-                "<tr><td>2</td><td>1838</td><td>1010</td><td>1945</td></tr>"
-                "</tbody></table></body></html>")
-
-        table_string = reporting.generate_report(report_args)
-
-        self.assertEqual(expected_result, table_string)
+        self.assertFiles(output_uri, reg_uri)
     
     def test_generate_html_shape(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        #raise SkipTest
         
-        out_dir = 'invest-data/test/data/test_out'
-        data_dir = 'invest-data/test/data/reporting_data'
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        output_uri = os.path.join(out_dir, 'html_test.html')
-        shape_uri = os.path.join(data_dir, 'shape_test.shp')
+        raise SkipTest
+        
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_shp.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_shp.html')
+        shape_uri = os.path.join(REPORTING_DATA, 'shape_test.shp')
 
         columns = {
             'ws_id' : {'id': 0, 'editable':False},
@@ -167,17 +150,95 @@ class TestReportingPackage(unittest.TestCase):
                     ],
                 'out_uri': output_uri}
 
+        reporting.generate_report(report_args)
 
-        expected_result = ("<html><head><title>Test Title</title>"
-                "<link rel=stylesheet type=text/css href=table_style.css>"
-                "</head><body><table><thead><tr><th>ws_id</th>"
-                "<th>precip_mn</th><th>wyield_mn</th><th>wyield_vol</th></tr></thead>"
-                "<tbody><tr><td>0</td><td>1880.0</td><td>1070.0</td><td>4590</td></tr>"
-                "<tr><td>1</td><td>1892.0</td><td>1111.0</td><td>9420</td></tr>"
-                "<tr><td>2</td><td>1838.0</td><td>1010.0</td><td>1945</td></tr>"
-                "</tbody></table></body></html>")
+        self.assertFiles(output_uri, reg_uri)
 
-        table_string = reporting.generate_report(report_args)
+    def test_generate_html_robust(self):
+        """Regression test for making a robust html page. Pass in a table
+            element, css style, and javascript source. This table should be
+            sortable"""
+        
+        #raise SkipTest
+        
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_sorttable.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_sortable.html')
+        css_uri = '../reporting_data/table_style.css'
+        jsc_uri = '../reporting_data/sorttable.js'
+        
+        sample_dict = {
+                    0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                    1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                    2: {'date':'5/12', 'price':'moderate', 'product':'mints'}
+                }
 
-        self.assertEqual(expected_result, table_string)
-    
+        columns = {
+            'date' : {'id': 1, 'editable':False},
+            'price' : {'id': 2, 'editable':False},
+            'product' : {'id': 0, 'editable':True}}
+        
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'ws_id',
+                        'data': sample_dict,
+                        'position': 1},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'position': 0,
+                        'text': 'Here is a sortable table!'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'position': 0,
+                        'src': css_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 1,
+                        'src': jsc_uri}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
+    def test_add_head_element_link(self):
+        """Unit test for adding link head elements to html file"""
+        raise SkipTest
+       
+        args = {'format':'link', 'src':'example_style.css'}
+
+        expected_result = \
+                '<link rel=stylesheet type=text/css href=example_style.css>'
+
+        result = reporting.add_head_element(args)
+
+        self.assertEqual(expected_result, result)
+
+    def test_add_head_element_script(self):
+        """Unit test for adding script head elements to html file"""
+        raise SkipTest
+
+        args = {'format':'script', 'src':'example_script.js'}
+
+        expected_result = \
+                '<script type=text/javascript src=example_script.js></script>'
+
+        result = reporting.add_head_element(args)
+
+        self.assertEqual(expected_result, result)
+

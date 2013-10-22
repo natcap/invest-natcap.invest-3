@@ -372,6 +372,22 @@ class GISTest(unittest.TestCase):
         self.maxDiff = None
         self.assertEqual(dict_1, dict_2)
 
+    def assertTextEqual(self, text_1_uri, text_2_uri):
+        """Assert that two text files are equal.  This is done by looping
+        through each line in the text files and asserting that each line matches
+        the other.  If a mismatch occurs, an AssertionError will be raised.
+
+        text_1_uri - a python string uri to a text file.  Considered the file to
+            be tested.
+        text_2_uri - a python string uri to a text file.  Considered the
+            regression file."""
+
+        lines = lambda f: [line for line in open(f)]
+        for index, (a_line, b_line) in enumerate(zip(lines(text_1_uri), lines(text_2_uri))):
+            self.assertEqual(a_line, b_line, ('Line %s in %s does not match'
+                'regression file. Output: \"%s\" Regression: \"%s\"') % (index,
+                text_1_uri, a_line, b_line))
+
     def assertFiles(self, file_1_uri, file_2_uri):
         """Assert two files are equal.  We try to determine the filetype based
         on the input URI extensions (which are assumed to be the same). If we do
@@ -392,6 +408,8 @@ class GISTest(unittest.TestCase):
             '.tif': self.assertRastersEqual,
             '.shp': self.assertVectorsEqual,
             '.csv': self.assertCSVEqual,
+            '.txt': self.assertTextEqual,
+            '.html': self.assertTextEqual,
         }
 
         try:
