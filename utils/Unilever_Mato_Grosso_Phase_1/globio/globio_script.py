@@ -1135,7 +1135,7 @@ def main():
     NUMBER_OF_STEPS = 1
     pool = Pool(8)
     run_globio_mgds(NUMBER_OF_STEPS, pool)
-    #run_globio_mg(NUMBER_OF_STEPS, pool)
+    run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
