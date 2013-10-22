@@ -1132,7 +1132,7 @@ def run_globio_mg(number_of_steps, pool):
 
 
 def main():
-    NUMBER_OF_STEPS = 1
+    NUMBER_OF_STEPS = 200
     pool = Pool(8)
     run_globio_mgds(NUMBER_OF_STEPS, pool)
     run_globio_mg(NUMBER_OF_STEPS, pool)
