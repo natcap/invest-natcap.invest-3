@@ -1,9 +1,9 @@
 {
     "id" : "window",
     "label": "Biodiversity: Biophysical",
-    "targetScript" : "invest_natcap.biodiversity.biodiversity_biophysical",
+    "targetScript" : "invest_natcap.habitat_quality.habitat_quality",
     "modelName" : "biodiversity_biophysical",
-    "localDocURI": "../documentation/biodiversity.html",
+    "localDocURI": "../documentation/habitat_quality.html",
     "height": 500,
     "width" : 700,
     "elements": [
