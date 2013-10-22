@@ -285,15 +285,16 @@ def calc_msa_f(infrastructure, input_lulc, args, iteration_number):
             },
         }
 
-    for index, impact_type in [(0, 'lower'), (1, 'upper')]:
-        fragmentation_effect_zones['low'] = {}
+    for index, tail_end in [(0, 'lower'), (1, 'upper')]:
+        fragmentation_effect_zones[tail_end] = {}
         for impact_type, value in fragmentation_effect_zones['median'].iteritems():
-            fragmentation_effect_zones['low'][impact_type] = (
+            fragmentation_effect_zones[tail_end][impact_type] = (
                 scipy.stats.norm.interval(
                     0.95, loc=fragmentation_effect_zones['median'][impact_type],
                     scale=fragmentation_effect_zones['se'][impact_type] / math.sqrt(sample_n)))[index]
 
 
+    LOGGER.debug('fragmentation_effect_zones %s' % fragmentation_effect_zones)
     #now write the MSA(F) per FFQI using the values in table 6.
     msa_f = {
         'median': np.zeros(ffqi.shape),
@@ -329,10 +330,10 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
             },
         }
 
-    for index, impact_type in [(0, 'lower'), (1, 'upper')]:
-        infrastructure_impact_zones['low'] = {}
+    for index, tail_end in [(0, 'lower'), (1, 'upper')]:
+        infrastructure_impact_zones[tail_end] = {}
         for impact_type, value in infrastructure_impact_zones['median'].iteritems():
-            infrastructure_impact_zones['low'][impact_type] = (
+            infrastructure_impact_zones[tail_end][impact_type] = (
                 scipy.stats.norm.interval(
                     0.95, loc=infrastructure_impact_zones['median'][impact_type],
                     scale=infrastructure_impact_zones['se'][impact_type] / math.sqrt(sample_n)))[index]
@@ -374,6 +375,53 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
 def calc_msa_lu(input_array, args, iteration_number):
     globio_lulc = input_array
     print "Calculating MSA(lu) from globio_lulc"
+    
+    lu_msa_lookup = {
+        'median': {
+            1.0: 1.0,
+            2.0: 0.7,
+            3.0: 0.5,
+            4.0: 0.2,
+            5.0: 0.7,
+            6.0: 0.1,
+            7.0: 0.5,
+            8.0: 0.3,
+            9.0: 0.1,
+            },
+        'se': {
+            1.0: 0.01,
+            2.0: 0.05,
+            3.0: 0.03,
+            4.0: 0.04,
+            5.0: 0.03,
+            6.0: 0.07,
+            7.0: 0.03,
+            8.0: 0.12,
+            9.0: 0.08,
+            },
+        'n': {
+            1.0: 63,
+            2.0: 11,
+            3.0: 40,
+            4.0: 10,
+            5.0: 11,
+            6.0: 7,
+            7.0: 40,
+            8.0: 11,
+            9.0: 5,
+        }
+    }
+
+    for index, tail_end in [(0, 'lower'), (1, 'upper')]:
+        lu_msa_lookup[tail_end] = {}
+        for lu_code, value in lu_msa_lookup['median'].iteritems():
+            lu_msa_lookup[tail_end][lu_code] = (
+                scipy.stats.norm.interval(
+                    0.95, loc=lu_msa_lookup['median'][lu_code],
+                    scale=lu_msa_lookup['se'][lu_code] / math.sqrt(lu_msa_lookup['n'][lu_code])))[index]
+    
+    LOGGER.debug('msa_lu lookup %s' % lu_msa_lookup)
+    
     #TODO: make this input  more elegant, as part of the input CSV
     msa_lu = np.zeros(globio_lulc.shape)
     msa_lu = np.where(globio_lulc == 1.0, 1.0, msa_lu)
