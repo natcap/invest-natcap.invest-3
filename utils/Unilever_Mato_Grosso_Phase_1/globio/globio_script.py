@@ -421,19 +421,12 @@ def calc_msa_lu(input_array, args, iteration_number):
                     scale=lu_msa_lookup['se'][lu_code] / math.sqrt(lu_msa_lookup['n'][lu_code])))[index]
     
     LOGGER.debug('msa_lu lookup %s' % lu_msa_lookup)
-    
+    msa_lu = {}
+    for bound in ['median', 'lower', 'upper']:
     #TODO: make this input  more elegant, as part of the input CSV
-    msa_lu = np.zeros(globio_lulc.shape)
-    msa_lu = np.where(globio_lulc == 1.0, 1.0, msa_lu)
-    msa_lu = np.where(globio_lulc == 2.0, 0.7, msa_lu)
-    msa_lu = np.where(globio_lulc == 3.0, 0.5, msa_lu)
-    msa_lu = np.where(globio_lulc == 4.0, 0.2, msa_lu)
-    msa_lu = np.where(globio_lulc == 5.0, 0.7, msa_lu)
-    msa_lu = np.where(globio_lulc == 6.0, 0.1, msa_lu)
-    msa_lu = np.where(globio_lulc == 7.0, 0.5, msa_lu)
-    msa_lu = np.where(globio_lulc == 8.0, 0.3, msa_lu)
-    msa_lu = np.where(globio_lulc == 9.0, 0.1, msa_lu)
-    msa_lu = np.where(globio_lulc == 10.0, 0.05, msa_lu)
+        msa_lu[bound] = np.zeros(globio_lulc.shape)
+        for lu_code, value in lu_msa_lookup[bound].iteritems():
+            msa_lu[bound] = np.where(globio_lulc == lu_code, value, msa_lu[bound])
  
     return msa_lu
 
@@ -579,7 +572,7 @@ def globio_analyze_forest_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
@@ -588,7 +581,7 @@ def globio_analyze_forest_expansion(args):
         avg_msa_f = str(float(np.mean(msa_f['median'][np.where(args['aoi_array'] == 1)])))
 
         
-        msa = msa_f['median'] * msa_lu * msa_i['median']
+        msa = msa_f['median'] * msa_lu['median'] * msa_i['median']
         avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
@@ -649,7 +642,7 @@ def globio_analyze_forest_core_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
@@ -658,7 +651,7 @@ def globio_analyze_forest_core_expansion(args):
         avg_msa_f = str(float(np.mean(msa_f['median'][np.where(args['aoi_array'] == 1)])))
 
         
-        msa = msa_f['median'] * msa_lu * msa_i['median']
+        msa = msa_f['median'] * msa_lu['median'] * msa_i['median']
         avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
 
@@ -721,7 +714,7 @@ def globio_analyze_forest_core_fragmentation(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
@@ -730,7 +723,7 @@ def globio_analyze_forest_core_fragmentation(args):
         avg_msa_f = str(float(np.mean(msa_f['median'][np.where(args['aoi_array'] == 1)])))
 
         
-        msa = msa_f['median'] * msa_lu * msa_i['median']
+        msa = msa_f['median'] * msa_lu['median'] * msa_i['median']
         avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
@@ -797,7 +790,7 @@ def globio_analyze_lu_expansion(args):
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
@@ -806,7 +799,7 @@ def globio_analyze_lu_expansion(args):
         avg_msa_f = str(float(np.mean(msa_f['median'][np.where(args['aoi_array'] == 1)])))
 
         
-        msa = msa_f['median'] * msa_lu * msa_i['median']
+        msa = msa_f['median'] * msa_lu['median'] * msa_i['median']
         avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
@@ -900,7 +893,7 @@ def analyze_composite_globio_change(args):
         globio_lulc = create_globio_lulc(args, expanded_lulc_array) 
         
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
-        avg_msa_lu = str(float(np.mean(msa_lu[np.where(args['aoi_array'] == 1)])))
+        avg_msa_lu = str(float(np.mean(msa_lu['median'][np.where(args['aoi_array'] == 1)])))
         
         msa_i = calc_msa_i(distance_to_infrastructure, expanded_lulc_array, percent)
         avg_msa_i = str(float(np.mean(msa_i['median'][np.where(args['aoi_array'] == 1)])))
@@ -908,7 +901,7 @@ def analyze_composite_globio_change(args):
         msa_f = calc_msa_f(infrastructure, expanded_lulc_array, args, percent)
         avg_msa_f = str(float(np.mean(msa_f['median'][np.where(args['aoi_array'] == 1)])))
         
-        msa = msa_f['median'] * msa_lu * msa_i['median']
+        msa = msa_f['median'] * msa_lu['median'] * msa_i['median']
         avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
         print "results for",scenario_name,percent,avg_msa, np.sum(msa), np.sum(msa_f), np.sum(msa_lu), np.sum(msa_i)
         
