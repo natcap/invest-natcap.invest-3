@@ -947,36 +947,36 @@ def add_active_pixel(sweep_line, distance, visibility):
         sweep_line['closest'] = new_pixel
     return sweep_line
 
-    def get_perimeter_cells(array_shape, viewpoint):
-        """Compute cells along the perimeter of an array.
+def get_perimeter_cells(array_shape, viewpoint):
+    """Compute cells along the perimeter of an array.
 
-            Inputs:
-                -array_shape: tuple (row, col) as ndarray.shape containing the
-                size of the array from which to compute the perimeter
-                -viewpoint: tuple (row, col) indicating the position of the
-                observer
-                
-            Returns a tuple (rows, cols) of the cell rows and columns following
-            the convention of numpy.where() where the first cell is immediately
-            right to the viewpoint, and the others are enumerated clockwise."""
-        # list all perimeter cell center angles
-        row_count, col_count = array_shape
-        # Create top row, except cell (0,0)
-        rows = np.zeros(col_count - 1)
-        cols = np.array(range(col_count-1, 0, -1))
-        # Create left side, avoiding repeat from top row
-        rows = np.concatenate((rows, np.array(range(row_count -1))))
-        cols = np.concatenate((cols, np.zeros(row_count - 1)))
-        # Create bottom row, avoiding repat from left side
-        rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
-        cols = np.concatenate((cols, np.array(range(col_count - 1))))
-        # Create last part of the right side, avoiding repeat from bottom row
-        rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
-        cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
-        # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-        rows = np.roll(rows, viewpoint[0])
-        cols = np.roll(cols, viewpoint[0])
-        return (rows, cols)
+        Inputs:
+            -array_shape: tuple (row, col) as ndarray.shape containing the
+            size of the array from which to compute the perimeter
+            -viewpoint: tuple (row, col) indicating the position of the
+            observer
+            
+        Returns a tuple (rows, cols) of the cell rows and columns following
+        the convention of numpy.where() where the first cell is immediately
+        right to the viewpoint, and the others are enumerated clockwise."""
+    # list all perimeter cell center angles
+    row_count, col_count = array_shape
+    # Create top row, except cell (0,0)
+    rows = np.zeros(col_count - 1)
+    cols = np.array(range(col_count-1, 0, -1))
+    # Create left side, avoiding repeat from top row
+    rows = np.concatenate((rows, np.array(range(row_count -1))))
+    cols = np.concatenate((cols, np.zeros(row_count - 1)))
+    # Create bottom row, avoiding repat from left side
+    rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
+    cols = np.concatenate((cols, np.array(range(col_count - 1))))
+    # Create last part of the right side, avoiding repeat from bottom row
+    rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
+    cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
+    # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
+    rows = np.roll(rows, viewpoint[0])
+    cols = np.roll(cols, viewpoint[0])
+    return (rows, cols)
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):

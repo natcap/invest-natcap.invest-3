@@ -502,7 +502,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         
         test_values = [18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] 
         #[12, 16, 8, 20, 4, 14, 10, 13, 22, 15]
-        shuffle(test_values)
+        #shuffle(test_values)
         for value in test_values:
             sweep_line, skip_nodes = \
             aesthetic_quality_core.add_active_pixel_fast(sweep_line, \
@@ -737,11 +737,19 @@ class TestAestheticQualityCore(unittest.TestCase):
             if add_cell_events[a].size > 0:
                 for c in add_cell_events[a]:
                     #print('  adding', c)
+                    d = distances[c]
+                    v = visibility[c]
+                    #active_line = \
+                    #aesthetic_quality_core.add_active_pixel(active_line, d, v)
                     active_cells.add(c)
         #   2.2- remove cells
             #print('  remove cell events', remove_cell_events[a])
             for c in remove_cell_events[a]:
                 #print('  removing', c)
+                d = distances[c]
+                v = visibility[c]
+                #active_line = \
+                #aesthetic_quality_core.remove_active_pixel(active_line, d)
                 active_cells.remove(c)
         #    print('  active cells', len(active_cells), active_cells)
         #print('active cells', active_cells, len(active_cells) == 0)
