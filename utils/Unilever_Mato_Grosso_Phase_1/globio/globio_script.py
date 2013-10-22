@@ -553,14 +553,19 @@ def globio_analyze_forest_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA (median),Average MSA (lower), Average MSA (upper)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario')
+    for eco_name in args['ecoregion_mask_uris']:
+        for msa_type in ['Species', 'Endemic']:
+            for bound_type in ['(median)', '(lower)', '(upper)']:
+                output_table.write(',MSA %s - %s %s' % (msa_type, eco_name, bound_type))
+    output_table.write('\n')
  
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
+    en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
+    sp_rich = geotiff_to_array(args['ecoregions_sp_rich_uri'])
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating change in MSA for expansion step %s' % percent
-        
-
         if percent > 0:
             deepest_edge_index += args['pixels_to_convert_per_step']
             scenario_lulc_array.flat[
@@ -572,11 +577,14 @@ def globio_analyze_forest_expansion(args):
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
+
         output_table.write('%s' % (percent))
-        for tail_mode in ['median', 'lower', 'upper']:
-            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
-            avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
-            output_table.write(',%s' % (avg_msa))
+        for eco_name in args['ecoregion_mask_uris']:
+            ecoregion_mask = geotiff_to_array(args['ecoregion_mask_uris'][eco_name])
+            for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
+                msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
+                avg_msa= str(float(np.mean(msa[np.where((args['aoi_array'] == 1) & (ecoregion_mask == 1))])))
+                output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
 
@@ -618,11 +626,18 @@ def globio_analyze_forest_core_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA (median),Average MSA (lower), Average MSA (upper)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario')
+    for eco_name in args['ecoregion_mask_uris']:
+        for msa_type in ['Species', 'Endemic']:
+            for bound_type in ['(median)', '(lower)', '(upper)']:
+                output_table.write(',MSA %s - %s %s' % (msa_type, eco_name, bound_type))
+    output_table.write('\n')
  
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
 
+    en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
+    sp_rich = geotiff_to_array(args['ecoregions_sp_rich_uri'])
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating change in MSA for expansion step %s' % percent
         if percent > 0:
@@ -636,10 +651,12 @@ def globio_analyze_forest_core_expansion(args):
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
-        for tail_mode in ['median', 'lower', 'upper']:
-            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
-            avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
-            output_table.write(',%s' % (avg_msa))
+        for eco_name in args['ecoregion_mask_uris']:
+            ecoregion_mask = geotiff_to_array(args['ecoregion_mask_uris'][eco_name])
+            for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
+                msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
+                avg_msa= str(float(np.mean(msa[np.where((args['aoi_array'] == 1) & (ecoregion_mask == 1))])))
+                output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
 
@@ -677,11 +694,18 @@ def globio_analyze_forest_core_fragmentation(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA (median),Average MSA (lower), Average MSA (upper)\n')
+        'Percent Soy Expansion in Forest Core Expansion Scenario')
+    for eco_name in args['ecoregion_mask_uris']:
+        for msa_type in ['Species', 'Endemic']:
+            for bound_type in ['(median)', '(lower)', '(upper)']:
+                output_table.write(',MSA %s - %s %s' % (msa_type, eco_name, bound_type))
+    output_table.write('\n')
  
     #This index will keep track of the number of forest pixels converted.
     deepest_edge_index = 0
 
+    en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
+    sp_rich = geotiff_to_array(args['ecoregions_sp_rich_uri'])
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating change in MSA for expansion step %s' % percent
 
@@ -702,14 +726,16 @@ def globio_analyze_forest_core_fragmentation(args):
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
-        for tail_mode in ['median', 'lower', 'upper']:
-            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
-            avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
-            output_table.write(',%s' % (avg_msa))
+        for eco_name in args['ecoregion_mask_uris']:
+            ecoregion_mask = geotiff_to_array(args['ecoregion_mask_uris'][eco_name])
+            for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
+                msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
+                avg_msa= str(float(np.mean(msa[np.where((args['aoi_array'] == 1) & (ecoregion_mask == 1))])))
+                output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
 
-        
+
 def globio_analyze_lu_expansion(args):
     """This function does a simulation of cropland expansion by
         expanding into the forest edges.
@@ -753,10 +779,17 @@ def globio_analyze_lu_expansion(args):
     #Open a .csv file to dump the grassland expansion scenario
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
-        'Percent Soy Expansion in Forest Core Expansion Scenario,Average MSA (median),Average MSA (lower), Average MSA (upper)\n')
- 
+        'Percent Soy Expansion in Forest Core Expansion Scenario')
+    for eco_name in args['ecoregion_mask_uris']:
+        for msa_type in ['Species', 'Endemic']:
+            for bound_type in ['(median)', '(lower)', '(upper)']:
+                output_table.write(',MSA %s - %s %s' % (msa_type, eco_name, bound_type))
+    output_table.write('\n')
+
     #This index will keep track of the number of forest pixels converted.
     pixels_converted = 0
+    en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
+    sp_rich = geotiff_to_array(args['ecoregions_sp_rich_uri'])
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating change in MSA for expansion step %s' % percent
 
@@ -771,10 +804,12 @@ def globio_analyze_lu_expansion(args):
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
         output_table.write('%s' % (percent))
-        for tail_mode in ['median', 'lower', 'upper']:
-            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
-            avg_msa = str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))        
-            output_table.write(',%s' % (avg_msa))
+        for eco_name in args['ecoregion_mask_uris']:
+            ecoregion_mask = geotiff_to_array(args['ecoregion_mask_uris'][eco_name])
+            for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
+                msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
+                avg_msa= str(float(np.mean(msa[np.where((args['aoi_array'] == 1) & (ecoregion_mask == 1))])))
+                output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
 
@@ -874,14 +909,17 @@ def analyze_composite_globio_change(args):
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
+
         output_table.write('%s' % (percent))
-        for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
-            LOGGER.debug('%s %s' % (tail_mode, rich_factor))
-            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
-            avg_msa= str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
-            output_table.write(',%s' % (avg_msa))
+        for eco_name in args['ecoregion_mask_uris']:
+            ecoregion_mask = geotiff_to_array(args['ecoregion_mask_uris'][eco_name])
+            for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
+                msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode] * rich_factor
+                avg_msa= str(float(np.mean(msa[np.where((args['aoi_array'] == 1) & (ecoregion_mask == 1))])))
+                output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
+
 
 def make_ecoregions(args):
     
@@ -922,7 +960,6 @@ def make_ecoregions(args):
         raster_utils.vectorize_datasets(
             [ecoregion_objectids_uri], mask_object_op, args['ecoregion_mask_uris'][eco_name],
             gdal.GDT_Byte, 255, pixel_size_out, "intersection", assert_datasets_projected=False)
-
 
  
 def run_globio_mgds(number_of_steps, pool):
@@ -974,7 +1011,6 @@ def run_globio_mgds(number_of_steps, pool):
 
     make_ecoregions(args)
 
-
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
     aoi_raster_uri = raster_utils.temporary_filename()
@@ -1007,7 +1043,6 @@ def run_globio_mgds(number_of_steps, pool):
         canals_raster_uri, args['canals_uri'], burn_values=[1])
     args['canals_array']= geotiff_to_array(canals_raster_uri)
     
-    
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
@@ -1020,31 +1055,43 @@ def run_globio_mgds(number_of_steps, pool):
         2: .8,
         9: .2
         }
-    #pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
-    analyze_composite_globio_change(args)
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
+    else:
+        analyze_composite_globio_change(args)
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
-    #globio_analyze_forest_core_expansion(args)
+    if pool:
+        pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
+    else:
+        globio_analyze_forest_core_expansion(args)
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    #pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
+    if pool:
+        pool.apply_async(globio_analyze_lu_expansion, args=[args.copy()])
+    else:
+        globio_analyze_lu_expansion(args)
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
+    if pool:
+        pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
+    else:
+        globio_analyze_forest_expansion(args)
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
-    #globio_analyze_forest_core_fragmentation(args)
+    if pool:
+        pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
+    else:
+        globio_analyze_forest_core_fragmentation(args)
     
     
 def run_globio_mg(number_of_steps, pool):
@@ -1141,35 +1188,49 @@ def run_globio_mg(number_of_steps, pool):
         9: .2
         }
         
-    #pool.apply_async(analyze_composite_globio_change, [args.copy()])
-    analyze_composite_globio_change(args)
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    else:
+        analyze_composite_globio_change(args)
         
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
-    #globio_analyze_forest_core_expansion(args)
+    if pool:
+        pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
+    else:
+        globio_analyze_forest_core_expansion(args)
     
     #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
        os.path.join(output_folder, 'globio_mg_lu_expansion_msa_change_'+args['run_id']+'.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
-    #pool.apply_async(globio_analyze_lu_expansion, [args.copy()])
+    if pool:
+        pool.apply_async(globio_analyze_lu_expansion, [args.copy()])
+    else:
+        globio_analyze_lu_expansion(args)
        
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_expansion_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_expansion, [args.copy()])
+    if pool:
+        pool.apply_async(globio_analyze_forest_expansion, [args.copy()])
+    else:
+        globio_analyze_forest_expansion(args)
     
     args['output_table_filename'] = (
         os.path.join(output_folder,'globio_mg_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
-    #pool.apply_async(globio_analyze_forest_core_fragmentation, [args.copy()])
+    if pool:
+        pool.apply_async(globio_analyze_forest_core_fragmentation, [args.copy()])
+    else:
+        globio_analyze_forest_core_fragmentation(args)
 
 
 def main():
-    NUMBER_OF_STEPS = 1
+    NUMBER_OF_STEPS = 200
     pool = Pool(8)
+#    pool = None
     run_globio_mgds(NUMBER_OF_STEPS, pool)
     run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
