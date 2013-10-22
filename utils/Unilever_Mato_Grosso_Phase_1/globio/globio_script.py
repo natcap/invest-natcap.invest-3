@@ -356,13 +356,9 @@ def calc_msa_i(distance_to_infrastructure, input_lulc, iteration_number):
         msa_i_tropical_forest = np.where( (distance_to_infrastructure <= 1000.0), infrastructure_impact_zones[bound]['high impact'], msa_i_tropical_forest)
 
         msa_i_temperate_and_boreal_forest = np.zeros(input_lulc.shape)
-        print msa_i_temperate_and_boreal_forest.shape
         msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 1200.0) & (distance_to_infrastructure <= 4200.0), infrastructure_impact_zones[bound]['low impact'], infrastructure_impact_zones[bound]['no impact'])
-        print msa_i_temperate_and_boreal_forest.shape
         msa_i_temperate_and_boreal_forest = np.where((distance_to_infrastructure > 300.0) & (distance_to_infrastructure <= 1200.0), infrastructure_impact_zones[bound]['medium impact'], msa_i_temperate_and_boreal_forest)
-        print msa_i_temperate_and_boreal_forest.shape
         msa_i_temperate_and_boreal_forest = np.where( (distance_to_infrastructure <= 300.0), infrastructure_impact_zones[bound]['high impact'], msa_i_temperate_and_boreal_forest)
-        print msa_i_temperate_and_boreal_forest.shape
 
         msa_i_cropland_and_grassland = np.zeros(input_lulc.shape)
         msa_i_cropland_and_grassland = np.where((distance_to_infrastructure > 2000.0) & (distance_to_infrastructure <= 7000.0), infrastructure_impact_zones[bound]['low impact'], infrastructure_impact_zones[bound]['no impact'])
@@ -887,6 +883,46 @@ def analyze_composite_globio_change(args):
         output_table.write('\n')
         output_table.flush()
 
+def make_ecoregions(args):
+    
+    args['ecoregions_en_rich_uri'] = raster_utils.temporary_filename()
+    args['ecoregions_sp_rich_uri'] = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(
+        args['input_lulc_uri'], args['ecoregions_en_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
+    raster_utils.new_raster_from_base_uri(
+        args['input_lulc_uri'], args['ecoregions_sp_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
+    raster_utils.rasterize_layer_uri(
+        args['ecoregions_en_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=en_rich'])
+    raster_utils.rasterize_layer_uri(
+        args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
+
+    ecoregions_table = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
+    
+    unique_ecoregion_objectids = collections.defaultdict(list)
+    for record in ecoregions_table.itervalues():
+        unique_ecoregion_objectids[record['ECO_NAME']].append(record['OBJECTID'])
+    LOGGER.debug(unique_ecoregion_objectids)
+
+    ecoregion_objectids_uri = raster_utils.temporary_filename()
+    raster_utils.new_raster_from_base_uri(
+        args['input_lulc_uri'], ecoregion_objectids_uri, 'GTiff',
+        -1, gdal.GDT_Int32, fill_value=-1)
+
+    raster_utils.rasterize_layer_uri(
+        ecoregion_objectids_uri, args['ecoregions_shape_uri'], option_list=['ATTRIBUTE=OBJECTID'])
+
+    pixel_size_out = raster_utils.get_cell_size_from_uri(args['input_lulc_uri'])
+    args['ecoregion_mask_uris'] = {}
+    for eco_name, objectids in unique_ecoregion_objectids.iteritems():
+        args['ecoregion_mask_uris'][eco_name] = raster_utils.temporary_filename()
+        def mask_object_op(x):
+            if x in objectids:
+                return 1
+            return 0
+        raster_utils.vectorize_datasets(
+            [ecoregion_objectids_uri], mask_object_op, args['ecoregion_mask_uris'][eco_name],
+            gdal.GDT_Byte, 255, pixel_size_out, "intersection", assert_datasets_projected=False)
+
 
  
 def run_globio_mgds(number_of_steps, pool):
@@ -936,43 +972,8 @@ def run_globio_mgds(number_of_steps, pool):
         'ecoregions_shape_uri': 'inputs_mgds_globio/ecoregions_mgds_proj.shp',
     }
 
-    args['ecoregions_en_rich_uri'] = raster_utils.temporary_filename()
-    args['ecoregions_sp_rich_uri'] = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(
-        args['input_lulc_uri'], args['ecoregions_en_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
-    raster_utils.new_raster_from_base_uri(
-        args['input_lulc_uri'], args['ecoregions_sp_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
-    raster_utils.rasterize_layer_uri(
-        args['ecoregions_en_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=en_rich'])
-    raster_utils.rasterize_layer_uri(
-        args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
+    make_ecoregions(args)
 
-    ecoregions_table = raster_utils.extract_datasource_table_by_key(args['ecoregions_shape_uri'], 'OBJECTID')
-    
-    unique_ecoregion_objectids = collections.defaultdict(list)
-    for record in ecoregions_table.itervalues():
-        unique_ecoregion_objectids[record['ECO_NAME']].append(record['OBJECTID'])
-    LOGGER.debug(unique_ecoregion_objectids)
-
-    ecoregion_objectids_uri = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(
-        args['input_lulc_uri'], ecoregion_objectids_uri, 'GTiff',
-        -1, gdal.GDT_Int32, fill_value=-1)
-
-    raster_utils.rasterize_layer_uri(
-        ecoregion_objectids_uri, args['ecoregions_shape_uri'], option_list=['ATTRIBUTE=OBJECTID'])
-
-    pixel_size_out = raster_utils.get_cell_size_from_uri(args['input_lulc_uri'])
-    args['ecoregion_mask_uris'] = {}
-    for eco_name, objectids in unique_ecoregion_objectids.iteritems():
-        args['ecoregion_mask_uris'][eco_name] = raster_utils.temporary_filename()
-        def mask_object_op(x):
-            if x in objectids:
-                return 1
-            return 0
-        raster_utils.vectorize_datasets(
-            [ecoregion_objectids_uri], mask_object_op, args['ecoregion_mask_uris'][eco_name],
-            gdal.GDT_Byte, 255, pixel_size_out, "intersection")
 
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
@@ -1010,7 +1011,7 @@ def run_globio_mgds(number_of_steps, pool):
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
-        os.path.join(output_folder, 'globio_mgds_composite_change_20_80_mg.csv'))
+        os.path.join(output_folder, 'globio_mgds_composite_change_20_80_pixel_count.csv'))
     args['land_cover_start_fractions'] = {
         2: .2,
         9: .8
@@ -1093,19 +1094,8 @@ def run_globio_mg(number_of_steps, pool):
         'ecoregions_shape_uri': 'inputs_mg_globio/ecoregions_mg_proj.shp',
     }
 
-    args['ecoregions_en_rich_uri'] = raster_utils.temporary_filename()
-    args['ecoregions_sp_rich_uri'] = raster_utils.temporary_filename()
-    raster_utils.new_raster_from_base_uri(
-        args['input_lulc_uri'], args['ecoregions_en_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
-    raster_utils.new_raster_from_base_uri(
-        args['input_lulc_uri'], args['ecoregions_sp_rich_uri'], 'GTiff', 0.0, gdal.GDT_Float32, fill_value=0)
-    raster_utils.rasterize_layer_uri(
-        args['ecoregions_en_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=en_rich'])
-    raster_utils.rasterize_layer_uri(
-        args['ecoregions_sp_rich_uri'], args['ecoregions_shape_uri'], burn_values=[1], option_list=['ATTRIBUTE=sp_rich'])
+    make_ecoregions(args)
 
-
-    
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
     args['input_lulc_array']= geotiff_to_array(args['input_lulc_uri'])
     aoi_raster_uri = raster_utils.temporary_filename()
@@ -1181,7 +1171,7 @@ def main():
     NUMBER_OF_STEPS = 1
     pool = Pool(8)
     run_globio_mgds(NUMBER_OF_STEPS, pool)
-    #run_globio_mg(NUMBER_OF_STEPS, pool)
+    run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
