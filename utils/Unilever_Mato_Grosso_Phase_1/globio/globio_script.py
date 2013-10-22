@@ -1062,7 +1062,7 @@ def run_globio_mgds(number_of_steps, pool):
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
+        os.path.join(output_folder, 'globio_mgds_forest_core_expansion_msa_change.csv'))
     if pool:
         pool.apply_async(globio_analyze_forest_core_expansion, args=[args.copy()])
     else:
@@ -1070,7 +1070,7 @@ def run_globio_mgds(number_of_steps, pool):
     
      #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
-       os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change_'+args['run_id']+'.csv'))
+       os.path.join(output_folder, 'globio_mgds_lu_expansion_msa_change.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
     if pool:
@@ -1080,14 +1080,14 @@ def run_globio_mgds(number_of_steps, pool):
     
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change_'+args['run_id']+'.csv'))
+        os.path.join(output_folder, 'globio_mgds_forest_expansion_msa_change.csv'))
     if pool:
         pool.apply_async(globio_analyze_forest_expansion, args=[args.copy()])
     else:
         globio_analyze_forest_expansion(args)
     
     args['output_table_filename'] = (
-        os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
+        os.path.join(output_folder,'globio_mgds_forest_core_fragmentation_msa_change.csv'))
     if pool:
         pool.apply_async(globio_analyze_forest_core_fragmentation, args=[args.copy()])
     else:
@@ -1195,7 +1195,7 @@ def run_globio_mg(number_of_steps, pool):
         
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'globio_mg_forest_core_expansion_msa_change_'+args['run_id']+'.csv'))
+        os.path.join(output_folder, 'globio_mg_forest_core_expansion_msa_change.csv'))
     if pool:
         pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
     else:
@@ -1203,7 +1203,7 @@ def run_globio_mg(number_of_steps, pool):
     
     #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
-       os.path.join(output_folder, 'globio_mg_lu_expansion_msa_change_'+args['run_id']+'.csv'))
+       os.path.join(output_folder, 'globio_mg_lu_expansion_msa_change.csv'))
     #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['conversion_lucode'] = 9
     if pool:
@@ -1213,14 +1213,14 @@ def run_globio_mg(number_of_steps, pool):
        
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'globio_mg_forest_expansion_msa_change_'+args['run_id']+'.csv'))
+        os.path.join(output_folder, 'globio_mg_forest_expansion_msa_change.csv'))
     if pool:
         pool.apply_async(globio_analyze_forest_expansion, [args.copy()])
     else:
         globio_analyze_forest_expansion(args)
     
     args['output_table_filename'] = (
-        os.path.join(output_folder,'globio_mg_forest_core_fragmentation_msa_change_'+args['run_id']+'.csv'))
+        os.path.join(output_folder,'globio_mg_forest_core_fragmentation_msa_change.csv'))
     if pool:
         pool.apply_async(globio_analyze_forest_core_fragmentation, [args.copy()])
     else:
