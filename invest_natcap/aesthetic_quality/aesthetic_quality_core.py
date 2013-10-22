@@ -263,8 +263,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     ', before any change:')
     print_skip_list(sweep_line, skip_nodes)
     print_hierarchy(hierarchy)
-    print('hierarchy is consistent:', \
-    hierarchy_is_consistent(pixel, hierarchy, skip_nodes))
+    consistency = hierarchy_is_consistent(pixel, hierarchy, skip_nodes)
+    print('hierarchy is consistent:', consistency)
+    assert consistency[0], consistency[1]
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
