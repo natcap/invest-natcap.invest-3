@@ -943,6 +943,7 @@ def run_globio_mgds(number_of_steps, pool):
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
         'secondary_threshold':.33,
+        'ecoregions_uri': 'inputs_mg_globio/ecoregions_mg.shp',
     }
 
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
@@ -1059,7 +1060,8 @@ def run_globio_mg(number_of_steps, pool):
         #areas with FFQI > primary threshold are defined as primary forest
         'primary_threshold':.66,
         #areas < primary but > secondary threshold are defined as secondary forest while < secondary threshold is defined as forest-plantation
-        'secondary_threshold':.33,
+        'secondary_threshold':.33,        
+        'ecoregions_uri': 'inputs_mg_globio/ecoregions_mg.shp',
     }
     
     #This set of args store arrays for each of the inputted URIs. This method of processing is faster in my program, but could present problems if very large input data are considered. In which case, I will need to do case-specific blocking of the matrices in the analysis.
