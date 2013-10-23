@@ -233,7 +233,7 @@ def analyze_composite_carbon_stock_change(args):
         #tables, and land cover raster.
         for tail_type in ['median', 'lower', 'upper']:
             carbon_stocks = calculate_carbon_stocks(
-                scenario_lulc_array, args['forest_lucodes'],
+                expanded_lulc_array, args['forest_lucodes'],
                 args['regression_lucodes'],
                 args['biomass_from_table_lucodes'], carbon_pool_table,
                 landcover_regression, landcover_mean, cell_size, tail=tail_type)
