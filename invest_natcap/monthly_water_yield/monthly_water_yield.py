@@ -845,11 +845,22 @@ def calculate_evaporation(
                 [water_pix, soil_pix, etc_pix, smax_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
-        
+    
+        # Constraint/bound on evaporation is:
+        # [0 <= E(i,t) <= (S(i,t-1) + W(i,t))]
+        constraint = water_pix + soil_pix
+
         if water_pix < etc_pix:
-            return water_pix + soil_pix * (
+            evap_val = water_pix + soil_pix * (
                     1.0 - math.exp(-(etc_pix - water_pix) / smax_pix))
+            # Checking against bound / constraint for evaportation
+            if evap_val > constraint:
+                return constraint
+            else:
+                return evap_val
         else:
+            # No need to check constraint here because by being in here we know
+            # W >= ETc, which means E(i,t) can never be great than W + S(i,t-1)
             return etc_pix
     
     no_data_list = []
