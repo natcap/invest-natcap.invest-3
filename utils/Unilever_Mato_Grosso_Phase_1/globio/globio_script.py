@@ -866,7 +866,7 @@ def analyze_composite_globio_change(args):
     #Load the base landcover map that we use in the scenarios
     scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
-    scenario_lulc_array = copy(args['input_lulc_array'])
+    base_lulc_array = copy(args['input_lulc_array'])
     scenario_nodata = scenario_lulc_dataset.GetRasterBand(1).GetNoDataValue()
     scenario_lulc_dataset=None
 
@@ -881,7 +881,7 @@ def analyze_composite_globio_change(args):
     output_table.write('\n')
  
     output_count_table = open(args['output_pixel_count_filename'], 'wb')
-    unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
+    unique_lucodes = sorted(numpy.unique(base_lulc_array))
     output_count_table.write(','.join(map(str,unique_lucodes)) + '\n')
 
     en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
@@ -890,7 +890,7 @@ def analyze_composite_globio_change(args):
         print 'calculating globio for composite expansion step %s' % percent
         try:
             scenario_lulc_array, pixel_count = expand_lu_type(
-                scenario_lulc_array, scenario_nodata, args['converting_crop'], 
+                base_lulc_array, scenario_nodata, args['converting_crop'], 
                 args['converting_id_list'], percent, args['pixels_to_convert_per_step'], 
                 args['land_cover_start_fractions'], 
                 args['land_cover_end_fractions'], 
@@ -1059,6 +1059,8 @@ def run_globio_mgds(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     else:
         analyze_composite_globio_change(args)
+
+    return
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
@@ -1192,6 +1194,8 @@ def run_globio_mg(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, [args.copy()])
     else:
         analyze_composite_globio_change(args)
+
+    return
         
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
@@ -1229,8 +1233,8 @@ def run_globio_mg(number_of_steps, pool):
 
 def main():
     NUMBER_OF_STEPS = 200
-    pool = Pool(8)
-#    pool = None
+    pool = Pool(7)
+    #pool = None
     run_globio_mgds(NUMBER_OF_STEPS, pool)
     run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
