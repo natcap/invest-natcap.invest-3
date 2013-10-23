@@ -162,7 +162,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_naive = (min_angles, center_angles, max_angles)
         # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
-            aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Compare the two
         error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
             np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
@@ -180,37 +180,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
 
-    def get_perimeter_cells(self, array_shape, viewpoint):
-        """Compute cells along the perimeter of an array.
-
-            Inputs:
-                -array_shape: tuple (row, col) as ndarray.shape containing the
-                size of the array from which to compute the perimeter
-                -viewpoint: tuple (row, col) indicating the position of the
-                observer
-                
-            Returns a tuple (rows, cols) of the cell rows and columns following
-            the convention of numpy.where() where the first cell is immediately
-            right to the viewpoint, and the others are enumerated clockwise."""
-        # list all perimeter cell center angles
-        row_count, col_count = array_shape
-        # Create top row, except cell (0,0)
-        rows = np.zeros(col_count - 1)
-        cols = np.array(range(col_count-1, 0, -1))
-        # Create left side, avoiding repeat from top row
-        rows = np.concatenate((rows, np.array(range(row_count -1))))
-        cols = np.concatenate((cols, np.zeros(row_count - 1)))
-        # Create bottom row, avoiding repat from left side
-        rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
-        cols = np.concatenate((cols, np.array(range(col_count - 1))))
-        # Create last part of the right side, avoiding repeat from bottom row
-        rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
-        cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
-        # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-        rows = np.roll(rows, viewpoint[0])
-        cols = np.roll(cols, viewpoint[0])
-        return (rows, cols)
-
     def test_get_perimeter_cells(self):
         """Test get_perimeter_cells on 2 hand-designed examples"""
         # First hand-designed example: 3x4 raster
@@ -222,7 +191,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         expected_cols = np.array([3.,3.,3.,2.,1.,0.,0.,0.,1.,2.])
         # Test if the computed rows and columns agree with the expected ones
         computed_rows, computed_cols = \
-            self.get_perimeter_cells(array_shape, viewpoint)
+        aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         message = 'number of rows disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_rows.shape == computed_rows.shape, message
@@ -245,7 +214,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         expected_cols = np.array([2.,1.,0.,0.,0.,0.,0.,1.,2.,2.,2.,2.])
         # Test if the computed rows and columns agree with the expected ones
         computed_rows, computed_cols = \
-            self.get_perimeter_cells(array_shape, viewpoint)
+            aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         message = 'number of rows disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_rows.shape == computed_rows.shape, message
@@ -283,7 +252,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         array_shape = (400, 400)
         viewpoint = (350, 200)
         # Get the perimeter cells
-        perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
+        perimeter_cells = \
+        aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         # Compute angles associated to the perimeter cells
         angles_fast = self.cell_angles(perimeter_cells, viewpoint)
         # Compute the same angles individually
@@ -532,7 +502,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         
         test_values = [18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] 
         #[12, 16, 8, 20, 4, 14, 10, 13, 22, 15]
-        shuffle(test_values)
+        #shuffle(test_values)
         for value in test_values:
             sweep_line, skip_nodes = \
             aesthetic_quality_core.add_active_pixel_fast(sweep_line, \
@@ -668,7 +638,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         viewpoint_elevation = 1.75
 
         # 1- get perimeter cells
-        perimeter_cells = self.get_perimeter_cells(array_shape, viewpoint)
+        perimeter_cells = \
+        aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         # 1.1- remove perimeter cell if same coord as viewpoint
         # 2- compute cell angles
         angles = self.cell_angles(perimeter_cells, viewpoint)
@@ -725,6 +696,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             current_events = []
             while (add_event_id < add_event_count) and \
                 (add_events[arg_min[add_event_id]] < angles[a]):
+                # The active cell list is initialized with those at angle 0.
+                # Make sure to remove them from the cell_addition events to
+                # avoid duplicates. Do not remove them from remove_cell events.
                 #print(events[0][arg_min[add_event_id]], '< current angle')
                 if center_events[arg_min[add_event_id]] > 0.:
                     #print('add', arg_min[add_event_id],add_events[arg_min[add_event_id]])
@@ -753,26 +727,38 @@ class TestAestheticQualityCore(unittest.TestCase):
         active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            active_cells.add(c)
+            #print('  pre-adding', c, events[1][c])
             d = distances[c]
             v = visibility[c]
             active_line = \
                 aesthetic_quality_core.add_active_pixel(active_line, d, v)
+            active_cells.add(d)
+            
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
-            #print('sweep angle', a)
+            #print('sweep angle', a, angles[a+1])
         #   2.1- add cells
             #print('  add cell events', add_cell_events[a])
             if add_cell_events[a].size > 0:
                 for c in add_cell_events[a]:
-                    #print('  adding', c)
-                    active_cells.add(c)
+                    #print('  adding', c, events[0][c])
+                    d = distances[c]
+                    v = visibility[c]
+                    active_line = \
+                    aesthetic_quality_core.add_active_pixel(active_line, d, v)
+                    active_cells.add(d)
         #   2.2- remove cells
             #print('  remove cell events', remove_cell_events[a])
             for c in remove_cell_events[a]:
-                #print('  removing', c)
-                active_cells.remove(c)
-        #    print('  active cells', len(active_cells), active_cells)
+                #print('  removing', c, events[2][c])
+                d = distances[c]
+                v = visibility[c]
+                active_line = \
+                aesthetic_quality_core.remove_active_pixel(active_line, d)
+                active_cells.remove(d)
+            #print('  active cells', len(active_cells), active_cells)
+            #active_line_distance = [node for node in active_line if node != 'closest']
+            #print('  active line', len(active_line), active_line_distance)
         #print('active cells', active_cells, len(active_cells) == 0)
 
         # Sanity checks

@@ -53,7 +53,7 @@ def execute(args):
         
         returns - nothing
     """
-    LOGGER.debug('Start Executing Model')
+    LOGGER.debug('Start Executing Monthly Water Yield')
    
     # Set up directories for model outputs
     workspace = args['workspace_dir']
@@ -296,7 +296,8 @@ def execute(args):
         # Calculate Streamflow
         clean_uri([streamflow_uri])
         calculate_streamflow(
-                interflow_uri, baseflow_uri, streamflow_uri, float_nodata)
+                interflow_uri, baseflow_uri, dflow_uri, streamflow_uri, 
+                float_nodata)
 
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
@@ -305,7 +306,7 @@ def execute(args):
         clean_uri([soil_storage_uri])
         calculate_soil_storage(
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
-                soil_storage_uri, float_nodata)
+                smax_uri, soil_storage_uri, float_nodata)
 
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
@@ -428,8 +429,8 @@ def clean_uri(in_uri_list):
             os.remove(uri)
 
 def calculate_soil_storage(
-        prev_soil_uri, water_uri, evap_uri, streamflow_uri, soil_storage_uri,
-        out_nodata):
+        prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri, 
+        soil_storage_uri, out_nodata):
     """This function calculates the soil storage 
 
         prev_soil_uri - a URI to a gdal dataset of the previous months soil
@@ -441,6 +442,8 @@ def calculate_soil_storage(
 
         streamflow_uri - a URI to a gdal dataset for the streamflow
         
+        smax_uri - a URI to a gdal dataset for the soil max
+        
         soil_storage_uri - a URI to a gdal dataset for the current months soil
             storage
 
@@ -450,11 +453,13 @@ def calculate_soil_storage(
     
     no_data_list = []
     # Build up a list of nodata values to check against
-    for raster_uri in [prev_soil_uri, water_uri, evap_uri, streamflow_uri]:
+    for raster_uri in [
+            prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def soil_storage_op(prev_soil_pix, water_pix, evap_pix, streamflow_pix):
+    def soil_storage_op(
+            prev_soil_pix, water_pix, evap_pix, streamflow_pix, smax_pix):
         """A vectorize operation for calculating the intermediate 
             streamflow
 
@@ -462,31 +467,43 @@ def calculate_soil_storage(
             water_pix - a float value for the water amount
             evap_pix - a float value for the evap
             streamflow_pix - a float value for the streamflow
+            smax_pix - a float value for the soil max
             returns - the current soil storage
         """
         for pix, pix_nodata in zip(
-                [prev_soil_pix, water_pix, evap_pix, streamflow_pix],
+                [prev_soil_pix, water_pix, evap_pix, streamflow_pix, smax_pix],
                 no_data_list):
             if pix == pix_nodata:
                 return out_nodata
 
-        return prev_soil_pix + water_pix - evap_pix - streamflow_pix
+        # Constraint / bound for soil storage is:
+        # [ 0 <= S(i,t) <= Smax]
+
+        storage_value =  prev_soil_pix + water_pix - evap_pix - streamflow_pix
+
+        # Check constraint / bound
+        if storage_value > smax_pix:
+            return smax_pix 
+        else:
+            return storage_value
 
     cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
 
     raster_utils.vectorize_datasets(
-            [prev_soil_uri, water_uri, evap_uri, streamflow_uri],
+            [prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri],
             soil_storage_op, soil_storage_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
 
 def calculate_streamflow(
-        interflow_uri, baseflow_uri, streamflow_uri, out_nodata):
+        interflow_uri, baseflow_uri, dflow_uri, streamflow_uri, out_nodata):
     """This function calculates the streamflow 
 
         interflow_uri - a URI to a gdal datasaet for the interflow
 
         baseflow_uri - a URI to a gdal datasaet for the baseflow
 
+        dflow_uri - a URI to a gdal datasaet for the direct flow
+        
         streamflow_uri - a URI path for the streamflow output to be
             written to disk
 
@@ -500,25 +517,26 @@ def calculate_streamflow(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def streamflow_op(interflow_pix, baseflow_pix):
+    def streamflow_op(interflow_pix, baseflow_pix, dflow_pix):
         """A vectorize operation for calculating the streamflow
 
             interflow_pix - a float value for the interflow
             baseflow_pix - a float value for the baseflow
+            dflow_pix - a float value for the direct flow
 
             returns - the baseflow value
         """
         for pix, pix_nodata in zip(
-                [interflow_pix, baseflow_pix], no_data_list):
+                [interflow_pix, baseflow_pix, dflow_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
 
-        return interflow_pix + baseflow_pix 
+        return interflow_pix + baseflow_pix + dflow_pix 
 
     cell_size = raster_utils.get_cell_size_from_uri(interflow_uri)
 
     raster_utils.vectorize_datasets(
-            [interflow_uri, baseflow_uri], streamflow_op,
+            [interflow_uri, baseflow_uri, dflow_uri], streamflow_op,
             streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
@@ -666,8 +684,18 @@ def calculate_baseflow(
             if pix == pix_nodata: 
                 return out_nodata
 
+        # Constraint / bound for baseflow is:
+        # [0 <= Bt(i,t) <= (S(i,t-1) - E(i,t))]
+        constraint = soil_pix - evap_pix
+
         if evap_pix < soil_pix:
-            return alpha_pix * (soil_pix - evap_pix)**beta
+            base_value = alpha_pix * (soil_pix - evap_pix)**beta
+            
+            # Checking against constraint / bound
+            if base_value > constraint:
+                return constraint
+            else:
+                return base_value
         return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_three_uri)
@@ -721,8 +749,17 @@ def calculate_intermediate_interflow(
             if pix == pix_nodata: 
                 return out_nodata
 
+        # Constraint / bound for intermediate interlow is:
+        # [0 <= I(i,t) <= (S(i,t-1) + W(i,t) - E(i,t) - Bt(i,t))]
+        constraint = soil_pix + water_pix - evap_pix - baseflow_pix
+
         if evap_pix + baseflow_pix < soil_pix + water_pix:
-            return alpha_pix * (soil_pix + water_pix - evap_pix - baseflow_pix) ** beta
+            inter_value = alpha_pix * (soil_pix + water_pix - evap_pix - baseflow_pix) ** beta
+            # Constraint / bound check
+            if inter_value > constraint:
+                return constraint
+            else:
+                return inter_value
         return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
@@ -845,11 +882,22 @@ def calculate_evaporation(
                 [water_pix, soil_pix, etc_pix, smax_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
-        
+    
+        # Constraint/bound on evaporation is:
+        # [0 <= E(i,t) <= (S(i,t-1) + W(i,t))]
+        constraint = water_pix + soil_pix
+
         if water_pix < etc_pix:
-            return water_pix + soil_pix * (
+            evap_val = water_pix + soil_pix * (
                     1.0 - math.exp(-(etc_pix - water_pix) / smax_pix))
+            # Checking against bound / constraint for evaportation
+            if evap_val > constraint:
+                return constraint
+            else:
+                return evap_val
         else:
+            # No need to check constraint here because by being in here we know
+            # W >= ETc, which means E(i,t) can never be great than W + S(i,t-1)
             return etc_pix
     
     no_data_list = []
