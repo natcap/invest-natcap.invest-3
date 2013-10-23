@@ -17,6 +17,8 @@ LOGGER = logging.getLogger('blue_carbon')
 def transition_soil_carbon(area_final, carbon_final, depth_final,
                            transition_rate, year, area_initial,
                            carbon_initial, depth_initial):
+    """This is the formula for calculating the transition of soil carbon
+    """
 
     return (area_final * carbon_final * depth_final) - \
            (1/((1 + transition_rate) ** year)) * \
@@ -24,13 +26,8 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
             (area_initial * carbon_initial * depth_initial))
 
 def execute(args):
-    disturbance_uri = os.path.join(os.path.dirname(__file__),"disturbance.csv")
-    disturbance_key_field = "veg type"
-    disturbance_loss_name = "%s loss"
-    disturbance_depth_name = "%s depth"
-    
-    
     #preprocess args for possible ease of adoption of future IUI features
+    #this creates a hypothetical IUI element from existing element
     lulc_list = []
     for i in range(1,6):
         if "year_%i" % i in args:
@@ -38,53 +35,20 @@ def execute(args):
         else:
             break
 
-    lulc_dict = dict([(lulc["year"], lulc["uri"]) for lulc in lulc_list[1:]])
+    #create a list of the analysis years and a dictionary of the correspond rasters
+    lulc_dict = dict([(lulc["year"], lulc["uri"]) for lulc in lulc_list])
     lulc_years = lulc_dict.keys()
     lulc_years.sort()
-
-    #carbon stock file names
-    above_name = "%i_above.tif"
-    below_name = "%i_below.tif"
-    soil_name = "%i_soil.tif"
-    trans_soil_name = "%i_trans_soil.tif"
-    litter_name = "%i_litter.tif"
-    biomass_name = "%i_bio.tif"
-    carbon_name = "%i_carbon.tif"
-
-    #carbon accumulation file names
-    acc_name = "%i_acc.tif"
-    soil_acc_name = "%i_soil_acc.tif"
-    predisturbance_name = "%i_pre.tif"
-    residual_name = "%i_soil_res.tif"
-    released_marsh_name = "%i_marsh_rel.tif"
-    released_grove_name = "%i_grove_rel.tif"
-    released_grass_name = "%i_grass_rel.tif"
-    released_other_name = "%i_other_rel.tif"
-
-    disturbed_biomass_marsh_name = "%i_dis_bio_marsh.tif"
-    disturbed_biomass_grove_name = "%i_dis_bio_grove.tif"
-    disturbed_biomass_grass_name = "%i_dis_bio_grass.tif"
-    disturbed_biomass_other_name = "%i_dis_bio_other.tif"
-
-    disturbed_soil_marsh_name = "%i_dis_soil_marsh.tif"
-    disturbed_soil_grove_name = "%i_dis_soil_grove.tif"
-    disturbed_soil_grass_name = "%i_dis_soil_grass.tif"
-    disturbed_soil_other_name = "%i_dis_soil_other.tif"
-
-    #carbon emission and timing file names
-##    biomass_coefficient_name = "%i_bio_loss.tif"
-    soil_coefficient_name = "%i_soil_coefficient.tif"
-    magnitude_name = "%i_mag.tif"
-    biomass_half_name = "%i_bio_half.tif"
-    soil_half_name = "%i_soil_half.tif"
-    time_name = "%i_time.tif"
 
     #constants
     gdal_type = gdal.GDT_Float32
   
-    #inputs
+    ##inputs parameters
     workspace_dir = args["workspace_dir"]
+
+    #carbon pools table
     carbon_uri = args["carbon_pools_uri"]
+
     carbon_key_field = "ID"
     carbon_veg_field = "Veg Type"
     carbon_above_field = "Above"
@@ -94,19 +58,74 @@ def execute(args):
     carbon_depth_field = "Soil Depth"
     carbon_acc_field = "Accum Rate (T CO2e/ha/yr)"
 
+    #transition matrix
     transition_matrix_uri = args["transition_matrix_uri"]
+
     transition_key_field = "ID"
 
+    #disturbance table
+    disturbance_uri = args["disturbance_csv_uri"]
+
+    ### disturbance.csv ###
+    ##The disturbance.csv file contains columns in the following order:
+    ##veg type, veg name, low loss, medium loss, high loss,
+    ##low depth, medium depth, high depth,
+    ##biomass carbon half life, soil carbon half life
+    ##veg type is a unique integer for the vegetation
+    ##veg name is the name associated with the vegetation type
+    ##low, medium, and high loss is expressed as a coefficent between 0 and 1
+    ##low, medium, and high depth are in meters and >= 0
+    ##biomass and carbon half life are expressed in years or N/A if no decay
+
+    disturbance_key_field = "veg type"
+    disturbance_veg_name = "veg name"
+    disturbance_loss_name = "%s loss"
+    disturbance_depth_name = "%s depth"
     disturbance_biomass_half_life_field = "biomass carbon half life"
     disturbance_soil_half_life_field = "soil carbon half life"
 
+    #valuation flags
     private_valuation = args["private_valuation"]
     social_valuation = args["social_valuation"]
 
+    ##outputs
+    depth_uri = os.path.join(workspace_dir, "depth.tif")
+
+    #carbon stock file names
+    above_name = "%i_stock_above.tif"
+    below_name = "%i_stock_below.tif"
+    soil_name = "%i_stock_soil.tif"
+    trans_soil_name = "%i_trans_soil.tif"
+    litter_name = "%i_stock_litter.tif"
+    biomass_name = "%i_stock_biomass.tif"
+    carbon_name = "%i_stock_total.tif"
+
+    #carbon accumulation file names
+    acc_name = "%i_rate_accumulation.tif"
+    soil_acc_name = "%i_soil_accumulation.tif"
+    predisturbance_name = "%i_predisturbance.tif"
+
+    veg_mask_name = "%i_mask_%s.tif"
+    residual_name = "%i_residual_soil.tif"
+    released_name = "%i_released_%s.tif"
+    disturbed_biomass_name = "%i_disturbed_bio_%s.tif"
+    disturbed_soil_name = "%i_disturbed_soil_%s.tif"
+
+    #carbon emission and timing file names
+    biomass_coefficient_name = "%i_biomass_coefficient.tif"
+    soil_coefficient_name = "%i_soil_coefficient.tif"
+    magnitude_name = "%i_magnitude.tif"
+    biomass_half_name = "%i_bio_half.tif"
+    soil_half_name = "%i_soil_half.tif"
+    time_name = "%i_time.tif"
+
+    ##process inputs
+    #load tables from files
     disturbance = raster_utils.get_lookup_from_csv(disturbance_uri, disturbance_key_field)
     transition = raster_utils.get_lookup_from_csv(transition_matrix_uri, transition_key_field)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_key_field)
 
+    #construct dictionaries for single parameter lookups
     above_dict = dict([(k, carbon[k][carbon_above_field]) for k in carbon])
     below_dict = dict([(k, carbon[k][carbon_below_field]) for k in carbon])
     soil_dict = dict([(k, carbon[k][carbon_soil_field]) for k in carbon])
@@ -116,11 +135,56 @@ def execute(args):
     biomass_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_biomass_half_life_field]) for k in carbon])
     soil_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_soil_half_life_field]) for k in carbon])
 
-    #outputs
-    depth_uri = os.path.join(workspace_dir, "depth.tif")
+    veg_dict = {}
+    for veg_type in disturbance:
+        veg_dict[veg_type] = dict([(k, carbon[k][carbon_veg_field] == veg_type) for k in carbon])
+    LOGGER.debug(str(veg_dict))
 
-    #validating tables
-    pass
+
+    #validating data
+    nodata = set([raster_utils.get_nodata_from_uri(lulc_dict[k]) for k in lulc_dict])
+    if len(nodata) == 1:
+        LOGGER.debug("All rasters have the same nodata value.")
+        nodata = nodata.pop()
+    else:
+        msg = "All rasters must have the same nodata value."
+        LOGGER.error(msg)
+        raise ValueError, msg
+    
+    cell_size = set([raster_utils.get_cell_size_from_uri(lulc_dict[k]) for k in lulc_dict])
+    if len(cell_size) == 1:
+        LOGGER.debug("All masters have the same cell size.")
+        cell_size = cell_size.pop()
+    else:
+        msg = "All rasters must have the same cell size."
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    LOGGER.debug("Check for alignment missing...")
+    
+
+    #reassign nodata values in dictionary to raster nodata values
+    for k in biomass_half_dict:
+        if (type(biomass_half_dict[k]) == str):
+            if (biomass_half_dict[k].lower() == "n/a"):
+                biomass_half_dict[k] = nodata
+            else:
+                msg = "Invalid biomass half life value."
+                LOGGER.error(msg)
+                raise ValueError, msg
+
+    for k in soil_half_dict:
+        if  (type(soil_half_dict[k]) == str):
+            if (soil_half_dict[k].lower() == "n/a"):
+                soil_half_dict[k] = nodata
+            else:
+                msg = "Invalid soil hald life value."
+                LOGGER.error(msg)
+                raise ValueError, msg
+
+
+    LOGGER.info("Vegetation types: %s", ", ".join([disturbance[k][disturbance_veg_name] for k in disturbance]))
+    LOGGER.info("Analysis years: %s", ", ".join([str(year) for year in lulc_years]))
 
 ##    #constructing depth raster
 ##    LOGGER.info("Creating depth raster.")
@@ -135,32 +199,10 @@ def execute(args):
     LOGGER.info("Running analysis.")
 
     #working on initial year
-    lulc_base_year = lulc_list[0]["year"]
+    lulc_base_year = lulc_years.pop(0)
     LOGGER.debug("Initial LULC year set to %i.", lulc_base_year)
-    lulc_base_uri = lulc_list[0]["uri"]
+    lulc_base_uri = lulc_dict[lulc_base_year]
     LOGGER.debug("Initial LULC set to %s.", lulc_base_uri)
-
-    nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
-    cell_size = raster_utils.get_cell_size_from_uri(lulc_base_uri)
-
-    #reassign nodata values in dictionary to raster nodata values
-    for k in biomass_half_dict:
-        if (type(biomass_half_dict[k]) == str):
-            if (biomass_half_dict[k].lower() == "nodata"):
-                biomass_half_dict[k] = nodata
-            else:
-                msg = "Invalid biomass half life value."
-                LOGGER.error(msg)
-                raise ValueError, msg
-
-    for k in soil_half_dict:
-        if  (type(soil_half_dict[k]) == str):
-            if (soil_half_dict[k].lower() == "nodata"):
-                soil_half_dict[k] = nodata
-            else:
-                msg = "Invalid soil hald life value."
-                LOGGER.error(msg)
-                raise ValueError, msg
 
     #scale soil carbon by depth
     for k in soil_dict:
@@ -297,7 +339,7 @@ def execute(args):
             lulc_base_carbon_accumulation_uri = os.path.join(workspace_dir, soil_acc_name % lulc_base_year)
             lulc_base_soil_residual_uri = os.path.join(workspace_dir, residual_name % lulc_base_year)
             
-##            lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
+            lulc_base_biomass_coefficient_uri = os.path.join(workspace_dir, biomass_coefficient_name % lulc_base_year)
             lulc_base_soil_coefficient_uri = os.path.join(workspace_dir, soil_coefficient_name % lulc_base_year)
 
             lulc_predisturbance_soil_uri = os.path.join(workspace_dir, predisturbance_name % lulc_transition_year)
@@ -317,24 +359,23 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-##            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
-##            raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
-##                                            add_op,
-##                                            lulc_predisturbance_soil_uri,
-##                                            gdal_type,
-##                                            nodata,
-##                                            cell_size,
-##                                            "union")           
+            LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
+            raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
+                                            add_op,
+                                            lulc_predisturbance_soil_uri,
+                                            gdal_type,
+                                            nodata,
+                                            cell_size,
+                                            "union")           
 
-            #calculate magnitude and timing of emission
-##            LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
-##            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-##                                            biomass_coefficient_op,
-##                                            lulc_base_biomass_coefficient_uri,
-##                                            gdal_type,
-##                                            nodata,
-##                                            cell_size,
-##                                            "union")
+            LOGGER.debug("Creating biomass disturbance coefficient raster for %i.", lulc_base_year)
+            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                            biomass_coefficient_op,
+                                            lulc_base_biomass_coefficient_uri,
+                                            gdal_type,
+                                            nodata,
+                                            cell_size,
+                                            "union")
 
             LOGGER.debug("Creating soil disturbance coefficient raster for %i.", lulc_base_year)
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
@@ -344,6 +385,16 @@ def execute(args):
                                             nodata,
                                             cell_size,
                                             "union")
+
+            for veg_type in disturbance:
+                LOGGER.debug("Creating vegetation mask for %s in %i.", disturbance[veg_type][disturbance_veg_name], lulc_base_year)
+                veg_mask_uri = os.path.join(workspace_dir, veg_mask_name % (lulc_base_year, disturbance[veg_type][disturbance_veg_name]))
+                raster_utils.reclassify_dataset_uri(lulc_base_uri,
+                                                    veg_dict[veg_type],
+                                                    veg_mask_uri,
+                                                    gdal.GDT_Byte,
+                                                    0,
+                                                    exception_flag="values_required")                                                    
 
             LOGGER.debug("Calculate residual soil carbon after disturbance in %i.", lulc_transition_year)
             raster_utils.vectorize_datasets([lulc_predisturbance_soil_uri, lulc_base_soil_coefficient_uri],
