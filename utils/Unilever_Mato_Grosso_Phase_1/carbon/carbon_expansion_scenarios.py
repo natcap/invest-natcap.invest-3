@@ -402,9 +402,9 @@ def regression_builder_confidence(x, y, slope, intercept, mode):
     y_err = y - p_y
     sigma_e = numpy.sqrt(numpy.sum(numpy.power(y_err, 2)))
     if mode == 'lower':
-        return lambda x_star: slope * numpy.log(x_star) + intercept - numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
+        return lambda x_star: slope * numpy.log(x_star) + intercept #- numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
     elif mode == 'upper':
-        return lambda x_star: slope * numpy.log(x_star) + intercept + numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
+        return lambda x_star: slope * numpy.log(x_star) + intercept #+ numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
     
 
 def calculate_landcover_means(
