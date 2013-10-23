@@ -453,11 +453,13 @@ def calculate_soil_storage(
     
     no_data_list = []
     # Build up a list of nodata values to check against
-    for raster_uri in [prev_soil_uri, water_uri, evap_uri, streamflow_uri]:
+    for raster_uri in [
+            prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def soil_storage_op(prev_soil_pix, water_pix, evap_pix, streamflow_pix):
+    def soil_storage_op(
+            prev_soil_pix, water_pix, evap_pix, streamflow_pix, smax_pix):
         """A vectorize operation for calculating the intermediate 
             streamflow
 
@@ -465,10 +467,11 @@ def calculate_soil_storage(
             water_pix - a float value for the water amount
             evap_pix - a float value for the evap
             streamflow_pix - a float value for the streamflow
+            smax_pix - a float value for the soil max
             returns - the current soil storage
         """
         for pix, pix_nodata in zip(
-                [prev_soil_pix, water_pix, evap_pix, streamflow_pix],
+                [prev_soil_pix, water_pix, evap_pix, streamflow_pix, smax_pix],
                 no_data_list):
             if pix == pix_nodata:
                 return out_nodata
@@ -479,15 +482,15 @@ def calculate_soil_storage(
         storage_value =  prev_soil_pix + water_pix - evap_pix - streamflow_pix
 
         # Check constraint / bound
-        if storage_value > Smax:
-            return Smax
+        if storage_value > smax_pix:
+            return smax_pix 
         else:
             return storage_value
 
     cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
 
     raster_utils.vectorize_datasets(
-            [prev_soil_uri, water_uri, evap_uri, streamflow_uri],
+            [prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri],
             soil_storage_op, soil_storage_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
 
