@@ -636,6 +636,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
         viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
+        pixel_visibility = np.ones(array_shape) * 2
 
         # 1- get perimeter cells
         perimeter_cells = \
@@ -733,6 +734,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             active_line = \
                 aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
             active_cells.add(d)
+            # The sweep line is current, now compute pixel visibility
+            aesthetic_quality_core.update_visible_pixels(active_line, \
+            events[3], events[4], pixel_visibility)
             
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
@@ -759,7 +763,14 @@ class TestAestheticQualityCore(unittest.TestCase):
             #print('  active cells', len(active_cells), active_cells)
             #active_line_distance = [node for node in active_line if node != 'closest']
             #print('  active line', len(active_line), active_line_distance)
+            # The sweep line is current, now compute pixel visibility
+            aesthetic_quality_core.update_visible_pixels(active_line, \
+            events[3], events[4], pixel_visibility)
         #print('active cells', active_cells, len(active_cells) == 0)
+
+        print('DEM')
+        print(DEM)
+        print('pixel visibility', pixel_visibility)
 
         # Sanity checks
         print('---------------------------------')

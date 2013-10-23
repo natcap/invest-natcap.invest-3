@@ -917,26 +917,30 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
-def update_visible_pixels(active_pixels, I, J):
+def update_visible_pixels(active_pixels, I, J, pixel_visibility):
     """Update the array of visible pixels from the active pixel's visibility"""
     # Update visibility and create a binary map of visible pixels
     # -Look at visibility from closer pixels out, keep highest visibility
     # -A pixel is not visible if its visibility <= highest visibility so far
+    if not active_pixels:
+        return
+
     pixel = active_pixels['closest']
     max_visibility = -1.
     while pixel is not None:
         # Pixel is visible
         if pixel['visibility'] > max_visibility:
             visibility = 1
-            max_visibility = pixel_visibility
+            max_visibility = pixel['visibility']
         # Pixel is not visible
         else:
             visibility = 0
         # Update the visibility map for this pixel
-        #index = pixel['index']
-        #i = I[index]
-        #j = J[index]
-        #pixel_visibility[i, j] = visibility
+        index = pixel['index']
+        i = I[index]
+        j = J[index]
+        pixel_visibility[i, j] = visibility
+        pixel = pixel['next']
 
 def add_active_pixel(sweep_line, index, distance, visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
