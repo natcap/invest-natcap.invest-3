@@ -978,32 +978,46 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename):
         2: .8,
         9: .2
         }
-    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    #analyze_composite_carbon_stock_change(args)
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
+    else:
+        analyze_forest_core_fragmentation(args)
+
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mg%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
+    else:
+        analyze_forest_core_expansion(args)
+
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mg%s.csv' % suffix))
     args['conversion_lucode'] = 9 #woody savannna    
-    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_lu_expansion, args=[args.copy()])
+    else:
+        analyze_lu_expansion(args)
+
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg%s.csv' % suffix))
-    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
-
+    if pool is not None:
+        pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
+    else:
+        analyze_forest_edge_erosion(args)
             
-def run_mgds(number_of_steps, pool, carbon_pool_filename, suffix):
+
+def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename):
     output_dir = './carbon_mgds_output'
     args = {
         #the locations for the various filenames needed for the simulations
@@ -1041,43 +1055,58 @@ def run_mgds(number_of_steps, pool, carbon_pool_filename, suffix):
         2: .8,
         9: .2
         }
-    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    #analyze_composite_carbon_stock_change(args)
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mgds%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
+    else:
+        analyze_forest_core_fragmentation(args)
+
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mgds%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
+    else:
+        analyze_forest_core_expansion(args)
+        
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mgds%s.csv' % suffix))
     args['conversion_lucode'] = 9 #woody savannna    
-    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_lu_expansion, args=[args.copy()])
+    else:
+        analyze_lu_expansion(args)
+        
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mgds%s.csv' % suffix))
-    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])    
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
+    else:
+        analyze_forest_edge_erosion(args)
+
     
 if __name__ == '__main__':
     start = time.clock()
     NUMBER_OF_STEPS = 200
     POOL = Pool(7)
-    SUFFIX = '_regression_uncertainty_only'
-    CARBON_POOL_FILENAME = './inputs/brazil_carbon_no_uncertainty.csv'
-    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
-    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+#    SUFFIX = '_regression_uncertainty_only'
+#    CARBON_POOL_FILENAME = './inputs/brazil_carbon_no_uncertainty.csv'
+#    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+#    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
 
-    SUFFIX = '_uncertainty_regression_and_table'
+    SUFFIX = '_uncertainty_table_only'
     CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
-    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+#    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+#    POOL = None
     run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
 
     POOL.close()
