@@ -305,7 +305,7 @@ def execute(args):
         clean_uri([soil_storage_uri])
         calculate_soil_storage(
                 prev_soil_uri, water_uri, evap_uri, streamflow_uri,
-                soil_storage_uri, float_nodata)
+                smax_uri, soil_storage_uri, float_nodata)
 
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
@@ -428,8 +428,8 @@ def clean_uri(in_uri_list):
             os.remove(uri)
 
 def calculate_soil_storage(
-        prev_soil_uri, water_uri, evap_uri, streamflow_uri, soil_storage_uri,
-        out_nodata):
+        prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri, 
+        soil_storage_uri, out_nodata):
     """This function calculates the soil storage 
 
         prev_soil_uri - a URI to a gdal dataset of the previous months soil
@@ -440,6 +440,8 @@ def calculate_soil_storage(
         evap_uri - a URI to a gdal datasaet for the evaporation
 
         streamflow_uri - a URI to a gdal dataset for the streamflow
+        
+        smax_uri - a URI to a gdal dataset for the soil max
         
         soil_storage_uri - a URI to a gdal dataset for the current months soil
             storage
@@ -470,7 +472,16 @@ def calculate_soil_storage(
             if pix == pix_nodata:
                 return out_nodata
 
-        return prev_soil_pix + water_pix - evap_pix - streamflow_pix
+        # Constraint / bound for soil storage is:
+        # [ 0 <= S(i,t) <= Smax]
+
+        storage_value =  prev_soil_pix + water_pix - evap_pix - streamflow_pix
+
+        # Check constraint / bound
+        if storage_value > Smax:
+            return Smax
+        else:
+            return storage_value
 
     cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
 
