@@ -402,9 +402,9 @@ def regression_builder_confidence(x, y, slope, intercept, mode):
     y_err = y - p_y
     sigma_e = numpy.sqrt(numpy.sum(numpy.power(y_err, 2)))
     if mode == 'lower':
-        return lambda x_star: slope * numpy.log(x_star) + intercept #- numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
+        return lambda x_star: slope * numpy.log(x_star) + intercept - numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
     elif mode == 'upper':
-        return lambda x_star: slope * numpy.log(x_star) + intercept #+ numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
+        return lambda x_star: slope * numpy.log(x_star) + intercept + numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
     
 
 def calculate_landcover_means(
@@ -1093,20 +1093,20 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename):
     else:
         analyze_forest_edge_erosion(args)
 
-    
+
 if __name__ == '__main__':
     start = time.clock()
     NUMBER_OF_STEPS = 200
     POOL = Pool(7)
-#    SUFFIX = '_regression_uncertainty_only'
-#    CARBON_POOL_FILENAME = './inputs/brazil_carbon_no_uncertainty.csv'
-#    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
-#    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
-
-    SUFFIX = '_uncertainty_table_only'
-    CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
-#    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
 #    POOL = None
+    SUFFIX = '_regression_uncertainty_only'
+    CARBON_POOL_FILENAME = './inputs/brazil_carbon_no_uncertainty.csv'
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+
+    SUFFIX = '_regression_and_table_uncertainty'
+    CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
     run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
 
     POOL.close()
