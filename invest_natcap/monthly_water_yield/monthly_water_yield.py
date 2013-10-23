@@ -666,8 +666,18 @@ def calculate_baseflow(
             if pix == pix_nodata: 
                 return out_nodata
 
+        # Constraint / bound for baseflow is:
+        # [0 <= Bt(i,t) <= (S(i,t-1) - E(i,t))]
+        contraint = soil_pix - evap_pix
+
         if evap_pix < soil_pix:
-            return alpha_pix * (soil_pix - evap_pix)**beta
+            base_value = alpha_pix * (soil_pix - evap_pix)**beta
+            
+            # Checking against constraint / bound
+            if base_value > constraint:
+                return constraint
+            else:
+                return base_value
         return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_three_uri)
