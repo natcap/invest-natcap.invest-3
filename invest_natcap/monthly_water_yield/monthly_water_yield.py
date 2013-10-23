@@ -668,7 +668,7 @@ def calculate_baseflow(
 
         # Constraint / bound for baseflow is:
         # [0 <= Bt(i,t) <= (S(i,t-1) - E(i,t))]
-        contraint = soil_pix - evap_pix
+        constraint = soil_pix - evap_pix
 
         if evap_pix < soil_pix:
             base_value = alpha_pix * (soil_pix - evap_pix)**beta
@@ -731,8 +731,17 @@ def calculate_intermediate_interflow(
             if pix == pix_nodata: 
                 return out_nodata
 
+        # Constraint / bound for intermediate interlow is:
+        # [0 <= I(i,t) <= (S(i,t-1) + W(i,t) - E(i,t) - Bt(i,t))]
+        constraint = soil_pix + water_pix - evap_pix - baseflow_pix
+
         if evap_pix + baseflow_pix < soil_pix + water_pix:
-            return alpha_pix * (soil_pix + water_pix - evap_pix - baseflow_pix) ** beta
+            inter_value = alpha_pix * (soil_pix + water_pix - evap_pix - baseflow_pix) ** beta
+            # Constraint / bound check
+            if inter_value > constraint:
+                return constraint
+            else:
+                return inter_value
         return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
