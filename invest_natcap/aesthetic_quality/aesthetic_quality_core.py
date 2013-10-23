@@ -938,13 +938,14 @@ def update_visible_pixels(active_pixels, I, J):
         #j = J[index]
         #pixel_visibility[i, j] = visibility
 
-def add_active_pixel(sweep_line, distance, visibility):
+def add_active_pixel(sweep_line, index, distance, visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
-    new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
+    new_pixel = \
+    {'next':None, 'index':index, 'distance':distance, 'visibility':visibility}
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
         previous = None

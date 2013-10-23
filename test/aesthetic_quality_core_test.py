@@ -434,7 +434,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         for i in shuffled_range:
             distance = i
             visibility = 0
-            aesthetic_quality_core.add_active_pixel(test_list, distance, \
+            aesthetic_quality_core.add_active_pixel(test_list, 0, distance, \
                 visibility)
         expected_length = additions + 1
         actual_length = len(test_list)
@@ -475,7 +475,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert expected_length == actual_length, message
         # 1.3- access for data retreival
         distance = 1
-        aesthetic_quality_core.add_active_pixel(test_list, distance, 0.5)
+        aesthetic_quality_core.add_active_pixel(test_list, 0, distance, 0.5)
         pixel = aesthetic_quality_core.find_active_pixel(test_list, distance)
         # 1.3.1- check the right element is retreived
         message = 'Error, returned None for a pixel that should be in the list'
@@ -727,11 +727,11 @@ class TestAestheticQualityCore(unittest.TestCase):
         active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            print('  pre-adding', c, events[1][c])
+            #print('  pre-adding', c, events[1][c])
             d = distances[c]
             v = visibility[c]
             active_line = \
-                aesthetic_quality_core.add_active_pixel(active_line, d, v)
+                aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
             active_cells.add(d)
             
         # 2- loop through line sweep angles:
@@ -745,7 +745,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     d = distances[c]
                     v = visibility[c]
                     active_line = \
-                    aesthetic_quality_core.add_active_pixel(active_line, d, v)
+                    aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
                     active_cells.add(d)
         #   2.2- remove cells
             #print('  remove cell events', remove_cell_events[a])
