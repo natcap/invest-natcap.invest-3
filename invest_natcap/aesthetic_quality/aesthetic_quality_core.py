@@ -263,8 +263,9 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     ', before any change:')
     print_skip_list(sweep_line, skip_nodes)
     print_hierarchy(hierarchy)
-    print('hierarchy is consistent:', \
-    hierarchy_is_consistent(pixel, hierarchy, skip_nodes))
+    consistency = hierarchy_is_consistent(pixel, hierarchy, skip_nodes)
+    print('hierarchy is consistent:', consistency)
+    assert consistency[0], consistency[1]
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel
@@ -445,93 +446,6 @@ def find_active_pixel_fast(sweep_line, skip_nodes, distance):
     else:
         return None
     
-
-def find_active_pixel(sweep_line, distance):
-    """Find an active pixel based on distance. Return None if can't be found"""
-    if 'closest' in sweep_line:
-        # Get information about first pixel in the list
-        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
-        # Move on to next pixel if we're not done
-        while (pixel is not None) and \
-            (pixel['distance'] < distance):
-            pixel = pixel['next']
-        # We reached the end and didn't find anything
-        if pixel is None:
-            return None
-        # We didn't reach the end: either pixel doesn't exist...
-        if pixel['distance'] != distance:
-            return None
-        # ...or we found it
-        else:
-            return pixel
-    else:
-        return None
-
-
-def remove_active_pixel(sweep_line, distance):
-    """Remove a pixel based on distance. Do nothing if can't be found."""
-    if 'closest' in sweep_line:
-        # Get information about first pixel in the list
-        previous = None
-        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
-        # Move on to next pixel if we're not done
-        while (pixel is not None) and \
-            (pixel['distance'] < distance):
-            previous = pixel
-            pixel = pixel['next']
-        # We reached the end and didn't find anything
-        if pixel is None:
-            return sweep_line
-        # We didn't reach the end: either pixel doesn't exist:
-        if pixel['distance'] != distance:
-            return sweep_line
-        # Or we found the value we want to delete
-        # Make the previous element point to the next
-        # We're at the beginning of the list: update the list's first element
-        if previous is None:
-            # No next pixel: we have to delete 'closest'
-            if pixel['next'] is None:
-                del sweep_line['closest']
-            # Otherwise, update it
-            else:
-                sweep_line['closest'] = pixel['next']
-        # We're not at the beginning of the list: only update previous
-        else:
-            previous['next'] = sweep_line[distance]['next']
-        # Remove the value from the list
-        del sweep_line[distance]
-    return sweep_line
-
-
-def add_active_pixel(sweep_line, distance, visibility):
-    """Add a pixel to the sweep line in O(n) using a linked_list of
-    linked_cells."""
-    # Make sure we're not creating any duplicate
-    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
-    assert distance not in sweep_line, message
-    new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
-    if 'closest' in sweep_line:
-        # Get information about first pixel in the list
-        previous = None
-        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
-        # Move on to next pixel if we're not done
-        while (pixel is not None) and \
-            (pixel['distance'] < distance):
-            previous = pixel
-            pixel = pixel['next']
-        # 1- Make the current pixel points to the next one
-        new_pixel['next'] = pixel
-        # 2- Insert the current pixel in the sweep line:
-        sweep_line[distance] = new_pixel
-        # 3- Make the preceding pixel point to the current one
-        if previous is None:
-            sweep_line['closest'] = new_pixel
-        else:
-            sweep_line[previous['distance']]['next'] = sweep_line[distance]
-    else:
-        sweep_line[distance] = new_pixel
-        sweep_line['closest'] = new_pixel
-    return sweep_line
 
 def hierarchy_is_consistent(pixel, hierarchy, skip_nodes):
     """Makes simple tests to ensure the the hierarchy is consistent"""
@@ -946,6 +860,127 @@ def skip_list_is_consistent(linked_list, skip_nodes):
 
     return (True, 'All is well')
 
+def find_active_pixel(sweep_line, distance):
+    """Find an active pixel based on distance. Return None if can't be found"""
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+        # Move on to next pixel if we're not done
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            pixel = pixel['next']
+        # We reached the end and didn't find anything
+        if pixel is None:
+            return None
+        # We didn't reach the end: either pixel doesn't exist...
+        if pixel['distance'] != distance:
+            return None
+        # ...or we found it
+        else:
+            return pixel
+    else:
+        return None
+
+
+def remove_active_pixel(sweep_line, distance):
+    """Remove a pixel based on distance. Do nothing if can't be found."""
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        previous = None
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+        # Move on to next pixel if we're not done
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            previous = pixel
+            pixel = pixel['next']
+        # We reached the end and didn't find anything
+        if pixel is None:
+            return sweep_line
+        # We didn't reach the end: either pixel doesn't exist:
+        if pixel['distance'] != distance:
+            return sweep_line
+        # Or we found the value we want to delete
+        # Make the previous element point to the next
+        # We're at the beginning of the list: update the list's first element
+        if previous is None:
+            # No next pixel: we have to delete 'closest'
+            if pixel['next'] is None:
+                del sweep_line['closest']
+            # Otherwise, update it
+            else:
+                sweep_line['closest'] = pixel['next']
+        # We're not at the beginning of the list: only update previous
+        else:
+            previous['next'] = sweep_line[distance]['next']
+        # Remove the value from the list
+        del sweep_line[distance]
+    return sweep_line
+
+
+def add_active_pixel(sweep_line, distance, visibility):
+    """Add a pixel to the sweep line in O(n) using a linked_list of
+    linked_cells."""
+    # Make sure we're not creating any duplicate
+    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
+    assert distance not in sweep_line, message
+    new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        previous = None
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+        # Move on to next pixel if we're not done
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            previous = pixel
+            pixel = pixel['next']
+        # 1- Make the current pixel points to the next one
+        new_pixel['next'] = pixel
+        # 2- Insert the current pixel in the sweep line:
+        sweep_line[distance] = new_pixel
+        # 3- Make the preceding pixel point to the current one
+        if previous is None:
+            sweep_line['closest'] = new_pixel
+        else:
+            sweep_line[previous['distance']]['next'] = sweep_line[distance]
+    else:
+        sweep_line[distance] = new_pixel
+        sweep_line['closest'] = new_pixel
+    # Update visibility and create a binary map of visible pixels
+    # -Look at visibility from closer pixels out, keep highest visibility
+    # -A pixel is not visible if its visibility <= highest visibility so far
+    return sweep_line
+
+def get_perimeter_cells(array_shape, viewpoint):
+    """Compute cells along the perimeter of an array.
+
+        Inputs:
+            -array_shape: tuple (row, col) as ndarray.shape containing the
+            size of the array from which to compute the perimeter
+            -viewpoint: tuple (row, col) indicating the position of the
+            observer
+            
+        Returns a tuple (rows, cols) of the cell rows and columns following
+        the convention of numpy.where() where the first cell is immediately
+        right to the viewpoint, and the others are enumerated clockwise."""
+    # list all perimeter cell center angles
+    row_count, col_count = array_shape
+    # Create top row, except cell (0,0)
+    rows = np.zeros(col_count - 1)
+    cols = np.array(range(col_count-1, 0, -1))
+    # Create left side, avoiding repeat from top row
+    rows = np.concatenate((rows, np.array(range(row_count -1))))
+    cols = np.concatenate((cols, np.zeros(row_count - 1)))
+    # Create bottom row, avoiding repat from left side
+    rows = np.concatenate((rows, np.ones(col_count - 1) * (row_count -1)))
+    cols = np.concatenate((cols, np.array(range(col_count - 1))))
+    # Create last part of the right side, avoiding repeat from bottom row
+    rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
+    cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
+    # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
+    rows = np.roll(rows, viewpoint[0])
+    cols = np.roll(cols, viewpoint[0])
+    return (rows, cols)
+
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
     """Viewshed computation function
@@ -968,7 +1003,7 @@ max_dist=-1., refraction_coeff=None):
     in_raster = gdal.Open(input_uri)
     in_array = in_raster.GetRasterBand(1).ReadAsArray()
 
-    extreme_angles
+    extreme_angles = compute_extreme_angles()
 
 def execute(args):
     """Entry point for aesthetic quality core computation.
