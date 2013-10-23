@@ -187,8 +187,7 @@ if platform.system() == 'Windows':
                 ('invest_natcap/recreation',
                     ['invest_natcap/recreation/recreation_client_config.json']),
                 ('invest_natcap/blue_carbon',
-                    ['invest_natcap/blue_carbon/disturbance.csv',
-                     'invest_natcap/blue_carbon/preprocessor.csv']),
+                    ['invest_natcap/blue_carbon/preprocessor.csv']),
                 ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')),
                 ('installer', glob.glob('installer/*')),
             ] + matplotlib.get_py2exe_datafiles()
