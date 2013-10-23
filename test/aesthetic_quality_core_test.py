@@ -727,7 +727,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            #print('  pre-adding', c, events[1][c])
+            print('  pre-adding', c, events[1][c])
             d = distances[c]
             v = visibility[c]
             active_line = \

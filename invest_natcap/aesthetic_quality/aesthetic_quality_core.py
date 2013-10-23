@@ -917,6 +917,27 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
+def update_visible_pixels(active_pixels, I, J):
+    """Update the array of visible pixels from the active pixel's visibility"""
+    # Update visibility and create a binary map of visible pixels
+    # -Look at visibility from closer pixels out, keep highest visibility
+    # -A pixel is not visible if its visibility <= highest visibility so far
+    pixel = active_pixels['closest']
+    max_visibility = -1.
+    while pixel is not None:
+        # Pixel is visible
+        if pixel['visibility'] > max_visibility:
+            visibility = 1
+            max_visibility = pixel_visibility
+        # Pixel is not visible
+        else:
+            visibility = 0
+        # Update the visibility map for this pixel
+        #index = pixel['index']
+        #i = I[index]
+        #j = J[index]
+        #pixel_visibility[i, j] = visibility
+
 def add_active_pixel(sweep_line, distance, visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
@@ -945,9 +966,6 @@ def add_active_pixel(sweep_line, distance, visibility):
     else:
         sweep_line[distance] = new_pixel
         sweep_line['closest'] = new_pixel
-    # Update visibility and create a binary map of visible pixels
-    # -Look at visibility from closer pixels out, keep highest visibility
-    # -A pixel is not visible if its visibility <= highest visibility so far
     return sweep_line
 
 def get_perimeter_cells(array_shape, viewpoint):
