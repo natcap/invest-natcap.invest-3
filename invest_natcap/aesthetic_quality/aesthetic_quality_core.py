@@ -945,6 +945,9 @@ def add_active_pixel(sweep_line, distance, visibility):
     else:
         sweep_line[distance] = new_pixel
         sweep_line['closest'] = new_pixel
+    # Update visibility and create a binary map of visible pixels
+    # -Look at visibility from closer pixels out, keep highest visibility
+    # -A pixel is not visible if its visibility <= highest visibility so far
     return sweep_line
 
 def get_perimeter_cells(array_shape, viewpoint):

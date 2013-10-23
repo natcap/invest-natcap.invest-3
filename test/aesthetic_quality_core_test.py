@@ -727,7 +727,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         active_line = {}
         # 1- add cells at angle 0
         for c in cell_center_events[0]:
-            print('  pre-adding', c, events[1][c])
+            #print('  pre-adding', c, events[1][c])
             d = distances[c]
             v = visibility[c]
             active_line = \
@@ -736,12 +736,12 @@ class TestAestheticQualityCore(unittest.TestCase):
             
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
-            print('sweep angle', a, angles[a+1])
+            #print('sweep angle', a, angles[a+1])
         #   2.1- add cells
             #print('  add cell events', add_cell_events[a])
             if add_cell_events[a].size > 0:
                 for c in add_cell_events[a]:
-                    print('  adding', c, events[0][c])
+                    #print('  adding', c, events[0][c])
                     d = distances[c]
                     v = visibility[c]
                     active_line = \
@@ -750,15 +750,15 @@ class TestAestheticQualityCore(unittest.TestCase):
         #   2.2- remove cells
             #print('  remove cell events', remove_cell_events[a])
             for c in remove_cell_events[a]:
-                print('  removing', c, events[2][c])
+                #print('  removing', c, events[2][c])
                 d = distances[c]
                 v = visibility[c]
                 active_line = \
                 aesthetic_quality_core.remove_active_pixel(active_line, d)
                 active_cells.remove(d)
-            print('  active cells', len(active_cells), active_cells)
-            active_line_distance = [node for node in active_line if node != 'closest']
-            print('  active line', len(active_line), active_line_distance)
+            #print('  active cells', len(active_cells), active_cells)
+            #active_line_distance = [node for node in active_line if node != 'closest']
+            #print('  active line', len(active_line), active_line_distance)
         #print('active cells', active_cells, len(active_cells) == 0)
 
         # Sanity checks
