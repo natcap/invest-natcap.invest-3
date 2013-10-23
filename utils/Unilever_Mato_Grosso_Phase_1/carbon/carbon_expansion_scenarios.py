@@ -122,21 +122,22 @@ def expand_lu_type(
     zero_distance_mask = edge_distance == 0
     edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
     edge_distance[zero_distance_mask] = numpy.inf
+    increasing_distances = numpy.argsort(edge_distance.flat)
     
     result_array = base_array.copy()
     pixels_converted_so_far = 0
     pixel_count = collections.defaultdict(int)
-    for lu_code in land_cover_start_fractions:
-        lu_edge_distance = edge_distance.copy()
-        lu_edge_distance[base_array != lu_code] = numpy.inf
-        increasing_distances = numpy.argsort(lu_edge_distance.flat)
-        lu_pixels_to_convert = int(round(step_percent(lu_code)))
-        result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-        pixels_converted_so_far += int(lu_pixels_to_convert)
-        pixel_count[lu_code] += int(lu_pixels_to_convert)
-    edge_distance[result_array == expansion_id] = numpy.inf
-    increasing_distances = numpy.argsort(edge_distance.flat)
-    #print expansion_pixel_count - pixels_converted_so_far
+    if land_cover_start_fractions:
+        for lu_code in land_cover_start_fractions:
+            lu_edge_distance = edge_distance.copy()
+            lu_edge_distance[base_array != lu_code] = numpy.inf
+            lu_increasing_distances = numpy.argsort(lu_edge_distance.flat)
+            lu_pixels_to_convert = int(round(step_percent(lu_code)))
+            result_array.flat[lu_increasing_distances[0:lu_pixels_to_convert]] = expansion_id
+            pixels_converted_so_far += int(lu_pixels_to_convert)
+            pixel_count[lu_code] += int(lu_pixels_to_convert)
+        edge_distance[result_array == expansion_id] = numpy.inf
+        #print expansion_pixel_count - pixels_converted_so_far
     
     remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
     for lu_code in numpy.unique(remaining_pixels):
@@ -232,7 +233,7 @@ def analyze_composite_carbon_stock_change(args):
         #tables, and land cover raster.
         for tail_type in ['median', 'lower', 'upper']:
             carbon_stocks = calculate_carbon_stocks(
-                scenario_lulc_array, args['forest_lucodes'],
+                expanded_lulc_array, args['forest_lucodes'],
                 args['regression_lucodes'],
                 args['biomass_from_table_lucodes'], carbon_pool_table,
                 landcover_regression, landcover_mean, cell_size, tail=tail_type)
@@ -323,7 +324,7 @@ def calculate_forest_edge_distance(lulc_array, forest_lucodes, cell_size):
 
 def build_biomass_forest_edge_regression(
     landcover_array, biomass_array, biomass_nodata, edge_distance, cell_size,
-    regression_lucodes):
+    regression_lucodes, regression_uncertainty):
     """Builds a log regression function to fit biomass to edge distance for a
         set of given lucodes.
 
@@ -336,6 +337,8 @@ def build_biomass_forest_edge_regression(
             distance from forest edge
         cell_size - the cell size in meters
         regression_lucodes - a list of lucodes to build a regression for
+        regression_uncertainty - true or false whether to account for uncertainty
+            in the regression model
 
         returns a dictionary mapping lucode to regression function"""
 
@@ -368,9 +371,11 @@ def build_biomass_forest_edge_regression(
             }
             
             landcover_regression[landcover_type]['lower'] = (
-                regression_builder_confidence(x, y, slope, intercept, 'lower'))
+                regression_builder_confidence(x, y, slope, intercept, 'lower',
+                                              regression_uncertainty))
             landcover_regression[landcover_type]['upper'] = (
-                regression_builder_confidence(x, y, slope, intercept, 'upper'))
+                regression_builder_confidence(x, y, slope, intercept, 'upper',
+                                              regression_uncertainty))
                 
         except ValueError:
             print (
@@ -382,7 +387,7 @@ def build_biomass_forest_edge_regression(
 
     return landcover_regression
 
-def regression_builder_confidence(x, y, slope, intercept, mode):
+def regression_builder_confidence(x, y, slope, intercept, mode, regression_uncertainty):
     """Builds a confidence interval function given the log'd x's and y
         along with the slope and intercept calculated from the linear
         regression.
@@ -391,9 +396,14 @@ def regression_builder_confidence(x, y, slope, intercept, mode):
         y - a parallel array to x of measured y values
         slope - the regression slope of the pre-calcualted regression function of x and y
         intercept - the y-intercept of the pre-calculated regression function of x and y
-        
+        regression_uncertainty - true or false depending on whether or not to account for
+           uncertainty
+
         returns a regression function as a function of un-logged x."""
         
+    if not regression_uncertainty:
+        return lambda x_star: slope * numpy.log(x_star) + intercept
+
     x_mean = numpy.mean(x)
     n = x.size
     denom = numpy.sum(numpy.power(x-x_mean, 2.0))
@@ -401,6 +411,7 @@ def regression_builder_confidence(x, y, slope, intercept, mode):
     p_y = slope * x + intercept
     y_err = y - p_y
     sigma_e = numpy.sqrt(numpy.sum(numpy.power(y_err, 2)))
+
     if mode == 'lower':
         return lambda x_star: slope * numpy.log(x_star) + intercept - numpy.abs(t_star * sigma_e * numpy.sqrt(1.0/n + numpy.power(numpy.log(x_star) - x_mean, 2) / denom))
     elif mode == 'upper':
@@ -460,7 +471,7 @@ def load_base_datasets(args):
     #on the distance from the edge of the forest
     landcover_regression = build_biomass_forest_edge_regression(
         landcover_array, biomass_array, biomass_nodata,
-        regression_edge_distance, cell_size, args['regression_lucodes'])
+        regression_edge_distance, cell_size, args['regression_lucodes'], args['regression_uncertainty'])
 
     #We'll use the biomass means in case we don't ahve a lookup value in the
     #table
@@ -939,7 +950,7 @@ def analyze_lu_expansion(args):
             0:args['pixels_to_convert_per_step']]] = args['converting_crop']
 
 
-def run_mg(number_of_steps, pool, suffix, carbon_pool_filename):
+def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncertainty):
     output_dir = './carbon_mg_output'
     args = {
         #the locations for the various filenames needed for the simulations
@@ -961,11 +972,26 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename):
         'converting_id_list': [12, 17, 120],
         #Becky calculated this for MG
         'pixels_to_convert_per_step': 932,
+        'regression_uncertainty': regression_uncertainty,
     }
 
     #set up args for the composite scenario
     raster_utils.create_directories([output_dir])
     
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_mg%s.csv' % suffix))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_pixel_count_mg%s.csv' % suffix))
+    args['land_cover_start_fractions'] = None
+    args['land_cover_end_fractions'] = None
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
+    return
+
+
+
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
@@ -978,32 +1004,46 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename):
         2: .8,
         9: .2
         }
-    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    #analyze_composite_carbon_stock_change(args)
-    
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
+
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
+    else:
+        analyze_forest_core_fragmentation(args)
+
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mg%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
+    else:
+        analyze_forest_core_expansion(args)
+
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mg%s.csv' % suffix))
     args['conversion_lucode'] = 9 #woody savannna    
-    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_lu_expansion, args=[args.copy()])
+    else:
+        analyze_lu_expansion(args)
+
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg%s.csv' % suffix))
-    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
-
+    if pool is not None:
+        pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
+    else:
+        analyze_forest_edge_erosion(args)
             
-def run_mgds(number_of_steps, pool, carbon_pool_filename, suffix):
+
+def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncertainty):
     output_dir = './carbon_mgds_output'
     args = {
         #the locations for the various filenames needed for the simulations
@@ -1025,10 +1065,25 @@ def run_mgds(number_of_steps, pool, carbon_pool_filename, suffix):
         'converting_id_list': [12, 17, 120],
         #Becky wants the average between MGDS and MG
         'pixels_to_convert_per_step': 932,
+        'regression_uncertainty': regression_uncertainty,
     }
 
     #set up args for the composite scenario
     raster_utils.create_directories([output_dir])
+
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_mgds%s.csv' % suffix))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_pixel_count_mgds%s.csv' % suffix))
+    args['land_cover_start_fractions'] = None
+    args['land_cover_end_fractions'] = None
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
+    return
+
+
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
@@ -1041,44 +1096,68 @@ def run_mgds(number_of_steps, pool, carbon_pool_filename, suffix):
         2: .8,
         9: .2
         }
-    pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    #analyze_composite_carbon_stock_change(args)
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
     
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mgds%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_fragmentation, args=[args.copy()])
+    else:
+        analyze_forest_core_fragmentation(args)
+
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_degredation_carbon_stock_change_mgds%s.csv' % suffix))
-    pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_core_expansion, args=[args.copy()])
+    else:
+        analyze_forest_core_expansion(args)
+        
     #Set up args for the savanna scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'savanna_expansion_carbon_stock_change_mgds%s.csv' % suffix))
     args['conversion_lucode'] = 9 #woody savannna    
-    pool.apply_async(analyze_lu_expansion, args=[args.copy()])
-    
+    if pool is not None:
+        pool.apply_async(analyze_lu_expansion, args=[args.copy()])
+    else:
+        analyze_lu_expansion(args)
+        
     #Set up args for the forest edge erosion scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mgds%s.csv' % suffix))
-    pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])    
-    
-    
+    if pool is not None:
+        pool.apply_async(analyze_forest_edge_erosion, args=[args.copy()])
+    else:
+        analyze_forest_edge_erosion(args)
+
+
 if __name__ == '__main__':
     start = time.clock()
     NUMBER_OF_STEPS = 200
     POOL = Pool(7)
+#    POOL = None
     SUFFIX = '_regression_uncertainty_only'
     CARBON_POOL_FILENAME = './inputs/brazil_carbon_no_uncertainty.csv'
-    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
-    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+    REGRESSION_UNCERTAINTY=True
+#    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+#    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
 
-    SUFFIX = '_uncertainty_regression_and_table'
+    SUFFIX = '_regression_and_table_uncertainty'
     CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
-    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
-    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME)
+    REGRESSION_UNCERTAINTY=True
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+
+    SUFFIX = '_table_uncertainty_only'
+    REGRESSION_UNCERTAINTY=False
+    CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+
 
     POOL.close()
     POOL.join()

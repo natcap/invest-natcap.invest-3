@@ -92,17 +92,19 @@ def expand_lu_type(
     result_array = base_array.copy()
     pixels_converted_so_far = 0
     pixel_count = collections.defaultdict(int)
-    for lu_code in land_cover_start_fractions:
-        lu_edge_distance = edge_distance.copy()
-        lu_edge_distance[base_array != lu_code] = numpy.inf
-        increasing_distances = numpy.argsort(lu_edge_distance.flat)
-        lu_pixels_to_convert = int(round(step_percent(lu_code)))
-        result_array.flat[increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-        pixels_converted_so_far += int(lu_pixels_to_convert)
-        pixel_count[lu_code] += int(lu_pixels_to_convert)
-    edge_distance[result_array == expansion_id] = numpy.inf
     increasing_distances = numpy.argsort(edge_distance.flat)
-    #print expansion_pixel_count - pixels_converted_so_far
+
+    if land_cover_start_fractions:
+        for lu_code in land_cover_start_fractions:
+            lu_edge_distance = edge_distance.copy()
+            lu_edge_distance[base_array != lu_code] = numpy.inf
+            lu_increasing_distances = numpy.argsort(lu_edge_distance.flat)
+            lu_pixels_to_convert = int(round(step_percent(lu_code)))
+            result_array.flat[lu_increasing_distances[0:lu_pixels_to_convert]] = expansion_id
+            pixels_converted_so_far += int(lu_pixels_to_convert)
+            pixel_count[lu_code] += int(lu_pixels_to_convert)
+        edge_distance[result_array == expansion_id] = numpy.inf
+        #print expansion_pixel_count - pixels_converted_so_far
     
     remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
     for lu_code in numpy.unique(remaining_pixels):
@@ -866,7 +868,7 @@ def analyze_composite_globio_change(args):
     #Load the base landcover map that we use in the scenarios
     scenario_lulc_dataset = gdal.Open(args['input_lulc_uri'])
     cell_size = scenario_lulc_dataset.GetGeoTransform()[1]
-    scenario_lulc_array = copy(args['input_lulc_array'])
+    base_lulc_array = copy(args['input_lulc_array'])
     scenario_nodata = scenario_lulc_dataset.GetRasterBand(1).GetNoDataValue()
     scenario_lulc_dataset=None
 
@@ -881,16 +883,16 @@ def analyze_composite_globio_change(args):
     output_table.write('\n')
  
     output_count_table = open(args['output_pixel_count_filename'], 'wb')
-    unique_lucodes = sorted(numpy.unique(scenario_lulc_array))
+    unique_lucodes = sorted(numpy.unique(base_lulc_array))
     output_count_table.write(','.join(map(str,unique_lucodes)) + '\n')
 
     en_rich = geotiff_to_array(args['ecoregions_en_rich_uri'])
     sp_rich = geotiff_to_array(args['ecoregions_sp_rich_uri'])
-    for percent in range(args['scenario_conversion_steps']):
+    for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating globio for composite expansion step %s' % percent
         try:
             scenario_lulc_array, pixel_count = expand_lu_type(
-                scenario_lulc_array, scenario_nodata, args['converting_crop'], 
+                base_lulc_array, scenario_nodata, args['converting_crop'], 
                 args['converting_id_list'], percent, args['pixels_to_convert_per_step'], 
                 args['land_cover_start_fractions'], 
                 args['land_cover_end_fractions'], 
@@ -1044,6 +1046,18 @@ def run_globio_mgds(number_of_steps, pool):
     args['canals_array']= geotiff_to_array(canals_raster_uri)
     
     args['output_table_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_composite_change.csv'))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_composite_change_pixel_count.csv'))
+    args['land_cover_start_fractions'] = None
+    args['land_cover_end_fractions'] = None
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+    return
+
+    args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80_pixel_count.csv'))
@@ -1059,6 +1073,8 @@ def run_globio_mgds(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     else:
         analyze_composite_globio_change(args)
+
+
     
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
@@ -1175,6 +1191,21 @@ def run_globio_mg(number_of_steps, pool):
         canals_raster_uri, args['canals_uri'], burn_values=[1])
     args['canals_array']= geotiff_to_array(canals_raster_uri)
     
+
+
+    args['output_table_filename'] = (
+        os.path.join(output_folder, 'globio_mg_composite_change.csv'))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mg_composite_pixel_count.csv'))
+    args['land_cover_start_fractions'] = None
+    args['land_cover_end_fractions'] = None
+        
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+    return
+        
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
@@ -1192,7 +1223,9 @@ def run_globio_mg(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, [args.copy()])
     else:
         analyze_composite_globio_change(args)
-        
+
+
+
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_core_expansion_msa_change.csv'))
@@ -1229,8 +1262,8 @@ def run_globio_mg(number_of_steps, pool):
 
 def main():
     NUMBER_OF_STEPS = 200
-    pool = Pool(8)
-#    pool = None
+    pool = Pool(7)
+    #pool = None
     run_globio_mgds(NUMBER_OF_STEPS, pool)
     run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
