@@ -228,24 +228,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'difference in columns: ' + str(col_diff)
         assert col_diff == 0, message
 
-    def cell_angles(self, cell_coords, viewpoint):
-        """Compute angles between cells and viewpoint where 0 angle is right of
-        viewpoint.
-            Inputs:
-                -cell_coords: coordinate tuple (rows, cols) as numpy.where()
-                from which to compute the angles
-                -viewpoint: tuple (row, col) indicating the position of the
-                observer. Each of row and col is an integer.
-                
-            Returns a sorted list of angles"""
-        rows, cols = cell_coords
-        # List the angles between each perimeter cell
-        two_pi = 2.0 * math.pi
-        r = np.array(range(rows.size))
-        p = (rows[r] - viewpoint[0], cols[r] - viewpoint[1])
-        angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
-        return angles
-
     def test_cell_angles(self):
         """Test the angles computed by angles_from_perimeter_cells agains the
         function cell_angles"""
@@ -255,7 +237,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         perimeter_cells = \
         aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         # Compute angles associated to the perimeter cells
-        angles_fast = self.cell_angles(perimeter_cells, viewpoint)
+        angles_fast = aesthetic_quality_core.cell_angles(perimeter_cells, viewpoint)
         # Compute the same angles individually
         angles_naive = []
         for cell in zip(perimeter_cells[0], perimeter_cells[1]):
@@ -638,12 +620,20 @@ class TestAestheticQualityCore(unittest.TestCase):
         viewpoint_elevation = 1.75
         pixel_visibility = np.ones(array_shape) * 2
 
+        pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
+        viewpoint, 1.75, 0.0, -1.0, 1.0)
+
+        print('DEM')
+        print(DEM)
+        print('pixel visibility', pixel_visibility)
+
+        return
         # 1- get perimeter cells
         perimeter_cells = \
         aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         # 1.1- remove perimeter cell if same coord as viewpoint
         # 2- compute cell angles
-        angles = self.cell_angles(perimeter_cells, viewpoint)
+        angles = aesthetic_quality_core.cell_angles(perimeter_cells, viewpoint)
         angles = np.append(angles, 2.0 * math.pi)
         print('angles', angles.size, angles)
         # 3- compute information on raster cells
@@ -767,10 +757,6 @@ class TestAestheticQualityCore(unittest.TestCase):
             aesthetic_quality_core.update_visible_pixels(active_line, \
             events[3], events[4], pixel_visibility)
         #print('active cells', active_cells, len(active_cells) == 0)
-
-        print('DEM')
-        print(DEM)
-        print('pixel visibility', pixel_visibility)
 
         # Sanity checks
         print('---------------------------------')

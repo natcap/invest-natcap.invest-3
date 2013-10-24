@@ -1024,6 +1024,24 @@ def get_perimeter_cells(array_shape, viewpoint):
     cols = np.roll(cols, viewpoint[0])
     return (rows, cols)
 
+def cell_angles(cell_coords, viewpoint):
+    """Compute angles between cells and viewpoint where 0 angle is right of
+    viewpoint.
+        Inputs:
+            -cell_coords: coordinate tuple (rows, cols) as numpy.where()
+            from which to compute the angles
+            -viewpoint: tuple (row, col) indicating the position of the
+            observer. Each of row and col is an integer.
+            
+        Returns a sorted list of angles"""
+    rows, cols = cell_coords
+    # List the angles between each perimeter cell
+    two_pi = 2.0 * math.pi
+    r = np.array(range(rows.size))
+    p = (rows[r] - viewpoint[0], cols[r] - viewpoint[1])
+    angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
+    return angles
+
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
     """URI wrapper for the viewshed computation function
@@ -1045,12 +1063,12 @@ max_dist=-1., refraction_coeff=None):
     input_raster = gdal.Open(input_uri)
     message = 'Cannot open file ' + input_raster
     assert input_raster is not None, message
-    DEM = input_raster.GetRasterBand(1).ReadAsArray()
+    input_array = input_raster.GetRasterBand(1).ReadAsArray()
     array_shape = DEM.shape
     
     # Compute the viewshed on it
-    output_array = compute_viewshed(DEM, coordinates, obs_elev, tgt_elev,
-    max_dist, refraction_coeff)
+    output_array = compute_viewshed(input_array, coordinates, obs_elev, \
+    tgt_elev, max_dist, refraction_coeff)
     
     # Save the output in the output URI
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
@@ -1058,7 +1076,7 @@ max_dist=-1., refraction_coeff=None):
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
-def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
+def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     refraction_coeff):
     """Compute the viewshed for a single observer. 
         Inputs: 
@@ -1067,23 +1085,25 @@ def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
             see viewshed's docstring as they are passed as-is to this function
         
         Returns the visibility map for the DEM as a numpy array"""
+    pixel_visibility = np.ones_like(input_array)
+    array_shape = input_array.shape
     # 1- get perimeter cells
     perimeter_cells = \
-    aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
+    get_perimeter_cells(array_shape, coordinates)
     # 1.1- remove perimeter cell if same coord as viewpoint
     # 2- compute cell angles
-    angles = self.cell_angles(perimeter_cells, viewpoint)
+    angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
     print('angles', angles.size, angles)
     # 3- compute information on raster cells
     events = \
-    aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+    list_extreme_cell_angles(array_shape, coordinates)
     I = events[3]
     J = events[4]
-    distances = (viewpoint[0] - I)**2 + (viewpoint[1] - J)**2
+    distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     visibility = \
-    (DEM[(I, J)] - DEM[viewpoint[0], viewpoint[1]] - viewpoint_elevation) \
-    / distances
+    (input_array[(I, J)] - input_array[coordinates[0], \
+    coordinates[1]] - obs_elev) / distances
     # 4- build event lists
     add_cell_events = []
     add_event_id = 0
@@ -1099,16 +1119,10 @@ def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
     remove_event_count = remove_events.size
     # 5- Sort event lists
     arg_min = np.argsort(events[0])
-    #print('min', events[0][arg_min])
     arg_center = np.argsort(events[1])
-    #print('center', events[1][arg_center])
     arg_max = np.argsort(events[2])
-    #print('max', events[2][arg_max])
     
     # Add the events to the 3 event lists
-    #print('index', self.find_angle_index(angles, 1.6))
-    #print('center', events[1][arg_center])
-    #print('center', arg_center)
     # Add center angles to center_events_array
     for a in range(1, len(angles)): 
         #print('current angle', angles[a])
@@ -1161,10 +1175,10 @@ def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
         d = distances[c]
         v = visibility[c]
         active_line = \
-            aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
+            add_active_pixel(active_line, c, d, v)
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
-        aesthetic_quality_core.update_visible_pixels(active_line, \
+        update_visible_pixels(active_line, \
         events[3], events[4], pixel_visibility)
         
     # 2- loop through line sweep angles:
@@ -1178,7 +1192,7 @@ def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
                 d = distances[c]
                 v = visibility[c]
                 active_line = \
-                aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
+                add_active_pixel(active_line, c, d, v)
                 active_cells.add(d)
     #   2.2- remove cells
         #print('  remove cell events', remove_cell_events[a])
@@ -1187,18 +1201,18 @@ def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
             d = distances[c]
             v = visibility[c]
             active_line = \
-            aesthetic_quality_core.remove_active_pixel(active_line, d)
+            remove_active_pixel(active_line, d)
             active_cells.remove(d)
         #print('  active cells', len(active_cells), active_cells)
         #active_line_distance = [node for node in active_line if node != 'closest']
         #print('  active line', len(active_line), active_line_distance)
         # The sweep line is current, now compute pixel visibility
-        aesthetic_quality_core.update_visible_pixels(active_line, \
+        update_visible_pixels(active_line, \
         events[3], events[4], pixel_visibility)
     #print('active cells', active_cells, len(active_cells) == 0)
 
-    print('DEM')
-    print(DEM)
+    print('input_array')
+    print(input_array)
     print('pixel visibility', pixel_visibility)
 
     # Sanity checks
