@@ -324,7 +324,7 @@ def calculate_forest_edge_distance(lulc_array, forest_lucodes, cell_size):
 
 def build_biomass_forest_edge_regression(
     landcover_array, biomass_array, biomass_nodata, edge_distance, cell_size,
-    regression_lucodes, regression_uncertainty):
+    regression_lucodes, regression_sd, regression_uncertainty):
     """Builds a log regression function to fit biomass to edge distance for a
         set of given lucodes.
 
@@ -337,6 +337,8 @@ def build_biomass_forest_edge_regression(
             distance from forest edge
         cell_size - the cell size in meters
         regression_lucodes - a list of lucodes to build a regression for
+        regression_sd - a parallel list to regression_lucodes to say the sd
+            for each code
         regression_uncertainty - true or false whether to account for uncertainty
             in the regression model
 
@@ -345,7 +347,7 @@ def build_biomass_forest_edge_regression(
     landcover_regression = {}
 
     print 'building biomass regression'
-    for landcover_type in regression_lucodes:
+    for index, landcover_type in enumerate(regression_lucodes):
 
         landcover_mask = numpy.where(
             (landcover_array == landcover_type) *
@@ -372,10 +374,10 @@ def build_biomass_forest_edge_regression(
             
             landcover_regression[landcover_type]['lower'] = (
                 regression_builder_confidence(x, y, slope, intercept, 'lower',
-                                              regression_uncertainty))
+                                              regression_uncertainty, regression_sd[index]))
             landcover_regression[landcover_type]['upper'] = (
                 regression_builder_confidence(x, y, slope, intercept, 'upper',
-                                              regression_uncertainty))
+                                              regression_uncertainty, regression_sd[index]))
                 
         except ValueError:
             print (
@@ -387,7 +389,7 @@ def build_biomass_forest_edge_regression(
 
     return landcover_regression
 
-def regression_builder_confidence(x, y, slope, intercept, mode, regression_uncertainty):
+def regression_builder_confidence(x, y, slope, intercept, mode, regression_uncertainty, stdev):
     """Builds a confidence interval function given the log'd x's and y
         along with the slope and intercept calculated from the linear
         regression.
@@ -398,12 +400,16 @@ def regression_builder_confidence(x, y, slope, intercept, mode, regression_uncer
         intercept - the y-intercept of the pre-calculated regression function of x and y
         regression_uncertainty - true or false depending on whether or not to account for
            uncertainty
+        stdev - fixed standard deviation if we don't want to use regression for the line
 
         returns a regression function as a function of un-logged x."""
         
     if not regression_uncertainty:
-        return lambda x_star: slope * numpy.log(x_star) + intercept
-
+        if mode == 'lower':
+            return lambda x_star: slope * numpy.log(x_star) + intercept + scipy.stats.norm.interval(0.95,loc=0.0,scale=stdev)[0]
+        elif mode == 'upper':
+            return lambda x_star: slope * numpy.log(x_star) + intercept + scipy.stats.norm.interval(0.95,loc=0.0,scale=stdev)[1]
+            
     x_mean = numpy.mean(x)
     n = x.size
     denom = numpy.sum(numpy.power(x-x_mean, 2.0))
@@ -471,7 +477,7 @@ def load_base_datasets(args):
     #on the distance from the edge of the forest
     landcover_regression = build_biomass_forest_edge_regression(
         landcover_array, biomass_array, biomass_nodata,
-        regression_edge_distance, cell_size, args['regression_lucodes'], args['regression_uncertainty'])
+        regression_edge_distance, cell_size, args['regression_lucodes'], args['regression_sd'], args['regression_uncertainty'])
 
     #We'll use the biomass means in case we don't ahve a lookup value in the
     #table
@@ -963,6 +969,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         #These are the landcover types that should use the log regression
         #when calculating storage biomass
         'regression_lucodes': [2],
+        'regression_sd': [50.42],
         #These are the LULCs to take directly from table, everything else is
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 120, 0],
@@ -988,9 +995,6 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
-    return
-
-
 
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
@@ -1056,6 +1060,7 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
         #These are the landcover types that should use the log regression
         #when calculating storage biomass
         'regression_lucodes': [2],
+        'regression_sd': [50.42],
         #These are the LULCs to take directly from table, everything else is
         #mean from regression
         'biomass_from_table_lucodes': [10, 12, 17, 0],
@@ -1081,8 +1086,6 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
-    return
-
 
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))
@@ -1157,7 +1160,6 @@ if __name__ == '__main__':
     CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
     run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
     run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
-
 
     POOL.close()
     POOL.join()
