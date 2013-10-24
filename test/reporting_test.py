@@ -22,7 +22,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
         
-        raise SkipTest
+        #raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -37,9 +37,9 @@ class TestReportingPackage(testing.GISTest):
                 }
 
         columns = {
-            'date' : {'id': 1, 'editable':False},
-            'price' : {'id': 2, 'editable':False},
-            'product' : {'id': 0, 'editable':True}}
+            1 : {'name': 'date', 'editable':False},
+            2 : {'name': 'price', 'editable':False},
+            0 : {'name': 'product', 'editable':True}}
         
         report_args = {
                 'title': 'Test Title',
@@ -70,7 +70,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
 
-        raise SkipTest
+        #raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -80,10 +80,10 @@ class TestReportingPackage(testing.GISTest):
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
 
         columns = {
-            'ws_id' : {'id': 0, 'editable':False},
-            'precip_mn' : {'id': 1, 'editable':False},
-            'wyield_mn' : {'id': 2, 'editable':False},
-            'wyield_vol' : {'id': 3, 'editable':True}}
+            0 : {'name': 'ws_id', 'editable':False},
+            1 : {'name': 'precip_mn', 'editable':False},
+            2 : {'name': 'wyield_mn', 'editable':False},
+            3 : {'name': 'wyield_vol', 'editable':True}}
         
         report_args = {
                 'title': 'Test Title',
@@ -114,7 +114,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
         
-        raise SkipTest
+        #raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -124,10 +124,10 @@ class TestReportingPackage(testing.GISTest):
         shape_uri = os.path.join(REPORTING_DATA, 'shape_test.shp')
 
         columns = {
-            'ws_id' : {'id': 0, 'editable':False},
-            'precip_mn' : {'id': 1, 'editable':False},
-            'wyield_mn' : {'id': 2, 'editable':False},
-            'wyield_vol' : {'id': 3, 'editable':True}}
+            0 : {'name': 'ws_id', 'editable':False},
+            1 : {'name': 'precip_mn', 'editable':False},
+            2 : {'name': 'wyield_mn', 'editable':False},
+            3 : {'name': 'wyield_vol', 'editable':True}}
         
         report_args = {
                 'title': 'Test Title',
@@ -174,11 +174,11 @@ class TestReportingPackage(testing.GISTest):
                     1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
                     2: {'date':'5/12', 'price':'moderate', 'product':'mints'}
                 }
-
+        
         columns = {
-            'date' : {'id': 1, 'editable':False},
-            'price' : {'id': 2, 'editable':False},
-            'product' : {'id': 0, 'editable':True}}
+            1 : {'name': 'date', 'editable':False},
+            2 : {'name': 'price', 'editable':False},
+            0 : {'name': 'product', 'editable':True}}
         
         report_args = {
                 'title': 'Sortable Table',
@@ -218,7 +218,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_link(self):
         """Unit test for adding link head elements to html file"""
-        raise SkipTest
+        #raise SkipTest
        
         args = {'format':'link', 'src':'example_style.css'}
 
@@ -231,7 +231,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_script(self):
         """Unit test for adding script head elements to html file"""
-        raise SkipTest
+        #raise SkipTest
 
         args = {'format':'script', 'src':'example_script.js'}
 
