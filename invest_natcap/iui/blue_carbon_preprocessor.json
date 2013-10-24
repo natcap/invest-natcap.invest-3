@@ -19,6 +19,15 @@
                                                 "defaultValue": "../BlueCarbon/output",
                                                 "helpText": "The directory to hold output from a particular model run. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
+                                            },
+                                            {
+                                                "id": "preprocessor_key_uri",
+                                                "args_id": "preprocessor_key_uri",
+                                                "type": "file",
+                                                "label": "Preprocessor key",
+                                                "defaultValue": "../BlueCarbon/input/preprocessor.csv",
+                                                "helpText": "The preprocessor key contains the default values for transitions between all vegetation types.",
+                                                "required": true
                                             }
                                         ]
                     },
