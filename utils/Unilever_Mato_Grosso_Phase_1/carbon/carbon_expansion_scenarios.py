@@ -988,9 +988,6 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
-    return
-
-
 
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
@@ -1081,8 +1078,6 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
-    return
-
 
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))
