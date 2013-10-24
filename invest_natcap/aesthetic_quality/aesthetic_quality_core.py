@@ -1026,7 +1026,7 @@ def get_perimeter_cells(array_shape, viewpoint):
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
 max_dist=-1., refraction_coeff=None):
-    """Viewshed computation function
+    """URI wrapper for the viewshed computation function
         
         Inputs: 
             -input_uri: uri of the input elevation raster map
@@ -1038,12 +1038,35 @@ max_dist=-1., refraction_coeff=None):
                 every point on the raster
             -max_dist: maximum visibility radius. By default infinity (-1), 
                 not used yet
-            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet"""
+            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
+            
+        Returns nothing"""
+    # Open the input URI and extract the numpy array
     input_raster = gdal.Open(input_uri)
     message = 'Cannot open file ' + input_raster
     assert input_raster is not None, message
     DEM = input_raster.GetRasterBand(1).ReadAsArray()
     array_shape = DEM.shape
+    
+    # Compute the viewshed on it
+    output_array = compute_viewshed(DEM, coordinates, obs_elev, tgt_elev,
+    max_dist, refraction_coeff)
+    
+    # Save the output in the output URI
+    output_raster = gdal.Open(output_uri, gdal.GA_Update)
+    message = 'Cannot open file ' + output_raster
+    assert output_raster is not None, message
+    output_raster.GetRasterBand(1).WriteArray(output_array)
+
+def compute_viewshed(DEM, coordinates, obs_elev, tgt_elev, max_dist,
+    refraction_coeff):
+    """Compute the viewshed for a single observer. 
+        Inputs: 
+            -DEM: a numpy array of terrain elevations
+            -for a detailed explanation of the rest of the parameters, 
+            see viewshed's docstring as they are passed as-is to this function
+        
+        Returns the visibility map for the DEM as a numpy array"""
     # 1- get perimeter cells
     perimeter_cells = \
     aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
