@@ -2,8 +2,11 @@ import os
 import sys
 import math
 import webbrowser
+import logging
 
 from invest_natcap import raster_utils
+
+LOGGER = logging.getLogger('invest_natcap.table_generator')
 
 def generate_table(table_dict, attributes=None):
     """Takes in a dictionary representation of a table and generates a String of
@@ -18,7 +21,8 @@ def generate_table(table_dict, attributes=None):
                       row_id_1: {col_name_1: value, col_name_2: value, ...},
                      ...
                      },
-             'totals': row_id_x
+             'totals': row_id_x (optional)
+             'checkbox':True (optional)
              }
 
          attributes - a dictionary with keys being valid html table attributes
@@ -29,6 +33,7 @@ def generate_table(table_dict, attributes=None):
     # Initialize the string that will store the html representation of the table
     table_string = ''
     # Create the table header, either with attributes or without
+    # TODO: Handle attributes better
     if attributes != None:
         attr_keys = attributes.keys()
         attr_keys.sort()
@@ -39,27 +44,47 @@ def generate_table(table_dict, attributes=None):
         table_string = table_string + '>'
     else:
         table_string = '<table>'
-   
+
+    # If checkbox column is wanted set it up
+    if ('checkbox' in table_dict) and (table_dict['checkbox']):
+        # Get a copy of the column and row dictionaries to pass into checkbox
+        # funtion 
+        cols_copy = table_dict['cols'].copy()
+        rows_copy = table_dict['rows'].copy()
+        # Get the updated column and row dictionaries
+        table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
+    else:
+        # The column and row dictionaries need to update so get the originals
+        table_cols = table_dict['cols']
+        table_rows = table_dict['rows']
+
     # Get the column headers
-    col_headers = get_column_headers(table_dict['cols'])
+    col_headers = get_column_headers(table_cols)
     
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
     for col in col_headers:
+        # Add each column header to the html string
         table_string += '<th>%s</th>' % col
-    
+   
+    # Add the closing tag for the table header
     table_string = table_string + '</tr></thead>'
 
-    row_data = get_row_data(table_dict['rows'], col_headers)
-    
-    table_string = table_string + '<tbody>'
+    # Get the row data as 2D list
+    row_data = get_row_data(table_rows, col_headers)
    
+    # Add the start tag for the table body
+    table_string = table_string + '<tbody>'
+  
+    # For each data row add a row in the html table and fill in the data
     for row in row_data:
         table_string = table_string + '<tr>'
         for row_data in row:
+            # Add row data
             table_string = table_string + '<td>%s</td>' % row_data
         table_string = table_string + '</tr>'
 
+    # Add the closing tag for the table body and table
     table_string = table_string + '</tbody></table>'
 
     return table_string
@@ -67,23 +92,65 @@ def generate_table(table_dict, attributes=None):
 def add_checkbox_column(col_dict, row_dict):
     """Insert a new column into the columns dictionary so that it is the second
         column in order of 'id'. Also add the checkbox column header to the rows
-        dictionary and subsequent value
+        dictionary and subsequent checkbox value
 
-        col_dict - a dictionary with column names as keys
+        col_dict - a dictionary with column ids as keys and sub dictionary as
+            its value. The sub dictionary requires a key 'name' followed by the
+            columns name. An example:
             {col_id_1 : {name: col_1, sortable:True, editable:False},
              col_id_2 : {name: col_2, sortable:True, editable:False},
              ...
             }
 
-        row_dict - a dictionary with row ids as keys
+        row_dict - a dictionary with row ids as keys and sub dictionary as its
+            values. The sub dictionary requires key-value pairs for all the
+            column names in 'col_dict'. An Example:
             {row_id_0: {col_name_1: value, col_name_2: value, ...},
              row_id_1: {col_name_1: value, col_name_2: value, ...},
              ...
             }
 
-        returns - updated column and rows dictionaries"""
+        returns - a tuple of the updated column and rows dictionaries in that
+            order"""
 
-    pass
+    # Get the keys from the column dictionary which will be unique id's
+    # represting the order the column should be displayed
+    col_ids = col_dict.keys()
+    # Sort he id's
+    col_ids.sort()
+
+    # Since the checkbox column will be added as the second column, get a list
+    # of all the keys starting at the second
+    col_sub = col_ids[1:]
+    # Save the second key's id as this will be set to the checkbox column later
+    check_col_id = col_sub[0]
+    # In order to add the checkbox column in as the second row, all key id's
+    # from the second on will be incremented by 1. Thus we want to reverse the
+    # order of the id's so that they are changed last first, to avoid duplicate
+    # id conficts
+    col_sub.reverse()
+
+    for col_id in col_sub:
+        # Increment each key id by 1 and set to the formers value
+        col_dict[col_id + 1] = col_dict[col_id]
+        # Delete the previous key from the dictionary
+        del col_dict[col_id]
+
+    # Add the checkbox column as the second column using the old second column
+    # id
+    col_dict[check_col_id] = {'name':'Select'}
+
+    LOGGER.debug('Columns with Checkboxes: %s', col_dict)
+
+    # For each row in the row dictionary add a 'Select' key which refers to the
+    # new column and set the value as a checkbox
+    for key, val in row_dict.iteritems():
+        val['Select'] = '<input type="checkbox" name="cb" value="1">'
+        
+    LOGGER.debug('Rows with Checkboxes: %s', row_dict)
+
+    # Return a tuple of the updated / modified column and row dictionary
+    return (col_dict, row_dict) 
 
 def get_column_headers(col_dict):
     """Iterate through the dictionary and pull out the column headers and store
