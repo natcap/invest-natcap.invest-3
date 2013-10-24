@@ -245,7 +245,7 @@ def analyze_composite_carbon_stock_change(args):
         output_table.write('\n')
         output_table.flush()
         
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             base_tifname = (
                 os.path.splitext(os.path.basename(args['output_table_filename']))[0] + 
@@ -998,6 +998,9 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_composite_carbon_stock_change(args)
 
+    return
+
+
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
@@ -1015,7 +1018,6 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_composite_carbon_stock_change(args)
 
-    return
 
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
