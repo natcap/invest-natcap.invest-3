@@ -26,11 +26,12 @@ def generate_report(reporting_args):
                         'section': 'body',
                         'position':2,
                         'sortable':True,
+                        'checkbox':True,
                         'data_type':'shapefile'|'csv'|'dictionary',
                         'data':URI | dict,
                         'key':'key_field',
-                        'columns':{'col_name_1':{'id':0,'editable':True},
-                                   'col_name_2':{'id':1,'editable':False},
+                        'columns':{'col_id_1':{'name':'col_1,'editable':True},
+                                   'col_id_2':{'name':'col_2','editable':False},
                                    ...},
                         'total':{'row_name':'totals', 'columns':['col_name_1']}
                         }
@@ -148,15 +149,16 @@ def build_table(param_args):
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
             
-            param_args['columns'] - a dictionary where the keys are the names of
-                the columns and the values are dictionaries that have the
+            param_args['columns'] - a dictionary where the keys are the ids of
+                the columns (representing how the order they should be
+                displayed) and the values are dictionaries that have the
                 following attributes represented by key-value pairs (required): 
-                'id' - a number that defines the order of columns
+                'name' - a string for the name of the column
                 'editable' - a boolean that determines whether the column
                     entries can be edited
-                        'columns':{'col_name_1':{'id':0,'editable':True},
-                                   'col_name_2':{'id':1,'editable':False},
-                                   ...},
+                    'columns':{'col_id_1':{'name':'product','editable':True},
+                               'col_id_2':{'name':'price','editable':False},
+                               ...},
 
             param_args['totals'] - a dictionary that if present holds information
                 for a totals row. The dictionary has two keys, 'row_name' and

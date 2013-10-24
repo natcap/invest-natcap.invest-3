@@ -10,8 +10,8 @@ def generate_table(table_dict, attributes=None):
         the the table in the form of hmtl
 
         table_dict - a dictionary with the following structure:
-            {'cols': {col_name_1 : {id: 0, sortable:True, editable:False},
-                      col_name_2 : {id: 1, sortable:True, editable:False},
+            {'cols': {col_id_1 : {name: col_name, sortable:True, editable:False},
+                      col_id_2 : {name: col_name, sortable:True, editable:False},
                       ...
                      },
              'rows': {row_id_0: {col_name_1: value, col_name_2: value, ...},
@@ -64,37 +64,53 @@ def generate_table(table_dict, attributes=None):
 
     return table_string
 
+def add_checkbox_column(col_dict, row_dict):
+    """Insert a new column into the columns dictionary so that it is the second
+        column in order of 'id'. Also add the checkbox column header to the rows
+        dictionary and subsequent value
+
+        col_dict - a dictionary with column names as keys
+            {col_id_1 : {name: col_1, sortable:True, editable:False},
+             col_id_2 : {name: col_2, sortable:True, editable:False},
+             ...
+            }
+
+        row_dict - a dictionary with row ids as keys
+            {row_id_0: {col_name_1: value, col_name_2: value, ...},
+             row_id_1: {col_name_1: value, col_name_2: value, ...},
+             ...
+            }
+
+        returns - updated column and rows dictionaries"""
+
+    pass
+
 def get_column_headers(col_dict):
     """Iterate through the dictionary and pull out the column headers and store
         in a list
 
-        table_dict - a dictionary representing the table
+        col_dict - a dictionary specifying the column defintions. Example:
+            {col_id_1 : {name: col_name, sortable:True, editable:False},
+             col_id_2 : {name: col_name, sortable:True, editable:False},
+             ...
+            }
 
         return - a list"""
 
-
-    #TODO Fill in with actual code
     # Initialize a list to store the column names in order
-    col_list = []
-    # Initialize a dictionary that will map out column ordering ids to the
-    # column name so that we can properly sort the column names
-    sortable_dict = {}
-    
-    # Loop over input dictionary and set the column's 'id' value as the key and
-    # the columns name as the value
-    for key, value in col_dict.iteritems():
-        sortable_dict[value['id']] = key
-    # Get a list of the id's from the dictionary created above
-    key_ids = sortable_dict.keys()
-    # Sort the list
-    key_ids.sort()
-    
-    # Iterate over the sorted list of id's and use those to grab the column
-    # names and build up the proper column name list to return
-    for key_id in key_ids:
-        col_list.append(sortable_dict[key_id])
+    col_names = []
 
-    return col_list 
+    # Get a list of the keys from the column dictionary. The keys are ids that
+    # specify the order the columns should be listed
+    col_ids = col_dict.keys()
+    # Sort the ids so that we can return a corresponding list of column names in
+    # the proper order
+    col_ids.sort()
+
+    for col_id in col_ids:
+        col_names.append(col_dict[col_id]['name'])
+
+    return col_names
 
 def get_row_data(row_dict, col_headers):
     """Construct the rows in a 2D List from the dictionary, using col_headers to
