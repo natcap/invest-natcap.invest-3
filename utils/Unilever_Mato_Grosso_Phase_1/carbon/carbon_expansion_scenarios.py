@@ -494,8 +494,8 @@ def load_base_datasets(args):
                 ci = scipy.stats.norm.interval(0.95, loc=mn, scale=sd)
             carbon_pool_table_confidence[lu_code] = {
                 'median': mn,
-                'lower': ci[0] if ci[0] > 0 else 0,
-                'upper': ci[1],
+                'lower': mn + ci[0] if ci[0] > 0 else mn,
+                'upper': mn + ci[1],
                 }
         except ValueError:
             print '%s not in table' % lu_code
