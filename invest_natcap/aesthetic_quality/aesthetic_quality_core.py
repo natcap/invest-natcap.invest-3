@@ -917,13 +917,59 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
-def add_active_pixel(sweep_line, distance, visibility):
+def update_visible_pixels(active_pixels, I, J, pixel_visibility):
+    """Update the array of visible pixels from the active pixel's visibility
+    
+            Inputs:
+                -active_pixels: a linked list of dictionaries containing the
+                following fields:
+                    -distance: distance between pixel center and viewpoint
+                    -visibility: an elevation/distance ratio used by the
+                    algorithm to determine what pixels are bostructed
+                    -index: pixel index in the event stream, used to find the
+                    pixel's coordinates 'i' and 'j'.
+                    -next: points to the next pixel, or is None if at the end
+                The linked list is implemented with a dictionary where the
+                pixels distance is the key. The closest pixel is also
+                referenced by the key 'closest'.
+                -I: the array of pixel rows indexable by pixel['index']
+                -J: the array of pixel columns indexable by pixel['index']
+                -pixel_visibility: a python array the same size as the DEM
+                with 1s for visible pixels and 0s otherwise. Viewpoint is
+                always visible.
+            
+            Returns nothing"""
+    # Update visibility and create a binary map of visible pixels
+    # -Look at visibility from closer pixels out, keep highest visibility
+    # -A pixel is not visible if its visibility <= highest visibility so far
+    if not active_pixels:
+        return
+
+    pixel = active_pixels['closest']
+    max_visibility = -1.
+    while pixel is not None:
+        # Pixel is visible
+        if pixel['visibility'] > max_visibility:
+            visibility = 1
+            max_visibility = pixel['visibility']
+        # Pixel is not visible
+        else:
+            visibility = 0
+        # Update the visibility map for this pixel
+        index = pixel['index']
+        i = I[index]
+        j = J[index]
+        pixel_visibility[i, j] = visibility
+        pixel = pixel['next']
+
+def add_active_pixel(sweep_line, index, distance, visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
-    new_pixel = {'next':None, 'distance':distance, 'visibility':visibility}
+    new_pixel = \
+    {'next':None, 'index':index, 'distance':distance, 'visibility':visibility}
     if 'closest' in sweep_line:
         # Get information about first pixel in the list
         previous = None
@@ -945,9 +991,6 @@ def add_active_pixel(sweep_line, distance, visibility):
     else:
         sweep_line[distance] = new_pixel
         sweep_line['closest'] = new_pixel
-    # Update visibility and create a binary map of visible pixels
-    # -Look at visibility from closer pixels out, keep highest visibility
-    # -A pixel is not visible if its visibility <= highest visibility so far
     return sweep_line
 
 def get_perimeter_cells(array_shape, viewpoint):
