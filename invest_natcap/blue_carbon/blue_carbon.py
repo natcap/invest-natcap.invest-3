@@ -56,7 +56,7 @@ def execute(args):
     carbon_soil_field = "Soil"
     carbon_litter_field = "Litter"
     carbon_depth_field = "Soil Depth"
-    carbon_acc_field = "Accum Rate (T CO2e/ha/yr)"
+
 
     #transition matrix
     transition_matrix_uri = args["transition_matrix_uri"]
@@ -83,7 +83,8 @@ def execute(args):
     disturbance_depth_name = "%s depth"
     disturbance_biomass_half_life_field = "biomass carbon half life"
     disturbance_soil_half_life_field = "soil carbon half life"
-
+    disturbance_acc_field = "Accum Rate (T CO2e/ha/yr)"
+    
     #valuation flags
     private_valuation = args["private_valuation"]
     social_valuation = args["social_valuation"]
@@ -131,14 +132,9 @@ def execute(args):
     soil_dict = dict([(k, carbon[k][carbon_soil_field]) for k in carbon])
     litter_dict = dict([(k, carbon[k][carbon_litter_field]) for k in carbon])
     depth_dict = dict([(k, carbon[k][carbon_depth_field]) for k in carbon])
-    acc_dict = dict([(k, carbon[k][carbon_acc_field]) for k in carbon])
+    acc_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_acc_field]) for k in carbon])
     biomass_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_biomass_half_life_field]) for k in carbon])
     soil_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_soil_half_life_field]) for k in carbon])
-
-    veg_dict = {}
-    for veg_type in disturbance:
-        veg_dict[veg_type] = dict([(k, carbon[k][carbon_veg_field] == veg_type) for k in carbon])
-    LOGGER.debug(str(veg_dict))
 
 
     #validating data
@@ -161,7 +157,10 @@ def execute(args):
         raise ValueError, msg
 
     LOGGER.debug("Check for alignment missing...")
-    
+
+    veg_dict = {}
+    for veg_type in disturbance:
+        veg_dict[veg_type] = dict([(k, carbon[k][carbon_veg_field] == veg_type) for k in carbon])    
 
     #reassign nodata values in dictionary to raster nodata values
     for k in biomass_half_dict:
@@ -394,7 +393,25 @@ def execute(args):
                                                     veg_mask_uri,
                                                     gdal.GDT_Byte,
                                                     0,
-                                                    exception_flag="values_required")                                                    
+                                                    exception_flag="values_required")
+
+                LOGGER.debug("Calculating the disturbed carbon for %s in %i.", disturbance[veg_type][disturbance_veg_name], lulc_base_year)
+                disturbed_soil_uri = os.path.join(workspace_dir, disturbed_soil_name % (lulc_base_year, disturbance[veg_type][disturbance_veg_name]))
+                try:
+                    raster_utils.vectorize_datasets([lulc_base_soil_coefficient_uri, veg_mask_uri, lulc_predisturbance_soil_uri],
+                                                    mul_op,
+                                                    disturbed_soil_uri,
+                                                    gdal_type,
+                                                    nodata,
+                                                    cell_size,
+                                                    "union")
+                except:
+                    LOGGER.debug("It appears that there are only nodata values in the result.")
+                    raster_utils.new_raster_from_base_uri(veg_mask_uri,
+                                                          disturbed_soil_uri,
+                                                          "GTiff",
+                                                          nodata,
+                                                          gdal_type)
 
             LOGGER.debug("Calculate residual soil carbon after disturbance in %i.", lulc_transition_year)
             raster_utils.vectorize_datasets([lulc_predisturbance_soil_uri, lulc_base_soil_coefficient_uri],

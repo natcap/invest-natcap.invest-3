@@ -27,7 +27,7 @@ def get_transition_set_from_uri(dataset_uri_list):
 
 def execute(args):
     transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
-    values_matrix_uri = os.path.join(os.path.dirname(__file__), "preprocessor.csv")
+    values_matrix_uri = args["preprocessor_key_uri"]
     values_matrix_id = "ID"
     
     nodata = set([raster_utils.get_nodata_from_uri(uri) for uri in args["lulc"]])
