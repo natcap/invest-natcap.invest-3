@@ -917,7 +917,7 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
-def update_visible_pixels(active_pixels, I, J, pixel_visibility):
+def update_visible_pixels(active_pixels, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -934,7 +934,7 @@ def update_visible_pixels(active_pixels, I, J, pixel_visibility):
                 referenced by the key 'closest'.
                 -I: the array of pixel rows indexable by pixel['index']
                 -J: the array of pixel columns indexable by pixel['index']
-                -pixel_visibility: a python array the same size as the DEM
+                -visibility_map: a python array the same size as the DEM
                 with 1s for visible pixels and 0s otherwise. Viewpoint is
                 always visible.
             
@@ -959,7 +959,7 @@ def update_visible_pixels(active_pixels, I, J, pixel_visibility):
         index = pixel['index']
         i = I[index]
         j = J[index]
-        pixel_visibility[i, j] = visibility
+        visibility_map[i, j] = visibility
         pixel = pixel['next']
 
 def add_active_pixel(sweep_line, index, distance, visibility):
@@ -1085,7 +1085,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
             see viewshed's docstring as they are passed as-is to this function
         
         Returns the visibility map for the DEM as a numpy array"""
-    pixel_visibility = np.ones_like(input_array)
+    visibility_map = np.ones_like(input_array)
     array_shape = input_array.shape
     # 1- get perimeter cells
     perimeter_cells = \
@@ -1125,13 +1125,10 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     # Add the events to the 3 event lists
     # Add center angles to center_events_array
     for a in range(1, len(angles)): 
-        #print('current angle', angles[a])
         # Collect cell_center events
         current_events = []
         while (center_event_id < center_event_count) and \
             (center_events[arg_center[center_event_id]] < angles[a]):
-            #print(events[1][arg_center[event_id]], '< current angle')
-            #print('center', arg_center[center_event_id], center_events[arg_center[center_event_id]])
             current_events.append(arg_center[center_event_id])
             arg_center[center_event_id] = 0
             center_event_id += 1
@@ -1143,12 +1140,8 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
             # The active cell list is initialized with those at angle 0.
             # Make sure to remove them from the cell_addition events to
             # avoid duplicates. Do not remove them from remove_cell events.
-            #print(events[0][arg_min[add_event_id]], '< current angle')
             if center_events[arg_min[add_event_id]] > 0.:
-                #print('add', arg_min[add_event_id],add_events[arg_min[add_event_id]])
                 current_events.append(arg_min[add_event_id])
-            #else:
-            #    print('    found 0:', arg_min[add_event_id])
             arg_min[add_event_id] = 0
             add_event_id += 1
         add_cell_events.append(np.array(current_events))
@@ -1156,13 +1149,10 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
         current_events = []
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a]):
-            #print(events[2][arg_max[remove_event_id]], '< current angle')
-            #print('remove', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
             current_events.append(arg_max[remove_event_id])
             arg_max[remove_event_id] = 0
             remove_event_id += 1
         remove_cell_events.append(np.array(current_events))
-    #print('add_cell_events', add_cell_events)
 
     # Create the binary search tree as depicted in Kreveld et al.
     # "Variations on Sweep Algorithms"
@@ -1171,7 +1161,6 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     active_line = {}
     # 1- add cells at angle 0
     for c in cell_center_events[0]:
-        #print('  pre-adding', c, events[1][c])
         d = distances[c]
         v = visibility[c]
         active_line = \
@@ -1179,68 +1168,30 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, \
-        events[3], events[4], pixel_visibility)
+        events[3], events[4], visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(len(angles) - 1):
-        #print('sweep angle', a, angles[a+1])
     #   2.1- add cells
-        #print('  add cell events', add_cell_events[a])
         if add_cell_events[a].size > 0:
             for c in add_cell_events[a]:
-                #print('  adding', c, events[0][c])
                 d = distances[c]
                 v = visibility[c]
                 active_line = \
                 add_active_pixel(active_line, c, d, v)
                 active_cells.add(d)
     #   2.2- remove cells
-        #print('  remove cell events', remove_cell_events[a])
         for c in remove_cell_events[a]:
-            #print('  removing', c, events[2][c])
             d = distances[c]
             v = visibility[c]
             active_line = \
             remove_active_pixel(active_line, d)
             active_cells.remove(d)
-        #print('  active cells', len(active_cells), active_cells)
-        #active_line_distance = [node for node in active_line if node != 'closest']
-        #print('  active line', len(active_line), active_line_distance)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, \
-        events[3], events[4], pixel_visibility)
-    #print('active cells', active_cells, len(active_cells) == 0)
+        events[3], events[4], visibility_map)
 
-    print('input_array')
-    print(input_array)
-    print('pixel visibility', pixel_visibility)
-
-    # Sanity checks
-    print('---------------------------------')
-    print('add_cell events:')
-    for i in range(len(add_cell_events)):
-        add_cell_ids = add_cell_events[i]
-        if add_cell_ids.size > 0:
-            add_cell = add_events[add_cell_ids]
-            print('within bounds:', (add_cell >= angles[i]).all() and \
-                (add_cell < angles[i+1]).all())
-    print('unprocessed add_cell ids', np.where(arg_min > 0)[0])
-    print('remove_cell events:')
-    for i in range(len(remove_cell_events)):
-        remove_cell_ids = remove_cell_events[i]
-        if remove_cell_ids.size > 0:
-            remove_cell = remove_events[remove_cell_ids]
-            print('within bounds:', (remove_cell >= angles[i]).all() and \
-                (remove_cell <= angles[i+1]).all())
-    print('unprocessed remove_cell ids', np.where(arg_max > 0)[0])
-    print('cell_center events:')
-    for i in range(len(cell_center_events)):
-        cell_center_ids = cell_center_events[i]
-        if cell_center_ids.size > 0:
-            cell_centers = center_events[cell_center_ids]
-            print('within bounds:', (cell_centers >= angles[i]).all() and \
-                (cell_centers < angles[i+1]).all())
-    print('unprocessed cell_center ids', np.where(arg_center > 0)[0])
+    return visibility_map
 
 def execute(args):
     """Entry point for aesthetic quality core computation.
