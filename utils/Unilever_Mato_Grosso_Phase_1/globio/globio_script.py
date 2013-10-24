@@ -876,6 +876,7 @@ def analyze_composite_globio_change(args):
     output_table = open(args['output_table_filename'], 'wb')
     output_table.write(
         'Percent Soy Expansion in Forest Core Expansion Scenario')
+    output_table.write(',Average MSA (median),Average MSA (lower),Average MSA (upper)')
     for eco_name in args['ecoregion_mask_uris']:
         for msa_type in ['Species', 'Endemic']:
             for bound_type in ['(median)', '(lower)', '(upper)']:
@@ -913,6 +914,12 @@ def analyze_composite_globio_change(args):
         msa_f = calc_msa_f(infrastructure, scenario_lulc_array, args, percent)
 
         output_table.write('%s' % (percent))
+        #First write the unweighted average
+        for tail_mode in ['median', 'lower', 'upper']:
+            msa = msa_f[tail_mode] * msa_lu[tail_mode] * msa_i[tail_mode]
+            avg_msa= str(float(np.mean(msa[np.where(args['aoi_array'] == 1)])))
+            output_table.write(',%s' % (avg_msa))
+        #Then the weighted average by ecoregion
         for eco_name in args['ecoregion_mask_uris']:
             ecoregion_mask = geotiff_to_array(args['ecoregion_mask_uris'][eco_name])
             for rich_factor, tail_mode in itertools.product([sp_rich, en_rich], ['median', 'lower', 'upper']):
@@ -1262,10 +1269,10 @@ def run_globio_mg(number_of_steps, pool):
 
 def main():
     NUMBER_OF_STEPS = 200
-    pool = Pool(7)
-    #pool = None
+    #pool = Pool(7)
+    pool = None
     run_globio_mgds(NUMBER_OF_STEPS, pool)
-    run_globio_mg(NUMBER_OF_STEPS, pool)
+#    run_globio_mg(NUMBER_OF_STEPS, pool)
     pool.close()
     pool.join()
 
