@@ -434,7 +434,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         for i in shuffled_range:
             distance = i
             visibility = 0
-            aesthetic_quality_core.add_active_pixel(test_list, distance, \
+            aesthetic_quality_core.add_active_pixel(test_list, 0, distance, \
                 visibility)
         expected_length = additions + 1
         actual_length = len(test_list)
@@ -475,7 +475,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert expected_length == actual_length, message
         # 1.3- access for data retreival
         distance = 1
-        aesthetic_quality_core.add_active_pixel(test_list, distance, 0.5)
+        aesthetic_quality_core.add_active_pixel(test_list, 0, distance, 0.5)
         pixel = aesthetic_quality_core.find_active_pixel(test_list, distance)
         # 1.3.1- check the right element is retreived
         message = 'Error, returned None for a pixel that should be in the list'
@@ -636,6 +636,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
         viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
+        pixel_visibility = np.ones(array_shape) * 2
 
         # 1- get perimeter cells
         perimeter_cells = \
@@ -731,8 +732,11 @@ class TestAestheticQualityCore(unittest.TestCase):
             d = distances[c]
             v = visibility[c]
             active_line = \
-                aesthetic_quality_core.add_active_pixel(active_line, d, v)
+                aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
             active_cells.add(d)
+            # The sweep line is current, now compute pixel visibility
+            aesthetic_quality_core.update_visible_pixels(active_line, \
+            events[3], events[4], pixel_visibility)
             
         # 2- loop through line sweep angles:
         for a in range(len(angles) - 1):
@@ -745,7 +749,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                     d = distances[c]
                     v = visibility[c]
                     active_line = \
-                    aesthetic_quality_core.add_active_pixel(active_line, d, v)
+                    aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
                     active_cells.add(d)
         #   2.2- remove cells
             #print('  remove cell events', remove_cell_events[a])
@@ -759,7 +763,14 @@ class TestAestheticQualityCore(unittest.TestCase):
             #print('  active cells', len(active_cells), active_cells)
             #active_line_distance = [node for node in active_line if node != 'closest']
             #print('  active line', len(active_line), active_line_distance)
+            # The sweep line is current, now compute pixel visibility
+            aesthetic_quality_core.update_visible_pixels(active_line, \
+            events[3], events[4], pixel_visibility)
         #print('active cells', active_cells, len(active_cells) == 0)
+
+        print('DEM')
+        print(DEM)
+        print('pixel visibility', pixel_visibility)
 
         # Sanity checks
         print('---------------------------------')
