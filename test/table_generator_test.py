@@ -19,9 +19,9 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
         
         sample_dict = {
-                'col_1' : {'id': 0},
-                'col_2' : {'id': 2},
-                'col_3' : {'id': 1}}
+                0 : {'name': 'col_1'},
+                2 : {'name': 'col_2'},
+                1 : {'name': 'col_3'}}
 
         expected_result = ['col_1', 'col_3', 'col_2']
 
@@ -36,10 +36,10 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
         
         sample_dict = {
-                'date' : {'id': 1, 'time':'day'},
-                'price' : {'id': 6, 'price':'expensive'},
-                'product' : {'id': 0, 'product':'chips'},
-                'comments' : {'id': 2, 'comment':'bad product'}}
+                1 : {'name': 'date', 'time':'day'},
+                6 : {'name': 'price', 'price':'expensive'},
+                0 : {'name': 'product', 'product':'chips'},
+                2 : {'name': 'comments', 'comment':'bad product'}}
 
         expected_result = ['product', 'date', 'comments', 'price']
 
@@ -100,13 +100,13 @@ class TestTableGenerator(unittest.TestCase):
         
         sample_dict = {
                 'cols':{
-                    'date' : {'id': 1, 'time':'day'},
-                    'price' : {'id': 2, 'price':'expensive'},
-                    'product' : {'id': 0, 'product':'chips'}},
+                   1 : {'name':'date', 'time':'day'},
+                   2 : {'name': 'price', 'price':'expensive'},
+                   0 : {'name':'product', 'product':'chips'}},
                 'rows':{
-                    0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
-                    1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
-                    2: {'date':'5/12', 'price':'moderate', 'product':'mints'}}
+                   0 : {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                   1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                   2 : {'date':'5/12', 'price':'moderate', 'product':'mints'}}
                 }
 
         expected_result = ("<table><thead><tr><th>product</th>"
@@ -128,9 +128,9 @@ class TestTableGenerator(unittest.TestCase):
         
         sample_dict = {
                 'cols':{
-                    'date' : {'id': 1, 'time':'day'},
-                    'price' : {'id': 2, 'price':'expensive'},
-                    'product' : {'id': 0, 'product':'chips'}},
+                    1: {'name':'date', 'time':'day'},
+                    2: {'name': 'price', 'price':'expensive'},
+                    0: {'name':'product', 'product':'chips'}},
                 'rows':{
                     0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
                     1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
