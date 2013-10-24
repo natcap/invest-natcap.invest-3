@@ -149,3 +149,39 @@ class TestTableGenerator(unittest.TestCase):
         table_string = table_generator.generate_table(sample_dict, attributes)
 
         self.assertEqual(expected_result, table_string)
+    
+    def test_add_checkbox_column(self):
+        """Unit test for adding a checkbox column to the table definition"""
+        
+        #raise SkipTest
+        
+        sample_dict = {
+                'cols':{
+                   1 : {'name':'date', 'time':'day'},
+                   2 : {'name': 'price', 'price':'expensive'},
+                   0 : {'name':'product', 'product':'chips'}},
+                'rows':{
+                   0 : {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                   1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                   2 : {'date':'5/12', 'price':'moderate', 'product':'mints'}}
+                }
+
+        expected_rows = {
+                   0 : {'date':'9/13', 'price':'expensive', 'product':'chips',
+                       'Select':'<input type="checkbox" name="cb" value="1">'},
+                   1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts',
+                       'Select':'<input type="checkbox" name="cb" value="1">'},
+                   2 : {'date':'5/12', 'price':'moderate', 'product':'mints',
+                       'Select':'<input type="checkbox" name="cb" value="1">'}}
+
+        expected_cols = {
+                1 : {'name':'Select'},
+                2 : {'name': 'date', 'time':'day'},
+                3 : {'name': 'price', 'price':'expensive'},
+                0 : {'name':'product', 'product':'chips'}}
+
+        col_dict, row_dict = table_generator.add_checkbox_column(
+                sample_dict['cols'], sample_dict['rows'])
+
+        self.assertEqual(col_dict, expected_cols)
+        self.assertEqual(row_dict, expected_rows)
