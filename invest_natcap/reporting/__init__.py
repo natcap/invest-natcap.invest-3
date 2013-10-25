@@ -189,18 +189,13 @@ def build_table(param_args):
                 the columns (representing how the order they should be
                 displayed) and the values are dictionaries that have the
                 following attributes represented by key-value pairs (required): 
-                'name' - a string for the name of the column
-                'editable' - a boolean that determines whether the column
-                    entries can be edited
-                    'columns':{'col_id_1':{'name':'product','editable':True},
-                               'col_id_2':{'name':'price','editable':False},
-                               ...},
+                'name' - a string for the name of the column (required)
+                'total' - a boolean that determines whether the column
+                    entries should be summed in a total row (required)
 
-            param_args['totals'] - a dictionary that if present holds information
-                for a totals row. The dictionary has two keys, 'row_name' and
-                'columns'. 'columns' points to a list of the column names to
-                total (required)
-                        'total':{'row_name':'totals', 'columns':['col_name_1']}
+            param_args['total'] - a boolean value where if True a constant
+                total row will be placed at the bottom of the table that sums the
+                columns (required)
 
         returns - a string that represents an html table
     """
@@ -241,8 +236,8 @@ def build_table(param_args):
     table_dict['rows'] = data_dict
     
     # If a totals row is present, add it to the final dictionary
-    if 'totals' in param_args:
-        table_dict['totals'] = param_args['totals']
+    if 'total' in param_args:
+        table_dict['total'] = param_args['total']
     
     LOGGER.debug('Final Table Dictionary: %s', table_dict)
     
@@ -281,10 +276,10 @@ def add_head_element(param_args):
         param_args - a dictionary that holds the following arguments:
 
             param_args['format'] - a string representing the type of element to
-                be added. Currently : 'script', 'link'
+                be added. Currently : 'script', 'link' (required)
             
             param_args['src'] - a string URI path for the external source of the
-                element.
+                element (required)
 
         returns - a string representation of the html head element"""
 
