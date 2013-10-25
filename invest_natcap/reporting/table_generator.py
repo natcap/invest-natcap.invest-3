@@ -12,22 +12,38 @@ def generate_table(table_dict, attributes=None):
     """Takes in a dictionary representation of a table and generates a String of
         the the table in the form of hmtl
 
-        table_dict - a dictionary with the following structure:
-            {'cols': {col_id_1 : {name: col_name, sortable:True, editable:False},
-                      col_id_2 : {name: col_name, sortable:True, editable:False},
-                      ...
-                     },
-             'rows': {row_id_0: {col_name_1: value, col_name_2: value, ...},
-                      row_id_1: {col_name_1: value, col_name_2: value, ...},
-                     ...
-                     },
-             'totals': row_id_x (optional)
-             'checkbox':True (optional)
-             }
+        table_dict - a dictionary with the following arguments:
+            'cols'- a dictionary that defines the column structure for
+                the table (required). The dictionary has unique numeric
+                keys that determine the left to right order of the columns.
+                Each key has a dictionary value with the following
+                arguments:
+                    'name' - a string for the column name (required)
+                    'total' - a boolean for whether the column should be
+                        totaled (required)
+
+            'rows' - a dictionary with keys that have sub dictionaries as
+                values. The sub dictionaries have column names that match
+                the names in 'cols' as keys and the corresponding entry for
+                the column/row pair as a value. (required) Example:
+                {row_id_0: {col_name_1: value, col_name_2: value, ...},
+                 row_id_1: {col_name_1: value, col_name_2: value, ...},
+                 ...
+                }
+            
+            'checkbox' - a boolean value for whether there should be a
+                checkbox column. If True a 'selected total' row will be added
+                to the bottom of the table that will show the total of the
+                columns selected (optional)
+            
+            'total'- a boolean value for whether there should be a constant
+                total row at the bottom of the table that sums the column
+                values (optional)
 
          attributes - a dictionary with keys being valid html table attributes
-             that point to proper values
+             that point to proper values (optional)
 
+        returns - a string representing an html table
     """
     
     # Initialize the string that will store the html representation of the table
