@@ -495,13 +495,13 @@ def load_base_datasets(args):
             mn = float(carbon_pool_table_raw[lu_code]['C_ABOVE_MEAN'])
             print lu_code, mn, sd
             if sd == 0:
-                ci = (0.0, 0.0)
+                ci = (mn, mn)
             else:
                 ci = scipy.stats.norm.interval(0.95, loc=mn, scale=sd)
             carbon_pool_table_confidence[lu_code] = {
                 'median': mn,
-                'lower': mn + ci[0] if ci[0] > 0 else mn,
-                'upper': mn + ci[1],
+                'lower': ci[0],
+                'upper': ci[1],
                 }
         except ValueError:
             print '%s not in table' % lu_code
@@ -972,7 +972,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         'regression_sd': [50.42],
         #These are the LULCs to take directly from table, everything else is
         #mean from regression
-        'biomass_from_table_lucodes': [10, 12, 120, 0],
+        'biomass_from_table_lucodes': [10, 12, 17, 120, 0],
         'converting_crop': 120,
         'scenario_lulc_base_map_filename': 'inputs/mg_lulc_base',
         'scenario_conversion_steps': number_of_steps,
@@ -1063,7 +1063,7 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
         'regression_sd': [50.42],
         #These are the LULCs to take directly from table, everything else is
         #mean from regression
-        'biomass_from_table_lucodes': [10, 12, 17, 0],
+        'biomass_from_table_lucodes': [10, 12, 17, 120, 0],
         'converting_crop': 17,
         'scenario_lulc_base_map_filename': 'inputs/mgds_lulc_base',
         'scenario_conversion_steps': number_of_steps,
