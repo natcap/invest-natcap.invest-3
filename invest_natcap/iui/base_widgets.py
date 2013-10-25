@@ -1724,6 +1724,7 @@ class TableHandler(Dropdown):
             attributes['options'] = []
 
         Dropdown.__init__(self, attributes)
+        self.loaded_state = None
         self.handler = None  # this should be set in an appropriate subclass.
         self.uri = ''
 
@@ -1737,6 +1738,27 @@ class TableHandler(Dropdown):
         field_names = self.handler.get_fieldnames(case='orig')
         for name in field_names:
             self.dropdown.addItem(name)
+
+        # see if the current state of the dropdown matches the saved state
+        if self.loaded_state != None:
+            # check that the URI matches
+            uri_matches = self.loaded_state['linked_uri'] == self.handler.uri
+
+            # check that the index and key at that index matches
+            key_at_index = str(self.dropdown.itemText(self.loaded_state['index']))
+            key_matches = key_at_index == self.loaded_state['key']
+
+            if uri_matches and key_matches:
+                self.dropdown.setCurrentIndex(self.loaded_state['index'])
+
+    def get_element_state(self):
+        return {'key': unicode(self.dropdown.currentText(), 'utf-8'),
+                'index': self.dropdown.currentIndex(),
+                'linked_uri': self.handler.uri}
+
+    def set_element_state(self, state):
+        self.loaded_state = state
+        self.dropdown.setCurrentIndex(state['index'])
 
     def setState(self, state, includeSelf=True, recursive=True):
         """Reimplemented from Dropdown.setState.  When state=False, the dropdown
