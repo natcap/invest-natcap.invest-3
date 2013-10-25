@@ -86,28 +86,10 @@ class ModelUI(base_widgets.ExecRoot):
             # Thrown if attributes['localDocURI'] is not present
             print 'Attribute localDocURI not found for this model; skipping.'
 
-        feedback_uri = 'mailto:richsharp@stanford.edu?subject=InVEST Issue'
+        feedback_uri = 'http://ncp-yamato.stanford.edu/natcapforums/'
         links.append('<a href=\"%s\">Report an issue</a>' % feedback_uri)
 
-        self.feedbackBody = "Please include the following information:\
-\n\n1) InVEST model you're having difficulty with\n2) Explicit error message or \
-behavior\n3) If possible, a screenshot of the state of your InVEST toolset when \
-you get the error.\n4)ArcGIS version and service pack number\n\n\
-Feel free to also contact us about requests for collaboration, suggestions for \
-improvement, or anything else you'd like to share."
         self.links.setText(' | '.join(links))
-        self.links.linkActivated.connect(self.contactPopup)
-
-    def contactPopup(self, uri):
-        if str(uri) == self.feedbackURI:
-            #open up a qdialog
-            self.feedbackDialog = QtGui.QMessageBox()
-            self.feedbackDialog.setWindowTitle('Report an issue')
-            self.feedbackDialog.setText("If you'd like to report a problem with\
-this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
-            self.feedbackDialog.show()
-
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl(uri))
 
     def queueOperations(self):
         modelArgs = self.assembleOutputDict()

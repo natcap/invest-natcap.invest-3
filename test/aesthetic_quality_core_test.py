@@ -228,24 +228,6 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'difference in columns: ' + str(col_diff)
         assert col_diff == 0, message
 
-    def cell_angles(self, cell_coords, viewpoint):
-        """Compute angles between cells and viewpoint where 0 angle is right of
-        viewpoint.
-            Inputs:
-                -cell_coords: coordinate tuple (rows, cols) as numpy.where()
-                from which to compute the angles
-                -viewpoint: tuple (row, col) indicating the position of the
-                observer. Each of row and col is an integer.
-                
-            Returns a sorted list of angles"""
-        rows, cols = cell_coords
-        # List the angles between each perimeter cell
-        two_pi = 2.0 * math.pi
-        r = np.array(range(rows.size))
-        p = (rows[r] - viewpoint[0], cols[r] - viewpoint[1])
-        angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
-        return angles
-
     def test_cell_angles(self):
         """Test the angles computed by angles_from_perimeter_cells agains the
         function cell_angles"""
@@ -255,7 +237,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         perimeter_cells = \
         aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
         # Compute angles associated to the perimeter cells
-        angles_fast = self.cell_angles(perimeter_cells, viewpoint)
+        angles_fast = aesthetic_quality_core.cell_angles(perimeter_cells, viewpoint)
         # Compute the same angles individually
         angles_naive = []
         for cell in zip(perimeter_cells[0], perimeter_cells[1]):
@@ -638,166 +620,11 @@ class TestAestheticQualityCore(unittest.TestCase):
         viewpoint_elevation = 1.75
         pixel_visibility = np.ones(array_shape) * 2
 
-        # 1- get perimeter cells
-        perimeter_cells = \
-        aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint)
-        # 1.1- remove perimeter cell if same coord as viewpoint
-        # 2- compute cell angles
-        angles = self.cell_angles(perimeter_cells, viewpoint)
-        angles = np.append(angles, 2.0 * math.pi)
-        print('angles', angles.size, angles)
-        # 3- compute information on raster cells
-        events = \
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
-        I = events[3]
-        J = events[4]
-        distances = (viewpoint[0] - I)**2 + (viewpoint[1] - J)**2
-        visibility = \
-        (DEM[(I, J)] - DEM[viewpoint[0], viewpoint[1]] - viewpoint_elevation) \
-        / distances
-        # 4- build event lists
-        add_cell_events = []
-        add_event_id = 0
-        add_events = events[0]
-        add_event_count = add_events.size
-        cell_center_events = []
-        center_event_id = 0
-        center_events = events[1]
-        center_event_count = center_events.size
-        remove_cell_events = []
-        remove_event_id = 0
-        remove_events = events[2]
-        remove_event_count = remove_events.size
-        # 5- Sort event lists
-        arg_min = np.argsort(events[0])
-        #print('min', events[0][arg_min])
-        arg_center = np.argsort(events[1])
-        #print('center', events[1][arg_center])
-        arg_max = np.argsort(events[2])
-        #print('max', events[2][arg_max])
-        
-        # Add the events to the 3 event lists
-        #print('index', self.find_angle_index(angles, 1.6))
-        #print('center', events[1][arg_center])
-        #print('center', arg_center)
-        # Add center angles to center_events_array
-        for a in range(1, len(angles)): 
-            #print('current angle', angles[a])
-            # Collect cell_center events
-            current_events = []
-            while (center_event_id < center_event_count) and \
-                (center_events[arg_center[center_event_id]] < angles[a]):
-                #print(events[1][arg_center[event_id]], '< current angle')
-                #print('center', arg_center[center_event_id], center_events[arg_center[center_event_id]])
-                current_events.append(arg_center[center_event_id])
-                arg_center[center_event_id] = 0
-                center_event_id += 1
-            cell_center_events.append(np.array(current_events))
-            # Collect add_cell events:
-            current_events = []
-            while (add_event_id < add_event_count) and \
-                (add_events[arg_min[add_event_id]] < angles[a]):
-                # The active cell list is initialized with those at angle 0.
-                # Make sure to remove them from the cell_addition events to
-                # avoid duplicates. Do not remove them from remove_cell events.
-                #print(events[0][arg_min[add_event_id]], '< current angle')
-                if center_events[arg_min[add_event_id]] > 0.:
-                    #print('add', arg_min[add_event_id],add_events[arg_min[add_event_id]])
-                    current_events.append(arg_min[add_event_id])
-                #else:
-                #    print('    found 0:', arg_min[add_event_id])
-                arg_min[add_event_id] = 0
-                add_event_id += 1
-            add_cell_events.append(np.array(current_events))
-            # Collect remove_cell events:
-            current_events = []
-            while (remove_event_id < remove_event_count) and \
-                (remove_events[arg_max[remove_event_id]] <= angles[a]):
-                #print(events[2][arg_max[remove_event_id]], '< current angle')
-                #print('remove', arg_max[remove_event_id], remove_events[arg_max[remove_event_id]])
-                current_events.append(arg_max[remove_event_id])
-                arg_max[remove_event_id] = 0
-                remove_event_id += 1
-            remove_cell_events.append(np.array(current_events))
-        #print('add_cell_events', add_cell_events)
+        pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
+        viewpoint, 1.75, 0.0, -1.0, 1.0)
 
-        # Create the binary search tree as depicted in Kreveld et al.
-        # "Variations on Sweep Algorithms"
-        # Updating active cells
-        active_cells = set()
-        active_line = {}
-        # 1- add cells at angle 0
-        for c in cell_center_events[0]:
-            #print('  pre-adding', c, events[1][c])
-            d = distances[c]
-            v = visibility[c]
-            active_line = \
-                aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
-            active_cells.add(d)
-            # The sweep line is current, now compute pixel visibility
-            aesthetic_quality_core.update_visible_pixels(active_line, \
-            events[3], events[4], pixel_visibility)
-            
-        # 2- loop through line sweep angles:
-        for a in range(len(angles) - 1):
-            #print('sweep angle', a, angles[a+1])
-        #   2.1- add cells
-            #print('  add cell events', add_cell_events[a])
-            if add_cell_events[a].size > 0:
-                for c in add_cell_events[a]:
-                    #print('  adding', c, events[0][c])
-                    d = distances[c]
-                    v = visibility[c]
-                    active_line = \
-                    aesthetic_quality_core.add_active_pixel(active_line, c, d, v)
-                    active_cells.add(d)
-        #   2.2- remove cells
-            #print('  remove cell events', remove_cell_events[a])
-            for c in remove_cell_events[a]:
-                #print('  removing', c, events[2][c])
-                d = distances[c]
-                v = visibility[c]
-                active_line = \
-                aesthetic_quality_core.remove_active_pixel(active_line, d)
-                active_cells.remove(d)
-            #print('  active cells', len(active_cells), active_cells)
-            #active_line_distance = [node for node in active_line if node != 'closest']
-            #print('  active line', len(active_line), active_line_distance)
-            # The sweep line is current, now compute pixel visibility
-            aesthetic_quality_core.update_visible_pixels(active_line, \
-            events[3], events[4], pixel_visibility)
-        #print('active cells', active_cells, len(active_cells) == 0)
-
-        print('DEM')
-        print(DEM)
+        print('input_array', DEM)
         print('pixel visibility', pixel_visibility)
 
-        # Sanity checks
-        print('---------------------------------')
-        print('add_cell events:')
-        for i in range(len(add_cell_events)):
-            add_cell_ids = add_cell_events[i]
-            if add_cell_ids.size > 0:
-                add_cell = add_events[add_cell_ids]
-                print('within bounds:', (add_cell >= angles[i]).all() and \
-                    (add_cell < angles[i+1]).all())
-        print('unprocessed add_cell ids', np.where(arg_min > 0)[0])
-        print('remove_cell events:')
-        for i in range(len(remove_cell_events)):
-            remove_cell_ids = remove_cell_events[i]
-            if remove_cell_ids.size > 0:
-                remove_cell = remove_events[remove_cell_ids]
-                print('within bounds:', (remove_cell >= angles[i]).all() and \
-                    (remove_cell <= angles[i+1]).all())
-        print('unprocessed remove_cell ids', np.where(arg_max > 0)[0])
-        print('cell_center events:')
-        for i in range(len(cell_center_events)):
-            cell_center_ids = cell_center_events[i]
-            if cell_center_ids.size > 0:
-                cell_centers = center_events[cell_center_ids]
-                print('within bounds:', (cell_centers >= angles[i]).all() and \
-                    (cell_centers < angles[i+1]).all())
-        print('unprocessed cell_center ids', np.where(arg_center > 0)[0])
-            
     def tare_down(self):
         pass

@@ -245,11 +245,13 @@ def analyze_composite_carbon_stock_change(args):
         output_table.write('\n')
         output_table.flush()
         
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
-            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'composite_lulc_80_20_%ss.tif' % percent)
+            base_tifname = (
+                os.path.splitext(os.path.basename(args['output_table_filename']))[0] + 
+                str(percent) + '.tif')
             lulc_out_ds = new_raster_from_base_uri(
-                args['scenario_lulc_base_map_filename'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+                args['scenario_lulc_base_map_filename'], base_tifname, 'GTiff', -1, gdal.GDT_Int32)
             lulc_band = lulc_out_ds.GetRasterBand(1)
             lulc_band.WriteArray(expanded_lulc_array)
             lulc_band = None
@@ -996,6 +998,8 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_composite_carbon_stock_change(args)
 
+    return
+
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
@@ -1012,6 +1016,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
+
 
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
@@ -1086,6 +1091,8 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
+
+    return 
 
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))

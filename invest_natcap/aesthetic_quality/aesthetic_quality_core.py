@@ -917,7 +917,7 @@ def remove_active_pixel(sweep_line, distance):
     return sweep_line
 
 
-def update_visible_pixels(active_pixels, I, J, pixel_visibility):
+def update_visible_pixels(active_pixels, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -934,7 +934,7 @@ def update_visible_pixels(active_pixels, I, J, pixel_visibility):
                 referenced by the key 'closest'.
                 -I: the array of pixel rows indexable by pixel['index']
                 -J: the array of pixel columns indexable by pixel['index']
-                -pixel_visibility: a python array the same size as the DEM
+                -visibility_map: a python array the same size as the DEM
                 with 1s for visible pixels and 0s otherwise. Viewpoint is
                 always visible.
             
@@ -959,7 +959,7 @@ def update_visible_pixels(active_pixels, I, J, pixel_visibility):
         index = pixel['index']
         i = I[index]
         j = J[index]
-        pixel_visibility[i, j] = visibility
+        visibility_map[i, j] = visibility
         pixel = pixel['next']
 
 def add_active_pixel(sweep_line, index, distance, visibility):
@@ -1024,9 +1024,27 @@ def get_perimeter_cells(array_shape, viewpoint):
     cols = np.roll(cols, viewpoint[0])
     return (rows, cols)
 
+def cell_angles(cell_coords, viewpoint):
+    """Compute angles between cells and viewpoint where 0 angle is right of
+    viewpoint.
+        Inputs:
+            -cell_coords: coordinate tuple (rows, cols) as numpy.where()
+            from which to compute the angles
+            -viewpoint: tuple (row, col) indicating the position of the
+            observer. Each of row and col is an integer.
+            
+        Returns a sorted list of angles"""
+    rows, cols = cell_coords
+    # List the angles between each perimeter cell
+    two_pi = 2.0 * math.pi
+    r = np.array(range(rows.size))
+    p = (rows[r] - viewpoint[0], cols[r] - viewpoint[1])
+    angles = (np.arctan2(-p[0], p[1]) + two_pi) % two_pi
+    return angles
+
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
-max_dist=-1., refraction_coeff=None):
-    """Viewshed computation function
+    max_dist=-1., refraction_coeff=None):
+    """URI wrapper for the viewshed computation function
         
         Inputs: 
             -input_uri: uri of the input elevation raster map
@@ -1038,15 +1056,142 @@ max_dist=-1., refraction_coeff=None):
                 every point on the raster
             -max_dist: maximum visibility radius. By default infinity (-1), 
                 not used yet
-            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet"""
+            -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
+            
+        Returns nothing"""
+    # Open the input URI and extract the numpy array
+    input_raster = gdal.Open(input_uri)
+    message = 'Cannot open file ' + input_raster
+    assert input_raster is not None, message
+    input_array = input_raster.GetRasterBand(1).ReadAsArray()
+    array_shape = DEM.shape
+    
+    # Compute the viewshed on it
+    output_array = compute_viewshed(input_array, coordinates, obs_elev, \
+    tgt_elev, max_dist, refraction_coeff)
+    
+    # Save the output in the output URI
+    output_raster = gdal.Open(output_uri, gdal.GA_Update)
+    message = 'Cannot open file ' + output_raster
+    assert output_raster is not None, message
+    output_raster.GetRasterBand(1).WriteArray(output_array)
+
+def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
+    refraction_coeff):
+    """Compute the viewshed for a single observer. 
+        Inputs: 
+            -DEM: a numpy array of terrain elevations
+            -for a detailed explanation of the rest of the parameters, 
+            see viewshed's docstring as they are passed as-is to this function
+        
+        Returns the visibility map for the DEM as a numpy array"""
+    visibility_map = np.ones_like(input_array)
+    array_shape = input_array.shape
+    # 1- get perimeter cells
+    perimeter_cells = \
+    get_perimeter_cells(array_shape, coordinates)
+    # 1.1- remove perimeter cell if same coord as viewpoint
+    # 2- compute cell angles
+    angles = cell_angles(perimeter_cells, coordinates)
+    angles = np.append(angles, 2.0 * math.pi)
+    print('angles', angles.size, angles)
+    # 3- compute information on raster cells
+    events = \
+    list_extreme_cell_angles(array_shape, coordinates)
+    I = events[3]
+    J = events[4]
+    distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
+    visibility = \
+    (input_array[(I, J)] - input_array[coordinates[0], \
+    coordinates[1]] - obs_elev) / distances
+    # 4- build event lists
     add_cell_events = []
-    delete_cell_events = []
+    add_event_id = 0
+    add_events = events[0]
+    add_event_count = add_events.size
     cell_center_events = []
+    center_event_id = 0
+    center_events = events[1]
+    center_event_count = center_events.size
+    remove_cell_events = []
+    remove_event_id = 0
+    remove_events = events[2]
+    remove_event_count = remove_events.size
+    # 5- Sort event lists
+    arg_min = np.argsort(events[0])
+    arg_center = np.argsort(events[1])
+    arg_max = np.argsort(events[2])
+    
+    # Add the events to the 3 event lists
+    # Add center angles to center_events_array
+    for a in range(1, len(angles)): 
+        # Collect cell_center events
+        current_events = []
+        while (center_event_id < center_event_count) and \
+            (center_events[arg_center[center_event_id]] < angles[a]):
+            current_events.append(arg_center[center_event_id])
+            arg_center[center_event_id] = 0
+            center_event_id += 1
+        cell_center_events.append(np.array(current_events))
+        # Collect add_cell events:
+        current_events = []
+        while (add_event_id < add_event_count) and \
+            (add_events[arg_min[add_event_id]] < angles[a]):
+            # The active cell list is initialized with those at angle 0.
+            # Make sure to remove them from the cell_addition events to
+            # avoid duplicates. Do not remove them from remove_cell events.
+            if center_events[arg_min[add_event_id]] > 0.:
+                current_events.append(arg_min[add_event_id])
+            arg_min[add_event_id] = 0
+            add_event_id += 1
+        add_cell_events.append(np.array(current_events))
+        # Collect remove_cell events:
+        current_events = []
+        while (remove_event_id < remove_event_count) and \
+            (remove_events[arg_max[remove_event_id]] <= angles[a]):
+            current_events.append(arg_max[remove_event_id])
+            arg_max[remove_event_id] = 0
+            remove_event_id += 1
+        remove_cell_events.append(np.array(current_events))
 
-    in_raster = gdal.Open(input_uri)
-    in_array = in_raster.GetRasterBand(1).ReadAsArray()
+    # Create the binary search tree as depicted in Kreveld et al.
+    # "Variations on Sweep Algorithms"
+    # Updating active cells
+    active_cells = set()
+    active_line = {}
+    # 1- add cells at angle 0
+    for c in cell_center_events[0]:
+        d = distances[c]
+        v = visibility[c]
+        active_line = \
+            add_active_pixel(active_line, c, d, v)
+        active_cells.add(d)
+        # The sweep line is current, now compute pixel visibility
+        update_visible_pixels(active_line, \
+        events[3], events[4], visibility_map)
+        
+    # 2- loop through line sweep angles:
+    for a in range(len(angles) - 1):
+    #   2.1- add cells
+        if add_cell_events[a].size > 0:
+            for c in add_cell_events[a]:
+                d = distances[c]
+                v = visibility[c]
+                active_line = \
+                add_active_pixel(active_line, c, d, v)
+                active_cells.add(d)
+    #   2.2- remove cells
+        for c in remove_cell_events[a]:
+            d = distances[c]
+            v = visibility[c]
+            active_line = \
+            remove_active_pixel(active_line, d)
+            active_cells.remove(d)
+        # The sweep line is current, now compute pixel visibility
+        update_visible_pixels(active_line, \
+        events[3], events[4], visibility_map)
 
-    extreme_angles = compute_extreme_angles()
+    return visibility_map
 
 def execute(args):
     """Entry point for aesthetic quality core computation.
