@@ -49,7 +49,7 @@ def execute(args):
     #carbon pools table
     carbon_uri = args["carbon_pools_uri"]
 
-    carbon_key_field = "ID"
+    carbon_key_field = "Id"
     carbon_veg_field = "Veg Type"
     carbon_above_field = "Above"
     carbon_below_field = "Below"

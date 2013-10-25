@@ -28,7 +28,7 @@ def get_transition_set_from_uri(dataset_uri_list):
 def execute(args):
     transition_matrix_uri = os.path.join(args["workspace_dir"], "transition.csv")
     values_matrix_uri = args["preprocessor_key_uri"]
-    values_matrix_id = "ID"
+    values_matrix_id = "Id"
     
     nodata = set([raster_utils.get_nodata_from_uri(uri) for uri in args["lulc"]])
 
@@ -85,7 +85,7 @@ def execute(args):
     original_values.sort()
     final_values.sort()
     transition_matrix = open(transition_matrix_uri, 'w')
-    transition_matrix.write("ID,Name,")
+    transition_matrix.write("Id,Name,")
     transition_matrix.write(",".join([str(value) for value in final_values]))
 
     labels_dict = {}
