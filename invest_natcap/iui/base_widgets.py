@@ -1596,7 +1596,7 @@ class Dropdown(LabeledElement):
 
         self.addElement(self.dropdown)
         self.addElement(QtGui.QWidget())
-       
+
     def setValue(self, index):
         if isinstance(index, str) or isinstance(index, unicode):
             index = self.dropdown.findText(index)
@@ -1624,7 +1624,11 @@ class Dropdown(LabeledElement):
                 return self.dropdown.currentIndex()
         else:
             return str(self.dropdown.currentText())
-    
+
+    def get_element_state(self):
+        # return the state of the dropdown, specifically the index.
+        return self.dropdown.currentIndex()
+
 class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
     """This class represents a checkbox for our UI interpreter.  It has the 
         ability to enable and disable other elements."""
