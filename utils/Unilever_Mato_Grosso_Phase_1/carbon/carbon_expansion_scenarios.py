@@ -1000,7 +1000,6 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
 
     return
 
-
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
