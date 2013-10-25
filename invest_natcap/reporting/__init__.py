@@ -215,6 +215,10 @@ def build_table(param_args):
     if param_args['sortable']:
         attr = {"class":"sortable"}
 
+    # If a checkbox column is wanted pass in the table dictionary
+    if 'checkbox' in param_args and param_args['checkbox']:
+        table_dict['checkbox'] = True
+    
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)

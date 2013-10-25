@@ -242,3 +242,65 @@ class TestReportingPackage(testing.GISTest):
 
         self.assertEqual(expected_result, result)
 
+    def test_generate_html_checkbox(self):
+        """Regression test for making a robust html page. Pass in a table
+            element, css style, javascript source, and enable checkbox column.
+            This table should be sortable with a checkbox column"""
+        
+        #raise SkipTest
+        
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_checkbox.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_checkbox.html')
+        css_uri = '../reporting_data/table_style.css'
+        jsc_uri = '../reporting_data/sorttable.js'
+        
+        sample_dict = {
+                    0: {'date':'9/13', 'price':'expensive', 'product':'chips'},
+                    1: {'date':'3/13', 'price':'cheap', 'product':'peanuts'},
+                    2: {'date':'5/12', 'price':'moderate', 'product':'mints'}
+                }
+        
+        columns = {
+            1 : {'name': 'date', 'editable':False},
+            2 : {'name': 'price', 'editable':False},
+            0 : {'name': 'product', 'editable':True}}
+        
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'ws_id',
+                        'data': sample_dict,
+                        'position': 1},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'position': 0,
+                        'text': 'Here is a sortable table!'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'position': 0,
+                        'src': css_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 1,
+                        'src': jsc_uri}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
