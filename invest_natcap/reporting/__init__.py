@@ -19,45 +19,81 @@ LOGGER = logging.getLogger('invest_natcap.reporting')
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
     
-        reporting_args[title]
-        reporting_args[elements] - a list of dictionaries that represent html
-            elements: {
-                        'type':'table',
-                        'section': 'body',
-                        'position':2,
-                        'sortable':True,
-                        'checkbox':True,
-                        'data_type':'shapefile'|'csv'|'dictionary',
-                        'data':URI | dict,
-                        'key':'key_field',
-                        'columns':{'col_id_1':{'name':'col_1,'editable':True},
-                                   'col_id_2':{'name':'col_2','editable':False},
-                                   ...},
-                        'total':{'row_name':'totals', 'columns':['col_name_1']}
-                        }
-                        {
-                        'type':'head',
-                        'section': 'head',
-                        'format':'script',
-                        'position':2,
-                        'src':'sorttable.js'
-                        },
-                        {
-                        'type':'head',
-                        'section': 'head',
-                        'format':'link',
-                        'position':1,
-                        'src':'table_style.css'
-                        },
-                        {
-                        'type':'text',
-                        'section': 'body',
-                        'text':'link',
-                        'position':4
-                        }
+        reporting_args[title] - a string for the title of the html page
+            (required)
+        
+        reporting_args[out_uri] - a URI to the output destination for the html
+            page (required)
 
-        reporting_args[out_uri]
-    """
+        reporting_args[elements] - a list of dictionaries that represent html
+            elements to be added to the html page (required). The 3 main
+            element types are 'table', 'head', and 'text'.
+            All elements share the following arguments:
+                'type' - a string that depicts the type of element being add.
+                    Currently 'table', 'head', and 'text defined (required)
+                
+                'section' - a string that depicts whether the element belongs
+                    in the body or head of the html page. 
+                    Values: 'body' | 'head' (required)
+                        
+                'position' - an integer that depicts where the element should
+                    be placed on the html page. Elements will be written in
+                    ascending order with sections 'body' and 'head' separately
+                    defined (required)
+            
+            Table element dictionary has at least the following additional arguments: 
+                'sortable' - a boolean value for whether the tables columns
+                    should be sortable (required)
+
+                'checkbox' - a boolean value for whether there should be a
+                    checkbox column. If True a 'selected total' row will be added
+                    to the bottom of the table that will show the total of the
+                    columns selected (optional)
+
+                'data_type' - one of the following string values: 
+                    'shapefile'|'csv'|'dictionary'. Depicts the type of data
+                    structure to build the table from (required)
+                    
+                'data' - either a dictionary if 'data_type' is 'dictionary' or
+                    a URI to a CSV table or shapefile if 'data_type' is
+                    'shapefile' or 'csv' (required). If a dictionary it should
+                    be formatted as follows:
+                    {row_id_0: {col_name_1: value, col_name_2: value, ...},
+                     row_id_1: {col_name_1: value, col_name_2: value, ...},
+                     ...
+                    }
+                
+                'key' - a string that defines which column or field should be
+                    used as the keys for extracting data from a shapefile or csv
+                    table'key_field' (required for 'data_type' = 'shapefile' | 'csv')
+
+                'columns'- a dictionary that defines the column structure for
+                    the table (required). The dictionary has unique numeric
+                    keys that determine the left to right order of the columns.
+                    Each key has a dictionary value with the following
+                    arguments:
+                        'name' - a string for the column name (required)
+                        'total' - a boolean for whether the column should be
+                            totaled (required)
+                
+                'total'- a boolean value for whether there should be a constant
+                    total row at the bottom of the table that sums the column
+                    values (optional)
+            
+            Head element dictionary has at least the following additional arguments: 
+                'format' - a string representing the type of head element being
+                    added. Currently 'script' (javascript) and 'link' (css
+                    style) accepted (required)
+
+                'src'- a URI to the location of the external file for either
+                    the 'script' or the 'link' (required)
+            
+            Text element dictionary has at least the following additional arguments: 
+                'text'- a string to add as a paragraph element in the html page
+                    (required)
+
+        returns - nothing"""
+
     html_obj = {'head':{}, 'body':{}}
     
     report = {
@@ -153,18 +189,13 @@ def build_table(param_args):
                 the columns (representing how the order they should be
                 displayed) and the values are dictionaries that have the
                 following attributes represented by key-value pairs (required): 
-                'name' - a string for the name of the column
-                'editable' - a boolean that determines whether the column
-                    entries can be edited
-                    'columns':{'col_id_1':{'name':'product','editable':True},
-                               'col_id_2':{'name':'price','editable':False},
-                               ...},
+                'name' - a string for the name of the column (required)
+                'total' - a boolean that determines whether the column
+                    entries should be summed in a total row (required)
 
-            param_args['totals'] - a dictionary that if present holds information
-                for a totals row. The dictionary has two keys, 'row_name' and
-                'columns'. 'columns' points to a list of the column names to
-                total (required)
-                        'total':{'row_name':'totals', 'columns':['col_name_1']}
+            param_args['total'] - a boolean value where if True a constant
+                total row will be placed at the bottom of the table that sums the
+                columns (required)
 
         returns - a string that represents an html table
     """
@@ -205,8 +236,8 @@ def build_table(param_args):
     table_dict['rows'] = data_dict
     
     # If a totals row is present, add it to the final dictionary
-    if 'totals' in param_args:
-        table_dict['totals'] = param_args['totals']
+    if 'total' in param_args:
+        table_dict['total'] = param_args['total']
     
     LOGGER.debug('Final Table Dictionary: %s', table_dict)
     
@@ -245,10 +276,10 @@ def add_head_element(param_args):
         param_args - a dictionary that holds the following arguments:
 
             param_args['format'] - a string representing the type of element to
-                be added. Currently : 'script', 'link'
+                be added. Currently : 'script', 'link' (required)
             
             param_args['src'] - a string URI path for the external source of the
-                element.
+                element (required)
 
         returns - a string representation of the html head element"""
 
