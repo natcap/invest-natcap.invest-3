@@ -1,3 +1,4 @@
+import os
 import unittest
 import logging
 import math
@@ -625,6 +626,8 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         print('input_array', DEM)
         print('pixel visibility', pixel_visibility)
+
+        print('current working dir', os.getcwd())
 
     def tare_down(self):
         pass
