@@ -629,8 +629,16 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         print('current working dir', os.getcwd())
         args = {}
-        args['working_dir'] = 'invest-data/test/test_out/aesthetic_quality'
-        
+        args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
+        args['structure_uri'] = \
+        'invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp'
+        args['dem_uri'] = '../../Base_data/Marine/DEMs/claybark_dem/hdr.adf'
+        args['a'] = 
+        'invest_data/test/data/aesthetic_quality_test_data/'
+        args['b'] = 
+        'invest_data/test/data/aesthetic_quality_test_data/'
+        args['c'] = 
+        'invest_data/test/data/aesthetic_quality_test_data/'
 
     def tare_down(self):
         pass

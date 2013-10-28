@@ -32,7 +32,7 @@
                                     "args_id" : "structure_uri",
                                     "type": "file",
                                     "label": "Structures",
-                                    "defaultValue": "",
+                                    "defaultValue": "test/invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": true
                                 },
