@@ -628,6 +628,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('pixel visibility', pixel_visibility)
 
         print('current working dir', os.getcwd())
+        args = {}
+        args['working_dir'] = 'invest-data/test/test_out/aesthetic_quality'
+        
 
     def tare_down(self):
         pass
