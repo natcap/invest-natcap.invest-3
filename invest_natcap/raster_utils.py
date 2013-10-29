@@ -1447,7 +1447,7 @@ def get_rat_as_dictionary_uri(dataset_uri):
             second is the row number"""
 
     ds = gdal.Open(dataset_uri)
-    get_rat_as_dictionary(ds)
+    return get_rat_as_dictionary(ds)
     
     
 def get_rat_as_dictionary(dataset):
