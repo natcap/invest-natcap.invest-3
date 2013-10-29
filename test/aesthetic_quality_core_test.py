@@ -630,15 +630,17 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
+        args['aoi_uri'] = \
+        'invest-data/AestheticQuality/Input/AOI_WCVI.shp'
         args['structure_uri'] = \
-        'invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp'
+        'invest-data/AestheticQuality/Input/AquaWEM_points.shp'
         args['dem_uri'] = '../Base_Data/Marine/DEMs/claybark_dem/hdr.adf'
-        args['aoi_uri'] = 
-        'invest_data/test/data/aesthetic_quality_test_data/AOI_WCVI.shp'
-        args['pop_uri'] = 
+        args['refraction'] = 0.13
+        args['cell_size'] = 500.
+        args['pop_uri'] = \
         '../Base_Data/Marine/Population/global_pop/hdr.adf'
-        args['overlap_uri'] = 
-        'invest_data/test/data/aesthetic_quality_test_data/AquaWEM_single_point.shp'
+        args['overlap_uri'] = \
+        'invest_data/AestheticQuality/Input/BC_parks.shp'
 
     def tare_down(self):
         pass

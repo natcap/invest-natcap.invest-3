@@ -23,7 +23,7 @@
                                     "args_id" : "aoi_uri",
                                     "type": "file",
                                     "label": "Area of Interest",
-                                    "defaultValue": "invest-data/AestheticQuality/Input/AOI_WCVI.shp",
+                                    "defaultValue": "test/invest-data/AestheticQuality/Input/AOI_WCVI.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": true
                                 },
@@ -32,7 +32,7 @@
                                     "args_id" : "structure_uri",
                                     "type": "file",
                                     "label": "Structures",
-                                    "defaultValue": "invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp",
+                                    "defaultValue": "test/invest-data/AestheticQuality/Input/AquaWEM_points.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": true
                                 },
@@ -79,7 +79,7 @@
                                     "args_id" : "overlap_uri",
                                     "type": "file",
                                     "label": "Overlap Analysis Features",
-                                    "defaultValue": "invest-data/test/data/aesthetic_quality_test_data/AquaWEM_single_point.shp",
+                                    "defaultValue": "test/invest-data/AestheticQuality/Input/BC_parks.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": false
                                 }
