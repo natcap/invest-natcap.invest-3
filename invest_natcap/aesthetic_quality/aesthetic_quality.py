@@ -157,8 +157,11 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     for f in range(feature_count):
         feature = layer.GetFeature(f)
         geometry = feature.GetGeometryRef()
-        geometry_type = geometry.getGeometryType()
-        print('feature', f, 'geometry type', geometry_type)
+        assert geometry is not None
+        geometry_type = geometry.GetGeometryType()
+        print('feature', f, 'geometry type', geometry_type, 'point', ogr.wkbPoint)
+        #geometry_ref = geometry.GetGeometryRef(f)
+        #print('feature', f, 'geometry ref', geometry_ref)
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
