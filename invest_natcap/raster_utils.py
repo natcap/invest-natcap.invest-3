@@ -1406,6 +1406,16 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
     contour_band = contour_dataset.GetRasterBand(1)
     contour_band.WriteArray(contour_array)
 
+def unique_raster_values_uri(dataset_uri):
+    """Returns a list of the unique integer values on the given dataset
+
+        dataset_uri - a uri to a gdal dataset of some integer type
+
+        returns a list of dataset's unique non-nodata values"""
+
+    return unique_raster_values(gdal.Open(dataset_uri))
+    
+    
 def unique_raster_values(dataset):
     """Returns a list of the unique integer values on the given dataset
 
@@ -1426,6 +1436,20 @@ def unique_raster_values(dataset):
         unique_list.remove(nodata)
     return unique_list
 
+
+def get_rat_as_dictionary_uri(dataset_uri):
+    """Returns the RAT of the first band of dataset as a dictionary.
+
+        dataset - a GDAL dataset that has a RAT associated with the first
+            band
+
+        returns a 2D dictionary where the first key is the column name and
+            second is the row number"""
+
+    ds = gdal.Open(dataset_uri)
+    return get_rat_as_dictionary(ds)
+    
+    
 def get_rat_as_dictionary(dataset):
     """Returns the RAT of the first band of dataset as a dictionary.
 
