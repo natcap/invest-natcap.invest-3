@@ -126,7 +126,7 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, viewshed_uri, cell_size, aoi_dem_uri):
+def viewshed(dem_uri, viewshed_uri, structure_uri, curvature_correction, refraction, cell_size, aoi_dem_uri):
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
     dst_filename = viewshed_uri
@@ -263,11 +263,10 @@ def execute(args):
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
     viewshed(aq_args['dem_uri'],
+             viewshed_uri,
              aq_args['structure_uri'],
-             z_factor,
              curvature_correction,
              aq_args['refraction'],
-             viewshed_uri,
              aq_args['cell_size'],
              aoi_dem_uri)
 

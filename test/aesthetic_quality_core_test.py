@@ -642,5 +642,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         args['overlap_uri'] = \
         'invest_data/AestheticQuality/Input/BC_parks.shp'
 
+        # Create the inputs
+        input_uri = ''
+        output_uri = ''
+        coordinates = (0.0, 0.0)
+        #aesthetic_quality_core.viewshed(input_uri, output_uri, coordinates, \
+        #obs_elev = 1.75, tgt_elev = 0.0, max_dist = -1., \
+        #refraction_coeff = None)
+
     def tare_down(self):
         pass
