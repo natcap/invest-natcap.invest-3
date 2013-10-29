@@ -2498,12 +2498,8 @@ class ExecRoot(Root):
         self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
 
-        if 'resources' not in self.attributes:
-            self.attributes['resources'] = ''
-        self.resource_manager = fileio.ResourceManager(
-            self.attributes['resources'])
         self.main_window.setWindowIcon(QtGui.QIcon(
-            self.resource_manager.icon('application')))
+            os.path.join(IUI_DIR, 'natcap_logo.png')))
 
         # Check to see if we should load the last run.  Defaults to false if the
         # user has not specified.

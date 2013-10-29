@@ -628,6 +628,17 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('pixel visibility', pixel_visibility)
 
         print('current working dir', os.getcwd())
+        args = {}
+        args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
+        args['structure_uri'] = \
+        'invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp'
+        args['dem_uri'] = '../Base_Data/Marine/DEMs/claybark_dem/hdr.adf'
+        args['aoi_uri'] = 
+        'invest_data/test/data/aesthetic_quality_test_data/AOI_WCVI.shp'
+        args['pop_uri'] = 
+        '../Base_Data/Marine/Population/global_pop/hdr.adf'
+        args['overlap_uri'] = 
+        'invest_data/test/data/aesthetic_quality_test_data/AquaWEM_single_point.shp'
 
     def tare_down(self):
         pass

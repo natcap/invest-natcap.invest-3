@@ -25,7 +25,7 @@
                                                 "args_id": "lulc_uri_1",
                                                 "type": "file",
                                                 "label": "LULC Year 1",
-                                                "defaultValue": "../BlueCarbon/input/GBJC_2004_mean.tif",
+                                                "defaultValue": "../BlueCarbon/input/GBJC_2004_mean_Resample.tif",
                                                 "helpText": "The land use land cover raster for time 1. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
@@ -46,7 +46,7 @@
                                                 "args_id": "lulc_uri_2",
                                                 "type": "file",
                                                 "label": "LULC Year 2",
-                                                "defaultValue": "../BlueCarbon/input/GBJC_2050_mean.tif",
+                                                "defaultValue": "../BlueCarbon/input/GBJC_2050_mean_Resample.tif",
                                                 "helpText": "The land use land cover raster for time 2. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
@@ -67,7 +67,7 @@
                                                 "args_id": "lulc_uri_3",
                                                 "type": "file",
                                                 "label": "LULC Year 3",
-                                                "defaultValue": "",
+                                                "defaultValue": "../BlueCarbon/input/GBJC_2100_mean_Resample.tif",
                                                 "helpText": "",
                                                 "enabledBy": "lulc_uri_2",
                                                 "required": false
@@ -80,7 +80,7 @@
                                                 "validateAs": {"type": "number"},
                                                 "validText": "[1-9][0-9]*",
                                                 "dataType": "int",
-                                                "defaultValue": "",
+                                                "defaultValue": "2100",
                                                 "helpText": "",
                                                 "enabledBy": "lulc_uri_3",
                                                 "required": true
@@ -131,14 +131,23 @@
                                                 "helpText": "",
                                                 "enabledBy": "lulc_uri_5",
                                                 "required": true
-                                            },                                                                
+                                            },
+                                            {
+                                                "id": "accumulation_csv_uri",
+                                                "args_id": "accumulation_csv_uri",
+                                                "type": "file",
+                                                "label": "Accumulation CSV",
+                                                "defaultValue": "../BlueCarbon/input/accumulation.csv",
+                                                "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "required": true
+                                            },                                            
                                             {
                                                 "id": "disturbance_csv_uri",
                                                 "args_id": "disturbance_csv_uri",
                                                 "type": "file",
                                                 "label": "Disturbance CSV",
                                                 "defaultValue": "../BlueCarbon/input/disturbance.csv",
-                                                "helpText": "Disturbance table that contains values for losses, depths, decays for vegetation types. <p>For more information see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
                                             {
@@ -167,7 +176,7 @@
                                                 "validateAs": {"type": "number"},
                                                 "validText": "[1-9][0-9]*",
                                                 "dataType": "int",
-                                                "defaultValue": "",
+                                                "defaultValue": "2150",
                                                 "helpText": "",
                                                 "required": true
                                             }                             
