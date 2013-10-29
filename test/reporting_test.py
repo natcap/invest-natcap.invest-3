@@ -318,7 +318,7 @@ class TestReportingPackage(testing.GISTest):
         css_uri = '../reporting_data/table_style.css'
         jsc_uri = '../reporting_data/sorttable.js'
         jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
-        jsc_fun_uri = '../reporting_data/total_fuctions.js'
+        jsc_fun_uri = '../reporting_data/total_functions.js'
         
         sample_dict = {
                     0: {'date':'13', 'price':'1', 'product':'chips'},
@@ -327,9 +327,9 @@ class TestReportingPackage(testing.GISTest):
                 }
         
         columns = {
-            1 : {'name': 'date', 'editable':False},
-            2 : {'name': 'price', 'editable':False},
-            0 : {'name': 'product', 'editable':True}}
+            1 : {'name': 'date', 'total':True},
+            2 : {'name': 'price', 'total':True},
+            0 : {'name': 'product', 'total':False}}
         
         report_args = {
                 'title': 'Sortable Table',
