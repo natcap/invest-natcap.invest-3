@@ -57,11 +57,10 @@ def execute(args):
     carbon_litter_field = "Litter"
     carbon_depth_field = "Soil Depth"
 
-
     #transition matrix
     transition_matrix_uri = args["transition_matrix_uri"]
 
-    transition_key_field = "ID"
+    transition_key_field = "Id"
 
     #disturbance table
     disturbance_uri = args["disturbance_csv_uri"]
@@ -102,9 +101,13 @@ def execute(args):
     carbon_name = "%i_stock_total.tif"
 
     #carbon accumulation file names
+    accumulation_uri = args["accumulation_csv_uri"]
+    accumulation_key_field = "veg type"
+    
     acc_name = "%i_rate_accumulation.tif"
     soil_acc_name = "%i_soil_accumulation.tif"
     predisturbance_name = "%i_predisturbance.tif"
+    acc_mask_name = "%i_acc_mask.tif"
 
     veg_mask_name = "%i_mask_%s.tif"
     residual_name = "%i_residual_soil.tif"
@@ -122,6 +125,7 @@ def execute(args):
 
     ##process inputs
     #load tables from files
+    accumulation = raster_utils.get_lookup_from_csv(accumulation_uri, accumulation_key_field)
     disturbance = raster_utils.get_lookup_from_csv(disturbance_uri, disturbance_key_field)
     transition = raster_utils.get_lookup_from_csv(transition_matrix_uri, transition_key_field)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_key_field)
@@ -132,10 +136,9 @@ def execute(args):
     soil_dict = dict([(k, carbon[k][carbon_soil_field]) for k in carbon])
     litter_dict = dict([(k, carbon[k][carbon_litter_field]) for k in carbon])
     depth_dict = dict([(k, carbon[k][carbon_depth_field]) for k in carbon])
-    acc_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_acc_field]) for k in carbon])
-    biomass_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_biomass_half_life_field]) for k in carbon])
-    soil_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_soil_half_life_field]) for k in carbon])
-
+#    acc_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_acc_field]) for k in carbon])
+##    biomass_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_biomass_half_life_field]) for k in carbon])
+##    soil_half_dict = dict([(k, disturbance[carbon[k][carbon_veg_field]][disturbance_soil_half_life_field]) for k in carbon])
 
     #validating data
     nodata = set([raster_utils.get_nodata_from_uri(lulc_dict[k]) for k in lulc_dict])
@@ -162,24 +165,24 @@ def execute(args):
     for veg_type in disturbance:
         veg_dict[veg_type] = dict([(k, carbon[k][carbon_veg_field] == veg_type) for k in carbon])    
 
-    #reassign nodata values in dictionary to raster nodata values
-    for k in biomass_half_dict:
-        if (type(biomass_half_dict[k]) == str):
-            if (biomass_half_dict[k].lower() == "n/a"):
-                biomass_half_dict[k] = nodata
-            else:
-                msg = "Invalid biomass half life value."
-                LOGGER.error(msg)
-                raise ValueError, msg
-
-    for k in soil_half_dict:
-        if  (type(soil_half_dict[k]) == str):
-            if (soil_half_dict[k].lower() == "n/a"):
-                soil_half_dict[k] = nodata
-            else:
-                msg = "Invalid soil hald life value."
-                LOGGER.error(msg)
-                raise ValueError, msg
+##    #reassign nodata values in dictionary to raster nodata values
+##    for k in biomass_half_dict:
+##        if (type(biomass_half_dict[k]) == str):
+##            if (biomass_half_dict[k].lower() == "n/a"):
+##                biomass_half_dict[k] = nodata
+##            else:
+##                msg = "Invalid biomass half life value."
+##                LOGGER.error(msg)
+##                raise ValueError, msg
+##
+##    for k in soil_half_dict:
+##        if  (type(soil_half_dict[k]) == str):
+##            if (soil_half_dict[k].lower() == "n/a"):
+##                soil_half_dict[k] = nodata
+##            else:
+##                msg = "Invalid soil hald life value."
+##                LOGGER.error(msg)
+##                raise ValueError, msg
 
 
     LOGGER.info("Vegetation types: %s", ", ".join([disturbance[k][disturbance_veg_name] for k in disturbance]))
@@ -301,13 +304,13 @@ def execute(args):
                                     cell_size,
                                     "union")    
 
-    LOGGER.info("Creating accumulation rate raster for %i.", lulc_base_year)
-    raster_utils.reclassify_dataset_uri(lulc_base_uri,
-                               acc_dict,
-                               lulc_base_acc_uri,
-                               gdal_type,
-                               nodata,
-                               exception_flag="values_required")
+##    LOGGER.info("Creating accumulation rate raster for %i.", lulc_base_year)
+##    raster_utils.reclassify_dataset_uri(lulc_base_uri,
+##                               acc_dict,
+##                               lulc_base_acc_uri,
+##                               gdal_type,
+##                               nodata,
+##                               exception_flag="values_required")
 
     #generate list of snapshot years
     snapshots = [args["analysis_year"]]
@@ -316,6 +319,17 @@ def execute(args):
             snapshots.extend(range(args["start"],args["analysis_year"]+1,args["step"]))
         else:
             snapshots.extend(range(args["start"],args["stop"]+1,args["step"]))
+
+    def accumulation_mask_op(lulc_base, lulc_transition):
+        if nodata in [lulc_base, lulc_transition]:
+            return 0
+        else:
+            transition_value = transition[int(lulc_base)][str(int(lulc_transition))]
+            if transition_value in accumulation[0]:
+                return 1
+            else:
+                return 0
+            
 
     analysis_years = list(set(lulc_years+snapshots))
     analysis_years.sort()
@@ -328,11 +342,6 @@ def execute(args):
                     return nodata
                 return ((0.5 ** (t / biomass_half)) * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
 
-            def accumulation_op(accumulation):
-                if nodata in [accumulation]:
-                    return nodata
-                return accumulation * t
-            
             lulc_transition_uri = lulc_dict[lulc_transition_year]
 
             lulc_base_carbon_accumulation_uri = os.path.join(workspace_dir, soil_acc_name % lulc_base_year)
@@ -348,15 +357,22 @@ def execute(args):
             lulc_base_soil_half_life_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
             lulc_base_time_uri = os.path.join(workspace_dir, time_name % lulc_base_year)
 
-            #calculate accumulation
-            LOGGER.debug("Calculating accumulated soil carbon before disturbance in %i.", lulc_transition_year)
-            raster_utils.vectorize_datasets([lulc_base_acc_uri],
-                                            accumulation_op,
-                                            lulc_base_carbon_accumulation_uri,
+            lulc_base_acc_mask_uri = os.path.join(workspace_dir, acc_mask_name % lulc_base_year)
+
+            #create accumulation and disturbance masks
+            LOGGER.debug("Creating accumulation mask.")
+            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                            accumulation_mask_op,
+                                            lulc_base_acc_mask_uri,
                                             gdal_type,
                                             nodata,
                                             cell_size,
                                             "union")
+                                            
+            return
+                                            
+            LOGGER.debug("Creating disturbance mask.")
+
 
             LOGGER.debug("Calculating total soil carbon before disturbance in %i.", lulc_transition_year)
             raster_utils.vectorize_datasets([lulc_base_soil_uri, lulc_base_carbon_accumulation_uri],
@@ -541,13 +557,13 @@ def execute(args):
                                             cell_size,
                                             "union")
 
-            LOGGER.info("Creating accumulation rate raster for %i.", lulc_base_year)
-            raster_utils.reclassify_dataset_uri(lulc_base_uri,
-                                       acc_dict,
-                                       lulc_base_acc_uri,
-                                       gdal_type,
-                                       nodata,
-                                       exception_flag="values_required")
+##            LOGGER.info("Creating accumulation rate raster for %i.", lulc_base_year)
+##            raster_utils.reclassify_dataset_uri(lulc_base_uri,
+##                                       acc_dict,
+##                                       lulc_base_acc_uri,
+##                                       gdal_type,
+##                                       nodata,
+##                                       exception_flag="values_required")
                         
 ##        else:
 ##            LOGGER.debug("Snapshot year %i.", lulc_transition_year)
