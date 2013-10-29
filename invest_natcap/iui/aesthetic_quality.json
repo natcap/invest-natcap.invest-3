@@ -23,7 +23,7 @@
                                     "args_id" : "aoi_uri",
                                     "type": "file",
                                     "label": "Area of Interest",
-                                    "defaultValue": "",
+                                    "defaultValue": "invest-data/AestheticQuality/Input/AOI_WCVI.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": true
                                 },
@@ -32,7 +32,7 @@
                                     "args_id" : "structure_uri",
                                     "type": "file",
                                     "label": "Structures",
-                                    "defaultValue": "test/invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp",
+                                    "defaultValue": "invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": true
                                 },
@@ -41,7 +41,7 @@
                                     "args_id" : "dem_uri",
                                     "type": "file",
                                     "label": "Digital Elevation Model",
-                                    "defaultValue": "",
+                                    "defaultValue": "../Base_Data/Marine/DEMs/claybark_dem/hdr.adf",
                                     "validateAs": {"type": "GDAL"},
                                     "required": true
                                 },                                
@@ -70,7 +70,7 @@
                                     "args_id" : "pop_uri",
                                     "type": "file",
                                     "label": "Population Raster",
-                                    "defaultValue": "",
+                                    "defaultValue": "../Base_Data/Marine/Population/global_pop/hdr.adf",
                                     "validateAs": {"type": "GDAL"},
                                     "required": true
                                 },
@@ -79,7 +79,7 @@
                                     "args_id" : "overlap_uri",
                                     "type": "file",
                                     "label": "Overlap Analysis Features",
-                                    "defaultValue": "",
+                                    "defaultValue": "invest-data/test/data/aesthetic_quality_test_data/AquaWEM_single_point.shp",
                                     "validateAs": {"type": "OGR"},
                                     "required": false
                                 }
