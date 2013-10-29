@@ -1407,7 +1407,7 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
     contour_band.WriteArray(contour_array)
 
 def unique_raster_values_uri(dataset_uri):
-"""Returns a list of the unique integer values on the given dataset
+    """Returns a list of the unique integer values on the given dataset
 
         dataset_uri - a uri to a gdal dataset of some integer type
 
