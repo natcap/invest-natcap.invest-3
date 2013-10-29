@@ -126,10 +126,17 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(dem_uri, viewshed_uri, structure_uri, curvature_correction, refraction, cell_size, aoi_dem_uri):
+def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
+    # default parameter values that are not passed to this function but that
+    # aesthetic_quality_core.viewshed needs
+    obs_elev = 1.75 # Observator's elevation in meters
+    tgt_elev = 0.0  # Extra elevation applied to all the DEM
+    max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
+    refr_coeff = 0.13 # Refractivity coefficient
+
     src_filename = \
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
-    dst_filename = viewshed_uri
+    dst_filename = out_viewshed_uri
 
     src_ds = gdal.Open( src_filename )
     driver = gdal.GetDriverByName("GTiff")
@@ -266,9 +273,7 @@ def execute(args):
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,
-             aq_args['refraction'],
-             aq_args['cell_size'],
-             aoi_dem_uri)
+             aq_args['refraction'])
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed
