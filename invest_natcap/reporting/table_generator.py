@@ -53,13 +53,15 @@ def generate_table(table_dict, attributes=None):
     if attributes != None:
         attr_keys = attributes.keys()
         attr_keys.sort()
-        table_string = '<table'
+        table_string = '<table id=my_table '
         for attr in attr_keys:
             table_string = '%s %s=%s' % (table_string, attr, attributes[attr])
 
         table_string = table_string + '>'
     else:
-        table_string = '<table>'
+        table_string = '<table id=my_table>'
+
+    footer_string = ''
 
     # If checkbox column is wanted set it up
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
@@ -69,10 +71,12 @@ def generate_table(table_dict, attributes=None):
         rows_copy = table_dict['rows'].copy()
         # Get the updated column and row dictionaries
         table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
+        add_checkbox_total = True
     else:
         # The column and row dictionaries need to update so get the originals
         table_cols = table_dict['cols']
         table_rows = table_dict['rows']
+        add_checkbox_total = False
 
     # Get the column headers
     col_headers = get_column_headers(table_cols)
@@ -88,10 +92,18 @@ def generate_table(table_dict, attributes=None):
 
     # Get the row data as 2D list
     row_data = get_row_data(table_rows, col_headers)
-   
+  
+    if add_checkbox_total:
+        footer_string += add_totals_row(
+                col_headers, 'Selected Total', 'checkTotal', 'checkTot', True)
+
     # Add any total rows as 'tfoot' elements in the table
-    if 'total' in table_dict and table['total']:
-        table_string += add_totals_row(col_headers)
+    if 'total' in table_dict and table_dict['total']:
+        footer_string += add_totals_row(
+                col_headers, 'Total', 'totalColumn', 'totalCol', False)
+    
+    if not footer_string == '':
+        table_string += '<tfoot>%s</tfoot>' % footer_string
 
     # Add the start tag for the table body
     table_string = table_string + '<tbody>'
@@ -99,9 +111,16 @@ def generate_table(table_dict, attributes=None):
     # For each data row add a row in the html table and fill in the data
     for row in row_data:
         table_string = table_string + '<tr>'
+        class_attr = -1
         for row_data in row:
-            # Add row data
-            table_string = table_string + '<td>%s</td>' % row_data
+            if class_attr >= 0:
+                # Add row data
+                table_string = table_string + '<td class=rowDataSd>%s</td>' % row_data
+            else:
+                table_string = table_string + '<td>%s</td>' % row_data
+
+            class_attr += 1
+
         table_string = table_string + '</tr>'
 
     # Add the closing tag for the table body and table
@@ -109,7 +128,9 @@ def generate_table(table_dict, attributes=None):
 
     return table_string
 
-def add_totals_row(col_headers):
+    return html_str
+
+def add_totals_row(col_headers, title, row_class, data_class, checkbox=False):
     """Add a totals row into the rows dictionary
         
         col_headers - a list of the column headers in order
@@ -117,15 +138,19 @@ def add_totals_row(col_headers):
         return - a string representing a 'tfoot' element
     """
     
-    html_str = '<tfoot><tr><td>Total</td>'
+    html_str = '<tr class=%s><td>%s</td>' % (row_class, title)
+    data_index = 1
 
-    for col_spot in range(len(col_headers) - 1):
-        html_str += '<td></td>'
+    if checkbox:
+        html_str += '<td>--</td>'
+        data_index = 2
 
-    html_str += '</tr></tfoot>'
+    for col_spot in range(len(col_headers) - data_index):
+        html_str += '<td class=%s>--</td>' % data_class
+
+    html_str += '</tr>'
 
     return html_str
-
 
 def add_checkbox_column(col_dict, row_dict):
     """Insert a new column into the columns dictionary so that it is the second
