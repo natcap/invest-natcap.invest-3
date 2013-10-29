@@ -146,6 +146,20 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     dst_ds = None
     src_ds = None
 
+    # The model extracts each point from the shapefile
+    point_list = []
+    shapefile = ogr.Open(in_structure_uri)
+    assert shapefile is not None
+    layer = shapefile.GetLayer(0)
+    assert layer is not None
+    feature_count = layer.GetFeatureCount()
+    print('feature count', feature_count)
+    for f in range(feature_count):
+        feature = layer.GetFeature(f)
+        geometry = feature.GetGeometryRef()
+        geometry_type = geometry.getGeometryType()
+        print('feature', f, 'geometry type', geometry_type)
+
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
     layer = shapefile.GetLayer()
