@@ -22,7 +22,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -70,7 +70,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
 
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -114,7 +114,7 @@ class TestReportingPackage(testing.GISTest):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -159,7 +159,7 @@ class TestReportingPackage(testing.GISTest):
             element, css style, and javascript source. This table should be
             sortable"""
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -218,7 +218,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_link(self):
         """Unit test for adding link head elements to html file"""
-        #raise SkipTest
+        raise SkipTest
        
         args = {'format':'link', 'src':'example_style.css'}
 
@@ -231,7 +231,7 @@ class TestReportingPackage(testing.GISTest):
 
     def test_add_head_element_script(self):
         """Unit test for adding script head elements to html file"""
-        #raise SkipTest
+        raise SkipTest
 
         args = {'format':'script', 'src':'example_script.js'}
 
@@ -247,7 +247,7 @@ class TestReportingPackage(testing.GISTest):
             element, css style, javascript source, and enable checkbox column.
             This table should be sortable with a checkbox column"""
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
@@ -298,6 +298,82 @@ class TestReportingPackage(testing.GISTest):
                         'format': 'script',
                         'position': 1,
                         'src': jsc_uri}
+                    ],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+    
+    def test_generate_html_javascript(self):
+        """Regression test for an external javascript file"""
+        
+        #raise SkipTest
+        
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_javascript.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_javascript.html')
+        css_uri = '../reporting_data/table_style.css'
+        jsc_uri = '../reporting_data/sorttable.js'
+        jquery_uri = '../reporting_data/jquery-1.10.2.min.js'
+        jsc_fun_uri = '../reporting_data/total_fuctions.js'
+        
+        sample_dict = {
+                    0: {'date':'13', 'price':'1', 'product':'chips'},
+                    1: {'date':'3', 'price':'2', 'product':'peanuts'},
+                    2: {'date':'5', 'price':'3', 'product':'mints'}
+                }
+        
+        columns = {
+            1 : {'name': 'date', 'editable':False},
+            2 : {'name': 'price', 'editable':False},
+            0 : {'name': 'product', 'editable':True}}
+        
+        report_args = {
+                'title': 'Sortable Table',
+                'elements': [
+                    {
+                        'type': 'table',
+                        'section': 'body',
+                        'sortable': True,
+                        'checkbox': True,
+                        'data_type':'dictionary',
+                        'columns':columns,
+                        'key':'ws_id',
+                        'data': sample_dict,
+                        'position': 1,
+                        'total':True},
+                    {
+                        'type': 'text',
+                        'section': 'body',
+                        'position': 0,
+                        'text': 'Here is a sortable table!'},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'link',
+                        'position': 0,
+                        'src': css_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 1,
+                        'src': jsc_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 2,
+                        'src': jquery_uri},
+                    {
+                        'type': 'head',
+                        'section': 'head',
+                        'format': 'script',
+                        'position': 3,
+                        'src': jsc_fun_uri}
                     ],
                 'out_uri': output_uri}
 
