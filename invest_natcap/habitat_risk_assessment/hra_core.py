@@ -121,14 +121,14 @@ def execute(args):
     #We will combine all of the h-s rasters of the same habitat into
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
-    h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
+    h_risk_dict, h_s_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
     #Also want to output a polygonized version of high and low risk areas in 
     #each habitat. Will polygonize everything that falls above a certain 
     #percentage of the total raster risk, or below that threshold. These can 
     #then be fed into different models.
     num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, 
-                args['max_risk'])
+                h_s_risk_dict, args['max_risk'], args['max_stress'])
 
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
@@ -750,7 +750,7 @@ def make_ecosys_risk_raster(dir, h_dict):
                 resample_method_list=None, dataset_to_align_index=0,
                 aoi_uri=None)
 
-def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
+def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     '''This function will take in the current rasterized risk files for each
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
     percentage of risk over potential risk) are the only existing polygonized
