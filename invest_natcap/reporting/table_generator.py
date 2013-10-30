@@ -129,7 +129,9 @@ def generate_table(table_dict, attributes=None):
     return table_string
 
 def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
-    """Add a totals row into the rows dictionary
+    """Construct a totals row as an html string. Creates one row element with
+        data where the row gets a class name and the data get a class name if
+        the corresponding column is a totalable column
         
         col_headers - a list of the column headers in order (required)
 
@@ -145,18 +147,24 @@ def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
         data_class - a string for the class name for the data elements in the
             row. Used for table manipulation in javascript (required)
 
-        return - a string representing a 'tfoot' element
-    """
-    
+        return - a string representing the html contents of a row which should
+            later be used in a 'tfoot' element"""
+
+    # Begin constructing the html string for the new totals row
+    # Give the row a class name and have the first data element be the name or
+    # header for that row
     html_str = '<tr class=%s><td>%s</td>' % (row_class, total_name)
 
+    # Iterate over the number of columns and add proper row data value,
+    # starting from the second column as the first columns row data value was
+    # defined above
     for col_index in range(1, len(col_headers)):
-        LOGGER.debug('Add Total Row: col_index : %s', col_index)
-        LOGGER.debug('Column Name: %s', col_headers[col_index])
+        # Check to see if this columns values should be totaled
         if total_list[col_index]:
-            LOGGER.debug('Adding class to total row')
+            # If column should be totaled then add a class name
             html_str += '<td class=%s>--</td>' % data_class
         else:
+            # If the column should not be totaled leave off the class name
             html_str += '<td>--</td>'
 
     html_str += '</tr>'
