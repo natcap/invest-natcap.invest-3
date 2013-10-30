@@ -53,7 +53,7 @@ def generate_table(table_dict, attributes=None):
     if attributes != None:
         attr_keys = attributes.keys()
         attr_keys.sort()
-        table_string = '<table id=my_table '
+        table_string = '<table id=my_table'
         for attr in attr_keys:
             table_string = '%s %s=%s' % (table_string, attr, attributes[attr])
 
@@ -79,8 +79,8 @@ def generate_table(table_dict, attributes=None):
         add_checkbox_total = False
 
     # Get the column headers
-    col_headers = get_column_headers(table_cols)
-    total_cols = get_column_total_list(col_headers, table_cols)
+    col_headers = get_dictionary_values_ordered(table_cols, 'name')
+    total_cols = get_dictionary_values_ordered(table_cols, 'total')
 
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
@@ -171,34 +171,32 @@ def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
 
     return html_str
 
-def get_column_total_list(col_headers, col_dict):
-    """Create a list that has boolean values indicating whether the
-        corresponding column in 'col_headers' should be totaled
-
-        col_headers - a list of the column headers in order (required)
+def get_dictionary_values_ordered(base_dict, sub_key_name):
+    """Generate a list, ordered from the unique keys in 'base_dict', from a
+        specific value retrieved from the sub dictionaries key 'sub_key_name' 
         
-        col_dict - a dictionary that defines the column structure for
-                the table (required). The dictionary has unique numeric
-                keys that determine the left to right order of the columns.
-                Each key has a dictionary value with the following
-                arguments:
-                    'name' - a string for the column name (required)
-                    'total' - a boolean for whether the column should be
-                        totaled (required)
+        base_dict - a dictionary that has unique sortable keys where the keys
+            in ascending order represent the order of the constructed list.
+            Each key points to a dictionary that has at least one key:value pair
+            with the key being 'sub_key_name' (required)
 
-        return - a list of boolean values correlated to 'col_headers'"""
+        return - a list of values from 'sub_key_name' in ascending order based
+            on 'base_dict's keys"""
+   
+    # Initiate an empty list to store values
+    ordered_value_list = []
+    # Get a list of the keys
+    keys = base_dict.keys()
+    # Sort the keys so that the values can be added to the list in proper order
+    keys.sort()
 
-    col_copy = list(col_headers)
+    for key in keys:
+        # Get the desired value from each keys dictionary
+        value = base_dict[key][sub_key_name]
+        # Add the value to the list
+        ordered_value_list.append(value)
 
-    for key, val in col_dict.iteritems():
-         name = val['name']
-         total = val['total']
-         index = col_copy.index(name)
-         col_copy[index] = total
-
-    LOGGER.debug('Total List Booleans: %s', col_copy)
-
-    return col_copy
+    return ordered_value_list
 
 def add_checkbox_column(col_dict, row_dict):
     """Insert a new column into the columns dictionary so that it is the second
@@ -262,33 +260,6 @@ def add_checkbox_column(col_dict, row_dict):
 
     # Return a tuple of the updated / modified column and row dictionary
     return (col_dict, row_dict) 
-
-def get_column_headers(col_dict):
-    """Iterate through the dictionary and pull out the column headers and store
-        in a list
-
-        col_dict - a dictionary specifying the column defintions. Example:
-            {col_id_1 : {name: col_name, sortable:True, editable:False},
-             col_id_2 : {name: col_name, sortable:True, editable:False},
-             ...
-            }
-
-        return - a list"""
-
-    # Initialize a list to store the column names in order
-    col_names = []
-
-    # Get a list of the keys from the column dictionary. The keys are ids that
-    # specify the order the columns should be listed
-    col_ids = col_dict.keys()
-    # Sort the ids so that we can return a corresponding list of column names in
-    # the proper order
-    col_ids.sort()
-
-    for col_id in col_ids:
-        col_names.append(col_dict[col_id]['name'])
-
-    return col_names
 
 def get_row_data(row_dict, col_headers):
     """Construct the rows in a 2D List from the dictionary, using col_headers to
