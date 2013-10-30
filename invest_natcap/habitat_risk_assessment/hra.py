@@ -178,7 +178,7 @@ def execute(args):
     
     #Pass along the max number of stressors the user believes will overlap one
     #another
-    hra_args['max_stress'] = args['max_stres']
+    hra_args['max_stress'] = args['max_stress']
 
     #Create intermediate and output folders. Delete old ones, if they exist.
     for folder in (inter_dir, output_dir):

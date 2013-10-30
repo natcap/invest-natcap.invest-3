@@ -63,6 +63,9 @@ def execute(args):
             dependent on this.
         args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
+        args['max_stress']- The largest number of stressors that the user
+            believes will overlap. This will be used to get an accurate estimate
+            of risk.
         args['aoi_tables']- May or may not exist within this model run, but if it
             does, the user desires to have the average risk values by 
             stressor/habitat using E/C axes for each feature in the AOI layer
@@ -781,7 +784,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
                            hab2: ...
                          }
             }
-        h_dict- A dictionary that contains raster dataseti URIs corresponding
+        h_dict- A dictionary that contains raster dataset URIs corresponding
             to each of the habitats in the model. The key in this dictionary is
             the name of the habiat, and it maps to the open dataset.
         max_risk- Double representing the highest potential value for a single
@@ -1316,7 +1319,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
-        out_uri- The location to which the calculated C raster should be burned.
+        out_uri- The location to which the calculated C raster should be bGurned.
         h_s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that h, s pair.
         h_s_denom_dict- A dictionary containing criteria names applicable to this
@@ -1369,7 +1372,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                     denom_val += h_s_denom_dict[h_s_names[i]]
                 else:
                     value += p
-                    denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
+                    denom_val += h_denom_dict[h_names[i-h_list_start_index]]
        
         #Special case for 0 value inputs coming in. Know that val=0 will only
         #be the case when we have no resil. crits, and habitat not covered by
