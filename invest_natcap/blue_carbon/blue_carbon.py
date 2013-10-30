@@ -108,6 +108,7 @@ def execute(args):
     soil_acc_name = "%i_soil_accumulation.tif"
     predisturbance_name = "%i_predisturbance.tif"
     acc_mask_name = "%i_acc_mask.tif"
+    dis_mask_name = "%i_dis_mask.tif"
 
     veg_mask_name = "%i_mask_%s.tif"
     residual_name = "%i_residual_soil.tif"
@@ -329,6 +330,16 @@ def execute(args):
                 return 1
             else:
                 return 0
+
+    def disturbance_mask_op(lulc_base, lulc_transition):
+        if nodata in [lulc_base, lulc_transition]:
+            return 0
+        else:
+            transition_value = transition[int(lulc_base)][str(int(lulc_transition))]
+            if transition_value in disturbance[0]:
+                return 1
+            else:
+                return 0
             
 
     analysis_years = list(set(lulc_years+snapshots))
@@ -358,16 +369,45 @@ def execute(args):
             lulc_base_time_uri = os.path.join(workspace_dir, time_name % lulc_base_year)
 
             lulc_base_acc_mask_uri = os.path.join(workspace_dir, acc_mask_name % lulc_base_year)
+            lulc_base_dis_mask_uri = os.path.join(workspace_dir, dis_mask_name % lulc_base_year)
 
             #create accumulation and disturbance masks
-            LOGGER.debug("Creating accumulation mask.")
-            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
-                                            accumulation_mask_op,
-                                            lulc_base_acc_mask_uri,
-                                            gdal_type,
-                                            nodata,
-                                            cell_size,
-                                            "union")
+            try:
+                LOGGER.debug("Creating accumulation mask.")
+                raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                                accumulation_mask_op,
+                                                lulc_base_acc_mask_uri,
+                                                gdal.GDT_Byte,
+                                                0,
+                                                cell_size,
+                                                "union")
+            except:
+                    LOGGER.debug("There is no accumulation.")
+                    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                          lulc_base_acc_mask_uri,
+                                                          "GTiff",
+                                                          nodata,
+                                                          gdal_type)
+              
+
+            try:
+                LOGGER.debug("Creating disturbance mask.")
+                raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                                disturbance_mask_op,
+                                                lulc_base_dis_mask_uri,
+                                                gdal.GDT_Byte,
+                                                0,
+                                                cell_size,
+                                                "union")            
+
+
+            except:
+                    LOGGER.debug("There is no accumulation.")
+                    raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                          lulc_base_dis_mask_uri,
+                                                          "GTiff",
+                                                          nodata,
+                                                          gdal_type)
                                             
             return
                                             
