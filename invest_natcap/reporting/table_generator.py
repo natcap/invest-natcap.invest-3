@@ -53,13 +53,15 @@ def generate_table(table_dict, attributes=None):
     if attributes != None:
         attr_keys = attributes.keys()
         attr_keys.sort()
-        table_string = '<table'
+        table_string = '<table id=my_table '
         for attr in attr_keys:
             table_string = '%s %s=%s' % (table_string, attr, attributes[attr])
 
         table_string = table_string + '>'
     else:
-        table_string = '<table>'
+        table_string = '<table id=my_table>'
+
+    footer_string = ''
 
     # If checkbox column is wanted set it up
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
@@ -69,14 +71,17 @@ def generate_table(table_dict, attributes=None):
         rows_copy = table_dict['rows'].copy()
         # Get the updated column and row dictionaries
         table_cols, table_rows = add_checkbox_column(cols_copy, rows_copy)
+        add_checkbox_total = True
     else:
         # The column and row dictionaries need to update so get the originals
         table_cols = table_dict['cols']
         table_rows = table_dict['rows']
+        add_checkbox_total = False
 
     # Get the column headers
     col_headers = get_column_headers(table_cols)
-    
+    total_cols = get_column_total_list(col_headers, table_cols)
+
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
     for col in col_headers:
@@ -88,10 +93,19 @@ def generate_table(table_dict, attributes=None):
 
     # Get the row data as 2D list
     row_data = get_row_data(table_rows, col_headers)
-   
+  
+    if add_checkbox_total:
+        footer_string += add_totals_row(
+                col_headers, total_cols, 'Selected Total', 'checkTotal',
+                'checkTot')
+
     # Add any total rows as 'tfoot' elements in the table
-    if 'total' in table_dict and table['total']:
-        table_string += add_totals_row(col_headers)
+    if 'total' in table_dict and table_dict['total']:
+        footer_string += add_totals_row(
+                col_headers, total_cols, 'Total', 'totalColumn', 'totalCol')
+    
+    if not footer_string == '':
+        table_string += '<tfoot>%s</tfoot>' % footer_string
 
     # Add the start tag for the table body
     table_string = table_string + '<tbody>'
@@ -99,9 +113,14 @@ def generate_table(table_dict, attributes=None):
     # For each data row add a row in the html table and fill in the data
     for row in row_data:
         table_string = table_string + '<tr>'
-        for row_data in row:
-            # Add row data
-            table_string = table_string + '<td>%s</td>' % row_data
+        #for row_data in row:
+        for row_index in range(len(row)):
+            if total_cols[row_index]:
+                # Add row data
+                table_string += '<td class=rowDataSd>%s</td>' % row[row_index]
+            else:
+                table_string += '<td>%s</td>' % row[row_index]
+
         table_string = table_string + '</tr>'
 
     # Add the closing tag for the table body and table
@@ -109,23 +128,69 @@ def generate_table(table_dict, attributes=None):
 
     return table_string
 
-def add_totals_row(col_headers):
+def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
     """Add a totals row into the rows dictionary
         
-        col_headers - a list of the column headers in order
+        col_headers - a list of the column headers in order (required)
+
+        total_list - a list of booleans that corresponds to 'col_headers' and
+            indicates whether a column should be totaled (required)
+
+        total_name - a string for the name of the total row, ex: 'Total', 'Sum'
+            (required)
+
+        row_class - a string for the class name for the total row. Used for
+            table manipulation in javascript (required)
+
+        data_class - a string for the class name for the data elements in the
+            row. Used for table manipulation in javascript (required)
 
         return - a string representing a 'tfoot' element
     """
     
-    html_str = '<tfoot><tr><td>Total</td>'
+    html_str = '<tr class=%s><td>%s</td>' % (row_class, total_name)
 
-    for col_spot in range(len(col_headers) - 1):
-        html_str += '<td></td>'
+    for col_index in range(1, len(col_headers)):
+        LOGGER.debug('Add Total Row: col_index : %s', col_index)
+        LOGGER.debug('Column Name: %s', col_headers[col_index])
+        if total_list[col_index]:
+            LOGGER.debug('Adding class to total row')
+            html_str += '<td class=%s>--</td>' % data_class
+        else:
+            html_str += '<td>--</td>'
 
-    html_str += '</tr></tfoot>'
+    html_str += '</tr>'
 
     return html_str
 
+def get_column_total_list(col_headers, col_dict):
+    """Create a list that has boolean values indicating whether the
+        corresponding column in 'col_headers' should be totaled
+
+        col_headers - a list of the column headers in order (required)
+        
+        col_dict - a dictionary that defines the column structure for
+                the table (required). The dictionary has unique numeric
+                keys that determine the left to right order of the columns.
+                Each key has a dictionary value with the following
+                arguments:
+                    'name' - a string for the column name (required)
+                    'total' - a boolean for whether the column should be
+                        totaled (required)
+
+        return - a list of boolean values correlated to 'col_headers'"""
+
+    col_copy = list(col_headers)
+
+    for key, val in col_dict.iteritems():
+         name = val['name']
+         total = val['total']
+         index = col_copy.index(name)
+         col_copy[index] = total
+
+    LOGGER.debug('Total List Booleans: %s', col_copy)
+
+    return col_copy
 
 def add_checkbox_column(col_dict, row_dict):
     """Insert a new column into the columns dictionary so that it is the second
@@ -176,7 +241,7 @@ def add_checkbox_column(col_dict, row_dict):
 
     # Add the checkbox column as the second column using the old second column
     # id
-    col_dict[check_col_id] = {'name':'Select'}
+    col_dict[check_col_id] = {'name':'Select', 'total':False}
 
     LOGGER.debug('Columns with Checkboxes: %s', col_dict)
 
