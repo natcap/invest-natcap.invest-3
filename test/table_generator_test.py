@@ -193,11 +193,11 @@ class TestTableGenerator(unittest.TestCase):
 
         expected_rows = {
                    0 : {'date':'9/13', 'price':'expensive', 'product':'chips',
-                       'Select':'<input type="checkbox" name="cb" value="1">'},
+                       'Select':'<input type=checkbox name=cb value=1>'},
                    1 : {'date':'3/13', 'price':'cheap', 'product':'peanuts',
-                       'Select':'<input type="checkbox" name="cb" value="1">'},
+                       'Select':'<input type=checkbox name=cb value=1>'},
                    2 : {'date':'5/12', 'price':'moderate', 'product':'mints',
-                       'Select':'<input type="checkbox" name="cb" value="1">'}}
+                       'Select':'<input type=checkbox name=cb value=1>'}}
 
         expected_cols = {
                 1 : {'name':'Select', 'total':False},
@@ -230,3 +230,42 @@ class TestTableGenerator(unittest.TestCase):
                 cols, total_cols, 'Total', row_class, data_class)
 
         self.assertEqual(expected_result, totals_html)
+    
+    def test_generate_table_checkbox_total(self):
+        """Unit test for creating a table from a dictionary as a string
+            representing html using attributes and with checkbox totals and
+            constant totals"""
+        
+        #raise SkipTest
+        
+        sample_dict = {
+                'cols':{
+                    1: {'name':'date', 'total':False},
+                    2: {'name': 'price', 'total':True},
+                    0: {'name':'product', 'total':False}},
+                'rows':{
+                    0: {'date':'9/13', 'price':100, 'product':'chips'},
+                    1: {'date':'3/13', 'price':50, 'product':'peanuts'},
+                    2: {'date':'5/12', 'price':75, 'product':'mints'}},
+                'checkbox':True,
+                'total':True
+                }
+
+        attributes= {'class':'sortable', 'border':'1'}
+
+        expected_result = ("<table id=my_table border=1 class=sortable><thead>"
+                "<tr><th>product</th><th>Select</th><th>date</th><th>price</th>"
+                "</tr></thead><tfoot><tr class=checkTotal><td>Selected Total</td>"
+                "<td>--</td><td>--</td><td class=checkTot>--</td>"
+                "</tr><tr class=totalColumn><td>Total</td><td>--</td>"
+                "<td>--</td><td class=totalCol>--</td></tr></tfoot>"
+                "<tbody><tr><td>chips</td><td><input type=checkbox name=cb value=1>"
+                "</td><td>9/13</td><td class=rowDataSd>100</td></tr>"
+                "<tr><td>peanuts</td><td><input type=checkbox name=cb value=1></td>"
+                "<td>3/13</td><td class=rowDataSd>50</td></tr>"
+                "<tr><td>mints</td><td><input type=checkbox name=cb value=1></td>"
+                "<td>5/12</td><td class=rowDataSd>75</td></tr></tbody></table>")
+
+        table_string = table_generator.generate_table(sample_dict, attributes)
+
+        self.assertEqual(expected_result, table_string)
