@@ -787,9 +787,17 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         h_dict- A dictionary that contains raster dataset URIs corresponding
             to each of the habitats in the model. The key in this dictionary is
             the name of the habiat, and it maps to the open dataset.
+        h_s_dict- A dictionary that maps a habitat name to the risk rasters
+            for each of the applicable stressors.
+
+            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            }
         max_risk- Double representing the highest potential value for a single
             h-s raster. The amount of risk for a given Habitat raster would be
             SUM(s) for a given h.
+        max_stress- The largest number of stressors that the user believes will
+            overlap. This will be used to get an accurate estimate of risk.
 
      Output:
         Returns two shapefiles for every habitat, one which shows features only
