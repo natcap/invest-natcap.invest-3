@@ -881,6 +881,9 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #make sure that we're passing in the h risk raster first so that we
         #know it from the rest.
         risk_raster_list = [h_dict[h]] + h_s_dict[h]
+        #This will eventually be removed.
+        old_ds_uri = h_dict[h]
+        
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif') 
