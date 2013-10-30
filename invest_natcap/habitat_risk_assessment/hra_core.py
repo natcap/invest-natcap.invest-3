@@ -1344,7 +1344,9 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
     h_list_start_index = len(h_s_list)
-    
+   
+    LOGGER.debug("The outgoing URI is: %s, which is composed of: %s" % (out_uri, tot_crit_list))
+
     def add_c_pix(*pixels):
         
         all_nodata = True
