@@ -203,17 +203,19 @@ def add_checkbox_column(col_dict, row_dict):
         column in order of 'id'. Also add the checkbox column header to the rows
         dictionary and subsequent checkbox value
 
-        col_dict - a dictionary with column ids as keys and sub dictionary as
-            its value. The sub dictionary requires a key 'name' followed by the
-            columns name. An example:
-            {col_id_1 : {name: col_1, sortable:True, editable:False},
-             col_id_2 : {name: col_2, sortable:True, editable:False},
-             ...
-            }
+        'col_dict'- a dictionary that defines the column structure for
+            the table (required). The dictionary has unique numeric
+            keys that determine the left to right order of the columns.
+            Each key has a dictionary value with the following
+            arguments:
+                'name' - a string for the column name (required)
+                'total' - a boolean for whether the column should be
+                    totaled (required)
 
-        row_dict - a dictionary with row ids as keys and sub dictionary as its
-            values. The sub dictionary requires key-value pairs for all the
-            column names in 'col_dict'. An Example:
+        'row_dict' - a dictionary with keys that have sub dictionaries as
+            values. The sub dictionaries have column names that match
+            the names in 'cols' as keys and the corresponding entry for
+            the column/row pair as a value. (required) Example:
             {row_id_0: {col_name_1: value, col_name_2: value, ...},
              row_id_1: {col_name_1: value, col_name_2: value, ...},
              ...
@@ -254,7 +256,7 @@ def add_checkbox_column(col_dict, row_dict):
     # For each row in the row dictionary add a 'Select' key which refers to the
     # new column and set the value as a checkbox
     for key, val in row_dict.iteritems():
-        val['Select'] = '<input type="checkbox" name="cb" value="1">'
+        val['Select'] = '<input type=checkbox name=cb value=1>'
         
     LOGGER.debug('Rows with Checkboxes: %s', row_dict)
 
