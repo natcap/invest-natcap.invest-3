@@ -301,9 +301,3 @@ def get_row_data(row_dict, col_headers):
         raise Exception('The dictionary is not constructed correctly')
 
     return row_data 
-
-def create_css_file(out_uri):
-    """Write a cool css default file, has to have the sortable table definition
-        it"""
-    #css_file = open(out_uri, 'w')
-
