@@ -823,16 +823,35 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             num_stress[h] = 1
     
     curr_top_risk = None
+    
+    #This is the user definied threshold overlap of stressors, multipled by the
+    #maximum potential risk for any given overlap between habitat and stressor
+    #This yields a user defined threshold for risk.
+    user_max_risk = max_stress * max_risk
 
-    def high_risk_raster(pixel):
+    def high_risk_raster(*pixels):
 
-        percent = float(pixel)/ curr_top_risk
+        #We know that the overarching habitat pixel is the first in the list
+        h_pixel = pixels[0]
+
+        h_percent = float(h_pixel)/ curr_top_risk
 
         #high risk is classified as the top third of risk
-        if percent > .666:
+        if h_percent > .666:
             return 1
-        else:
-            return -1.
+        
+        #If we aren't getting high risk from just the habitat pixel, 
+        #want to secondarily check each of the h_s pixels.
+        for p in pixels[1::]:
+            
+            p_percent = float(p) / user_max_risk
+
+            if p > .666:
+                return 1
+
+        #If we get here, neither the habitat raster nor the h_s_raster are
+        #considered high risk. Can return nodata.
+        return -1.
 
     def med_risk_raster(pixel):
 
@@ -858,13 +877,16 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #Want to know the number of stressors for the current habitat        
         #curr_top_risk = num_stress[h] * max_risk
         curr_top_risk = 3 * max_risk
-        old_ds_uri = h_dict[h]
+        #Make list on the fly for rasters which could be high risk. Want to
+        #make sure that we're passing in the h risk raster first so that we
+        #know it from the rest.
+        risk_raster_list = [h_dict[h]] + h_s_dict[h]
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif') 
         h_out_uri = os.path.join(dir, '[' + h + ']_HIGH_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, 
+        raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
