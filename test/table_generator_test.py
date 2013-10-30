@@ -192,10 +192,16 @@ class TestTableGenerator(unittest.TestCase):
         #raise SkipTest
 
         cols = ['product', 'shipped', 'units', 'price']
+        total_cols = [False, False, True, True]
 
-        expected_result = "<tfoot><tr><td>Total</td><td>--</td><td>--</td>"
-            "<td>--</td></tr></tfoot>"
+        data_class = 'totalCol'
+        row_class = 'totalColumn'
 
-        totals_html = table_generator.add_totals_row(cols)
+        expected_result = ("<tr class=%s><td>Total</td><td>--</td>"
+            "<td class=%s>--</td><td class=%s>--</td></tr>" %
+            (row_class, data_class, data_class))
+
+        totals_html = table_generator.add_totals_row(
+                cols, total_cols, 'Total', row_class, data_class)
 
         self.assertEqual(expected_result, totals_html)
