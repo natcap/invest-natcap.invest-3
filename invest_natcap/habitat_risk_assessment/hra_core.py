@@ -965,6 +965,12 @@ def make_hab_risk_raster(dir, risk_dict):
             'Habitat B': "Overall Habitat B Risk URI"
              ...
             }
+        h_s_rasters- A dictionary that maps a habitat name to the risk rasters
+            for each of the applicable stressors.
+
+            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            }
     '''
     
     #Use arbitrary element to get the nodata for habs
@@ -1006,6 +1012,9 @@ def make_hab_risk_raster(dir, risk_dict):
     #ecosystem raster function to be used in vectorize_dataset.
     h_rasters = {} 
 
+    #Also need to store which h_s rasters apply to each habitat   
+    h_s_rasters = {}
+
     #Run through all potential pairings, and make lists for the ones that
     #share the same habitat.
     for h in habitats:
@@ -1025,9 +1034,9 @@ def make_hab_risk_raster(dir, risk_dict):
                         aoi_uri=None)
 
         h_rasters[h] = out_uri 
+        h_s_rasters[h] = ds_list
 
-    return h_rasters
-
+    return h_rasters, h_s_rasters
 
 def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
