@@ -160,9 +160,9 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
         for field in range(field_count):
             geometry = feature.GetGeometryRef()
             assert geometry is not None
-            message = 'geometry type is ' + str(geometry.GetGeometryType()) + \
-            ' wkbPoint is ' + str(ogr.wkbPoint)
-            assert geometry.GetGeometryType() == ogr.wkbPoint, message
+            message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
+            ' point is "POINT"'
+            assert geometry.GetGeometryName() == 'POINT', message
             print('x', geometry.GetX(), 'y', geometry.GetY())
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
