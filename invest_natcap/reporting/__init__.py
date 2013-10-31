@@ -31,7 +31,7 @@ def generate_report(reporting_args):
             The 3 main element types are 'table', 'head', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
-                    Currently 'table', 'head', and 'text defined (required)
+                    Currently 'table', 'head', and 'text' are defined (required)
                 
                 'section' - a string that depicts whether the element belongs
                     in the body or head of the html page. 
@@ -40,7 +40,8 @@ def generate_report(reporting_args):
                 'position' - an integer that depicts where the element should
                     be placed on the html page. Elements will be written in
                     ascending order with sections 'body' and 'head' separately
-                    defined (required)
+                    defined. If two elements have the same position, the
+                    following repeated positions will be bumped up (required)
             
             Table element dictionary has at least the following additional arguments: 
                 'sortable' - a boolean value for whether the tables columns
@@ -95,7 +96,8 @@ def generate_report(reporting_args):
 
         returns - nothing"""
 
-    html_obj = {'head':{}, 'body':{}}
+#    html_obj = {'head':{}, 'body':{}}
+    html_obj = {'head':([],[]), 'body':([],[])}
     
     report = {
             'table': build_table,
@@ -108,7 +110,10 @@ def generate_report(reporting_args):
         fun_type = element.pop('type')
         section = element.pop('section')
         position = element.pop('position')
-        html_obj[section][position] = report[fun_type](element)
+
+        #html_obj[section][position] = report[fun_type](element)
+        html_obj[section][0].append(report[fun_type](element))
+        html_obj[section][1].append(position)
 
     LOGGER.debug('HTML OBJECT : %s', html_obj)
 
@@ -133,25 +138,41 @@ def write_html(html_obj, out_uri, title):
     # Start the string that will be written as the html file by setting the
     # title
     html_str = '<html><head><title>%s</title>' % title
-    
+   
+    head_elements = html_obj['head'][0]
+    head_order = html_obj['head'][1]
+
+    head_order, head_elements = zip(*sorted(zip(head_order, head_elements)))
+
+    for head_elem in head_elements:
+        html_str += head_elem
+
     # Sort the head keys so that the head elements are written in the proper
     # order
-    head_keys = html_obj['head'].keys()
-    head_keys.sort()
-    for head_key in head_keys:
+    #head_keys = html_obj['head'].keys()
+    #head_keys.sort()
+    #for head_key in head_keys:
         # Concatenate the output string with the head elements
-        html_str += html_obj['head'][head_key]
+    #    html_str += html_obj['head'][head_key]
     
     # End the head tag and start the body tag
     html_str += '</head><body>'
 
+    body_elements = html_obj['body'][0]
+    body_order = html_obj['body'][1]
+
+    body_order, body_elements = zip(*sorted(zip(body_order, body_elements)))
+
+    for body_elem in body_elements:
+        html_str += body_elem
+
     # Sort the body keys so that the body elements are written in the proper
     # order
-    body_keys = html_obj['body'].keys()
-    body_keys.sort()
-    for body_key in body_keys:
+    #body_keys = html_obj['body'].keys()
+    #body_keys.sort()
+    #for body_key in body_keys:
         # Concatenate the output string with the body elements
-        html_str += html_obj['body'][body_key]
+    #    html_str += html_obj['body'][body_key]
 
     # Finish the body and the html tag
     html_str += '</body></html>'
