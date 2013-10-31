@@ -887,7 +887,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         h_percent = float(h_pixel)/ curr_top_risk
 
         #high risk is classified as the top third of risk
-        if h_percent < .333:
+        if 0. < h_percent < .333:
             return 1
         
         #If we aren't getting low risk from just the habitat pixel, 
@@ -896,7 +896,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     
             p_percent = float(p) / user_max_risk
 
-            if p_percent < .333:
+            if 0. < p_percent < .333:
                 return 1
 
         #If we get here, neither the habitat raster nor the h_s_raster are
