@@ -176,6 +176,10 @@ def execute(args):
     max_r = calc_max_rating(args['risk_eq'], args['max_rating'])
     hra_args['max_risk'] = max_r
     
+    #Pass along the max number of stressors the user believes will overlap one
+    #another
+    hra_args['max_stress'] = args['max_stress']
+
     #Create intermediate and output folders. Delete old ones, if they exist.
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):
