@@ -828,6 +828,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     #maximum potential risk for any given overlap between habitat and stressor
     #This yields a user defined threshold for risk.
     user_max_risk = max_stress * max_risk
+    LOGGER.debug("User max risk is %s" % user_max_risk)
+
 
     def high_risk_raster(*pixels):
 
@@ -853,25 +855,53 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #considered high risk. Can return nodata.
         return -1.
 
-    def med_risk_raster(pixel):
+    def med_risk_raster(*pixels):
 
-        percent = float(pixel)/ curr_top_risk
+        #We know that the overarching habitat pixel is the first in the list
+        h_pixel = pixels[0]
 
-        #low risk is classified as the bottom two thirds of risk
-        if .333 < percent <= .666:
+        h_percent = float(h_pixel)/ curr_top_risk
+
+        #high risk is classified as the top third of risk
+        if .333 < h_percent < .666:
             return 1
-        else:
-            return -1.
+        
+        #If we aren't getting medium risk from just the habitat pixel, 
+        #want to secondarily check each of the h_s pixels.
+        for p in pixels[1::]:
     
-    def low_risk_raster(pixel):
+            p_percent = float(p) / user_max_risk
 
-        percent = float(pixel)/ curr_top_risk
+            if .333 < p_percent < .666:
+                return 1
 
-        #low risk is classified as the bottom one third of risk
-        if 0 < percent <= .333:
+        #If we get here, neither the habitat raster nor the h_s_raster are
+        #considered high risk. Can return nodata.
+        return -1.
+    
+    def low_risk_raster(*pixels):
+
+        #We know that the overarching habitat pixel is the first in the list
+        h_pixel = pixels[0]
+
+        h_percent = float(h_pixel)/ curr_top_risk
+
+        #high risk is classified as the top third of risk
+        if h_percent < .333:
             return 1
-        else:
-            return -1.
+        
+        #If we aren't getting low risk from just the habitat pixel, 
+        #want to secondarily check each of the h_s pixels.
+        for p in pixels[1::]:
+    
+            p_percent = float(p) / user_max_risk
+
+            if p_percent < .333:
+                return 1
+
+        #If we get here, neither the habitat raster nor the h_s_raster are
+        #considered high risk. Can return nodata.
+        return -1.
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
@@ -880,9 +910,8 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #Make list on the fly for rasters which could be high risk. Want to
         #make sure that we're passing in the h risk raster first so that we
         #know it from the rest.
-        risk_raster_list = [h_dict[h]] + h_s_dict[h]
-        #This will eventually be removed.
         old_ds_uri = h_dict[h]
+        risk_raster_list = [old_ds_uri] + h_s_dict[h]
         
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
@@ -903,7 +932,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
         m_out_uri = os.path.join(dir, '[' + h + ']_MED_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], med_risk_raster, 
+        raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
@@ -917,7 +946,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
         l_out_uri = os.path.join(dir, '[' + h + ']_LOW_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, 
+        raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
