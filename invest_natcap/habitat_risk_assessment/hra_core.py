@@ -809,6 +809,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
             associated with each habitat. The key is the string name of the 
             habitat, and it maps to an int counter of number of stressors.
      '''
+    
     #For each h, want  to know how many stressors are associated with it. This
     #allows us to not have to think about whether or not a h-s pair was zero'd
     #out by weighting or DQ.
