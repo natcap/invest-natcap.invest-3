@@ -3,6 +3,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 from invest_natcap import raster_utils
+from invest_natcap import testing
+from invest_natcap.aesthetic_quality import aesthetic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
 
 import logging
@@ -158,7 +160,7 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     print('feature count', feature_count)
-    for f in range(feature_count):
+    for f in range(1): #feature_count):
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
         for field in range(field_count):
@@ -172,9 +174,13 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
             #print('x', x, 'y', y)
             #print('GT ', GT)
             #print('iGT', iGT)
-            i = round(iGT[0] + x*iGT[1] + y*iGT[2])
-            j = round(iGT[3] + x*iGT[4] + y*iGT[5])
+            i = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
+            j = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
             print('i', i, 'j', j)
+            aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
+            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+    
+    testing.assertRasterEquals(src_filename, out_viewshed_uri)
 
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
