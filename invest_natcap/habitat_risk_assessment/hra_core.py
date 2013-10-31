@@ -843,10 +843,10 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #If we aren't getting high risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
-            
+    
             p_percent = float(p) / user_max_risk
 
-            if p > .666:
+            if p_percent > .666:
                 return 1
 
         #If we get here, neither the habitat raster nor the h_s_raster are
