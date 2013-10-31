@@ -110,6 +110,13 @@ def execute(args):
     dis_soil_name = "%i_dis_soil"
 
 
+    #totals
+    acc_name = "total_acc.tif"
+    dis_name = "total_dis.tif"
+
+    acc_uri = os.path.join(workspace_dir, acc_name)
+    dis_uri = os.path.join(workspace_dir, dis_name)
+    
     ##process inputs
     #load tables from files
     acc_soil = raster_utils.get_lookup_from_csv(acc_soil_uri, acc_soil_field_key)
@@ -195,74 +202,12 @@ def execute(args):
     lulc_base_year = lulc_years.pop(0)
     lulc_base_uri = lulc_uri_dict[lulc_base_year]
 
-    LOGGER.info("Calculating stock carbon values.")
-
-    #set file paths for lulc base
-    lulc_base_above_uri = os.path.join(workspace_dir, above_name % lulc_base_year)
-    lulc_base_below_uri = os.path.join(workspace_dir, below_name % lulc_base_year)
-    lulc_base_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
-    lulc_base_litter_uri = os.path.join(workspace_dir, litter_name % lulc_base_year)
-    lulc_base_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
-    lulc_base_carbon_uri = os.path.join(workspace_dir, carbon_name % lulc_base_year)
-
     #add reclass entry for nodata
     above_dict[int(nodata)] = 0.0
     below_dict[int(nodata)] = 0.0
     soil_dict[int(nodata)] = 0.0
     litter_dict[int(nodata)] = 0.0
     depth_dict[int(nodata)] = 0.0
-
-    #create base rasters for initial lulc
-    raster_utils.reclassify_dataset_uri(lulc_base_uri,
-                               above_dict,
-                               lulc_base_above_uri,
-                               gdal_type,
-                               0.0,
-                               exception_flag="values_required")
-    LOGGER.debug("Created stock above raster.")
-
-    raster_utils.reclassify_dataset_uri(lulc_base_uri,
-                               below_dict,
-                               lulc_base_below_uri,
-                               gdal_type,
-                               0.0,
-                               exception_flag="values_required")
-    LOGGER.debug("Created stock below raster.")
-
-    LOGGER.debug(soil_dict)
-    raster_utils.reclassify_dataset_uri(lulc_base_uri,
-                               soil_dict,
-                               lulc_base_soil_uri,
-                               gdal_type,
-                               0.0,
-                               exception_flag="values_required")
-    LOGGER.debug("Created stock soil raster.")
-
-    raster_utils.reclassify_dataset_uri(lulc_base_uri,
-                               litter_dict,
-                               lulc_base_litter_uri,
-                               gdal_type,
-                               0.0,
-                               exception_flag="values_required")
-    LOGGER.debug("Created stock litter raster.")
-
-    raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri, lulc_base_litter_uri],
-                                    add_op,
-                                    lulc_base_biomass_uri,
-                                    gdal_type,
-                                    0.0,
-                                    cell_size,
-                                    "union")
-    LOGGER.debug("Created stock biomass raster.")
-
-    raster_utils.vectorize_datasets([lulc_base_biomass_uri, lulc_base_soil_uri],
-                                    add_op,
-                                    lulc_base_carbon_uri,
-                                    gdal_type,
-                                    0.0,
-                                    cell_size,
-                                    "union")
-    LOGGER.debug("Created stock total raster.")
 
     ##loop over lulc years
     for lulc_transition_year in lulc_years:
@@ -272,6 +217,13 @@ def execute(args):
         t = lulc_transition_year - lulc_base_year
 
         #local variable names
+        lulc_base_above_uri = os.path.join(workspace_dir, above_name % lulc_base_year)
+        lulc_base_below_uri = os.path.join(workspace_dir, below_name % lulc_base_year)
+        lulc_base_soil_uri = os.path.join(workspace_dir, soil_name % lulc_base_year)
+        lulc_base_litter_uri = os.path.join(workspace_dir, litter_name % lulc_base_year)
+        lulc_base_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
+        lulc_base_carbon_uri = os.path.join(workspace_dir, carbon_name % lulc_base_year)
+        
         lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % lulc_base_year)
         lulc_base_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % lulc_base_year)
 
@@ -280,6 +232,60 @@ def execute(args):
 
         lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % lulc_base_year)
         lulc_base_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % lulc_base_year)
+
+
+        LOGGER.info("Calculating stock carbon values.")
+        #create stock initial lulc
+        raster_utils.reclassify_dataset_uri(lulc_base_uri,
+                                   above_dict,
+                                   lulc_base_above_uri,
+                                   gdal_type,
+                                   0.0,
+                                   exception_flag="values_required")
+        LOGGER.debug("Created stock above raster.")
+
+        raster_utils.reclassify_dataset_uri(lulc_base_uri,
+                                   below_dict,
+                                   lulc_base_below_uri,
+                                   gdal_type,
+                                   0.0,
+                                   exception_flag="values_required")
+        LOGGER.debug("Created stock below raster.")
+
+        LOGGER.debug(soil_dict)
+        raster_utils.reclassify_dataset_uri(lulc_base_uri,
+                                   soil_dict,
+                                   lulc_base_soil_uri,
+                                   gdal_type,
+                                   0.0,
+                                   exception_flag="values_required")
+        LOGGER.debug("Created stock soil raster.")
+
+        raster_utils.reclassify_dataset_uri(lulc_base_uri,
+                                   litter_dict,
+                                   lulc_base_litter_uri,
+                                   gdal_type,
+                                   0.0,
+                                   exception_flag="values_required")
+        LOGGER.debug("Created stock litter raster.")
+
+        raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri, lulc_base_litter_uri],
+                                        add_op,
+                                        lulc_base_biomass_uri,
+                                        gdal_type,
+                                        0.0,
+                                        cell_size,
+                                        "union")
+        LOGGER.debug("Created stock biomass raster.")
+
+        raster_utils.vectorize_datasets([lulc_base_biomass_uri, lulc_base_soil_uri],
+                                        add_op,
+                                        lulc_base_carbon_uri,
+                                        gdal_type,
+                                        0.0,
+                                        cell_size,
+                                        "union")
+        LOGGER.debug("Created stock total raster.")
 
         ##calculate soil accumulation
         LOGGER.info("Processing soil accumulation.")
@@ -411,5 +417,45 @@ def execute(args):
         LOGGER.debug("Changed base year to %i." % lulc_base_year)
 
         lulc_base_uri = lulc_uri_dict[lulc_base_year]
-        LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)
+        LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
+
+    lulc_years = lulc_uri_dict.keys()
+    lulc_years.sort()
+    lulc_years.pop(-1)
+    acc_uri_list = []
+    dis_uri_list = []
+    for year in lulc_years:
+        acc_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
+        dis_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
+
+    try:
+        raster_utils.vectorize_datasets(acc_uri_list,
+                                        add_op,
+                                        acc_uri,
+                                        gdal.GDT_Float64,
+                                        0.0,
+                                        cell_size,
+                                        "union")
+
+    except:
+        raster_utils.new_raster_from_base_uri(acc_uri_list[0],
+                                              acc_uri,
+                                              "GTiff",
+                                              0,
+                                              gdal.GDT_Byte)
+
+    try:                                              
+        raster_utils.vectorize_datasets(dis_uri_list,
+                                        add_op,
+                                        os.path.join(workspace_dir, dis_name),
+                                        gdal.GDT_Float64,
+                                        0.0,
+                                        cell_size,
+                                        "union")
+    except:
+        raster_utils.new_raster_from_base_uri(dis_uri_list[0],
+                                      dis_uri,
+                                      "GTiff",
+                                      0,
+                                      gdal.GDT_Byte)
