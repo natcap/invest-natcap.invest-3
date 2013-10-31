@@ -836,19 +836,19 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
 
-        h_percent = float(h_pixel)/ curr_top_risk
+        h_percent = float(h_pixel)/ user_max_risk
 
         #high risk is classified as the top third of risk
-        if h_percent > .666:
+        if h_percent >= .666:
             return 1
         
         #If we aren't getting high risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
     
-            p_percent = float(p) / user_max_risk
+            p_percent = float(p) / max_risk
 
-            if p_percent > .666:
+            if p_percent >= .666:
                 return 1
 
         #If we get here, neither the habitat raster nor the h_s_raster are
@@ -860,23 +860,23 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
 
-        h_percent = float(h_pixel)/ curr_top_risk
+        h_percent = float(h_pixel)/ user_max_risk 
 
-        #high risk is classified as the top third of risk
-        if .333 < h_percent < .666:
+        #medium risk is classified as the middle third of risk
+        if .333 <= h_percent < .666:
             return 1
         
         #If we aren't getting medium risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
     
-            p_percent = float(p) / user_max_risk
+            p_percent = float(p) / max_risk
 
-            if .333 < p_percent < .666:
+            if .333 <= p_percent < .666:
                 return 1
 
         #If we get here, neither the habitat raster nor the h_s_raster are
-        #considered high risk. Can return nodata.
+        #considered med risk. Can return nodata.
         return -1.
     
     def low_risk_raster(*pixels):
@@ -884,23 +884,23 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
 
-        h_percent = float(h_pixel)/ curr_top_risk
+        h_percent = float(h_pixel)/ user_max_risk
 
-        #high risk is classified as the top third of risk
-        if 0. < h_percent < .333:
+        #low risk is classified as the lowest third of risk
+        if 0. <= h_percent < .333:
             return 1
         
         #If we aren't getting low risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
     
-            p_percent = float(p) / user_max_risk
+            p_percent = float(p) / max_risk
 
-            if 0. < p_percent < .333:
+            if 0. <= p_percent < .333:
                 return 1
 
         #If we get here, neither the habitat raster nor the h_s_raster are
-        #considered high risk. Can return nodata.
+        #considered low risk. Can return nodata.
         return -1.
 
     for h in h_dict:
