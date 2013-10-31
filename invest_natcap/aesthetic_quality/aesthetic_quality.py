@@ -138,6 +138,8 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
     dst_filename = out_viewshed_uri
 
+    in_dem_raster = gdal.Open(in_dem_uri)
+    assert in_dem_raster is not None
     src_ds = gdal.Open( src_filename )
     driver = gdal.GetDriverByName("GTiff")
     dst_ds = driver.CreateCopy( dst_filename, src_ds, 0 )
@@ -152,6 +154,8 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     assert shapefile is not None
     layer = shapefile.GetLayer(0)
     assert layer is not None
+    GT = in_dem_raster.GetGeoTransform()
+    iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
     print('feature count', feature_count)
     for f in range(feature_count):
@@ -163,7 +167,15 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
             message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
             ' point is "POINT"'
             assert geometry.GetGeometryName() == 'POINT', message
-            print('x', geometry.GetX(), 'y', geometry.GetY())
+            x = geometry.GetX()
+            y = geometry.GetY()
+            #print('x', x, 'y', y)
+            #print('GT ', GT)
+            #print('iGT', iGT)
+            i = round(iGT[0] + x*iGT[1] + y*iGT[2])
+            j = round(iGT[3] + x*iGT[4] + y*iGT[5])
+            print('i', i, 'j', j)
+
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
