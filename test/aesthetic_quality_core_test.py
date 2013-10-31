@@ -181,6 +181,11 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
 
+    def test_list_extreme_cell_angles_cython(self):
+        """Comparing the cython against the python version of
+        list_extreme_cell_angles"""
+        pass
+
     def test_get_perimeter_cells(self):
         """Test get_perimeter_cells on 2 hand-designed examples"""
         # First hand-designed example: 3x4 raster
