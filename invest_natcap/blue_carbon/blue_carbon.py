@@ -186,6 +186,9 @@ def execute(args):
         except KeyError:
             return 0.0
 
+    LOGGER.debug(acc_soil)
+    LOGGER.debug(carbon)
+    LOGGER.debug(trans)
 
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
@@ -259,17 +262,14 @@ def execute(args):
                                     0.0,
                                     cell_size,
                                     "union")
-    LOGGER.debug("Create stock total raster.")
+    LOGGER.debug("Created stock total raster.")
 
     ##loop over lulc years
     for lulc_transition_year in lulc_years:
         LOGGER.debug("Transition year %i.", lulc_transition_year)
+        lulc_transition_uri = lulc_uri_dict[lulc_transition_year]
+        
         t = lulc_transition_year - lulc_base_year
-
-        def timing_op(biomass_half, biomass, soil_half, soil_coefficient, soil):
-            if nodata in [biomass_half, biomass, soil_half, soil_coefficient, soil]:
-                return nodata
-            return ((0.5 ** (t / biomass_half)) * biomass) + ((0.5 ** (t / soil_half)) * soil_coefficient * soil)
 
         #local variable names
         lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % lulc_base_year)
@@ -285,6 +285,8 @@ def execute(args):
         LOGGER.info("Processing soil accumulation.")
         #get coefficients
         try:
+            LOGGER.debug(lulc_base_uri)
+            LOGGER.debug(lulc_transition_uri)
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             acc_soil_co_op,
                                             lulc_base_acc_soil_co_uri,
@@ -299,17 +301,15 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_co_uri,
                                                   "GTiff",
-                                                  0,
+                                                  0.0,
                                                   gdal.GDT_Byte)
             LOGGER.debug("Identity raster for soil accumulation coefficent created.")
 
-        return
-
         #multiply by number of years
         try:
-            raster_utils.vectorize_datasets([lulc_base_acc_co_uri],
+            raster_utils.vectorize_datasets([lulc_base_acc_soil_co_uri],
                                             ConstantOp(mul_op,t),
-                                            lulc_base_acc_uri,
+                                            lulc_base_acc_soil_uri,
                                             gdal.GDT_Float64,
                                             0.0,
                                             cell_size,
@@ -318,12 +318,11 @@ def execute(args):
 
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
-                                                  lulc_base_acc_uri,
+                                                  lulc_base_acc_soil_uri,
                                                   "GTiff",
-                                                  0,
+                                                  0.0,
                                                   gdal.GDT_Byte)
             LOGGER.debug("Zero soil accumulation raster created.")
-
 
         ##calculate biomass disturbance
         LOGGER.info("Processing biomass disturbance.")
@@ -406,7 +405,6 @@ def execute(args):
                                                   gdal.GDT_Byte)
             LOGGER.debug("Zero soil disturbance raster created.")
 
-        return
 
         #set base to new LULC and year
         lulc_base_year = lulc_transition_year
