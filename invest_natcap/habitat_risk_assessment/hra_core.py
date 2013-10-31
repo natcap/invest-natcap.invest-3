@@ -895,7 +895,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         for p in pixels[1::]:
     
             p_percent = float(p) / max_risk
-
+            
             if 0. <= p_percent < .333:
                 return 1
 
