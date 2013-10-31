@@ -26,8 +26,9 @@ def generate_report(reporting_args):
             page (required)
 
         reporting_args[elements] - a list of dictionaries that represent html
-            elements to be added to the html page (required). The 3 main
-            element types are 'table', 'head', and 'text'.
+            elements to be added to the html page. (required) If no elements 
+            are provided (list is empty) a blank html page will be generated.
+            The 3 main element types are 'table', 'head', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
                     Currently 'table', 'head', and 'text defined (required)

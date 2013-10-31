@@ -18,6 +18,27 @@ REGRESSION_DATA = os.path.join(
 TEST_OUT = os.path.join('invest-data/test/data', 'test_out')
 
 class TestReportingPackage(testing.GISTest):
+    def test_generate_html_smoke(self):
+        """Regression test for creating a html report with no elements passed
+            in. Expecting a blank html page created."""
+        
+        #raise SkipTest
+        
+        if not os.path.isdir(TEST_OUT):
+            os.makedirs(TEST_OUT)
+        
+        output_uri = os.path.join(TEST_OUT, 'html_test_smoke.html')
+        reg_uri = os.path.join(REGRESSION_DATA, 'regres_html_test_smoke.html')
+        
+        report_args = {
+                'title': 'Test Title',
+                'elements': [],
+                'out_uri': output_uri}
+
+        reporting.generate_report(report_args)
+
+        self.assertFiles(output_uri, reg_uri)
+
     def test_generate_html(self):
         """Regression test for creating a html report with a table element
             from a dictionary and an external css file"""
@@ -417,7 +438,7 @@ class TestReportingPackage(testing.GISTest):
         """Regression test for making a html page with multiple tables.
         """ 
         
-        #raise SkipTest
+        raise SkipTest
         
         if not os.path.isdir(TEST_OUT):
             os.makedirs(TEST_OUT)
