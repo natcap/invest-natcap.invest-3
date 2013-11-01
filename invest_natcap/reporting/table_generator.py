@@ -48,20 +48,15 @@ def generate_table(table_dict, attributes=None):
     
     # Initialize the string that will store the html representation of the table
     table_string = ''
-    # Create the table header, either with attributes or without
-    # TODO: Handle attributes better
+    
     if attributes != None:
-        attr_keys = attributes.keys()
-        attr_keys.sort()
-        table_string = '<table id=my_table '
-        for attr in attr_keys:
-            table_string = '%s %s=%s' % (table_string, attr, attributes[attr])
+        table_string += '<table'
+        for attr_key, attr_value in attributes.iteritems():
+            table_string += ' %s=%s' % (attr_key, attr_value)
 
-        table_string = table_string + '>'
+        table_string += '>'
     else:
-        table_string = '<table id=my_table>'
-
-    footer_string = ''
+        table_string += '<table>'
 
     # If checkbox column is wanted set it up
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
@@ -79,8 +74,9 @@ def generate_table(table_dict, attributes=None):
         add_checkbox_total = False
 
     # Get the column headers
-    col_headers = get_column_headers(table_cols)
-    
+    col_headers = get_dictionary_values_ordered(table_cols, 'name')
+    total_cols = get_dictionary_values_ordered(table_cols, 'total')
+
     # Write table header tag followed by table row tag
     table_string = table_string + '<thead><tr>'
     for col in col_headers:
@@ -88,86 +84,135 @@ def generate_table(table_dict, attributes=None):
         table_string += '<th>%s</th>' % col
    
     # Add the closing tag for the table header
-    table_string = table_string + '</tr></thead>'
+    table_string += '</tr></thead>'
 
     # Get the row data as 2D list
     row_data = get_row_data(table_rows, col_headers)
   
+    footer_string = ''
+
     if add_checkbox_total:
         footer_string += add_totals_row(
-                col_headers, 'Selected Total', 'checkTotal', 'checkTot', True)
+                col_headers, total_cols, 'Selected Total', 'checkTotal',
+                'checkTot')
 
     # Add any total rows as 'tfoot' elements in the table
     if 'total' in table_dict and table_dict['total']:
         footer_string += add_totals_row(
-                col_headers, 'Total', 'totalColumn', 'totalCol', False)
+                col_headers, total_cols, 'Total', 'totalColumn', 'totalCol')
     
     if not footer_string == '':
         table_string += '<tfoot>%s</tfoot>' % footer_string
 
     # Add the start tag for the table body
-    table_string = table_string + '<tbody>'
+    table_string += '<tbody>'
   
     # For each data row add a row in the html table and fill in the data
     for row in row_data:
-        table_string = table_string + '<tr>'
-        class_attr = -1
-        for row_data in row:
-            if class_attr >= 0:
+        table_string += '<tr>'
+        #for row_data in row:
+        for row_index in range(len(row)):
+            if total_cols[row_index]:
                 # Add row data
-                table_string = table_string + '<td class=rowDataSd>%s</td>' % row_data
+                table_string += '<td class=rowDataSd>%s</td>' % row[row_index]
             else:
-                table_string = table_string + '<td>%s</td>' % row_data
+                table_string += '<td>%s</td>' % row[row_index]
 
-            class_attr += 1
-
-        table_string = table_string + '</tr>'
+        table_string += '</tr>'
 
     # Add the closing tag for the table body and table
-    table_string = table_string + '</tbody></table>'
+    table_string += '</tbody></table>'
 
     return table_string
 
-    return html_str
-
-def add_totals_row(col_headers, title, row_class, data_class, checkbox=False):
-    """Add a totals row into the rows dictionary
+def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
+    """Construct a totals row as an html string. Creates one row element with
+        data where the row gets a class name and the data get a class name if
+        the corresponding column is a totalable column
         
-        col_headers - a list of the column headers in order
+        col_headers - a list of the column headers in order (required)
 
-        return - a string representing a 'tfoot' element
-    """
-    
-    html_str = '<tr class=%s><td>%s</td>' % (row_class, title)
-    data_index = 1
+        total_list - a list of booleans that corresponds to 'col_headers' and
+            indicates whether a column should be totaled (required)
 
-    if checkbox:
-        html_str += '<td>--</td>'
-        data_index = 2
+        total_name - a string for the name of the total row, ex: 'Total', 'Sum'
+            (required)
 
-    for col_spot in range(len(col_headers) - data_index):
-        html_str += '<td class=%s>--</td>' % data_class
+        row_class - a string for the class name for the total row. Used for
+            table manipulation in javascript (required)
+
+        data_class - a string for the class name for the data elements in the
+            row. Used for table manipulation in javascript (required)
+
+        return - a string representing the html contents of a row which should
+            later be used in a 'tfoot' element"""
+
+    # Begin constructing the html string for the new totals row
+    # Give the row a class name and have the first data element be the name or
+    # header for that row
+    html_str = '<tr class=%s><td>%s</td>' % (row_class, total_name)
+
+    # Iterate over the number of columns and add proper row data value,
+    # starting from the second column as the first columns row data value was
+    # defined above
+    for col_index in range(1, len(col_headers)):
+        # Check to see if this columns values should be totaled
+        if total_list[col_index]:
+            # If column should be totaled then add a class name
+            html_str += '<td class=%s>--</td>' % data_class
+        else:
+            # If the column should not be totaled leave off the class name
+            html_str += '<td>--</td>'
 
     html_str += '</tr>'
 
     return html_str
+
+def get_dictionary_values_ordered(base_dict, sub_key_name):
+    """Generate a list, ordered from the unique keys in 'base_dict', from a
+        specific value retrieved from the sub dictionaries key 'sub_key_name' 
+        
+        base_dict - a dictionary that has unique sortable keys where the keys
+            in ascending order represent the order of the constructed list.
+            Each key points to a dictionary that has at least one key:value pair
+            with the key being 'sub_key_name' (required)
+
+        return - a list of values from 'sub_key_name' in ascending order based
+            on 'base_dict's keys"""
+   
+    # Initiate an empty list to store values
+    ordered_value_list = []
+    # Get a list of the keys
+    keys = base_dict.keys()
+    # Sort the keys so that the values can be added to the list in proper order
+    keys.sort()
+
+    for key in keys:
+        # Get the desired value from each keys dictionary
+        value = base_dict[key][sub_key_name]
+        # Add the value to the list
+        ordered_value_list.append(value)
+
+    return ordered_value_list
 
 def add_checkbox_column(col_dict, row_dict):
     """Insert a new column into the columns dictionary so that it is the second
         column in order of 'id'. Also add the checkbox column header to the rows
         dictionary and subsequent checkbox value
 
-        col_dict - a dictionary with column ids as keys and sub dictionary as
-            its value. The sub dictionary requires a key 'name' followed by the
-            columns name. An example:
-            {col_id_1 : {name: col_1, sortable:True, editable:False},
-             col_id_2 : {name: col_2, sortable:True, editable:False},
-             ...
-            }
+        'col_dict'- a dictionary that defines the column structure for
+            the table (required). The dictionary has unique numeric
+            keys that determine the left to right order of the columns.
+            Each key has a dictionary value with the following
+            arguments:
+                'name' - a string for the column name (required)
+                'total' - a boolean for whether the column should be
+                    totaled (required)
 
-        row_dict - a dictionary with row ids as keys and sub dictionary as its
-            values. The sub dictionary requires key-value pairs for all the
-            column names in 'col_dict'. An Example:
+        'row_dict' - a dictionary with keys that have sub dictionaries as
+            values. The sub dictionaries have column names that match
+            the names in 'cols' as keys and the corresponding entry for
+            the column/row pair as a value. (required) Example:
             {row_id_0: {col_name_1: value, col_name_2: value, ...},
              row_id_1: {col_name_1: value, col_name_2: value, ...},
              ...
@@ -201,46 +246,19 @@ def add_checkbox_column(col_dict, row_dict):
 
     # Add the checkbox column as the second column using the old second column
     # id
-    col_dict[check_col_id] = {'name':'Select'}
+    col_dict[check_col_id] = {'name':'Select', 'total':False}
 
     LOGGER.debug('Columns with Checkboxes: %s', col_dict)
 
     # For each row in the row dictionary add a 'Select' key which refers to the
     # new column and set the value as a checkbox
     for key, val in row_dict.iteritems():
-        val['Select'] = '<input type="checkbox" name="cb" value="1">'
+        val['Select'] = '<input type=checkbox name=cb value=1>'
         
     LOGGER.debug('Rows with Checkboxes: %s', row_dict)
 
     # Return a tuple of the updated / modified column and row dictionary
     return (col_dict, row_dict) 
-
-def get_column_headers(col_dict):
-    """Iterate through the dictionary and pull out the column headers and store
-        in a list
-
-        col_dict - a dictionary specifying the column defintions. Example:
-            {col_id_1 : {name: col_name, sortable:True, editable:False},
-             col_id_2 : {name: col_name, sortable:True, editable:False},
-             ...
-            }
-
-        return - a list"""
-
-    # Initialize a list to store the column names in order
-    col_names = []
-
-    # Get a list of the keys from the column dictionary. The keys are ids that
-    # specify the order the columns should be listed
-    col_ids = col_dict.keys()
-    # Sort the ids so that we can return a corresponding list of column names in
-    # the proper order
-    col_ids.sort()
-
-    for col_id in col_ids:
-        col_names.append(col_dict[col_id]['name'])
-
-    return col_names
 
 def get_row_data(row_dict, col_headers):
     """Construct the rows in a 2D List from the dictionary, using col_headers to
@@ -280,9 +298,3 @@ def get_row_data(row_dict, col_headers):
         raise Exception('The dictionary is not constructed correctly')
 
     return row_data 
-
-def create_css_file(out_uri):
-    """Write a cool css default file, has to have the sortable table definition
-        it"""
-    #css_file = open(out_uri, 'w')
-

@@ -3,6 +3,8 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 from invest_natcap import raster_utils
+from invest_natcap import testing
+from invest_natcap.aesthetic_quality import aesthetic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
 
 import logging
@@ -126,10 +128,20 @@ def get_data_type_uri(ds_uri):
 
     return raster_data_type
 
-def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction, viewshed_uri, cell_size, aoi_dem_uri):
-    src_filename = "/home/mlacayo/Desktop/aq_sample/Output/vshed.tif"
-    dst_filename = viewshed_uri
+def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
+    # default parameter values that are not passed to this function but that
+    # aesthetic_quality_core.viewshed needs
+    obs_elev = 1.75 # Observator's elevation in meters
+    tgt_elev = 0.0  # Extra elevation applied to all the DEM
+    max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
+    refr_coeff = 0.13 # Refractivity coefficient
 
+    src_filename = \
+    "test/invest-data/test/data/aesthetic_quality_regression_data/single_viewpoint/output/vshed/hdr.adf"
+    dst_filename = out_viewshed_uri
+
+    in_dem_raster = gdal.Open(in_dem_uri)
+    assert in_dem_raster is not None
     src_ds = gdal.Open( src_filename )
     driver = gdal.GetDriverByName("GTiff")
     dst_ds = driver.CreateCopy( dst_filename, src_ds, 0 )
@@ -137,6 +149,39 @@ def viewshed(dem_uri, structure_uri, z_factor, curvature_correction, refraction,
     # Once we're done, close properly the dataset
     dst_ds = None
     src_ds = None
+
+    # The model extracts each point from the shapefile
+    point_list = []
+    shapefile = ogr.Open(in_structure_uri)
+    assert shapefile is not None
+    layer = shapefile.GetLayer(0)
+    assert layer is not None
+    GT = in_dem_raster.GetGeoTransform()
+    iGT = gdal.InvGeoTransform(GT)[1]
+    feature_count = layer.GetFeatureCount()
+    print('feature count', feature_count)
+    for f in range(1): #feature_count):
+        feature = layer.GetFeature(f)
+        field_count = feature.GetFieldCount()
+        for field in range(field_count):
+            geometry = feature.GetGeometryRef()
+            assert geometry is not None
+            message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
+            ' point is "POINT"'
+            assert geometry.GetGeometryName() == 'POINT', message
+            x = geometry.GetX()
+            y = geometry.GetY()
+            #print('x', x, 'y', y)
+            #print('GT ', GT)
+            #print('iGT', iGT)
+            i = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
+            j = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
+            print('i', i, 'j', j)
+            aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
+            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+    
+    testing.assertRasterEquals(src_filename, out_viewshed_uri)
+
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
@@ -262,13 +307,10 @@ def execute(args):
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
     viewshed(aq_args['dem_uri'],
-             aq_args['structure_uri'],
-             z_factor,
-             curvature_correction,
-             aq_args['refraction'],
              viewshed_uri,
-             aq_args['cell_size'],
-             aoi_dem_uri)
+             aq_args['structure_uri'],
+             curvature_correction,
+             aq_args['refraction'])
 
     LOGGER.info("Ranking viewshed.")
     #rank viewshed

@@ -181,6 +181,47 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert error < 5e-15, message
 
 
+    def test_list_extreme_cell_angles_cython(self):
+        """Comparing the cython against the python version of
+        list_extreme_cell_angles"""
+        array_shape = (3, 3)
+        viewpoint = (array_shape[0]/2, array_shape[1]/2)
+
+        # Gather extreme angles from naive algorithm 
+        extreme_angles_naive = []
+        for row in range(array_shape[0]):
+            for col in range(array_shape[1]):
+                if (row == viewpoint[0]) and (col == viewpoint[1]):
+                    continue
+                cell = (row, col)
+                extreme_angles_naive.append( \
+                    self.extreme_cell_angles_naive(cell, viewpoint))
+        # Convert to numpy
+        min_angles, nested_list = zip(*extreme_angles_naive)
+        min_angles = np.array(min_angles)
+        center_angles, max_angles = zip(*nested_list)
+        center_angles = np.array(center_angles)
+        max_angles = np.array(max_angles)
+        extreme_angles_naive = (min_angles, center_angles, max_angles)
+        # Gather extreme angles from efficient algorithm
+        extreme_angles_fast = \
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        # Compare the two
+        error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
+            np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
+            np.abs(extreme_angles_naive[2]-extreme_angles_fast[2]))
+        # assert if necessary
+        if error > 5e-15:
+            print('naive', extreme_angles_naive)
+            print('fast', extreme_angles_fast)
+            print('difference')
+            print(extreme_angles_fast[0] - extreme_angles_naive[0])
+            print(extreme_angles_fast[1] - extreme_angles_naive[1])
+            print(extreme_angles_fast[2] - extreme_angles_naive[2])
+        message = 'error on expected and computed angles is too large:' + \
+        str(error)
+        assert error < 5e-15, message
+
     def test_get_perimeter_cells(self):
         """Test get_perimeter_cells on 2 hand-designed examples"""
         # First hand-designed example: 3x4 raster
@@ -630,15 +671,25 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
+        args['aoi_uri'] = \
+        'invest-data/AestheticQuality/Input/AOI_WCVI.shp'
         args['structure_uri'] = \
-        'invest-data/test/data/aesthetic_quality_test_data/BC_parks.shp'
+        'invest-data/AestheticQuality/Input/AquaWEM_points.shp'
         args['dem_uri'] = '../Base_Data/Marine/DEMs/claybark_dem/hdr.adf'
-        args['aoi_uri'] = 
-        'invest_data/test/data/aesthetic_quality_test_data/AOI_WCVI.shp'
-        args['pop_uri'] = 
+        args['refraction'] = 0.13
+        args['cell_size'] = 500.
+        args['pop_uri'] = \
         '../Base_Data/Marine/Population/global_pop/hdr.adf'
-        args['overlap_uri'] = 
-        'invest_data/test/data/aesthetic_quality_test_data/AquaWEM_single_point.shp'
+        args['overlap_uri'] = \
+        'invest_data/AestheticQuality/Input/BC_parks.shp'
+
+        # Create the inputs
+        input_uri = ''
+        output_uri = ''
+        coordinates = (0.0, 0.0)
+        #aesthetic_quality_core.viewshed(input_uri, output_uri, coordinates, \
+        #obs_elev = 1.75, tgt_elev = 0.0, max_dist = -1., \
+        #refraction_coeff = None)
 
     def tare_down(self):
         pass
