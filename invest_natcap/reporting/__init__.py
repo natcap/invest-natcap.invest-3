@@ -37,11 +37,12 @@ def generate_report(reporting_args):
                     in the body or head of the html page. 
                     Values: 'body' | 'head' (required)
                         
-                'position' - an integer that depicts where the element should
-                    be placed on the html page. Elements will be written in
-                    ascending order with sections 'body' and 'head' separately
-                    defined. If two elements have the same position, the
-                    following repeated positions will be bumped up (required)
+                'position' - a positive integer that depicts where the element
+                    should be placed on the html page. Elements will be written
+                    in ascending order with sections 'body' and 'head'
+                    separately defined. If two elements have the same position,
+                    the following repeated positions will be bumped up
+                    (required)
             
             Table element dictionary has at least the following additional arguments: 
                 'sortable' - a boolean value for whether the tables columns
@@ -96,86 +97,95 @@ def generate_report(reporting_args):
 
         returns - nothing"""
 
-#    html_obj = {'head':{}, 'body':{}}
-    html_obj = {'head':([],[]), 'body':([],[])}
-    
+    # Get the title for the hmlt page and place it in a string with html 
+    # title tags
+    html_title = '<title>%s</title>' % reporting_args['title']
+
+    # Initiate the html dictionary which will store all the head and body
+    # elements. The 'head' and 'body' keys points to a tuple of two lists. The
+    # first list holds the string representations of the html elements and the
+    # second list is the corresponding 'position' of those elements. This allows
+    # for proper ordering later in 'write_html'.
+    # Initialize head's first element to be the title where the -1 position 
+    # ensures it will be the first element
+    html_obj = {'head':([html_title],[-1]), 'body':([],[])}
+   
+    # A dictionary of 'types' that point to corresponding functions. When an
+    # 'element' is passed in the 'type' will be one of the defined types below
+    # and will execute a function that properly handles that element
     report = {
             'table': build_table,
             'text' : add_text_element,
             'head': add_head_element
             }
 
+    # Iterate over the elements to be added to the html page
     for element in reporting_args['elements']:
-        
+        # There are 3 general purpose arguments that each element will have,
+        # 'type', 'section', and 'position'. Get and remove these from the
+        # elements dictionary (they should not be added weight passed to the
+        # individual element functions)
         fun_type = element.pop('type')
         section = element.pop('section')
         position = element.pop('position')
 
-        #html_obj[section][position] = report[fun_type](element)
+        # Process the element by calling it's specific function handler which
+        # will return a string. Append this to html dictionary to be written
+        # in write_html
         html_obj[section][0].append(report[fun_type](element))
+        # Append the position of the element to the html dictionary so the
+        # elements can be written in order in write_html
         html_obj[section][1].append(position)
 
     LOGGER.debug('HTML OBJECT : %s', html_obj)
 
-    write_html(html_obj, reporting_args['out_uri'], reporting_args['title'])
+    # Write the html page to 'out_uri'
+    write_html(html_obj, reporting_args['out_uri'])
 
-def write_html(html_obj, out_uri, title):
-    """Write an html file by parsing through a dictionary that contains strings
-        and their proper structure
+def write_html(html_obj, out_uri):
+    """Write an html file to 'out_uri' from html element represented as strings
+        in 'html_obj'
 
-        html_obj - a dictionary whose keys depict the structure for the html
-            page and whose values are sub dictionaries that hold the strings 
-            example: {'head':{0:'string', 1:'string', 2:'string'},
-                      'body':{0:'string', 1:'string', 2:'string'}}
+        html_obj - a dictionary with two keys, 'head' and 'body', that point to
+            a tuple of two lists. The first list in the tuple for each key is a
+            list of the htmls elements as strings. The second is a list of the
+            position those elements should be written with respect to the their
+            key (required)
+            example: {'head':(['elem_1', 'elem_2',...],[pos_1, pos_2,...]),
+                      'body':(['elem_1', 'elem_2',...],[pos_1, pos_2,...])}
         
         out_uri - a URI for the output html file
 
-        title - a string represting the title of the page
-
-        returns - nothing
-    """
-
-    # Start the string that will be written as the html file by setting the
-    # title
-    html_str = '<html><head><title>%s</title>' % title
-   
-    head_elements = html_obj['head'][0]
-    head_order = html_obj['head'][1]
-
-    head_order, head_elements = zip(*sorted(zip(head_order, head_elements)))
-
-    for head_elem in head_elements:
-        html_str += head_elem
-
-    # Sort the head keys so that the head elements are written in the proper
-    # order
-    #head_keys = html_obj['head'].keys()
-    #head_keys.sort()
-    #for head_key in head_keys:
-        # Concatenate the output string with the head elements
-    #    html_str += html_obj['head'][head_key]
+        returns - nothing"""
     
-    # End the head tag and start the body tag
-    html_str += '</head><body>'
+    # Start the string that will be written as the html file
+    html_str = '<html>'
 
-    body_elements = html_obj['body'][0]
-    body_order = html_obj['body'][1]
+    for section in ['head', 'body']:
+        # Write the tag for the section
+        html_str += '<%s>' % section
+        # Get the list of html string elements for this section
+        sect_elements = html_obj[section][0]
+        # Get the list of positions for the elements
+        sect_order = html_obj[section][1]
 
-    body_order, body_elements = zip(*sorted(zip(body_order, body_elements)))
+        # Check to make sure the lists are not empty because it is possible no
+        # elements were were added
+        if len(sect_elements) > 0 and len(sect_order) > 0:
+            # The position and element string are related in the two lists by
+            # the index they are found. Sorting the position order list and
+            # keep the relation of the element list.
+            sect_order, sect_elements = zip(*sorted(zip(sect_order, sect_elements)))
 
-    for body_elem in body_elements:
-        html_str += body_elem
+            for sect_elem in sect_elements:
+                # Add each element to the html string
+                html_str += sect_elem
 
-    # Sort the body keys so that the body elements are written in the proper
-    # order
-    #body_keys = html_obj['body'].keys()
-    #body_keys.sort()
-    #for body_key in body_keys:
-        # Concatenate the output string with the body elements
-    #    html_str += html_obj['body'][body_key]
+        # Add the closing tag for the section
+        html_str += '</%s>' % section
 
-    # Finish the body and the html tag
-    html_str += '</body></html>'
+    # Finish the html tag
+    html_str += '</html>'
 
     # If the URI for the html output file exists remove it
     if os.path.isfile(out_uri):
