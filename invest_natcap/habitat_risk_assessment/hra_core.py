@@ -63,6 +63,9 @@ def execute(args):
             dependent on this.
         args['max_risk']- The highest possible risk value for any given pairing
             of habitat and stressor.
+        args['max_stress']- The largest number of stressors that the user
+            believes will overlap. This will be used to get an accurate estimate
+            of risk.
         args['aoi_tables']- May or may not exist within this model run, but if it
             does, the user desires to have the average risk values by 
             stressor/habitat using E/C axes for each feature in the AOI layer
@@ -118,14 +121,14 @@ def execute(args):
     #We will combine all of the h-s rasters of the same habitat into
     #cumulative habitat risk rastersma db return a list of the DS's of each,
     #so that it can be read into the ecosystem risk raster's vectorize.
-    h_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
+    h_risk_dict, h_s_risk_dict = make_hab_risk_raster(maps_dir, risk_dict)
 
     #Also want to output a polygonized version of high and low risk areas in 
     #each habitat. Will polygonize everything that falls above a certain 
     #percentage of the total raster risk, or below that threshold. These can 
     #then be fed into different models.
     num_stress = make_risk_shapes(maps_dir, crit_lists, h_risk_dict, 
-                args['max_risk'])
+                h_s_risk_dict, args['max_risk'], args['max_stress'])
 
     #Now, combine all of the habitat rasters unto one overall ecosystem
     #rasterusing the DS's from the previous function.
@@ -747,7 +750,7 @@ def make_ecosys_risk_raster(dir, h_dict):
                 resample_method_list=None, dataset_to_align_index=0,
                 aoi_uri=None)
 
-def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
+def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     '''This function will take in the current rasterized risk files for each
     habitat, and output a shapefile where the areas that are "HIGH RISK" (high
     percentage of risk over potential risk) are the only existing polygonized
@@ -781,12 +784,20 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
                            hab2: ...
                          }
             }
-        h_dict- A dictionary that contains raster dataseti URIs corresponding
+        h_dict- A dictionary that contains raster dataset URIs corresponding
             to each of the habitats in the model. The key in this dictionary is
             the name of the habiat, and it maps to the open dataset.
+        h_s_dict- A dictionary that maps a habitat name to the risk rasters
+            for each of the applicable stressors.
+
+            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            }
         max_risk- Double representing the highest potential value for a single
             h-s raster. The amount of risk for a given Habitat raster would be
             SUM(s) for a given h.
+        max_stress- The largest number of stressors that the user believes will
+            overlap. This will be used to get an accurate estimate of risk.
 
      Output:
         Returns two shapefiles for every habitat, one which shows features only
@@ -798,6 +809,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
             associated with each habitat. The key is the string name of the 
             habitat, and it maps to an int counter of number of stressors.
      '''
+    
     #For each h, want  to know how many stressors are associated with it. This
     #allows us to not have to think about whether or not a h-s pair was zero'd
     #out by weighting or DQ.
@@ -811,48 +823,102 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
             num_stress[h] = 1
     
     curr_top_risk = None
+    
+    #This is the user definied threshold overlap of stressors, multipled by the
+    #maximum potential risk for any given overlap between habitat and stressor
+    #This yields a user defined threshold for risk.
+    user_max_risk = max_stress * max_risk
+    LOGGER.debug("User max risk is %s" % user_max_risk)
 
-    def high_risk_raster(pixel):
 
-        percent = float(pixel)/ curr_top_risk
+    def high_risk_raster(*pixels):
+
+        #We know that the overarching habitat pixel is the first in the list
+        h_pixel = pixels[0]
+
+        h_percent = float(h_pixel)/ user_max_risk
 
         #high risk is classified as the top third of risk
-        if percent > .666:
+        if h_percent >= .666:
             return 1
-        else:
-            return -1.
-
-    def med_risk_raster(pixel):
-
-        percent = float(pixel)/ curr_top_risk
-
-        #low risk is classified as the bottom two thirds of risk
-        if .333 < percent <= .666:
-            return 1
-        else:
-            return -1.
+        
+        #If we aren't getting high risk from just the habitat pixel, 
+        #want to secondarily check each of the h_s pixels.
+        for p in pixels[1::]:
     
-    def low_risk_raster(pixel):
+            p_percent = float(p) / max_risk
 
-        percent = float(pixel)/ curr_top_risk
+            if p_percent >= .666:
+                return 1
 
-        #low risk is classified as the bottom one third of risk
-        if 0 < percent <= .333:
+        #If we get here, neither the habitat raster nor the h_s_raster are
+        #considered high risk. Can return nodata.
+        return -1.
+
+    def med_risk_raster(*pixels):
+
+        #We know that the overarching habitat pixel is the first in the list
+        h_pixel = pixels[0]
+
+        h_percent = float(h_pixel)/ user_max_risk 
+
+        #medium risk is classified as the middle third of risk
+        if .333 <= h_percent < .666:
             return 1
-        else:
-            return -1.
+        
+        #If we aren't getting medium risk from just the habitat pixel, 
+        #want to secondarily check each of the h_s pixels.
+        for p in pixels[1::]:
+    
+            p_percent = float(p) / max_risk
+
+            if .333 <= p_percent < .666:
+                return 1
+
+        #If we get here, neither the habitat raster nor the h_s_raster are
+        #considered med risk. Can return nodata.
+        return -1.
+    
+    def low_risk_raster(*pixels):
+
+        #We know that the overarching habitat pixel is the first in the list
+        h_pixel = pixels[0]
+
+        h_percent = float(h_pixel)/ user_max_risk
+
+        #low risk is classified as the lowest third of risk
+        if 0. <= h_percent < .333:
+            return 1
+        
+        #If we aren't getting low risk from just the habitat pixel, 
+        #want to secondarily check each of the h_s pixels.
+        for p in pixels[1::]:
+    
+            p_percent = float(p) / max_risk
+            
+            if 0. <= p_percent < .333:
+                return 1
+
+        #If we get here, neither the habitat raster nor the h_s_raster are
+        #considered low risk. Can return nodata.
+        return -1.
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
         #curr_top_risk = num_stress[h] * max_risk
         curr_top_risk = 3 * max_risk
+        #Make list on the fly for rasters which could be high risk. Want to
+        #make sure that we're passing in the h risk raster first so that we
+        #know it from the rest.
         old_ds_uri = h_dict[h]
+        risk_raster_list = [old_ds_uri] + h_s_dict[h]
+        
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif') 
         h_out_uri = os.path.join(dir, '[' + h + ']_HIGH_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], high_risk_raster, 
+        raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
@@ -866,7 +932,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
         m_out_uri = os.path.join(dir, '[' + h + ']_MED_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], med_risk_raster, 
+        raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
@@ -880,7 +946,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, max_risk):
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
         l_out_uri = os.path.join(dir, '[' + h + ']_LOW_RISK.shp')
         
-        raster_utils.vectorize_datasets([old_ds_uri], low_risk_raster, 
+        raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
@@ -962,6 +1028,12 @@ def make_hab_risk_raster(dir, risk_dict):
             'Habitat B': "Overall Habitat B Risk URI"
              ...
             }
+        h_s_rasters- A dictionary that maps a habitat name to the risk rasters
+            for each of the applicable stressors.
+
+            {'HabA': ["A-1 Risk Raster URI", "A-2 Risk Raster URI", ...],
+             'HabB': ["B-1 Risk Raster URI", "B-2 Risk Raster URI", ...], ...
+            }
     '''
     
     #Use arbitrary element to get the nodata for habs
@@ -1003,6 +1075,9 @@ def make_hab_risk_raster(dir, risk_dict):
     #ecosystem raster function to be used in vectorize_dataset.
     h_rasters = {} 
 
+    #Also need to store which h_s rasters apply to each habitat   
+    h_s_rasters = {}
+
     #Run through all potential pairings, and make lists for the ones that
     #share the same habitat.
     for h in habitats:
@@ -1022,9 +1097,9 @@ def make_hab_risk_raster(dir, risk_dict):
                         aoi_uri=None)
 
         h_rasters[h] = out_uri 
+        h_s_rasters[h] = ds_list
 
-    return h_rasters
-
+    return h_rasters, h_s_rasters
 
 def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
@@ -1316,7 +1391,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     of all the rasters passed in within the list, divided by the denominator.
 
     Input:
-        out_uri- The location to which the calculated C raster should be burned.
+        out_uri- The location to which the calculated C raster should be bGurned.
         h_s_list- A list of rasters burned with the equation r/dq*w for every
             criteria applicable for that h, s pair.
         h_s_denom_dict- A dictionary containing criteria names applicable to this
@@ -1344,7 +1419,9 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
     h_list_start_index = len(h_s_list)
-    
+   
+    LOGGER.debug("The outgoing URI is: %s, which is composed of: %s" % (out_uri, tot_crit_list))
+
     def add_c_pix(*pixels):
         
         all_nodata = True
@@ -1367,7 +1444,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
                     denom_val += h_s_denom_dict[h_s_names[i]]
                 else:
                     value += p
-                    denom_val += h_denom_dict[h_names[i-len(h_s_list)]]
+                    denom_val += h_denom_dict[h_names[i-h_list_start_index]]
        
         #Special case for 0 value inputs coming in. Know that val=0 will only
         #be the case when we have no resil. crits, and habitat not covered by
