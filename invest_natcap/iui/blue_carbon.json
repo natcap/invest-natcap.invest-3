@@ -142,11 +142,20 @@
                                                 "required": true
                                             },                                            
                                             {
-                                                "id": "disturbance_csv_uri",
-                                                "args_id": "disturbance_csv_uri",
+                                                "id": "biomass_disturbance_csv_uri",
+                                                "args_id": "biomass_disturbance_csv_uri",
                                                 "type": "file",
-                                                "label": "Disturbance CSV",
-                                                "defaultValue": "../BlueCarbon/input/disturbance.csv",
+                                                "label": "Biomass Disturbance CSV",
+                                                "defaultValue": "../BlueCarbon/input/biomass_disturbance.csv",
+                                                "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
+                                                "required": true
+                                            },
+                                            {
+                                                "id": "soil_disturbance_csv_uri",
+                                                "args_id": "soil_disturbance_csv_uri",
+                                                "type": "file",
+                                                "label": "Soil Disturbance CSV",
+                                                "defaultValue": "../BlueCarbon/input/soil_disturbance.csv",
                                                 "helpText": "see <a href=\"../documentation/blue_carbon.html#data-needs\">Data Needs</a>",
                                                 "required": true
                                             },
