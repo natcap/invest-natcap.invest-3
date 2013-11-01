@@ -4,9 +4,11 @@ import numpy as np
 import collections
 import logging
 
-#LOGGER = logging.get('aesthetic_quality_core')
-#logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-#    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+from osgeo import gdal
+
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('aesthetic_quality_core')
 
 def list_extreme_cell_angles(array_shape, viewpoint_coords):
     """List the minimum and maximum angles spanned by each cell of a
@@ -46,8 +48,15 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     max_angles = []
     I = []
     J = []
+    print('listing extreme cell angles')
+    cell_count = array_shape[0]*array_shape[1]
+    current_cell_id = 0
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
+            if (current_cell_id % (cell_count/1000)) == 0:
+                progress = round(float(current_cell_id) / cell_count * 100.,1)
+                print(str(progress) + '%')
+            current_cell_id += 1
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
@@ -75,13 +84,14 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
+    print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
     angles = np.array(angles)
     max_angles = np.array(max_angles)
     I = np.array(I)
     J = np.array(J)
-
+    print('done storing result. Returning.')
     return (min_angles, angles, max_angles, I, J)
 
 # Linked cells used for the active pixels
@@ -1061,10 +1071,10 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
         Returns nothing"""
     # Open the input URI and extract the numpy array
     input_raster = gdal.Open(input_uri)
-    message = 'Cannot open file ' + input_raster
+    message = 'Cannot open file ' + input_uri
     assert input_raster is not None, message
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
-    array_shape = DEM.shape
+    array_shape = input_array.shape
     
     # Compute the viewshed on it
     output_array = compute_viewshed(input_array, coordinates, obs_elev, \
@@ -1095,6 +1105,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
     print('angles', angles.size, angles)
+    angle_count = len(angles)
     # 3- compute information on raster cells
     events = \
     list_extreme_cell_angles(array_shape, coordinates)
@@ -1124,7 +1135,9 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     
     # Add the events to the 3 event lists
     # Add center angles to center_events_array
-    for a in range(1, len(angles)): 
+    LOGGER.debug('Creating event string')
+    for a in range(1, angle_count):
+        print('angle ' + str(a) + ' / ' + str(angle_count))
         # Collect cell_center events
         current_events = []
         while (center_event_id < center_event_count) and \
@@ -1160,6 +1173,8 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
+    print('Sweeping the map')
+    print('angle 0 / ' + str(angles))
     for c in cell_center_events[0]:
         d = distances[c]
         v = visibility[c]
@@ -1172,6 +1187,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
         
     # 2- loop through line sweep angles:
     for a in range(len(angles) - 1):
+        print('angle ' + str(a) + ' / ' + str(angle_count - 1))
     #   2.1- add cells
         if add_cell_events[a].size > 0:
             for c in add_cell_events[a]:
