@@ -48,20 +48,15 @@ def generate_table(table_dict, attributes=None):
     
     # Initialize the string that will store the html representation of the table
     table_string = ''
-    # Create the table header, either with attributes or without
-    # TODO: Handle attributes better
+    
     if attributes != None:
-        attr_keys = attributes.keys()
-        attr_keys.sort()
-        table_string = '<table id=my_table'
-        for attr in attr_keys:
-            table_string = '%s %s=%s' % (table_string, attr, attributes[attr])
+        table_string += '<table'
+        for attr_key, attr_value in attributes.iteritems():
+            table_string += ' %s=%s' % (attr_key, attr_value)
 
-        table_string = table_string + '>'
+        table_string += '>'
     else:
-        table_string = '<table id=my_table>'
-
-    footer_string = ''
+        table_string += '<table>'
 
     # If checkbox column is wanted set it up
     if ('checkbox' in table_dict) and (table_dict['checkbox']):
@@ -89,11 +84,13 @@ def generate_table(table_dict, attributes=None):
         table_string += '<th>%s</th>' % col
    
     # Add the closing tag for the table header
-    table_string = table_string + '</tr></thead>'
+    table_string += '</tr></thead>'
 
     # Get the row data as 2D list
     row_data = get_row_data(table_rows, col_headers)
   
+    footer_string = ''
+
     if add_checkbox_total:
         footer_string += add_totals_row(
                 col_headers, total_cols, 'Selected Total', 'checkTotal',
@@ -108,11 +105,11 @@ def generate_table(table_dict, attributes=None):
         table_string += '<tfoot>%s</tfoot>' % footer_string
 
     # Add the start tag for the table body
-    table_string = table_string + '<tbody>'
+    table_string += '<tbody>'
   
     # For each data row add a row in the html table and fill in the data
     for row in row_data:
-        table_string = table_string + '<tr>'
+        table_string += '<tr>'
         #for row_data in row:
         for row_index in range(len(row)):
             if total_cols[row_index]:
@@ -121,10 +118,10 @@ def generate_table(table_dict, attributes=None):
             else:
                 table_string += '<td>%s</td>' % row[row_index]
 
-        table_string = table_string + '</tr>'
+        table_string += '</tr>'
 
     # Add the closing tag for the table body and table
-    table_string = table_string + '</tbody></table>'
+    table_string += '</tbody></table>'
 
     return table_string
 
