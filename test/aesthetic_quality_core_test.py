@@ -184,7 +184,43 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_list_extreme_cell_angles_cython(self):
         """Comparing the cython against the python version of
         list_extreme_cell_angles"""
-        pass
+        array_shape = (3, 3)
+        viewpoint = (array_shape[0]/2, array_shape[1]/2)
+
+        # Gather extreme angles from naive algorithm 
+        extreme_angles_naive = []
+        for row in range(array_shape[0]):
+            for col in range(array_shape[1]):
+                if (row == viewpoint[0]) and (col == viewpoint[1]):
+                    continue
+                cell = (row, col)
+                extreme_angles_naive.append( \
+                    self.extreme_cell_angles_naive(cell, viewpoint))
+        # Convert to numpy
+        min_angles, nested_list = zip(*extreme_angles_naive)
+        min_angles = np.array(min_angles)
+        center_angles, max_angles = zip(*nested_list)
+        center_angles = np.array(center_angles)
+        max_angles = np.array(max_angles)
+        extreme_angles_naive = (min_angles, center_angles, max_angles)
+        # Gather extreme angles from efficient algorithm
+        extreme_angles_fast = \
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        # Compare the two
+        error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
+            np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
+            np.abs(extreme_angles_naive[2]-extreme_angles_fast[2]))
+        # assert if necessary
+        if error > 5e-15:
+            print('naive', extreme_angles_naive)
+            print('fast', extreme_angles_fast)
+            print('difference')
+            print(extreme_angles_fast[0] - extreme_angles_naive[0])
+            print(extreme_angles_fast[1] - extreme_angles_naive[1])
+            print(extreme_angles_fast[2] - extreme_angles_naive[2])
+        message = 'error on expected and computed angles is too large:' + \
+        str(error)
+        assert error < 5e-15, message
 
     def test_get_perimeter_cells(self):
         """Test get_perimeter_cells on 2 hand-designed examples"""
