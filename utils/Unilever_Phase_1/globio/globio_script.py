@@ -4,16 +4,23 @@
    is used to calculate MSA. The script can analyze scenarios of several types,
    including (identical to the scenario set used in the Carbon assessment):
 
-   1) predefined scenarios as LULC GIS rasters
-   2) forest erosion from edges inward
-   3) grassland expansion, then forest erosion
+  1) unconstrained composite (expansion from current agriculture into whichever 
+    cell is closest, regardless of the habitat type)
+    2) 80/20 composite (expansion from current agriculture into closest cell, 
+    constrained to expanding into 80% savanna  20% forest at the beginning
+    and gradually moving toward 20% savanna 80% forest by then end) 
+    3) forest fragmentation (expansion into forest with maximum fragmentation,
+    always choosing cells furthest from edge)
+    4) forest edge (expansion into forest from edge inward)
+    5) forest core (expansion into forest from core outward)
+    6) savanna (expansion into savanna only)
 
-   The program writes to several output files, including:    
-   pre_calculated_scenarios_biodiversity_change.csv, 
-   forest_degredation_biodiversity_change.csv and 
-   grassland_expansion_biodiversity_change.csv that contains two columns, the
-   first the soybean expansion percent and the second, the amount of carbon
-   stocks on the landscape for each of the three scenarios above"""
+    The program writes outputs to the following directories:
+    globio_mg_output
+    globio_mgds_output
+    globio_mg_output_by_ecoregion
+    globio_mgds_output_by_ecoregion
+   """
 
 import gdal
 import numpy
