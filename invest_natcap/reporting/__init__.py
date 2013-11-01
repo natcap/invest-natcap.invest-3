@@ -68,7 +68,8 @@ def generate_report(reporting_args):
                 
                 'key' - a string that defines which column or field should be
                     used as the keys for extracting data from a shapefile or csv
-                    table'key_field' (required for 'data_type' = 'shapefile' | 'csv')
+                    table 'key_field'.
+                    (required for 'data_type' = 'shapefile' | 'csv')
 
                 'columns'- a dictionary that defines the column structure for
                     the table (required). The dictionary has unique numeric
