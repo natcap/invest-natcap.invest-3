@@ -1,15 +1,32 @@
-"""This script calculates a log regresion function to predict forest carbon
+"""This script calculates a log regression function to predict forest carbon
     stocks based on the distance from the edge of the forest.  It has several
     options to simulate soybean expansion scenarios including:
 
-    1) predefined scenarios as LULC GIS rasters
-    2) forest erosion from edges inward
-    3) grassland expansion, then forest erosion
+    1) unconstrained composite (expansion from current agriculture into whichever 
+    cell is closest, regardless of the habitat type)
+    2) 80/20 composite (expansion from current agriculture into closest cell, 
+    constrained to expanding into 80% savanna  20% forest at the beginning
+    and gradually moving toward 20% savanna 80% forest by then end) 
+    3) forest fragmentation (expansion into forest with maximum fragmentation,
+    always choosing cells furthest from edge)
+    4) forest edge (expansion into forest from edge inward)
+    5) forest core (expansion into forest from core outward)
+    6) savanna (expansion into savanna only)
 
-    The program writes to a file called
-    grassland_expansion_carbon_stock_change.csv that contains two columns, the
-    first the soybean expansion percent and the second, the amount of carbon
-    stocks on the landscape under that scenario."""
+    The program writes outputs to the following directories:
+    carbon_mg_output
+    carbon_mgds_output
+   
+   with csvs for each scenario containing the following columns:
+   expansion step (1-200)
+   number of pixels converted
+   total aboveground carbon
+   total aboveground carbon (lower tail)
+   total aboveground carbon (upper tail)
+
+  and csvs for pixel counts of each land-use/land-cover class converted by each
+ step in the two composite scenarios. 
+   """
 
 import gdal
 import numpy
@@ -23,6 +40,7 @@ import collections
 import errno
 from multiprocessing import Pool
 import time
+
 from invest_natcap import raster_utils
 
 def lowpriority():
@@ -984,7 +1002,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         'regression_uncertainty': regression_uncertainty,
     }
 
-    #set up args for the composite scenario
+    #set up args for the constrained composite scenario
     raster_utils.create_directories([output_dir])
     
     args['output_table_filename'] = (
@@ -998,6 +1016,8 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_composite_carbon_stock_change(args)
 
+    #set up args for the 80/20 composite scenario (starting with 80% savanna 20% forest, 
+    #ending with 20% savanna 80% forest
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
@@ -1016,7 +1036,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         analyze_composite_carbon_stock_change(args)
 
 
-    #Set up args for the forest core scenario
+    #Set up args for the forest fragmentation scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg%s.csv' % suffix))
     if pool is not None:
@@ -1041,7 +1061,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_lu_expansion(args)
 
-    #Set up args for the forest edge erosion scenario
+    #Set up args for the forest edge scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg%s.csv' % suffix))
     if pool is not None:

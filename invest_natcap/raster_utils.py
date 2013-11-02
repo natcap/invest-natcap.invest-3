@@ -2175,7 +2175,6 @@ def vectorize_datasets(
         gdal.Dataset.__swig_destroy__(dataset)
     aligned_datasets = None
     for temp_dataset_uri in dataset_out_uri_list:
-        LOGGER.debug('removing %s' % temp_dataset_uri)
         try:
             os.remove(temp_dataset_uri)
         except OSError:
