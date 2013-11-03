@@ -62,8 +62,8 @@ def expand_lu_type(
             lu_mask_array = numpy.zeros(shape=edge_distance.shape, dtype=numpy.bool)
             lu_mask_array[:] = False
             for lu_code in lu_code_list:
-                lu_mask_array = lu_mask_array | base_array == lu_code
-            lu_edge_distance[lu_mask_array] = numpy.inf
+                lu_mask_array = lu_mask_array | (base_array == lu_code)
+            lu_edge_distance[~lu_mask_array] = numpy.inf
             lu_increasing_distances = numpy.argsort(lu_edge_distance.flat)
             lu_pixels_to_convert = int(round(step_percent(lu_start_percent_change, lu_end_percent_change)))
             if lu_pixels_to_convert == 0: continue

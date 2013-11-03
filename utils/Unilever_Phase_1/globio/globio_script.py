@@ -45,7 +45,7 @@ import scipy.ndimage.filters
 import matplotlib.pyplot as plt
 from invest_natcap import raster_utils
 
-from .. import scenario_tools
+import scenario_tools
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
