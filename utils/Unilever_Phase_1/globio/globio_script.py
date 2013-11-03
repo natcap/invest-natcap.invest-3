@@ -1040,7 +1040,7 @@ def run_globio_mgds(number_of_steps, pool):
         analyze_composite_globio_change(args)
     
     return
-    
+
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change.csv'))
     args['output_pixel_count_filename'] = (
@@ -1187,7 +1187,7 @@ def run_globio_mg(number_of_steps, pool):
         analyze_composite_globio_change(args)
 
     return
-    
+
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_composite_change.csv'))
     args['output_pixel_count_filename'] = (
