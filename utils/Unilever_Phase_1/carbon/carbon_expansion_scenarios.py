@@ -617,7 +617,7 @@ def analyze_forest_edge_erosion(args):
             increasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
                 
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'edge_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
@@ -709,7 +709,7 @@ def analyze_forest_core_expansion(args):
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
                 
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'core_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
@@ -803,7 +803,7 @@ def analyze_forest_core_fragmentation(args):
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
                 
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'frag_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
@@ -1046,8 +1046,6 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
     else:
         analyze_composite_carbon_stock_change(args)
         
-    return
-    
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_mgds%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
