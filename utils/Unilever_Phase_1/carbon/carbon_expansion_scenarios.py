@@ -934,17 +934,6 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
 
     #set up args for the constrained composite scenario
     raster_utils.create_directories([output_dir])
-    
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_mg%s.csv' % suffix))
-    args['output_pixel_count_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_pixel_count_mg%s.csv' % suffix))
-    args['land_cover_start_fractions'] = None
-    args['land_cover_end_fractions'] = None
-    if pool is not None:
-        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    else:
-        analyze_composite_carbon_stock_change(args)
 
     #set up args for the 80/20 composite scenario (starting with 80% savanna 20% forest, 
     #ending with 20% savanna 80% forest
@@ -964,7 +953,19 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
+    return
 
+    
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_mg%s.csv' % suffix))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_pixel_count_mg%s.csv' % suffix))
+    args['land_cover_start_fractions'] = None
+    args['land_cover_end_fractions'] = None
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
 
     #Set up args for the forest fragmentation scenario
     args['output_table_filename'] = (
@@ -1045,6 +1046,8 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
         pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
     else:
         analyze_composite_carbon_stock_change(args)
+
+    return
         
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_mgds%s.csv' % suffix))
@@ -1105,14 +1108,14 @@ if __name__ == '__main__':
     SUFFIX = '_regression_and_table_uncertainty'
     CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
     REGRESSION_UNCERTAINTY=True
-    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
-    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    #run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    #run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
 
     SUFFIX = '_table_uncertainty_only'
     REGRESSION_UNCERTAINTY=False
     CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
-    #run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
-    #run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
 
     POOL.close()
     POOL.join()

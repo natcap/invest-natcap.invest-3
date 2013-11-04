@@ -898,6 +898,18 @@ def analyze_composite_globio_change(args):
         output_table.write('\n')
         output_table.flush()
 
+        if percent % 50 == 0:
+            print 'dumping a raster at percent %s%%' % percent
+            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'composite_%s.tif' % percent)
+            raster_utils.new_raster_from_base_uri(
+                args['input_lulc_uri'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+            lulc_out_ds = gdal.Open(output_uri, gdal.GA_Update)
+            lulc_band = lulc_out_ds.GetRasterBand(1)
+            lulc_band.WriteArray(scenario_lulc_array)
+            lulc_band = None
+            lulc_out_ds = None
+
+
 
 def make_ecoregions(args):
     
@@ -1021,7 +1033,24 @@ def run_globio_mgds(number_of_steps, pool):
         canals_raster_uri, args['canals_uri'], burn_values=[1])
     args['canals_array']= geotiff_to_array(canals_raster_uri)
     
-    
+    #Set up args for the savanna scenario (via lu_expansion function)
+    args['output_table_filename'] = (
+       os.path.join(output_folder, 'globio_mgds_savannah_expansion_msa_change.csv'))
+    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_savannah_expansion_pixel_count.csv'))
+    args['land_cover_start_fractions'] = [
+        ([9], 1.0)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([9], 1.0)
+        ]
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+    return
+
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
@@ -1038,8 +1067,6 @@ def run_globio_mgds(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     else:
         analyze_composite_globio_change(args)
-    
-    return
 
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change.csv'))
@@ -1168,6 +1195,24 @@ def run_globio_mg(number_of_steps, pool):
     args['canals_array']= geotiff_to_array(canals_raster_uri)
 
 
+    #Set up args for the savanna scenario (via lu_expansion function)
+    args['output_table_filename'] = (
+       os.path.join(output_folder, 'globio_mg_savannah_expansion_msa_change.csv'))
+    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mg_savannah_expansion_pixel_count.csv'))
+    args['land_cover_start_fractions'] = [
+        ([9], 1.0)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([9], 1.0)
+        ]
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+    return
+
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
@@ -1186,7 +1231,6 @@ def run_globio_mg(number_of_steps, pool):
     else:
         analyze_composite_globio_change(args)
 
-    return
 
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_composite_change.csv'))
@@ -1208,17 +1252,7 @@ def run_globio_mg(number_of_steps, pool):
         pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
     else:
         globio_analyze_forest_core_expansion(args)
-    
-    #Set up args for the savanna scenario (via lu_expansion function)
-    args['output_table_filename'] = (
-       os.path.join(output_folder, 'globio_mg_lu_expansion_msa_change.csv'))
-    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
-    args['conversion_lucode'] = 9
-    if pool:
-        pool.apply_async(globio_analyze_lu_expansion, [args.copy()])
-    else:
-        globio_analyze_lu_expansion(args)
-       
+           
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_expansion_msa_change.csv'))
