@@ -509,6 +509,11 @@ def globio_analyze_forest_expansion(args):
         print 'calculating change in MSA for expansion step %s' % percent
         if percent > 0:
             deepest_edge_index += args['pixels_to_convert_per_step']
+            if scenario_edge_distance.flat[increasing_distances[deepest_edge_index - 1]] == numpy.inf:
+                print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+                return
+
+
             scenario_lulc_array.flat[
                 increasing_distances[0:deepest_edge_index]] = (
                     args['converting_crop'])
@@ -594,6 +599,11 @@ def globio_analyze_forest_core_expansion(args):
                 decreasing_distances[0:deepest_edge_index]] = (
                     args['converting_crop'])
         #Calcualte the effect on MSA using calc_msa_lu function
+
+        if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0.0:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
+
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
@@ -671,6 +681,11 @@ def globio_analyze_forest_core_fragmentation(args):
             scenario_edge_distance = calculate_forest_edge_distance(
                 scenario_lulc_array, args['forest_lucodes'], cell_size)        
             decreasing_distances = numpy.argsort(scenario_edge_distance.flat)[::-1]
+
+
+            if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0:
+                print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+                return
 
             scenario_lulc_array.flat[
                 decreasing_distances[0:deepest_edge_index]] = (
@@ -1049,7 +1064,6 @@ def run_globio_mgds(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, [args.copy()])
     else:
         analyze_composite_globio_change(args)
-    return
 
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
@@ -1211,7 +1225,6 @@ def run_globio_mg(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, [args.copy()])
     else:
         analyze_composite_globio_change(args)
-    return
 
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_composite_change_20_80.csv'))
