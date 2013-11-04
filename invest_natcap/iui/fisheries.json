@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "../HabitatRiskAssess_3_0",
+                    "defaultValue": "../Fisheries",
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
@@ -25,20 +25,140 @@
                     "id" : "aoi",
                     "args_id" : "aoi_uri",
                     "type": "file",
-                    "label": "Area of Interest",
+                    "label": "Area(s) of Interest",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": "This is a shapefile which will be used to display outputs within the region of interest."
+                    "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. "
                 },
                 {
-                    "id" : "rec_eq",
-                    "args_id" : "rec_eq",
-                    "type": "dropdown",
-                    "label": "Recruitment Equation",
+                    "id" : "param_csv",
+                    "args_id" : "param_csv",
+                    "type": "file",
+                    "label": "Parameters for Age Classes and Area(s)",
                     "required": true,
-                    "helpText": "This is a shapefile which will be used to display outputs within the region of interest."
+                    "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
                 }
             ]
-        }    
+        },
+        {
+            "id": "p_cont",
+            "label": "Recruitment Parameters",
+            "type": "container",
+            "elements":[
+                {
+                    "id": "params_list",
+                    "type": "list",
+                    "elements": [
+                    {
+                        "id" : "rec_eq",
+                        "args_id" : "rec_eq",
+                        "type": "dropdown",
+                        "label": "Recruitment Equation",
+                        "required": true,
+                        "options" : ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
+                        "returns": "strings",
+                        "dataType": "string",
+                        "helpText": "This equation will be used in order to model recruitment within each of the zones provided in the AOI URI shapefile. Each will require a different set of parameters. Beverton-Holt requires alpha and beta. Ricker requires alpha and beta. Fecundity requires one fecundity parameter for each age/stage being provided (within the input CSV). For fecundity, upload a CSV which correlates offspring produced for each age. (See sample data example.) Fixed requires only a single parameter representing a single number of recruits which will be applied to each area."
+                    },
+                    {
+                        "id" : "alpha",
+                        "args_id" : "alpha",
+                        "type": "text",
+                        "label": "Alpha (Beverton-Holt/Ricker)",
+                        "required": false,
+                        "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                    },
+                    {
+                        "id" : "beta",
+                        "args_id" : "beta",
+                        "type": "text",
+                        "label": "Beta (Beverton-Holt/Ricker)",
+                        "required": false,
+                        "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                    },
+                    {
+                        "id" : "fec_csv",
+                        "args_id" : "fec_params",
+                        "type": "file",
+                        "label": "Offspring per Age Class (Fecundity)",
+                        "required": true,
+                        "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
+                    },
+                    {
+                        "id" : "fix_param",
+                        "args_id" : "fix_param",
+                        "type": "text",
+                        "label": "Number of Recruits (Fixed)",
+                        "required": false,
+                        "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                    }
+                    ]
+                }
+            ]
+        },
+        {    
+            "id" : "parameters_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "recruit_num",
+                    "args_id" : "init_recruits",
+                    "type": "text",
+                    "label": "Initial Number of Recruits",
+                    "required": true,
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                },
+                {
+                    "id":"do_migration",
+                    "args_id": "do_migration",
+                    "type": "hideableFileEntry",
+                    "label": "Migration?",
+                    "required": false,
+                    "validateAs": {"type": "folder",
+		    		  "mustExist": true},
+                    "defaultValue": "../Fisheries/Input/migration.csv",
+                    "helpText": "By checking this box, you are indicating that you would like to use habitats as a base for overlap with provided stressors. This is the path to your habitat layers folder."
+                }
+            ]
+        },
+        {
+            "id": "do_val",
+            "label": "Valuation",
+            "type": "container",
+            "collapsible": true,
+            "elements":[
+                {
+                    "id": "params_list",
+                    "type": "list",
+                    "elements": [
+                        {
+                            "id" : "f_post_proc",
+                            "args_id" : "frac_post_proc",
+                            "type": "text",
+                            "label": "Fraction After Processing",
+                            "required": true,
+                            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                        },
+                        {
+                            "id" : "unit_price",
+                            "args_id" : "unit_price",
+                            "type": "text",
+                            "label": "Unit Price",
+                            "required": true,
+                            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id" : "sim_dur",
+            "args_id" : "duration",
+            "type": "text",
+            "label": "Duration of Simulation (time steps)",
+            "validateAs": {"type": "number"},
+            "required": true,
+            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+        }
     ]
 }
