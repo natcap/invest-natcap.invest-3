@@ -531,7 +531,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             consistency = \
             aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
                 skip_nodes)
-            print('consistency for ' + str(value), consistency)
+            #print('consistency for ' + str(value), consistency)
             assert consistency[0] is True, message
 
         # 2.1.2- create intermediate links when and where expected
@@ -550,31 +550,31 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('active pixels:')
         current = sweep_line['closest']
         right = current['next']
-        print('distance ' + str(current['distance']) + ', next ' + \
-            str(right if right is None else right['distance']))
+        #print('distance ' + str(current['distance']) + ', next ' + \
+        #    str(right if right is None else right['distance']))
         while(right is not None):
             current = current['next']
             right = current['next']
-            print('distance ' + str(current['distance']) + ', next ' + \
-                str(right if right is None else right['distance']))
+            #print('distance ' + str(current['distance']) + ', next ' + \
+            #    str(right if right is None else right['distance']))
         for level in range(len(skip_nodes)):
             first = sorted(skip_nodes[level].keys())[0]
-            print('skip nodes level ' + str(level) + ':')
+            #print('skip nodes level ' + str(level) + ':')
             current = skip_nodes[level][first]
             right = current['next']
             span = current['span']
-            print('distance ' + str(current['distance']) + ', next ' + \
-                str(right if right is None else right['distance']), \
-                'down ' + str(current['down']['distance']), \
-                'span', span)
+            #print('distance ' + str(current['distance']) + ', next ' + \
+            #    str(right if right is None else right['distance']), \
+            #    'down ' + str(current['down']['distance']), \
+            #    'span', span)
             while(right is not None):
                 current = current['next']
                 right = current['next']
                 span = current['span']
-                print('distance ' + str(current['distance']) + ', next ' + \
-                    str(right if right is None else right['distance']), \
-                    'down ' + str(current['down']['distance']), \
-                    'span', span)
+                #print('distance ' + str(current['distance']) + ', next ' + \
+                #    str(right if right is None else right['distance']), \
+                #    'down ' + str(current['down']['distance']), \
+                #    'span', span)
         # Test the data structure is valid
         print('skip list is consistent', \
             aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
@@ -653,8 +653,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
         viewpoint, 1.75, 0.0, -1.0, 1.0)
 
-        print('input_array', DEM)
-        print('pixel visibility', pixel_visibility)
+        #print('input_array', DEM)
+        #print('pixel visibility', pixel_visibility)
 
         print('current working dir', os.getcwd())
         args = {}

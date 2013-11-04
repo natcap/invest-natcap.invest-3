@@ -49,8 +49,11 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     print('listing extreme cell angles')
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
+    # Loop through the rows
     for row in range(array_shape[0]):
+    # Loop through the columns    
         for col in range(array_shape[1]):
+            # Show progress in 0.1% increment
             if (current_cell_id % (cell_count/1000)) == 0:
                 progress = round(float(current_cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
@@ -58,7 +61,9 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
+            # cell coordinates
             cell = np.array([row, col])
+            # Update list of rows and list of cols
             I.append(row)
             J.append(col)
             viewpoint_to_cell = cell - viewpoint
@@ -67,9 +72,12 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             angles.append((angle + two_pi) % two_pi)
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
+            # This line only discriminates between 4 axis-aligned angles
             sector = int(4. * angles[-1] / two_pi) * 2
+            # The if statement adjusts for all the 8 angles
             if np.amin(np.absolute(viewpoint_to_cell)) > 0:
                 sector += 1
+            # adjust wrt 8 angles
             min_corner_offset = \
                 np.array(extreme_cell_points[sector]['min_angle'])
             max_corner_offset = \
