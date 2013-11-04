@@ -1,5 +1,6 @@
 import math
 cimport numpy as np
+import numpy as np
 
 import cython
 
@@ -54,7 +55,8 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     # Loop through the columns    
         for col in range(array_shape[1]):
             # Show progress in 0.1% increment
-            if (current_cell_id % (cell_count/1000)) == 0:
+            if (cell_count > 1000) and \
+                (current_cell_id % (cell_count/1000)) == 0:
                 progress = round(float(current_cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
             current_cell_id += 1
