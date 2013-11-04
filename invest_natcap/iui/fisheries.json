@@ -151,14 +151,20 @@
                 }
             ]
         },
-        {
-            "id" : "sim_dur",
-            "args_id" : "duration",
-            "type": "text",
-            "label": "Duration of Simulation (time steps)",
-            "validateAs": {"type": "number"},
-            "required": true,
-            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+        {    
+            "id" : "parameters_list2",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "sim_dur",
+                    "args_id" : "duration",
+                    "type": "text",
+                    "label": "Duration of Simulation (time steps)",
+                    "validateAs": {"type": "number"},
+                    "required": true,
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+               } 
+            ]
         }
     ]
 }
