@@ -71,7 +71,7 @@ def execute(args):
     sediment_threshold_table = raster_utils.get_lookup_from_csv(
         args['sediment_threshold_table_uri'], 'ws_id')
 
-    out_pixel_size = raster_utils.pixel_size(gdal.Open(args['landuse_uri']))
+    out_pixel_size = raster_utils.pixel_size_uri(args['landuse_uri'])
 
     csv_dict_reader = csv.DictReader(open(args['biophysical_table_uri']))
     biophysical_table = {}
