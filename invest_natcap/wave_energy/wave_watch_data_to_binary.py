@@ -1,6 +1,11 @@
 """This Python Script converts and compresses yearly wave watch three text data
     to a binary format that's faster to load and cheaper to build in an
-    installer than the bulky text format"""
+    installer than the bulky text format
+    
+    Example from command line:
+    >> python wave_watch_data_to_binary.py ww3_yearly.txt ww3_binary.bin
+    
+"""
 
 import numpy as np
 import sys
@@ -69,6 +74,7 @@ def text_wave_data_to_binary(wave_watch_file_uri, binary_file_uri):
             # Pack up the data values as float types
             s=struct.pack('f'*len(float_list), *float_list)
             bin_file.write(s)
+
 # Get the wave watch three uri from the first command line argument
 wave_watch_file_uri = sys.argv[1]
 # Get the out binary uri from the second command line argument

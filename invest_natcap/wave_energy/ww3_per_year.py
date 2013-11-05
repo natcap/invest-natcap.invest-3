@@ -1,4 +1,8 @@
-"""This Python Script converts wave watch 3 data to yearly values"""
+"""This Python Script converts wave watch 3 data to yearly values
+
+    Example from command line:
+    >> python ww3_per_year.py ww3_formatted.txt ww3_yearly.txt 10 
+"""
 
 import os
 import numpy as np

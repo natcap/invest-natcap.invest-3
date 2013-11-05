@@ -1,4 +1,11 @@
-"""Python module that creates a point shapefile from a CSV"""
+"""Python module that creates a point shapefile from a CSV
+
+    Example from command line:
+    >> python wave_csv_to_points.py wave_formatted_csv_data.txt my_layer shape_out.shp 
+
+    Example two:
+    >> python wave_csv_to_points.py wave_formatted_csv_data.csv WCVI WCVI_points.shp 
+"""
 
 # Imports
 import csv
@@ -12,18 +19,16 @@ def create_wave_point_ds(wave_data_csv_uri, layer_name, output_uri):
         properly formatted. The point shapefile created is not projected
         and uses latitude and longitude for its geometry.
         
-        wave_data_csv_uri - Argument 1 from the command line. 
-            A URI to a comma separated file of wave point data
+        wave_data_csv_uri - a URI to a comma separated file of wave point data
             that has been properly formatted (required) Example format:
             ID,I,J,LONG,LATI,HSAVG,TPAVG
             1,102,370,24.3,54.3,10.2,11.1
             2,102,370,24.3,54.3,10.2,11.1
         
-        layer_name - Argument 2 from the command line. 
-            A string for the name of the point shapefile layer (required)
+        layer_name - a string for the name of the point shapefile
+            layer (required)
         
-        output_uri - Argument 3 from the command line. 
-            A URI for the output path of the point shapefile (required)
+        output_uri - a URI for the output path of the point shapefile (required)
 
         return - Nothing"""
    
