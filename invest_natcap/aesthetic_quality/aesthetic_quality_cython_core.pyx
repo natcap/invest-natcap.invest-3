@@ -52,6 +52,8 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         int array_rows = array_shape[0]
         int array_cols = array_shape[1]
         int cell_count = array_rows * array_cols
+        double min_corner_row = 0
+        double min_corner_col = 0
 
     extreme_cell_points = np.array([ \
     [[0.5, -0.5], [-0.5, -0.5]], \
@@ -116,8 +118,10 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             max_corner_offset = \
                 np.array(extreme_cell_points[sector][max_angle_id])
             # Use the offset to compute extreme angles
+            min_corner_row = viewpoint_to_cell_row + min_corner_offset[0]
+            min_corner_col = viewpoint_to_cell_col + min_corner_offset[1]
             min_corner = viewpoint_to_cell + min_corner_offset
-            min_angle = atan2(-min_corner[0], min_corner[1])
+            min_angle = atan2(-min_corner_row, min_corner_col)
             #min_angles.append((min_angle + two_pi) % two_pi) 
             min_angles[cell_id] = (min_angle + two_pi) % two_pi 
             
