@@ -45,80 +45,11 @@ import scipy.ndimage.filters
 import matplotlib.pyplot as plt
 from invest_natcap import raster_utils
 
+import scenario_tools
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('globio_script')
-
-
-def expand_lu_type(
-    base_array, nodata, expansion_id, converting_id_list, current_step, 
-    pixels_per_step, land_cover_start_fractions=None,
-    land_cover_end_fractions=None, end_step=None):
-    """Given a base array, and a number of pixels to expand
-        from, buffer out a conversion of that number of pixels
-        
-        base_array - a 2D array of integers that represent
-            land cover IDs
-        nodata - value in base_array to ignore
-        expansion_id - the ID type to expand
-        converting_id_list - a list of land cover types that the simulation will
-            calculate distances from
-        expansion_pixel_count - convert this number of pixels
-        land_cover_start_percentages/land_cover_end_percentages -
-            optional, if defined is a dictionary of land cover types
-            that are used for conversion during the start step
-        end_expansion_pixel_count - defined if land_cover_*_percentages are defined.  use to know what % of total conversion has been reached
-        
-        returns the new expanded array, the number of pixels per type that were converted to expansion_id
-        """
-        
-    def step_percent(lu_code):
-        total_pixels = 0
-        for step_id in range(current_step):
-            current_percent = float(step_id) / (end_step - 1)
-            #print current_percent, pixels_per_step
-            total_pixels += pixels_per_step * (
-                land_cover_start_fractions[lu_code] * (1-current_percent) + 
-                land_cover_end_fractions[lu_code] * current_percent)
-        return total_pixels
-            
-    expansion_pixel_count = pixels_per_step * current_step
-    
-    #Calculate the expansion distance
-    expansion_existance = base_array != nodata
-    for converting_id in converting_id_list:
-        expansion_existance = (base_array != converting_id) & expansion_existance
-    edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-        expansion_existance)
-        
-    zero_distance_mask = edge_distance == 0
-    edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
-    edge_distance[zero_distance_mask] = numpy.inf
-    
-    result_array = base_array.copy()
-    pixels_converted_so_far = 0
-    pixel_count = collections.defaultdict(int)
-    increasing_distances = numpy.argsort(edge_distance.flat)
-
-    if land_cover_start_fractions:
-        for lu_code in land_cover_start_fractions:
-            lu_edge_distance = edge_distance.copy()
-            lu_edge_distance[base_array != lu_code] = numpy.inf
-            lu_increasing_distances = numpy.argsort(lu_edge_distance.flat)
-            lu_pixels_to_convert = int(round(step_percent(lu_code)))
-            result_array.flat[lu_increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-            pixels_converted_so_far += int(lu_pixels_to_convert)
-            pixel_count[lu_code] += int(lu_pixels_to_convert)
-        edge_distance[result_array == expansion_id] = numpy.inf
-        #print expansion_pixel_count - pixels_converted_so_far
-    
-    remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
-    for lu_code in numpy.unique(remaining_pixels):
-        pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
-    result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
-        
-    return result_array, pixel_count
 
 
 def lowpriority():
@@ -578,6 +509,11 @@ def globio_analyze_forest_expansion(args):
         print 'calculating change in MSA for expansion step %s' % percent
         if percent > 0:
             deepest_edge_index += args['pixels_to_convert_per_step']
+            if scenario_edge_distance.flat[increasing_distances[deepest_edge_index - 1]] == numpy.inf:
+                print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+                return
+
+
             scenario_lulc_array.flat[
                 increasing_distances[0:deepest_edge_index]] = (
                     args['converting_crop'])
@@ -663,6 +599,11 @@ def globio_analyze_forest_core_expansion(args):
                 decreasing_distances[0:deepest_edge_index]] = (
                     args['converting_crop'])
         #Calcualte the effect on MSA using calc_msa_lu function
+
+        if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0.0:
+            print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+            return
+
         globio_lulc = create_globio_lulc(args, scenario_lulc_array) 
         msa_lu = calc_msa_lu(globio_lulc, args, percent)
         msa_i = calc_msa_i(distance_to_infrastructure, scenario_lulc_array, percent)
@@ -740,6 +681,11 @@ def globio_analyze_forest_core_fragmentation(args):
             scenario_edge_distance = calculate_forest_edge_distance(
                 scenario_lulc_array, args['forest_lucodes'], cell_size)        
             decreasing_distances = numpy.argsort(scenario_edge_distance.flat)[::-1]
+
+
+            if scenario_edge_distance.flat[decreasing_distances[deepest_edge_index - 1]] == 0:
+                print 'WARNING: All the forest has been converted, stopping at step %s' % percent
+                return
 
             scenario_lulc_array.flat[
                 decreasing_distances[0:deepest_edge_index]] = (
@@ -930,7 +876,7 @@ def analyze_composite_globio_change(args):
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating globio for composite expansion step %s' % percent
         try:
-            scenario_lulc_array, pixel_count = expand_lu_type(
+            scenario_lulc_array, pixel_count = scenario_tools.expand_lu_type(
                 base_lulc_array, scenario_nodata, args['converting_crop'], 
                 args['converting_id_list'], percent, args['pixels_to_convert_per_step'], 
                 args['land_cover_start_fractions'], 
@@ -966,6 +912,18 @@ def analyze_composite_globio_change(args):
                 output_table.write(',%s' % (avg_msa))
         output_table.write('\n')
         output_table.flush()
+
+        if percent % 50 == 0:
+            print 'dumping a raster at percent %s%%' % percent
+            output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'composite_%s.tif' % percent)
+            raster_utils.new_raster_from_base_uri(
+                args['input_lulc_uri'], output_uri, 'GTiff', -1, gdal.GDT_Int32)
+            lulc_out_ds = gdal.Open(output_uri, gdal.GA_Update)
+            lulc_band = lulc_out_ds.GetRasterBand(1)
+            lulc_band.WriteArray(scenario_lulc_array)
+            lulc_band = None
+            lulc_out_ds = None
+
 
 
 def make_ecoregions(args):
@@ -1090,14 +1048,20 @@ def run_globio_mgds(number_of_steps, pool):
         canals_raster_uri, args['canals_uri'], burn_values=[1])
     args['canals_array']= geotiff_to_array(canals_raster_uri)
     
+    #Set up args for the savanna scenario (via lu_expansion function)
     args['output_table_filename'] = (
-        os.path.join(output_folder, 'globio_mgds_composite_change.csv'))
+       os.path.join(output_folder, 'globio_mgds_savannah_expansion_msa_change.csv'))
+    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
     args['output_pixel_count_filename'] = (
-        os.path.join(output_folder, 'globio_mgds_composite_change_pixel_count.csv'))
-    args['land_cover_start_fractions'] = None
-    args['land_cover_end_fractions'] = None
+        os.path.join(output_folder, 'globio_mgds_savannah_expansion_pixel_count.csv'))
+    args['land_cover_start_fractions'] = [
+        ([9], 1.0)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([9], 1.0)
+        ]
     if pool:
-        pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
     else:
         analyze_composite_globio_change(args)
 
@@ -1105,14 +1069,25 @@ def run_globio_mgds(number_of_steps, pool):
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80.csv'))
     args['output_pixel_count_filename'] = (
         os.path.join(output_folder, 'globio_mgds_composite_change_20_80_pixel_count.csv'))
-    args['land_cover_start_fractions'] = {
-        2: .2,
-        9: .8
-        }
-    args['land_cover_end_fractions'] = {
-        2: .8,
-        9: .2
-        }
+    args['land_cover_start_fractions'] = [
+        ([1,2,3,4,5], .2),
+        ([9], .8)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([1,2,3,4,5], .8),
+        ([9], .2)
+        ]
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+
+    args['output_table_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_composite_change.csv'))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mgds_composite_change_pixel_count.csv'))
+    args['land_cover_start_fractions'] = None
+    args['land_cover_end_fractions'] = None
     if pool:
         pool.apply_async(analyze_composite_globio_change, args=[args.copy()])
     else:
@@ -1233,6 +1208,43 @@ def run_globio_mg(number_of_steps, pool):
         canals_raster_uri, args['canals_uri'], burn_values=[1])
     args['canals_array']= geotiff_to_array(canals_raster_uri)
 
+
+    #Set up args for the savanna scenario (via lu_expansion function)
+    args['output_table_filename'] = (
+       os.path.join(output_folder, 'globio_mg_savannah_expansion_msa_change.csv'))
+    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mg_savannah_expansion_pixel_count.csv'))
+    args['land_cover_start_fractions'] = [
+        ([9], 1.0)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([9], 1.0)
+        ]
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+
+    args['output_table_filename'] = (
+        os.path.join(output_folder, 'globio_mg_composite_change_20_80.csv'))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_folder, 'globio_mg_composite_20_80_pixel_count.csv'))
+    args['land_cover_start_fractions'] = [
+        ([1,2,3,4,5], .2),
+        ([9], .8)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([1,2,3,4,5], .8),
+        ([9], .2)
+        ]
+        
+    if pool:
+        pool.apply_async(analyze_composite_globio_change, [args.copy()])
+    else:
+        analyze_composite_globio_change(args)
+
+
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_composite_change.csv'))
     args['output_pixel_count_filename'] = (
@@ -1244,26 +1256,7 @@ def run_globio_mg(number_of_steps, pool):
         pool.apply_async(analyze_composite_globio_change, [args.copy()])
     else:
         analyze_composite_globio_change(args)
-
-    args['output_table_filename'] = (
-        os.path.join(output_folder, 'globio_mg_composite_change_20_80.csv'))
-    args['output_pixel_count_filename'] = (
-        os.path.join(output_folder, 'globio_mg_composite_20_80_pixel_count.csv'))
-    args['land_cover_start_fractions'] = {
-        2: .2,
-        9: .8
-        }
-    args['land_cover_end_fractions'] = {
-        2: .8,
-        9: .2
-        }
-        
-    if pool:
-        pool.apply_async(analyze_composite_globio_change, [args.copy()])
-    else:
-        analyze_composite_globio_change(args)
-
-
+    
 
     #Set up args for the forest core expansion scenario
     args['output_table_filename'] = (
@@ -1272,17 +1265,7 @@ def run_globio_mg(number_of_steps, pool):
         pool.apply_async(globio_analyze_forest_core_expansion, [args.copy()])
     else:
         globio_analyze_forest_core_expansion(args)
-    
-    #Set up args for the savanna scenario (via lu_expansion function)
-    args['output_table_filename'] = (
-       os.path.join(output_folder, 'globio_mg_lu_expansion_msa_change.csv'))
-    #currently,  this code only calculates on scenario based on the globio_analyze_lu_expansion() function for savannah (with lu_code of 9). Rich defined additional scenarios but I have not been updated on these, so I have omitted them for now.
-    args['conversion_lucode'] = 9
-    if pool:
-        pool.apply_async(globio_analyze_lu_expansion, [args.copy()])
-    else:
-        globio_analyze_lu_expansion(args)
-       
+           
     #Set up args for the forest (edge) expansion scenario
     args['output_table_filename'] = (
         os.path.join(output_folder, 'globio_mg_forest_expansion_msa_change.csv'))
