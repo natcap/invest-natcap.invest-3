@@ -76,7 +76,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         int cell_id = 0
         int row = 0
         int col = 0
-        #int cell_rows = {0, 0}
+        int sector = 0
 
     for row in range(array_rows):
         # Loop through the columns    
@@ -106,8 +106,8 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             # This line only discriminates between 4 axis-aligned angles
             sector = int(4. * angles[cell_id] / two_pi) * 2
             # The if statement adjusts for all the 8 angles
-            #if abs(viewpoint_to_cell[0] * viewpoint_to_cell[1]) > 0:
-            if np.amin(np.absolute(viewpoint_to_cell)) > 0:
+            #if np.amin(np.absolute(viewpoint_to_cell)) > 0:
+            if abs(viewpoint_to_cell[0] * viewpoint_to_cell[1]) > 0:
                 sector += 1
             # adjust wrt 8 angles
             min_corner_offset = \
