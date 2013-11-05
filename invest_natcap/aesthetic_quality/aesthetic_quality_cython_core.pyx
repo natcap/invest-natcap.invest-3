@@ -1,3 +1,4 @@
+from libc.math cimport atan2
 import math
 cimport numpy as np
 import numpy as np
@@ -47,7 +48,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
 
     print('listing extreme cell angles')
     cell_count = array_shape[0]*array_shape[1]
-    current_cell_id = 0
 
     min_angles = []
     angles = []
@@ -56,15 +56,15 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     J = []
 
     # Loop through the rows
+    cell_id = 0
     for row in range(array_shape[0]):
         # Loop through the columns    
         for col in range(array_shape[1]):
             # Show progress in 0.1% increment
             if (cell_count > 1000) and \
-                (current_cell_id % (cell_count/1000)) == 0:
-                progress = round(float(current_cell_id) / cell_count * 100.,1)
+                (cell_id % (cell_count/1000)) == 0:
+                progress = round(float(cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
-            current_cell_id += 1
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
@@ -97,6 +97,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
+            cell_id += 1
     print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
