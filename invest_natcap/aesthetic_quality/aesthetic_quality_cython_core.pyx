@@ -67,7 +67,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
                 print(str(progress) + '%')
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
-                #cell_id -= 1                
                 continue
             # cell coordinates
             cell = np.array([row, col])
@@ -78,7 +77,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             J[cell_id] = col
             viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
-            angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+            angle = atan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
             #angles.append((angle + two_pi) % two_pi)
             angles[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
@@ -95,12 +94,12 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
                 np.array(extreme_cell_points[sector][max_angle_id])
             # Use the offset to compute extreme angles
             min_corner = viewpoint_to_cell + min_corner_offset
-            min_angle = np.arctan2(-min_corner[0], min_corner[1])
+            min_angle = atan2(-min_corner[0], min_corner[1])
             #min_angles.append((min_angle + two_pi) % two_pi) 
             min_angles[cell_id] = (min_angle + two_pi) % two_pi 
             
             max_corner = viewpoint_to_cell + max_corner_offset
-            max_angle = np.arctan2(-max_corner[0], max_corner[1])
+            max_angle = atan2(-max_corner[0], max_corner[1])
             #max_angles.append((max_angle + two_pi) % two_pi)
             max_angles[cell_id] = (max_angle + two_pi) % two_pi
             cell_id += 1
