@@ -149,7 +149,7 @@ def execute(args):
     LOGGER.info('building retention fraction raster from lulc')
     #dividing sediment retention by 100 since it's in the csv as a percent then subtracting 1.0 to make it export
     lulc_to_retention_dict = \
-        dict([(lulc_code, float(table['sedret_eff'])/100.0) \
+        dict([(lulc_code, float(table['sedret_eff'])) \
                   for (lulc_code, table) in biophysical_table.items()])
                   
     no_stream_retention_rate_uri = raster_utils.temporary_filename()
