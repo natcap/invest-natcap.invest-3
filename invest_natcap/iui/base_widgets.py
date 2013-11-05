@@ -1945,12 +1945,12 @@ class OperationDialog(QtGui.QDialog):
         self.cursor.movePosition(QtGui.QTextCursor.End)
         self.statusArea.setTextCursor(self.cursor)
 
-    def closeEvent(self, data=None):
+    def closeEvent(self, event=None):
         """When a closeEvent is detected, run self.closeWindow().
 
             returns nothing."""
 
-        self.closeWindow()
+        event.ignore()
 
     def okPressed(self):
         """When self.runButton is pressed, halt the statusbar and close the 
