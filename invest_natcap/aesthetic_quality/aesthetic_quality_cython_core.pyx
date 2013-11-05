@@ -1,9 +1,16 @@
 from libc.math cimport atan2
+from libc.math cimport sin
 import math
 cimport numpy as np
 import numpy as np
 
 import cython
+
+cdef extern from "math.h":
+    double atan2(double x, double x)
+
+#cdef extern from "math.h":
+#    int abs(int x)
 
 
 cdef inline int int_round(float x): return <int>(x) if x-<int>x <= 0.5  else <int>(x+1)
@@ -36,6 +43,8 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     cdef:
         int min_angle_id = 0
         int max_angle_id = 1
+        #float viewpoint[2] = {viewpoint_coords[0], viewpoint_coords[1]}
+
     extreme_cell_points = np.array([ \
     [[0.5, -0.5], [-0.5, -0.5]], \
     [[0.5, 0.5], [-0.5, -0.5]], \
@@ -56,7 +65,14 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     J = np.ndarray(cell_count -1, dtype = np.int32)
 
     # Loop through the rows
-    cell_id = 0
+    cdef:
+        #int array_size[2] = {array_shape[0], array_shape[1]}
+        int cell_id = 0
+        int row = 0
+        int col = 0
+        #int cell[2] = {0, 0}
+        #int viewpoint_to_cell[2] = {0, 0}
+
     for row in range(array_shape[0]):
         # Loop through the columns    
         for col in range(array_shape[1]):
@@ -85,6 +101,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             # This line only discriminates between 4 axis-aligned angles
             sector = int(4. * angles[cell_id] / two_pi) * 2
             # The if statement adjusts for all the 8 angles
+            #if abs(viewpoint_to_cell[0] * viewpoint_to_cell[1]) > 0:
             if np.amin(np.absolute(viewpoint_to_cell)) > 0:
                 sector += 1
             # adjust wrt 8 angles
