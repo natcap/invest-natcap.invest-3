@@ -1395,7 +1395,7 @@ def distance_transform_dataset(
     dest_mask_filename = os.path.join(temp_dir, 'dest_mask.dat')
 
     source_band, source_nodata = raster_utils.extract_band_and_nodata(dataset)
-    pixel_size = raster_utils.pixel_size(dataset)
+    pixel_size = raster_utils.pixel_size_uri(dataset_uri)
     LOGGER.debug('Pixel Size : %s', pixel_size)
 
     out_dataset = raster_utils.new_raster_from_base(
