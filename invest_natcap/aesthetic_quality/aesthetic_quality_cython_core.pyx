@@ -43,7 +43,15 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     cdef:
         int min_angle_id = 0
         int max_angle_id = 1
-        #float viewpoint[2] = {viewpoint_coords[0], viewpoint_coords[1]}
+        int viewpoint_row = viewpoint_coords[0]
+        int viewpoint_col = viewpoint_coords[1]
+        int cell_row = 0
+        int cell_col = 0
+        int viewpoint_to_cell_row = 0
+        int viewpoint_to_cell_col = 0
+        int array_rows = array_shape[0]
+        int array_cols = array_shape[1]
+        int cell_count = array_rows * array_cols
 
     extreme_cell_points = np.array([ \
     [[0.5, -0.5], [-0.5, -0.5]], \
@@ -56,7 +64,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     [[0.5, -0.5], [-0.5, 0.5]]], dtype = float)
 
     print('listing extreme cell angles')
-    cell_count = array_shape[0]*array_shape[1]
 
     min_angles = np.ndarray(cell_count -1, dtype = np.float)
     angles = np.ndarray(cell_count -1, dtype = np.float)
@@ -66,23 +73,21 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
 
     # Loop through the rows
     cdef:
-        #int array_size[2] = {array_shape[0], array_shape[1]}
         int cell_id = 0
         int row = 0
         int col = 0
-        #int cell[2] = {0, 0}
-        #int viewpoint_to_cell[2] = {0, 0}
+        #int cell_rows = {0, 0}
 
-    for row in range(array_shape[0]):
+    for row in range(array_rows):
         # Loop through the columns    
-        for col in range(array_shape[1]):
+        for col in range(array_cols):
             # Show progress in 0.1% increment
             if (cell_count > 1000) and \
                 (cell_id % (cell_count/1000)) == 0:
                 progress = round(float(cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
             # Skip if cell falls on the viewpoint
-            if (row == viewpoint[0]) and (col == viewpoint[1]):
+            if (row == viewpoint_row) and (col == viewpoint_col):
                 continue
             # cell coordinates
             cell = np.array([row, col])
@@ -93,7 +98,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             J[cell_id] = col
             viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
-            angle = atan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
+            angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
             #angles.append((angle + two_pi) % two_pi)
             angles[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
