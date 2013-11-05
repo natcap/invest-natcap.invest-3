@@ -568,7 +568,7 @@ def vectorize_points(
 
 
 def aggregate_raster_values_uri(
-    raster_uri, shapefile_uri, shapefile_field, ignore_nodata=True,
+    raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
     threshold_amount_lookup=None):
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
@@ -578,7 +578,8 @@ def aggregate_raster_values_uri(
             raises an exception if not.
         shapefile_field - a string indicating which key in shapefile to
             associate the output dictionary values with whose values are
-            associated with ints
+            associated with ints; if None dictionary returns a value over
+            the entire shapefile region that intersects the raster.
         ignore_nodata - (optional) if operation == 'mean' then it does not
             account for nodata pixels when determing the pixel_mean, otherwise
             all pixels in the AOI are used for calculation of the mean.  This
@@ -618,27 +619,42 @@ def aggregate_raster_values_uri(
 
     shapefile = ogr.Open(shapefile_uri)
     shapefile_layer = shapefile.GetLayer()
-    gdal.RasterizeLayer(
-        mask_dataset, [1], shapefile_layer,
-        options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
+    if shapefile_field is not None:
+        gdal.RasterizeLayer(
+            mask_dataset, [1], shapefile_layer,
+            options=['ATTRIBUTE=%s' % shapefile_field, 'ALL_TOUCHED=TRUE'])
+    else:
+        #The 9999 is a classic int32 value that is unlikely to be a nodata
+        #value.  Call me at 315-262-4786 if there is ever a collision; I'll
+        #want to know.
+        global_id_value = 9999
+        gdal.RasterizeLayer(
+            mask_dataset, [1], shapefile_layer, burn_values=[global_id_value],
+            options=['ALL_TOUCHED=TRUE'])
 
     #get feature areas
     num_features = shapefile_layer.GetFeatureCount()
-    feature_areas = {}
+    feature_areas = collections.defaultdict(int)
     for index in xrange(num_features):
         feature = shapefile_layer.GetFeature(index)
-        feature_id = feature.GetField(shapefile_field)
         geom = feature.GetGeometryRef()
-        feature_areas[feature_id] = geom.GetArea()
+        if shapefile_field is not None:
+            feature_id = feature.GetField(shapefile_field)
+            feature_areas[feature_id] = geom.GetArea()
+        else:
+            feature_areas[global_id_value] += geom.GetArea()
     geom = None
 
     mask_dataset.FlushCache()
     mask_band = mask_dataset.GetRasterBand(1)
 
     #This will store the sum/count with index of shapefile attribute
-    shapefile_table = extract_datasource_table_by_key(
-        shapefile_uri, shapefile_field)
-
+    if shapefile_field is not None:
+        shapefile_table = extract_datasource_table_by_key(
+            shapefile_uri, shapefile_field)
+    else:
+        shapefile_table = {global_id_value: 0.0}
+    
     #Initialize these dictionaries to have the shapefile fields in the original
     #datasource even if we don't pick up a value later
     aggregate_dict_values = dict(
