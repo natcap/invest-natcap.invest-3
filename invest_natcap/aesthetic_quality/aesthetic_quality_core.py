@@ -53,7 +53,8 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     current_cell_id = 0
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
-            if (current_cell_id % (cell_count/1000)) == 0:
+            if (cell_count > 1000) and \
+                (current_cell_id % (cell_count/1000)) == 0:
                 progress = round(float(current_cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
             current_cell_id += 1
@@ -268,14 +269,14 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
     # Need to re-organize the sweep line:
     pixel, hierarchy = find_pixel_before_fast( \
         sweep_line, skip_nodes, distance)
-    print('After finding ' + (str(None) if pixel is None else \
-    str(pixel['distance'])) + ' before ' + str(distance) + \
-    ', before any change:')
-    print_skip_list(sweep_line, skip_nodes)
-    print_hierarchy(hierarchy)
-    consistency = hierarchy_is_consistent(pixel, hierarchy, skip_nodes)
-    print('hierarchy is consistent:', consistency)
-    assert consistency[0], consistency[1]
+#    print('After finding ' + (str(None) if pixel is None else \
+#    str(pixel['distance'])) + ' before ' + str(distance) + \
+#    ', before any change:')
+#    print_skip_list(sweep_line, skip_nodes)
+#    print_hierarchy(hierarchy)
+#    consistency = hierarchy_is_consistent(pixel, hierarchy, skip_nodes)
+#    print('hierarchy is consistent:', consistency)
+#    assert consistency[0], consistency[1]
     # Add to the beginning of the list
     if pixel is None:
         # New pixel points to previously first pixel

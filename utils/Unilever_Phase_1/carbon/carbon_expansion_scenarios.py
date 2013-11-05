@@ -1,15 +1,32 @@
-"""This script calculates a log regresion function to predict forest carbon
+"""This script calculates a log regression function to predict forest carbon
     stocks based on the distance from the edge of the forest.  It has several
     options to simulate soybean expansion scenarios including:
 
-    1) predefined scenarios as LULC GIS rasters
-    2) forest erosion from edges inward
-    3) grassland expansion, then forest erosion
+    1) unconstrained composite (expansion from current agriculture into whichever 
+    cell is closest, regardless of the habitat type)
+    2) 80/20 composite (expansion from current agriculture into closest cell, 
+    constrained to expanding into 80% savanna  20% forest at the beginning
+    and gradually moving toward 20% savanna 80% forest by then end) 
+    3) forest fragmentation (expansion into forest with maximum fragmentation,
+    always choosing cells furthest from edge)
+    4) forest edge (expansion into forest from edge inward)
+    5) forest core (expansion into forest from core outward)
+    6) savanna (expansion into savanna only)
 
-    The program writes to a file called
-    grassland_expansion_carbon_stock_change.csv that contains two columns, the
-    first the soybean expansion percent and the second, the amount of carbon
-    stocks on the landscape under that scenario."""
+    The program writes outputs to the following directories:
+    carbon_mg_output
+    carbon_mgds_output
+   
+   with csvs for each scenario containing the following columns:
+   expansion step (1-200)
+   number of pixels converted
+   total aboveground carbon
+   total aboveground carbon (lower tail)
+   total aboveground carbon (upper tail)
+
+  and csvs for pixel counts of each land-use/land-cover class converted by each
+ step in the two composite scenarios. 
+   """
 
 import gdal
 import numpy
@@ -23,7 +40,10 @@ import collections
 import errno
 from multiprocessing import Pool
 import time
+
 from invest_natcap import raster_utils
+
+import scenario_tools
 
 def lowpriority():
     """ Set the priority of the process to below-normal."""
@@ -73,79 +93,7 @@ def new_raster_from_base_uri(
     band = None
 
     return new_raster
-
     
-def expand_lu_type(
-    base_array, nodata, expansion_id, converting_id_list, current_step, 
-    pixels_per_step, land_cover_start_fractions=None,
-    land_cover_end_fractions=None, end_step=None):
-    """Given a base array, and a number of pixels to expand
-        from, buffer out a conversion of that number of pixels
-        
-        base_array - a 2D array of integers that represent
-            land cover IDs
-        nodata - value in base_array to ignore
-        expansion_id - the ID type to expand
-        converting_id_list - a list of land cover types that the simulation will
-            calculate distances from
-        expansion_pixel_count - convert this number of pixels
-        land_cover_start_percentages/land_cover_end_percentages -
-            optional, if defined is a dictionary of land cover types
-            that are used for conversion during the start step
-        end_expansion_pixel_count - defined if land_cover_*_percentages are defined.  use to know what % of total conversion has been reached
-        
-        returns the new expanded array, the number of pixels per type that were converted to expansion_id
-        """
-        
-    def step_percent(lu_code):
-        total_pixels = 0
-        for step_id in range(current_step):
-            if end_step != 1:
-                current_percent = float(step_id) / (end_step - 1)
-            else:
-                current_percent = 0.0
-            #print current_percent, pixels_per_step
-            total_pixels += pixels_per_step * (
-                land_cover_start_fractions[lu_code] * (1-current_percent) + 
-                land_cover_end_fractions[lu_code] * current_percent)
-        return total_pixels
-            
-    expansion_pixel_count = pixels_per_step * current_step
-    
-    #Calculate the expansion distance
-    expansion_existance = base_array != nodata
-    for converting_id in converting_id_list:
-        expansion_existance = (base_array != converting_id) & expansion_existance
-    edge_distance = scipy.ndimage.morphology.distance_transform_edt(
-        expansion_existance)
-        
-    zero_distance_mask = edge_distance == 0
-    edge_distance = scipy.ndimage.filters.gaussian_filter(edge_distance, 2.0)
-    edge_distance[zero_distance_mask] = numpy.inf
-    increasing_distances = numpy.argsort(edge_distance.flat)
-    
-    result_array = base_array.copy()
-    pixels_converted_so_far = 0
-    pixel_count = collections.defaultdict(int)
-    if land_cover_start_fractions:
-        for lu_code in land_cover_start_fractions:
-            lu_edge_distance = edge_distance.copy()
-            lu_edge_distance[base_array != lu_code] = numpy.inf
-            lu_increasing_distances = numpy.argsort(lu_edge_distance.flat)
-            lu_pixels_to_convert = int(round(step_percent(lu_code)))
-            result_array.flat[lu_increasing_distances[0:lu_pixels_to_convert]] = expansion_id
-            pixels_converted_so_far += int(lu_pixels_to_convert)
-            pixel_count[lu_code] += int(lu_pixels_to_convert)
-        edge_distance[result_array == expansion_id] = numpy.inf
-        #print expansion_pixel_count - pixels_converted_so_far
-    
-    remaining_pixels = result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]]
-    for lu_code in numpy.unique(remaining_pixels):
-        pixel_count[lu_code] += numpy.count_nonzero(remaining_pixels == lu_code)
-    result_array.flat[increasing_distances[0:(expansion_pixel_count - pixels_converted_so_far)]] = expansion_id
-        
-    return result_array, pixel_count
-
 
 def analyze_composite_carbon_stock_change(args):
     """This function loads scenarios from disk and calculates the carbon stocks
@@ -213,7 +161,7 @@ def analyze_composite_carbon_stock_change(args):
     for percent in range(args['scenario_conversion_steps'] + 1):
         print 'calculating carbon stocks for composite expansion step %s' % percent
         try:
-            expanded_lulc_array, pixel_count = expand_lu_type(
+            expanded_lulc_array, pixel_count = scenario_tools.expand_lu_type(
                 scenario_lulc_array, scenario_nodata, args['converting_crop'], 
                 args['converting_id_list'], percent, args['pixels_to_convert_per_step'], 
                 args['land_cover_start_fractions'], 
@@ -669,7 +617,7 @@ def analyze_forest_edge_erosion(args):
             increasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
                 
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'edge_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
@@ -761,7 +709,7 @@ def analyze_forest_core_expansion(args):
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
                 
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'core_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
@@ -855,7 +803,7 @@ def analyze_forest_core_fragmentation(args):
             decreasing_distances[0:deepest_edge_index]] = (
                 args['converting_crop'])
                 
-        if percent % 100 == 0:
+        if percent % 25 == 0:
             print 'dumping a raster at percent %s%%' % percent
             output_uri = os.path.join(os.path.dirname(args['output_table_filename']), 'frag_lulc_%s.tif' % percent)
             lulc_out_ds = new_raster_from_base_uri(
@@ -984,8 +932,27 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
         'regression_uncertainty': regression_uncertainty,
     }
 
-    #set up args for the composite scenario
+    #set up args for the constrained composite scenario
     raster_utils.create_directories([output_dir])
+
+    #set up args for the 80/20 composite scenario (starting with 80% savanna 20% forest, 
+    #ending with 20% savanna 80% forest
+    args['output_table_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mg%s.csv' % suffix))
+    args['land_cover_start_fractions'] = [
+        ([1,2,3,4,5], .2),
+        ([9], .8)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([1,2,3,4,5], .8),
+        ([9], .2)
+        ]
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
     
     args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_mg%s.csv' % suffix))
@@ -998,25 +965,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_composite_carbon_stock_change(args)
 
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mg%s.csv' % suffix))
-    args['output_pixel_count_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mg%s.csv' % suffix))
-    args['land_cover_start_fractions'] = {
-        2: .2,
-        9: .8
-        }
-    args['land_cover_end_fractions'] = {
-        2: .8,
-        9: .2
-        }
-    if pool is not None:
-        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    else:
-        analyze_composite_carbon_stock_change(args)
-
-
-    #Set up args for the forest core scenario
+    #Set up args for the forest fragmentation scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mg%s.csv' % suffix))
     if pool is not None:
@@ -1041,7 +990,7 @@ def run_mg(number_of_steps, pool, suffix, carbon_pool_filename, regression_uncer
     else:
         analyze_lu_expansion(args)
 
-    #Set up args for the forest edge erosion scenario
+    #Set up args for the forest edge scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_edge_erosion_carbon_stock_change_mg%s.csv' % suffix))
     if pool is not None:
@@ -1080,6 +1029,23 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
     raster_utils.create_directories([output_dir])
 
     args['output_table_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))
+    args['output_pixel_count_filename'] = (
+        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mgds%s.csv' % suffix))
+    args['land_cover_start_fractions'] = [
+        ([1,2,3,4,5], .2),
+        ([9], .8)
+        ]
+    args['land_cover_end_fractions'] = [
+        ([1,2,3,4,5], .8),
+        ([9], .2)
+        ]
+    if pool is not None:
+        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
+    else:
+        analyze_composite_carbon_stock_change(args)
+
+    args['output_table_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_mgds%s.csv' % suffix))
     args['output_pixel_count_filename'] = (
         os.path.join(output_dir, 'composite_carbon_stock_change_pixel_count_mgds%s.csv' % suffix))
@@ -1090,23 +1056,6 @@ def run_mgds(number_of_steps, pool, suffix, carbon_pool_filename, regression_unc
     else:
         analyze_composite_carbon_stock_change(args)
 
-    args['output_table_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_mgds%s.csv' % suffix))
-    args['output_pixel_count_filename'] = (
-        os.path.join(output_dir, 'composite_carbon_stock_change_20_80_pixel_count_mgds%s.csv' % suffix))
-    args['land_cover_start_fractions'] = {
-        2: .2,
-        9: .8
-        }
-    args['land_cover_end_fractions'] = {
-        2: .8,
-        9: .2
-        }
-    if pool is not None:
-        pool.apply_async(analyze_composite_carbon_stock_change, args=[args.copy()])
-    else:
-        analyze_composite_carbon_stock_change(args)
-    
     #Set up args for the forest core scenario
     args['output_table_filename'] = (
         os.path.join(output_dir, 'forest_core_fragmentation_carbon_stock_change_mgds%s.csv' % suffix))
@@ -1155,8 +1104,8 @@ if __name__ == '__main__':
     SUFFIX = '_regression_and_table_uncertainty'
     CARBON_POOL_FILENAME = './inputs/brazil_carbon.csv'
     REGRESSION_UNCERTAINTY=True
-    run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
-    run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    #run_mg(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
+    #run_mgds(NUMBER_OF_STEPS, POOL, SUFFIX, CARBON_POOL_FILENAME, REGRESSION_UNCERTAINTY)
 
     SUFFIX = '_table_uncertainty_only'
     REGRESSION_UNCERTAINTY=False
