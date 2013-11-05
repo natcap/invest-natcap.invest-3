@@ -32,27 +32,32 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     rad_to_deg = 180.0 / pi
     deg_to_rad = 1.0 / rad_to_deg
 
-    extreme_cell_points = [ \
-    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, -0.5]}, \
-    {'min_angle':[0.5, 0.5], 'max_angle':[-0.5, -0.5]}, \
-    {'min_angle':[0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
-    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, -0.5]}, \
-    {'min_angle':[-0.5, 0.5], 'max_angle':[0.5, 0.5]}, \
-    {'min_angle':[-0.5, -0.5], 'max_angle':[0.5, 0.5]}, \
-    {'min_angle':[-0.5, -0.5], 'max_angle':[-0.5, 0.5]}, \
-    {'min_angle':[0.5, -0.5], 'max_angle':[-0.5, 0.5]}]
+    cdef:
+        int min_angle_id = 0
+        int max_angle_id = 1
+    extreme_cell_points = np.array([ \
+    [[0.5, -0.5], [-0.5, -0.5]], \
+    [[0.5, 0.5], [-0.5, -0.5]], \
+    [[0.5, 0.5], [0.5, -0.5]], \
+    [[-0.5, 0.5], [0.5, -0.5]], \
+    [[-0.5, 0.5], [0.5, 0.5]], \
+    [[-0.5, -0.5], [0.5, 0.5]], \
+    [[-0.5, -0.5], [-0.5, 0.5]], \
+    [[0.5, -0.5], [-0.5, 0.5]]], dtype = float)
+
+    print('listing extreme cell angles')
+    cell_count = array_shape[0]*array_shape[1]
+    current_cell_id = 0
 
     min_angles = []
     angles = []
     max_angles = []
     I = []
     J = []
-    print('listing extreme cell angles')
-    cell_count = array_shape[0]*array_shape[1]
-    current_cell_id = 0
+
     # Loop through the rows
     for row in range(array_shape[0]):
-    # Loop through the columns    
+        # Loop through the columns    
         for col in range(array_shape[1]):
             # Show progress in 0.1% increment
             if (cell_count > 1000) and \
@@ -81,9 +86,9 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
                 sector += 1
             # adjust wrt 8 angles
             min_corner_offset = \
-                np.array(extreme_cell_points[sector]['min_angle'])
+                np.array(extreme_cell_points[sector][min_angle_id])
             max_corner_offset = \
-                np.array(extreme_cell_points[sector]['max_angle'])
+                np.array(extreme_cell_points[sector][max_angle_id])
             # Use the offset to compute extreme angles
             min_corner = viewpoint_to_cell + min_corner_offset
             min_angle = np.arctan2(-min_corner[0], min_corner[1])
