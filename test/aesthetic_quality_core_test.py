@@ -195,6 +195,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_python = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Compare the two
+        print('extreme_angles_python', type(extreme_angles_python), extreme_angles_python)
+        print('extreme_angles_cython', type(extreme_angles_cython),
+        extreme_angles_cython)
         error = np.sum(np.abs(extreme_angles_python[0]-extreme_angles_cython[0])+\
             np.abs(extreme_angles_python[1]-extreme_angles_cython[1]) + \
             np.abs(extreme_angles_python[2]-extreme_angles_cython[2]))

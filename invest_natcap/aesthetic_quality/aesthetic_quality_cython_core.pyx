@@ -49,11 +49,11 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     print('listing extreme cell angles')
     cell_count = array_shape[0]*array_shape[1]
 
-    min_angles = []
-    angles = []
-    max_angles = []
-    I = []
-    J = []
+    min_angles = np.ndarray(cell_count -1, dtype = np.float)
+    angles = np.ndarray(cell_count -1, dtype = np.float)
+    max_angles = np.ndarray(cell_count -1, dtype = np.float)
+    I = np.ndarray(cell_count -1, dtype = np.int32)
+    J = np.ndarray(cell_count -1, dtype = np.int32)
 
     # Loop through the rows
     cell_id = 0
@@ -67,20 +67,24 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
                 print(str(progress) + '%')
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
+                cell_id -= 1                
                 continue
             # cell coordinates
             cell = np.array([row, col])
             # Update list of rows and list of cols
-            I.append(row)
-            J.append(col)
+            #I.append(row)
+            I[cell_id] = row
+            #J.append(col)
+            J[cell_id] = col
             viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
             angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
-            angles.append((angle + two_pi) % two_pi)
+            #angles.append((angle + two_pi) % two_pi)
+            angles[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
-            sector = int(4. * angles[-1] / two_pi) * 2
+            sector = int(4. * angles[cell_id] / two_pi) * 2
             # The if statement adjusts for all the 8 angles
             if np.amin(np.absolute(viewpoint_to_cell)) > 0:
                 sector += 1
@@ -92,11 +96,13 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             # Use the offset to compute extreme angles
             min_corner = viewpoint_to_cell + min_corner_offset
             min_angle = np.arctan2(-min_corner[0], min_corner[1])
-            min_angles.append((min_angle + two_pi) % two_pi) 
+            #min_angles.append((min_angle + two_pi) % two_pi) 
+            min_angles[cell_id] = (min_angle + two_pi) % two_pi 
             
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
-            max_angles.append((max_angle + two_pi) % two_pi)
+            #max_angles.append((max_angle + two_pi) % two_pi)
+            max_angles[cell_id] = (max_angle + two_pi) % two_pi
             cell_id += 1
     print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
