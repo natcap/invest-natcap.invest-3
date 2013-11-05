@@ -67,7 +67,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
                 print(str(progress) + '%')
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
-                cell_id -= 1                
+                #cell_id -= 1                
                 continue
             # cell coordinates
             cell = np.array([row, col])

@@ -58,7 +58,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 (current_cell_id % (cell_count/1000)) == 0:
                 progress = round(float(current_cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
-            current_cell_id += 1
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
@@ -82,10 +81,11 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             min_corner = viewpoint_to_cell + min_corner_offset
             min_angle = np.arctan2(-min_corner[0], min_corner[1])
             min_angles.append((min_angle + two_pi) % two_pi) 
-            
+
             max_corner = viewpoint_to_cell + max_corner_offset
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
+            current_cell_id += 1
     print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
