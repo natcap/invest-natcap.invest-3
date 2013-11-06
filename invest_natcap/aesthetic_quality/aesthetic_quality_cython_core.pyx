@@ -13,13 +13,6 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan2(double x, double x)
 
-#cdef extern from "math.h":
-#    int abs(int x)
-
-
-cdef inline int int_round(float x): return <int>(x) if x-<int>x <= 0.5  else <int>(x+1)
-
-#@cython.boundscheck(False)
 def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
@@ -76,8 +69,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         size_t min_point_id
         size_t max_point_id
 
-    print('listing extreme cell angles')
-
     cdef double *min_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
     cdef double *a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
     cdef double *max_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
@@ -92,7 +83,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         int sector = 0
 
     for row in range(array_rows):
-        print('row', row, '/', array_rows)
         viewpoint_to_cell_row = row - viewpoint_row
         # Loop through the columns    
         for col in range(array_cols):
@@ -152,8 +142,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     free(min_a_ptr)
     free(a_ptr)
     free(max_a_ptr)
-    # Copy a_ptr to angles    
-    print('done')
+
     return (min_angles, angles, max_angles, I, J)
 
 
