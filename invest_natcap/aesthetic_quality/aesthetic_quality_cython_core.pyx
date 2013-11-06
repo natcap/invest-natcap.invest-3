@@ -32,15 +32,9 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     cdef:
         double pi = 3.141592653589793238462643
         double two_pi = 2. * pi
-        double rad_to_deg = 180.0 / pi
-        double deg_to_rad = 1.0 / rad_to_deg
 
-        int min_angle_id = 0
-        int max_angle_id = 1
         int viewpoint_row = viewpoint_coords[0]
         int viewpoint_col = viewpoint_coords[1]
-        int cell_row = 0
-        int cell_col = 0
         int viewpoint_to_cell_row = 0
         int viewpoint_to_cell_col = 0
         int array_rows = array_shape[0]
@@ -69,19 +63,18 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         size_t min_point_id
         size_t max_point_id
 
-    cdef double *min_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
-    cdef double *a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
-    cdef double *max_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
-    cdef long *I_ptr = <long *>malloc((cell_count-1) * sizeof(long))
-    cdef long *J_ptr = <long *>malloc((cell_count-1) * sizeof(long))
+        double *min_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+        double *a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+        double *max_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+        long *I_ptr = <long *>malloc((cell_count-1) * sizeof(long))
+        long *J_ptr = <long *>malloc((cell_count-1) * sizeof(long))
 
-    # Loop through the rows
-    cdef:
         int cell_id = 0
         int row = 0
         int col = 0
         int sector = 0
 
+    # Loop through the rows
     for row in range(array_rows):
         viewpoint_to_cell_row = row - viewpoint_row
         # Loop through the columns    
@@ -139,6 +132,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         I[i] = I_ptr[i]
         J[i] = J_ptr[i]
     free(I_ptr)
+    free(J_ptr)
     free(min_a_ptr)
     free(a_ptr)
     free(max_a_ptr)

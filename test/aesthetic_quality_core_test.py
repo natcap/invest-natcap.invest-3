@@ -184,8 +184,8 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_list_extreme_cell_angles_cython(self):
         """Comparing cython vs python list_extreme_cell_angles"""
-        array_shape = (3, 3)
-        viewpoint = (array_shape[0]/2, array_shape[1]/2)
+        array_shape = (30, 30)
+        viewpoint = (array_shape[0]/4, array_shape[1]/3)
 
         # Gather extreme angles from cython algorithm
         # TODO: change the line below to call the actual cython function
