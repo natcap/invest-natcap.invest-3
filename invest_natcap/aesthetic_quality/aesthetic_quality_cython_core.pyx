@@ -81,12 +81,12 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
 
     print('listing extreme cell angles')
 
-    cdef np.ndarray angles = np.ndarray(cell_count -1, dtype = np.float)
-    cdef np.ndarray max_angles = np.ndarray(cell_count -1, dtype = np.float)
     cdef np.ndarray I = np.ndarray(cell_count -1, dtype = np.int32)
     cdef np.ndarray J = np.ndarray(cell_count -1, dtype = np.int32)
 
     cdef double *min_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+    cdef double *a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+    cdef double *max_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
 
     # Loop through the rows
     cdef:
@@ -117,12 +117,11 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             J[cell_id] = col
             # Compute the angle of the cell center
             angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
-            #angles.append((angle + two_pi) % two_pi)
-            angles[cell_id] = (angle + two_pi) % two_pi
+            a_ptr[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
-            sector = int(4. * angles[cell_id] / two_pi) * 2
+            sector = int(4. * a_ptr[cell_id] / two_pi) * 2
             # The if statement adjusts for all the 8 angles
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
@@ -142,15 +141,22 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             max_corner_row = viewpoint_to_cell_row + max_corner_offset_row
             max_corner_col = viewpoint_to_cell_col + max_corner_offset_col
             max_angle = atan2(-max_corner_row, max_corner_col)
-            max_angles[cell_id] = (max_angle + two_pi) % two_pi
+            max_a_ptr[cell_id] = (max_angle + two_pi) % two_pi
             cell_id += 1
     # Copy C-array contents to numpy arrays:
-    # TODO: use memcpy if possible
-    # Copy min_a_ptr to min_angles
+    # TODO: use memcpy if possible (or memoryviews?)
+    # Copy C arrays to numpy arrays
     min_angles = np.ndarray(cell_count -1, dtype = np.float)
+    angles = np.ndarray(cell_count -1, dtype = np.float)
+    max_angles = np.ndarray(cell_count -1, dtype = np.float)
     for i in range(cell_count-1):
         min_angles[i] = min_a_ptr[i]
+        angles[i] = a_ptr[i]
+        max_angles[i] = max_a_ptr[i]
     free(min_a_ptr)
+    free(a_ptr)
+    free(max_a_ptr)
+    # Copy a_ptr to angles    
     print('done')
     return (min_angles, angles, max_angles, I, J)
 
