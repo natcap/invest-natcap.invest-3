@@ -144,23 +144,6 @@ def get_statistics_from_uri(dataset_uri):
     dataset = None
     return statistics
 
-def get_cell_area_from_uri(dataset_uri):
-    return pixel_area(gdal.Open(dataset_uri))
-
-def pixel_area(dataset):
-    """Calculates the pixel area of the given dataset in m^2
-
-        dataset - GDAL dataset
-
-        returns area in m ^ 2 of each pixel in dataset"""
-
-    srs = osr.SpatialReference()
-    srs.SetProjection(dataset.GetProjection())
-    linear_units = srs.GetLinearUnits()
-    geotransform = dataset.GetGeoTransform()
-    #take absolute value since sometimes negative widths/heights
-    area_meters = abs(geotransform[1] * geotransform[5] * (linear_units ** 2))
-    return area_meters
 
 def get_cell_size_from_uri(dataset_uri):
     srs = osr.SpatialReference()
