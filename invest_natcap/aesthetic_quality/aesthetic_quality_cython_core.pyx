@@ -36,14 +36,12 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         angles and coords as two Nx1 numpy arrays of row and column of the 
         coordinate of each point.
     """
-    viewpoint = np.array(viewpoint_coords)
-
-    pi = 3.1415926535897932384626433852
-    two_pi = 2. * pi
-    rad_to_deg = 180.0 / pi
-    deg_to_rad = 1.0 / rad_to_deg
-
     cdef:
+        double pi = 3.141592653589793238462643
+        double two_pi = 2. * pi
+        double rad_to_deg = 180.0 / pi
+        double deg_to_rad = 1.0 / rad_to_deg
+
         int min_angle_id = 0
         int max_angle_id = 1
         int viewpoint_row = viewpoint_coords[0]
@@ -64,19 +62,19 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         double max_corner_offset_row = 0
         double max_corner_offset_col = 0
 
-    cdef size_t SECTOR_SIZE = 4
-    cdef size_t POINT_SIZE = 2
-    cdef size_t min_point_id
-    cdef size_t max_point_id
-    cdef double *extreme_cell_points = [ \
-    0.5, -0.5, -0.5, -0.5, \
-    0.5, 0.5, -0.5, -0.5, \
-    0.5, 0.5, 0.5, -0.5, \
-    -0.5, 0.5, 0.5, -0.5, \
-    -0.5, 0.5, 0.5, 0.5, \
-    -0.5, -0.5, 0.5, 0.5, \
-    -0.5, -0.5, -0.5, 0.5, \
-    0.5, -0.5, -0.5, 0.5]
+        double *extreme_cell_points = [ \
+        0.5, -0.5, -0.5, -0.5, \
+        0.5, 0.5, -0.5, -0.5, \
+        0.5, 0.5, 0.5, -0.5, \
+        -0.5, 0.5, 0.5, -0.5, \
+        -0.5, 0.5, 0.5, 0.5, \
+        -0.5, -0.5, 0.5, 0.5, \
+        -0.5, -0.5, -0.5, 0.5, \
+        0.5, -0.5, -0.5, 0.5]
+        size_t SECTOR_SIZE = 4
+        size_t POINT_SIZE = 2
+        size_t min_point_id
+        size_t max_point_id
 
     print('listing extreme cell angles')
 
