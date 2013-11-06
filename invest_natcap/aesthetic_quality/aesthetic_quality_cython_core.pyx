@@ -102,7 +102,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             I[cell_id] = row
             #J.append(col)
             J[cell_id] = col
-            viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
             angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
             #angles.append((angle + two_pi) % two_pi)
@@ -122,7 +121,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             # Use the offset to compute extreme angles
             min_corner_row = viewpoint_to_cell_row + min_corner_offset[0]
             min_corner_col = viewpoint_to_cell_col + min_corner_offset[1]
-            min_corner = viewpoint_to_cell + min_corner_offset
             min_angle = atan2(-min_corner_row, min_corner_col)
             #min_angles.append((min_angle + two_pi) % two_pi) 
             min_angles[cell_id] = (min_angle + two_pi) % two_pi 
