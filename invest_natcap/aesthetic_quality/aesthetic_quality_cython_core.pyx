@@ -56,6 +56,10 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         double min_corner_col = 0
         double max_corner_row = 0
         double max_corner_col = 0
+        double min_corner_offset_row = 0
+        double min_corner_offset_col = 0
+        double max_corner_offset_row = 0
+        double max_corner_offset_col = 0
 
     extreme_cell_points = np.array([ \
     [[0.5, -0.5], [-0.5, -0.5]], \
@@ -114,19 +118,23 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
             # adjust wrt 8 angles
-            min_corner_offset = \
-                np.array(extreme_cell_points[sector][min_angle_id])
-            max_corner_offset = \
-                np.array(extreme_cell_points[sector][max_angle_id])
+            min_corner_offset_row = \
+                extreme_cell_points[sector][min_angle_id][0]
+            min_corner_offset_col = \
+                extreme_cell_points[sector][min_angle_id][1]
+            max_corner_offset_row = \
+                extreme_cell_points[sector][max_angle_id][0]
+            max_corner_offset_col = \
+                extreme_cell_points[sector][max_angle_id][1]
             # Use the offset to compute extreme angles
-            min_corner_row = viewpoint_to_cell_row + min_corner_offset[0]
-            min_corner_col = viewpoint_to_cell_col + min_corner_offset[1]
+            min_corner_row = viewpoint_to_cell_row + min_corner_offset_row
+            min_corner_col = viewpoint_to_cell_col + min_corner_offset_col
             min_angle = atan2(-min_corner_row, min_corner_col)
             #min_angles.append((min_angle + two_pi) % two_pi) 
             min_angles[cell_id] = (min_angle + two_pi) % two_pi 
             
-            max_corner_row = viewpoint_to_cell_row + max_corner_offset[0]
-            max_corner_col = viewpoint_to_cell_col + max_corner_offset[1]
+            max_corner_row = viewpoint_to_cell_row + max_corner_offset_row
+            max_corner_col = viewpoint_to_cell_col + max_corner_offset_col
             max_angle = atan2(-max_corner_row, max_corner_col)
             #max_angles.append((max_angle + two_pi) % two_pi)
             max_angles[cell_id] = (max_angle + two_pi) % two_pi
