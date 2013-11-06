@@ -19,8 +19,7 @@ cdef extern from "math.h":
 
 cdef inline int int_round(float x): return <int>(x) if x-<int>x <= 0.5  else <int>(x+1)
 
-class NotAtSea(Exception): pass
-@cython.boundscheck(False)
+#@cython.boundscheck(False)
 def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
@@ -81,12 +80,11 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
 
     print('listing extreme cell angles')
 
-    cdef np.ndarray I = np.ndarray(cell_count -1, dtype = np.int32)
-    cdef np.ndarray J = np.ndarray(cell_count -1, dtype = np.int32)
-
     cdef double *min_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
     cdef double *a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
     cdef double *max_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+    cdef long *I_ptr = <long *>malloc((cell_count-1) * sizeof(long))
+    cdef long *J_ptr = <long *>malloc((cell_count-1) * sizeof(long))
 
     # Loop through the rows
     cdef:
@@ -96,11 +94,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         int sector = 0
 
     for row in range(array_rows):
-        if (cell_count > 1000) and \
-            (cell_id % (cell_count/1000)) == 0:
-            progress = round(float(cell_id) / cell_count * 100.,1)
-            print(str(progress) + '%')
-
+        print('row', row, '/', array_rows)
         viewpoint_to_cell_row = row - viewpoint_row
         # Loop through the columns    
         for col in range(array_cols):
@@ -111,17 +105,15 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
                 continue
             # cell coordinates
             # Update list of rows and list of cols
-            #I.append(row)
-            I[cell_id] = row
-            #J.append(col)
-            J[cell_id] = col
+            I_ptr[cell_id] = row
+            J_ptr[cell_id] = col
             # Compute the angle of the cell center
             angle = atan2(-(row - viewpoint_row), col - viewpoint_col)
             a_ptr[cell_id] = (angle + two_pi) % two_pi
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
-            sector = int(4. * a_ptr[cell_id] / two_pi) * 2
+            sector = int_round(4. * a_ptr[cell_id] / two_pi) * 2
             # The if statement adjusts for all the 8 angles
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
@@ -149,10 +141,16 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     min_angles = np.ndarray(cell_count -1, dtype = np.float)
     angles = np.ndarray(cell_count -1, dtype = np.float)
     max_angles = np.ndarray(cell_count -1, dtype = np.float)
+    I = np.ndarray(cell_count -1, dtype = np.int32)
+    J = np.ndarray(cell_count -1, dtype = np.int32)
+
     for i in range(cell_count-1):
         min_angles[i] = min_a_ptr[i]
         angles[i] = a_ptr[i]
         max_angles[i] = max_a_ptr[i]
+        I[i] = I_ptr[i]
+        J[i] = J_ptr[i]
+    free(I_ptr)
     free(min_a_ptr)
     free(a_ptr)
     free(max_a_ptr)
