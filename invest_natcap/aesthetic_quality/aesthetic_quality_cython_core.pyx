@@ -113,7 +113,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             # find index in extreme_cell_points that corresponds to the current
             # angle to compute the offset from cell center
             # This line only discriminates between 4 axis-aligned angles
-            sector = int_round(4. * a_ptr[cell_id] / two_pi) * 2
+            sector = <int>(4. * a_ptr[cell_id] / two_pi) * 2
             # The if statement adjusts for all the 8 angles
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
