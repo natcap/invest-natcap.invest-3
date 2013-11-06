@@ -163,17 +163,8 @@ def pixel_area(dataset):
     return area_meters
 
 def get_cell_size_from_uri(dataset_uri):
-    return pixel_size(gdal.Open(dataset_uri))
-
-def pixel_size(dataset):
-    """Calculates the average pixel size of the given dataset in m.  Saying
-       'average' in case we have non-square pixels.
-
-        dataset - GDAL dataset
-
-        returns the average pixel size in m"""
-
     srs = osr.SpatialReference()
+    dataset = gdal.Open(dataset_uri)
     srs.SetProjection(dataset.GetProjection())
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
@@ -181,6 +172,7 @@ def pixel_size(dataset):
     size_meters = (abs(geotransform[1]) + abs(geotransform[5])) / 2 * \
         linear_units
     return size_meters
+
 
 def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
     """A wrapper for pixel_size_based_on_coordinate_transform
@@ -839,7 +831,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     LOGGER = logging.getLogger('calculateSlope')
     LOGGER.debug(dem_dataset_uri)
     dem_dataset = gdal.Open(dem_dataset_uri)
-    out_pixel_size = pixel_size(dem_dataset)
+    out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     LOGGER.debug(out_pixel_size)
     _, dem_nodata = extract_band_and_nodata(dem_dataset)
 
