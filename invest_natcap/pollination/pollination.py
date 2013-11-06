@@ -18,6 +18,8 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('pollination')
 
+class MissingFields(ValueError): pass
+
 def execute(args):
     """Execute the pollination model from the topmost, user-accessible level.
 
@@ -123,6 +125,16 @@ def execute(args):
         floral_fields = [f[2:] for f in att_table_fields if re.match('^f_', f)]
         LOGGER.debug('Parsed nesting fields: %s', nesting_fields)
         LOGGER.debug('Parsed floral fields: %s', floral_fields)
+
+        fields_to_check = [
+            (nesting_fields, 'nesting'),
+            (floral_fields, 'floral'),
+        ]
+        for field_list, field_type in fields_to_check:
+            if len(nesting_fields) == 0:
+                raise MissingFields(('LULC attribute table must have '
+                    ' %s fields but none were found.' % field_type))
+
         biophysical_args['nesting_fields'] = nesting_fields
         biophysical_args['floral_fields'] = floral_fields
 
@@ -131,6 +143,9 @@ def execute(args):
         guilds_handler = fileio.TableHandler(args['guilds_uri'])
         guilds_handler.set_field_mask('(^ns_)|(^fs_)', trim=3)
         biophysical_args['guilds'] = guilds_handler
+
+        biophysical_args['nesting_fields'] = nesting_fields
+        biophysical_args['floral_fields'] = floral_fields
 
         # Convert agricultural classes (a space-separated list of ints) into a
         # list of ints.  If the user has not provided a string list of ints,

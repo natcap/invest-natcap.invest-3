@@ -432,6 +432,17 @@ class GISTestTester(testing.GISTest):
         self.assertRaises(AssertionError, self.assertWorkspace,
             POLLINATION_DATA, REGRESSION_ARCHIVES)
 
+    def test_workspaces_ignore(self):
+        """Check that ignoring certain files works as expected."""
+        new_folder = raster_utils.temporary_folder()
+        shutil.copytree(POLLINATION_DATA, new_folder)
+
+        # make a file in POLLINATION_DATA by opening a writeable file there.
+        copied_filepath = os.path.join(POLLINATION_DATA, 'test_file.txt')
+        fp = open(copied_filepath, 'w')
+        fp.close()
+
+
     def test_json_same(self):
         """Check that asserting equal json objects passes."""
         json_path = os.path.join('invest-data/test/data', 'testing_regression',
