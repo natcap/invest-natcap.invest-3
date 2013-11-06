@@ -190,11 +190,14 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Gather extreme angles from cython algorithm
         # TODO: change the line below to call the actual cython function
         extreme_angles_cython = \
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_cython_core.list_extreme_cell_angles_cython(array_shape, viewpoint)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Compare the two
+        print('extreme_angles_python', type(extreme_angles_python), extreme_angles_python)
+        print('extreme_angles_cython', type(extreme_angles_cython),
+        extreme_angles_cython)
         error = np.sum(np.abs(extreme_angles_python[0]-extreme_angles_cython[0])+\
             np.abs(extreme_angles_python[1]-extreme_angles_cython[1]) + \
             np.abs(extreme_angles_python[2]-extreme_angles_cython[2]))
@@ -531,7 +534,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             consistency = \
             aesthetic_quality_core.skip_list_is_consistent(sweep_line, \
                 skip_nodes)
-            print('consistency for ' + str(value), consistency)
+            #print('consistency for ' + str(value), consistency)
             assert consistency[0] is True, message
 
         # 2.1.2- create intermediate links when and where expected
@@ -550,31 +553,31 @@ class TestAestheticQualityCore(unittest.TestCase):
         print('active pixels:')
         current = sweep_line['closest']
         right = current['next']
-        print('distance ' + str(current['distance']) + ', next ' + \
-            str(right if right is None else right['distance']))
+        #print('distance ' + str(current['distance']) + ', next ' + \
+        #    str(right if right is None else right['distance']))
         while(right is not None):
             current = current['next']
             right = current['next']
-            print('distance ' + str(current['distance']) + ', next ' + \
-                str(right if right is None else right['distance']))
+            #print('distance ' + str(current['distance']) + ', next ' + \
+            #    str(right if right is None else right['distance']))
         for level in range(len(skip_nodes)):
             first = sorted(skip_nodes[level].keys())[0]
-            print('skip nodes level ' + str(level) + ':')
+            #print('skip nodes level ' + str(level) + ':')
             current = skip_nodes[level][first]
             right = current['next']
             span = current['span']
-            print('distance ' + str(current['distance']) + ', next ' + \
-                str(right if right is None else right['distance']), \
-                'down ' + str(current['down']['distance']), \
-                'span', span)
+            #print('distance ' + str(current['distance']) + ', next ' + \
+            #    str(right if right is None else right['distance']), \
+            #    'down ' + str(current['down']['distance']), \
+            #    'span', span)
             while(right is not None):
                 current = current['next']
                 right = current['next']
                 span = current['span']
-                print('distance ' + str(current['distance']) + ', next ' + \
-                    str(right if right is None else right['distance']), \
-                    'down ' + str(current['down']['distance']), \
-                    'span', span)
+                #print('distance ' + str(current['distance']) + ', next ' + \
+                #    str(right if right is None else right['distance']), \
+                #    'down ' + str(current['down']['distance']), \
+                #    'span', span)
         # Test the data structure is valid
         print('skip list is consistent', \
             aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
@@ -653,8 +656,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
         viewpoint, 1.75, 0.0, -1.0, 1.0)
 
-        print('input_array', DEM)
-        print('pixel visibility', pixel_visibility)
+        #print('input_array', DEM)
+        #print('pixel visibility', pixel_visibility)
 
         print('current working dir', os.getcwd())
         args = {}

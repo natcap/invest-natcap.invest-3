@@ -43,10 +43,8 @@ class JSONHandler(object):
         try:
             file = open(self.uri).read()
             self.dict = json.loads(file)
-        except (IOError, ValueError):
+        except (IOError):
             # IOError occurs if file not found
-            # ValueError occurs if the file is blank (or if a JSON object could
-            # not be decoded)
             self.dict = {}
 
     def get_attributes(self):

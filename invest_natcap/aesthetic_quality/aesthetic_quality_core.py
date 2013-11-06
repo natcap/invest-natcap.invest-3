@@ -5,6 +5,7 @@ import collections
 import logging
 
 from osgeo import gdal
+import aesthetic_quality_cython_core
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -173,19 +174,19 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
         before['next'] = skip_nodes[current_distance]
         before['span'] = 2
         span = None
-        print('Inserting new skip node: before', before['distance'], 'current', current_distance,
-        'after', None if after is None else after['distance'])
+        #print('Inserting new skip node: before', before['distance'], 'current', current_distance,
+        #'after', None if after is None else after['distance'])
         if upper_node is not None:
-            print('Updating upper node ' + str(upper_node['distance']) + '-' + \
-            (str(None) if upper_node['next'] is None else \
-            str(upper_node['next']['distance']) + ' span from ' + \
-            str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1)))
+            #print('Updating upper node ' + str(upper_node['distance']) + '-' + \
+            #(str(None) if upper_node['next'] is None else \
+            #str(upper_node['next']['distance']) + ' span from ' + \
+            #str(upper_node['span']) + ' to ' + str(upper_node['span'] + 1)))
             upper_node['span'] += 1
             span = upper_node['span']
-        else:
-            print('Upper node is None')
+        #else:
+            #print('Upper node is None')
             
-        print('returning span of', span)
+        #print('returning span of', span)
         return span
 
     def update_skip_node_span(pixel, level, hierarchy, skip_nodes):
@@ -206,7 +207,7 @@ def add_active_pixel_fast(sweep_line, skip_nodes, distance):
             pixel['span'] += 1
             # Adjusting span if too large
             while pixel['span'] > 3:
-                print('span is more than 3')
+                #print('span is more than 3')
                 # Insert the missing skip_node
                 #print('using hierarchy level ' + str(level+1) + ' for node ' + \
                 #str(pixel['distance']) + ':')
@@ -845,10 +846,10 @@ def skip_list_is_consistent(linked_list, skip_nodes):
     # Create a list of first nodes for each level
     first_nodes.append(linked_list['closest']['up'])
     while first_nodes[-1]['up'] is not None:
-        print('first node', first_nodes[-1]['distance'], \
-        first_nodes[-1]['next']['distance'], \
-        'up', first_nodes[-1]['up']['distance'], \
-        first_nodes[-1]['up']['next']['distance'])
+        #print('first node', first_nodes[-1]['distance'], \
+        #first_nodes[-1]['next']['distance'], \
+        #'up', first_nodes[-1]['up']['distance'], \
+        #first_nodes[-1]['up']['next']['distance'])
         first_nodes.append(first_nodes[-1]['up'])
         message = 'Stopping at ' + str(len(first_nodes)) + \
         ' skip pointers on the first node.' + \
@@ -1105,11 +1106,11 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     # 2- compute cell angles
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
-    print('angles', angles.size, angles)
+    #print('angles', angles.size, angles)
     angle_count = len(angles)
     # 3- compute information on raster cells
     events = \
-    list_extreme_cell_angles(array_shape, coordinates)
+    aesthetic_quality_cython_core.list_extreme_cell_angles_cython(array_shape, coordinates)
     I = events[3]
     J = events[4]
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
@@ -1138,7 +1139,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     # Add center angles to center_events_array
     LOGGER.debug('Creating event string')
     for a in range(1, angle_count):
-        print('angle ' + str(a) + ' / ' + str(angle_count))
+        #print('angle ' + str(a) + ' / ' + str(angle_count))
         # Collect cell_center events
         current_events = []
         while (center_event_id < center_event_count) and \
@@ -1175,7 +1176,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     active_line = {}
     # 1- add cells at angle 0
     print('Sweeping the map')
-    print('angle 0 / ' + str(angles))
+    print('angle 0 / ' + str(angle_count))
     for c in cell_center_events[0]:
         d = distances[c]
         v = visibility[c]
@@ -1188,7 +1189,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
         
     # 2- loop through line sweep angles:
     for a in range(len(angles) - 1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 1))
+        #print('angle ' + str(a) + ' / ' + str(angle_count - 1))
     #   2.1- add cells
         if add_cell_events[a].size > 0:
             for c in add_cell_events[a]:

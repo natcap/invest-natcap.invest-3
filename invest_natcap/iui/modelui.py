@@ -113,7 +113,12 @@ def getFlatDefaultArgumentsDictionary(args):
 
 
 def main(uri, use_gui=True):
-    app = QtGui.QApplication(sys.argv)
+    # get the existing QApplication instance, or creating a new one if
+    # necessary.
+    app = QtGui.QApplication.instance()
+    if app is None:
+        app = QtGui.QApplication(sys.argv)
+
 #    validate(json_args)
 
     # Check to see if the URI exists in the current directory.  If not, assume

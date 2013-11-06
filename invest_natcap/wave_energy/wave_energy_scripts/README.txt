@@ -6,8 +6,31 @@ can be used to properly format wave watch 3 data as well as wave energy point
 data.
 
 There are two formatting tracks that can be followed depending on the stage of
-the data. These two tracks are outlined below. First a short description of
-each script is provided.
+the data. These two tracks are outlined below as well as a short description of
+each script is provided and the final data files that the wave energy model
+expects.
+
+==============================================================================
+Wave Energy Model Data Needs
+
+    The wave energy model needs three files for each location of interest.
+    When selecting a location in the dropdown list from the user interface, the
+    model will expect that the required input data live in input/WaveData/ .
+    This relationship of dropdown selection to needed data is hardcoded in the
+    model. In order for a new location of interest to be added and to properly
+    link the new data to the wave energy model a request must be made to the
+    developer. The data that is needed is as follows:
+    1) ww3_binary_data.bin
+        A binary file that has the wave watch three data
+
+    2) wave_point_data.shp
+        A shapefile of the wave point data with wave periods and wave height
+        values
+
+    3) wave_point_bounding_area.shp
+        A polygon shapefile that is a bounding box for the wave_point_data.shp.
+        This is used to properly clip outputs. This polygon should cover all
+        the points in wave_point_data.shp
 
 ===============================================================================
 Wave Energy Data Formatting Scripts
