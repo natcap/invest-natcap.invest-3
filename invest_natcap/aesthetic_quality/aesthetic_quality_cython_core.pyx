@@ -100,7 +100,6 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             if (row == viewpoint_row) and (col == viewpoint_col):
                 continue
             # cell coordinates
-            cell = np.array([row, col])
             # Update list of rows and list of cols
             #I.append(row)
             I[cell_id] = row
