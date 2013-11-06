@@ -6,6 +6,10 @@ import numpy as np
 
 import cython
 
+cdef extern from "stdlib.h":
+    void* malloc(size_t size)
+    void free(void* ptr)
+
 cdef extern from "math.h":
     double atan2(double x, double x)
 
@@ -61,15 +65,28 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         double max_corner_offset_row = 0
         double max_corner_offset_col = 0
 
-    cdef np.ndarray extreme_cell_points = np.array([ \
-    [[0.5, -0.5], [-0.5, -0.5]], \
-    [[0.5, 0.5], [-0.5, -0.5]], \
-    [[0.5, 0.5], [0.5, -0.5]], \
-    [[-0.5, 0.5], [0.5, -0.5]], \
-    [[-0.5, 0.5], [0.5, 0.5]], \
-    [[-0.5, -0.5], [0.5, 0.5]], \
-    [[-0.5, -0.5], [-0.5, 0.5]], \
-    [[0.5, -0.5], [-0.5, 0.5]]], dtype = float)
+#    cdef np.ndarray extreme_cell_points = np.array([ \
+#    [[0.5, -0.5], [-0.5, -0.5]], \
+#    [[0.5, 0.5], [-0.5, -0.5]], \
+#    [[0.5, 0.5], [0.5, -0.5]], \
+#    [[-0.5, 0.5], [0.5, -0.5]], \
+#    [[-0.5, 0.5], [0.5, 0.5]], \
+#    [[-0.5, -0.5], [0.5, 0.5]], \
+#    [[-0.5, -0.5], [-0.5, 0.5]], \
+#    [[0.5, -0.5], [-0.5, 0.5]]], dtype = float)
+    cdef size_t SECTOR_SIZE = 4
+    cdef size_t POINT_SIZE = 2
+    cdef size_t min_point_id
+    cdef size_t max_point_id
+    cdef double *extreme_cell_points = [ \
+    0.5, -0.5, -0.5, -0.5, \
+    0.5, 0.5, -0.5, -0.5, \
+    0.5, 0.5, 0.5, -0.5, \
+    -0.5, 0.5, 0.5, -0.5, \
+    -0.5, 0.5, 0.5, 0.5, \
+    -0.5, -0.5, 0.5, 0.5, \
+    -0.5, -0.5, -0.5, 0.5, \
+    0.5, -0.5, -0.5, 0.5]
 
     print('listing extreme cell angles')
 
@@ -118,14 +135,12 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             if abs(viewpoint_to_cell_row * viewpoint_to_cell_col) > 0:
                 sector += 1
             # adjust wrt 8 angles
-            min_corner_offset_row = \
-                extreme_cell_points[sector][min_angle_id][0]
-            min_corner_offset_col = \
-                extreme_cell_points[sector][min_angle_id][1]
-            max_corner_offset_row = \
-                extreme_cell_points[sector][max_angle_id][0]
-            max_corner_offset_col = \
-                extreme_cell_points[sector][max_angle_id][1]
+            min_point_id = sector * SECTOR_SIZE
+            min_corner_offset_row = extreme_cell_points[min_point_id]
+            min_corner_offset_col = extreme_cell_points[min_point_id + 1]
+            max_point_id = min_point_id + POINT_SIZE
+            max_corner_offset_row = extreme_cell_points[max_point_id]
+            max_corner_offset_col = extreme_cell_points[max_point_id + 1]
             # Use the offset to compute extreme angles
             min_corner_row = viewpoint_to_cell_row + min_corner_offset_row
             min_corner_col = viewpoint_to_cell_col + min_corner_offset_col
