@@ -61,7 +61,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         double max_corner_offset_row = 0
         double max_corner_offset_col = 0
 
-    extreme_cell_points = np.array([ \
+    cdef np.ndarray extreme_cell_points = np.array([ \
     [[0.5, -0.5], [-0.5, -0.5]], \
     [[0.5, 0.5], [-0.5, -0.5]], \
     [[0.5, 0.5], [0.5, -0.5]], \
@@ -73,11 +73,11 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
 
     print('listing extreme cell angles')
 
-    min_angles = np.ndarray(cell_count -1, dtype = np.float)
-    angles = np.ndarray(cell_count -1, dtype = np.float)
-    max_angles = np.ndarray(cell_count -1, dtype = np.float)
-    I = np.ndarray(cell_count -1, dtype = np.int32)
-    J = np.ndarray(cell_count -1, dtype = np.int32)
+    cdef np.ndarray min_angles = np.ndarray(cell_count -1, dtype = np.float)
+    cdef np.ndarray angles = np.ndarray(cell_count -1, dtype = np.float)
+    cdef np.ndarray max_angles = np.ndarray(cell_count -1, dtype = np.float)
+    cdef np.ndarray I = np.ndarray(cell_count -1, dtype = np.int32)
+    cdef np.ndarray J = np.ndarray(cell_count -1, dtype = np.int32)
 
     # Loop through the rows
     cdef:
@@ -87,15 +87,16 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
         int sector = 0
 
     for row in range(array_rows):
+        if (cell_count > 1000) and \
+            (cell_id % (cell_count/1000)) == 0:
+            progress = round(float(cell_id) / cell_count * 100.,1)
+            print(str(progress) + '%')
+
         viewpoint_to_cell_row = row - viewpoint_row
         # Loop through the columns    
         for col in range(array_cols):
             viewpoint_to_cell_col = col - viewpoint_col
             # Show progress in 0.1% increment
-            if (cell_count > 1000) and \
-                (cell_id % (cell_count/1000)) == 0:
-                progress = round(float(cell_id) / cell_count * 100.,1)
-                print(str(progress) + '%')
             # Skip if cell falls on the viewpoint
             if (row == viewpoint_row) and (col == viewpoint_col):
                 continue
@@ -138,14 +139,7 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
             #max_angles.append((max_angle + two_pi) % two_pi)
             max_angles[cell_id] = (max_angle + two_pi) % two_pi
             cell_id += 1
-    print('done listing extreme cell angles, storing results')
-    # Create a tuple of ndarray angles before returning
-    min_angles = np.array(min_angles)
-    angles = np.array(angles)
-    max_angles = np.array(max_angles)
-    I = np.array(I)
-    J = np.array(J)
-    print('done storing result. Returning.')
+    print('done')
     return (min_angles, angles, max_angles, I, J)
 
 
