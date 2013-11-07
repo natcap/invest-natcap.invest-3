@@ -558,7 +558,14 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             else:
                 e_score = (e_agg_dict[ident] + s_o_score) / 2
 
-            avgs_dict[h][s].append({'Name': name, 'E': e_score,
+            #If my E is 0 (indicating that there's no spatial overlap), then
+            #my C and risk scores should also be 0. Setting E to 0 should
+            #cascade to also make risk 0.
+            if e_score == 0.:
+                avgs_dict[h][s].append({'Name': name, 'E': e_score,
+                           'C': 0.]})
+            else:
+                avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
     
     LOGGER.debug("AVGS_DICT: %s" % avgs_dict)
