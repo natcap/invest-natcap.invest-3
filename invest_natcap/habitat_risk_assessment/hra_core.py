@@ -1305,8 +1305,9 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #If habitat exists without stressor, want to return 0 as the overall
         #risk, so that it will show up as "no risk" but still show up.
         elif b_pix == base_nodata:
-            #should calculate c within the equation by itself.
-            return c_pix - 1
+            #If there's no spatial overlap, want the outcome of risk to just be
+            #be 0.
+            return 0
         
         #At this point, we know that there is data in c_pix, and we know that
         #there is overlap. So now can do the euc. equation.

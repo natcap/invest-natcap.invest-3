@@ -22,6 +22,19 @@ def execute(args):
         rec_eq- The equation to be used in calculation of recruitment. Choices
             are strings, and will be one of "Beverton-Holt", "Ricker", 
             "Fecundity", or "Fixed."
-        alpha- 
+        alpha(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
+            "Ricker" . Parameter that will be used in calculation of
+            recruitment.
+        beta(*)- Must exist within args if rec_eq == "Beverton-Holt" or 
+            "Ricker" . Parameter that will be used in calculation of
+            recruitment.
+        fec_params_uri(*)- Must exist within args if rec_eq == "Fecundity".
+            Location of the csv conatining parameters to be used in calculation
+            of recruitment.
+        fix_param(*)- Must exist within args if rec_eq == "Fixed". Parameter
+            that will be used in calculation of recruitment. 
+        init_recruits- Int which represents the initial number of recruits that
+            will be used in calculation of population on a per area basis. 
+        
     '''
 
