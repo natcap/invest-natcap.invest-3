@@ -1,10 +1,12 @@
-from libc.math cimport atan2
-from libc.math cimport sin
+
 import math
 cimport numpy as np
 import numpy as np
 
 import cython
+from cython.operator import dereference as deref
+from libc.math cimport atan2
+from libc.math cimport sin
 
 cdef extern from "stdlib.h":
     void* malloc(size_t size)
@@ -172,6 +174,39 @@ def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
     free(max_a_ptr)
 
     return (min_angles, angles, max_angles, I, J)
+
+# Cython versions of aesthetic_quality_core's active_pixel helper functions
+# I'm trying to avoid cythonizing the more efficient version with skip lists,
+# because they are much more complicated to design and maintain.
+
+# struct that mimics python's dictionary implementation
+cdef struct ActivePixel:
+    long index # long is python's default int type
+    double distance # double is python's float type
+    double visibility
+    ActivePixel *next
+
+# Find an active pixel based on distance. Return None if it can't be found
+cdef find_active_pixel_cython(ActivePixel *closest, double distance):
+    cdef ActivePixel *pixel
+    if closest is not NULL:
+        # Get information about first pixel in the list
+        pixel = closest
+        # Move on to next pixel if we're not done
+        while (pixel is not NULL) and \
+            (deref(pixel).distance < distance):
+            pixel = deref(pixel).next
+        # We reached the end and didn't find anything
+        if pixel is NULL:
+            return None
+        # We didn't reach the end: either pixel doesn't exist...
+        if deref(pixel).distance != distance:
+            return None
+        # ...or we found it
+        else:
+            return deref(pixel).distance
+    else:
+        return None
 
 def find_active_pixel(sweep_line, distance):
     """Find an active pixel based on distance. Return None if can't be found"""
