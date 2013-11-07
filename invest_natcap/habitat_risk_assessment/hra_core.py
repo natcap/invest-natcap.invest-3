@@ -538,7 +538,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
         for ident in c_agg_dict:
-            
+   
             name = name_map[ident]
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
@@ -546,11 +546,13 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             s_o_score = max_risk * frac_over + (1-frac_over)
 
             if frac_over == 0.:
-                e_score == 0.
+                e_score = 0.
+            
             #Know here that there is overlap. So now check whether we have
             #scoring from users. If no, just use spatial overlap. 
             elif e_agg_dict[ident] in [0, 0.]:
                 e_score = s_o_score
+            
             #If there is, want to average the spatial overlap into everything
             #else.
             else:
@@ -558,6 +560,8 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
 
             avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
+    
+    LOGGER.debug("AVGS_DICT: %s" % avgs_dict)
     
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
@@ -587,6 +591,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             for sub_dict in sub_list:
         
                 sub_dict['R_Pct'] = sub_dict['Risk']/avgs_r_sum[h][sub_dict['Name']]
+
 
     return avgs_dict, name_map.values()
 
@@ -1421,7 +1426,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     h_list_start_index = len(h_s_list)
    
-    LOGGER.debug("The outgoing URI is: %s, which is composed of: %s" % (out_uri, tot_crit_list))
+    LOGGER.debug("H_Denom_Dict: %s" % h_denom_dict)
 
     def add_c_pix(*pixels):
         
