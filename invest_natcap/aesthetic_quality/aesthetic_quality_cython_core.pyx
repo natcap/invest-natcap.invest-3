@@ -209,23 +209,33 @@ cdef find_active_pixel_cython(ActivePixel *closest, double distance):
         return None
 
 def find_active_pixel(sweep_line, distance):
-    """Find an active pixel based on distance. Return None if can't be found"""
+    """Python wrapper for the cython find_active_pixel_cython function"""
+    cdef ActivePixel *active_pixels
+    
     if 'closest' in sweep_line:
-        # Get information about first pixel in the list
-        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
-        # Move on to next pixel if we're not done
-        while (pixel is not None) and \
-            (pixel['distance'] < distance):
+        # Have to create the whole linked list, since we're going to search
+        # into it
+        pixel = sweep_line['closest']
+        element_count = 1
+        # Find out how long the sweep_line is
+        while pixel['next'] is not None:
             pixel = pixel['next']
-        # We reached the end and didn't find anything
-        if pixel is None:
-            return None
-        # We didn't reach the end: either pixel doesn't exist...
-        if pixel['distance'] != distance:
-            return None
-        # ...or we found it
-        else:
-            return pixel
+            element_count += 1
+        # Dynamically allocate the active_pixels list
+        active_pixels =<ActivePixel*>malloc(element_count*sizeof(ActivePixel))
+        # Fill it up with values from sweep_line
+        pixel = sweep_line['closest']
+        for e in range(element_count):
+            active_pixels[e].index = pixel['index']
+            active_pixels[e].visibility = pixel['visibility']
+            active_pixels[e].distance = pixel['distance']
+            active_pixels[e].next = &(active_pixels[e+1])
+            pixel = pixel['next']
+        # Invoke the low-level function to find the right value
+        value = find_active_pixel_cython(active_pixels, distance)
+        # clean-up
+        free(active_pixels)
+        return value
     else:
         return None
 
