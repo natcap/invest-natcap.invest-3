@@ -109,7 +109,7 @@ def execute(args):
 
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
-    risk_dict = make_risk_rasters(args['h_s_c'],
+    risk_dict = make_risk_rasters(args['h_s_c'], args['habitats'],
         inter_dir, crit_lists, denoms, args['risk_eq'], args['warnings'])
 
     #Know at this point that the non-core has re-created the ouput directory
@@ -1113,7 +1113,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
     return h_rasters, h_s_rasters
 
-def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
+def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselves. The way in which the E/C rasters
@@ -1123,6 +1123,9 @@ def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
         h_s_c- Args dictionary containing much of the H-S overlap data in
             addition to the H-S base rasters. (In this function, we are only
             using it for the base h-s raster information.)
+        habs- Args dictionary containing habitat criteria information in
+            addition to the habitat base rasters. (In this function, we are only
+            using it for the base raster information.)
         inter_dir- Intermediate directory in which the H_S risk-burned rasters
             can be placed.
         crit_lists- A dictionary containing pre-burned criteria which can be
