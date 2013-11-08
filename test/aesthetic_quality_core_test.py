@@ -4,6 +4,8 @@ import logging
 import math
 import collections
 from random import shuffle
+from random import randint
+from random import uniform
 
 import numpy as np
 
@@ -625,7 +627,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         return (True, 'Pixels look identical')        
 
     def test_identical_active_pixels(self):
-        """Test that two pixels are identical"""
+        """Test the function identical_active_pixels"""
         # Build reference pixel
         first= {}
         first['index'] = 3
@@ -658,11 +660,11 @@ class TestAestheticQualityCore(unittest.TestCase):
         second['visibility'] -= 1
 
         # different distances
-        second['distance'] += 1
+        second['distance'] += 1.
         test_result = self.identical_active_pixels(first, second)
         message = 'The two pixels should test different: ' + test_result[1]
         assert test_result[0] is False, message
-        second['distance'] -= 1
+        second['distance'] -= 1.
 
 
     def identical_sweep_lines(self, first, second):
@@ -688,16 +690,37 @@ class TestAestheticQualityCore(unittest.TestCase):
                 return (False, 'pixel ' + str(pixel) + \
                     ' not in second sweep line')
             # Test pixel equality except for the field 'next'
-            same_pixels = identical_active_pixel(first[pixel], second[pixel])
+            same_pixels = self.identical_active_pixels(first[pixel], second[pixel])
             if not same_pixels[0]:
                 return (False, str(pixel) + "'s pixel: " + same_pixels[1])
             # Test the next pixel
-            same_pixels = identical_active_pixel(first[pixel]['next'], \
+            same_pixels = self.identical_active_pixels(first[pixel]['next'], \
                 second[pixel]['next'])
             if not same_pixels[0]:
                 return (False, str(pixel) + "'s next pixel: " + same_pixels[1])
         # Everything looks good
         return (True, 'Sweep lines appear identical')
+
+    def test_identical_sweep_lines(self):
+        """Testing the function identical_sweep_lines"""
+        # Test that identical randomly generated sweep_lines evaluate to True
+        first = {}
+        
+        for test in range(1):
+            sweep_line_length = randint(1, 5)
+            for pixel in range(sweep_line_length):
+                index = pixel
+                distance = uniform(0., 100.)
+                visibility = uniform(0., 100.)
+                aesthetic_quality_core.add_active_pixel(first, index, \
+                    distance, visibility)
+            test_result = self.identical_sweep_lines(first, first)
+            message = 'Sweep lines should be identical: ' + test_result[1]
+            assert test_result[0] is True, message
+
+        # Test that different randomly generated sweep lines evaluate to False
+        second = {}
+
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
