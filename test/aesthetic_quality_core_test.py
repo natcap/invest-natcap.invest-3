@@ -591,6 +591,77 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert found == expected, message
         # 2.3.2- O(log n) performance is maintained
 
+    def identical_active_pixel(self, first, second):
+        """Test that two active pixels are identical.
+            
+            Input:
+                -first, second: dictionaries with the following fields:
+                    -distance: pixel distance to the sweep line origin (float)
+                    -visibility: ratio between angle and distance (float)
+                    -index: integer
+                    -next: reference to the next pixel. This one is not tested.
+                
+            Return a tuple (bool, string) where bool is True if the active 
+            pixels are identical, False otherwise. string is an explanation of
+            the outcome for information purposes.
+        """
+        # Test for None
+        if (first is None) and (second is None):
+            return (True, 'Both pixels are None')
+
+        # test fields within a pixel:
+        if first['distance'] != second['distance']:
+            return (False, 'Distances differ: ' + str(first['distance']) + \
+            ' vs ' + str(second['distance']))
+
+        if first['visibility'] != second['visibility']:
+            return (False, 'Visibility differ: ' + str(first['visibility']) + \
+            ' vs ' + str(second['visibility']))
+
+        if first['index'] != second['index']:
+            return (False, 'Indices differ: ' + str(first['index']) + \
+            ' vs ' + str(second['index']))
+
+        if first['distance'] != second['distance']:
+            return (False, 'Distances differ: ' + str(first['distance']) + \
+            ' vs ' + str(second['distance']))
+
+        return (True, 'Pixels look identical')        
+
+    def identical_sweep_lines(self, first, second):
+        """Test that two sweep lines are identical.
+            
+            Input:
+                -first: reference sweep line
+                -second: sweep line to test against first
+                
+            Returns True if both sweep lines are identical, False otherwise.
+            
+            Note: The sweep lines are dictionaries that should be updated by
+            add_active_pixel or remove_active_pixel"""
+        # test lengths
+        if len(first) != len(second):
+            return (False, 'lengths of first and second differ (' + \
+                str(len(first)) + ' vs ' + str(len(second)) + ')')
+
+        # test distances + closest
+        for pixel in first:
+            # Test keys
+            if pixel not in second:
+                return (False, 'pixel ' + str(pixel) + \
+                    ' not in second sweep line')
+            # Test pixel equality except for the field 'next'
+            same_pixels = identical_active_pixel(first[pixel], second[pixel])
+            if not same_pixels[0]:
+                return (False, str(pixel) + "'s pixel: " + same_pixels[1])
+            # Test the next pixel
+            same_pixels = identical_active_pixel(first[pixel]['next'], \
+                second[pixel]['next'])
+            if not same_pixels[0]:
+                return (False, str(pixel) + "'s next pixel: " + same_pixels[1])
+        # Everything looks good
+        return (True, 'Sweep lines appear identical')
+
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
         Test the function that finds the pixel with the immediate smaller
