@@ -288,9 +288,9 @@ def build_table(param_args):
     return table_generator.generate_table(table_dict, attr)
 
 def add_text_element(param_args):
-    """Generates a string that represents a html text block wrapped in
-        paragraph tags
-
+    """Generates a string that represents a html text block. The input string
+        should be wrapped in proper html tags 
+        
         param_args - a dictionary with the following arguments:
             
             param_args['text'] - a string
@@ -298,8 +298,7 @@ def add_text_element(param_args):
         returns - a string
     """
     
-    html_str = '<p>%s</p>' % param_args['text']
-    return html_str
+    return param_args['text']
 
 def add_head_element(param_args):
     """Generates a string that represents a valid element in the head section of
