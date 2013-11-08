@@ -109,7 +109,7 @@ def execute(args):
 
     #Need to have the h_s_c dict in there so that we can use the H-S pair DS to
     #multiply against the E/C rasters in the case of decay.
-    risk_dict = make_risk_rasters(args['h_s_c'],
+    risk_dict = make_risk_rasters(args['h_s_c'], args['habitats'],
         inter_dir, crit_lists, denoms, args['risk_eq'], args['warnings'])
 
     #Know at this point that the non-core has re-created the ouput directory
@@ -538,7 +538,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
         #the names of the attributes will be the same for each dictionary, can
         #just use the names of one to index into the rest.
         for ident in c_agg_dict:
-            
+   
             name = name_map[ident]
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
@@ -546,18 +546,29 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             s_o_score = max_risk * frac_over + (1-frac_over)
 
             if frac_over == 0.:
-                e_score == 0.
+                e_score = 0.
+            
             #Know here that there is overlap. So now check whether we have
             #scoring from users. If no, just use spatial overlap. 
             elif e_agg_dict[ident] in [0, 0.]:
                 e_score = s_o_score
+            
             #If there is, want to average the spatial overlap into everything
             #else.
             else:
                 e_score = (e_agg_dict[ident] + s_o_score) / 2
 
-            avgs_dict[h][s].append({'Name': name, 'E': e_score,
+            #If my E is 0 (indicating that there's no spatial overlap), then
+            #my C and risk scores should also be 0. Setting E to 0 should
+            #cascade to also make risk 0.
+            if e_score == 0.:
+                avgs_dict[h][s].append({'Name': name, 'E': e_score,
+                           'C': 0.})
+            else:
+                avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
+    
+    LOGGER.debug("AVGS_DICT: %s" % avgs_dict)
     
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
@@ -587,6 +598,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             for sub_dict in sub_list:
         
                 sub_dict['R_Pct'] = sub_dict['Risk']/avgs_r_sum[h][sub_dict['Name']]
+
 
     return avgs_dict, name_map.values()
 
@@ -1101,7 +1113,7 @@ def make_hab_risk_raster(dir, risk_dict):
 
     return h_rasters, h_s_rasters
 
-def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
+def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warnings):
     '''This will combine all of the intermediate criteria rasters that we
     pre-processed with their r/dq*w. At this juncture, we should be able to 
     straight add the E/C within themselves. The way in which the E/C rasters
@@ -1111,6 +1123,9 @@ def make_risk_rasters(h_s_c, inter_dir, crit_lists, denoms, risk_eq, warnings):
         h_s_c- Args dictionary containing much of the H-S overlap data in
             addition to the H-S base rasters. (In this function, we are only
             using it for the base h-s raster information.)
+        habs- Args dictionary containing habitat criteria information in
+            addition to the habitat base rasters. (In this function, we are only
+            using it for the base raster information.)
         inter_dir- Intermediate directory in which the H_S risk-burned rasters
             can be placed.
         crit_lists- A dictionary containing pre-burned criteria which can be
@@ -1305,8 +1320,9 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
         #If habitat exists without stressor, want to return 0 as the overall
         #risk, so that it will show up as "no risk" but still show up.
         elif b_pix == base_nodata:
-            #should calculate c within the equation by itself.
-            return c_pix - 1
+            #If there's no spatial overlap, want the outcome of risk to just be
+            #be 0.
+            return 0
         
         #At this point, we know that there is data in c_pix, and we know that
         #there is overlap. So now can do the euc. equation.
@@ -1420,7 +1436,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     h_list_start_index = len(h_s_list)
    
-    LOGGER.debug("The outgoing URI is: %s, which is composed of: %s" % (out_uri, tot_crit_list))
+    LOGGER.debug("H_Denom_Dict: %s" % h_denom_dict)
 
     def add_c_pix(*pixels):
         
@@ -1882,7 +1898,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                         "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
 
-            crit_lists['Risk']['h_s_e'][pair].append(crit_C_uri)
+            crit_lists['Risk']['h_s_e'][pair].append(crit_E_uri)
    
     #This might help.
     return (crit_lists, denoms)

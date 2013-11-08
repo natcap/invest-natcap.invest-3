@@ -451,7 +451,7 @@ def make_crit_shape_dict(crit_uri):
         crit_name = parts[2].replace('_', ' ')
 
         if (hab_name, stress_name) not in c_shape_dict['h_s_c']:
-            c_shape_dict['h-s'][(hab_name, stress_name)] = {}
+            c_shape_dict['h_s_c'][(hab_name, stress_name)] = {}
         
         c_shape_dict['h_s_c'][(hab_name, stress_name)][crit_name] = path
 
