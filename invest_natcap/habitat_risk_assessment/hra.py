@@ -238,6 +238,7 @@ def execute(args):
     #Criteria, if they exist.
     if 'criteria_dir' in hra_args:
         c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
+        
         add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
                     hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'])
 
@@ -775,7 +776,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             #this set of features.
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-             
+            
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
@@ -835,7 +836,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     #H-S-E
     for pair in crit_dict['h_s_e']:
         
-        for c_name, c_path in crit_dict['h_s_c'][pair].iteritems():
+        for c_name, c_path in crit_dict['h_s_e'][pair].iteritems():
 
             #The path coming in from the criteria should be of the form
             #dir/h_s_critname.shp.
@@ -875,7 +876,9 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             #this set of features.
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-             
+            
+            LOGGER.debug("H_s_e: %s" % h_s_e[pair])
+
             if c_name in h_s_e[pair]['Crit_Rasters']:
                 h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
