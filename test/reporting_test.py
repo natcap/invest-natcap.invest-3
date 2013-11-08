@@ -228,7 +228,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
@@ -321,7 +321,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
@@ -402,7 +402,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
@@ -453,9 +453,9 @@ class TestReportingPackage(testing.GISTest):
         csv_uri = os.path.join(REPORTING_DATA, 'csv_test.csv')
         
         sample_dict = {
-                    0: {'date':'13', 'price':'1', 'product':'chips'},
-                    1: {'date':'3', 'price':'2', 'product':'peanuts'},
-                    2: {'date':'5', 'price':'3', 'product':'mints'}
+                    0: {'date':'13', 'price':'1.5', 'product':'chips'},
+                    1: {'date':'3', 'price':'2.25', 'product':'peanuts'},
+                    2: {'date':'5', 'price':'3.2', 'product':'mints'}
                 }
         
         columns = {
@@ -498,7 +498,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
