@@ -766,14 +766,12 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap, shape)
-
-
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
 
             #lower_attrib['rating'] should give us what rating is called within
             #this set of features.
@@ -839,17 +837,13 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                         within the HRA model run.")
             
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
-
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap, shape)
-
-
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
-            gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+            
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
             
             #Want to do a vectorize with the base layer, to make sure we're not
             #adding in values where there should be none
@@ -912,6 +906,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             raster_utils.create_raster_from_vector_extents_uri(
                 c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
             raster_utils.rasterize_layer_uri(
                 out_uri_pre_overlap, c_path, 
                 option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
