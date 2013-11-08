@@ -186,6 +186,47 @@ cdef struct ActivePixel:
     double visibility
     ActivePixel *next
 
+cdef ActivePixel *dict_to_active_pixels(sweep_line):
+    """Convert a python dictionary of active pixels to a C ActivePixels*"""
+    cdef ActivePixel *active_pixels = NULL
+    
+    if 'closest' in sweep_line:
+        # Have to create the whole linked list, since we're going to search
+        # into it
+        pixel = sweep_line['closest']
+        element_count = 1
+        # Find out how long the sweep_line is
+        while pixel['next'] is not None:
+            pixel = pixel['next']
+            element_count += 1
+        # Dynamically allocate the active_pixels list
+        active_pixels =<ActivePixel*>malloc(element_count*sizeof(ActivePixel))
+        # Fill it up with values from sweep_line
+        pixel = sweep_line['closest']
+        for e in range(element_count):
+            active_pixels[e].index = pixel['index']
+            active_pixels[e].visibility = pixel['visibility']
+            active_pixels[e].distance = pixel['distance']
+            active_pixels[e].next = &(active_pixels[e+1])
+            pixel = pixel['next']
+
+    return active_pixels
+
+def find_active_pixel(sweep_line, distance):
+    """Python wrapper for the cython find_active_pixel_cython function"""
+    cdef ActivePixel *active_pixels
+    
+    if 'closest' in sweep_line:
+        # Convert sweep_line to ActivePixel *
+        ActivePixel = dict_to_active_pixels(sweep_line)
+        # Invoke the low-level function to find the right value
+        value = find_active_pixel_cython(active_pixels, distance)
+        # clean-up
+        free(active_pixels)
+        return value
+    else:
+        return None
+
 # Find an active pixel based on distance. Return None if it can't be found
 cdef find_active_pixel_cython(ActivePixel *closest, double distance):
     cdef ActivePixel *pixel
@@ -208,36 +249,6 @@ cdef find_active_pixel_cython(ActivePixel *closest, double distance):
     else:
         return None
 
-def find_active_pixel(sweep_line, distance):
-    """Python wrapper for the cython find_active_pixel_cython function"""
-    cdef ActivePixel *active_pixels
-    
-    if 'closest' in sweep_line:
-        # Have to create the whole linked list, since we're going to search
-        # into it
-        pixel = sweep_line['closest']
-        element_count = 1
-        # Find out how long the sweep_line is
-        while pixel['next'] is not None:
-            pixel = pixel['next']
-            element_count += 1
-        # Dynamically allocate the active_pixels list
-        active_pixels =<ActivePixel*>malloc(element_count*sizeof(ActivePixel))
-        # Fill it up with values from sweep_line
-        pixel = sweep_line['closest']
-        for e in range(element_count):
-            active_pixels[e].index = pixel['index']
-            active_pixels[e].visibility = pixel['visibility']
-            active_pixels[e].distance = pixel['distance']
-            active_pixels[e].next = &(active_pixels[e+1])
-            pixel = pixel['next']
-        # Invoke the low-level function to find the right value
-        value = find_active_pixel_cython(active_pixels, distance)
-        # clean-up
-        free(active_pixels)
-        return value
-    else:
-        return None
 
 
 def remove_active_pixel(sweep_line, distance):
