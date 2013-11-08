@@ -591,7 +591,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert found == expected, message
         # 2.3.2- O(log n) performance is maintained
 
-    def identical_active_pixel(self, first, second):
+    def identical_active_pixels(self, first, second):
         """Test that two active pixels are identical.
             
             Input:
@@ -622,11 +622,48 @@ class TestAestheticQualityCore(unittest.TestCase):
             return (False, 'Indices differ: ' + str(first['index']) + \
             ' vs ' + str(second['index']))
 
-        if first['distance'] != second['distance']:
-            return (False, 'Distances differ: ' + str(first['distance']) + \
-            ' vs ' + str(second['distance']))
-
         return (True, 'Pixels look identical')        
+
+    def test_identical_active_pixels(self):
+        """Test that two pixels are identical"""
+        # Build reference pixel
+        first= {}
+        first['index'] = 3
+        first['visibility'] = 3.1415926535897932
+        first['distance'] = 123456
+        
+        # Test each execution path:
+        second = {}
+        
+        # identical values
+        second['index'] = 3
+        second['visibility'] = 3.1415926535897932
+        second['distance'] = 123456
+        test_result = self.identical_active_pixels(first, second)
+        message = 'The two pixels should test identical: ' + test_result[1]
+        assert test_result[0] is True, message
+
+        # different indices
+        second['index'] += 1
+        test_result = self.identical_active_pixels(first, second)
+        message = 'The two indices should test different: ' + test_result[1]
+        assert test_result[0] is False, message
+        second['index'] -= 1
+
+        # different visibilities
+        second['visibility'] += 1.
+        test_result = self.identical_active_pixels(first, second)
+        message='The two visibilities should test different: ' + test_result[1]
+        assert test_result[0] is False, message
+        second['visibility'] -= 1
+
+        # different distances
+        second['distance'] += 1
+        test_result = self.identical_active_pixels(first, second)
+        message = 'The two pixels should test different: ' + test_result[1]
+        assert test_result[0] is False, message
+        second['distance'] -= 1
+
 
     def identical_sweep_lines(self, first, second):
         """Test that two sweep lines are identical.
