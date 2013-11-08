@@ -1829,7 +1829,7 @@ def get_datasource_bounding_box(datasource_uri):
     return bounding_box
 
 
-def resize_and_resample_dataset(
+def resize_and_resample_dataset_uri(
     original_dataset_uri, bounding_box, out_pixel_size, output_uri,
     resample_method):
     """A function to resample a datsaet to larger or smaller pixel sizes
@@ -1991,7 +1991,7 @@ def align_dataset_list(
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        resize_and_resample_dataset(
+        resize_and_resample_dataset_uri(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
 
