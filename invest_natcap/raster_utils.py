@@ -1886,7 +1886,10 @@ def resize_and_resample_dataset_uri(
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_dict[resample_method])
-    calculate_raster_stats(output_dataset)
+
+    gdal.Dataset.__swig_destroy__(output_dataset)
+    output_dataset = None
+    calculate_raster_stats_uri(output_uri)
 
 
 def align_dataset_list(
