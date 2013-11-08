@@ -228,7 +228,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
@@ -321,7 +321,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
@@ -402,7 +402,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
@@ -498,7 +498,7 @@ class TestReportingPackage(testing.GISTest):
                         'type': 'text',
                         'section': 'body',
                         'position': 0,
-                        'text': 'Here is a sortable table!'},
+                        'text': '<p>Here is a sortable table!</p>'},
                     {
                         'type': 'head',
                         'section': 'head',
