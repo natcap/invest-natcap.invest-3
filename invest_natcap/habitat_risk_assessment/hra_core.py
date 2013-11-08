@@ -1145,20 +1145,20 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
                            hab2: ...
                          }
             }
-        denoms- Dictionary containing the combined denominator for a given
-            H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. 
+        denoms- Dictionary containing the denomincator scores for each overlap
+            for each criteria. These can be combined to get the final denom by
+            which the rasters should be divided. 
             
-            {'Risk': {  'h_s_c': { (hab1, stressA): 2.0, 
-                                 (hab1, stressB): 1.3
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0,...}, 
+                                 (hab1, stressB): {CritName': 1.3, ...}
                                },
-                        'h':   { hab1: 3.2,
+                        'h':   { hab1: {'CritName': 2.5, ...},
                                 ...
                                },
-                        'h_s_e': { (hab1, stressA): 1.2
+                        'h_s_e': { (hab1, stressA): {'CritName': 2.3},
                                }
                      }
-             'Recovery': { hab1: 1.6,
+             'Recovery': { hab1: {'CritName': 3.4},
                            hab2: ...
                          }
             }
