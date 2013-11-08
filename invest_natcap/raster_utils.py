@@ -102,19 +102,6 @@ def get_row_col_from_uri(dataset_uri):
     return (n_rows, n_cols)
 
 
-def calculate_raster_stats(dataset):
-    """Calculates and sets the min, max, stdev, and mean for the bandataset in
-       the raster.
-
-       dataset - a GDAL raster dataset that will be modified by having its band
-            statistics set
-
-        returns nothing"""
-
-    for band_number in range(dataset.RasterCount):
-        band = dataset.GetRasterBand(band_number + 1)
-        band.ComputeStatistics(0)
-
 def calculate_raster_stats_uri(dataset_uri):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
@@ -1613,8 +1600,9 @@ def reclassify_dataset(
         dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
     out_band = out_dataset.GetRasterBand(1)
 
-    calculate_raster_stats(dataset)
     in_band, in_nodata = extract_band_and_nodata(dataset)
+    in_band.ComputeStatistics(0)
+
     dataset_max = in_band.GetMaximum()
 
     #Make an array the same size as the max entry in the dictionary of the same
