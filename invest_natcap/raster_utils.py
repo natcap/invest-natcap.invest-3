@@ -794,10 +794,8 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     raster_cython_utils.reclassify_by_dictionary(
         dataset, rules, output_uri, format, default_value, datatype,
         output_dataset,)
+    calculate_raster_stats_uri(output_uri)
     LOGGER.info('Finished reclassification')
-
-    calculate_raster_stats(output_dataset)
-
     return output_dataset
 
 
@@ -836,7 +834,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
     slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
-    calculate_raster_stats(slope_dataset)
+    calculate_raster_stats_uri(slope_uri)
 
     dem_small_dataset = None
     os.remove(dem_small_uri)
@@ -1561,7 +1559,7 @@ def gaussian_filter_dataset(
     LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
 
-    calculate_raster_stats(out_dataset)
+    calculate_raster_stats_uri(out_uri)
 
     LOGGER.info('deleting %s' % temp_dir)
     dest_array = None
