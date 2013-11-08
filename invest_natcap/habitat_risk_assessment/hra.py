@@ -912,7 +912,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             r_dataset = \
                 raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
+                        grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap, shape)
 
 
             band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
