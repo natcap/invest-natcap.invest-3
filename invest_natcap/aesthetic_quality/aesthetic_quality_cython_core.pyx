@@ -186,13 +186,37 @@ cdef struct ActivePixel:
     double visibility
     ActivePixel *next
 
+cdef active_pixels_to_dict(ActivePixel *active_pixels):
+    """Convert a python dictionary of active pixels to a C ActivePixels*"""
+    sweep_line = {}
+    
+#    if active_pixels is not NULL:
+        # Have to create the whole linked list, since we're going to search
+        # into it
+#        pixel = sweep_line['closest']
+#        element_count = 1
+        # Find out how long the sweep_line is
+#        while pixel['next'] is not None:
+#            pixel = pixel['next']
+#            element_count += 1
+        # Dynamically allocate the active_pixels list
+#        active_pixels =<ActivePixel*>malloc(element_count*sizeof(ActivePixel))
+        # Fill it up with values from sweep_line
+#        pixel = sweep_line['closest']
+#        for e in range(element_count):
+#            active_pixels[e].index = pixel['index']
+#            active_pixels[e].visibility = pixel['visibility']
+#            active_pixels[e].distance = pixel['distance']
+#            active_pixels[e].next = &(active_pixels[e+1])
+#            pixel = pixel['next']
+
+#    return sweep_line
+
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     cdef ActivePixel *active_pixels = NULL
     
     if 'closest' in sweep_line:
-        # Have to create the whole linked list, since we're going to search
-        # into it
         pixel = sweep_line['closest']
         element_count = 1
         # Find out how long the sweep_line is
