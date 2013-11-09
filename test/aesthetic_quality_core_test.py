@@ -3,6 +3,7 @@ import unittest
 import logging
 import math
 import collections
+from copy import copy
 from random import shuffle
 from random import randint
 from random import uniform
@@ -705,22 +706,61 @@ class TestAestheticQualityCore(unittest.TestCase):
         """Testing the function identical_sweep_lines"""
         # Test that identical randomly generated sweep_lines evaluate to True
         first = {}
+        second = {}
         
-        for test in range(1):
-            sweep_line_length = randint(1, 5)
+        for test in range(50):
+            sweep_line_length = randint(1, 50)
             for pixel in range(sweep_line_length):
                 index = pixel
                 distance = uniform(0., 100.)
                 visibility = uniform(0., 100.)
                 aesthetic_quality_core.add_active_pixel(first, index, \
                     distance, visibility)
-            test_result = self.identical_sweep_lines(first, first)
+                aesthetic_quality_core.add_active_pixel(second, index, \
+                    distance, visibility)
+            test_result = self.identical_sweep_lines(first, second)
             message = 'Sweep lines should be identical: ' + test_result[1]
             assert test_result[0] is True, message
 
         # Test that different randomly generated sweep lines evaluate to False
-        second = {}
+        for test in range(1):
+            sweep_line_length = randint(1, 1)
+            distances = []
+            for pixel in range(sweep_line_length):
+                index = pixel
+                distance = uniform(0., 100.)
+                distances.append(distance)
+                visibility = uniform(0., 100.)
+                aesthetic_quality_core.add_active_pixel(first, index, \
+                    distance, visibility)
+            for pixel in range(sweep_line_length):
+                p = first[distances[pixel]]
+                index = copy(p['index'])
+                distance = copy(p['distance'])
+                visibility = copy(p['visibility'])
+                aesthetic_quality_core.add_active_pixel(second, index, \
+                    distance, visibility)
+            # Perturbation of sweep line length
+            position = randint(0, sweep_line_length-1)
+            offset = randint(-1, 1)
+            # If sweep line of same length, perturb something else
+            if not offset:
+                pixel = first[distances[position]]
+                a = [pixel['index'], pixel['visibility'], pixel['distance']]
+                i = randint(0, 2) # Choose something to modify
+                a[i] += 1 # apply modification
+            else:
+                if offset == 1:
+                    pixel = first[distances[position]]
+                    aesthetic_quality_core.add_active_pixel(second, \
+                        pixel['index'], pixel['visibility'], pixel['distance'])
+                else:
+                    aesthetic_quality_core.remove_active_pixel(second, \
+                        distances[position])
 
+            test_result = self.identical_sweep_lines(first, second)
+            message = 'Sweep lines should be different: ' + test_result[1]
+            assert test_result[0] is False, message
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
