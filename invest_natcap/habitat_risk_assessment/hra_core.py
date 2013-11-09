@@ -1898,7 +1898,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                         "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
 
-            crit_lists['Risk']['h_s_e'][pair].append(crit_C_uri)
+            crit_lists['Risk']['h_s_e'][pair].append(crit_E_uri)
    
     #This might help.
     return (crit_lists, denoms)
