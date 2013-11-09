@@ -1216,8 +1216,10 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             copy_raster(unbuff_stress_uri, e_out_uri)
 
         else:
+            #Going to add in the h_s_c dict to have the URI for the 
+            #overlap raster
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['Risk']['h_s_e'][pair])
+                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
@@ -1349,7 +1351,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
                     grid_size, "union", resample_method_list=None, 
                     dataset_to_align_index=0, aoi_uri=None)
 
-def calc_E_raster(out_uri, h_s_list, denom_dict):
+def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1363,9 +1365,8 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
 
     Returns nothing.
     '''
-    #Use arbitrary raster layers to get the grid size and the nodata values.
-    grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
-    nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
+    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+    nodata = raster_utils.get_nodata_from_uri(base_uri)
 
     #Using regex to pull out the criteria name after the last ]_. Will do this 
     #for all full URI's.
@@ -1376,7 +1377,9 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
 
     def add_e_pix(*pixels):
-        
+
+        base_pixel = pixels[0]
+
         all_nodata = True
         for p in pixels:
             if p != nodata:
@@ -1387,17 +1390,25 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
         value = 0.
         denom_val = 0.
 
-        for i in range(0, len(pixels)):
+        #Ignoring first pixel, since that's the base
+        for i in range(1, len(pixels)):
             
             p = pixels[i]
 
             if p != nodata:
                 value += p
-                denom_val += denom_dict[crit_name_list[i]]
-    
-        return value / denom_val
+                #Will be off by 1 because basename is now at the front
+                denom_val += denom_dict[crit_name_list[i-1]]
 
-    raster_utils.vectorize_datasets(h_s_list, add_e_pix, out_uri,
+        #As a final check, make sure there's overlap here
+        if base_pixel == nodata:
+            return nodata
+        else:
+            return value / denom_val
+
+    uri_list = [base_uri] + h_s_list
+
+    raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
