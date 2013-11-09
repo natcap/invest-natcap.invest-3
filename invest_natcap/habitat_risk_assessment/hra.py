@@ -766,14 +766,12 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
-
-
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
 
             #lower_attrib['rating'] should give us what rating is called within
             #this set of features.
@@ -784,7 +782,6 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             #adding in values where there should be none
             base_uri = h_s_c[pair]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-            pixel_size = raster_utils.get_cell_size_from_uri(base_uri)
 
             def overlap_hsc_spat_crit(base_pix, spat_pix):
 
@@ -798,9 +795,9 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif') 
         
-            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap, 
-                        curr_list, add_recov_pix, out_uri, gdal.GDT_Float32,
-                        -1., pixel_size, "union", resample_method_list=None, 
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+                        overlap_hsc_spat_crit, out_uri, gdal.GDT_Float32, -1.,
+                        grid_size, "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
     
             if c_name in h_s_c[pair]['Crit_Rasters']:
@@ -840,23 +837,18 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                         within the HRA model run.")
             
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
-
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
-
-
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
-            gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+            
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
             
             #Want to do a vectorize with the base layer, to make sure we're not
             #adding in values where there should be none
             base_uri = habitats[h]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-            pixel_size = raster_utils.get_cell_size_from_uri(base_uri)
             
             def overlap_h_spat_crit(base_pix, spat_pix):
 
@@ -870,9 +862,9 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif') 
         
-            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap, 
-                        curr_list, overlap_h_spat_crit, out_uri, gdal.GDT_Float32,
-                        -1., pixel_size, "union", resample_method_list=None, 
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+                        overlap_h_spat_crit, out_uri, gdal.GDT_Float32, -1., 
+                        grid_size, "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
             
             if c_name in habitats[h]['Crit_Rasters']:  
@@ -912,25 +904,17 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                 
             out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
-
-
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
-
-            #lower_attrib['rating'] should give us what rating is called within
-            #this set of features.
-            gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
             
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+                
             #Want to do a vectorize with the base layer, to make sure we're not
             #adding in values where there should be none
             base_uri = h_s_e[pair]['DS']
             base_nodata = raster_utils.get_nodata_from_uri(base_uri)
-            pixel_size = raster_utils.get_cell_size_from_uri(base_uri)
             
             def overlap_hse_spat_crit(base_pix, spat_pix):
 
@@ -944,9 +928,9 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
 
             out_uri = os.path.join(dir, filename + '.tif') 
         
-            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap, 
-                        curr_list, overlap_hse_spat_crit, out_uri, gdal.GDT_Float32,
-                        -1., pixel_size, "union", resample_method_list=None, 
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+                        overlap_hse_spat_crit, out_uri, gdal.GDT_Float32, -1.,
+                        grid_size, "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
 
             if c_name in h_s_e[pair]['Crit_Rasters']:
