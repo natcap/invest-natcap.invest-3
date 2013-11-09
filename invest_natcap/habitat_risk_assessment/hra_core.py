@@ -1445,7 +1445,6 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
     #The first two spots are habitat raster and h_s raster
-    h_s_list_start_index = len(h_s_list) + 2
     h_count = len(h_list)
 
     def add_c_pix(*pixels):
