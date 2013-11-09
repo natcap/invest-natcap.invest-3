@@ -1463,7 +1463,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
             return nodata
         
         h_value = 0.
-        h_denom_val = 0.
+        h_denom_value = 0.
 
         #If we have habitat without overlap, want to return 0.
         if h_s_base_pix == nodata and h_base_pix != nodata:
@@ -1480,7 +1480,7 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri
         #This will essentiall treat all resilience criteria (h) as a single
         #entry alongside the h_s criteria.
         h_s_value = h_value / h_count
-        h_s_denom_val = h_denom_value / h_count
+        h_s_denom_value = h_denom_value / h_count
 
         for i in range(len(h_s_pixels)):
             
