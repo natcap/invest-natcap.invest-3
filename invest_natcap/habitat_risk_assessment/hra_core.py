@@ -1145,20 +1145,20 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
                            hab2: ...
                          }
             }
-        denoms- Dictionary containing the combined denominator for a given
-            H-S overlap. Once all of the rasters are combined, each H-S raster
-            can be divided by this. 
+        denoms- Dictionary containing the denomincator scores for each overlap
+            for each criteria. These can be combined to get the final denom by
+            which the rasters should be divided. 
             
-            {'Risk': {  'h_s_c': { (hab1, stressA): 2.0, 
-                                 (hab1, stressB): 1.3
+            {'Risk': {  'h_s_c': { (hab1, stressA): {'CritName': 2.0,...}, 
+                                 (hab1, stressB): {CritName': 1.3, ...}
                                },
-                        'h':   { hab1: 3.2,
+                        'h':   { hab1: {'CritName': 2.5, ...},
                                 ...
                                },
-                        'h_s_e': { (hab1, stressA): 1.2
+                        'h_s_e': { (hab1, stressA): {'CritName': 2.3},
                                }
                      }
-             'Recovery': { hab1: 1.6,
+             'Recovery': { hab1: {'CritName': 3.4},
                            hab2: ...
                          }
             }
@@ -1216,12 +1216,14 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             copy_raster(unbuff_stress_uri, e_out_uri)
 
         else:
+            #Going to add in the h_s_c dict to have the URI for the 
+            #overlap raster
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['Risk']['h_s_e'][pair])
+                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
-                    denoms['Risk']['h'][h])
+                    denoms['Risk']['h'][h], habs[h]['DS'], h_s_c[pair]['DS'])
 
         #Function that we call now will depend on what the risk calculation
         #equation desired is.
@@ -1349,7 +1351,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
                     grid_size, "union", resample_method_list=None, 
                     dataset_to_align_index=0, aoi_uri=None)
 
-def calc_E_raster(out_uri, h_s_list, denom_dict):
+def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1363,9 +1365,8 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
 
     Returns nothing.
     '''
-    #Use arbitrary raster layers to get the grid size and the nodata values.
-    grid_size = raster_utils.get_cell_size_from_uri(h_s_list[0])
-    nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
+    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
+    nodata = raster_utils.get_nodata_from_uri(base_uri)
 
     #Using regex to pull out the criteria name after the last ]_. Will do this 
     #for all full URI's.
@@ -1376,7 +1377,9 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
 
     def add_e_pix(*pixels):
-        
+
+        base_pixel = pixels[0]
+
         all_nodata = True
         for p in pixels:
             if p != nodata:
@@ -1387,22 +1390,30 @@ def calc_E_raster(out_uri, h_s_list, denom_dict):
         value = 0.
         denom_val = 0.
 
-        for i in range(0, len(pixels)):
+        #Ignoring first pixel, since that's the base
+        for i in range(1, len(pixels)):
             
             p = pixels[i]
 
             if p != nodata:
                 value += p
-                denom_val += denom_dict[crit_name_list[i]]
-    
-        return value / denom_val
+                #Will be off by 1 because basename is now at the front
+                denom_val += denom_dict[crit_name_list[i-1]]
 
-    raster_utils.vectorize_datasets(h_s_list, add_e_pix, out_uri,
+        #As a final check, make sure there's overlap here
+        if base_pixel == nodata:
+            return nodata
+        else:
+            return value / denom_val
+
+    uri_list = [base_uri] + h_s_list
+
+    raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
+def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict, h_uri, h_s_uri):
     '''Should return a raster burned with a 'C' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1421,12 +1432,11 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
 
     Returns nothing.
     '''
-    tot_crit_list = h_s_list + h_list
+    tot_crit_list = [h_uri, h_s_uri] + h_list + h_s_list
 
     h_s_names = map(lambda uri: re.match(
             '.*\]_([^_]*)', 
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
-    
     h_names = map(lambda uri: re.match(
             '.*\]_([^_]*)', 
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_list)
@@ -1434,12 +1444,16 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
     grid_size = raster_utils.get_cell_size_from_uri(tot_crit_list[0])
     nodata = raster_utils.get_nodata_from_uri(h_s_list[0])
 
-    h_list_start_index = len(h_s_list)
-   
-    LOGGER.debug("H_Denom_Dict: %s" % h_denom_dict)
+    #The first two spots are habitat raster and h_s raster
+    h_count = len(h_list)
 
     def add_c_pix(*pixels):
-        
+     
+        h_base_pix = pixels[0]
+        h_s_base_pix = pixels[1]
+        h_pixels = pixels[2:h_count+2]
+        h_s_pixels = pixels[2+h_count::]
+
         all_nodata = True
         for p in pixels:
             if p != nodata:
@@ -1447,28 +1461,35 @@ def calc_C_raster(out_uri, h_s_list, h_s_denom_dict, h_list, h_denom_dict):
         if all_nodata:
             return nodata
         
-        value = 0.
-        denom_val = 0.
+        h_value = 0.
+        h_denom_value = 0.
 
-        for i in range(0, len(pixels)):
+        #If we have habitat without overlap, want to return 0.
+        if h_s_base_pix == nodata and h_base_pix != nodata:
+            return 0.
 
-            p = pixels[i]
+        for i in range(len(h_pixels)):
             
             if p != nodata:
-                if i < h_list_start_index:
-                    value += p
-                    denom_val += h_s_denom_dict[h_s_names[i]]
-                else:
-                    value += p
-                    denom_val += h_denom_dict[h_names[i-h_list_start_index]]
-       
-        #Special case for 0 value inputs coming in. Know that val=0 will only
-        #be the case when we have no resil. crits, and habitat not covered by
-        #stressor. Need to set to 0 here, and bypass in the risk calc for euc.
-        if value in [0, 0.]:
-            return 0
-        else:
-            return value / denom_val
+                h_value += h_pixels[i]
+                h_denom_value += h_denom_dict[h_names[i]]
+
+        #The h will need to get put into the h_s, so might as well have the
+        #h_s loop start with the average returned from h.
+        #This will essentiall treat all resilience criteria (h) as a single
+        #entry alongside the h_s criteria.
+        h_s_value = h_value / h_count
+        h_s_denom_value = h_denom_value / h_count
+
+        for i in range(len(h_s_pixels)):
+            
+            if p != nodata:
+                h_s_value += h_s_pixels[i]
+                h_s_denom_value += h_s_denom_dict[h_s_names[i]]
+
+        
+        return h_s_value / h_s_denom_value
+
 
     raster_utils.vectorize_datasets(tot_crit_list, add_c_pix, out_uri, 
                         gdal.GDT_Float32, -1., grid_size, "union", 
@@ -1898,7 +1919,7 @@ def pre_calc_denoms_and_criteria(dir, h_s_c, hab, h_s_e):
                         "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
 
-            crit_lists['Risk']['h_s_e'][pair].append(crit_C_uri)
+            crit_lists['Risk']['h_s_e'][pair].append(crit_E_uri)
    
     #This might help.
     return (crit_lists, denoms)

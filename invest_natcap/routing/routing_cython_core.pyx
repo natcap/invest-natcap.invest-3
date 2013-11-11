@@ -928,4 +928,7 @@ def flow_direction_inf(dem_uri, flow_direction_uri):
 
     LOGGER.info("writing flow data to raster")
     flow_band.WriteArray(flow_array)
-    raster_utils.calculate_raster_stats(flow_direction_dataset)
+    flow_band = None
+    gdal.Dataset.__swig_destroy__(flow_direction_dataset)
+    flow_direction_dataset = None
+    raster_utils.calculate_raster_stats_uri(flow_direction_uri)

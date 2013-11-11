@@ -1,16 +1,17 @@
 """The invest_natcap.testing package defines core testing routines and
 functionality."""
 
-import unittest
-import os
-import logging
-import shutil
-import functools
-import hashlib
-import filecmp
-import time
 import csv
+import filecmp
+import functools
+import glob
+import hashlib
 import json
+import logging
+import os
+import shutil
+import time
+import unittest
 
 import numpy
 np = numpy
