@@ -11,11 +11,6 @@
             "id" : "workspace_list",
             "type": "list",	        
 		    "elements": [
-			{		    
-                            "id":"alpha_only",
-                            "label": "This tool is in an ALPHA testing stage and should not be used for decision making",
-			    "type": "label"
-			},
                         {
                             "id" : "mode",
                             "args_id" : "mode",
