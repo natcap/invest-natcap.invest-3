@@ -98,7 +98,8 @@
                     "label": "Use Subregions Shapefile?",
                     "required": false,
                     "validateAs": {"type": "OGR",
-		    		  "mustExist": true},
+		    		  "mustExist": true,
+                      "fieldsExist": ["name"]},
                     "defaultValue": "../HabitatRiskAssess_3_0/Input/subregions.shp",
                     "helpText": "This is an option input which will take in a shapefile conatining feature subregions, and create additional summary outputs across these various subregions."
                 }
