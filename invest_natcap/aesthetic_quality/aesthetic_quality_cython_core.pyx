@@ -186,6 +186,21 @@ cdef struct ActivePixel:
     double visibility
     ActivePixel *next
 
+def dict_to_active_pixels_to_dict(sweep_line):
+    """Converts a sweep_line to an ActivePixels array and back and return it.
+        
+        Inputs: 
+            -sweep_line: a sweep line creatd with add_active_pixel in 
+            aesthetic_quality_core.
+
+        Returns a new sweep_line after being converted to ActivePixels 
+        and back. For debug purposes to see if the conversion functions work
+    """
+    # Retreive the active pixels
+    cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
+    # Converts the active pixels back to a python dictionary and return it
+    return active_pixels_to_dict(active_pixels, 0)
+
 cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     sweep_line = {}
@@ -219,21 +234,6 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
             last_distance = pixel.distance
 
     return sweep_line
-
-def dict_to_active_pixels_to_dict(sweep_line):
-    """Converts a sweep_line to an ActivePixels array and back and return it.
-        
-        Inputs: 
-            -sweep_line: a sweep line creatd with add_active_pixel in 
-            aesthetic_quality_core.
-
-        Returns a new sweep_line after being converted to ActivePixels 
-        and back. For debug purposes to see if the conversion functions work
-    """
-    # Retreive the active pixels
-    cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
-    # Converts the active pixels back to a python dictionary and return it
-    return active_pixels_to_dict(active_pixels, 0)
 
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
