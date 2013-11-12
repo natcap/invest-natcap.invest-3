@@ -724,7 +724,7 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         # Test that different randomly generated sweep lines evaluate to False
         for test in range(1):
-            sweep_line_length = randint(1, 1)
+            sweep_line_length = randint(1, 10)
             distances = []
             for pixel in range(sweep_line_length):
                 index = pixel
@@ -761,6 +761,13 @@ class TestAestheticQualityCore(unittest.TestCase):
             test_result = self.identical_sweep_lines(first, second)
             message = 'Sweep lines should be different: ' + test_result[1]
             assert test_result[0] is False, message
+
+    def test_dictionary_conversion(self):
+        """Test the python-to-C dictionary conversion"""
+        sweep_line = {}
+        for i in range(1):
+            sweep_line_length = randint(1, 10)
+            #aesthetic_quality_core.add_active_pixel(sweep_line)
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
