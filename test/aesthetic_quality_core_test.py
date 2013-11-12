@@ -723,9 +723,11 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert test_result[0] is True, message
 
         # Test that different randomly generated sweep lines evaluate to False
-        for test in range(1):
-            sweep_line_length = randint(1, 10)
+        for test in range(50):
+            first = {}
+            second = {}
             distances = []
+            sweep_line_length = randint(1, 50)
             for pixel in range(sweep_line_length):
                 index = pixel
                 distance = uniform(0., 100.)
@@ -746,9 +748,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             # If sweep line of same length, perturb something else
             if not offset:
                 pixel = first[distances[position]]
-                a = [pixel['index'], pixel['visibility'], pixel['distance']]
+                keys = ['index', 'visibility', 'distance']
                 i = randint(0, 2) # Choose something to modify
-                a[i] += 1 # apply modification
+                pixel[keys[i]] += 1 # apply modification
             else:
                 if offset == 1:
                     pixel = first[distances[position]]
