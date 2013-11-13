@@ -157,12 +157,6 @@ def execute(args):
         slope_uri, soil_text_uri, smax_uri, model_param_dict, float_nodata,
         alpha_uri_list)
 
-    # URI for the absorption raster
-    absorption_uri = os.path.join(
-            intermediate_dir, 'absorption%s.tif' % file_suffix)
-    # Calculate the absorption raster
-    calculate_in_absorption_rate(
-            imperv_area_uri, alpha_one_uri, absorption_uri, float_nodata)
 
     # Construct a dictionary from the precipitation time step data
     precip_data_dict = construct_time_step_data(precip_data_uri, 'p')
@@ -232,7 +226,7 @@ def execute(args):
     watershed_table_uri = os.path.join(
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
 	
-	# ROUTING FOR STREAMS LAYER #
+	## ROUTING FOR STREAMS LAYER ##
 			
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
@@ -243,10 +237,25 @@ def execute(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % file_suffix)
 	threshold_flow_accum = 1000
-    routing_utils.stream_threshold(flow_accumulation_uri,
-        float(threshold_flow_accum]), v_stream_uri)
+    routing_utils.stream_threshold(
+		flow_accumulation_uri, float(threshold_flow_accum]), v_stream_uri)
 	
 	#################################################
+	# Use the stream layer to set the impervious area values where a stream 
+	# occurs to 1.0. This ensures that when routing Direct Flow over a
+	# stream, no water is being absorbed. 
+	imperv_stream_uri = os.path.join(intermediate_dir, 'imperv_with_stream%s.tif' % file_suffix)
+	mask_impervious_layer_by_streams(
+        imperv_area_uri, v_stream_uri, imperv_stream_uri, out_nodata)
+
+    # URI for the absorption raster
+    absorption_uri = os.path.join(
+            intermediate_dir, 'absorption%s.tif' % file_suffix)
+    # Calculate the absorption raster
+    calculate_in_absorption_rate(
+            imperv_stream_uri, alpha_one_uri, absorption_uri, float_nodata)
+
+			
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
         # Create a tuple for precip and eto of the current months values
@@ -288,7 +297,7 @@ def execute(args):
         # Calculate water amount (W)
         clean_uri([water_uri])
         calculate_water_amt(
-                imperv_area_uri, total_precip_uri, alpha_one_uri, water_uri,
+                imperv_stream_uri, total_precip_uri, alpha_one_uri, water_uri,
                 float_nodata)
 
         # Calculate Evaporation
@@ -602,6 +611,50 @@ def calculate_in_absorption_rate(
             [imperv_uri, alpha_one_uri], in_absorption_rate,
             out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
 
+def mask_impervious_layer_by_streams(
+        imperv_uri, streams_uri, out_uri, out_nodata):
+    """This function sets the impervious values where streams are present to 1
+		indicating there shouldn't be any absorption
+
+        imperv_uri - a URI to a gdal dataset of the impervious area
+
+		streams_uri - a URI to a gdal dataset of the stream layer. This is a
+			a raster with 0 and 1 values where 1 indicates a stream
+
+		out_uri - a URI to save the modified raster to disk
+		
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+
+    no_data_list = []
+    # Build up a list of nodata values to check against
+    for raster_uri in [imperv_uri, streams_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+   
+    def mask_streams(imperv_pix, stream_pix):
+        """A vectorize operation for setting stream pixels to have an
+			impervious values of 1.0
+
+            imperv_pix - a float value for the impervious area in fraction
+            stream_pix - a float value for the stream layer
+
+            returns - impervious area value"""
+        for pix, pix_nodata in zip([imperv_pix, stream_pix], no_data_list):
+            if pix == pix_nodata: 
+                return out_nodata
+			elif stream_pix == 1.0:
+				return 1.0
+			else:
+				return imperv_pix
+    
+    cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
+
+    raster_utils.vectorize_datasets(
+            [imperv_uri, streams_uri], mask_streams,
+            out_uri, gdal.GDT_Float32, out_nodata, cell_size, 'intersection')
+
 def calculate_final_interflow(
         soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
         water_uri, intermediate_interflow_uri, interflow_out_uri, out_nodata):
@@ -794,12 +847,12 @@ def calculate_intermediate_interflow(
             out_nodata, cell_size, 'intersection')
 
 def calculate_water_amt(
-        imperv_area_uri, total_precip_uri, alpha_one_uri, water_out_uri,
+        imperv_stream_uri, total_precip_uri, alpha_one_uri, water_out_uri,
         out_nodata):
     """Calculates the water available on a pixel, this is equation 4 from the
         water yield guidance.
 
-        imperv_area_uri - a URI to a gdal dataset for the impervious area in
+        imperv_stream_uri - a URI to a gdal dataset for the impervious area in
             fraction
         total_precip_uri - a URI to a gdal dataset for the total precipiation
 
@@ -813,7 +866,7 @@ def calculate_water_amt(
     """
     no_data_list = []
     # Build up a list of nodata values to check against
-    for raster_uri in [imperv_area_uri, alpha_one_uri, total_precip_uri]:
+    for raster_uri in [imperv_stream_uri, alpha_one_uri, total_precip_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
@@ -835,7 +888,7 @@ def calculate_water_amt(
     cell_size = raster_utils.get_cell_size_from_uri(alpha_one_uri)
 
     raster_utils.vectorize_datasets(
-            [imperv_area_uri, alpha_one_uri, total_precip_uri], water_op,
+            [imperv_stream_uri, alpha_one_uri, total_precip_uri], water_op,
             water_out_uri, gdal.GDT_Float32, out_nodata, cell_size,
             'intersection')
 
