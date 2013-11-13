@@ -93,6 +93,7 @@ def execute(args):
     # Set out_nodata value
     float_nodata = -35432.0
    
+    
     # URIs for the impervious raster and etk raster, both based mapping lulc
     # codes to values
     imperv_area_uri = os.path.join(
@@ -113,6 +114,14 @@ def execute(args):
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
+	
+	# Clip the dem and cast to a float
+    clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
+
+    raster_utils.vectorize_datasets(
+        [dem_uri], float, clipped_dem_uri,
+        gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
+        dataset_to_align_index=0, aoi_uri=watershed_uri)
 
     # Create initial S_t-1 for now. Set all values to 0.0
     soil_storage_uri = os.path.join(
@@ -222,7 +231,22 @@ def execute(args):
     # Output URI for the watershed table 
     watershed_table_uri = os.path.join(
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
-    
+	
+	# ROUTING FOR STREAMS LAYER #
+			
+	# Calculate flow accumulation in order to build up our streams layer
+    LOGGER.info("calculating flow accumulation")
+    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
+
+    # Classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % file_suffix)
+	threshold_flow_accum = 1000
+    routing_utils.stream_threshold(flow_accumulation_uri,
+        float(threshold_flow_accum]), v_stream_uri)
+	
+	#################################################
     # Iterate over each month, calculating the water storage and streamflow
     for cur_month in list_of_months:
         # Create a tuple for precip and eto of the current months values
