@@ -199,7 +199,10 @@ def dict_to_active_pixels_to_dict(sweep_line):
     # Retreive the active pixels
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     # Converts the active pixels back to a python dictionary and return it
-    return active_pixels_to_dict(active_pixels, 0)
+    sweep_line = active_pixels_to_dict(active_pixels, 0)
+    free(active_pixels)
+
+    return sweep_line
 
 cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
@@ -232,26 +235,9 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
             sweep_line[pixel.distance]['distance'] = pixel.distance
             sweep_line[pixel.distance]['next'] = None
             # Update the last pixel's 'next' field
-            sweep_line[last_distance]['next'] = sweep_line[last_distance]
+            sweep_line[last_distance]['next'] = sweep_line[pixel.distance]
             # Update last_distance for next loop
             last_distance = pixel.distance
-
-        p = sweep_line['closest']
-        print('ActivePixel to dict:')
-        for e in range(element_count):
-            if p['next'] is None:
-                print("sweep_line's current", p['distance'])
-                print("sweep_line's next", None)
-            else:
-                print("sweep_line's current", p['distance'])
-                print("sweep_line's next", p['next']['distance'])
-            if active_pixels[e].next is NULL:
-                print("active pixel's current", active_pixels[e].distance)
-                print("active pixel's next", 'NULL')
-            else:
-                print("active pixel's current", active_pixels[e].distance)
-                print("active pixel's next", deref(active_pixels[e].next).distance)
-            p = p['next']
 
     return sweep_line
 
@@ -277,19 +263,6 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
             active_pixels[e].next = &(active_pixels[e+1])
             pixel = pixel['next']
         active_pixels[element_count-1].next = NULL # NULL-terminated list
-
-        pixel = sweep_line['closest']
-        print('dict to ActivePixel:')
-        for e in range(element_count):
-            if pixel['next'] is None:
-                print("sweep_line's next", None)
-            else:
-                print("sweep_line's next", pixel['next']['distance'])
-            if active_pixels[e].next is NULL:
-                print("active pixel's next", 'NULL')
-            else:
-                print("active pixel's next", deref(active_pixels[e].next).distance)
-            pixel = pixel['next']
 
     return active_pixels
 
