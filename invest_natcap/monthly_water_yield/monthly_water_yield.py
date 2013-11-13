@@ -344,23 +344,41 @@ def execute(args):
 		dflow_vol = max_dflow * pixel_area / 1000.0
 		combined_flow_mn = combined_flow_aggregates.pixel_mean
 		combined_flow_pixel_count = combined_flow_aggregates.n_pixels
-		total_streamflows = {}
+		total_streamflow_vol = {}
 		shed_keys = combined_flow_mn.keys()
 		for key in shed_keys:
 			shed_mn = combined_flow_mn[key]
 			shed_pix_count = combined_flow_pixel_count[key]
 			shed_vol = shed_mn * pixel_area * shed_pix_count / 1000.0
 			total_shed_vol = shed_vol + dflow_vol
-			total_streamflows[key] = total_shed_vol
+			total_streamflow_vol[key] = total_shed_vol
 		
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
-        calculate_soil_storage(
-                prev_soil_uri, water_uri, evap_uri, streamflow_uri,
+        #calculate_soil_storage(
+        #        prev_soil_uri, water_uri, evap_uri, streamflow_uri,
+        #        smax_uri, soil_storage_uri, float_nodata)
+		
+		calculate_soil_storage_less_streamflow(
+                prev_soil_uri, water_uri, evap_uri,
                 smax_uri, soil_storage_uri, float_nodata)
+		
+		storage_aggregate = raster_utils.aggregate_raster_values_uri(
+                soil_storage_uri, watershed_uri, 'ws_id', ignore_nodata=False)
+				
+		storage_flow_mn = storage_aggregate.pixel_mean
+		storage_flow_pixel_count = storage_aggregate.n_pixels
+		total_storage_vol = {}
+		for key in shed_keys:
+			shed_mn = storage_flow_mn[key]
+			shed_pix_count = storage_flow_pixel_count[key]
+			shed_vol = shed_mn * pixel_area * shed_pix_count / 1000.0
+			total_shed_vol = shed_vol - total_streamflow_vol[key]
+			total_storage_vol[key] = total_shed_vol
+		
 
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
@@ -380,7 +398,7 @@ def execute(args):
         # Given the two output dictionaries build up the final dictionary that
         # will then be used to right out to the CSV
         for result_dict, field in zip(
-                [total_streamflow, max_storage], field_list):
+                [total_streamflow_vol, total_storage_vol], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
@@ -589,6 +607,69 @@ def calculate_soil_storage(
 
     raster_utils.vectorize_datasets(
             [prev_soil_uri, water_uri, evap_uri, streamflow_uri, smax_uri],
+            soil_storage_op, soil_storage_uri, gdal.GDT_Float32,
+            out_nodata, cell_size, 'intersection')
+
+def calculate_soil_storage_less_streamflow(
+        prev_soil_uri, water_uri, evap_uri, smax_uri, 
+        soil_storage_uri, out_nodata):
+    """This function calculates the soil storage without factoring in streamflow
+
+        prev_soil_uri - a URI to a gdal dataset of the previous months soil
+            storage
+
+        water_uri - a URI to a gdal datasaet for the amount of water
+
+        evap_uri - a URI to a gdal datasaet for the evaporation
+
+        smax_uri - a URI to a gdal dataset for the soil max
+        
+        soil_storage_uri - a URI to a gdal dataset for the current months soil
+            storage
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+    
+    no_data_list = []
+    # Build up a list of nodata values to check against
+    for raster_uri in [
+            prev_soil_uri, water_uri, evap_uri, smax_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def soil_storage_op(
+            prev_soil_pix, water_pix, evap_pix, smax_pix):
+        """A vectorize operation for calculating the intermediate 
+            streamflow
+
+            prev_soil_pix - a float value for the previous soil storage
+            water_pix - a float value for the water amount
+            evap_pix - a float value for the evap
+            smax_pix - a float value for the soil max
+            returns - the current soil storage
+        """
+        for pix, pix_nodata in zip(
+                [prev_soil_pix, water_pix, evap_pix, smax_pix],
+                no_data_list):
+            if pix == pix_nodata:
+                return out_nodata
+
+        # Constraint / bound for soil storage is:
+        # [ 0 <= S(i,t) <= Smax]
+
+        storage_value =  prev_soil_pix + water_pix - evap_pix
+		return storage_value
+        # Check constraint / bound
+        #if storage_value > smax_pix:
+        #    return smax_pix 
+        #else:
+        #    return storage_value
+
+    cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
+
+    raster_utils.vectorize_datasets(
+            [prev_soil_uri, water_uri, smax_uri],
             soil_storage_op, soil_storage_uri, gdal.GDT_Float32,
             out_nodata, cell_size, 'intersection')
 
