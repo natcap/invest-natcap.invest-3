@@ -329,8 +329,7 @@ def execute(args):
         # Calculate Streamflow
         clean_uri([streamflow_uri])
         calculate_streamflow(
-                interflow_uri, baseflow_uri, dflow_uri, streamflow_uri, 
-                float_nodata)
+                interflow_uri, baseflow_uri, streamflow_uri, float_nodata)
 
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
@@ -528,15 +527,13 @@ def calculate_soil_storage(
             out_nodata, cell_size, 'intersection')
 
 def calculate_streamflow(
-        interflow_uri, baseflow_uri, dflow_uri, streamflow_uri, out_nodata):
+        interflow_uri, baseflow_uri, streamflow_uri, out_nodata):
     """This function calculates the streamflow 
 
         interflow_uri - a URI to a gdal datasaet for the interflow
 
         baseflow_uri - a URI to a gdal datasaet for the baseflow
 
-        dflow_uri - a URI to a gdal datasaet for the direct flow
-        
         streamflow_uri - a URI path for the streamflow output to be
             written to disk
 
@@ -550,26 +547,25 @@ def calculate_streamflow(
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
-    def streamflow_op(interflow_pix, baseflow_pix, dflow_pix):
+    def streamflow_op(interflow_pix, baseflow_pix):
         """A vectorize operation for calculating the streamflow
 
             interflow_pix - a float value for the interflow
             baseflow_pix - a float value for the baseflow
-            dflow_pix - a float value for the direct flow
 
             returns - the baseflow value
         """
         for pix, pix_nodata in zip(
-                [interflow_pix, baseflow_pix, dflow_pix], no_data_list):
+                [interflow_pix, baseflow_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
 
-        return interflow_pix + baseflow_pix + dflow_pix 
+        return interflow_pix + baseflow_pix 
 
     cell_size = raster_utils.get_cell_size_from_uri(interflow_uri)
 
     raster_utils.vectorize_datasets(
-            [interflow_uri, baseflow_uri, dflow_uri], streamflow_op,
+            [interflow_uri, baseflow_uri], streamflow_op,
             streamflow_uri, gdal.GDT_Float32, out_nodata,
             cell_size, 'intersection')
 
