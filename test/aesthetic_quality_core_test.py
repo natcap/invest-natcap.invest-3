@@ -193,7 +193,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Gather extreme angles from cython algorithm
         # TODO: change the line below to call the actual cython function
         extreme_angles_cython = \
-        aesthetic_quality_cython_core.list_extreme_cell_angles_cython(array_shape, viewpoint)
+        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
@@ -782,6 +782,10 @@ class TestAestheticQualityCore(unittest.TestCase):
             test_result = self.identical_sweep_lines(sweep_line, converted)
             message = 'Sweep lines should be identical: ' + test_result[1]
             assert test_result[0] is True, message
+
+    def test_find_pixel_before_cython(self):
+        """Function that tests the cython version of find_pixel_before"""
+        pass
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast

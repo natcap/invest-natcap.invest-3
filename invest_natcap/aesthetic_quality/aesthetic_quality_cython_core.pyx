@@ -15,7 +15,7 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan2(double x, double x)
 
-def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
+def list_extreme_cell_angles(array_shape, viewpoint_coords):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
