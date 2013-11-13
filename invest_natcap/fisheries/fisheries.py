@@ -35,6 +35,12 @@ def execute(args):
             that will be used in calculation of recruitment. 
         init_recruits- Int which represents the initial number of recruits that
             will be used in calculation of population on a per area basis. 
-        
+        mig_params_uri(*)- If this parameter exists, it means migration is
+            desired. This is  the location of the parameters file for migration.
+        frac_post_process(*)- This will exist only if valuation is desired for
+            the particular species. A double representing the fraction of the
+            animal remaining after processing of the whole carcass is complete.
+        unit_price(*)- This will exist only if valuation is desired. Double 
+            which represents the price for a single unit of that animal.
     '''
 
