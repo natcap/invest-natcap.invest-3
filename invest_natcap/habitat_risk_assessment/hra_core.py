@@ -150,7 +150,7 @@ def execute(args):
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
+        make_aoi_tables(tables_dir, aoi_pairs)
 
         if args['risk_eq'] == 'Euclidean':
             make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress,
@@ -311,7 +311,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
     out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
     matplotlib.pyplot.savefig(out_uri, format='png')
 
-def make_aoi_tables(out_dir, aoi_pairs, max_risk):
+def make_aoi_tables(out_dir, aoi_pairs):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
