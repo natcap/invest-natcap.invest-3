@@ -232,7 +232,6 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
             sweep_line[last_distance]['next'] = sweep_line[last_distance]
             # Update last_distance for next loop
             last_distance = pixel.distance
-    print('reconstructed sweep_line', len(sweep_line))
 
     return sweep_line
 
@@ -247,7 +246,6 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
         while pixel['next'] is not None:
             pixel = pixel['next']
             element_count += 1
-        print('element_count', element_count)
         # Dynamically allocate the active_pixels list
         active_pixels =<ActivePixel*>malloc(element_count*sizeof(ActivePixel))
         # Fill it up with values from sweep_line
@@ -258,9 +256,19 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
             active_pixels[e].distance = pixel['distance']
             active_pixels[e].next = &(active_pixels[e+1])
             pixel = pixel['next']
-        active_pixels[element_count-1].next = NULL
-    print('input sweep_line', len(sweep_line))
+        active_pixels[element_count-1].next = NULL # NULL-terminated list
 
+        pixel = sweep_line['closest']
+        for e in range(element_count):
+            if pixel['next'] is None:
+                print("sweep_line's next", None)
+            else:
+                print("sweep_line's next", pixel['next']['distance'])
+            if active_pixels[e].next is NULL:
+                print("active pixel's next", 'NULL')
+            else:
+                print("active pixel's next", deref(active_pixels[e].next).distance)
+            pixel = pixel['next']
 
     return active_pixels
 
