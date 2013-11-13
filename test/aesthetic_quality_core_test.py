@@ -723,9 +723,11 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert test_result[0] is True, message
 
         # Test that different randomly generated sweep lines evaluate to False
-        for test in range(1):
-            sweep_line_length = randint(1, 1)
+        for test in range(50):
+            first = {}
+            second = {}
             distances = []
+            sweep_line_length = randint(1, 50)
             for pixel in range(sweep_line_length):
                 index = pixel
                 distance = uniform(0., 100.)
@@ -746,9 +748,9 @@ class TestAestheticQualityCore(unittest.TestCase):
             # If sweep line of same length, perturb something else
             if not offset:
                 pixel = first[distances[position]]
-                a = [pixel['index'], pixel['visibility'], pixel['distance']]
+                keys = ['index', 'visibility', 'distance']
                 i = randint(0, 2) # Choose something to modify
-                a[i] += 1 # apply modification
+                pixel[keys[i]] += 1 # apply modification
             else:
                 if offset == 1:
                     pixel = first[distances[position]]
@@ -761,6 +763,25 @@ class TestAestheticQualityCore(unittest.TestCase):
             test_result = self.identical_sweep_lines(first, second)
             message = 'Sweep lines should be different: ' + test_result[1]
             assert test_result[0] is False, message
+
+    def test_dictionary_conversion(self):
+        """Test the python-to-C dictionary conversion"""
+        sweep_line = {}
+        for i in range(1):
+            sweep_line_length = randint(1, 10)
+            for pixel in range(sweep_line_length):
+                index = pixel
+                distance = uniform(0., 100.)
+                visibility = uniform(0., 100.)
+                aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+                    distance, visibility)
+            converted = \
+            aesthetic_quality_cython_core.dict_to_active_pixels_to_dict( \
+            sweep_line)
+            
+            test_result = self.identical_sweep_lines(sweep_line, converted)
+            message = 'Sweep lines should be identical: ' + test_result[1]
+            assert test_result[0] is True, message
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
