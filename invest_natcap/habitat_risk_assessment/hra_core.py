@@ -153,8 +153,8 @@ def execute(args):
         make_aoi_tables(tables_dir, aoi_pairs)
 
         if args['risk_eq'] == 'Euclidean':
-            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress,
-                        len(h_risk_dict))
+            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], 
+                args['max_stress'],num_stress, len(h_risk_dict))
     '''
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
@@ -171,7 +171,7 @@ def execute(args):
 
         LOGGER.warn(text)
 
-def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
+def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_habs):
     '''This function will produce risk plots when the risk equation is
     euclidean.
 
@@ -186,6 +186,11 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
                 ....
             }
 
+        max_risk- Double representing the highest potential value for a single
+            h-s raster. The amount of risk for a given Habitat raster would be
+            SUM(s) for a given h.
+        max_stress- The largest number of stressors that the user believes will
+            overlap. This will be used to get an accurate estimate of risk.
         num_stress- A dictionary that simply associates every habaitat with the
             number of stressors associated with it. This will help us determine
             the max E/C we should be expecting in our overarching ecosystem 
