@@ -330,7 +330,29 @@ def execute(args):
         clean_uri([streamflow_uri])
         calculate_streamflow(
                 interflow_uri, baseflow_uri, streamflow_uri, float_nodata)
+		
+		combine_baseflow_interflow(
+                interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
+        max_dflow = raster_utils.aggregate_raster_values_uri(
+                dflow_uri, watershed_uri, 'ws_id').pixel_max
+				
+        combined_flow_aggragates = raster_utils.aggregate_raster_values_uri(
+                non_runoff_flow_uri, watershed_uri, 'ws_id', ignore_nodata=False)
+		
+		pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
+		dflow_vol = max_dflow * pixel_area / 1000.0
+		combined_flow_mn = combined_flow_aggregates.pixel_mean
+		combined_flow_pixel_count = combined_flow_aggregates.n_pixels
+		total_streamflows = {}
+		shed_keys = combined_flow_mn.keys()
+		for key in shed_keys:
+			shed_mn = combined_flow_mn[key]
+			shed_pix_count = combined_flow_pixel_count[key]
+			shed_vol = shed_mn * pixel_area * shed_pix_count / 1000.0
+			total_shed_vol = shed_vol + dflow_vol
+			total_streamflows[key] = total_shed_vol
+		
         # Calculate Soil Moisture for current time step, to be used as
         # previous time step in the next iteration
         clean_uri([prev_soil_uri])
@@ -358,7 +380,7 @@ def execute(args):
         # Given the two output dictionaries build up the final dictionary that
         # will then be used to right out to the CSV
         for result_dict, field in zip(
-                [max_streamflow, max_storage], field_list):
+                [total_streamflow, max_storage], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
@@ -392,6 +414,50 @@ def execute(args):
         
         # Move on to next month
 
+def combine_baseflow_interflow(
+                interflow_uri, baseflow_uri, non_runoff_flow_uri, out_nodata):
+	"""Add baseflow and interflow to get total flow not including direct flow.
+		These rasters are per pixel values where as direct flow is being
+		routed
+				
+		interflow_uri - a URI to a gdal datasaet for the interflow
+
+        baseflow_uri - a URI to a gdal datasaet for the baseflow
+
+        non_runoff_flow_uri - a URI path for the output gdal dataset
+
+        out_nodata - a float for the output nodata value
+
+        returns - nothing"""
+    
+    no_data_list = []
+    # Build up a list of nodata values to check against
+    for raster_uri in [interflow_uri, baseflow_uri]:
+        uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
+        no_data_list.append(uri_nodata)
+
+    def summation_op(interflow_pix, baseflow_pix):
+        """A vectorize operation for adding baseflow and interflow
+
+            interflow_pix - a float value for the interflow
+            baseflow_pix - a float value for the baseflow
+
+            returns - the baseflow value
+        """
+        for pix, pix_nodata in zip(
+                [interflow_pix, baseflow_pix], no_data_list):
+            if pix == pix_nodata: 
+                return out_nodata
+
+        return interflow_pix + baseflow_pix
+
+    cell_size = raster_utils.get_cell_size_from_uri(interflow_uri)
+
+    raster_utils.vectorize_datasets(
+            [interflow_uri, baseflow_uri], summation_op,
+            non_runoff_flow_uri, gdal.GDT_Float32, out_nodata,
+            cell_size, 'intersection')
+		
 def build_csv_dict(new_dict, columns, out_dict, field):
     """Combines a single level dictionary to an existing or non existing single
         level dicitonary
