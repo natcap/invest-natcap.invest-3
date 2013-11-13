@@ -796,15 +796,17 @@ class TestAestheticQualityCore(unittest.TestCase):
                     2- insert_active_pixel_fast: the new pixel to insert is
                         right after this pixel.
         Very useful."""
+        # Create the test sweep_line, and the test values to look for
         sweep_line, skip_nodes = self.build_skip_list()
-        
         test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+        # Gather the list of values from the sweep line in a list
         sweep_line_values = []
         pixel = sweep_line['closest']
         sweep_line_values.append(pixel['distance'])
         while pixel['next'] is not None:
             pixel = pixel['next']
             sweep_line_values.append(pixel['distance'])
+        # Create the lists of the distance found and those before and after
         found = []
         before = []
         after = []
@@ -818,6 +820,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             after.append((node['next']['distance'] if node['next'] is not None
             else None) if node is not None else 
                 sweep_line['closest']['distance'])
+        # Test if the distances found by the algorithm are consistent
         for i in range(len(test_values)):
             distance = test_values[i]
             if distance < sweep_line['closest']['distance']:
