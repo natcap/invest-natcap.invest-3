@@ -85,9 +85,9 @@ def execute(args):
 
     acc_soil_field_key = "veg type"
 
-    #valuation flags
-    private_valuation = args["private_valuation"]
-    social_valuation = args["social_valuation"]
+##    #valuation flags
+##    private_valuation = args["private_valuation"]
+##    social_valuation = args["social_valuation"]
 
 
     ##outputs
