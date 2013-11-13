@@ -783,9 +783,36 @@ class TestAestheticQualityCore(unittest.TestCase):
             message = 'Sweep lines should be identical: ' + test_result[1]
             assert test_result[0] is True, message
 
-    def test_find_pixel_before_cython(self):
-        """Function that tests the cython version of find_pixel_before"""
-        pass
+#    def test_find_pixel_cython(self):
+#        """Function that tests the cython version of find_pixel_before"""
+#        # Create the test sweep_line, and the test values to look for
+#        sweep_line, skip_nodes = self.build_skip_list()
+#        test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+#        # Gather the list of values from the sweep line in a list
+#        sweep_line_values = []
+#        pixel = sweep_line['closest']
+#        sweep_line_values.append(pixel['distance'])
+#        while pixel['next'] is not None:
+#            pixel = pixel['next']
+#            sweep_line_values.append(pixel['distance'])
+#        # Create the lists of the distance found and those before and after
+#        found = []
+#        found_cython = []
+#        for distance in test_values:
+#            node, _ = aesthetic_quality_core.find_active_pixel(sweep_line,
+#                skip_nodes, distance)
+#            found.append(node['distance'] if node is not None else None)
+#            node, _ = \
+#            aesthetic_quality_core_cython.find_active_pixel(sweep_line,
+#                skip_nodes, distance)
+#            found_cython.append(node['distance'] if node is not None else None)
+#        # Test if the distances found by the algorithm are consistent
+#        for i in range(len(test_values)):
+#            distance = test_values[i]
+#            message = 'Distances found by the python function ('+str(found[i]) \
+#            + ') is different from the cython version (' + str(found_cython[i])\
+#            + ')'
+#            assert found == found_cython, message
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast

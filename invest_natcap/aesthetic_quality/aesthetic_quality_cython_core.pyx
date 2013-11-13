@@ -204,6 +204,16 @@ def dict_to_active_pixels_to_dict(sweep_line):
 
     return sweep_line
 
+cdef active_pixel_to_dict(ActivePixel active_pixel):
+    """Convert a single ActivePixel object to a dictionary"""
+    pixel = {}
+    pixel['index'] = active_pixel.index
+    pixel['visibility'] = active_pixel.visibility
+    pixel['distance'] = active_pixel.distance
+    pixel['next'] = None # might be overridden later
+
+    return pixel
+
 cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     sweep_line = {}
@@ -212,13 +222,8 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
     if active_pixels is not NULL:
         # extract data from the closest distance first
         pixel = active_pixels[closest]
-        element_count = 1
-        # create an entry for the first diatance
-        sweep_line[pixel.distance] = {}
-        sweep_line[pixel.distance]['index'] = pixel.index
-        sweep_line[pixel.distance]['visibility'] = pixel.visibility
-        sweep_line[pixel.distance]['distance'] = pixel.distance
-        sweep_line[pixel.distance]['next'] = None # might be overridden later
+        # create the first distance in sweep_line
+        sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
         # Make 'closest' point to the first distance
         sweep_line['closest'] = sweep_line[pixel.distance]
         # We'll need this later to update the 'next' field if necessary
@@ -227,13 +232,8 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
         while pixel.next is not NULL:
             # get the next pixel
             pixel = deref(pixel.next)
-            element_count += 1
-            # create the entry in the dictionary and fill it
-            sweep_line[pixel.distance] = {}
-            sweep_line[pixel.distance]['index'] = pixel.index
-            sweep_line[pixel.distance]['visibility'] = pixel.visibility
-            sweep_line[pixel.distance]['distance'] = pixel.distance
-            sweep_line[pixel.distance]['next'] = None
+            # Fill up the sweep_line with pixels
+            sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
             # Update the last pixel's 'next' field
             sweep_line[last_distance]['next'] = sweep_line[pixel.distance]
             # Update last_distance for next loop
@@ -274,10 +274,12 @@ def find_active_pixel(sweep_line, distance):
         # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
         active_pixels = dict_to_active_pixels(sweep_line)
         # Invoke the low-level function to find the right value
-        value = find_active_pixel_cython(active_pixels, distance)
+        active_pixel = find_active_pixel_cython(active_pixels, distance)
+        # Convert C to python dictionary
+        pixel = active_pixel_to_dict(active_pixels[0])
         # clean-up
         free(active_pixels)
-        return value
+        return pixel
     else:
         return None
 
