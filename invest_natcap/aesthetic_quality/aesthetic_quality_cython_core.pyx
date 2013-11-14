@@ -298,7 +298,7 @@ cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance
         # Get information about first pixel in the list
         pixel = closest
         # Move on to next pixel if we can (not a NULL pointer)
-        while pixel is not NULL and deref(pixel).distance >= distance:
+        while pixel is not NULL and deref(pixel).distance < distance:
             pixel = deref(pixel).next
 
         if (pixel is not NULL) and (deref(pixel).distance != distance):

@@ -787,9 +787,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         """Function that tests the cython version of find_pixel_before"""
         # Create the test sweep_line, and the test values to look for
         sweep_line = {}
-        for i in range(2,6):
-            aesthetic_quality_core.add_active_pixel(sweep_line, i, 2.*i, 0.1*i)
-        test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+        for i in range(1,6):
+            index = i
+            distance = 2. * i
+            visibility = 0.1 * i
+            aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+            distance, visibility)
+        test_values = [-1, 0, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14, 20]
         # Gather the list of values from the sweep line in a list
         sweep_line_values = []
         pixel = sweep_line['closest']
