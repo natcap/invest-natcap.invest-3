@@ -318,32 +318,39 @@ def add_active_pixel(sweep_line, index, distance, visibility):
     sweep_line = active_pixels_to_dict(active_pixels, 0)
     free(active_pixels)
 
-
+# What is needed: 
+#   -maintain a pool of available pixels
+#   -figure out how to deallocate the active pixels
 cdef add_active_pixel_cython(ActivePixel *sweep_line, int closest, \
     int index, double distance, double visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
-    cdef ActivePixel new_pixel
-    new_pixel.next = NULL
-    new_pixel.index = index
-    new_pixel.visibility = visibility
+    cdef: 
+        ActivePixel *previous
+        ActivePixel *pixel
+        ActivePixel *new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
+    assert new_pixel is not NULL, 'new pixel assignment failed'
+
+    deref(new_pixel).next = NULL
+    deref(new_pixel).index = index
+    deref(new_pixel).visibility = visibility
 
 #    if sweep_line is not NULL:
 #        # Get information about first pixel in the list
 #        previous = NULL
-#        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+#        pixel = sweep_line[0]
 #        # Move on to next pixel if we're not done
-#        while (pixel is not None) and \
-#            (pixel['distance'] < distance):
+#        while (pixel is not NULL) and \
+#            (deref(pixel).distance < distance):
 #            previous = pixel
-#            pixel = pixel['next']
-#        # 1- Make the current pixel points to the next one
-#        new_pixel['next'] = pixel
+#            pixel = deref(pixel).next
+#        # 1- Make the current pixel point to the next one
+#        deref(new_pixel).next = pixel
 #        # 2- Insert the current pixel in the sweep line:
 #        sweep_line[distance] = new_pixel
 #        # 3- Make the preceding pixel point to the current one
-#        if previous is None:
-#            sweep_line['closest'] = new_pixel
+#        if previous is NULL:
+#            closest = new_pixel # should use an index from a vacant spot
 #        else:
 #            sweep_line[previous['distance']]['next'] = sweep_line[distance]
 #    else:
@@ -351,6 +358,7 @@ cdef add_active_pixel_cython(ActivePixel *sweep_line, int closest, \
 #        sweep_line['closest'] = new_pixel
 #    return sweep_line
 
+    free(new_pixel)
 
 def remove_active_pixel(sweep_line, distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
