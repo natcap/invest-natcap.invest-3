@@ -206,17 +206,18 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     '''
     def plot_background_circle(max_value):
-        circle_stuff = [(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), (4.25, '#C44539'), 
-                        (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), (3.25, '#E89D74'), 
-                        (3, '#F0B686'), (2.75, '#F5CC98'), (2.5, '#FAE5AC'), (2.25, '#FFFFBF'), 
-                        (2, '#EAEBC3'), (1.75, '#CFD1C5'), (1.5, '#B9BEC9'), (1.25, '#9FA7C9'), 
-                        (1, '#8793CC'), (0.75, '#6D83CF'), (0.5, '#5372CF'), (0.25, '#305FCF')]
+        circle_stuff = [(6, '#FFFFFF'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
+                        (4.25, '#C44539'), (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), 
+                        (3.25, '#E89D74'), (3, '#F0B686'), (2.75, '#F5CC98'), (2.5, '#FAE5AC'), 
+                        (2.25, '#FFFFBF'), (2, '#EAEBC3'), (1.75, '#CFD1C5'), (1.5, '#B9BEC9'), 
+                        (1.25, '#9FA7C9'), (1, '#8793CC'), (0.75, '#6D83CF'), (0.5, '#5372CF'), 
+                        (0.25, '#305FCF')]
         index = 0
         for radius, color in circle_stuff:
             index += 1
             linestyle = 'solid' if index % 2 == 0 else 'dashed'
             cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', 
-                        linestyle=linestyle, radius=radius * max_value/ 3.5, 
+                        linestyle=linestyle, radius=radius * max_value/ 3.75, 
                         fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
 
