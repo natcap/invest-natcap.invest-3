@@ -327,9 +327,13 @@ def execute(args):
 
         # Get the precipitation mean for the watersheds, this helps in comparing
         # outputs
-        precip_mn_dict = raster_utils.aggregate_raster_values_uri(
+        precip_agg_dict = raster_utils.aggregate_raster_values_uri(
                 precip_uri, watershed_uri, 'ws_id',
-                ignore_nodata=False).pixel_mean
+                ignore_nodata=False)
+        
+        evap_agg_dict = raster_utils.aggregate_raster_values_uri(
+                evap_uri, watershed_uri, 'ws_id',
+                ignore_nodata=False)
         
         clean_uri([non_runoff_flow_uri])
         combine_baseflow_interflow(
@@ -342,7 +346,8 @@ def execute(args):
         max_dflow = dflow_agg.pixel_max
         dflow_pixel_count = dflow_agg.n_pixels
 		
-        pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
+        dflow_pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
+        comb_pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
 				
         combined_flow_aggregates = raster_utils.aggregate_raster_values_uri(
                 non_runoff_flow_uri, watershed_uri, 'ws_id', ignore_nodata=False)
@@ -361,8 +366,8 @@ def execute(args):
                     shed_mn + max_dflow[key] / dflow_pixel_count[key])
 		    
             # Max direct flow as a volume. Divided by a 1000 to convert to meters
-            dflow_vol = max_dflow[key] * pixel_area / 1000.0
-            shed_vol = shed_mn * pixel_area * shed_pix_count / 1000.0
+            dflow_vol = max_dflow[key] * dflow_pixel_area / 1000.0
+            shed_vol = shed_mn * comb_pixel_area * shed_pix_count / 1000.0
             total_shed_vol = shed_vol + dflow_vol
             total_streamflow_vol[key] = total_shed_vol
 		
@@ -375,12 +380,53 @@ def execute(args):
         calculate_soil_storage_less_streamflow(
                 prev_soil_uri, water_uri, evap_uri,
                 smax_uri, soil_storage_uri, float_nodata)
-		
-        storage_aggregate = raster_utils.aggregate_raster_values_uri(
-                soil_storage_uri, watershed_uri, 'ws_id', ignore_nodata=False)
-				
-        storage_flow_mn = storage_aggregate.pixel_mean
+	
+        storage_mn = raster_utils.aggregate_raster_values_uri(
+                soil_storage_uri, watershed_uri, 'ws_id',
+                ignore_nodata=False).pixel_mean
+        
+        #### TESTING FOR WATER BALANCE #####
+        def compute_volume(raster_uri, aoi_uri, field, shed_keys):
+            raster_agg = raster_utils.aggregate_raster_values_uri(
+                    raster_uri, aoi_uri, field, ignore_nodata=False)
+            raster_mn = raster_agg.pixel_mean
+            raster_pix_count = raster_agg.n_pixels
+            raster_pix_area = raster_utils.get_cell_size_from_uri(raster_uri) ** 2
+            volume_dict = {}
 
+            for key in shed_keys:
+                vol = (raster_mn[key] * raster_pix_area *
+                        raster_pix_count[key] / 1000.0)
+                volume_dict[key] = vol
+
+            return volume_dict
+        
+        precip_vol = compute_volume(
+                precip_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME PRECIP: %s', precip_vol)
+        evap_vol = compute_volume(evap_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME EVAP: %s', evap_vol)
+        prev_store_vol = compute_volume(
+                prev_soil_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME PREV_STORE: %s', prev_store_vol)
+        store_vol = compute_volume(
+                soil_storage_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME STORAGE: %s', store_vol)
+        inter_base_vol = compute_volume(
+                non_runoff_flow_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME INTER + BASE: %s', inter_base_vol)
+
+        volume_balance = {}
+        for key in shed_keys:
+            store_change = store_vol[key] - prev_store_vol[key]
+            vol_bal = (precip_vol[key] - evap_vol[key] - store_change -
+                total_streamflow_vol[key] - inter_base_vol[key])
+            volume_balance[key] = vol_bal
+
+        LOGGER.debug('VOLUME BALANCE: %s', volume_balance)
+        LOGGER.debug('STREAMFLOW VOLUME: %s', total_streamflow_vol)
+        #####################################
+        
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
         out_dict['Date'] = cur_month
@@ -388,8 +434,8 @@ def execute(args):
         # Given the two output dictionaries build up the final dictionary that
         # will then be used to right out to the CSV
         for result_dict, field in zip(
-                [total_streamflow_vol, total_streamflow_mn, storage_flow_mn,
-                    precip_mn_dict], field_list):
+                [total_streamflow_vol, total_streamflow_mn, storage_mn,
+                    precip_agg_dict.pixel_mean], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
