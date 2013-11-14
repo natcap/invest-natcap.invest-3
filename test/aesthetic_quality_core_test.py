@@ -835,13 +835,9 @@ class TestAestheticQualityCore(unittest.TestCase):
                 aesthetic_quality_cython_core.add_active_pixel( \
                 cython_sweep_line, index, distance, visibility)
             # Test that the sweep lines are consistent
-            #for i in range(len(test_values)):
-            #    distance = test_values[i]
-            #    message = 'Distance ' + str(distance) + \
-            #    ': result from the python function ('+str(found[i]) \
-            #    + ') is different from the cython version (' + \
-            #    str(found_cython[i]) + ')'
-            #    assert found[i] == found_cython[i], message
+            result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+            message = 'C/Python sweep lines are different: ' + result[1]
+            assert result[0] is True, message
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
