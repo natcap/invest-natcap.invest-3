@@ -171,7 +171,8 @@ def execute(args):
 
     # Create individual CSV URIs for each shed based on the watershed ID's.
     # Store these URIs in a dictionary mapping to their respective shed ID's
-    field_list = ['Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn']    
+    field_list = [
+            'Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn', 'precip_mn']    
     shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
         for field in field_list:
@@ -324,10 +325,12 @@ def execute(args):
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
 
-        # Calculate Streamflow
-        #clean_uri([streamflow_uri])
-        #calculate_streamflow(
-        #        interflow_uri, baseflow_uri, streamflow_uri, float_nodata)
+        # Get the precipitation mean for the watersheds, this helps in comparing
+        # outputs
+        precip_mn_dict = raster_utils.aggregate_raster_values_uri(
+                precip_uri, watershed_uri, 'ws_id',
+                ignore_nodata=False).pixel_mean
+        
         clean_uri([non_runoff_flow_uri])
         combine_baseflow_interflow(
                 interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
@@ -374,12 +377,7 @@ def execute(args):
                 soil_storage_uri, watershed_uri, 'ws_id', ignore_nodata=False)
 				
         storage_flow_mn = storage_aggregate.pixel_mean
-        total_storage_mn = {}
-        
-        for key in shed_keys:
-		    shed_mn = storage_flow_mn[key]
-		    total_storage_mn[key] = shed_mn - total_streamflow_mn[key]
-		
+
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
         out_dict['Date'] = cur_month
@@ -387,7 +385,8 @@ def execute(args):
         # Given the two output dictionaries build up the final dictionary that
         # will then be used to right out to the CSV
         for result_dict, field in zip(
-                [total_streamflow_vol, total_streamflow_mn, total_storage_mn], field_list):
+                [total_streamflow_vol, total_streamflow_mn, storage_flow_mn,
+                    precip_mn_dict], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
