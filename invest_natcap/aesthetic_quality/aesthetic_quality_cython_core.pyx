@@ -244,7 +244,8 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     cdef ActivePixel *active_pixels = NULL
-    
+    cdef ActivePixel *p = NULL
+   
     if 'closest' in sweep_line:
         pixel = sweep_line['closest']
         element_count = 1
@@ -276,8 +277,7 @@ def find_active_pixel(sweep_line, distance):
         # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
         active_pixels = dict_to_active_pixels(sweep_line)
         # Invoke the low-level function to find the right value
-        active_pixel = active_pixels
-#find_active_pixel_cython(active_pixels, distance)
+        active_pixel = find_active_pixel_cython(active_pixels, distance)
         # Convert C to python dictionary
         if active_pixel is NULL:
             # clean-up
@@ -297,20 +297,14 @@ cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance
     if closest is not NULL:
         # Get information about first pixel in the list
         pixel = closest
-        # Move on to next pixel if we're not done
-        while (pixel is not NULL) and \
-            (deref(pixel).distance < distance):
-            print('pixel is ' + 'a valid PTR' if pixel is not NULL \
-                else 'NULL')            
-            print('pixel distance', deref(pixel).distance)
+        # Move on to next pixel if we can (not a NULL pointer)
+        while pixel is not NULL and deref(pixel).distance >= distance:
             pixel = deref(pixel).next
-        print('looked for', distance, 'found', deref(pixel).distance)
 
         if (pixel is not NULL) and (deref(pixel).distance != distance):
             return NULL
 
-    return NULL
-#    return pixel
+    return pixel
 
 
 def remove_active_pixel(sweep_line, distance):
