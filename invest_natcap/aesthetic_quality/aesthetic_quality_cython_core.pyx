@@ -205,7 +205,7 @@ def dict_to_active_pixels_to_dict(sweep_line):
     return sweep_line
 
 cdef active_pixel_to_dict(ActivePixel active_pixel):
-    """Convert a single ActivePixel object to a dictionary"""
+    """Convert a single ActivePixel object to a dictionary"""    
     pixel = {}
     pixel['index'] = active_pixel.index
     pixel['visibility'] = active_pixel.visibility
@@ -268,43 +268,49 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
 
 def find_active_pixel(sweep_line, distance):
     """Python wrapper for the cython find_active_pixel_cython function"""
-    cdef ActivePixel *active_pixels
+    cdef: 
+        ActivePixel *active_pixels
+        ActivePixel *active_pixel
     
     if 'closest' in sweep_line:
         # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
         active_pixels = dict_to_active_pixels(sweep_line)
         # Invoke the low-level function to find the right value
-        active_pixel = find_active_pixel_cython(active_pixels, distance)
+        active_pixel = active_pixels
+#find_active_pixel_cython(active_pixels, distance)
         # Convert C to python dictionary
-        pixel = active_pixel_to_dict(active_pixels[0])
-        # clean-up
-        free(active_pixels)
-        return pixel
+        if active_pixel is NULL:
+            # clean-up
+            free(active_pixels)
+            return None
+        else:
+            pixel = active_pixel_to_dict(deref(active_pixel))
+            # clean-up
+            free(active_pixels)
+            return pixel
     else:
         return None
 
 # Find an active pixel based on distance. Return None if it can't be found
-cdef find_active_pixel_cython(ActivePixel *closest, double distance):
-    cdef ActivePixel *pixel
+cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance):
+    cdef ActivePixel *pixel = NULL
     if closest is not NULL:
         # Get information about first pixel in the list
         pixel = closest
         # Move on to next pixel if we're not done
         while (pixel is not NULL) and \
             (deref(pixel).distance < distance):
+            print('pixel is ' + 'a valid PTR' if pixel is not NULL \
+                else 'NULL')            
+            print('pixel distance', deref(pixel).distance)
             pixel = deref(pixel).next
-        # We reached the end and didn't find anything
-        if pixel is NULL:
-            return None
-        # We didn't reach the end: either pixel doesn't exist...
-        if deref(pixel).distance != distance:
-            return None
-        # ...or we found it
-        else:
-            return deref(pixel).distance
-    else:
-        return None
+        print('looked for', distance, 'found', deref(pixel).distance)
 
+        if (pixel is not NULL) and (deref(pixel).distance != distance):
+            return NULL
+
+    return NULL
+#    return pixel
 
 
 def remove_active_pixel(sweep_line, distance):
