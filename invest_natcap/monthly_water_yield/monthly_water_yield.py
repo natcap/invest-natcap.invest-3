@@ -48,6 +48,10 @@ def execute(args):
         args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
             type
 
+        args[threshold_flow_accumulation] - an Integer value for the number of
+            upstream cells that must flow into a cell before it's considered
+            part of a stream (required)
+
         args['suffix'] - a string that will be concatenated onto the
            end of file names (optional)
         
@@ -71,6 +75,7 @@ def execute(args):
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
     model_params_uri = args['model_params_uri']
+    threshold_flow_accum = args['threshold_flow_accumulation']
     
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -237,7 +242,6 @@ def execute(args):
     # Classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % file_suffix)
-    threshold_flow_accum = 1000
     routing_utils.stream_threshold(
 		flow_accumulation_uri, float(threshold_flow_accum), v_stream_uri)
 	
