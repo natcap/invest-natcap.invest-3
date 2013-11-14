@@ -350,14 +350,12 @@ def execute(args):
         shed_keys = combined_flow_mn.keys()
 		
         for key in shed_keys:
-		    # Max direct flow as a volume. Divided by a 1000 to convert to meters
-            dflow_vol = max_dflow[key] * pixel_area / 1000.0
-		    
             shed_mn = combined_flow_mn[key]
             shed_pix_count = combined_flow_pixel_count[key]
-			
-            total_streamflow_mn[key] = shed_mn * shed_pix_count + max_dflow[key]
-			
+            total_streamflow_mn[key] = shed_mn + max_dflow[key]
+		    
+            # Max direct flow as a volume. Divided by a 1000 to convert to meters
+            dflow_vol = max_dflow[key] * pixel_area / 1000.0
             shed_vol = shed_mn * pixel_area * shed_pix_count / 1000.0
             total_shed_vol = shed_vol + dflow_vol
             total_streamflow_vol[key] = total_shed_vol
@@ -367,9 +365,6 @@ def execute(args):
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
-        #calculate_soil_storage(
-        #        prev_soil_uri, water_uri, evap_uri, streamflow_uri,
-        #        smax_uri, soil_storage_uri, float_nodata)
 		
         calculate_soil_storage_less_streamflow(
                 prev_soil_uri, water_uri, evap_uri,
@@ -379,13 +374,11 @@ def execute(args):
                 soil_storage_uri, watershed_uri, 'ws_id', ignore_nodata=False)
 				
         storage_flow_mn = storage_aggregate.pixel_mean
-        storage_flow_pixel_count = storage_aggregate.n_pixels
         total_storage_mn = {}
+        
         for key in shed_keys:
 		    shed_mn = storage_flow_mn[key]
-		    shed_pix_count = storage_flow_pixel_count[key]
-		    total_shed_mn = shed_mn * shed_pix_count - total_streamflow_mn[key]
-		    total_storage_mn[key] = total_shed_mn
+		    total_storage_mn[key] = shed_mn - total_streamflow_mn[key]
 		
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
