@@ -336,11 +336,13 @@ def execute(args):
                 interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
 		# Max Direct Flow as a mean or density
-        max_dflow = raster_utils.aggregate_raster_values_uri(
-                dflow_uri, watershed_uri, 'ws_id').pixel_max
+        dflow_agg = raster_utils.aggregate_raster_values_uri(
+                dflow_uri, watershed_uri, 'ws_id')
+        
+        max_dflow = dflow_agg.pixel_max
+        dflow_pixel_count = dflow_agg.n_pixels
 		
         pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
-		
 				
         combined_flow_aggregates = raster_utils.aggregate_raster_values_uri(
                 non_runoff_flow_uri, watershed_uri, 'ws_id', ignore_nodata=False)
@@ -355,7 +357,8 @@ def execute(args):
         for key in shed_keys:
             shed_mn = combined_flow_mn[key]
             shed_pix_count = combined_flow_pixel_count[key]
-            total_streamflow_mn[key] = shed_mn + max_dflow[key]
+            total_streamflow_mn[key] = (
+                    shed_mn + max_dflow[key] / dflow_pixel_count[key])
 		    
             # Max direct flow as a volume. Divided by a 1000 to convert to meters
             dflow_vol = max_dflow[key] * pixel_area / 1000.0
