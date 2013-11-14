@@ -206,7 +206,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     '''
     def plot_background_circle(max_value):
-        circle_stuff = [(6, '#FFFFFF'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
+        circle_stuff = [(6, '#000000'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
                         (4.25, '#C44539'), (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), 
                         (3.25, '#E89D74'), (3, '#F0B686'), (2.75, '#F5CC98'), (2.5, '#FAE5AC'), 
                         (2.25, '#FFFFBF'), (2, '#EAEBC3'), (1.75, '#CFD1C5'), (1.5, '#B9BEC9'), 
