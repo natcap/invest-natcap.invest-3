@@ -1225,7 +1225,8 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             #Going to add in the h_s_c dict to have the URI for the 
             #overlap raster
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'])
+                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'],
+                        habs[h]['DS'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
