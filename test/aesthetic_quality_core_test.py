@@ -806,13 +806,16 @@ class TestAestheticQualityCore(unittest.TestCase):
             node = aesthetic_quality_cython_core.find_active_pixel(sweep_line,
             distance)
             found_cython.append(node['distance'] if node is not None else None)
+            print(distance, 'python', found[-1], 'cython', found_cython[-1], \
+            found[-1] == found_cython[-1])
         # Test if the distances found by the algorithm are consistent
         for i in range(len(test_values)):
             distance = test_values[i]
-            message = 'Distances found by the python function ('+str(found[i]) \
+            message = 'Distance ' + str(distance) + \
+            ': result from the python function ('+str(found[i]) \
             + ') is different from the cython version (' + str(found_cython[i])\
             + ')'
-            assert found == found_cython, message
+            assert found[i] == found_cython[i], message
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
