@@ -1372,9 +1372,8 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
 
     Returns nothing.
     '''
-    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
-    h_s_nodata = raster_utils.get_nodata_from_uri(h_s_base_uri)
-    h_nodata = raster_utils.get_nodata_from_uri(h_base_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(h_s_base_uri)
+    nodata = raster_utils.get_nodata_from_uri(h_s_base_uri)
 
     #Using regex to pull out the criteria name after the last ]_. Will do this 
     #for all full URI's.
@@ -1404,7 +1403,7 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         #Need to check if the one that exists is only the h pixel. If not
         #catching here, can assume that there are h_s values, and continue with
         #equation.
-        if h_s_base_pix == h_s_nodata and h_base_pix != h_nodata:
+        if h_s_base_pix == nodata and h_base_pix != nodata:
             return 0
 
         #If we're here, want to go ahead and calculate out the values, since
