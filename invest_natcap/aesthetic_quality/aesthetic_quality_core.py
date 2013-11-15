@@ -1110,7 +1110,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     angle_count = len(angles)
     # 3- compute information on raster cells
     events = \
-    aesthetic_quality_cython_core.list_extreme_cell_angles_cython(array_shape, coordinates)
+    aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, coordinates)
     I = events[3]
     J = events[4]
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2

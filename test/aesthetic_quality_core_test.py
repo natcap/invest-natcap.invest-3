@@ -193,7 +193,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Gather extreme angles from cython algorithm
         # TODO: change the line below to call the actual cython function
         extreme_angles_cython = \
-        aesthetic_quality_cython_core.list_extreme_cell_angles_cython(array_shape, viewpoint)
+        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
@@ -767,8 +767,8 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_dictionary_conversion(self):
         """Test the python-to-C dictionary conversion"""
         sweep_line = {}
-        for i in range(1):
-            sweep_line_length = randint(1, 10)
+        for i in range(50):
+            sweep_line_length = randint(1, 50)
             for pixel in range(sweep_line_length):
                 index = pixel
                 distance = uniform(0., 100.)
@@ -783,6 +783,64 @@ class TestAestheticQualityCore(unittest.TestCase):
             message = 'Sweep lines should be identical: ' + test_result[1]
             assert test_result[0] is True, message
 
+    def test_find_pixel_cython(self):
+        """Function that tests the cython version of find_active_pixel"""
+        # Create the test sweep_line, and the test values to look for
+        sweep_line = {}
+        for i in range(1,6):
+            index = i
+            distance = 2. * i
+            visibility = 0.1 * i
+            aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+            distance, visibility)
+        test_values = [-1, 0, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14, 20]
+        # Gather the list of values from the sweep line in a list
+        sweep_line_values = []
+        pixel = sweep_line['closest']
+        sweep_line_values.append(pixel['distance'])
+        while pixel['next'] is not None:
+            pixel = pixel['next']
+            sweep_line_values.append(pixel['distance'])
+        # Create the lists of the distance found and those before and after
+        found = []
+        found_cython = []
+        for distance in test_values:
+            node = aesthetic_quality_core.find_active_pixel(sweep_line,distance)
+            found.append(node['distance'] if node is not None else None)
+            node = aesthetic_quality_cython_core.find_active_pixel(sweep_line,
+            distance)
+            found_cython.append(node['distance'] if node is not None else None)
+        # Test if the distances found by the algorithm are consistent
+        for i in range(len(test_values)):
+            distance = test_values[i]
+            message = 'Distance ' + str(distance) + \
+            ': result from the python function ('+str(found[i]) \
+            + ') is different from the cython version (' + str(found_cython[i])\
+            + ')'
+            assert found[i] == found_cython[i], message
+
+    def test_add_active_pixel_cython(self):
+        """Function that tests the cython version of add_active_pixel"""
+        # Create the test sweep_line, and the test values to look for
+        for test in range(50):
+            sweep_line = {}
+            cython_sweep_line = {}
+            line_length = randint(1, 50)
+            # Sorting the distance, so the array is consistent
+            distances = sorted([uniform(0., 100.) for i in range(line_length)])
+            for i in range(line_length):
+                index = i
+                distance = distances[i]
+                visibility = uniform(0., 0.1)
+                aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+                distance, visibility)
+                aesthetic_quality_cython_core.add_active_pixel( \
+                cython_sweep_line, index, distance, visibility)
+            # Test that the sweep lines are consistent
+            result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+            message = 'C/Python sweep lines are different: ' + result[1]
+            assert result[0] is True, message
+
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
         Test the function that finds the pixel with the immediate smaller
@@ -792,15 +850,17 @@ class TestAestheticQualityCore(unittest.TestCase):
                     2- insert_active_pixel_fast: the new pixel to insert is
                         right after this pixel.
         Very useful."""
+        # Create the test sweep_line, and the test values to look for
         sweep_line, skip_nodes = self.build_skip_list()
-        
         test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+        # Gather the list of values from the sweep line in a list
         sweep_line_values = []
         pixel = sweep_line['closest']
         sweep_line_values.append(pixel['distance'])
         while pixel['next'] is not None:
             pixel = pixel['next']
             sweep_line_values.append(pixel['distance'])
+        # Create the lists of the distance found and those before and after
         found = []
         before = []
         after = []
@@ -814,6 +874,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             after.append((node['next']['distance'] if node['next'] is not None
             else None) if node is not None else 
                 sweep_line['closest']['distance'])
+        # Test if the distances found by the algorithm are consistent
         for i in range(len(test_values)):
             distance = test_values[i]
             if distance < sweep_line['closest']['distance']:

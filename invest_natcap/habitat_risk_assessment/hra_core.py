@@ -206,17 +206,18 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     '''
     def plot_background_circle(max_value):
-        circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'),
-                        (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'),
-                        (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'),
-                        (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'),
-                        (1, '#305FCF')]
+        circle_stuff = [(6, '#000000'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
+                        (4.25, '#C44539'), (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), 
+                        (3.25, '#E89D74'), (3, '#F0B686'), (2.75, '#F5CC98'), (2.5, '#FAE5AC'), 
+                        (2.25, '#FFFFBF'), (2, '#EAEBC3'), (1.75, '#CFD1C5'), (1.5, '#B9BEC9'), 
+                        (1.25, '#9FA7C9'), (1, '#8793CC'), (0.75, '#6D83CF'), (0.5, '#5372CF'), 
+                        (0.25, '#305FCF')]
         index = 0
         for radius, color in circle_stuff:
             index += 1
             linestyle = 'solid' if index % 2 == 0 else 'dashed'
             cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', 
-                        linestyle=linestyle, radius=radius * max_value/ 3.5, 
+                        linestyle=linestyle, radius=radius * max_value/ 3.75, 
                         fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
 
@@ -1224,7 +1225,8 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             #Going to add in the h_s_c dict to have the URI for the 
             #overlap raster
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'])
+                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'],
+                        habs[h]['DS'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
@@ -1356,7 +1358,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
                     grid_size, "union", resample_method_list=None, 
                     dataset_to_align_index=0, aoi_uri=None)
 
-def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
+def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1370,8 +1372,8 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
 
     Returns nothing.
     '''
-    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
-    nodata = raster_utils.get_nodata_from_uri(base_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(h_s_base_uri)
+    nodata = raster_utils.get_nodata_from_uri(h_s_base_uri)
 
     #Using regex to pull out the criteria name after the last ]_. Will do this 
     #for all full URI's.
@@ -1381,9 +1383,13 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
             '.*\]_([^_]*)', 
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
 
+
     def add_e_pix(*pixels):
 
-        base_pixel = pixels[0]
+
+        h_base_pix = pixels[0]
+        h_s_base_pix = pixels[1]
+        h_s_pixels = pixels[2::]
 
         all_nodata = True
         for p in pixels:
@@ -1391,27 +1397,33 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
                 all_nodata = False
         if all_nodata:
             return nodata
-        
+       
+        #Know here that at least some pixels exist. h_s_pixels and h_s_base_pix
+        #should cover the same area since they're all burned to h_s overlap.
+        #Need to check if the one that exists is only the h pixel. If not
+        #catching here, can assume that there are h_s values, and continue with
+        #equation.
+        if h_s_base_pix == nodata and h_base_pix != nodata:
+            return 0
+
+        #If we're here, want to go ahead and calculate out the values, since
+        #we know there is overlap.
         value = 0.
         denom_val = 0.
 
         #Ignoring first pixel, since that's the base
-        for i in range(1, len(pixels)):
+        for i in range(len(h_s_pixels)):
             
             p = pixels[i]
 
             if p != nodata:
                 value += p
                 #Will be off by 1 because basename is now at the front
-                denom_val += denom_dict[crit_name_list[i-1]]
+                denom_val += denom_dict[crit_name_list[i]]
 
-        #As a final check, make sure there's overlap here
-        if base_pixel == nodata:
-            return nodata
-        else:
-            return value / denom_val
+        return value / denom_val
 
-    uri_list = [base_uri] + h_s_list
+    uri_list = [h_base_uri, h_s_base_uri] + h_s_list
 
     raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 

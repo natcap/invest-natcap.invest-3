@@ -15,7 +15,7 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan2(double x, double x)
 
-def list_extreme_cell_angles_cython(array_shape, viewpoint_coords):
+def list_extreme_cell_angles(array_shape, viewpoint_coords):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
@@ -199,21 +199,31 @@ def dict_to_active_pixels_to_dict(sweep_line):
     # Retreive the active pixels
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     # Converts the active pixels back to a python dictionary and return it
-    return active_pixels_to_dict(active_pixels, 0)
+    sweep_line = active_pixels_to_dict(active_pixels, 0)
+    free(active_pixels)
+
+    return sweep_line
+
+cdef active_pixel_to_dict(ActivePixel active_pixel):
+    """Convert a single ActivePixel object to a dictionary"""    
+    pixel = {}
+    pixel['index'] = active_pixel.index
+    pixel['visibility'] = active_pixel.visibility
+    pixel['distance'] = active_pixel.distance
+    pixel['next'] = None # might be overridden later
+
+    return pixel
 
 cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     sweep_line = {}
+    cdef ActivePixel pixel
     
     if active_pixels is not NULL:
         # extract data from the closest distance first
         pixel = active_pixels[closest]
-        # create an entry for the first diatance
-        sweep_line[pixel.distance] = {}
-        sweep_line[pixel.distance]['index'] = pixel.index
-        sweep_line[pixel.distance]['visibility'] = pixel.visibility
-        sweep_line[pixel.distance]['distance'] = pixel.distance
-        sweep_line[pixel.distance]['next'] = None # might be overridden later
+        # create the first distance in sweep_line
+        sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
         # Make 'closest' point to the first distance
         sweep_line['closest'] = sweep_line[pixel.distance]
         # We'll need this later to update the 'next' field if necessary
@@ -222,14 +232,10 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
         while pixel.next is not NULL:
             # get the next pixel
             pixel = deref(pixel.next)
-            # create the entry in the dictionary and fill it
-            sweep_line[pixel.distance] = {}
-            sweep_line[pixel.distance]['index'] = pixel.index
-            sweep_line[pixel.distance]['visibility'] = pixel.visibility
-            sweep_line[pixel.distance]['distance'] = pixel.distance
-            sweep_line[pixel.distance]['next'] = None
+            # Fill up the sweep_line with pixels
+            sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
             # Update the last pixel's 'next' field
-            sweep_line[last_distance]['next'] = sweep_line[last_distance]
+            sweep_line[last_distance]['next'] = sweep_line[pixel.distance]
             # Update last_distance for next loop
             last_distance = pixel.distance
 
@@ -238,7 +244,8 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     cdef ActivePixel *active_pixels = NULL
-    
+    cdef ActivePixel *p = NULL
+   
     if 'closest' in sweep_line:
         pixel = sweep_line['closest']
         element_count = 1
@@ -258,58 +265,100 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
             pixel = pixel['next']
         active_pixels[element_count-1].next = NULL # NULL-terminated list
 
-        pixel = sweep_line['closest']
-        for e in range(element_count):
-            if pixel['next'] is None:
-                print("sweep_line's next", None)
-            else:
-                print("sweep_line's next", pixel['next']['distance'])
-            if active_pixels[e].next is NULL:
-                print("active pixel's next", 'NULL')
-            else:
-                print("active pixel's next", deref(active_pixels[e].next).distance)
-            pixel = pixel['next']
-
     return active_pixels
 
 def find_active_pixel(sweep_line, distance):
     """Python wrapper for the cython find_active_pixel_cython function"""
-    cdef ActivePixel *active_pixels
+    cdef: 
+        ActivePixel *active_pixels
+        ActivePixel *active_pixel
     
     if 'closest' in sweep_line:
         # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
         active_pixels = dict_to_active_pixels(sweep_line)
         # Invoke the low-level function to find the right value
-        value = find_active_pixel_cython(active_pixels, distance)
-        # clean-up
-        free(active_pixels)
-        return value
+        active_pixel = find_active_pixel_cython(active_pixels, distance)
+        # Convert C to python dictionary
+        if active_pixel is NULL:
+            # clean-up
+            free(active_pixels)
+            return None
+        else:
+            pixel = active_pixel_to_dict(deref(active_pixel))
+            # clean-up
+            free(active_pixels)
+            return pixel
     else:
         return None
 
 # Find an active pixel based on distance. Return None if it can't be found
-cdef find_active_pixel_cython(ActivePixel *closest, double distance):
-    cdef ActivePixel *pixel
+cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance):
+    cdef ActivePixel *pixel = NULL
     if closest is not NULL:
         # Get information about first pixel in the list
         pixel = closest
-        # Move on to next pixel if we're not done
-        while (pixel is not NULL) and \
-            (deref(pixel).distance < distance):
+        # Move on to next pixel if we can (not a NULL pointer)
+        while pixel is not NULL and deref(pixel).distance < distance:
             pixel = deref(pixel).next
-        # We reached the end and didn't find anything
-        if pixel is NULL:
-            return None
-        # We didn't reach the end: either pixel doesn't exist...
-        if deref(pixel).distance != distance:
-            return None
-        # ...or we found it
-        else:
-            return deref(pixel).distance
-    else:
-        return None
+
+        if (pixel is not NULL) and (deref(pixel).distance != distance):
+            return NULL
+
+    return pixel
 
 
+def add_active_pixel(sweep_line, index, distance, visibility):
+    """Python wrapper for the cython find_active_pixel_cython function"""
+    # Make sure we're not creating any duplicate
+    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
+    assert distance not in sweep_line, message
+
+    cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
+    add_active_pixel_cython(active_pixels, 0, index, distance, visibility)
+    sweep_line = active_pixels_to_dict(active_pixels, 0)
+    free(active_pixels)
+
+# What is needed: 
+#   -maintain a pool of available pixels
+#   -figure out how to deallocate the active pixels
+cdef add_active_pixel_cython(ActivePixel *sweep_line, int closest, \
+    int index, double distance, double visibility):
+    """Add a pixel to the sweep line in O(n) using a linked_list of
+    linked_cells."""
+    cdef: 
+        ActivePixel *previous
+        ActivePixel *pixel
+        ActivePixel *new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
+    assert new_pixel is not NULL, 'new pixel assignment failed'
+
+    deref(new_pixel).next = NULL
+    deref(new_pixel).index = index
+    deref(new_pixel).visibility = visibility
+
+#    if sweep_line is not NULL:
+#        # Get information about first pixel in the list
+#        previous = NULL
+#        pixel = sweep_line[0]
+#        # Move on to next pixel if we're not done
+#        while (pixel is not NULL) and \
+#            (deref(pixel).distance < distance):
+#            previous = pixel
+#            pixel = deref(pixel).next
+#        # 1- Make the current pixel point to the next one
+#        deref(new_pixel).next = pixel
+#        # 2- Insert the current pixel in the sweep line:
+#        sweep_line[distance] = new_pixel
+#        # 3- Make the preceding pixel point to the current one
+#        if previous is NULL:
+#            closest = new_pixel # should use an index from a vacant spot
+#        else:
+#            sweep_line[previous['distance']]['next'] = sweep_line[distance]
+#    else:
+#        sweep_line[distance] = new_pixel
+#        sweep_line['closest'] = new_pixel
+#    return sweep_line
+
+    free(new_pixel)
 
 def remove_active_pixel(sweep_line, distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
@@ -343,38 +392,6 @@ def remove_active_pixel(sweep_line, distance):
             previous['next'] = sweep_line[distance]['next']
         # Remove the value from the list
         del sweep_line[distance]
-    return sweep_line
-
-
-def add_active_pixel(sweep_line, index, distance, visibility):
-    """Add a pixel to the sweep line in O(n) using a linked_list of
-    linked_cells."""
-    # Make sure we're not creating any duplicate
-    message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
-    assert distance not in sweep_line, message
-    new_pixel = \
-    {'next':None, 'index':index, 'distance':distance, 'visibility':visibility}
-    if 'closest' in sweep_line:
-        # Get information about first pixel in the list
-        previous = None
-        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
-        # Move on to next pixel if we're not done
-        while (pixel is not None) and \
-            (pixel['distance'] < distance):
-            previous = pixel
-            pixel = pixel['next']
-        # 1- Make the current pixel points to the next one
-        new_pixel['next'] = pixel
-        # 2- Insert the current pixel in the sweep line:
-        sweep_line[distance] = new_pixel
-        # 3- Make the preceding pixel point to the current one
-        if previous is None:
-            sweep_line['closest'] = new_pixel
-        else:
-            sweep_line[previous['distance']]['next'] = sweep_line[distance]
-    else:
-        sweep_line[distance] = new_pixel
-        sweep_line['closest'] = new_pixel
     return sweep_line
 
 
