@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('monthly_water_yield')
 
 def execute(args):
-    """Executes the Monthly Water Yield Model given the arguments in 'args'
+    """Execute the Monthly Water Yield Model given the arguments in 'args'
         which are defined as follows:
 
         args - a Python dictionary with the following keys and values:
