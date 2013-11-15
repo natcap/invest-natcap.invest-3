@@ -252,21 +252,14 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels):
 
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixel*"""
-    cdef ActivePixel *active_pixel = NULL
-    cdef ActivePixel *p = NULL
-    cdef ActivePixel *previous = NULL
-    cdef ActivePixel *first_pixel = NULL
+    cdef ActivePixel *active_pixel = NULL # New pixel being created
+    cdef ActivePixel *previous = NULL # previous pixel that needs an update
+    cdef ActivePixel *first_pixel = NULL # closest pixel in the sweep line
 
     if 'closest' in sweep_line:
+        # Construct the active pixel list with values from sweep_line
         pixel = sweep_line['closest']
-        element_count = 1
-        # Find out how long the sweep_line is
-        while pixel['next'] is not None:
-            pixel = pixel['next']
-            element_count += 1
-        # Fill it up with values from sweep_line
-        pixel = sweep_line['closest']
-        for e in range(element_count):
+        while pixel is not None:
             # Dynamically allocate the active pixels individually
             active_pixel =<ActivePixel*>malloc(sizeof(ActivePixel))
             assert active_pixel is not NULL, "can't allocate new active pixel"
