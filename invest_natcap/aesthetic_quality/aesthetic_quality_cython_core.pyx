@@ -343,7 +343,8 @@ def add_active_pixel(sweep_line, index, distance, visibility):
     assert distance not in sweep_line, message
 
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
-    add_active_pixel_cython(active_pixels, 0, index, distance, visibility)
+    active_pixels = \
+    add_active_pixel_cython(active_pixels, index, distance, visibility)
     sweep_line = active_pixels_to_dict(active_pixels)
     pixels_deleted = delete_active_pixels(active_pixels)
     message = "add_active_pixels: deleted pixel count " + \
@@ -354,44 +355,54 @@ def add_active_pixel(sweep_line, index, distance, visibility):
 # What is needed: 
 #   -maintain a pool of available pixels
 #   -figure out how to deallocate the active pixels
-cdef add_active_pixel_cython(ActivePixel *sweep_line, int closest, \
+cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
     int index, double distance, double visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
-    cdef: 
-        ActivePixel *previous
-        ActivePixel *pixel
-        ActivePixel *new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
+    cdef:
+        ActivePixel *previous = NULL
+        ActivePixel *pixel = NULL
+        ActivePixel *new_pixel = NULL
     assert new_pixel is not NULL, 'new pixel assignment failed'
 
     deref(new_pixel).next = NULL
     deref(new_pixel).index = index
     deref(new_pixel).visibility = visibility
 
-#    if sweep_line is not NULL:
-#        # Get information about first pixel in the list
-#        previous = NULL
-#        pixel = sweep_line[0]
-#        # Move on to next pixel if we're not done
-#        while (pixel is not NULL) and \
-#            (deref(pixel).distance < distance):
-#            previous = pixel
-#            pixel = deref(pixel).next
-#        # 1- Make the current pixel point to the next one
-#        deref(new_pixel).next = pixel
-#        # 2- Insert the current pixel in the sweep line:
-#        sweep_line[distance] = new_pixel
-#        # 3- Make the preceding pixel point to the current one
-#        if previous is NULL:
-#            closest = new_pixel # should use an index from a vacant spot
-#        else:
-#            sweep_line[previous['distance']]['next'] = sweep_line[distance]
-#    else:
-#        sweep_line[distance] = new_pixel
-#        sweep_line['closest'] = new_pixel
-#    return sweep_line
+    if closest is not NULL:
+        # Look into the active pixel list to find where to insert the new pixel
+        previous = closest
+        while previous is not NULL and deref(previous).distance < distance:
+            previous = deref(previous).next
+        message = "won't override existing distance " + str(distance)
+        assert deref(deref(previous).next).distance != distance, message
 
-    delete_active_pixels(new_pixel)
+        new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
+        deref(new_pixel).next = NULL
+        deref(new_pixel).index = index
+        deref(new_pixel).visibility = visibility
+
+        # Found something       
+        if deref(previous).distance >= distance:
+            # insert at the beginning
+            deref(new_pixel).next = closest
+            closest = new_pixel
+        elif deref(previous).next is NULL:
+            # insert at the end
+            deref(previous).next = new_pixel
+        else:
+            # insert between the ends
+            pixel = deref(previous).next # next pixel after insertion
+            deref(previous).next = new_pixel # previous points to new
+            deref(new_pixel).next = pixel # new points to next pixel
+    # Closest is NULL: just make it point to the new pixel
+    else:
+        closest = <ActivePixel*>malloc(sizeof(ActivePixel))
+        deref(closest).next = NULL
+        deref(closest).index = index
+        deref(closest).visibility = visibility
+
+    return closest
 
 def remove_active_pixel(sweep_line, distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
