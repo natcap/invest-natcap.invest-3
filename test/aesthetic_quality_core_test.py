@@ -705,10 +705,9 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_identical_sweep_lines(self):
         """Testing the function identical_sweep_lines"""
         # Test that identical randomly generated sweep_lines evaluate to True
-        first = {}
-        second = {}
-        
         for test in range(50):
+            first = {}
+            second = {}
             sweep_line_length = randint(1, 50)
             for pixel in range(sweep_line_length):
                 index = pixel
@@ -766,8 +765,8 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_dictionary_conversion(self):
         """Test the python-to-C dictionary conversion"""
-        sweep_line = {}
         for i in range(50):
+            sweep_line = {}
             sweep_line_length = randint(1, 50)
             for pixel in range(sweep_line_length):
                 index = pixel

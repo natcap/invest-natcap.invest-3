@@ -196,10 +196,15 @@ def dict_to_active_pixels_to_dict(sweep_line):
         Returns a new sweep_line after being converted to ActivePixel 
         and back. For debug purposes to see if the conversion functions work
     """
+    original_sweep_line_size = len(sweep_line)
     # Retreive the active pixels
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     # Converts the active pixels back to a python dictionary and return it
-    sweep_line = active_pixels_to_dict(active_pixels, 0)
+    sweep_line = active_pixels_to_dict(active_pixels)
+    message = 'dict_to_active_pixels_to_dict: original sweep line size ' + \
+    str(original_sweep_line_size) + " is different from new sweep line's " + \
+    str(len(sweep_line))
+    assert len(sweep_line) == original_sweep_line_size, message
     pixels_deleted = delete_active_pixels(active_pixels)
     message = "dict_to_active_pixels_to_dict: deleted pixel count " + \
     str(pixels_deleted) + " doesn't agree with sweep line length " + \
@@ -218,14 +223,14 @@ cdef active_pixel_to_dict(ActivePixel active_pixel):
 
     return pixel
 
-cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
+cdef active_pixels_to_dict(ActivePixel *active_pixels):
     """Convert a python dictionary of active pixels to a C ActivePixel*"""
     sweep_line = {}
     cdef ActivePixel pixel
-    
+
     if active_pixels is not NULL:
         # extract data from the closest distance first
-        pixel = active_pixels[closest]
+        pixel = deref(active_pixels)
         # create the first distance in sweep_line
         sweep_line[pixel.distance] = active_pixel_to_dict(pixel)
         # Make 'closest' point to the first distance
@@ -247,7 +252,7 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
 
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixel*"""
-    cdef ActivePixel *active_pixels = NULL
+    cdef ActivePixel *active_pixel = NULL
     cdef ActivePixel *p = NULL
     cdef ActivePixel *previous = NULL
     cdef ActivePixel *first_pixel = NULL
@@ -259,6 +264,7 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
         while pixel['next'] is not None:
             pixel = pixel['next']
             element_count += 1
+        print('sweep line length', element_count)
         # Fill it up with values from sweep_line
         pixel = sweep_line['closest']
         for e in range(element_count):
@@ -279,6 +285,16 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
                 deref(previous).next = active_pixel
             # Move on to the next pixel
             pixel = pixel['next']
+            previous = active_pixel
+
+        active_pixel = first_pixel
+        element_count = 1
+        while active_pixel is not NULL:
+            print('element', deref(active_pixel).distance)
+            active_pixel = deref(active_pixel).next
+            element_count += 1
+        print('active_pixel length', element_count)
+            
 
     return first_pixel
 
@@ -345,7 +361,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
 
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     add_active_pixel_cython(active_pixels, 0, index, distance, visibility)
-    sweep_line = active_pixels_to_dict(active_pixels, 0)
+    sweep_line = active_pixels_to_dict(active_pixels)
     pixels_deleted = delete_active_pixels(active_pixels)
     message = "add_active_pixels: deleted pixel count " + \
     str(pixels_deleted) + " doesn't agree with sweep line length " + \
