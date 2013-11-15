@@ -264,7 +264,6 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
         while pixel['next'] is not None:
             pixel = pixel['next']
             element_count += 1
-        print('sweep line length', element_count)
         # Fill it up with values from sweep_line
         pixel = sweep_line['closest']
         for e in range(element_count):
@@ -286,15 +285,6 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
             # Move on to the next pixel
             pixel = pixel['next']
             previous = active_pixel
-
-        active_pixel = first_pixel
-        element_count = 1
-        while active_pixel is not NULL:
-            print('element', deref(active_pixel).distance)
-            active_pixel = deref(active_pixel).next
-            element_count += 1
-        print('active_pixel length', element_count)
-            
 
     return first_pixel
 
