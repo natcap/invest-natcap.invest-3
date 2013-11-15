@@ -78,6 +78,16 @@ def execute(args):
     model_params_uri = args['model_params_uri']
     threshold_flow_accum = args['threshold_flow_accumulation']
     
+    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    # Align datasets
+    uris_to_align = [dem_uri, lulc_uri, smax_uri, soil_text_uri]
+    aligned_uris = [dem_aligned_uri, lulc_aligned_uri, smax_aligned_uri, 
+                    soil_text_aligned_uri]
+    raster_utils.align_dataset_list(
+        uris_to_align, aligned_uris, ['nearest','nearest','nearest','nearest'],
+        dem_cell_size, 'intersection', 1, aoi_uri=watershed_uri, 
+        assert_datasets_projected=True)
+    
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
         file_suffix = args['suffix']
@@ -105,51 +115,29 @@ def execute(args):
             intermediate_dir, 'imperv_area%s.tif' % file_suffix)
     etk_uri = os.path.join(intermediate_dir, 'etk%s.tif' % file_suffix)
     
-    # Get LULC, Nodata, and Cell size
-    lulc_nodata = raster_utils.get_nodata_from_uri(lulc_uri)
-    lulc_cell_size = raster_utils.get_cell_size_from_uri(lulc_uri)
-	
-    # Clip the lulc and cast to a int
-    clipped_lulc_uri = os.path.join(intermediate_dir, 'clipped_lulc.tif')
-
-    raster_utils.vectorize_datasets(
-        [lulc_uri], int, clipped_lulc_uri,
-        gdal.GDT_Int32, lulc_nodata, lulc_cell_size, "intersection",
-        aoi_uri=watershed_uri)
-
     for code_uri, field in zip(
             [imperv_area_uri, etk_uri],['imperv_fract', 'etk']):
         # Map the field to the lulc code in a dictionary
         lulc_code_dict = construct_lulc_lookup_dict(lulc_data_uri, field)
         # Reclassify lulc raster using lulc code to field mapping
         raster_utils.reclassify_dataset_uri(
-                clipped_lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
+                lulc_aligned_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
     # Get DEM WKT, Nodata, and Cell size
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
-    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
-    LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
-	
-	# Clip the dem and cast to a float
-    clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
-
-    raster_utils.vectorize_datasets(
-        [dem_uri], float, clipped_dem_uri,
-        gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
-        aoi_uri=watershed_uri)
-
+    
     # Create initial S_t-1 for now. Set all values to 0.0
     soil_storage_uri = os.path.join(
             intermediate_dir, 'soil_storage%s.tif' % file_suffix)
     raster_utils.new_raster_from_base_uri(
-        clipped_dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
+        dem_aligned_uri, soil_storage_uri, 'GTIFF', float_nodata,
         gdal.GDT_Float32, fill_value=0.0)
 
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(clipped_dem_uri, slope_uri)
+    raster_utils.calculate_slope(dem_aligned_uri, slope_uri)
 
     # Set up the URIs for the alpha rasters
     alpha_one_uri = os.path.join(
@@ -249,7 +237,7 @@ def execute(args):
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
+    routing_utils.flow_accumulation(dem_aligned_uri, flow_accumulation_uri)
 
     # Classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
@@ -295,7 +283,7 @@ def execute(args):
 
             # Create a new raster from the DEM to vectorize the points onto
             raster_utils.new_raster_from_base_uri(
-                    clipped_dem_uri, out_uri, 'GTIFF', float_nodata, gdal.GDT_Float32,
+                    dem_aligned_uri, out_uri, 'GTIFF', float_nodata, gdal.GDT_Float32,
                     fill_value=float_nodata)
             
             # Use vectorize points to construct rasters based on points and
@@ -306,7 +294,7 @@ def execute(args):
         # Calculate Direct Flow (Runoff) and Tp
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
-                clipped_dem_uri, precip_uri, absorption_uri, dflow_uri,
+                dem_aligned_uri, precip_uri, absorption_uri, dflow_uri,
                 total_precip_uri, in_source_uri, float_nodata, watershed_uri)
         
         # Calculate water amount (W)
