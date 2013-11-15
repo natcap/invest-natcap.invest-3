@@ -187,20 +187,24 @@ cdef struct ActivePixel:
     ActivePixel *next
 
 def dict_to_active_pixels_to_dict(sweep_line):
-    """Converts a sweep_line to an ActivePixels array and back and return it.
+    """Converts a sweep_line to an ActivePixel array and back and return it.
         
         Inputs: 
             -sweep_line: a sweep line creatd with add_active_pixel in 
             aesthetic_quality_core.
 
-        Returns a new sweep_line after being converted to ActivePixels 
+        Returns a new sweep_line after being converted to ActivePixel 
         and back. For debug purposes to see if the conversion functions work
     """
     # Retreive the active pixels
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     # Converts the active pixels back to a python dictionary and return it
     sweep_line = active_pixels_to_dict(active_pixels, 0)
-    free(active_pixels)
+    pixels_deleted = delete_active_pixels(active_pixels)
+    message = "dict_to_active_pixels_to_dict: deleted pixel count " + \
+    str(pixels_deleted) + " doesn't agree with sweep line length " + \
+    str(max(0, len(sweep_line) -1))
+    assert pixels_deleted == max(0, (len(sweep_line)-1)), message
 
     return sweep_line
 
@@ -215,7 +219,7 @@ cdef active_pixel_to_dict(ActivePixel active_pixel):
     return pixel
 
 cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
-    """Convert a python dictionary of active pixels to a C ActivePixels*"""
+    """Convert a python dictionary of active pixels to a C ActivePixel*"""
     sweep_line = {}
     cdef ActivePixel pixel
     
@@ -242,7 +246,7 @@ cdef active_pixels_to_dict(ActivePixel *active_pixels, size_t closest):
     return sweep_line
 
 cdef ActivePixel *dict_to_active_pixels(sweep_line):
-    """Convert a python dictionary of active pixels to a C ActivePixels*"""
+    """Convert a python dictionary of active pixels to a C ActivePixel*"""
     cdef ActivePixel *active_pixels = NULL
     cdef ActivePixel *p = NULL
     cdef ActivePixel *previous = NULL
@@ -278,29 +282,44 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
 
     return first_pixel
 
+cdef int delete_active_pixels(ActivePixel *first_pixel):
+    """Delete every pixel in the active_pixel linked list"""
+    deleted_pixels = 0 # Keep a count of how many pixels have been deleted
+    cdef ActivePixel *pixel_to_delete = NULL # The pixel to be deleted
+    # Iterate through the linked list and delete every pixel on the way
+    while first_pixel is not NULL:
+        pixel_to_delete = first_pixel
+        first_pixel = deref(first_pixel).next # new first pixel
+        free(pixel_to_delete)
+        deleted_pixels += 1
+
+    return deleted_pixels
+
 def find_active_pixel(sweep_line, distance):
     """Python wrapper for the cython find_active_pixel_cython function"""
     cdef: 
         ActivePixel *active_pixels
         ActivePixel *active_pixel
     
+    result = None
+        
     if 'closest' in sweep_line:
         # Convert sweep_line to ActivePixel *. Need to delete active_pixels.
         active_pixels = dict_to_active_pixels(sweep_line)
         # Invoke the low-level function to find the right value
         active_pixel = find_active_pixel_cython(active_pixels, distance)
-        # Convert C to python dictionary
-        if active_pixel is NULL:
-            # clean-up
-            free(active_pixels)
-            return None
-        else:
-            pixel = active_pixel_to_dict(deref(active_pixel))
-            # clean-up
-            free(active_pixels)
-            return pixel
-    else:
-        return None
+        # Convert C-style pixel to python dictionary if possible
+        if active_pixel is not NULL:
+            result = active_pixel_to_dict(deref(active_pixel))
+        # clean-up
+        pixels_deleted = delete_active_pixels(active_pixels)
+        # Try to keep track of memory leaks
+        message = "find_active_pixels: deleted pixel count " + \
+        str(pixels_deleted) + " doesn't agree with sweep line length " + \
+        str(max(0, len(sweep_line) -1))
+        assert pixels_deleted == max(0, len(sweep_line)-1), message
+
+    return result
 
 # Find an active pixel based on distance. Return None if it can't be found
 cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance):
@@ -327,7 +346,11 @@ def add_active_pixel(sweep_line, index, distance, visibility):
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     add_active_pixel_cython(active_pixels, 0, index, distance, visibility)
     sweep_line = active_pixels_to_dict(active_pixels, 0)
-    free(active_pixels)
+    pixels_deleted = delete_active_pixels(active_pixels)
+    message = "add_active_pixels: deleted pixel count " + \
+    str(pixels_deleted) + " doesn't agree with sweep line length " + \
+    str(max(0, len(sweep_line) -1))
+    assert pixels_deleted == max(0, len(sweep_line)-1), message
 
 # What is needed: 
 #   -maintain a pool of available pixels
@@ -369,7 +392,7 @@ cdef add_active_pixel_cython(ActivePixel *sweep_line, int closest, \
 #        sweep_line['closest'] = new_pixel
 #    return sweep_line
 
-    free(new_pixel)
+    delete_active_pixels(new_pixel)
 
 def remove_active_pixel(sweep_line, distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
