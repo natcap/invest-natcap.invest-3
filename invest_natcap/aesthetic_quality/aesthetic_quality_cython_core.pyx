@@ -245,7 +245,9 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
     """Convert a python dictionary of active pixels to a C ActivePixels*"""
     cdef ActivePixel *active_pixels = NULL
     cdef ActivePixel *p = NULL
-   
+    cdef ActivePixel *previous = NULL
+    cdef ActivePixel *first_pixel = NULL
+
     if 'closest' in sweep_line:
         pixel = sweep_line['closest']
         element_count = 1
@@ -253,19 +255,28 @@ cdef ActivePixel *dict_to_active_pixels(sweep_line):
         while pixel['next'] is not None:
             pixel = pixel['next']
             element_count += 1
-        # Dynamically allocate the active_pixels list
-        active_pixels =<ActivePixel*>malloc(element_count*sizeof(ActivePixel))
         # Fill it up with values from sweep_line
         pixel = sweep_line['closest']
         for e in range(element_count):
-            active_pixels[e].index = pixel['index']
-            active_pixels[e].visibility = pixel['visibility']
-            active_pixels[e].distance = pixel['distance']
-            active_pixels[e].next = &(active_pixels[e+1])
+            # Dynamically allocate the active pixels individually
+            active_pixel =<ActivePixel*>malloc(sizeof(ActivePixel))
+            assert active_pixel is not NULL, "can't allocate new active pixel"
+            # Keep the first pixel's address around
+            if first_pixel is NULL:
+                first_pixel = active_pixel
+            # set up the values in active_pixels
+            active_pixel.index = pixel['index']
+            active_pixel.visibility = pixel['visibility']
+            active_pixel.distance = pixel['distance']
+            # Set the 'next' field to NULL for the moment
+            active_pixel.next = NULL
+            # Update the 'next' field if it's possible
+            if previous is not NULL:
+                deref(previous).next = active_pixel
+            # Move on to the next pixel
             pixel = pixel['next']
-        active_pixels[element_count-1].next = NULL # NULL-terminated list
 
-    return active_pixels
+    return first_pixel
 
 def find_active_pixel(sweep_line, distance):
     """Python wrapper for the cython find_active_pixel_cython function"""
