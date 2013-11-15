@@ -7,6 +7,7 @@ import re
 import shutil
 
 from osgeo import gdal
+from osgeo import ogr
 #required for py2exe to build
 from scipy.sparse.csgraph import _validation
 
@@ -19,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 LOGGER = logging.getLogger('monthly_water_yield')
 
 def execute(args):
-    """Executes the Monthly Water Yield Model given the arguments in 'args'
+    """Execute the Monthly Water Yield Model given the arguments in 'args'
         which are defined as follows:
 
         args - a Python dictionary with the following keys and values:
@@ -48,6 +49,10 @@ def execute(args):
         args[sub_watersheds_uri] - a URI to an ogr shapefile of polygon geometry
             type
 
+        args[threshold_flow_accumulation] - an Integer value for the number of
+            upstream cells that must flow into a cell before it's considered
+            part of a stream (required)
+
         args['suffix'] - a string that will be concatenated onto the
            end of file names (optional)
         
@@ -71,6 +76,17 @@ def execute(args):
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
     model_params_uri = args['model_params_uri']
+    threshold_flow_accum = args['threshold_flow_accumulation']
+    
+    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
+    # Align datasets
+    uris_to_align = [dem_uri, lulc_uri, smax_uri, soil_text_uri]
+    aligned_uris = [dem_aligned_uri, lulc_aligned_uri, smax_aligned_uri, 
+                    soil_text_aligned_uri]
+    raster_utils.align_dataset_list(
+        uris_to_align, aligned_uris, ['nearest','nearest','nearest','nearest'],
+        dem_cell_size, 'intersection', 1, aoi_uri=watershed_uri, 
+        assert_datasets_projected=True)
     
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -105,37 +121,23 @@ def execute(args):
         lulc_code_dict = construct_lulc_lookup_dict(lulc_data_uri, field)
         # Reclassify lulc raster using lulc code to field mapping
         raster_utils.reclassify_dataset_uri(
-                lulc_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
+                lulc_aligned_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
     # Get DEM WKT, Nodata, and Cell size
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_uri)
     dem_nodata = raster_utils.get_nodata_from_uri(dem_uri)
-    dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
-    LOGGER.debug('DEM nodata : cellsize %s:%s', dem_nodata, dem_cell_size)
-	
-	# Clip the dem and cast to a float
-    clipped_dem_uri = os.path.join(intermediate_dir, 'clipped_dem.tif')
-
-    raster_utils.vectorize_datasets(
-        [dem_uri], float, clipped_dem_uri,
-        gdal.GDT_Float32, dem_nodata, dem_cell_size, "intersection",
-        dataset_to_align_index=0, aoi_uri=watershed_uri)
-
+    
     # Create initial S_t-1 for now. Set all values to 0.0
     soil_storage_uri = os.path.join(
             intermediate_dir, 'soil_storage%s.tif' % file_suffix)
     raster_utils.new_raster_from_base_uri(
-        dem_uri, soil_storage_uri, 'GTIFF', float_nodata,
+        dem_aligned_uri, soil_storage_uri, 'GTIFF', float_nodata,
         gdal.GDT_Float32, fill_value=0.0)
-   
-    # Create a URI to hold the previous months soil storage
-    prev_soil_uri = os.path.join(
-            intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
 
     # Calculate the slope raster from the DEM
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
-    raster_utils.calculate_slope(dem_uri, slope_uri)
+    raster_utils.calculate_slope(dem_aligned_uri, slope_uri)
 
     # Set up the URIs for the alpha rasters
     alpha_one_uri = os.path.join(
@@ -171,7 +173,8 @@ def execute(args):
 
     # Create individual CSV URIs for each shed based on the watershed ID's.
     # Store these URIs in a dictionary mapping to their respective shed ID's
-    field_list = ['Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn']    
+    field_list = [
+            'Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn', 'precip_mn']    
     shed_field_list = ['Date']
     for key in shed_dict.iterkeys():
         for field in field_list:
@@ -201,6 +204,9 @@ def execute(args):
     # Sort the list of months taken from the precipitation dictionaries keys
     list_of_months.sort()
 
+    # Create a URI to hold the previous months soil storage
+    prev_soil_uri = os.path.join(
+            intermediate_dir, 'soil_storage_prev%s.tif' % file_suffix)
     # Construct resusable URIs for each month
     precip_uri = os.path.join(intermediate_dir, 'precip%s.tif' % file_suffix)
     eto_uri = os.path.join(intermediate_dir, 'eto%s.tif' % file_suffix)
@@ -231,16 +237,14 @@ def execute(args):
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
     flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
-    routing_utils.flow_accumulation(clipped_dem_uri, flow_accumulation_uri)
+    routing_utils.flow_accumulation(dem_aligned_uri, flow_accumulation_uri)
 
     # Classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % file_suffix)
-    threshold_flow_accum = 1000
     routing_utils.stream_threshold(
 		flow_accumulation_uri, float(threshold_flow_accum), v_stream_uri)
 	
-	#################################################
 	# Use the stream layer to set the impervious area values where a stream 
 	# occurs to 1.0. This ensures that when routing Direct Flow over a
 	# stream, no water is being absorbed. 
@@ -279,7 +283,7 @@ def execute(args):
 
             # Create a new raster from the DEM to vectorize the points onto
             raster_utils.new_raster_from_base_uri(
-                    dem_uri, out_uri, 'GTIFF', float_nodata, gdal.GDT_Float32,
+                    dem_aligned_uri, out_uri, 'GTIFF', float_nodata, gdal.GDT_Float32,
                     fill_value=float_nodata)
             
             # Use vectorize points to construct rasters based on points and
@@ -290,7 +294,7 @@ def execute(args):
         # Calculate Direct Flow (Runoff) and Tp
         clean_uri([dflow_uri, total_precip_uri])
         calculate_direct_flow(
-                dem_uri, precip_uri, absorption_uri, dflow_uri,
+                dem_aligned_uri, precip_uri, absorption_uri, dflow_uri,
                 total_precip_uri, in_source_uri, float_nodata, watershed_uri)
         
         # Calculate water amount (W)
@@ -323,21 +327,21 @@ def execute(args):
                 soil_storage_uri, evap_uri, baseflow_uri, smax_uri,
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
-
-        # Calculate Streamflow
-        #clean_uri([streamflow_uri])
-        #calculate_streamflow(
-        #        interflow_uri, baseflow_uri, streamflow_uri, float_nodata)
+        
         clean_uri([non_runoff_flow_uri])
         combine_baseflow_interflow(
                 interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
-		# Max Direct Flow as a mean or density
-        max_dflow = raster_utils.aggregate_raster_values_uri(
-                dflow_uri, watershed_uri, 'ws_id').pixel_max
+		# Aggregate dflow values over the watersheds
+        dflow_agg = raster_utils.aggregate_raster_values_uri(
+                dflow_uri, watershed_uri, 'ws_id')
+        # A dictionary with maximum direct flow for each watershed
+        max_dflow = dflow_agg.pixel_max
+        # A dictionary with the pixel count for each watershed
+        dflow_pixel_count = dflow_agg.n_pixels
 		
-        pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
-		
+        dflow_pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
+        comb_pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
 				
         combined_flow_aggregates = raster_utils.aggregate_raster_values_uri(
                 non_runoff_flow_uri, watershed_uri, 'ws_id', ignore_nodata=False)
@@ -350,15 +354,14 @@ def execute(args):
         shed_keys = combined_flow_mn.keys()
 		
         for key in shed_keys:
-		    # Max direct flow as a volume. Divided by a 1000 to convert to meters
-            dflow_vol = max_dflow[key] * pixel_area / 1000.0
-		    
             shed_mn = combined_flow_mn[key]
             shed_pix_count = combined_flow_pixel_count[key]
-			
-            total_streamflow_mn[key] = shed_mn * shed_pix_count + max_dflow[key]
-			
-            shed_vol = shed_mn * pixel_area * shed_pix_count / 1000.0
+            total_streamflow_mn[key] = (
+                    shed_mn + max_dflow[key] / dflow_pixel_count[key])
+		    
+            # Max direct flow as a volume. Divided by a 1000 to convert to meters
+            dflow_vol = max_dflow[key] * dflow_pixel_area / 1000.0
+            shed_vol = shed_mn * comb_pixel_area * shed_pix_count / 1000.0
             total_shed_vol = shed_vol + dflow_vol
             total_streamflow_vol[key] = total_shed_vol
 		
@@ -367,26 +370,81 @@ def execute(args):
         clean_uri([prev_soil_uri])
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
-        #calculate_soil_storage(
-        #        prev_soil_uri, water_uri, evap_uri, streamflow_uri,
-        #        smax_uri, soil_storage_uri, float_nodata)
 		
         calculate_soil_storage_less_streamflow(
                 prev_soil_uri, water_uri, evap_uri,
                 smax_uri, soil_storage_uri, float_nodata)
-		
-        storage_aggregate = raster_utils.aggregate_raster_values_uri(
-                soil_storage_uri, watershed_uri, 'ws_id', ignore_nodata=False)
-				
-        storage_flow_mn = storage_aggregate.pixel_mean
-        storage_flow_pixel_count = storage_aggregate.n_pixels
-        total_storage_mn = {}
+	
+        storage_mn = raster_utils.aggregate_raster_values_uri(
+                soil_storage_uri, watershed_uri, 'ws_id',
+                ignore_nodata=False).pixel_mean
+        
+        # Get the precipitation mean for the watersheds, this helps in comparing
+        # outputs
+        precip_agg_dict = raster_utils.aggregate_raster_values_uri(
+                precip_uri, watershed_uri, 'ws_id',
+                ignore_nodata=False)
+        #### TESTING FOR WATER BALANCE #####
+        def compute_volume(raster_uri, aoi_uri, field, shed_keys):
+            raster_agg = raster_utils.aggregate_raster_values_uri(
+                    raster_uri, aoi_uri, field, ignore_nodata=False)
+            raster_mn = raster_agg.pixel_mean
+            raster_pix_count = raster_agg.n_pixels
+            raster_pix_area = raster_utils.get_cell_size_from_uri(raster_uri) ** 2
+            volume_dict = {}
+            volume_by_area = {}
+
+            aoi = ogr.Open(aoi_uri)
+            layer = aoi.GetLayer()
+            for feat in layer:
+                ws_id = feat.GetField(field)
+                geom = feat.GetGeometryRef()
+                area = geom.Area()
+
+                vol = (raster_mn[ws_id] * area *
+                        raster_pix_count[ws_id] / 1000.0)
+                
+                volume_by_area[ws_id] = vol
+            
+            layer = None
+            aoi = None
+
+            for key in shed_keys:
+                LOGGER.debug('AREA : COUNT : %s : %s', raster_pix_area,
+                        raster_pix_count[key])
+                vol = (raster_mn[key] * raster_pix_area *
+                        raster_pix_count[key] / 1000.0)
+                volume_dict[key] = vol
+
+            LOGGER.debug('VOLUME BY AREA: %s', volume_by_area)
+            return raster_mn
+        
+        precip_vol = compute_volume(
+                precip_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME PRECIP: %s', precip_vol)
+        evap_vol = compute_volume(evap_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME EVAP: %s', evap_vol)
+        prev_store_vol = compute_volume(
+                prev_soil_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME PREV_STORE: %s', prev_store_vol)
+        store_vol = compute_volume(
+                soil_storage_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME STORAGE: %s', store_vol)
+        inter_base_vol = compute_volume(
+                non_runoff_flow_uri, watershed_uri, 'ws_id', shed_keys)
+        LOGGER.debug('VOLUME INTER + BASE: %s', inter_base_vol)
+
+        volume_balance = {}
         for key in shed_keys:
-		    shed_mn = storage_flow_mn[key]
-		    shed_pix_count = storage_flow_pixel_count[key]
-		    total_shed_mn = shed_mn * shed_pix_count - total_streamflow_mn[key]
-		    total_storage_mn[key] = total_shed_mn
-		
+            store_change = store_vol[key] - prev_store_vol[key]
+            vol_bal = (precip_vol[key] - evap_vol[key] - store_change -
+                total_streamflow_mn[key])
+            volume_balance[key] = vol_bal
+
+        LOGGER.debug('VOLUME BALANCE: %s', volume_balance)
+        LOGGER.debug('STREAMFLOW VOLUME: %s', total_streamflow_vol)
+        #####################################
+        
         # Dictionary to build up the outputs for the CSV tables
         out_dict = {}
         out_dict['Date'] = cur_month
@@ -394,7 +452,8 @@ def execute(args):
         # Given the two output dictionaries build up the final dictionary that
         # will then be used to right out to the CSV
         for result_dict, field in zip(
-                [total_streamflow_vol, total_streamflow_mn, total_storage_mn], field_list):
+                [total_streamflow_vol, total_streamflow_mn, storage_mn,
+                    precip_agg_dict.pixel_mean], field_list):
             build_csv_dict(result_dict, shed_field_list, out_dict, field)
 
         LOGGER.debug('OUTPUT Shed Dict: %s', out_dict)
