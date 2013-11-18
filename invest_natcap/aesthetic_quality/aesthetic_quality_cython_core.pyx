@@ -373,13 +373,10 @@ def add_active_pixel(sweep_line, index, distance, visibility):
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
 
-    print_sweep_line(sweep_line)
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     active_pixels = \
     add_active_pixel_cython(active_pixels, index, distance, visibility)
-    print_active_pixels(active_pixels)
     sweep_line = active_pixels_to_dict(active_pixels)
-    print_sweep_line(sweep_line)
     pixels_deleted = delete_active_pixels(active_pixels)
     message = "add_active_pixels: deleted pixel count " + \
     str(pixels_deleted) + " doesn't agree with sweep line length " + \
@@ -402,14 +399,11 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
         ActivePixel *new_pixel = NULL
 
     if closest is not NULL:
-        print('closest is not null')
         # Look into the active pixel list to find where to insert the new pixel
         previous = closest
         while deref(previous).next is not NULL and \
         deref(previous).distance < distance:
             previous = deref(previous).next
-        print('active pixel before:')      
-        print_active_pixel(previous)
         if deref(previous).next is not NULL:
             message = "won't override existing distance " + str(distance)
             assert deref(deref(previous).next).distance != distance, message
@@ -422,28 +416,20 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
         deref(new_pixel).visibility = visibility
 
         # Found something
-        print('pased')       
         if deref(previous).next is NULL:
-            print('A')       
             # insert at the end
             deref(previous).next = new_pixel
-            print('A1')       
         elif deref(previous).distance >= distance:
-            print('B')       
             # insert at the beginning
             deref(new_pixel).next = closest
             closest = new_pixel
-            print('B2')       
         else:
-            print('C')       
             # insert between the ends
             pixel = deref(previous).next # next pixel after insertion
             deref(previous).next = new_pixel # previous points to new
             deref(new_pixel).next = pixel # new points to next pixel
-            print('C2')       
     # Closest is NULL: just make it point to the new pixel
     else:
-        print('closest is null')
         closest = <ActivePixel*>malloc(sizeof(ActivePixel))
         deref(closest).next = NULL
         deref(closest).index = index
