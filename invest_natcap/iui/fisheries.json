@@ -149,7 +149,7 @@
                             "label": "Fraction After Processing",
                             "required": true,
                             "dataType": "float",
-                            "validateAs" {"type":"number"},
+                            "validateAs": {"type":"number"},
                             "helpText": "This is the fraction of the meat left over from the animal after processing is complete."
                         },
                         {
