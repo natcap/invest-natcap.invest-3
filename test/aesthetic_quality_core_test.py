@@ -824,7 +824,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         for test in range(1):
             sweep_line = {}
             cython_sweep_line = {}
-            line_length = randint(1, 1)
+            line_length = randint(1, 10)
             # Sorting the distance, so the array is consistent
             distances = sorted([uniform(0., 100.) for i in range(line_length)])
             for i in range(line_length):

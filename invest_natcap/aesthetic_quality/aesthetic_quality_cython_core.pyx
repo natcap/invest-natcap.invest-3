@@ -196,9 +196,10 @@ def print_sweep_line(sweep_line):
             None if pixel['next'] is None else pixel['next']['distance'])
             pixel = pixel['next']
 
-cdef print_active_pixel(ActivePixel pixel):
-    print('pixel', pixel.distance, 'next', 'NULL' if \
-    pixel.next is NULL else deref(pixel.next).distance)
+cdef print_active_pixel(ActivePixel *pixel):
+    print('pixel', 'NULL' if pixel is NULL else deref(pixel).distance, \
+    'next', 'NULL' if deref(pixel).next is NULL else \
+    deref(deref(pixel).next).distance)
     
 
 cdef print_active_pixels(ActivePixel *active_pixels):
@@ -206,12 +207,12 @@ cdef print_active_pixels(ActivePixel *active_pixels):
 
     if active_pixels is not NULL:
         # extract data from the closest distance first
-        pixel = deref(active_pixels)
+        pixel = active_pixels
         print_active_pixel(pixel)
         # Proceed to the next entry as long as there are valid pixels
         while pixel.next is not NULL:
             # get the next pixel
-            pixel = deref(pixel.next)
+            pixel = deref(pixel).next
             print_active_pixel(pixel)
     else:
         print('active pixels is empty')
@@ -401,11 +402,13 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
         ActivePixel *new_pixel = NULL
 
     if closest is not NULL:
+        print('closest is not null')
         # Look into the active pixel list to find where to insert the new pixel
         previous = closest
         while previous is not NULL and deref(previous).distance < distance:
-            previous = deref(previous).next        
-        #print_active_pixel(deref(previous))
+            previous = deref(previous).next
+        print('active pixel before:')      
+        print_active_pixel(previous)
         message = "won't override existing distance " + str(distance)
         assert deref(deref(previous).next).distance != distance, message
 
@@ -431,6 +434,7 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
             deref(new_pixel).next = pixel # new points to next pixel
     # Closest is NULL: just make it point to the new pixel
     else:
+        print('closest is null')
         closest = <ActivePixel*>malloc(sizeof(ActivePixel))
         deref(closest).next = NULL
         deref(closest).index = index
