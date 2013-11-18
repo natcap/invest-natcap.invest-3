@@ -186,6 +186,16 @@ cdef struct ActivePixel:
     double visibility
     ActivePixel *next
 
+def print_sweep_line(sweep_line):
+    if 'closest' not in sweep_line:
+        print('empty sweep line')
+    else:
+        pixel = sweep_line['closest']
+        while pixel is not None:
+            print('pixel', pixel['distance'], 'next', \
+            None if pixel['next'] is None else pixel['next']['distance'])
+            pixel = pixel['next']
+
 cdef print_active_pixel(ActivePixel pixel):
     print('pixel', pixel.distance, 'next', 'NULL' if \
     pixel.next is NULL else deref(pixel.next).distance)
@@ -362,13 +372,13 @@ def add_active_pixel(sweep_line, index, distance, visibility):
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
 
-    print('sweep line before', sweep_line)
+    print_sweep_line(sweep_line)
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     active_pixels = \
     add_active_pixel_cython(active_pixels, index, distance, visibility)
     print_active_pixels(active_pixels)
     sweep_line = active_pixels_to_dict(active_pixels)
-    print('sweep line after', sweep_line)
+    print_sweep_line(sweep_line)
     pixels_deleted = delete_active_pixels(active_pixels)
     message = "add_active_pixels: deleted pixel count " + \
     str(pixels_deleted) + " doesn't agree with sweep line length " + \
