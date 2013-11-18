@@ -198,12 +198,12 @@ def print_sweep_line(sweep_line):
 
 cdef print_active_pixel(ActivePixel *pixel):
     print('pixel', 'NULL' if pixel is NULL else deref(pixel).distance, \
-    'next', 'NULL' if deref(pixel).next is NULL else \
+    'next', 'NULL' if pixel is NULL or deref(pixel).next is NULL else \
     deref(deref(pixel).next).distance)
     
 
 cdef print_active_pixels(ActivePixel *active_pixels):
-    cdef ActivePixel pixel
+    cdef ActivePixel *pixel
 
     if active_pixels is not NULL:
         # extract data from the closest distance first
