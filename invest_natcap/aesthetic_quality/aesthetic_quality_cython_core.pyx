@@ -186,7 +186,7 @@ cdef struct ActivePixel:
     double visibility
     ActivePixel *next
 
-cdef print_active_pixel(ActivePixel active_pixel):
+cdef print_active_pixel(ActivePixel pixel):
     print('pixel', pixel.distance, 'next', 'NULL' if \
     pixel.next is NULL else deref(pixel.next).distance)
     
