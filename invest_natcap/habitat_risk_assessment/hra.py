@@ -333,7 +333,6 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     
     Returns nothing.
     '''
-    LOGGER.debug('h_s_c from parse?: %s' % h_s_c)
     for pair in h_s_c:
 
         h, s = pair
@@ -614,9 +613,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
       
-        LOGGER.debug("Is there a source? %s" % datasource)
-        LOGGER.debug("Sources uri: %s" % shape)
-
         r_dataset = \
             raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
                     gdal.GDT_Float32, -1., out_uri, datasource)
