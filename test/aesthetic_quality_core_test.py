@@ -833,6 +833,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                 visibility = uniform(0., 0.1)
                 aesthetic_quality_core.add_active_pixel(sweep_line, index, \
                 distance, visibility)
+                cython_sweep_line = \
                 aesthetic_quality_cython_core.add_active_pixel( \
                 cython_sweep_line, index, distance, visibility)
             # Test that the sweep lines are consistent
