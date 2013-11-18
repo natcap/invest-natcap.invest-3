@@ -405,12 +405,14 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
         print('closest is not null')
         # Look into the active pixel list to find where to insert the new pixel
         previous = closest
-        while previous is not NULL and deref(previous).distance < distance:
+        while deref(previous).next is not NULL and \
+        deref(previous).distance < distance:
             previous = deref(previous).next
         print('active pixel before:')      
         print_active_pixel(previous)
-        message = "won't override existing distance " + str(distance)
-        assert deref(deref(previous).next).distance != distance, message
+        if deref(previous).next is not NULL:
+            message = "won't override existing distance " + str(distance)
+            assert deref(deref(previous).next).distance != distance, message
 
         new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
         assert new_pixel is not NULL, 'new pixel assignment failed'
@@ -419,19 +421,26 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
         deref(new_pixel).distance = distance
         deref(new_pixel).visibility = visibility
 
-        # Found something       
-        if deref(previous).distance >= distance:
+        # Found something
+        print('pased')       
+        if deref(previous).next is NULL:
+            print('A')       
+            # insert at the end
+            deref(previous).next = new_pixel
+            print('A1')       
+        elif deref(previous).distance >= distance:
+            print('B')       
             # insert at the beginning
             deref(new_pixel).next = closest
             closest = new_pixel
-        elif deref(previous).next is NULL:
-            # insert at the end
-            deref(previous).next = new_pixel
+            print('B2')       
         else:
+            print('C')       
             # insert between the ends
             pixel = deref(previous).next # next pixel after insertion
             deref(previous).next = new_pixel # previous points to new
             deref(new_pixel).next = pixel # new points to next pixel
+            print('C2')       
     # Closest is NULL: just make it point to the new pixel
     else:
         print('closest is null')
