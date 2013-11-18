@@ -227,9 +227,11 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
-        matplotlib.pyplot.figure(plot_index)
+        fig = matplotlib.pyplot.figure(plot_index)
         plot_index += 1
         matplotlib.pyplot.suptitle(aoi_name)
+        fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
+        fig.text(0.06, 0.5, 'Consequence', ha='center', va='center', rotation='vertical')
 
         hab_index = 0
         curr_hab_name = aoi_list[0][0]
@@ -246,8 +248,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
                 matplotlib.pyplot.title(curr_hab_name)
                 matplotlib.pyplot.xlim([0, max_risk])
                 matplotlib.pyplot.ylim([0, max_risk])
-                matplotlib.pyplot.xlabel("Exposure")
-                matplotlib.pyplot.ylabel("Consequence")
 
             hab_name = element[0]
             if curr_hab_name == hab_name:
@@ -269,8 +269,6 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             matplotlib.pyplot.title(curr_hab_name)
             matplotlib.pyplot.xlim([0, max_risk])
             matplotlib.pyplot.ylim([0, max_risk])
-            matplotlib.pyplot.xlabel("Exposure")
-            matplotlib.pyplot.ylabel("Consequence")
 
         out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
 
