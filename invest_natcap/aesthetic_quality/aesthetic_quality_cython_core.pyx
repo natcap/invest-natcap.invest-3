@@ -446,7 +446,7 @@ def remove_active_pixel(sweep_line, distance):
     remove_active_pixel_cython(active_pixels, distance)
     sweep_line = active_pixels_to_dict(active_pixels)
     pixels_deleted = delete_active_pixels(active_pixels)
-    if pixels_deleted == 0: # Empty list?
+    if pixels_deleted == 0 and sweep_line_length == 0: # Empty list?
         pixels_deleted = -1 # Adjust so the assertion subtraction is still 0
     message = "remove_active_pixels: deleted pixel count +1 (" + \
     str(pixels_deleted + 1) + ") doesn't agree with sweep line length " + \
@@ -461,11 +461,7 @@ cdef ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
     cdef ActivePixel *pixel = NULL
     cdef ActivePixel *next = NULL
 
-    print('deleting', distance, 'from')
-    print_active_pixels(closest)
-
     if closest is not NULL:
-        print('closest is not null')
         # Initialize to first pixel in the list
         pixel = closest
         # Move on to next pixel if we're not done
@@ -476,35 +472,27 @@ cdef ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
             pixel = deref(pixel).next
         # We reached the end and didn't find anything
         if pixel is NULL:
-            print('Reached the end: pixel is null, return')
             return closest
         # We didn't reach the end: either pixel doesn't exist:
         if deref(pixel).distance != distance:
-            print('Distance not in sweep line, return')
             return closest
         # Or we found the value we want to delete
         # Make the previous element point to the next
         # We're at the beginning of the list: update the list's first element
         if previous is NULL:
-            print('previous is null, at the beginning at the list')
             next = deref(pixel).next
             # No next pixel: we have to delete 'closest'
             if next is NULL:
-                print('No next pixel, delete closest')
                 free(closest) # same as free(pixel)
                 closest = NULL
             # Otherwise, update it
             else:
-                print('Next pixel: delete closest, update closest to be next pixel')
                 free(closest) # same as free(pixel)
                 closest = next
         # We're not at the beginning of the list: only update previous
         else:
-            #print('Previous not null: make it point to next and delete pixel')
             deref(previous).next = deref(pixel).next
             free(pixel)
-    print('done')
-    print_active_pixels(closest)
     return closest
 
 
