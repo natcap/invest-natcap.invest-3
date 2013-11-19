@@ -53,7 +53,7 @@
                     "id" : "do_gender",
                     "args_id" : "is_gendered",
                     "type": "checkbox",
-                    "label": "Classes Are Gender-Specific?",
+                    "label": "Classes Are Sex-Specific?",
                     "defaultValue": false,
                     "required": true,
                     "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
