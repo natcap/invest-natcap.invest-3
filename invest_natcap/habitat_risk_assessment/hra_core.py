@@ -221,7 +221,13 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
                         fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
 
-    
+    def jigger(E, C):
+        '''Want to return a fractionally offset set of coordinates so that each of
+        the text related to strings is slightly offset.'''
+
+
+
+
     #Create plots for each combination of AOI, Hab
     plot_index = 0
 
@@ -276,7 +282,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             matplotlib.pyplot.plot(element[2], element[3], 'k^', 
                     markerfacecolor='black', markersize=8)
             matplotlib.pyplot.annotate(element[1], xy=(element[2], 
-                    element[3]), xytext=(element[2], element[3]+0.07))
+                    element[3]), xytext= jigger(element[2], element[3]))
 
         out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
 
