@@ -861,7 +861,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                 aesthetic_quality_cython_core.add_active_pixel( \
                 cython_sweep_line, index, distance, visibility)
             # Removing pixels from the random sweep_lines
-            for i in range(line_length):
+            for i in range(1): #line_length):
                 index = randint(0, line_length -1 -i)
                 aesthetic_quality_core.remove_active_pixel(sweep_line, \
                 distances[index])
