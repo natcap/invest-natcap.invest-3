@@ -76,7 +76,7 @@ def execute(args):
     lulc_data_uri = args['lulc_data_uri']
     watershed_uri = args['watersheds_uri']
     model_params_uri = args['model_params_uri']
-    threshold_flow_accum = args['threshold_flow_accumulation']
+    threshold_flow_accum = int(args['threshold_flow_accumulation'])
     
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -87,38 +87,51 @@ def execute(args):
         file_suffix = ''
    
     # Calculate the slope raster from the DEM
+    LOGGER.info("calculating slope")
     slope_uri = os.path.join(intermediate_dir, 'slope%s.tif' % file_suffix)
     raster_utils.calculate_slope(dem_uri, slope_uri)
     
-	## ROUTING FOR STREAMS LAYER ##
-			
 	# Calculate flow accumulation in order to build up our streams layer
     LOGGER.info("calculating flow accumulation")
-    flow_accumulation_uri = os.path.join(intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
+    flow_accumulation_uri = os.path.join(
+            intermediate_dir, 'flow_accumulation%s.tif' % file_suffix)
     routing_utils.flow_accumulation(dem_uri, flow_accumulation_uri)
 
     # Classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    v_stream_uri = os.path.join(intermediate_dir, 'v_stream%s.tif' % file_suffix)
+    v_stream_uri = os.path.join(
+            intermediate_dir, 'v_stream%s.tif' % file_suffix)
     routing_utils.stream_threshold(
-		flow_accumulation_uri, float(threshold_flow_accum), v_stream_uri)
-    
+		flow_accumulation_uri, threshold_flow_accum, v_stream_uri)
+   
+    # All intermediate and output rasters should be based on the DEM's cell size
     dem_cell_size = raster_utils.get_cell_size_from_uri(dem_uri)
     
-    # Align datasets
-    uris_to_align = [dem_uri, lulc_uri, smax_uri, soil_text_uri, slope_uri,
-            v_stream_uri]
-    dem_aligned_uri = os.path.join(intermediate_dir, 'dem_aligned%s.tif' % file_suffix)
-    lulc_aligned_uri = os.path.join(intermediate_dir, 'lulc_aligned%s.tif' % file_suffix)
-    smax_aligned_uri = os.path.join(intermediate_dir, 'smax_aligned%s.tif' % file_suffix)
-    soil_text_aligned_uri = os.path.join(intermediate_dir, 'soil_text_aligned%s.tif' % file_suffix)
-    slope_aligned_uri = os.path.join(intermediate_dir, 'slope_aligned%s.tif' % file_suffix)
-    stream_aligned_uri = os.path.join(intermediate_dir, 'stream_aligned%s.tif' % file_suffix)
-    aligned_uris = [dem_aligned_uri, lulc_aligned_uri, smax_aligned_uri, 
-                    soil_text_aligned_uri, slope_aligned_uri, stream_aligned_uri]
+    # Align Datasets. It is important when we are computing and comparing the
+    # outputs that all the datasets are properly aligned so that the pixel
+    # counts do not differ under a watershed
+    uris_to_align = [
+            dem_uri, lulc_uri, smax_uri, soil_text_uri, slope_uri, v_stream_uri]
+
+    dem_aligned_uri = os.path.join(
+            intermediate_dir, 'dem_aligned%s.tif' % file_suffix)
+    lulc_aligned_uri = os.path.join(
+            intermediate_dir, 'lulc_aligned%s.tif' % file_suffix)
+    smax_aligned_uri = os.path.join(
+            intermediate_dir, 'smax_aligned%s.tif' % file_suffix)
+    soil_text_aligned_uri = os.path.join(
+            intermediate_dir, 'soil_text_aligned%s.tif' % file_suffix)
+    slope_aligned_uri = os.path.join(
+            intermediate_dir, 'slope_aligned%s.tif' % file_suffix)
+    stream_aligned_uri = os.path.join(
+            intermediate_dir, 'stream_aligned%s.tif' % file_suffix)
+    aligned_uris = [
+            dem_aligned_uri, lulc_aligned_uri, smax_aligned_uri, 
+            soil_text_aligned_uri, slope_aligned_uri, stream_aligned_uri]
+    # Align Datasets call
     raster_utils.align_dataset_list(
-        uris_to_align, aligned_uris, ['nearest','nearest','nearest','nearest','nearest','nearest'],
-        dem_cell_size, 'intersection', 0, aoi_uri=watershed_uri, 
+        uris_to_align, aligned_uris, ['nearest'] * 6, dem_cell_size,
+        'intersection', 0, aoi_uri=watershed_uri, 
         assert_datasets_projected=True)
     
     # Set a flag to True if sub watersheds was provided as an input
@@ -132,10 +145,10 @@ def execute(args):
         sub_shed_present = False
 
     # Set out_nodata value
-    float_nodata = -35432.0
+    float_nodata = -65432.0
    
-    # URIs for the impervious raster and etk raster, both based mapping lulc
-    # codes to values
+    # URIs for the impervious raster and etk raster, both based on 
+    # mapping lulc codes to values
     imperv_area_uri = os.path.join(
             intermediate_dir, 'imperv_area%s.tif' % file_suffix)
     etk_uri = os.path.join(intermediate_dir, 'etk%s.tif' % file_suffix)
@@ -149,25 +162,31 @@ def execute(args):
                 lulc_aligned_uri, lulc_code_dict, code_uri, gdal.GDT_Float32,
                 float_nodata)
 
-    # Get DEM WKT, Nodata, and Cell size
+    # Get DEM WKT, Nodata. 'dem_wkt' is used later to properly project the point
+    # shapefiles made from precipitation and evaporation
     dem_wkt = raster_utils.get_dataset_projection_wkt_uri(dem_aligned_uri)
     dem_nodata = raster_utils.get_nodata_from_uri(dem_aligned_uri)
     
-    # Create initial S_t-1 for now. Set all values to 0.0
-    soil_storage_uri = os.path.join(
-            intermediate_dir, 'soil_storage%s.tif' % file_suffix)
-    
     def zero_op(pixel):
+        """Vectorize function that sets all non nodata values to 0.0
+            pixel - incoming pixel value from the raster
+
+            returns - 0.0 if not equal to nodata, else returns nodata"""
         if pixel == dem_nodata:
             return float_nodata
         else:
             return 0.0
 
-    raster_utils.vectorize_datasets(
-            [dem_aligned_uri], zero_op,
-            soil_storage_uri, gdal.GDT_Float32, float_nodata,
-            dem_cell_size, 'intersection', aoi_uri=watershed_uri)
+    # URI for initial soil_storage    
+    soil_storage_uri = os.path.join(
+            intermediate_dir, 'soil_storage%s.tif' % file_suffix)
 
+    # Create initial S_t-1 for now. Set all values to 0.0
+    LOGGER.debug("Initialize Soil Storage Raster")
+    raster_utils.vectorize_datasets(
+            [dem_aligned_uri], zero_op, soil_storage_uri,
+            gdal.GDT_Float32, float_nodata, dem_cell_size,
+            'intersection', aoi_uri=watershed_uri)
 
     # Set up the URIs for the alpha rasters
     alpha_one_uri = os.path.join(
@@ -185,8 +204,8 @@ def execute(args):
 
     # Calculate the Alpha Rasters
     calculate_alphas(
-        slope_aligned_uri, soil_text_aligned_uri, smax_aligned_uri, model_param_dict, float_nodata,
-        alpha_uri_list)
+        slope_aligned_uri, soil_text_aligned_uri, smax_aligned_uri,
+        model_param_dict, float_nodata, alpha_uri_list)
 
     # Construct a dictionary from the precipitation time step data
     precip_data_dict = construct_time_step_data(precip_data_uri, 'p')
@@ -201,8 +220,9 @@ def execute(args):
     shed_dict = raster_utils.extract_datasource_table_by_key(
             watershed_uri, 'ws_id')
 
-    # Create individual CSV URIs for each shed based on the watershed ID's.
-    # Store these URIs in a dictionary mapping to their respective shed ID's
+    # Create a list of columns for the CSV ouput table. Each watershed will have
+    # a column from 'field_list' with the watersheds ID appended to the end. 
+    # Example: 'Streamflow_vol_0', 'Streamflow_mn_0', 'Streamflow_vol_1', etc
     field_list = [
             'Streamflow_vol', 'Streamflow_mn', 'Soil_Storage_mn', 'precip_mn']    
     shed_field_list = ['Date']
@@ -261,16 +281,18 @@ def execute(args):
     # Output URI for the watershed table 
     watershed_table_uri = os.path.join(
             intermediate_dir, 'wshed_table%s.csv' % file_suffix)
+    # If the CSV file already exists, delete it
     clean_uri([watershed_table_uri])	
 	
 	# Use the stream layer to set the impervious area values where a stream 
 	# occurs to 1.0. This ensures that when routing Direct Flow over a
 	# stream, no water is being absorbed. 
-    imperv_stream_uri = os.path.join(intermediate_dir, 'imperv_with_stream%s.tif' % file_suffix)
+    imperv_stream_uri = os.path.join(
+            intermediate_dir, 'imperv_with_stream%s.tif' % file_suffix)
     mask_impervious_layer_by_streams(
         imperv_area_uri, stream_aligned_uri, imperv_stream_uri, float_nodata)
 
-    # URI for the absorption raster
+    # URI for the absorption raster which is used in calculating direct flow
     absorption_uri = os.path.join(
             intermediate_dir, 'absorption%s.tif' % file_suffix)
     # Calculate the absorption raster
@@ -296,21 +318,18 @@ def execute(args):
             # Create point shapefile from dictionary
             raster_utils.dictionary_to_point_shapefile(
                     data_dict, cur_month, cur_point_uri)
-
             # Project point shapefile to DEM projection
             raster_utils.reproject_datasource_uri(
                     cur_point_uri, dem_wkt, projected_point_uri)
-
             # Create a new raster from the DEM to vectorize the points onto
             raster_utils.new_raster_from_base_uri(
-                    dem_aligned_uri, tmp_out_uri, 'GTIFF', float_nodata, gdal.GDT_Float32,
-                    fill_value=float_nodata)
-            
+                    dem_aligned_uri, tmp_out_uri, 'GTIFF', float_nodata,
+                    gdal.GDT_Float32, fill_value=float_nodata)
             # Use vectorize points to construct rasters based on points and
             # fields
             raster_utils.vectorize_points_uri(
                     projected_point_uri, field, tmp_out_uri)
-
+            # Clipped the new raster to the watersheds
             raster_utils.clip_dataset_uri(
                     tmp_out_uri, watershed_uri, out_uri, True)
 
@@ -341,8 +360,8 @@ def execute(args):
         # Calculate Intermediate Interflow
         clean_uri([intermed_interflow_uri])
         calculate_intermediate_interflow(
-                alpha_two_uri, soil_storage_uri, water_uri, evap_uri, baseflow_uri, beta,
-                intermed_interflow_uri, float_nodata)
+                alpha_two_uri, soil_storage_uri, water_uri, evap_uri,
+                baseflow_uri, beta, intermed_interflow_uri, float_nodata)
 
         # Calculate Final Interflow
         clean_uri([interflow_uri])
@@ -351,25 +370,35 @@ def execute(args):
                 water_uri, intermed_interflow_uri, interflow_uri,
                 float_nodata)
         
+        # Calculate Baseflow + Interflow. This is the first step in calculating
+        # streamflow. Baseflow and Interflow are per pixel values, so after
+        # these are added up then Direct Flow is added in later.
         clean_uri([non_runoff_flow_uri])
         combine_baseflow_interflow(
                 interflow_uri, baseflow_uri, non_runoff_flow_uri, float_nodata)
 
-		# Aggregate dflow values over the watersheds
+		# Aggregate direct flow values over the watersheds
         dflow_agg = raster_utils.aggregate_raster_values_uri(
                 dflow_uri, watershed_uri, 'ws_id')
+        
         # A dictionary with maximum direct flow for each watershed
         max_dflow = dflow_agg.pixel_max
         LOGGER.debug('DFLOW MAX VALUES: %s', max_dflow)
+        
         # A dictionary with the pixel count for each watershed
         dflow_pixel_count = dflow_agg.n_pixels
 		
+        # Get the pixel area for direct flow cells
         dflow_pixel_area = raster_utils.get_cell_size_from_uri(dflow_uri) ** 2
+        # Get the pixel area for combined interflow and baseflow cells
         comb_pixel_area = raster_utils.get_cell_size_from_uri(non_runoff_flow_uri) ** 2
-				
+	
+        # Aggregate combined interflow and baseflow over the watersheds
         combined_flow_aggregates = raster_utils.aggregate_raster_values_uri(
-                non_runoff_flow_uri, watershed_uri, 'ws_id', ignore_nodata=False)
-		
+                non_runoff_flow_uri, watershed_uri, 'ws_id',
+                ignore_nodata=False)
+	    
+        # A dictionary 
         combined_flow_mn = combined_flow_aggregates.pixel_mean
         combined_flow_pixel_count = combined_flow_aggregates.n_pixels
         total_streamflow_vol = {}
