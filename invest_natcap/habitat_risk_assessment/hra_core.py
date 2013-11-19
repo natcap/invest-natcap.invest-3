@@ -227,9 +227,13 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
-        matplotlib.pyplot.figure(plot_index)
+        LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
+
+        fig = matplotlib.pyplot.figure(plot_index)
         plot_index += 1
         matplotlib.pyplot.suptitle(aoi_name)
+        fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
+        fig.text(0.06, 0.5, 'Consequence', ha='center', va='center', rotation='vertical')
 
         hab_index = 0
         curr_hab_name = aoi_list[0][0]
@@ -244,10 +248,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
                                         2, hab_index)
                 plot_background_circle(max_risk)
                 matplotlib.pyplot.title(curr_hab_name)
-                matplotlib.pyplot.xlim([0, max_risk])
-                matplotlib.pyplot.ylim([0, max_risk])
-                matplotlib.pyplot.xlabel("Exposure")
-                matplotlib.pyplot.ylabel("Consequence")
+                matplotlib.pyplot.xlim([-.5, max_risk])
+                matplotlib.pyplot.ylim([-.5, max_risk])
 
             hab_name = element[0]
             if curr_hab_name == hab_name:
@@ -267,10 +269,14 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
             curr_hab_name = hab_name
 
             matplotlib.pyplot.title(curr_hab_name)
-            matplotlib.pyplot.xlim([0, max_risk])
-            matplotlib.pyplot.ylim([0, max_risk])
-            matplotlib.pyplot.xlabel("Exposure")
-            matplotlib.pyplot.ylabel("Consequence")
+            matplotlib.pyplot.xlim([-.5, max_risk])
+            matplotlib.pyplot.ylim([-.5, max_risk])
+            
+            #We still need to plot the element that gets us here.
+            matplotlib.pyplot.plot(element[2], element[3], 'k^', 
+                    markerfacecolor='black', markersize=8)
+            matplotlib.pyplot.annotate(element[1], xy=(element[2], 
+                    element[3]), xytext=(element[2], element[3]+0.07))
 
         out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
 
@@ -548,7 +554,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             name = name_map[ident]
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
-            LOGGER.debug("The frac overlap for %s is %s" % (ident, frac_over))
             s_o_score = max_risk * frac_over + (1-frac_over)
 
             if frac_over == 0.:
@@ -573,8 +578,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             else:
                 avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
-    
-    LOGGER.debug("AVGS_DICT: %s" % avgs_dict)
     
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
@@ -846,8 +849,6 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     #maximum potential risk for any given overlap between habitat and stressor
     #This yields a user defined threshold for risk.
     user_max_risk = max_stress * max_risk
-    LOGGER.debug("User max risk is %s" % user_max_risk)
-
 
     def high_risk_raster(*pixels):
 
