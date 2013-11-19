@@ -472,4 +472,38 @@ def remove_active_pixel(sweep_line, distance):
         del sweep_line[distance]
     return sweep_line
 
+cdef remove_active_pixel_cython(sweep_line, distance):
+    """Remove a pixel based on distance. Do nothing if can't be found."""
+    if 'closest' in sweep_line:
+        # Get information about first pixel in the list
+        previous = None
+        pixel = sweep_line[sweep_line['closest']['distance']] # won't change
+        # Move on to next pixel if we're not done
+        while (pixel is not None) and \
+            (pixel['distance'] < distance):
+            previous = pixel
+            pixel = pixel['next']
+        # We reached the end and didn't find anything
+        if pixel is None:
+            return sweep_line
+        # We didn't reach the end: either pixel doesn't exist:
+        if pixel['distance'] != distance:
+            return sweep_line
+        # Or we found the value we want to delete
+        # Make the previous element point to the next
+        # We're at the beginning of the list: update the list's first element
+        if previous is None:
+            # No next pixel: we have to delete 'closest'
+            if pixel['next'] is None:
+                del sweep_line['closest']
+            # Otherwise, update it
+            else:
+                sweep_line['closest'] = pixel['next']
+        # We're not at the beginning of the list: only update previous
+        else:
+            previous['next'] = sweep_line[distance]['next']
+        # Remove the value from the list
+        del sweep_line[distance]
+    return sweep_line
+
 
