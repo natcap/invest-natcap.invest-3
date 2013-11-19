@@ -37,7 +37,16 @@
                     "label": "Parameters for Age Classes and Area(s)",
                     "required": true,
                     "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
-                }
+                },
+                {
+                    "id" : "do_gender",
+                    "args_id" : "is_gendered",
+                    "type": "checkbox",
+                    "label": "Classes Are Gender-Specific?",
+                    "defaultValue": false,
+                    "required": true,
+                    "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
+                },
             ]
         },
         {
