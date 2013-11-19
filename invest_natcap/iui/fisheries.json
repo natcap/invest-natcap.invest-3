@@ -39,6 +39,17 @@
                     "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
                 },
                 {
+                    "id" : "maturity_type",
+                    "args_id" : "maturity_type",
+                    "type": "dropdown",
+                    "label": "Maturity Type",
+                    "required": true,
+                    "options" : ["Age Specific", "Stage Specific"],
+                    "returns": "strings",
+                    "dataType": "string",
+                    "helpText": "This dropdown specifies whether the classes being input within the parameters CSV is classified into maturity classes by age or stage. Age specific models (ex: lobster, Dungeness crab) are separated by age in years in uniform time steps. Stage specific models (ex: shrimp) can have variable length time steps. Should Stage Specific time steps be chosen, there should be a column in the parameters CSV titled 'Duration' which will contain the number of time steps that each stage will last."
+                },
+                {
                     "id" : "do_gender",
                     "args_id" : "is_gendered",
                     "type": "checkbox",
@@ -46,7 +57,7 @@
                     "defaultValue": false,
                     "required": true,
                     "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
-                },
+                }
             ]
         },
         {
