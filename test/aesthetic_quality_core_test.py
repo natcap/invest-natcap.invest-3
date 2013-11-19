@@ -861,17 +861,18 @@ class TestAestheticQualityCore(unittest.TestCase):
                 aesthetic_quality_cython_core.add_active_pixel( \
                 cython_sweep_line, index, distance, visibility)
             # Removing pixels from the random sweep_lines
-            for i in range(1):
-                index = randint(0, len(sweep_line))
+            for i in range(line_length):
+                index = randint(0, line_length -1 -i)
                 aesthetic_quality_core.remove_active_pixel(sweep_line, \
                 distances[index])
                 cython_sweep_line = \
                 aesthetic_quality_cython_core.remove_active_pixel( \
                 cython_sweep_line, distances[index])
-            # Test that the sweep lines are consistent
-            result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
-            message = 'C/Python sweep lines are different: ' + result[1]
-            assert result[0] is True, message
+                del distances[index]
+                # Test that the sweep lines are consistent
+                result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+                message = 'C/Python sweep lines are different: ' + result[1]
+                assert result[0] is True, message
 
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
