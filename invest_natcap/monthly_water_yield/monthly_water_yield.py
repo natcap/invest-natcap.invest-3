@@ -323,7 +323,7 @@ def execute(args):
         # Calculate water amount (W)
         clean_uri([water_uri])
         calculate_water_amt(
-                imperv_stream_uri, total_precip_uri, alpha_one_uri, water_uri,
+                imperv_area_uri, total_precip_uri, alpha_one_uri, water_uri,
                 float_nodata)
 
         # Calculate Evaporation
@@ -360,6 +360,7 @@ def execute(args):
                 dflow_uri, watershed_uri, 'ws_id')
         # A dictionary with maximum direct flow for each watershed
         max_dflow = dflow_agg.pixel_max
+        LOGGER.debug('DFLOW MAX VALUES: %s', max_dflow)
         # A dictionary with the pixel count for each watershed
         dflow_pixel_count = dflow_agg.n_pixels
 		
@@ -380,7 +381,7 @@ def execute(args):
             shed_mn = combined_flow_mn[key]
             shed_pix_count = combined_flow_pixel_count[key]
             total_streamflow_mn[key] = (
-                    shed_mn + max_dflow[key] / dflow_pixel_count[key])
+                    shed_mn + (max_dflow[key] / dflow_pixel_count[key]))
 		    
             # Max direct flow as a volume. Divided by a 1000 to convert to meters
             dflow_vol = max_dflow[key] * dflow_pixel_area / 1000.0
@@ -394,9 +395,12 @@ def execute(args):
         shutil.copy(soil_storage_uri, prev_soil_uri)
         clean_uri([soil_storage_uri])
 		
-        calculate_soil_storage_less_streamflow(
-                prev_soil_uri, water_uri, evap_uri,
-                smax_aligned_uri, soil_storage_uri, float_nodata)
+        #calculate_soil_storage_less_streamflow(
+        #        prev_soil_uri, water_uri, evap_uri,
+        #        smax_aligned_uri, soil_storage_uri, float_nodata)
+        calculate_soil_storage(
+            prev_soil_uri, water_uri, evap_uri, non_runoff_flow_uri, smax_uri, 
+            soil_storage_uri, float_nodata)
 	
         storage_mn = raster_utils.aggregate_raster_values_uri(
                 soil_storage_uri, watershed_uri, 'ws_id',
@@ -405,8 +409,8 @@ def execute(args):
         # Get the precipitation mean for the watersheds, this helps in comparing
         # outputs
         precip_agg_dict = raster_utils.aggregate_raster_values_uri(
-                precip_uri, watershed_uri, 'ws_id',
-                ignore_nodata=False)
+                precip_uri, watershed_uri, 'ws_id', ignore_nodata=False)
+        
         #### TESTING FOR WATER BALANCE #####
         def compute_volume(raster_uri, aoi_uri, field, shed_keys):
             raster_agg = raster_utils.aggregate_raster_values_uri(
@@ -445,7 +449,7 @@ def execute(args):
         for key in shed_keys:
             store_change = store_vol[key] - prev_store_vol[key]
             vol_bal = (precip_vol[key] - evap_vol[key] - store_change -
-                total_streamflow_mn[key])
+                total_streamflow_vol[key])
             volume_balance[key] = vol_bal
 
         LOGGER.debug('VOLUME BALANCE: %s', volume_balance)
@@ -619,7 +623,8 @@ def calculate_soil_storage(
 
         evap_uri - a URI to a gdal datasaet for the evaporation
 
-        streamflow_uri - a URI to a gdal dataset for the streamflow
+        streamflow_uri - a URI to a gdal dataset for the streamflow, which is
+            interflow + baseflow
         
         smax_uri - a URI to a gdal dataset for the soil max
         
@@ -972,14 +977,15 @@ def calculate_baseflow(
         constraint = soil_pix - evap_pix
 
         if evap_pix < soil_pix:
-            base_value = alpha_pix * (soil_pix - evap_pix)**beta
+            base_value = alpha_pix * ((soil_pix - evap_pix)**beta)
             
             # Checking against constraint / bound
             if base_value > constraint:
                 return constraint
             else:
                 return base_value
-        return 0.0
+        else:
+            return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_three_uri)
 
@@ -1013,7 +1019,8 @@ def calculate_intermediate_interflow(
     
     no_data_list = []
     # Build up a list of nodata values to check against
-    for raster_uri in [alpha_two_uri, soil_storage_uri, water_uri, evap_uri]:
+    for raster_uri in [alpha_two_uri, soil_storage_uri, water_uri, evap_uri,
+            baseflow_uri]:
         uri_nodata = raster_utils.get_nodata_from_uri(raster_uri)
         no_data_list.append(uri_nodata)
 
@@ -1024,11 +1031,12 @@ def calculate_intermediate_interflow(
             soil_pix - a float value for the soil water content
             water_pix - a float value for the water
             evap_pix - a float value for the actual evaporation
+            baseflow_pix - a float value for the baseflow
 
             returns - the interflow value
         """
         for pix, pix_nodata in zip(
-                [alpha_pix, soil_pix, water_pix, evap_pix], no_data_list):
+                [alpha_pix, soil_pix, water_pix, evap_pix, baseflow_pix], no_data_list):
             if pix == pix_nodata: 
                 return out_nodata
 
@@ -1037,13 +1045,15 @@ def calculate_intermediate_interflow(
         constraint = soil_pix + water_pix - evap_pix - baseflow_pix
 
         if evap_pix + baseflow_pix < soil_pix + water_pix:
-            inter_value = alpha_pix * (soil_pix + water_pix - evap_pix - baseflow_pix) ** beta
+            inter_value = alpha_pix * ((soil_pix + water_pix - evap_pix -
+                baseflow_pix) ** beta)
             # Constraint / bound check
             if inter_value > constraint:
                 return constraint
             else:
                 return inter_value
-        return 0.0
+        else:
+            return 0.0
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_two_uri)
 
@@ -1089,7 +1099,7 @@ def calculate_water_amt(
             if pix == pix_nodata: 
                 return out_nodata
 
-        return (1 - imperv_pix) * (1 - alpha_pix) * precip_pix
+        return (1.0 - imperv_pix) * (1.0 - alpha_pix) * precip_pix
 
     cell_size = raster_utils.get_cell_size_from_uri(alpha_one_uri)
 
