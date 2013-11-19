@@ -821,10 +821,10 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_add_active_pixel_cython(self):
         """Function that tests the cython version of add_active_pixel"""
         # Create the test sweep_line, and the test values to look for
-        for test in range(50):
+        for test in range(1):
             sweep_line = {}
             cython_sweep_line = {}
-            line_length = randint(1, 50)
+            line_length = randint(1, 1)
             # Sorting the distance, so the array is consistent
             distances = sorted([uniform(0., 100.) for i in range(line_length)])
             for i in range(line_length):
@@ -833,6 +833,7 @@ class TestAestheticQualityCore(unittest.TestCase):
                 visibility = uniform(0., 0.1)
                 aesthetic_quality_core.add_active_pixel(sweep_line, index, \
                 distance, visibility)
+                cython_sweep_line = \
                 aesthetic_quality_cython_core.add_active_pixel( \
                 cython_sweep_line, index, distance, visibility)
             # Test that the sweep lines are consistent
