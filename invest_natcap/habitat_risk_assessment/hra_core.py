@@ -9,6 +9,7 @@ import math
 import datetime
 import matplotlib.pyplot
 import re
+import random
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -223,10 +224,16 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
 
     def jigger(E, C):
         '''Want to return a fractionally offset set of coordinates so that each of
-        the text related to strings is slightly offset.'''
+        the text related to strings is slightly offset.
+        
+        Range of x: E <= x <= E+.1 
+        Range of y: C-.1 <= y <= C+.1
+        '''
 
-
-
+        x = E + random.random() * .1
+        y = C + ((random.random() * .2) -.1)
+   
+        return (x, y)
 
     #Create plots for each combination of AOI, Hab
     plot_index = 0
@@ -263,7 +270,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_ha
                 matplotlib.pyplot.plot(element[2], element[3], 'k^', 
                         markerfacecolor='black', markersize=8)
                 matplotlib.pyplot.annotate(element[1], xy=(element[2], 
-                        element[3]), xytext=(element[2], element[3]+0.07))
+                        element[3]), xytext=jigger(element[2], element[3]))
                 continue    
             
             #We get here once we get to the next habitat
