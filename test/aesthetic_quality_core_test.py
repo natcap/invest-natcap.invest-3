@@ -844,10 +844,10 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_remove_active_pixel_cython(self):
         """Function that tests the cython version of add_active_pixel"""
         # Create the test sweep_line, and the test values to look for
-        for test in range(5):
+        for test in range(50):
             sweep_line = {}
             cython_sweep_line = {}
-            line_length = randint(1, 50)
+            line_length = randint(1, 10)
             # Sorting the distance, so the array is consistent
             distances = sorted([uniform(0., 100.) for i in range(line_length)])
             # Creating random sweep_lines 
