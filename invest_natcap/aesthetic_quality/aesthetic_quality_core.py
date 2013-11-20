@@ -1118,15 +1118,12 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
     # 4- build event lists
-    add_cell_events = []
     add_event_id = 0
     add_events = events[0]
     add_event_count = add_events.size
-    cell_center_events = []
     center_event_id = 0
     center_events = events[1]
     center_event_count = center_events.size
-    remove_cell_events = []
     remove_event_id = 0
     remove_events = events[2]
     remove_event_count = remove_events.size
@@ -1135,79 +1132,64 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     arg_center = np.argsort(events[1])
     arg_max = np.argsort(events[2])
     
-    # Add the events to the 3 event lists
-    # Add center angles to center_events_array
-    LOGGER.debug('Creating event string')
-    for a in range(1, angle_count):
-        #print('angle ' + str(a) + ' / ' + str(angle_count))
-        # Collect cell_center events
-        current_events = []
-        while (center_event_id < center_event_count) and \
-            (center_events[arg_center[center_event_id]] < angles[a]):
-            current_events.append(arg_center[center_event_id])
-            arg_center[center_event_id] = 0
-            center_event_id += 1
-        cell_center_events.append(np.array(current_events))
-        # Collect add_cell events:
-        current_events = []
-        while (add_event_id < add_event_count) and \
-            (add_events[arg_min[add_event_id]] < angles[a]):
-            # The active cell list is initialized with those at angle 0.
-            # Make sure to remove them from the cell_addition events to
-            # avoid duplicates. Do not remove them from remove_cell events.
-            if center_events[arg_min[add_event_id]] > 0.:
-                current_events.append(arg_min[add_event_id])
-            arg_min[add_event_id] = 0
-            add_event_id += 1
-        add_cell_events.append(np.array(current_events))
-        # Collect remove_cell events:
-        current_events = []
-        while (remove_event_id < remove_event_count) and \
-            (remove_events[arg_max[remove_event_id]] <= angles[a]):
-            current_events.append(arg_max[remove_event_id])
-            arg_max[remove_event_id] = 0
-            remove_event_id += 1
-        remove_cell_events.append(np.array(current_events))
-
-    # Create the binary search tree as depicted in Kreveld et al.
-    # "Variations on Sweep Algorithms"
     # Updating active cells
     active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
     print('Sweeping the map')
-    print('angle 0 / ' + str(angle_count))
-    for c in cell_center_events[0]:
+    LOGGER.debug('Creating event stream')
+    # Collect cell_center events
+    cell_center_events = []
+    while (center_event_id < center_event_count) and \
+        (center_events[arg_center[center_event_id]] < angles[1]):
+        cell_center_events.append(arg_center[center_event_id])
+        arg_center[center_event_id] = 0
+        center_event_id += 1
+    for c in cell_center_events:
         d = distances[c]
         v = visibility[c]
-        active_line = \
-            add_active_pixel(active_line, c, d, v)
+        active_line = add_active_pixel(active_line, c, d, v)
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, \
-        events[3], events[4], visibility_map)
+        update_visible_pixels(active_line, events[3], events[4], visibility_map)
         
     # 2- loop through line sweep angles:
-    for a in range(len(angles) - 1):
-        #print('angle ' + str(a) + ' / ' + str(angle_count - 1))
+    for a in range(angle_count-1):
+        print('angle ' + str(a) + ' / ' + str(angle_count - 1))
+        # Collect add_cell events:
+        add_cell_events = []
+        while (add_event_id < add_event_count) and \
+            (add_events[arg_min[add_event_id]] < angles[a+1]):
+            # The active cell list is initialized with those at angle 0.
+            # Make sure to remove them from the cell_addition events to
+            # avoid duplicates, but do not remove them from remove_cell events,
+            # because they still need to be removed
+            if center_events[arg_min[add_event_id]] > 0.:
+                add_cell_events.append(arg_min[add_event_id])
+            arg_min[add_event_id] = 0
+            add_event_id += 1
     #   2.1- add cells
-        if add_cell_events[a].size > 0:
-            for c in add_cell_events[a]:
+        if len(add_cell_events) > 0:
+            for c in add_cell_events:
                 d = distances[c]
                 v = visibility[c]
-                active_line = \
-                add_active_pixel(active_line, c, d, v)
+                active_line = add_active_pixel(active_line, c, d, v)
                 active_cells.add(d)
+        # Collect remove_cell events:
+        remove_cell_events = []
+        while (remove_event_id < remove_event_count) and \
+            (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
+            remove_cell_events.append(arg_max[remove_event_id])
+            arg_max[remove_event_id] = 0
+            remove_event_id += 1
     #   2.2- remove cells
-        for c in remove_cell_events[a]:
+        for c in remove_cell_events:
             d = distances[c]
             v = visibility[c]
-            active_line = \
-            remove_active_pixel(active_line, d)
+            active_line = remove_active_pixel(active_line, d)
             active_cells.remove(d)
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, \
-        events[3], events[4], visibility_map)
+        update_visible_pixels(active_line, events[3], events[4], visibility_map)
 
     return visibility_map
 

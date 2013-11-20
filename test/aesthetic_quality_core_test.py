@@ -942,8 +942,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
         viewpoint, 1.75, 0.0, -1.0, 1.0)
 
-        #print('input_array', DEM)
-        #print('pixel visibility', pixel_visibility)
+        print('input_array', DEM)
+        print('pixel visibility', pixel_visibility)
 
         print('current working dir', os.getcwd())
         args = {}
