@@ -186,7 +186,7 @@ def calculate_flow_length(flow_direction_uri, flow_length_uri):
         flow_direction_dataset, flow_length_uri, 'GTiff', flow_length_nodata,
         gdal.GDT_Float32)
 
-    flow_length_pixel_size = raster_utils.pixel_size(flow_length_dataset)
+    flow_length_pixel_size = raster_utils.get_cell_size_from_uri(flow_length_uri)
 
     def flow_length(flow_direction):
         """Function to calculate flow length for vectorize_datasets"""

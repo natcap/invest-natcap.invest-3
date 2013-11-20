@@ -640,7 +640,7 @@ def flood_water_discharge(runoff_uri, flow_direction_uri, time_interval,
     LOGGER.debug('Using time interval %s', time_interval)
 
     # Determine the pixel area from the runoff raster
-    pixel_area = raster_utils.get_cell_area_from_uri(runoff_uri)
+    pixel_area = raster_utils.get_cell_size_from_uri(runoff_uri) ** 2
     LOGGER.debug('Discharge pixel area: %s', pixel_area)
 
     # Get the flow graph

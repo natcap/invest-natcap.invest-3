@@ -34,6 +34,71 @@ class ConstantOp:
     def __call__(self, *f):
         return apply(self.op, f+self.c)
 
+def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
+    LOGGER.debug("Creating extent from: %s", dataset_uri)
+    LOGGER.debug("Storing extent in: %s", datasource_uri)
+    geotransform = raster_utils.get_geotransform_uri(dataset_uri)
+    bounding_box = raster_utils.get_bounding_box(dataset_uri)
+    upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+
+    if os.path.exists(datasource_uri):
+        driver.DeleteDataSource(datasource_uri)
+    
+    datasource = driver.CreateDataSource(datasource_uri)
+    if datasource is None:
+        msg = "Could not create %s." % datasource_uri
+        LOGGER.error(msg)
+        raise IOError, msg
+    
+    dataset = gdal.Open(dataset_uri)
+
+    field_name = "Id"
+    field_value = 1
+
+    #add projection
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(dataset.GetProjectionRef())
+
+    #create layer with field definitions
+    layer = datasource.CreateLayer("raster", geom_type = ogr.wkbPolygon, srs = srs)
+    field_defn = ogr.FieldDefn(field_name,ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    feature_defn = layer.GetLayerDefn()
+
+    #create polygon
+    polygon = ogr.Geometry(ogr.wkbPolygon)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+
+    ring.AddPoint(upper_left_x, upper_left_y)
+    ring.AddPoint(lower_right_x, upper_left_y)
+    ring.AddPoint(lower_right_x, lower_right_y)
+    ring.AddPoint(upper_left_x, lower_right_y)
+    ring.AddPoint(upper_left_x, upper_left_y)
+
+    ring.CloseRings()
+    polygon.AddGeometry(ring)
+
+    # create a new feature
+    feature = ogr.Feature(feature_defn)
+    feature.SetGeometry(polygon)    
+    feature.SetField(field_name, field_value)
+
+    layer.CreateFeature(feature)
+
+    #clean up and write to disk
+    polygon = None
+    feature = None
+
+    datasource = None
+
+def sum_uri(dataset_uri, datasource_uri):
+    total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
+    return total.__getitem__(total.keys().pop())
+    
+
 def execute(args):
     ##preprocess args for possible ease of adoption of future IUI features
     #this creates a hypothetical IUI element from existing element
@@ -74,23 +139,26 @@ def execute(args):
     trans_field_key = "Id"
 
     #disturbance table
-    dis_bio_uri = args["biomass_disturbance_csv_uri"]
-    dis_soil_uri = args["soil_disturbance_csv_uri"]
+    dis_bio_csv_uri = args["biomass_disturbance_csv_uri"]
+    dis_soil_csv_uri = args["soil_disturbance_csv_uri"]
 
     dis_field_key = "veg type"
     dis_field_veg_name = "veg name"
 
     #accumulation table
-    acc_soil_uri = args["accumulation_csv_uri"]
+    acc_soil_csv_uri = args["accumulation_csv_uri"]
 
     acc_soil_field_key = "veg type"
 
-    #valuation flags
-    private_valuation = args["private_valuation"]
-    social_valuation = args["social_valuation"]
+##    #valuation flags
+##    private_valuation = args["private_valuation"]
+##    social_valuation = args["social_valuation"]
 
 
     ##outputs
+    extent_name = "extent.shp"
+    report_name = "report.htm"
+    
     #carbon pool file names
     above_name = "%i_base_above.tif"
     below_name = "%i_base_below.tif"
@@ -107,21 +175,27 @@ def execute(args):
     dis_bio_co_name = "%i_dis_bio_co.tif"
     dis_soil_co_name = "%i_dis_soil_co.tif"
     dis_bio_name = "%i_dis_bio.tif"
-    dis_soil_name = "%i_dis_soil"
+    dis_soil_name = "%i_dis_soil.tif"
 
 
     #totals
-    acc_name = "total_acc.tif"
-    dis_name = "total_dis.tif"
+    total_acc_soil_name = "total_soil_acc.tif"
+    total_dis_soil_name = "total_soil_dis.tif"
+    total_dis_bio_name = "total_bio_dis.tif"
 
-    acc_uri = os.path.join(workspace_dir, acc_name)
-    dis_uri = os.path.join(workspace_dir, dis_name)
+    #uri
+    total_acc_soil_uri = os.path.join(workspace_dir, total_acc_soil_name)
+    total_dis_soil_uri = os.path.join(workspace_dir, total_dis_soil_name)
+    total_dis_bio_uri = os.path.join(workspace_dir, total_dis_bio_name)
+
+    extent_uri = os.path.join(workspace_dir, extent_name)
+    report_uri = os.path.join(workspace_dir, report_name)
     
     ##process inputs
     #load tables from files
-    acc_soil = raster_utils.get_lookup_from_csv(acc_soil_uri, acc_soil_field_key)
-    dis_bio = raster_utils.get_lookup_from_csv(dis_bio_uri, dis_field_key)
-    dis_soil = raster_utils.get_lookup_from_csv(dis_soil_uri, dis_field_key)
+    acc_soil = raster_utils.get_lookup_from_csv(acc_soil_csv_uri, acc_soil_field_key)
+    dis_bio = raster_utils.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
+    dis_soil = raster_utils.get_lookup_from_csv(dis_soil_csv_uri, dis_field_key)
     trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
 
@@ -193,10 +267,6 @@ def execute(args):
         except KeyError:
             return 0.0
 
-    LOGGER.debug(acc_soil)
-    LOGGER.debug(carbon)
-    LOGGER.debug(trans)
-
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
     lulc_base_year = lulc_years.pop(0)
@@ -235,7 +305,7 @@ def execute(args):
 
 
         LOGGER.info("Calculating stock carbon values.")
-        #create stock initial lulc
+        #create stock carbon values
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    above_dict,
                                    lulc_base_above_uri,
@@ -373,6 +443,7 @@ def execute(args):
 
         ##calculate soil disturbance
         LOGGER.info("Processing soil disturbance.")
+        #get coefficients
         try:
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             soil_disturbance_co_op,
@@ -419,43 +490,142 @@ def execute(args):
         lulc_base_uri = lulc_uri_dict[lulc_base_year]
         LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
-
+    ##calculate totals
+    LOGGER.info("Calculating totals.")
+    #construct list of rasters for totals
     lulc_years = lulc_uri_dict.keys()
     lulc_years.sort()
     lulc_years.pop(-1)
-    acc_uri_list = []
-    dis_uri_list = []
+
+    acc_soil_uri_list = []
+    dis_soil_uri_list = []
+    dis_bio_uri_list = []
+
     for year in lulc_years:
-        acc_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
-        dis_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
+        acc_soil_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
+        dis_soil_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
+        dis_bio_uri_list.append(os.path.join(workspace_dir, dis_bio_name % year))
 
     try:
-        raster_utils.vectorize_datasets(acc_uri_list,
+        raster_utils.vectorize_datasets(acc_soil_uri_list,
                                         add_op,
-                                        acc_uri,
+                                        total_acc_soil_uri,
                                         gdal.GDT_Float64,
                                         0.0,
                                         cell_size,
                                         "union")
 
     except:
-        raster_utils.new_raster_from_base_uri(acc_uri_list[0],
-                                              acc_uri,
+        raster_utils.new_raster_from_base_uri(acc_soil_uri_list[0],
+                                              total_acc_soil_uri,
                                               "GTiff",
                                               0,
                                               gdal.GDT_Byte)
+    LOGGER.debug("Cumilative soil accumulation raster created.")
 
     try:                                              
-        raster_utils.vectorize_datasets(dis_uri_list,
+        raster_utils.vectorize_datasets(dis_soil_uri_list,
                                         add_op,
-                                        os.path.join(workspace_dir, dis_name),
+                                        total_dis_soil_uri,
                                         gdal.GDT_Float64,
                                         0.0,
                                         cell_size,
                                         "union")
     except:
-        raster_utils.new_raster_from_base_uri(dis_uri_list[0],
-                                      dis_uri,
+        raster_utils.new_raster_from_base_uri(dis_soil_uri_list[0],
+                                      total_dis_soil_uri,
                                       "GTiff",
                                       0,
                                       gdal.GDT_Byte)
+    LOGGER.debug("Cumilative soil disturbance raster created.")
+
+    try:                                              
+        raster_utils.vectorize_datasets(dis_bio_uri_list,
+                                        add_op,
+                                        total_dis_bio_uri,
+                                        gdal.GDT_Float64,
+                                        0.0,
+                                        cell_size,
+                                        "union")
+    except:
+        raster_utils.new_raster_from_base_uri(dis_bio_uri_list[0],
+                                      total_dis_bio_uri,
+                                      "GTiff",
+                                      0,
+                                      gdal.GDT_Byte)
+    LOGGER.debug("Cumilative biomass disturbance raster created.")
+
+    
+
+    ##calculate totals in rasters and write report
+    LOGGER.info("Tabulating data and generating report.")
+    #create extent shapefile
+    datasource_from_dataset_bounding_box_uri(total_acc_soil_uri, extent_uri)
+
+    #open report
+    report = open(report_uri, 'w')
+    report.write("<HTML><TITLE>InVEST - Blue Carbon Report</TITLE><BODY>")
+
+    #soil disturbance and accumulation table
+    report.write("<B>Soil Disturbance and Accumulation</B>")
+    column_name_list = ["Year", "Disturbance", "Accumulation", "Net", "Total"]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+    d_total = 0
+    a_total = 0    
+    total = 0
+    for year, d_uri, a_uri in zip(lulc_years, dis_soil_uri_list, acc_soil_uri_list):
+        try:
+            d = sum_uri(d_uri, extent_uri)
+        except Exception:
+            d = 0
+        try:
+            a = sum_uri(a_uri, extent_uri)
+        except Exception:
+            a = 0
+
+        d_total += d
+        a_total += a        
+
+        net = a - d
+        total += net
+
+        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(map(str,[year, d, a, net, total])))
+
+    try:
+        d = sum_uri(total_dis_soil_uri, extent_uri)
+    except Exception:
+        d = 0
+    try:
+        a = sum_uri(total_acc_soil_uri, extent_uri)
+    except Exception:
+        a = 0
+    net = a - d        
+    total = net
+    report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, a, net, total])))
+    report.write("\n</TABLE>")
+
+    #biomass disturbance table
+    report.write("\n<P><P><B>Biomass Disturbance</B>")
+    column_name_list = ["Year", "Amount", "Total"]
+    report.write("\n<TABLE BORDER=1><TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(column_name_list))
+
+    total = 0
+    for year, d_uri in zip(lulc_years, dis_bio_uri_list):
+        try:
+            d = sum_uri(d_uri, extent_uri)
+        except Exception:
+            d = 0
+
+        total += d
+
+        report.write("\n<TR><TD>%s</TD></TR>" % "</TD><TD>".join(map(str,[year, d, total])))
+
+    try:
+        d = sum_uri(total_dis_bio_uri, extent_uri)
+    except Exception:
+        d = 0
+        
+    report.write("\n<TR><TD><B>%s</B></TD></TR>" % "</B></TD><TD><B>".join(map(str,["Total", d, d])))
+
+    #close report
+    report.close()

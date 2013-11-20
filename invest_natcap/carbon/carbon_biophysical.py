@@ -300,7 +300,7 @@ def _compute_carbon_pools(args):
 
 
 def _compute_cell_area_ha(args):
-    cell_area_cur = raster_utils.get_cell_area_from_uri(args['lulc_cur_uri'])
+    cell_area_cur = raster_utils.get_cell_size_from_uri(args['lulc_cur_uri']) ** 2
 
     for scenario in ['fut', 'redd']:
         try:
@@ -308,7 +308,7 @@ def _compute_cell_area_ha(args):
         except KeyError:
             continue
 
-        cell_area_in_scenario = raster_utils.get_cell_area_from_uri(lulc_uri)
+        cell_area_in_scenario = raster_utils.get_cell_size_from_uri(lulc_uri) ** 2
 
         if cell_area_cur != cell_area_in_scenario:
             raise Exception(

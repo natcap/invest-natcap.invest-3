@@ -102,19 +102,6 @@ def get_row_col_from_uri(dataset_uri):
     return (n_rows, n_cols)
 
 
-def calculate_raster_stats(dataset):
-    """Calculates and sets the min, max, stdev, and mean for the bandataset in
-       the raster.
-
-       dataset - a GDAL raster dataset that will be modified by having its band
-            statistics set
-
-        returns nothing"""
-
-    for band_number in range(dataset.RasterCount):
-        band = dataset.GetRasterBand(band_number + 1)
-        band.ComputeStatistics(0)
-
 def calculate_raster_stats_uri(dataset_uri):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
@@ -144,36 +131,10 @@ def get_statistics_from_uri(dataset_uri):
     dataset = None
     return statistics
 
-def get_cell_area_from_uri(dataset_uri):
-    return pixel_area(gdal.Open(dataset_uri))
-
-def pixel_area(dataset):
-    """Calculates the pixel area of the given dataset in m^2
-
-        dataset - GDAL dataset
-
-        returns area in m ^ 2 of each pixel in dataset"""
-
-    srs = osr.SpatialReference()
-    srs.SetProjection(dataset.GetProjection())
-    linear_units = srs.GetLinearUnits()
-    geotransform = dataset.GetGeoTransform()
-    #take absolute value since sometimes negative widths/heights
-    area_meters = abs(geotransform[1] * geotransform[5] * (linear_units ** 2))
-    return area_meters
 
 def get_cell_size_from_uri(dataset_uri):
-    return pixel_size(gdal.Open(dataset_uri))
-
-def pixel_size(dataset):
-    """Calculates the average pixel size of the given dataset in m.  Saying
-       'average' in case we have non-square pixels.
-
-        dataset - GDAL dataset
-
-        returns the average pixel size in m"""
-
     srs = osr.SpatialReference()
+    dataset = gdal.Open(dataset_uri)
     srs.SetProjection(dataset.GetProjection())
     linear_units = srs.GetLinearUnits()
     geotransform = dataset.GetGeoTransform()
@@ -181,6 +142,7 @@ def pixel_size(dataset):
     size_meters = (abs(geotransform[1]) + abs(geotransform[5])) / 2 * \
         linear_units
     return size_meters
+
 
 def pixel_size_based_on_coordinate_transform_uri(dataset_uri, *args, **kwargs):
     """A wrapper for pixel_size_based_on_coordinate_transform
@@ -819,10 +781,8 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     raster_cython_utils.reclassify_by_dictionary(
         dataset, rules, output_uri, format, default_value, datatype,
         output_dataset,)
+    calculate_raster_stats_uri(output_uri)
     LOGGER.info('Finished reclassification')
-
-    calculate_raster_stats(output_dataset)
-
     return output_dataset
 
 
@@ -839,7 +799,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     LOGGER = logging.getLogger('calculateSlope')
     LOGGER.debug(dem_dataset_uri)
     dem_dataset = gdal.Open(dem_dataset_uri)
-    out_pixel_size = pixel_size(dem_dataset)
+    out_pixel_size = get_cell_size_from_uri(dem_dataset_uri)
     LOGGER.debug(out_pixel_size)
     _, dem_nodata = extract_band_and_nodata(dem_dataset)
 
@@ -861,7 +821,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
     slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
-    calculate_raster_stats(slope_dataset)
+    calculate_raster_stats_uri(slope_uri)
 
     dem_small_dataset = None
     os.remove(dem_small_uri)
@@ -1586,7 +1546,7 @@ def gaussian_filter_dataset(
     LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
 
-    calculate_raster_stats(out_dataset)
+    calculate_raster_stats_uri(out_uri)
 
     LOGGER.info('deleting %s' % temp_dir)
     dest_array = None
@@ -1640,8 +1600,9 @@ def reclassify_dataset(
         dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
     out_band = out_dataset.GetRasterBand(1)
 
-    calculate_raster_stats(dataset)
     in_band, in_nodata = extract_band_and_nodata(dataset)
+    in_band.ComputeStatistics(0)
+
     dataset_max = in_band.GetMaximum()
 
     #Make an array the same size as the max entry in the dictionary of the same
@@ -1856,7 +1817,7 @@ def get_datasource_bounding_box(datasource_uri):
     return bounding_box
 
 
-def resize_and_resample_dataset(
+def resize_and_resample_dataset_uri(
     original_dataset_uri, bounding_box, out_pixel_size, output_uri,
     resample_method):
     """A function to resample a datsaet to larger or smaller pixel sizes
@@ -1913,7 +1874,10 @@ def resize_and_resample_dataset(
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_dict[resample_method])
-    calculate_raster_stats(output_dataset)
+
+    gdal.Dataset.__swig_destroy__(output_dataset)
+    output_dataset = None
+    calculate_raster_stats_uri(output_uri)
 
 
 def align_dataset_list(
@@ -2018,7 +1982,7 @@ def align_dataset_list(
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        resize_and_resample_dataset(
+        resize_and_resample_dataset_uri(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
 
