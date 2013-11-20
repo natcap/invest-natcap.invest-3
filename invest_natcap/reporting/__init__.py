@@ -5,6 +5,7 @@ import os
 import logging
 import csv
 import json
+import codecs
 
 import numpy as np
 from osgeo import gdal
@@ -193,7 +194,7 @@ def write_html(html_obj, out_uri):
         os.remove(out_uri)
 
     # Open the file, write the string and close the file
-    html_file = open(out_uri, 'w')
+    html_file = codecs.open(out_uri, 'wb', 'utf-8')
     html_file.write(html_str)
     html_file.close()
 

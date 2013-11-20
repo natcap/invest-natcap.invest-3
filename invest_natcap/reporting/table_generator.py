@@ -294,7 +294,7 @@ def get_row_data(row_dict, col_headers):
                 row.append(row_values[col])
             # Add the row to the list of rows
             row_data.append(row)
-    except:
-        raise Exception('The dictionary is not constructed correctly')
+    except Exception as e:
+        raise Exception(str(e) + ' The dictionary is not constructed correctly')
 
     return row_data 
