@@ -76,7 +76,7 @@ def execute(args):
     classes_dict = parse_main_csv(args['class_params_uri'], args['num_classes'],
                         area_count)
 
-def parse_main_csv(params_uri, num_classes, area_count)
+def parse_main_csv(params_uri, num_classes, area_count):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
