@@ -155,10 +155,11 @@
                         {
                             "id" : "mig_csv",
                             "args_id" : "mig_params_uri",
-                            "type": "file",
-                            "label": "Migration Matrix CSV",
+                            "type": "folder",
+                            "label": "Migration Matrix CSV Folder",
                             "required": true,
-                            "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
+                            "validateAs": {"type": "folder"},
+                            "helpText": "This folder should contain all CSV matrices for migration. There should be one CSV per age class, labeled accordingly. Each matrix should contain the portion of that age class which will move from one area to another."
                         }
                     ]
                 }
