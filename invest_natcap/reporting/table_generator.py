@@ -93,13 +93,12 @@ def generate_table(table_dict, attributes=None):
 
     if add_checkbox_total:
         footer_string += add_totals_row(
-                col_headers, total_cols, 'Selected Total', 'checkTotal',
-                'checkTot')
+                col_headers, total_cols, 'Selected Total', True)
 
     # Add any total rows as 'tfoot' elements in the table
     if 'total' in table_dict and table_dict['total']:
         footer_string += add_totals_row(
-                col_headers, total_cols, 'Total', 'totalColumn', 'totalCol')
+                col_headers, total_cols, 'Total', False)
     
     if not footer_string == '':
         table_string += '<tfoot>%s</tfoot>' % footer_string
@@ -125,7 +124,7 @@ def generate_table(table_dict, attributes=None):
 
     return table_string
 
-def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
+def add_totals_row(col_headers, total_list, total_name, checkbox_total):
     """Construct a totals row as an html string. Creates one row element with
         data where the row gets a class name and the data get a class name if
         the corresponding column is a totalable column
@@ -138,14 +137,22 @@ def add_totals_row(col_headers, total_list, total_name, row_class, data_class):
         total_name - a string for the name of the total row, ex: 'Total', 'Sum'
             (required)
 
-        row_class - a string for the class name for the total row. Used for
-            table manipulation in javascript (required)
-
-        data_class - a string for the class name for the data elements in the
-            row. Used for table manipulation in javascript (required)
-
+        checkbox_total - a boolean value that distinguishes whether a checkbox
+            total row is being added or a regular total row. Checkbox total row
+            is True. This will determine the row class name and row data class
+            name
+            
         return - a string representing the html contents of a row which should
             later be used in a 'tfoot' element"""
+
+    # Check to determine whether a checkbox total row is being added or a
+    # regular totals row
+    if checkbox_total:
+        row_class = 'checkTotal'
+        data_class = 'checkTot'
+    else:
+        row_class = 'totalColumn'
+        data_class = 'totalCol'
 
     # Begin constructing the html string for the new totals row
     # Give the row a class name and have the first data element be the name or
