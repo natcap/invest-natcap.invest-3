@@ -34,6 +34,71 @@ class ConstantOp:
     def __call__(self, *f):
         return apply(self.op, f+self.c)
 
+def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
+    LOGGER.debug("Creating extent from: %s", dataset_uri)
+    LOGGER.debug("Storing extent in: %s", datasource_uri)
+    geotransform = raster_utils.get_geotransform_uri(dataset_uri)
+    bounding_box = raster_utils.get_bounding_box(dataset_uri)
+    upper_left_x, upper_left_y, lower_right_x, lower_right_y = bounding_box
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+
+    if os.path.exists(datasource_uri):
+        driver.DeleteDataSource(datasource_uri)
+    
+    datasource = driver.CreateDataSource(datasource_uri)
+    if datasource is None:
+        msg = "Could not create %s." % datasource_uri
+        LOGGER.error(msg)
+        raise IOError, msg
+    
+    dataset = gdal.Open(dataset_uri)
+
+    field_name = "Id"
+    field_value = 1
+
+    #add projection
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(dataset.GetProjectionRef())
+
+    #create layer with field definitions
+    layer = datasource.CreateLayer("raster", geom_type = ogr.wkbPolygon, srs = srs)
+    field_defn = ogr.FieldDefn(field_name,ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    feature_defn = layer.GetLayerDefn()
+
+    #create polygon
+    polygon = ogr.Geometry(ogr.wkbPolygon)
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+
+    ring.AddPoint(upper_left_x, upper_left_y)
+    ring.AddPoint(lower_right_x, upper_left_y)
+    ring.AddPoint(lower_right_x, lower_right_y)
+    ring.AddPoint(upper_left_x, lower_right_y)
+    ring.AddPoint(upper_left_x, upper_left_y)
+
+    ring.CloseRings()
+    polygon.AddGeometry(ring)
+
+    # create a new feature
+    feature = ogr.Feature(feature_defn)
+    feature.SetGeometry(polygon)    
+    feature.SetField(field_name, field_value)
+
+    layer.CreateFeature(feature)
+
+    #clean up and write to disk
+    polygon = None
+    feature = None
+
+    datasource = None
+
+def sum_uri(dataset_uri, datasource_uri):
+    total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
+    return total.__getitem__(total.keys().pop())
+    
+
 def execute(args):
     ##preprocess args for possible ease of adoption of future IUI features
     #this creates a hypothetical IUI element from existing element
@@ -91,6 +156,8 @@ def execute(args):
 
 
     ##outputs
+    extent_name = "extent.shp"
+    
     #carbon pool file names
     above_name = "%i_base_above.tif"
     below_name = "%i_base_below.tif"
@@ -193,10 +260,6 @@ def execute(args):
         except KeyError:
             return 0.0
 
-    LOGGER.debug(acc_soil)
-    LOGGER.debug(carbon)
-    LOGGER.debug(trans)
-
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
     lulc_base_year = lulc_years.pop(0)
@@ -235,7 +298,7 @@ def execute(args):
 
 
         LOGGER.info("Calculating stock carbon values.")
-        #create stock initial lulc
+        #create stock carbon values
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    above_dict,
                                    lulc_base_above_uri,
@@ -373,6 +436,7 @@ def execute(args):
 
         ##calculate soil disturbance
         LOGGER.info("Processing soil disturbance.")
+        #get coefficients
         try:
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             soil_disturbance_co_op,
@@ -419,12 +483,17 @@ def execute(args):
         lulc_base_uri = lulc_uri_dict[lulc_base_year]
         LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
-
+    ##calculate totals
+    LOGGER.info("Calculating totals.")
+    #construct list of rasters for totals
     lulc_years = lulc_uri_dict.keys()
     lulc_years.sort()
     lulc_years.pop(-1)
+    #accumulation raster list
     acc_uri_list = []
+    #disturbance raster list
     dis_uri_list = []
+
     for year in lulc_years:
         acc_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
         dis_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
@@ -444,6 +513,7 @@ def execute(args):
                                               "GTiff",
                                               0,
                                               gdal.GDT_Byte)
+    LOGGER.debug("Cumilative accumulation raster created.")
 
     try:                                              
         raster_utils.vectorize_datasets(dis_uri_list,
@@ -459,3 +529,11 @@ def execute(args):
                                       "GTiff",
                                       0,
                                       gdal.GDT_Byte)
+    LOGGER.debug("Cumilative disturbance raster created.")
+
+    #calculate totals in rasters
+    extent_uri = os.path.join(workspace_dir, extent_name)
+    datasource_from_dataset_bounding_box_uri(acc_uri, extent_uri)
+
+    total = sum_uri(acc_uri, extent_uri)
+    LOGGER.info("Accumulated %s.", str(total))
