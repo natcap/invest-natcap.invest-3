@@ -219,15 +219,27 @@ class TestTableGenerator(unittest.TestCase):
         cols = ['product', 'shipped', 'units', 'price']
         total_cols = [False, False, True, True]
 
-        data_class = 'totalCol'
-        row_class = 'totalColumn'
-
-        expected_result = ("<tr class=%s><td>Total</td><td>--</td>"
-            "<td class=%s>--</td><td class=%s>--</td></tr>" %
-            (row_class, data_class, data_class))
+        expected_result = ("<tr class=totalColumn><td>Total</td><td>--</td>"
+            "<td class=totalCol>--</td><td class=totalCol>--</td></tr>")
 
         totals_html = table_generator.add_totals_row(
-                cols, total_cols, 'Total', row_class, data_class)
+                cols, total_cols, 'Total', False)
+
+        self.assertEqual(expected_result, totals_html)
+ 
+    def test_add_totals_row_checkbox(self):
+        """Unit test for adding a checkbox totals row"""
+        
+        #raise SkipTest
+
+        cols = ['product', 'shipped', 'units', 'price']
+        total_cols = [False, False, True, True]
+
+        expected_result = ("<tr class=checkTotal><td>Checked Total</td><td>--</td>"
+            "<td class=checkTot>--</td><td class=checkTot>--</td></tr>")
+
+        totals_html = table_generator.add_totals_row(
+                cols, total_cols, 'Checked Total', True)
 
         self.assertEqual(expected_result, totals_html)
     
