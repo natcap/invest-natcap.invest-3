@@ -368,7 +368,6 @@ def make_crit_shape_dict(crit_uri):
  
     for folder in [res_dir, exps_dir, sens_dir]:
         if not os.path.isdir(folder):
-            LOGGER.debug("The missing folder is %s" % folder) 
             raise IOError("Using spatically explicit critiera requires you to \
                     have subfolders named \"Resilience\", \"Exposure\", and \
                     \"Sensitivity\". Check that all these folders exist, and \
@@ -733,7 +732,6 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
         #the string.
         while ''.join(line) != '':
             
-            LOGGER.debug("Inside the loop the line is: %s" % line)
             if line[0] != '':
                 key = line[0]
 
@@ -755,7 +753,6 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
                         habs[hab_name]['Crit_Ratings'][key] = \
                             dict(zip(headers, map(float,line[1:4])))
                     except ValueError:
-                        LOGGER.debug("The line with a string is: %s" % line)
                         raise UnexpectedString("Entries in CSV table may not be \
                             strings, and may not be left blank. Check your %s CSV \
                             for any leftover strings or spaces within Rating, \
@@ -763,14 +760,11 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             
             line = csv_reader.next()
 
-        LOGGER.debug("Line after the loop is: %s" % line)
-
         #We will have just loaded in a null line from under the hab-specific
         #criteria, now drainthe next two, since they're just headers for users.
         #Drain the next two lines, and load in the third.
         for _ in range(2): 
             a = csv_reader.next()
-            LOGGER.debug("Lines we're discarding are : %s" % a)
 
         #Now we will pick up all the E/C habitat-stressor information for this
         #specific habitat.
@@ -795,8 +789,6 @@ def parse_overlaps(uri, habs, h_s_e, h_s_c):
             if counter > 1:
                 break
 
-            LOGGER.debug("Line now is: %s" % line)
-            LOGGER.debug("Hab name is: %s" % hab_name)
             stress_name = (line[0].split(hab_name+'/')[1]).split(' ')[0]
             headers = csv_reader.next()[1:]
             
