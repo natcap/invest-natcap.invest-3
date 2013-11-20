@@ -710,17 +710,8 @@ def calculate_soil_storage(
             if pix == pix_nodata:
                 return out_nodata
 
-        # Constraint / bound for soil storage is:
-        # [ 0 <= S(i,t) <= Smax]
-
-        storage_value =  prev_soil_pix + water_pix - evap_pix - streamflow_pix
-
-        # Check constraint / bound
-        if storage_value > smax_pix:
-            return smax_pix
-        else:
-            return storage_value
-
+        return prev_soil_pix + water_pix - evap_pix - streamflow_pix
+        
     cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
 
     raster_utils.vectorize_datasets(
