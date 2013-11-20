@@ -19,6 +19,12 @@ def execute(args):
             be used for any parameters that vary by area.
         class_params_uri- Location of the parameters csv. This will contain all
             age and stage specific parameters.
+        maturity_type- String specifying whether the model is age-specific or
+            stage-specific. Options will be either "Age Specific" or
+            "Stage Specific" and will change which equation is used in modeling
+            growth.
+        is_gendered- Boolean for whether or not the age and stage classes are
+            separated by gender.
         rec_eq- The equation to be used in calculation of recruitment. Choices
             are strings, and will be one of "Beverton-Holt", "Ricker", 
             "Fecundity", or "Fixed."
@@ -42,5 +48,22 @@ def execute(args):
             animal remaining after processing of the whole carcass is complete.
         unit_price(*)- This will exist only if valuation is desired. Double 
             which represents the price for a single unit of that animal.
+        duration- Int representing the number of time steps that the user
+            desires the model to run.
     '''
+
+    #Create folders that will be used for the rest of the model run.
+    for folder in ['Intermediate', 'Output']:
+        
+        out_dir = os.path.join(workspace_uri, folder)
+        
+        if os.path.exists(out_dir):
+            shutil.rmtree(out_dir)
+
+        os.makedirs(out_dir)
+
+
+
+
+
 
