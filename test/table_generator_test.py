@@ -7,17 +7,17 @@ import unittest
 from nose.plugins.skip import SkipTest
 import invest_natcap.testing
 
-#from invest_natcap import reporting 
-import invest_natcap.reporting as reporting 
+#from invest_natcap import reporting
+import invest_natcap.reporting as reporting
 from invest_natcap.reporting import table_generator
 import invest_test_core
 
 class TestTableGenerator(unittest.TestCase):
     def test_get_dictionary_values_ordered(self):
         """Unit test for getting values from a dictionary in order"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 0 : {'name': 'col_1'},
                 2 : {'name': 'col_2'},
@@ -29,13 +29,13 @@ class TestTableGenerator(unittest.TestCase):
                 sample_dict, 'name')
 
         self.assertEqual(expected_result, col_headers)
-    
+
     def test_get_dictionary_values_ordered_robust(self):
         """Unit test for getting dictionary values in order, with a non trivial
             dictionary input"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 1 : {'name': 'date', 'time':'day'},
                 6 : {'name': 'price', 'price':'expensive'},
@@ -48,13 +48,13 @@ class TestTableGenerator(unittest.TestCase):
                 sample_dict, 'name')
 
         self.assertEqual(expected_result, col_headers)
-    
+
     def test_get_dictionary_values_ordered_bool(self):
         """Unit test for getting dictionary values in order, with boolean
             values"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 1 : {'name': 'date', 'total':False},
                 6 : {'name': 'price', 'total':True},
@@ -67,12 +67,12 @@ class TestTableGenerator(unittest.TestCase):
                 sample_dict, 'total')
 
         self.assertEqual(expected_result, tot_col)
-    
+
     def test_get_row_data(self):
         """Unit test for getting the row data from a dictionary"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                     0: {'col_1':'value_1', 'col_2':'value_4'},
                     1: {'col_1':'value_2', 'col_2':'value_5'},
@@ -88,13 +88,13 @@ class TestTableGenerator(unittest.TestCase):
         row_data = table_generator.get_row_data(sample_dict, col_headers)
 
         self.assertEqual(expected_result, row_data)
-    
+
     def test_get_row_data_robust(self):
         """Unit test for getting the row data from a more complicated
             dictionary"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 3: {'date':'09-13', 'price':.54, 'product':'chips'},
                 0: {'date':'08-14', 'price':23.4, 'product':'mustard'},
@@ -116,9 +116,9 @@ class TestTableGenerator(unittest.TestCase):
     def test_generate_table(self):
         """Unit test for creating a table from a dictionary as a string
             representing html"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 'cols':{
                    1 : {'name':'date', 'total':False},
@@ -142,13 +142,13 @@ class TestTableGenerator(unittest.TestCase):
         table_string = table_generator.generate_table(sample_dict)
 
         self.assertEqual(expected_result, table_string)
-    
+
     def test_generate_table_attributes(self):
         """Unit test for creating a table from a dictionary as a string
             representing html using attributes"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 'cols':{
                     1: {'name':'date', 'total':False},
@@ -174,12 +174,12 @@ class TestTableGenerator(unittest.TestCase):
         table_string = table_generator.generate_table(sample_dict, attributes)
 
         self.assertEqual(expected_result, table_string)
-    
+
     def test_add_checkbox_column(self):
         """Unit test for adding a checkbox column to the table definition"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 'cols':{
                    1 : {'name':'date', 'total':False},
@@ -210,34 +210,46 @@ class TestTableGenerator(unittest.TestCase):
 
         self.assertEqual(col_dict, expected_cols)
         self.assertEqual(row_dict, expected_rows)
-    
+
     def test_add_totals_row(self):
         """Unit test for adding a totals row"""
-        
+
         #raise SkipTest
 
         cols = ['product', 'shipped', 'units', 'price']
         total_cols = [False, False, True, True]
 
-        data_class = 'totalCol'
-        row_class = 'totalColumn'
-
-        expected_result = ("<tr class=%s><td>Total</td><td>--</td>"
-            "<td class=%s>--</td><td class=%s>--</td></tr>" %
-            (row_class, data_class, data_class))
+        expected_result = ("<tr class=totalColumn><td>Total</td><td>--</td>"
+            "<td class=totalCol>--</td><td class=totalCol>--</td></tr>")
 
         totals_html = table_generator.add_totals_row(
-                cols, total_cols, 'Total', row_class, data_class)
+                cols, total_cols, 'Total', False)
 
         self.assertEqual(expected_result, totals_html)
-    
+
+    def test_add_totals_row_checkbox(self):
+        """Unit test for adding a checkbox totals row"""
+
+        #raise SkipTest
+
+        cols = ['product', 'shipped', 'units', 'price']
+        total_cols = [False, False, True, True]
+
+        expected_result = ("<tr class=checkTotal><td>Checked Total</td><td>--</td>"
+            "<td class=checkTot>--</td><td class=checkTot>--</td></tr>")
+
+        totals_html = table_generator.add_totals_row(
+                cols, total_cols, 'Checked Total', True)
+
+        self.assertEqual(expected_result, totals_html)
+
     def test_generate_table_checkbox_total(self):
         """Unit test for creating a table from a dictionary as a string
             representing html using attributes and with checkbox totals and
             constant totals"""
-        
+
         #raise SkipTest
-        
+
         sample_dict = {
                 'cols':{
                     1: {'name':'date', 'total':False},
