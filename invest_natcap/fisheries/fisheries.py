@@ -149,12 +149,12 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
     headers = hybrid_lines.pop(0)
 
-    #Know that for headers, the first is actually just a notation that areas are on
-    #top, and stages are below. Want to ignore.
+    #Know that for headers, the first is actually just a notation that areas are
+    #on top, and stages are below. Want to ignore.
     headers.pop(0)
 
-    #Since these are lists, they should be in the same order as in the line itself.
-    #We know that len(area_names) + len(age_params) = len(line) - 1
+    #Since these are lists, they should be in the same order as in the line
+    #itself. We know that len(area_names) + len(age_params) = len(line) - 1
     area_names = headers[:area_count]
     age_params = headers[area_count:]
 
@@ -166,9 +166,9 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
 
-           raise ImproperStageParameter("Improper parameter name given. Acceptable \
-                    age/stage-specific parameters include 'duration', \
-                    'vulnfishing', 'weight', and 'maturity'.")
+            raise ImproperStageParameter("Improper parameter name given. \
+                    Acceptable age/stage-specific parameters include \
+                    'duration', 'vulnfishing', 'weight', and 'maturity'.")
 
     for i in range(len(hybrid_lines)):
         
@@ -216,7 +216,7 @@ def parse_main_csv(params_uri, num_classes, area_count):
             short_param_name = area_param_short[param_name]
         except KeyError:
             raise ImproperAreaParameter("Improper area-specific parameter name. \
-                    Acceptable parameters include 'ExploitationFraction', and
+                    Acceptable parameters include 'ExploitationFraction', and \
                     'LarvalDispersal'.")
 
         for n in range(len(area_names)):
