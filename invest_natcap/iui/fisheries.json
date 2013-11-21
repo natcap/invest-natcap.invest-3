@@ -28,7 +28,7 @@
                     "label": "Area(s) of Interest",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. "
+                    "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. The name can be numeric or alphabetic, but must be unique within the file."
                 },
                 {
                     "id" : "param_csv",

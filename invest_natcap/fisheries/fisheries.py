@@ -23,6 +23,8 @@ def execute(args):
             stage-specific. Options will be either "Age Specific" or
             "Stage Specific" and will change which equation is used in modeling
             growth.
+        num_classes- The number of maturity classes that the user will be
+            providing within the main parameter csv.
         is_gendered- Boolean for whether or not the age and stage classes are
             separated by gender.
         rec_eq- The equation to be used in calculation of recruitment. Choices
