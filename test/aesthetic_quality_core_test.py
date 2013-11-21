@@ -938,17 +938,29 @@ class TestAestheticQualityCore(unittest.TestCase):
         
 
     def test_viewshed(self):
-        array_shape = (6,6)
+        """Compare the python and cython versions of compute_viewshed"""
+        array_shape = (15,10)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
-        viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
+        viewpoint = (5, 3) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
         pixel_visibility = np.ones(array_shape) * 2
 
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
-        viewpoint, 1.75, 0.0, -1.0, 1.0)
+        viewpoint, 1.75, 0.0, -1.0, 1.0, 'python')
 
-        print('input_array', DEM)
-        print('pixel visibility', pixel_visibility)
+        pixel_visibility_cython = aesthetic_quality_core.compute_viewshed( \
+        DEM, viewpoint, 1.75, 0.0, -1.0, 1.0, 'cython')
+        
+        difference = np.sum(np.absolute(pixel_visibility - pixel_visibility_cython))
+        if difference > 0:
+            print('input_array', DEM)
+            print('python pixel visibility', pixel_visibility)
+            print('cython pixel visibility', pixel_visibility_cython)
+
+        message = 'test_viewshed: inconsistent pixel_visibility ' + \
+        str(difference)
+        assert difference == 0, message
+
 
         print('current working dir', os.getcwd())
         args = {}

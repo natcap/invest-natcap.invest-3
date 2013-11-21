@@ -1065,7 +1065,7 @@ def cell_angles(cell_coords, viewpoint):
     return angles
 
 def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
-    max_dist=-1., refraction_coeff=None):
+    max_dist=-1., refraction_coeff=None, alg_version='cython'):
     """URI wrapper for the viewshed computation function
         
         Inputs: 
@@ -1079,7 +1079,9 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
             -max_dist: maximum visibility radius. By default infinity (-1), 
                 not used yet
             -refraction_coeff: refraction coefficient (0.0-1.0), not used yet
-            
+            -alg_version: name of the algorithm to be used. Either 'cython'
+            (default) or 'python'.
+
         Returns nothing"""
     # Open the input URI and extract the numpy array
     input_raster = gdal.Open(input_uri)
@@ -1090,7 +1092,7 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     
     # Compute the viewshed on it
     output_array = aesthetic_quality_core.compute_viewshed(input_array, \
-    coordinates, obs_elev, tgt_elev, max_dist, refraction_coeff)
+    coordinates, obs_elev, tgt_elev, max_dist, refraction_coeff, alg_version)
     
     # Save the output in the output URI
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
@@ -1099,7 +1101,7 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
 def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
-    refraction_coeff):
+    refraction_coeff, alg_version):
     """Compute the viewshed for a single observer. 
         Inputs: 
             -DEM: a numpy array of terrain elevations
@@ -1126,9 +1128,11 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
 
-    #sweep_through_angles(angles, events, distances, visibility, visibility_map)
-    aesthetic_quality_cython_core.sweep_through_angles(angles, events, \
-    distances, visibility, visibility_map)
+    if alg_version is 'python':
+        sweep_through_angles(angles, events, distances, visibility, visibility_map)
+    else:
+        aesthetic_quality_cython_core.sweep_through_angles(angles, events, \
+        distances, visibility, visibility_map)
 
     return visibility_map
 
