@@ -163,7 +163,7 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
            raise ImproperParameter("Improper parameter name given. Acceptable \
                     age/stage-specific parameters include 'duration', \
-                    'vulnfishing', 'weight', and 'maturity'.)
+                    'vulnfishing', 'weight', and 'maturity'.")
 
 
     for i in range(len(hybrid_lines)):
