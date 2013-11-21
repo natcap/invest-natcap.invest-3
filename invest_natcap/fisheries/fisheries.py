@@ -61,7 +61,7 @@ def execute(args):
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
-        out_dir = os.path.join(workspace_uri, folder)
+        out_dir = os.path.join(args['workspace_uri'], folder)
         
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
@@ -104,11 +104,70 @@ def parse_main_csv(params_uri, num_classes, area_count):
                 }
             }
    '''
+    #Create a container list to hold all the line lists
+    hybrid_lines = []
+    area_lines = []
 
-    csv_reader = csv.reader(params_uri)
+    with open(params_uri, 'rU') as param_file:
 
+        csv_reader = csv.reader(param_file)
 
+        #In some cases, line[0] may contain the name of the model 
+        #(as with Jodie data). And in some cases, line[1] reads 'Survival'.
+        line = csv_reader.next()
+        while line[0] == '' or line[1] == '':
+            line = csv_reader.next()
+        
+        #Once we get here, know that we're into the area/age vars.
+        #Should continue until we hit a blank line, which is the cue
+        #to switch over to area specific stuff.
+        
+        while line[0] != '':
+            hybrid_lines.append(line)
+            line = csv_reader.next()
 
+        #Once we get here, know that we've hit the space between hybrid vars
+        #and area specific vars. Run until we hit the end.
+        while True:
+            try:
+                area_lines.append(csv_reader.next())
+            except StopIteration:
+                break
+
+    main_dict = {'stage_params':{}, 'area_params':{}}
+
+    headers = hybrid_lines.pop(0)
+
+    #Know that for headers, the first is actually just a notation that areas are on
+    #top, and stages are below. Want to ignore.
+    headers.pop(0)
+
+    #Since these are lists, they should be in the same order as in the line itself.
+    #We know that len(area_names) + len(age_params) = len(line) - 1
+    area_names = headers[:num_features]
+    age_params = headers[num_features:]
+
+    for i in range(len(hybrid_lines)):
+        
+        line = hybrid_lines[i]
+        stage_name = line.pop(0)
+
+        #Initialize stage subdictionary with survival subdictionary inside
+        main_dict['stage_params'][stage_name] = {'survival':{}}
+        
+        #Do the survival params first
+        for j in range(len(area_names)):
+           
+            #If there is only one area, user may instead choose to not write an
+            #area name, but instead just put "Survival". If that's the case, replace
+            #it with '1'. Because 'Survival'['Survival'] is confusing.
+            curr_area_name = area_names[j]
+            if curr_area_name in ['Survival', 'survival']:
+                curr_area_name = '1'
+
+            area_surv = line[j]
+
+            main_dict['Stage_Params'][stage_name]['Survival'][curr_area_name] = area_surv
 
 
 
