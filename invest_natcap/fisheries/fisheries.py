@@ -12,9 +12,14 @@ LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-class ImproperParameter(Exception):
-    '''This exception will occur if the headings in the main parameter CSV are
-    not included in the set of known parameters.'''
+class ImproperStageParameter(Exception):
+    '''This exception will occur if the stage-specific headings in the main 
+    parameter CSV are not included in the set of known parameters.'''
+    pass
+
+class ImproperAreaParameter(Exception):
+    '''This exception will occur if the area-specific headings in the main 
+    parameter CSV are not included in the set of known parameters.'''
     pass
 
 def execute(args):
@@ -161,7 +166,7 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
         if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
 
-           raise ImproperParameter("Improper parameter name given. Acceptable \
+           raise ImproperStageParameter("Improper parameter name given. Acceptable \
                     age/stage-specific parameters include 'duration', \
                     'vulnfishing', 'weight', and 'maturity'.")
 
@@ -197,5 +202,22 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
             main_dict['stage_params'][stage_name][param_name] = param_value
 
+    area_param_short = {'exploitationfraction': 'exploit_frac', 
+                        'larvaldispersal': 'larv_disp'}
+
+    #The area-specific parameters.
+    for m in range(len(area_lines)):
+        
+        line = area_lines[m]
+
+        param_name = line.pop(0).lower()
+        
+        try:
+            short_name = area_param_short[param_name]
+
+        except KeyError:
+            raise ImproperAreaParameter("Improper area-specific parameter name. \
+                    Acceptable parameters include 'ExploitationFraction', and
+                    'LarvalDispersal'.)
         
 
