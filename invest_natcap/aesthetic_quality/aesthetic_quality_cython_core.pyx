@@ -501,6 +501,32 @@ cdef ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
 
 
 def update_visible_pixels(active_pixels, I, J, visibility_map):
+    """Python wrapper for the cython function update_visible_pixels"""
+    # Update visibility and create a binary map of visible pixels
+    # -Look at visibility from closer pixels out, keep highest visibility
+    # -A pixel is not visible if its visibility <= highest visibility so far
+    if not active_pixels:
+        return
+
+    pixel = active_pixels['closest']
+    max_visibility = -1.
+    while pixel is not None:
+        # Pixel is visible
+        if pixel['visibility'] > max_visibility:
+            visibility = 1
+            max_visibility = pixel['visibility']
+        # Pixel is not visible
+        else:
+            visibility = 0
+        # Update the visibility map for this pixel
+        index = pixel['index']
+        i = I[index]
+        j = J[index]
+        visibility_map[i, j] = visibility
+        pixel = pixel['next']
+
+
+def update_visible_pixels_cython(active_pixels, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
