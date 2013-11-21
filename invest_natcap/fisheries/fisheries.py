@@ -84,10 +84,9 @@ def execute(args):
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
-    classes_dict = parse_main_csv(args['class_params_uri'], args['num_classes'],
-                        area_count)
+    classes_dict = parse_main_csv(args['class_params_uri'], area_count)
 
-def parse_main_csv(params_uri, num_classes, area_count):
+def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
@@ -229,4 +228,5 @@ def parse_main_csv(params_uri, num_classes, area_count):
             param_value = line[n]
        
         main_dict['area_params'][curr_area_name][short_param_name] = param_value
-       
+
+    return main_dict
