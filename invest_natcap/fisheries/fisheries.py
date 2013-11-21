@@ -2,6 +2,10 @@
 any calculation onto fisheries_core.py.'''
 
 import logging
+import os
+import shutil
+
+from osgeo import ogr
 
 LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -64,9 +68,15 @@ def execute(args):
 
         os.makedirs(out_dir)
 
-    classes_dict = parse_main_csv(args['class_params_uri'])
+    #Want to know how many areas we're dealing with
+    aoi_ds = ogr.Open(aoi_uri)
+    aoi_layer = aoi_ds.GetLayer()
+    area_count = aoi_layer.GetFeatureCount()
 
-def parse_main_csv(params_uri)
+    classes_dict = parse_main_csv(args['class_params_uri'], args['num_classes'],
+                        area_count)
+
+def parse_main_csv(params_uri, num_classes, area_count)
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
