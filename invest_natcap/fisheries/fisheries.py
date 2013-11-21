@@ -165,7 +165,6 @@ def parse_main_csv(params_uri, num_classes, area_count):
                     age/stage-specific parameters include 'duration', \
                     'vulnfishing', 'weight', and 'maturity'.")
 
-
     for i in range(len(hybrid_lines)):
         
         line = hybrid_lines[i]
@@ -186,10 +185,17 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
             area_surv = line[j]
 
-            main_dict['Stage_Params'][stage_name]['Survival'][curr_area_name] = area_surv
+            main_dict['stage_params'][stage_name]['survival'][curr_area_name] = area_surv
 
-        for k in range(len(age_params))
+        #The rest of the age-specific params.
+        for k in range(len(age_params)):
+            
+            param_name = age_params[k]
+            #The first part of line will contain the area names. Want index
+            #relative to the end of that set.
+            param_value = line[k+len(area_names)] 
 
+            main_dict['stage_params'][stage_name][param_name] = param_value
 
-
+        
 
