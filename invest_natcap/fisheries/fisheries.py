@@ -213,11 +213,16 @@ def parse_main_csv(params_uri, num_classes, area_count):
         param_name = line.pop(0).lower()
         
         try:
-            short_name = area_param_short[param_name]
-
+            short_param_name = area_param_short[param_name]
         except KeyError:
             raise ImproperAreaParameter("Improper area-specific parameter name. \
                     Acceptable parameters include 'ExploitationFraction', and
-                    'LarvalDispersal'.)
-        
+                    'LarvalDispersal'.")
 
+        for n in range(len(area_names)):
+            
+            curr_area_name = area_names[n]
+            param_value = line[n]
+       
+        main_dict['area_params'][curr_area_name][short_param_name] = param_value
+       
