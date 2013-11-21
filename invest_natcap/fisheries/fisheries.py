@@ -62,6 +62,40 @@ def execute(args):
 
         os.makedirs(out_dir)
 
+    classes_dict = parse_main_csv(args['class_params_uri'])
+
+def parse_main_csv(params_uri)
+    '''Want to create the dictionary to store all information for age/stages
+    and areas.
+
+    Input:
+        params_uri- Contains a string location of the main parameter csv file.
+
+    Returns:
+        params_dict- Dictionary containing all information from the csv file.
+            Should have age/stage specific information, as well as area-specific
+            information. NOT ALL KEYS ARE REQUIRED TO EXIST. The keys which are
+            present are determined by what equations/additional information the
+            user is trying to model.
+
+            {'Stage_Params':
+                {'Age_A':
+                    {'survival': {'Area_1': 0.653, 'Area_2': 0.23', ...},
+                     'maturity': 0.0007, 'vuln_fishing': 0.993, 
+                     'weight': 4.42, 'duration': 16},
+                     ...
+                }
+             'Area_Params':
+                {'Area_1':
+                    {'exploit_frac': 0.309, 'larval_disp': 0.023},
+                    ...
+                }
+            }
+   '''
+
+    csv_reader = csv.reader(params_uri)
+
+
 
 
 
