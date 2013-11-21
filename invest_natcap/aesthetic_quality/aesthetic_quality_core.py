@@ -112,12 +112,11 @@ def print_hierarchy(hierarchy):
 
 def print_sweep_line(sweep_line):
     if sweep_line:
-        sorted_keys = sorted(sweep_line.keys())
-        for key in sorted_keys:
-            if key != 'closest':
-                print('active pixel', key, 'next', sweep_line[key]['next'] if \
-                sweep_line[key]['next'] is None else \
-                sweep_line[key]['next']['distance'])
+        pixel = sweep_line['closest']
+        while pixel is not None:
+            print('pixel', pixel['distance'], 'next', (pixel['next'] \
+            if pixel['next'] is None else pixel['next']['distance']))
+            pixel = pixel['next']
 
 def print_skip_list(sweep_line, skip_nodes):
     if sweep_line:
@@ -986,8 +985,8 @@ def remove_active_pixel(sweep_line, distance):
 def add_active_pixel(sweep_line, index, distance, visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
-    print('adding ' + str(distance) + ' to')
-    print_sweep_line(sweep_line)
+    #print('adding ' + str(distance) + ' to python list')
+    #print_sweep_line(sweep_line)
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message

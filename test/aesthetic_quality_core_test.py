@@ -838,6 +838,11 @@ class TestAestheticQualityCore(unittest.TestCase):
                 cython_sweep_line, index, distance, visibility)
             # Test that the sweep lines are consistent
             result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+            if result[0] is False:
+                print('python:')
+                aesthetic_quality_core.print_sweep_line(sweep_line)
+                print('cython:')
+                aesthetic_quality_core.print_sweep_line(cython_sweep_line)
             message = 'C/Python sweep lines are different: ' + result[1]
             assert result[0] is True, message
 

@@ -186,14 +186,17 @@ cdef struct ActivePixel:
     double visibility
     ActivePixel *next
 
+def print_python_pixel(pixel):
+    print('pixel', pixel['distance'], 'next', \
+    None if pixel['next'] is None else pixel['next']['distance'])
+
 def print_sweep_line(sweep_line):
     if 'closest' not in sweep_line:
         print('empty sweep line')
     else:
         pixel = sweep_line['closest']
         while pixel is not None:
-            print('pixel', pixel['distance'], 'next', \
-            None if pixel['next'] is None else pixel['next']['distance'])
+            print_python_pixel(pixel)
             pixel = pixel['next']
 
 cdef print_active_pixel(ActivePixel *pixel):
@@ -369,8 +372,8 @@ cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance
 
 def add_active_pixel(sweep_line, index, distance, visibility):
     """Python wrapper for the cython find_active_pixel_cython function"""
-    print('adding ' + str(distance) + ' to')
-    print_sweep_line(sweep_line)
+    #print('adding ' + str(distance) + ' to cython list')
+    #print_sweep_line(sweep_line)
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
@@ -397,18 +400,16 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
 
     cdef:
         ActivePixel *previous = NULL
-        ActivePixel *pixel = NULL
+        ActivePixel *pixel = closest
         ActivePixel *new_pixel = NULL
-
-    if closest is not NULL:
-        # Look into the active pixel list to find where to insert the new pixel
-        previous = closest
-        while deref(previous).next is not NULL and \
-        deref(previous).distance < distance:
-            previous = deref(previous).next
-        if deref(previous).next is not NULL:
+    if pixel is not NULL:
+        while deref(pixel).next is not NULL and \
+        deref(pixel).distance < distance:
+            previous = pixel
+            pixel = deref(pixel).next
+        if deref(pixel).next is not NULL:
             message = "won't override existing distance " + str(distance)
-            assert deref(deref(previous).next).distance != distance, message
+            assert deref(pixel).distance != distance, message
 
         new_pixel = <ActivePixel*>malloc(sizeof(ActivePixel))
         assert new_pixel is not NULL, 'new pixel assignment failed'
@@ -418,16 +419,15 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
         deref(new_pixel).visibility = visibility
 
         # Found something
-        if deref(previous).next is NULL:
+        if deref(pixel).distance < distance:
             # insert at the end
-            deref(previous).next = new_pixel
-        elif deref(previous).distance >= distance:
+            deref(pixel).next = new_pixel
+        elif previous is NULL:
             # insert at the beginning
             deref(new_pixel).next = closest
             closest = new_pixel
         else:
             # insert between the ends
-            pixel = deref(previous).next # next pixel after insertion
             deref(previous).next = new_pixel # previous points to new
             deref(new_pixel).next = pixel # new points to next pixel
     # Closest is NULL: just make it point to the new pixel
@@ -442,6 +442,8 @@ cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
 
 def remove_active_pixel(sweep_line, distance):
     """Python wrapper for the cython remove_active_pixel_cython function"""
+    #print('removing ' + str(distance) + ' from cython list')
+    #print_sweep_line(sweep_line)
     cdef ActivePixel *active_pixels = dict_to_active_pixels(sweep_line)
     sweep_line_length = len(sweep_line)
     active_pixels = \
