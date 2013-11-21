@@ -12,6 +12,11 @@ LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class ImproperParameter(Exception):
+    '''This exception will occur if the headings in the main parameter CSV are
+    not included in the set of known parameters.'''
+    pass
+
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
     module.
@@ -148,6 +153,19 @@ def parse_main_csv(params_uri, num_classes, area_count):
     area_names = headers[:area_count]
     age_params = headers[area_count:]
 
+    #Sometimes, people do weird capitalizations. So lower everything.
+    age_params = map(lambda x: x.lower(), age_params)
+    
+    #Want to make sure that the headers are in the acceptable set.
+    for param in age_params:
+
+        if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
+
+           raise ImproperParameter("Improper parameter name given. Acceptable \
+                    age/stage-specific parameters include 'duration', \
+                    'vulnfishing', 'weight', and 'maturity'.)
+
+
     for i in range(len(hybrid_lines)):
         
         line = hybrid_lines[i]
@@ -169,6 +187,8 @@ def parse_main_csv(params_uri, num_classes, area_count):
             area_surv = line[j]
 
             main_dict['Stage_Params'][stage_name]['Survival'][curr_area_name] = area_surv
+
+        for k in range(len(age_params))
 
 
 
