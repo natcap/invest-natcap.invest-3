@@ -4,6 +4,7 @@ any calculation onto fisheries_core.py.'''
 import logging
 import os
 import shutil
+import csv
 
 from osgeo import ogr
 
@@ -69,7 +70,7 @@ def execute(args):
         os.makedirs(out_dir)
 
     #Want to know how many areas we're dealing with
-    aoi_ds = ogr.Open(aoi_uri)
+    aoi_ds = ogr.Open(args['aoi_uri'])
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
@@ -144,8 +145,8 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
     #Since these are lists, they should be in the same order as in the line itself.
     #We know that len(area_names) + len(age_params) = len(line) - 1
-    area_names = headers[:num_features]
-    age_params = headers[num_features:]
+    area_names = headers[:area_count]
+    age_params = headers[area_count:]
 
     for i in range(len(hybrid_lines)):
         
