@@ -567,8 +567,7 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
     active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
-    print('Sweeping the map')
-    print('Creating event stream')
+    print('Creating cython event stream')
     # Collect cell_center events
     cell_center_events = []
     while (center_event_id < center_event_count) and \
@@ -586,7 +585,7 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 1))
+        print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \

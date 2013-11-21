@@ -552,10 +552,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         # All the skip levels are accessible:
         #current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
-        print('Skip pointers hierarchy:')
-        print('active pixels:')
         current = sweep_line['closest']
         right = current['next']
+        #print('active pixels:')
         #print('distance ' + str(current['distance']) + ', next ' + \
         #    str(right if right is None else right['distance']))
         while(right is not None):
@@ -582,8 +581,8 @@ class TestAestheticQualityCore(unittest.TestCase):
                 #    'down ' + str(current['down']['distance']), \
                 #    'span', span)
         # Test the data structure is valid
-        print('skip list is consistent', \
-            aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
+        #print('skip list is consistent', \
+        #    aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
         # 2.3.1- Find the appropriate value
         for distance in [0, 2, 4, 6, -1, 3, 7]:
             found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
@@ -962,7 +961,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert difference == 0, message
 
 
-        print('current working dir', os.getcwd())
+        #print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
         args['aoi_uri'] = \

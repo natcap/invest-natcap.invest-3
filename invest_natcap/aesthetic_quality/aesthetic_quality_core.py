@@ -49,7 +49,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     max_angles = []
     I = []
     J = []
-    print('listing extreme cell angles')
+    #print('listing extreme cell angles')
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
     for row in range(array_shape[0]):
@@ -86,14 +86,14 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
             current_cell_id += 1
-    print('done listing extreme cell angles, storing results')
+    #print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
     angles = np.array(angles)
     max_angles = np.array(max_angles)
     I = np.array(I)
     J = np.array(J)
-    print('done storing result. Returning.')
+    #print('done storing result. Returning.')
     return (min_angles, angles, max_angles, I, J)
 
 # Linked cells used for the active pixels
@@ -1157,8 +1157,7 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
     active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
-    print('Sweeping the map')
-    LOGGER.debug('Creating event stream')
+    LOGGER.debug('Creating python event stream')
     # Collect cell_center events
     cell_center_events = []
     while (center_event_id < center_event_count) and \
@@ -1176,7 +1175,7 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 1))
+        print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
