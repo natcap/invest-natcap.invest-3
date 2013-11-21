@@ -1079,8 +1079,8 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     array_shape = input_array.shape
     
     # Compute the viewshed on it
-    output_array = compute_viewshed(input_array, coordinates, obs_elev, \
-    tgt_elev, max_dist, refraction_coeff)
+    output_array = aesthetic_quality_core.compute_viewshed(input_array, \
+    coordinates, obs_elev, tgt_elev, max_dist, refraction_coeff)
     
     # Save the output in the output URI
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
@@ -1106,8 +1106,6 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     # 2- compute cell angles
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
-    #print('angles', angles.size, angles)
-    angle_count = len(angles)
     # 3- compute information on raster cells
     events = \
     aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, coordinates)
@@ -1117,6 +1115,14 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     visibility = \
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
+
+    sweep_through_angles(angles, events, distances, visibility, visibility_map)
+
+    return visibility_map
+
+def sweep_through_angles(angles, events, distances, visibility, visibility_map):
+    """Update the active pixels as the algorithm consumes the sweep angles"""
+    angle_count = len(angles)
     # 4- build event lists
     add_event_id = 0
     add_events = events[0]
@@ -1131,8 +1137,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     arg_min = np.argsort(events[0])
     arg_center = np.argsort(events[1])
     arg_max = np.argsort(events[2])
-    
-    # Updating active cells
+     # Updating active cells
     active_cells = set()
     active_line = {}
     # 1- add cells at angle 0
@@ -1191,7 +1196,6 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, events[3], events[4], visibility_map)
 
-    return visibility_map
 
 def execute(args):
     """Entry point for aesthetic quality core computation.

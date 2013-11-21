@@ -496,3 +496,4 @@ cdef ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
     return closest
 
 
+
