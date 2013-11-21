@@ -1116,7 +1116,8 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
 
-    sweep_through_angles(angles, events, distances, visibility, visibility_map)
+    aesthetic_quality_cython_core.sweep_through_angles(angles, events, \
+    distances, visibility, visibility_map)
 
     return visibility_map
 
