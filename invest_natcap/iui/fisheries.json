@@ -50,6 +50,16 @@
                     "helpText": "This dropdown specifies whether the classes being input within the parameters CSV is classified into maturity classes by age or stage. Age specific models (ex: lobster, Dungeness crab) are separated by age in years in uniform time steps. Stage specific models (ex: shrimp) can have variable length time steps. Should Stage Specific time steps be chosen, there should be a column in the parameters CSV titled 'Duration' which will contain the number of time steps that each stage will last."
                 },
                 {
+                    "id" : "num_classes",
+                    "args_id" : "num_classes",
+                    "type": "text",
+                    "label": "Number of Maturity Classes",
+                    "required": true,
+                    "dataType": "int",
+                    "validateAs": {"type":"number"},
+                    "helpText": "The number of ages or stages that you will be providing in the model. This should match the number of rows given to ages/stages within the age/stage parameters CSV."
+                },
+                {
                     "id" : "do_gender",
                     "args_id" : "is_gendered",
                     "type": "checkbox",
@@ -126,6 +136,8 @@
                     "type": "text",
                     "label": "Initial Number of Recruits",
                     "required": true,
+                    "dataType": "int",
+                    "validateAs": {"type":"number"},
                     "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
                 }
             ]
