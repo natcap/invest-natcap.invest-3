@@ -171,7 +171,6 @@ def parse_main_csv(params_uri, num_classes, area_count):
                     'duration', 'vulnfishing', 'weight', and 'maturity'.")
 
     for i in range(len(hybrid_lines)):
-        
         line = hybrid_lines[i]
         stage_name = line.pop(0)
 
@@ -185,7 +184,7 @@ def parse_main_csv(params_uri, num_classes, area_count):
             #area name, but instead just put "Survival". If that's the case, replace
             #it with '1'. Because 'Survival'['Survival'] is confusing.
             curr_area_name = area_names[j]
-            if curr_area_name in ['Survival', 'survival']:
+            if curr_area_name.lower() == 'survival':
                 curr_area_name = '1'
 
             area_surv = line[j]
@@ -204,12 +203,15 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
     area_param_short = {'exploitationfraction': 'exploit_frac', 
                         'larvaldispersal': 'larv_disp'}
+    #pre-populate with area names
+    for area_name in area_names:
+        if area_name.lower() == 'survival':
+            area_name = '1'
+        main_dict['area_params'][area_name] = {}
 
     #The area-specific parameters.
     for m in range(len(area_lines)):
-        
         line = area_lines[m]
-
         param_name = line.pop(0).lower()
         
         try:
@@ -220,8 +222,10 @@ def parse_main_csv(params_uri, num_classes, area_count):
                     'LarvalDispersal'.")
 
         for n in range(len(area_names)):
-            
             curr_area_name = area_names[n]
+            if curr_area_name.lower() == 'survival':
+                curr_area_name = '1'
+            
             param_value = line[n]
        
         main_dict['area_params'][curr_area_name][short_param_name] = param_value
