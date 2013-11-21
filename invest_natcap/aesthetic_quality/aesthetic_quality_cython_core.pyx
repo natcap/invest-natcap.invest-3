@@ -369,6 +369,8 @@ cdef ActivePixel* find_active_pixel_cython(ActivePixel *closest, double distance
 
 def add_active_pixel(sweep_line, index, distance, visibility):
     """Python wrapper for the cython find_active_pixel_cython function"""
+    print('adding ' + str(distance) + ' to')
+    print_sweep_line(sweep_line)
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
@@ -448,10 +450,10 @@ def remove_active_pixel(sweep_line, distance):
     pixels_deleted = delete_active_pixels(active_pixels)
     if pixels_deleted == 0 and sweep_line_length == 0: # Empty list?
         pixels_deleted = -1 # Adjust so the assertion subtraction is still 0
-    message = "remove_active_pixels: deleted pixel count +1 (" + \
-    str(pixels_deleted + 1) + ") doesn't agree with sweep line length " + \
-    str(max(0, sweep_line_length -1))
-    assert (pixels_deleted + 1) == max(0, sweep_line_length -1), message
+    message = "remove_active_pixels: deleted pixel count " + \
+    str(pixels_deleted) + " doesn't agree with sweep line length " + \
+    str(max(0, len(sweep_line) -1))
+    assert pixels_deleted == max(0, len(sweep_line)-1), message
 
     return sweep_line
 

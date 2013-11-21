@@ -110,6 +110,15 @@ def print_hierarchy(hierarchy):
         None if node['next'] is None else node['next']['distance']
         print('hierarchy node ', node['distance'], next_distance)
 
+def print_sweep_line(sweep_line):
+    if sweep_line:
+        sorted_keys = sorted(sweep_line.keys())
+        for key in sorted_keys:
+            if key != 'closest':
+                print('active pixel', key, 'next', sweep_line[key]['next'] if \
+                sweep_line[key]['next'] is None else \
+                sweep_line[key]['next']['distance'])
+
 def print_skip_list(sweep_line, skip_nodes):
     if sweep_line:
         sorted_keys = sorted(sweep_line.keys())
@@ -977,6 +986,8 @@ def remove_active_pixel(sweep_line, distance):
 def add_active_pixel(sweep_line, index, distance, visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
+    print('adding ' + str(distance) + ' to')
+    print_sweep_line(sweep_line)
     # Make sure we're not creating any duplicate
     message = 'Duplicate entry: the value ' + str(distance) + ' already exist'
     assert distance not in sweep_line, message
@@ -1116,6 +1127,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
 
+    #sweep_through_angles(angles, events, distances, visibility, visibility_map)
     aesthetic_quality_cython_core.sweep_through_angles(angles, events, \
     distances, visibility, visibility_map)
 
