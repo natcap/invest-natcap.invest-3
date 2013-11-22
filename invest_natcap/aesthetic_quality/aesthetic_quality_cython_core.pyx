@@ -508,22 +508,17 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     if not active_pixels:
         return
 
-    pixel = active_pixels['closest']
-    max_visibility = -1.
-    while pixel is not None:
-        # Pixel is visible
-        if pixel['visibility'] > max_visibility:
-            visibility = 1
-            max_visibility = pixel['visibility']
-        # Pixel is not visible
-        else:
-            visibility = 0
-        # Update the visibility map for this pixel
-        index = pixel['index']
-        i = I[index]
-        j = J[index]
-        visibility_map[i, j] = visibility
-        pixel = pixel['next']
+    active_pixels_length = max(0, len(active_pixels) -1)
+    cdef ActivePixel *closest = dict_to_active_pixels(active_pixels)
+
+    #update_visible_pixels_cython(closest, I, J, visibility_map)
+
+    pixels_deleted = delete_active_pixels(closest)
+
+    message = 'update_visible_pixels: deleted pixel count (' + \
+    str(pixels_deleted) + ') differs from original active pixel count ' + \
+    str(active_pixels_length)
+    assert active_pixels_length == pixels_deleted, message
 
 
 def update_visible_pixels_cython(active_pixels, I, J, visibility_map):
