@@ -93,8 +93,19 @@ def execute(args):
                         chosen, there are missing parameters. Please look at \
                         the help text provided next to the recruitment equation\
                         selection, and add the necessary additional \
-                        information.)
-
+                        information.")
+    if args['rec_eq'] == 'Fecundity' and 'fec_params_uri' not in args:
+        raise MissingRecruitmentParameter("For the recruitment equation \
+                    chosen, there are missing parameters. Please look at \
+                    the help text provided next to the recruitment equation\
+                    selection, and add the necessary additional \
+                    information.")
+    if args['rec_eq'] == 'Fixed' and 'fix_param' not in args:
+        raise MissingRecruitmentParameter("For the recruitment equation \
+                    chosen, there are missing parameters. Please look at \
+                    the help text provided next to the recruitment equation\
+                    selection, and add the necessary additional \
+                    information.")
 
     #Want to know how many areas we're dealing with
     aoi_ds = ogr.Open(args['aoi_uri'])
