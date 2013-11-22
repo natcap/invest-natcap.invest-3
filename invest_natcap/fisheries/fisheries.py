@@ -12,6 +12,16 @@ LOGGER = logging.getLogger('FISHERIES')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class ImproperStageParameter(Exception):
+    '''This exception will occur if the stage-specific headings in the main 
+    parameter CSV are not included in the set of known parameters.'''
+    pass
+
+class ImproperAreaParameter(Exception):
+    '''This exception will occur if the area-specific headings in the main 
+    parameter CSV are not included in the set of known parameters.'''
+    pass
+
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
     module.
@@ -74,10 +84,9 @@ def execute(args):
     aoi_layer = aoi_ds.GetLayer()
     area_count = aoi_layer.GetFeatureCount()
 
-    classes_dict = parse_main_csv(args['class_params_uri'], args['num_classes'],
-                        area_count)
+    classes_dict = parse_main_csv(args['class_params_uri'], area_count)
 
-def parse_main_csv(params_uri, num_classes, area_count):
+def parse_main_csv(params_uri, area_count):
     '''Want to create the dictionary to store all information for age/stages
     and areas.
 
@@ -139,17 +148,28 @@ def parse_main_csv(params_uri, num_classes, area_count):
 
     headers = hybrid_lines.pop(0)
 
-    #Know that for headers, the first is actually just a notation that areas are on
-    #top, and stages are below. Want to ignore.
+    #Know that for headers, the first is actually just a notation that areas are
+    #on top, and stages are below. Want to ignore.
     headers.pop(0)
 
-    #Since these are lists, they should be in the same order as in the line itself.
-    #We know that len(area_names) + len(age_params) = len(line) - 1
+    #Since these are lists, they should be in the same order as in the line
+    #itself. We know that len(area_names) + len(age_params) = len(line) - 1
     area_names = headers[:area_count]
     age_params = headers[area_count:]
 
+    #Sometimes, people do weird capitalizations. So lower everything.
+    age_params = map(lambda x: x.lower(), age_params)
+    
+    #Want to make sure that the headers are in the acceptable set.
+    for param in age_params:
+
+        if param not in ['duration', 'vulnfishing', 'weight', 'maturity']:
+
+            raise ImproperStageParameter("Improper parameter name given. \
+                    Acceptable age/stage-specific parameters include \
+                    'duration', 'vulnfishing', 'weight', and 'maturity'.")
+
     for i in range(len(hybrid_lines)):
-        
         line = hybrid_lines[i]
         stage_name = line.pop(0)
 
@@ -163,13 +183,50 @@ def parse_main_csv(params_uri, num_classes, area_count):
             #area name, but instead just put "Survival". If that's the case, replace
             #it with '1'. Because 'Survival'['Survival'] is confusing.
             curr_area_name = area_names[j]
-            if curr_area_name in ['Survival', 'survival']:
+            if curr_area_name.lower() == 'survival':
                 curr_area_name = '1'
 
             area_surv = line[j]
 
-            main_dict['Stage_Params'][stage_name]['Survival'][curr_area_name] = area_surv
+            main_dict['stage_params'][stage_name]['survival'][curr_area_name] = area_surv
 
+        #The rest of the age-specific params.
+        for k in range(len(age_params)):
+            
+            param_name = age_params[k]
+            #The first part of line will contain the area names. Want index
+            #relative to the end of that set.
+            param_value = line[k+len(area_names)] 
 
+            main_dict['stage_params'][stage_name][param_name] = param_value
 
+    area_param_short = {'exploitationfraction': 'exploit_frac', 
+                        'larvaldispersal': 'larv_disp'}
+    #pre-populate with area names
+    for area_name in area_names:
+        if area_name.lower() == 'survival':
+            area_name = '1'
+        main_dict['area_params'][area_name] = {}
 
+    #The area-specific parameters.
+    for m in range(len(area_lines)):
+        line = area_lines[m]
+        param_name = line.pop(0).lower()
+        
+        try:
+            short_param_name = area_param_short[param_name]
+        except KeyError:
+            raise ImproperAreaParameter("Improper area-specific parameter name. \
+                    Acceptable parameters include 'ExploitationFraction', and \
+                    'LarvalDispersal'.")
+
+        for n in range(len(area_names)):
+            curr_area_name = area_names[n]
+            if curr_area_name.lower() == 'survival':
+                curr_area_name = '1'
+            
+            param_value = line[n]
+       
+        main_dict['area_params'][curr_area_name][short_param_name] = param_value
+
+    return main_dict
