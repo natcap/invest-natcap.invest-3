@@ -593,12 +593,13 @@ def sweep_through_angles( \
     cdef int remove_event_id = 0
     cdef int remove_event_count = remove_events.size
     # 5- Sort event lists
+    print('sorting the events')
     arg_min = np.argsort(add_events)
     arg_center = np.argsort(center_events)
     arg_max = np.argsort(remove_events)
-     # Updating active cells
-    active_cells = set()
+    # Updating active cells
     active_line = {}
+    cdef ActivePixel *active_pixels = NULL
     # 1- add cells at angle 0
     print('Creating cython event stream')
     # Collect cell_center events
@@ -612,9 +613,10 @@ def sweep_through_angles( \
         d = distances[c]
         v = visibility[c]
         active_line = add_active_pixel(active_line, c, d, v)
-        active_cells.add(d)
+        active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
+        update_visible_pixels_cython(active_pixels, I, J, visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
@@ -637,7 +639,7 @@ def sweep_through_angles( \
                 d = distances[c]
                 v = visibility[c]
                 active_line = add_active_pixel(active_line, c, d, v)
-                active_cells.add(d)
+                active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
         # Collect remove_cell events:
         remove_cell_events = []
         while (remove_event_id < remove_event_count) and \
@@ -650,9 +652,13 @@ def sweep_through_angles( \
             d = distances[c]
             v = visibility[c]
             active_line = remove_active_pixel(active_line, d)
-            active_cells.remove(d)
+            active_pixels = remove_active_pixel_cython(active_pixels, d)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, I, J, visibility_map)
+        update_visible_pixels_cython(active_pixels, I, J, visibility_map)
+
+        sweep_line = active_pixels_to_dict(active_pixels)
+        assert len(sweep_line) == len(active_line)
 
     return visibility_map
 
