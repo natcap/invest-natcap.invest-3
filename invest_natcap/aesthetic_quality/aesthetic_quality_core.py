@@ -1091,7 +1091,7 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     array_shape = input_array.shape
     
     # Compute the viewshed on it
-    output_array = aesthetic_quality_core.compute_viewshed(input_array, \
+    output_array = compute_viewshed(input_array, \
     coordinates, obs_elev, tgt_elev, max_dist, refraction_coeff, alg_version)
     
     # Save the output in the output URI
@@ -1109,7 +1109,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
             see viewshed's docstring as they are passed as-is to this function
         
         Returns the visibility map for the DEM as a numpy array"""
-    visibility_map = np.ones_like(input_array)
+    visibility_map = np.ones(input_array.shape, dtype=np.int8)
     array_shape = input_array.shape
     # 1- get perimeter cells
     perimeter_cells = \

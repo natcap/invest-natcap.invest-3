@@ -523,7 +523,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
 
 cdef update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
-    np.ndarray[np.float_t, ndim = 2] visibility_map):
+    np.ndarray[np.int8_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
@@ -548,7 +548,7 @@ cdef update_visible_pixels_cython(ActivePixel *closest, \
     cdef ActivePixel *pixel = NULL
     cdef ActivePixel p
     cdef double max_visibility = -1.
-    cdef double visibility = 0.
+    cdef short visibility = 0
     cdef int index = -1
  
     # Update visibility and create a binary map of visible pixels
