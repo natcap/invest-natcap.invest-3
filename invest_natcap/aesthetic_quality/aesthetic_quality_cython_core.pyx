@@ -573,19 +573,32 @@ cdef update_visible_pixels_cython(ActivePixel *closest, \
         pixel = p.next
 
 
-def sweep_through_angles(angles, events, distances, visibility, visibility_map):
+def sweep_through_angles(np.ndarray[np.float64_t, ndim = 1] angles, \
+    events, \
+    np.ndarray[np.int32_t, ndim = 1] distances, \
+    np.ndarray[np.float64_t, ndim = 1] visibility, \
+    np.ndarray[np.int8_t, ndim = 2] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
+    print('angles type', type(angles[0]))
+    print('events[0] type', type(events[0][0]))
+    print('events[1] type', type(events[1][0]))
+    print('events[2] type', type(events[2][0]))
+    print('events[3] type', type(events[3][0]))
+    print('events[4] type', type(events[4][0]))
+    print('distances type', type(distances[0]))
+    print('visibility type', type(visibility[0]))
+    print('visibility_map type', type(visibility_map[0, 0]))
     angle_count = len(angles)
     # 4- build event lists
-    add_event_id = 0
+    cdef int add_event_id = 0
     add_events = events[0]
-    add_event_count = add_events.size
-    center_event_id = 0
+    cdef int add_event_count = add_events.size
+    cdef int center_event_id = 0
     center_events = events[1]
-    center_event_count = center_events.size
-    remove_event_id = 0
+    cdef int center_event_count = center_events.size
+    cdef int remove_event_id = 0
     remove_events = events[2]
-    remove_event_count = remove_events.size
+    cdef int remove_event_count = remove_events.size
     # 5- Sort event lists
     arg_min = np.argsort(events[0])
     arg_center = np.argsort(events[1])
@@ -648,5 +661,5 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels(active_line, events[3], events[4], visibility_map)
 
-
+    return visibility_map
 
