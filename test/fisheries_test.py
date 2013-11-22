@@ -7,7 +7,7 @@ import filecmp
 
 import invest_natcap.testing
 
-from invest_natcap.habitat_risk_assessment import hra
+from invest_natcap.fisheries import fisheries
 
 LOGGER = logging.getLogger('fisheries_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -15,3 +15,27 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestHRA(invest_natcap.testing.GISTest):
 
+    def test_main_csv_parse(self):
+        '''Want to make sure that the main CSV parsing function is working as
+        expected. Should run through fine on the sample CSV, but throw errors
+        for both types of incorrect parameter names.'''
+
+        shrimp_correct = './invest-data/test/data/fisheries/CSVs/shrimp_correct.csv'  
+        shrimp_bad_area = './invest-data/test/data/fisheries/CSVs/shrimp_bad_area.csv'  
+        shrimp_bad_stage = './invest-data/test/data/fisheries/CSVs/shrimp_bad_stage.csv'  
+        
+        lobster_multi_area = './invest-data/test/data/fisheries/CSVs/lobster_multi_area.csv'
+
+        shrimp_area_count = 1
+        lobster_area_count = 9
+        
+        #Smoke test the single area and multi area files.
+        fisheries.parse_main_csv(shrimp_correct, shrimp_area_count)
+        dictionary = fisheries.parse_main_csv(lobster_multi_area, lobster_area_count)
+
+        #Check that exceptions are properly raised when expected.
+        self.assertRaises(fisheries.ImproperStageParameter,
+                        fisheries.parse_main_csv, shrimp_bad_stage, shrimp_area_count)
+
+        self.assertRaises(fisheries.ImproperAreaParameter,
+                        fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count)
