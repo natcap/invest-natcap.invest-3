@@ -22,6 +22,12 @@ class ImproperAreaParameter(Exception):
     parameter CSV are not included in the set of known parameters.'''
     pass
 
+class MissingRecruitmentParameter(Exception):
+    '''This should be raised if the dropdown equation does not match the
+    parameters provided, and additional information is needed. That might
+    be in the form of alpha/beta, the CSV, or a numerical recruitment number.
+    '''
+
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
     module.
@@ -68,7 +74,7 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-
+    
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
@@ -78,6 +84,17 @@ def execute(args):
             shutil.rmtree(out_dir)
 
         os.makedirs(out_dir)
+
+    #Do all error checking for the different recruitment equations, since
+    #we can't continue if we don't have data.
+    if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
+        if 'alpha' not in args or 'beta' not in args:
+            raise MissingRecruitmentParameter("For the recruitment equation \
+                        chosen, there are missing parameters. Please look at \
+                        the help text provided next to the recruitment equation\
+                        selection, and add the necessary additional \
+                        information.)
+
 
     #Want to know how many areas we're dealing with
     aoi_ds = ogr.Open(args['aoi_uri'])
