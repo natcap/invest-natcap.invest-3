@@ -1119,40 +1119,37 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
     # 3- compute information on raster cells
-    events = \
+    add_events, center_events, remove_events, I, J = \
     aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, coordinates)
-    I = events[3]
-    J = events[4]
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     visibility = \
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
 
     if alg_version is 'python':
-        sweep_through_angles(angles, events, distances, visibility, visibility_map)
+        sweep_through_angles(angles, add_events, center_events, remove_events,\
+        I, J, distances, visibility, visibility_map)
     else:
-        aesthetic_quality_cython_core.sweep_through_angles(angles, events, \
-        distances, visibility, visibility_map)
+        aesthetic_quality_cython_core.sweep_through_angles(angles, add_events,\
+        center_events, remove_events, I, J, distances, visibility, visibility_map)
 
     return visibility_map
 
-def sweep_through_angles(angles, events, distances, visibility, visibility_map):
+def sweep_through_angles(angles, add_events, center_events, remove_events, \
+    I, J, distances, visibility, visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     angle_count = len(angles)
     # 4- build event lists
     add_event_id = 0
-    add_events = events[0]
     add_event_count = add_events.size
     center_event_id = 0
-    center_events = events[1]
     center_event_count = center_events.size
     remove_event_id = 0
-    remove_events = events[2]
     remove_event_count = remove_events.size
     # 5- Sort event lists
-    arg_min = np.argsort(events[0])
-    arg_center = np.argsort(events[1])
-    arg_max = np.argsort(events[2])
+    arg_min = np.argsort(add_events)
+    arg_center = np.argsort(center_events)
+    arg_max = np.argsort(remove_events)
      # Updating active cells
     active_cells = set()
     active_line = {}
@@ -1171,7 +1168,7 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
         active_line = add_active_pixel(active_line, c, d, v)
         active_cells.add(d)
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, events[3], events[4], visibility_map)
+        update_visible_pixels(active_line, I, J, visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
@@ -1209,7 +1206,7 @@ def sweep_through_angles(angles, events, distances, visibility, visibility_map):
             active_line = remove_active_pixel(active_line, d)
             active_cells.remove(d)
         # The sweep line is current, now compute pixel visibility
-        update_visible_pixels(active_line, events[3], events[4], visibility_map)
+        update_visible_pixels(active_line, I, J, visibility_map)
 
 
 def execute(args):
