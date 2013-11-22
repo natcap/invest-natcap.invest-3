@@ -521,12 +521,12 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     assert active_pixels_length == pixels_deleted, message
 
 
-def update_visible_pixels_cython(active_pixels, I, J, visibility_map):
+cdef update_visible_pixels_cython(ActivePixel *closest, I, J, visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
-                -active_pixels: a linked list of dictionaries containing the
-                following fields:
+                -closest: an ActivePixel pointer to a linked list 
+                of ActivePixel. These are nums with the following fields:
                     -distance: distance between pixel center and viewpoint
                     -visibility: an elevation/distance ratio used by the
                     algorithm to determine what pixels are bostructed
@@ -543,28 +543,31 @@ def update_visible_pixels_cython(active_pixels, I, J, visibility_map):
                 always visible.
             
             Returns nothing"""
+    cdef ActivePixel *pixel = NULL
+    cdef ActivePixel p
+    cdef double max_visibility = -1.
+    cdef double visibility = 0.
+    cdef int index = -1
+ 
     # Update visibility and create a binary map of visible pixels
     # -Look at visibility from closer pixels out, keep highest visibility
     # -A pixel is not visible if its visibility <= highest visibility so far
-    if not active_pixels:
+    if closest is NULL:
         return
 
-    pixel = active_pixels['closest']
-    max_visibility = -1.
-    while pixel is not None:
+    pixel = closest
+    while pixel is not NULL:
+        p = deref(pixel)
         # Pixel is visible
-        if pixel['visibility'] > max_visibility:
+        if p.visibility > max_visibility:
             visibility = 1
-            max_visibility = pixel['visibility']
-        # Pixel is not visible
-        else:
-            visibility = 0
+            max_visibility = p.visibility
+        # Else: pixel is already set to invisible
+
         # Update the visibility map for this pixel
-        index = pixel['index']
-        i = I[index]
-        j = J[index]
-        visibility_map[i, j] = visibility
-        pixel = pixel['next']
+        index = p.index
+        visibility_map[I[index], J[index]] = visibility
+        pixel = p.next
 
 
 def sweep_through_angles(angles, events, distances, visibility, visibility_map):
