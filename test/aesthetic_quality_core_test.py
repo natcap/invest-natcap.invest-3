@@ -552,10 +552,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         # All the skip levels are accessible:
         #current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
-        print('Skip pointers hierarchy:')
-        print('active pixels:')
         current = sweep_line['closest']
         right = current['next']
+        #print('active pixels:')
         #print('distance ' + str(current['distance']) + ', next ' + \
         #    str(right if right is None else right['distance']))
         while(right is not None):
@@ -582,8 +581,8 @@ class TestAestheticQualityCore(unittest.TestCase):
                 #    'down ' + str(current['down']['distance']), \
                 #    'span', span)
         # Test the data structure is valid
-        print('skip list is consistent', \
-            aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
+        #print('skip list is consistent', \
+        #    aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
         # 2.3.1- Find the appropriate value
         for distance in [0, 2, 4, 6, -1, 3, 7]:
             found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
@@ -838,6 +837,11 @@ class TestAestheticQualityCore(unittest.TestCase):
                 cython_sweep_line, index, distance, visibility)
             # Test that the sweep lines are consistent
             result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+            if result[0] is False:
+                print('python:')
+                aesthetic_quality_core.print_sweep_line(sweep_line)
+                print('cython:')
+                aesthetic_quality_core.print_sweep_line(cython_sweep_line)
             message = 'C/Python sweep lines are different: ' + result[1]
             assert result[0] is True, message
 
@@ -933,19 +937,31 @@ class TestAestheticQualityCore(unittest.TestCase):
         
 
     def test_viewshed(self):
-        array_shape = (6,6)
+        """Compare the python and cython versions of compute_viewshed"""
+        array_shape = (15,10)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
-        viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
+        viewpoint = (5, 3) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
         pixel_visibility = np.ones(array_shape) * 2
 
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
-        viewpoint, 1.75, 0.0, -1.0, 1.0)
+        viewpoint, 1.75, 0.0, -1.0, 1.0, 'python')
 
-        #print('input_array', DEM)
-        #print('pixel visibility', pixel_visibility)
+        pixel_visibility_cython = aesthetic_quality_core.compute_viewshed( \
+        DEM, viewpoint, 1.75, 0.0, -1.0, 1.0, 'cython')
+        
+        difference = np.sum(np.absolute(pixel_visibility - pixel_visibility_cython))
+        if difference > 0:
+            print('input_array', DEM)
+            print('python pixel visibility', pixel_visibility)
+            print('cython pixel visibility', pixel_visibility_cython)
 
-        print('current working dir', os.getcwd())
+        message = 'test_viewshed: inconsistent pixel_visibility ' + \
+        str(difference)
+        assert difference == 0, message
+
+
+        #print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
         args['aoi_uri'] = \

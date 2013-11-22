@@ -716,16 +716,7 @@ def calculate_soil_storage(
             if pix == pix_nodata:
                 return out_nodata
 
-        # Constraint / bound for soil storage is:
-        # [ 0 <= S(i,t) <= Smax]
-
-        storage_value =  prev_soil_pix + water_pix - evap_pix - streamflow_pix
-
-        # Check constraint / bound
-        if storage_value > smax_pix:
-            return smax_pix 
-        else:
-            return storage_value
+        return prev_soil_pix + water_pix - evap_pix - streamflow_pix
 
     cell_size = raster_utils.get_cell_size_from_uri(prev_soil_uri)
 
@@ -887,7 +878,7 @@ def calculate_final_interflow(
             'intersection')
 
 def calculate_baseflow(
-        alpha_three_uri, soil_storage_uri, evap_uri, beta, baseflow_out_uri,  out_nodata):
+        alpha_three_uri, soil_storage_uri, evap_uri, beta, baseflow_out_uri, out_nodata):
     """This function calculates the baseflow
 
         alpha_three_uri - a URI to a gdal dataset of alpha_three values
