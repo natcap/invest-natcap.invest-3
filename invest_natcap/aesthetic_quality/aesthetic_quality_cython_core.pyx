@@ -511,7 +511,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     active_pixels_length = max(0, len(active_pixels) -1)
     cdef ActivePixel *closest = dict_to_active_pixels(active_pixels)
 
-    #update_visible_pixels_cython(closest, I, J, visibility_map)
+    update_visible_pixels_cython(closest, I, J, visibility_map)
 
     pixels_deleted = delete_active_pixels(closest)
 
@@ -562,7 +562,8 @@ cdef update_visible_pixels_cython(ActivePixel *closest, I, J, visibility_map):
         if p.visibility > max_visibility:
             visibility = 1
             max_visibility = p.visibility
-        # Else: pixel is already set to invisible
+        else:
+            visibility = 0
 
         # Update the visibility map for this pixel
         index = p.index
