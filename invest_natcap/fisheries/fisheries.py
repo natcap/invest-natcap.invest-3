@@ -227,6 +227,6 @@ def parse_main_csv(params_uri, area_count):
             
             param_value = line[n]
        
-        main_dict['area_params'][curr_area_name][short_param_name] = param_value
+            main_dict['area_params'][curr_area_name][short_param_name] = param_value
 
     return main_dict
