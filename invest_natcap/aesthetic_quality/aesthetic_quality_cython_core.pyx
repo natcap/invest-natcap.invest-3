@@ -521,7 +521,9 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     assert active_pixels_length == pixels_deleted, message
 
 
-cdef update_visible_pixels_cython(ActivePixel *closest, I, J, visibility_map):
+cdef update_visible_pixels_cython(ActivePixel *closest, \
+    np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
+    np.ndarray[np.float_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
     
             Inputs:
