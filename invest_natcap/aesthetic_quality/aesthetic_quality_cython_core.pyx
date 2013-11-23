@@ -585,6 +585,7 @@ def sweep_through_angles( \
     np.ndarray[np.int8_t, ndim = 2, mode="c"] visibility_map):
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
+    cdef int max_line_length = angle_count/2
     cdef int c = 0
     cdef double d = 0
     cdef double v = 0
@@ -606,6 +607,14 @@ def sweep_through_angles( \
     # Updating active cells
     active_line = {}
     cdef ActivePixel *active_pixels = NULL
+
+    cdef int *add_cell_events2 = <int*>malloc(max_line_length*sizeof(int))
+    assert add_cell_events2 is not NULL
+    cdef int *cell_center_events2 = <int*>malloc(max_line_length*sizeof(int))
+    assert cell_center_events2 is not NULL
+    cdef int *remove_cell_events2 = <int*>malloc(max_line_length*sizeof(int))
+    assert remove_cell_events2 is not NULL
+
     # 1- add cells at angle 0
     print('Creating cython event stream')
     # Collect cell_center events
