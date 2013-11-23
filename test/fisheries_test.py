@@ -59,14 +59,12 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         #Test Fecundity
         args['rec_eq'] = 'Fecundity'
-        del args['fec_params_uri']
 
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)
 
         #Test Fixed Recruitment
         args['rec_eq'] = 'Fixed'
-        del args['fix_param']
 
         self.assertRaises(fisheries.MissingRecruitmentParameter,
                         fisheries.execute, args)

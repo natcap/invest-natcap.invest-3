@@ -208,8 +208,8 @@ def parse_main_csv(params_uri, area_count):
         for j in range(len(area_names)):
            
             #If there is only one area, user may instead choose to not write an
-            #area name, but instead just put "Survival". If that's the case, replace
-            #it with '1'. Because 'Survival'['Survival'] is confusing.
+            #area name, but instead just put "Survival". If that's the case, 
+            #replace it with '1'. Because 'Survival'['Survival'] is confusing.
             curr_area_name = area_names[j]
             if curr_area_name.lower() == 'survival':
                 curr_area_name = '1'
@@ -244,7 +244,7 @@ def parse_main_csv(params_uri, area_count):
         try:
             short_param_name = area_param_short[param_name]
         except KeyError:
-            raise ImproperAreaParameter("Improper area-specific parameter name. \
+            raise ImproperAreaParameter("Improper area-specific parameter name.\
                     Acceptable parameters include 'ExploitationFraction', and \
                     'LarvalDispersal'.")
 
