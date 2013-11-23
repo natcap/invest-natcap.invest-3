@@ -48,6 +48,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         '''
         
         args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
 
         args['beta'] = 1
         args['alpha'] = 1

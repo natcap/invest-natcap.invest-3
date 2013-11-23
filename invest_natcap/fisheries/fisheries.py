@@ -90,22 +90,22 @@ def execute(args):
     if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
         if 'alpha' not in args or 'beta' not in args:
             raise MissingRecruitmentParameter("For the recruitment equation \
-                        chosen, there are missing parameters. Please look at \
+                        chosen, there are missing parameters. Both an alpha \
+                        and a beta parameter are necessary. Please look at \
                         the help text provided next to the recruitment equation\
-                        selection, and add the necessary additional \
-                        information.")
+                        selection, and add the necessary additional information.")
     if args['rec_eq'] == 'Fecundity' and 'fec_params_uri' not in args:
         raise MissingRecruitmentParameter("For the recruitment equation \
-                    chosen, there are missing parameters. Please look at \
-                    the help text provided next to the recruitment equation\
-                    selection, and add the necessary additional \
-                    information.")
+                    chosen, there are missing parameters.  A CSV for fecundity\
+                    by AOI zone is necessary. Please look at the help text \
+                    provided next to the recruitment equation selection, and \
+                    add the necessary additional information.")
     if args['rec_eq'] == 'Fixed' and 'fix_param' not in args:
         raise MissingRecruitmentParameter("For the recruitment equation \
-                    chosen, there are missing parameters. Please look at \
-                    the help text provided next to the recruitment equation\
-                    selection, and add the necessary additional \
-                    information.")
+                    chosen, there are missing parameters.  A fixed recruitment\
+                    number is necessary. Please look at the help text \
+                    provided next to the recruitment equation selection, and \
+                    add the necessary additional information.")
 
     #Want to know how many areas we're dealing with
     aoi_ds = ogr.Open(args['aoi_uri'])
