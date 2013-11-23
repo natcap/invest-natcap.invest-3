@@ -27,9 +27,9 @@
                     "type": "file",
                     "label": "Area(s) of Interest",
                     "required": true,
-                    "validateAs": {"type": "OGR"},
+                    "validateAs": {"type": "OGR",
                         "layers": [{"name": {"inheritFrom": "file"}}],
-                        "mustExist": true,
+		    		    "mustExist": true,
                         "fieldsExist": ["NAME"]},
                     "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. The name can be numeric or alphabetic, but must be unique within the file."
                 },
