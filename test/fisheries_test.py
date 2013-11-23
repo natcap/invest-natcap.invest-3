@@ -48,8 +48,32 @@ class TestHRA(invest_natcap.testing.GISTest):
         '''
         
         args = {}
-        
 
+        args['beta'] = 1
+        args['alpha'] = 1
+        args['fix_param'] = 100
+        #Eventually, we will have an actual fecundity CSV. For now, it just needs
+        #to exist in args.
+        args['fec_params_uri'] = \
+            './invest-data/test/data/fisheries/CSVs/shrimp_correct.csv'  
+        #Test B-H, Ricker
+        for equation in ['Beverton-Holt', 'Ricker']:
+            args['rec_eq'] = equation
+            del args['alpha']
 
+            self.assertRaises(fisheries.MissingRecruitmentParameter,
+                            fisheries.execute, args)
 
-        
+        #Test Fecundity
+        args['rec_eq'] = 'Fecundity'
+        del args['fec_params_uri']
+
+        self.assertRaises(fisheries.MissingRecruitmentParameter,
+                        fisheries.execute, args)
+
+        #Test Fixed Recruitment
+        args['rec_eq'] = 'Fixed'
+        del args['fix_param']
+
+        self.assertRaises(fisheries.MissingRecruitmentParameter,
+                        fisheries.execute, args)
