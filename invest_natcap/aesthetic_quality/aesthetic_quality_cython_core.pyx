@@ -607,13 +607,9 @@ def sweep_through_angles( \
     # Updating active cells
     active_line = {}
     cdef ActivePixel *active_pixels = NULL
-
-    cdef int *add_cell_events2 = <int*>malloc(max_line_length*sizeof(int))
-    assert add_cell_events2 is not NULL
-    cdef int *cell_center_events2 = <int*>malloc(max_line_length*sizeof(int))
-    assert cell_center_events2 is not NULL
-    cdef int *remove_cell_events2 = <int*>malloc(max_line_length*sizeof(int))
-    assert remove_cell_events2 is not NULL
+    cdef int *cell_events = <int*>malloc(max_line_length*sizeof(int))
+    assert cell_events is not NULL
+    cdef int event_id = 0
 
     # 1- add cells at angle 0
     print('Creating cython event stream')
@@ -622,8 +618,10 @@ def sweep_through_angles( \
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
         cell_center_events.append(arg_center[center_event_id])
+#        cell_events[event_id] = arg_center[center_event_id]
         arg_center[center_event_id] = 0
         center_event_id += 1
+#        event_id += 1
     for c in cell_center_events:
         d = distances[c]
         v = visibility[c]
@@ -636,6 +634,7 @@ def sweep_through_angles( \
         print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
+#        event_id = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
@@ -644,8 +643,10 @@ def sweep_through_angles( \
             # because they still need to be removed
             if center_events[arg_min[add_event_id]] > 0.:
                 add_cell_events.append(arg_min[add_event_id])
+#                cell_events[event_id] = arg_min[add_event_id]
             arg_min[add_event_id] = 0
             add_event_id += 1
+#            event_id += 1
     #   2.1- add cells
         if len(add_cell_events) > 0:
             for c in add_cell_events:
@@ -654,11 +655,14 @@ def sweep_through_angles( \
                 active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
         # Collect remove_cell events:
         remove_cell_events = []
+#        event_id = 0
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
             remove_cell_events.append(arg_max[remove_event_id])
+#            cell_events[event_id] = arg_max[remove_event_id]
             arg_max[remove_event_id] = 0
             remove_event_id += 1
+#            event_id += 1
     #   2.2- remove cells
         for c in remove_cell_events:
             d = distances[c]
@@ -668,9 +672,7 @@ def sweep_through_angles( \
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
 
     # clean up
-    free(add_cell_events2)
-    free(cell_center_events2)
-    free(remove_cell_events2)
+    free(cell_events)
 
     return visibility_map
 
