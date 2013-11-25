@@ -641,18 +641,12 @@ def sweep_through_angles( \
                 v = visibility[c]
                 active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
             add_event_id += 1
-        # Collect remove_cell events:
-        event_id = 0
+        # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
-            cell_events[event_id] = arg_max[remove_event_id]
-            arg_max[remove_event_id] = 0
-            remove_event_id += 1
-            event_id += 1
-    #   2.2- remove cells
-        for i in range(event_id):
-            d = distances[cell_events[i]]
+            d = distances[arg_max[remove_event_id]]
             active_pixels = remove_active_pixel_cython(active_pixels, d)
+            remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
 
