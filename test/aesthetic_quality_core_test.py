@@ -938,11 +938,12 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_viewshed(self):
         """Compare the python and cython versions of compute_viewshed"""
-        array_shape = (15,10)
+        array_shape = (150,100)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
+        DEW = DEM.astype(np.int8)
         viewpoint = (5, 3) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
-        pixel_visibility = np.ones(array_shape) * 2
+        pixel_visibility = (np.ones(array_shape) * 2).astype(np.int16)
 
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
         viewpoint, 1.75, 0.0, -1.0, 1.0, 'python')
