@@ -586,6 +586,7 @@ def sweep_through_angles( \
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
+    cdef int i = 0
     cdef int c = 0
     cdef double d = 0
     cdef double v = 0
@@ -614,15 +615,14 @@ def sweep_through_angles( \
     # 1- add cells at angle 0
     print('Creating cython event stream')
     # Collect cell_center events
-    cell_center_events = []
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
-        cell_center_events.append(arg_center[center_event_id])
-#        cell_events[event_id] = arg_center[center_event_id]
+        cell_events[event_id] = arg_center[center_event_id]
         arg_center[center_event_id] = 0
         center_event_id += 1
-#        event_id += 1
-    for c in cell_center_events:
+        event_id += 1
+    for i in range(event_id):
+        c = cell_events[i]
         d = distances[c]
         v = visibility[c]
         active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
