@@ -594,7 +594,6 @@ def sweep_through_angles( \
     # 4- build event lists
     cdef int add_event_id = 0
     cdef int add_event_count = add_events.size
-    cdef int center_event_id = 0
     cdef int center_event_count = center_events.size
     cdef int remove_event_id = 0
     cdef int remove_event_count = remove_events.size
@@ -616,13 +615,12 @@ def sweep_through_angles( \
     # 1- add cells at angle 0
     print('Creating cython event stream')
     # Collect cell_center events
-    while (center_event_id < center_event_count) and \
-        (center_events[arg_center[center_event_id]] < angles[1]):
-        c = arg_center[center_event_id]
+    while (event_id < center_event_count) and \
+        (center_events[arg_center[event_id]] < angles[1]):
+        c = arg_center[event_id]
         d = distances[c]
         v = visibility[c]
         active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
-        center_event_id += 1
         event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
@@ -630,7 +628,7 @@ def sweep_through_angles( \
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
         print('angle ' + str(a) + ' / ' + str(angle_count - 2))
-        # Collect add_cell events:
+        # 2.1- add cells
         event_id = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
@@ -639,16 +637,11 @@ def sweep_through_angles( \
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
             if center_events[arg_min[add_event_id]] > 0.:
-                cell_events[event_id] = arg_min[add_event_id]
-                event_id += 1
-            arg_min[add_event_id] = 0
+                c = arg_min[add_event_id]
+                d = distances[c]
+                v = visibility[c]
+                active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
             add_event_id += 1
-    #   2.1- add cells
-        for i in range(event_id):
-            c = cell_events[i]
-            d = distances[c]
-            v = visibility[c]
-            active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
         # Collect remove_cell events:
         event_id = 0
         while (remove_event_id < remove_event_count) and \
