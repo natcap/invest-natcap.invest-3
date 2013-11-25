@@ -115,18 +115,18 @@
                             "defaultValue": false,
                             "required": false,
                             "helpText": "2010 <a href=\"http://www.ornl.gov/sci/landscan\">Landscan</a> global distribution of ambient population from <a href=\"http://www.ornl.gov\">ORNL</a>"
-                        },
-                        {
-                            "id" : "protected",
-                            "args_id" : "protected",
-                            "type": "checkbox",
-                            "label": "Protected Areas",
-                            "defaultValue": false,
-                            "required": false,
-                            "helpText": "2012 <a href=\"http://www.wdpa.org\">World Database on Protected Areas</a> from <a href=\"http://www.unep-wcmc.org\">UNEP-WCMC</a>, <a href=\"http://www.iucn.org/about/work/programmes/gpap_home/gpap_wcpa\">IUCN-WCPA</a>"
-                        }                        
+                        }                   
                     ]
                 },
+                {
+                    "id" : "protected",
+                    "args_id" : "protected",
+                    "type": "hiddenElement",
+                    "label": "Protected Areas",
+                    "defaultValue": false,
+                    "required": false,
+                    "helpText": "2012 <a href=\"http://www.wdpa.org\">World Database on Protected Areas</a> from <a href=\"http://www.unep-wcmc.org\">UNEP-WCMC</a>, <a href=\"http://www.iucn.org/about/work/programmes/gpap_home/gpap_wcpa\">IUCN-WCPA</a>"
+                },                     
                 {
                     "id" : "osm",
                     "args_id" : "osm",
@@ -279,7 +279,7 @@
                 {
                     "id" : "ouoc",
                     "args_id" : "ouoc",
-                    "type": "container",
+                    "type": "hiddenElement",
                     "collapsible" : true,
                     "label": "Ocean Use and Ocean Coverage",
                     "elements" : [

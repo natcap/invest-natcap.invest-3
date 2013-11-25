@@ -121,6 +121,7 @@ def execute(args):
 
     ##inputs parameters
     workspace_dir = args["workspace_dir"]
+    analysis_year = args["analysis_year"]
 
     #carbon pools table
     carbon_uri = args["carbon_pools_uri"]
@@ -280,9 +281,7 @@ def execute(args):
     depth_dict[int(nodata)] = 0.0
 
     ##loop over lulc years
-    for lulc_transition_year in lulc_years:
-        LOGGER.debug("Transition year %i.", lulc_transition_year)
-        lulc_transition_uri = lulc_uri_dict[lulc_transition_year]
+    for lulc_transition_year in lulc_years + [analysis_year]:
         
         t = lulc_transition_year - lulc_base_year
 
@@ -357,12 +356,16 @@ def execute(args):
                                         "union")
         LOGGER.debug("Created stock total raster.")
 
+        if lulc_transition_year == analysis_year:
+            break
+
+        LOGGER.debug("Transition year %i.", lulc_transition_year)
+        lulc_transition_uri = lulc_uri_dict[lulc_transition_year]
+
         ##calculate soil accumulation
         LOGGER.info("Processing soil accumulation.")
         #get coefficients
         try:
-            LOGGER.debug(lulc_base_uri)
-            LOGGER.debug(lulc_transition_uri)
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             acc_soil_co_op,
                                             lulc_base_acc_soil_co_uri,
@@ -482,13 +485,12 @@ def execute(args):
                                                   gdal.GDT_Byte)
             LOGGER.debug("Zero soil disturbance raster created.")
 
+            #set base to new LULC and year
+            lulc_base_year = lulc_transition_year
+            LOGGER.debug("Changed base year to %i." % lulc_base_year)
 
-        #set base to new LULC and year
-        lulc_base_year = lulc_transition_year
-        LOGGER.debug("Changed base year to %i." % lulc_base_year)
-
-        lulc_base_uri = lulc_uri_dict[lulc_base_year]
-        LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
+            lulc_base_uri = lulc_uri_dict[lulc_base_year]
+            LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
     ##calculate totals
     LOGGER.info("Calculating totals.")
