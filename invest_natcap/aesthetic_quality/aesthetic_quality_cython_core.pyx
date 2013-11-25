@@ -393,7 +393,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
 # What is needed: 
 #   -maintain a pool of available pixels
 #   -figure out how to deallocate the active pixels
-cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
+cdef inline ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
     int index, double distance, double visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
@@ -459,7 +459,7 @@ def remove_active_pixel(sweep_line, distance):
 
     return sweep_line
 
-cdef ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
+cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
     cdef ActivePixel *previous = NULL
     cdef ActivePixel *pixel = NULL
@@ -521,7 +521,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     assert active_pixels_length == pixels_deleted, message
 
 
-cdef update_visible_pixels_cython(ActivePixel *closest, \
+cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
     np.ndarray[np.int8_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
@@ -666,6 +666,11 @@ def sweep_through_angles( \
             active_pixels = remove_active_pixel_cython(active_pixels, d)
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
+
+    # clean up
+    free(add_cell_events2)
+    free(cell_center_events2)
+    free(remove_cell_events2)
 
     return visibility_map
 

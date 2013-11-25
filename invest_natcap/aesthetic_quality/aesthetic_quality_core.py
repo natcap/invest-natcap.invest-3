@@ -1096,7 +1096,7 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     
     # Save the output in the output URI
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
-    message = 'Cannot open file ' + output_raster
+    message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(output_array)
 
