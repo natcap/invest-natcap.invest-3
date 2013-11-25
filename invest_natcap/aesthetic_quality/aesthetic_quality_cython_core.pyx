@@ -629,7 +629,6 @@ def sweep_through_angles( \
     for a in range(angle_count-1):
         print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # 2.1- add cells
-        event_id = 0
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
