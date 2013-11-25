@@ -572,7 +572,7 @@ cdef void update_visible_pixels_cython(ActivePixel *closest, \
         visibility_map[I[index], J[index]] = visibility
         pixel = p.next
 
-
+#@cython.boundscheck(False)
 def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] angles, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] add_events, \
@@ -586,6 +586,7 @@ def sweep_through_angles( \
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
+    cdef int a = 0
     cdef int i = 0
     cdef int c = 0
     cdef double d = 0
