@@ -459,7 +459,8 @@ def remove_active_pixel(sweep_line, distance):
 
     return sweep_line
 
-cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
+cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, \
+    double distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
     cdef ActivePixel *previous = NULL
     cdef ActivePixel *pixel = NULL
