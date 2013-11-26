@@ -159,24 +159,28 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "report.htm"
+    intermediate_dir = "intermediate"
+
+    if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
+        os.makedirs(os.path.join(workspace_dir, intermediate_dir))
     
     #carbon pool file names
-    above_name = "%i_base_above.tif"
-    below_name = "%i_base_below.tif"
-    soil_name = "%i_base_soil.tif"
-    litter_name = "%i_base_litter.tif"
-    biomass_name = "%i_base_biomass.tif"
+    above_name = os.path.join(intermediate_dir, "%i_base_above.tif")
+    below_name = os.path.join(intermediate_dir, "%i_base_below.tif")
+    soil_name = os.path.join(intermediate_dir, "%i_base_soil.tif")
+    litter_name = os.path.join(intermediate_dir, "%i_base_litter.tif")
+    biomass_name = os.path.join(intermediate_dir, "%i_base_biomass.tif")
     carbon_name = "%i_base_total.tif"
 
     #carbon accumulation file names
-    acc_soil_name = "%i_acc_soil.tif"
-    acc_soil_co_name = "%i_acc_soil_co.tif"
+    acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
+    acc_soil_co_name = os.path.join(intermediate_dir, "%i_acc_soil_co.tif")
 
     #carbon disturbance file names
-    dis_bio_co_name = "%i_dis_bio_co.tif"
-    dis_soil_co_name = "%i_dis_soil_co.tif"
-    dis_bio_name = "%i_dis_bio.tif"
-    dis_soil_name = "%i_dis_soil.tif"
+    dis_bio_co_name = os.path.join(intermediate_dir, "%i_dis_bio_co.tif")
+    dis_soil_co_name = os.path.join(intermediate_dir, "%i_dis_soil_co.tif")
+    dis_bio_name = os.path.join(intermediate_dir, "%i_dis_bio.tif")
+    dis_soil_name = os.path.join(intermediate_dir, "%i_dis_soil.tif")
 
 
     #totals
