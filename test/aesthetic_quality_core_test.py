@@ -13,6 +13,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import cProfile
+import pstats
 import line_profiler
 
 from invest_natcap.aesthetic_quality import aesthetic_quality_core
@@ -968,13 +969,17 @@ class TestAestheticQualityCore(unittest.TestCase):
 
         pr = cProfile.Profile()
         pr.enable()
-
         pr.runcall(aesthetic_quality_core.compute_viewshed, DEM, viewpoint,
         1.75, 0.0, -1.0, 1.0, 'cython')
-        
+        pr.dump_stats('compute_viewshed_python.prof')
         pr.disable()
 
-        #print('current working dir', os.getcwd())
+        stats = pstats.Stats('compute_viewshed_python.prof')
+        stats.strip_dirs()
+        stats.sort_stats('time')
+        stats.print_stats()
+
+        print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
         args['aoi_uri'] = \
