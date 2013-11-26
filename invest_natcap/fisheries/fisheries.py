@@ -22,6 +22,12 @@ class ImproperAreaParameter(Exception):
     parameter CSV are not included in the set of known parameters.'''
     pass
 
+class MissingRecruitmentParameter(Exception):
+    '''This should be raised if the dropdown equation does not match the
+    parameters provided, and additional information is needed. That might
+    be in the form of alpha/beta, the CSV, or a numerical recruitment number.
+    '''
+
 def execute(args):
     '''This function will prepare files to be passed to the fisheries core
     module.
@@ -68,7 +74,7 @@ def execute(args):
         duration- Int representing the number of time steps that the user
             desires the model to run.
     '''
-
+    
     #Create folders that will be used for the rest of the model run.
     for folder in ['Intermediate', 'Output']:
         
@@ -78,6 +84,28 @@ def execute(args):
             shutil.rmtree(out_dir)
 
         os.makedirs(out_dir)
+
+    #Do all error checking for the different recruitment equations, since
+    #we can't continue if we don't have data.
+    if args['rec_eq'] == 'Beverton-Holt' or args['rec_eq'] == 'Ricker':
+        if 'alpha' not in args or 'beta' not in args:
+            raise MissingRecruitmentParameter("For the recruitment equation \
+                        chosen, there are missing parameters. Both an alpha \
+                        and a beta parameter are necessary. Please look at \
+                        the help text provided next to the recruitment equation\
+                        selection, and add the necessary additional information.")
+    if args['rec_eq'] == 'Fecundity' and 'fec_params_uri' not in args:
+        raise MissingRecruitmentParameter("For the recruitment equation \
+                    chosen, there are missing parameters.  A CSV for fecundity\
+                    by AOI zone is necessary. Please look at the help text \
+                    provided next to the recruitment equation selection, and \
+                    add the necessary additional information.")
+    if args['rec_eq'] == 'Fixed' and 'fix_param' not in args:
+        raise MissingRecruitmentParameter("For the recruitment equation \
+                    chosen, there are missing parameters.  A fixed recruitment\
+                    number is necessary. Please look at the help text \
+                    provided next to the recruitment equation selection, and \
+                    add the necessary additional information.")
 
     #Want to know how many areas we're dealing with
     aoi_ds = ogr.Open(args['aoi_uri'])
@@ -180,8 +208,8 @@ def parse_main_csv(params_uri, area_count):
         for j in range(len(area_names)):
            
             #If there is only one area, user may instead choose to not write an
-            #area name, but instead just put "Survival". If that's the case, replace
-            #it with '1'. Because 'Survival'['Survival'] is confusing.
+            #area name, but instead just put "Survival". If that's the case, 
+            #replace it with '1'. Because 'Survival'['Survival'] is confusing.
             curr_area_name = area_names[j]
             if curr_area_name.lower() == 'survival':
                 curr_area_name = '1'
@@ -216,7 +244,7 @@ def parse_main_csv(params_uri, area_count):
         try:
             short_param_name = area_param_short[param_name]
         except KeyError:
-            raise ImproperAreaParameter("Improper area-specific parameter name. \
+            raise ImproperAreaParameter("Improper area-specific parameter name.\
                     Acceptable parameters include 'ExploitationFraction', and \
                     'LarvalDispersal'.")
 

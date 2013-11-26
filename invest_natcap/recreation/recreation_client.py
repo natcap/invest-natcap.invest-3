@@ -112,6 +112,10 @@ def complete_shapefile(shapefile_name):
 def execute(args):
     """The main function called by IUI.
     """
+    #disabling protected predictor
+    args["protected"] = False
+    args["ouoc"] = False
+    
     LOGGER.setLevel(logging.INFO)
     
     # Register the streaming http handlers with urllib2

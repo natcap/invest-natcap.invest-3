@@ -39,3 +39,32 @@ class TestHRA(invest_natcap.testing.GISTest):
 
         self.assertRaises(fisheries.ImproperAreaParameter,
                         fisheries.parse_main_csv, shrimp_bad_area, shrimp_area_count)
+    
+    def test_recruitment_errors(self):
+        '''One of the first things we want to check is whether the necessary
+        parameters for recruitment (based on the user-selected recruitment
+        equation) exist within args. Test that it's throwing errors when
+        expected for args sets that don't contain what we want.
+        '''
+        
+        args = {}
+        args['workspace_uri'] = './invest-data/test/data/test_out/fisheries'
+
+        #Test B-H, Ricker
+        for equation in ['Beverton-Holt', 'Ricker']:
+            args['rec_eq'] = equation
+
+            self.assertRaises(fisheries.MissingRecruitmentParameter,
+                            fisheries.execute, args)
+
+        #Test Fecundity
+        args['rec_eq'] = 'Fecundity'
+
+        self.assertRaises(fisheries.MissingRecruitmentParameter,
+                        fisheries.execute, args)
+
+        #Test Fixed Recruitment
+        args['rec_eq'] = 'Fixed'
+
+        self.assertRaises(fisheries.MissingRecruitmentParameter,
+                        fisheries.execute, args)
