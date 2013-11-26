@@ -11,6 +11,10 @@ from random import uniform
 import numpy as np
 
 from matplotlib import pyplot as plt
+
+import cProfile
+import line_profiler
+
 from invest_natcap.aesthetic_quality import aesthetic_quality_core
 import aesthetic_quality_cython_core
 
@@ -948,6 +952,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
         viewpoint, 1.75, 0.0, -1.0, 1.0, 'python')
 
+
         pixel_visibility_cython = aesthetic_quality_core.compute_viewshed( \
         DEM, viewpoint, 1.75, 0.0, -1.0, 1.0, 'cython')
         
@@ -961,6 +966,13 @@ class TestAestheticQualityCore(unittest.TestCase):
         str(difference)
         assert difference == 0, message
 
+        pr = cProfile.Profile()
+        pr.enable()
+
+        pr.runcall(aesthetic_quality_core.compute_viewshed, DEM, viewpoint,
+        1.75, 0.0, -1.0, 1.0, 'cython')
+        
+        pr.disable()
 
         #print('current working dir', os.getcwd())
         args = {}
