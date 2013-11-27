@@ -384,8 +384,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_co_uri,
                                                   "GTiff",
-                                                  0.0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Identity raster for soil accumulation coefficent created.")
 
         #multiply by number of years
@@ -403,8 +404,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_uri,
                                                   "GTiff",
-                                                  0.0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Zero soil accumulation raster created.")
 
         ##calculate biomass disturbance
@@ -425,8 +427,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_bio_co_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Identity raster for biomass disturbance coefficent created.")
 
         #multiply coefficients by base biomass carbon
@@ -444,8 +447,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_bio_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Zero biomass disturbance raster created.")
 
         ##calculate soil disturbance
@@ -465,8 +469,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_soil_co_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Identity raster for soil disturbance created.")
 
 
@@ -485,8 +490,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_soil_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Zero soil disturbance raster created.")
 
             #set base to new LULC and year
@@ -525,8 +531,9 @@ def execute(args):
         raster_utils.new_raster_from_base_uri(acc_soil_uri_list[0],
                                               total_acc_soil_uri,
                                               "GTiff",
-                                              0,
-                                              gdal.GDT_Byte)
+                                              255,
+                                              gdal.GDT_Byte,
+                                              fill_value=0)
     LOGGER.debug("Cumilative soil accumulation raster created.")
 
     try:                                              
@@ -541,8 +548,9 @@ def execute(args):
         raster_utils.new_raster_from_base_uri(dis_soil_uri_list[0],
                                       total_dis_soil_uri,
                                       "GTiff",
-                                      0,
-                                      gdal.GDT_Byte)
+                                      255,
+                                      gdal.GDT_Byte,
+                                      fill_value=0)
     LOGGER.debug("Cumilative soil disturbance raster created.")
 
     try:                                              
@@ -557,8 +565,9 @@ def execute(args):
         raster_utils.new_raster_from_base_uri(dis_bio_uri_list[0],
                                       total_dis_bio_uri,
                                       "GTiff",
-                                      0,
-                                      gdal.GDT_Byte)
+                                      255,
+                                      gdal.GDT_Byte,
+                                      fill_value=0)
     LOGGER.debug("Cumilative biomass disturbance raster created.")
 
     
