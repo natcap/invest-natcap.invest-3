@@ -1,3 +1,5 @@
+"""
+"""
 from osgeo import gdal, ogr, osr
 gdal.UseExceptions()
 from invest_natcap import raster_utils
@@ -27,14 +29,40 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
 
 class ConstantOp:
     """A class that allows constants to be added to function calls"""
+    
     def __init__(self, op, *c):
+        """Constructor for ConstantOp class
+
+        :param op: The callable operator
+        :type op: <type 'function'>
+        :param c: The list of constants
+        :type c: list
+
+        :return: instance of ConstantOp
+        :rtype: <type 'instance'>
+        """
         self.op = op
         self.c = c
 
     def __call__(self, *f):
+        """Call to ConstantOp operator
+
+        :param f: The paramters with which to call the operator
+        :type f: list
+
+        :return: return of the operator
+        """
         return apply(self.op, f+self.c)
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
+    """Creates a shapefile with the bounding box from a raster.
+
+    :param dataset_uri: The uri for the input raster.
+    :type dataset_uri: str
+
+    :return: None
+    :rtype: None
+    """
     LOGGER.debug("Creating extent from: %s", dataset_uri)
     LOGGER.debug("Storing extent in: %s", datasource_uri)
     geotransform = raster_utils.get_geotransform_uri(dataset_uri)
@@ -95,11 +123,45 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     datasource = None
 
 def sum_uri(dataset_uri, datasource_uri):
+    """Wrapper call to raster_utils.aggregate_raster_values_uri to extract total
+
+    :param dataset_uri: The uri for the input raster.
+    :type dataset_uri: str
+
+    :return: None
+    :rtype: None
+    """
     total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
     
 
 def execute(args):
+    """Entry point for the blue carbon model.
+
+    :param args["workspace_dir"]: The directory to hold output from a particular model run
+    :type args["workspace_dir"]: str
+    :param args["lulc_uri_1"]: The land use land cover raster for time 1.
+    :type args["lulc_uri_1"]: str
+    :param args["year_1"]: The year for the land use land cover raster for time 1.
+    :type args["year_1"]: int
+    :param args["lulc_uri_2"]: The land use land cover raster for time 2.
+    :type args["lulc_uri_2"]: str
+    :param args["year_2"]: The year for the land use land cover raster for time 2.
+    :type args["year_2"]: int
+    :param args["lulc_uri_3"]: The land use land cover raster for time 3.
+    :type args["lulc_uri_3"]: str
+    :param args["year_3"]: The year for the land use land cover raster for time 3.
+    :type args["year_3"]: int
+    :param args["lulc_uri_4"]: The land use land cover raster for time 4.
+    :type args["lulc_uri_4"]: str
+    :param args["year_4"]: The year for the land use land cover raster for time 4.
+    :type args["year_4"]: int
+    :param args["lulc_uri_5"]: The land use land cover raster for time 5.
+    :type args["lulc_uri_5"]: str
+    :param args["year_5"]: The year for the land use land cover raster for time 5.
+    :type args["year_5"]: int
+    
+    """
     ##preprocess args for possible ease of adoption of future IUI features
     #this creates a hypothetical IUI element from existing element
     lulc_list = []
