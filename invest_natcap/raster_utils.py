@@ -2025,7 +2025,8 @@ def align_dataset_list(
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
-    dataset_to_align_index=None, aoi_uri=None, assert_datasets_projected=True):
+    dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
+    assert_datasets_projected=True):
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
         with one of the input datasets, output a dataset that is the union
@@ -2055,11 +2056,13 @@ def vectorize_datasets(
         nodata_out - the nodata value of the output dataset.
         pixel_size_out - the pixel size of the output dataset in
             projected coordinates.
-        bounding_box_mode - one of "union" or "intersection". If union
+        bounding_box_mode - one of "union" or "intersection", "dataset". If union
             the output dataset bounding box will be the union of the
             input datasets.  Will be the intersection otherwise. An
             exception is raised if the mode is "intersection" and the
-            input datasets have an empty intersection.
+            input datasets have an empty intersection. If dataset it will make a
+            bounding box as large as the given dataset, if given
+            dataset_to_bound_index must be defined.
         resample_method_list - (optional) a list of resampling methods
             for each output uri in dataset_out_uri list.  Each element
             must be one of "nearest|bilinear|cubic|cubic_spline|lanczos".
@@ -2069,6 +2072,8 @@ def vectorize_datasets(
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
+        dataset_to_bound_index - if mode is "dataset" this indicates which
+            dataset should be the output size.
         aoi_uri - (optional) a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
@@ -2090,6 +2095,7 @@ def vectorize_datasets(
     align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
+        dataset_to_bound_index=dataset_to_bound_index,
         aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected)
     aligned_datasets = [
         gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]
