@@ -349,7 +349,7 @@ def execute(args):
         # NOTE: using 'imperv_area_uri' not 'imperv_stream_uri' which has
         # masked values of 1.0 where there are streams.
         calculate_water_amt(
-                imperv_area_uri, total_precip_uri, alpha_one_uri, water_uri,
+                imperv_stream_uri, total_precip_uri, alpha_one_uri, water_uri,
                 float_nodata)
 
         # Calculate Evaporation
@@ -797,7 +797,7 @@ def mask_impervious_layer_by_streams(
             if pix == pix_nodata: 
                 return out_nodata
             elif stream_pix == 1.0:
-			    return 1.0
+			    return 0.0
             else:
 		        return imperv_pix
     

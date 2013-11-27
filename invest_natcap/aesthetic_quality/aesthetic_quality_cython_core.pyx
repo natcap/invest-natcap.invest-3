@@ -393,7 +393,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
 # What is needed: 
 #   -maintain a pool of available pixels
 #   -figure out how to deallocate the active pixels
-cdef ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
+cdef inline ActivePixel *add_active_pixel_cython(ActivePixel *closest, \
     int index, double distance, double visibility):
     """Add a pixel to the sweep line in O(n) using a linked_list of
     linked_cells."""
@@ -459,7 +459,8 @@ def remove_active_pixel(sweep_line, distance):
 
     return sweep_line
 
-cdef ActivePixel *remove_active_pixel_cython(ActivePixel *closest, distance):
+cdef inline ActivePixel *remove_active_pixel_cython(ActivePixel *closest, \
+    double distance):
     """Remove a pixel based on distance. Do nothing if can't be found."""
     cdef ActivePixel *previous = NULL
     cdef ActivePixel *pixel = NULL
@@ -521,7 +522,7 @@ def update_visible_pixels(active_pixels, I, J, visibility_map):
     assert active_pixels_length == pixels_deleted, message
 
 
-cdef update_visible_pixels_cython(ActivePixel *closest, \
+cdef void update_visible_pixels_cython(ActivePixel *closest, \
     np.ndarray[int, ndim = 1] I, np.ndarray[int, ndim = 1] J, \
     np.ndarray[np.int8_t, ndim = 2] visibility_map):
     """Update the array of visible pixels from the active pixel's visibility
@@ -572,7 +573,7 @@ cdef update_visible_pixels_cython(ActivePixel *closest, \
         visibility_map[I[index], J[index]] = visibility
         pixel = p.next
 
-
+#@cython.boundscheck(False)
 def sweep_through_angles( \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] angles, \
     np.ndarray[np.float64_t, ndim = 1, mode="c"] add_events, \
@@ -586,6 +587,8 @@ def sweep_through_angles( \
     """Update the active pixels as the algorithm consumes the sweep angles"""
     cdef int angle_count = len(angles)
     cdef int max_line_length = angle_count/2
+    cdef int a = 0
+    cdef int i = 0
     cdef int c = 0
     cdef double d = 0
     cdef double v = 0
@@ -607,35 +610,26 @@ def sweep_through_angles( \
     # Updating active cells
     active_line = {}
     cdef ActivePixel *active_pixels = NULL
-
-    cdef int *add_cell_events2 = <int*>malloc(max_line_length*sizeof(int))
-    assert add_cell_events2 is not NULL
-    cdef int *cell_center_events2 = <int*>malloc(max_line_length*sizeof(int))
-    assert cell_center_events2 is not NULL
-    cdef int *remove_cell_events2 = <int*>malloc(max_line_length*sizeof(int))
-    assert remove_cell_events2 is not NULL
+    cdef int *cell_events = <int*>malloc(max_line_length*sizeof(int))
+    assert cell_events is not NULL
 
     # 1- add cells at angle 0
     print('Creating cython event stream')
     # Collect cell_center events
-    cell_center_events = []
     while (center_event_id < center_event_count) and \
         (center_events[arg_center[center_event_id]] < angles[1]):
-        cell_center_events.append(arg_center[center_event_id])
-        arg_center[center_event_id] = 0
-        center_event_id += 1
-    for c in cell_center_events:
+        c = arg_center[center_event_id]
         d = distances[c]
         v = visibility[c]
         active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
+        center_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
         print('angle ' + str(a) + ' / ' + str(angle_count - 2))
-        # Collect add_cell events:
-        add_cell_events = []
+        # 2.1- add cells
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):
             # The active cell list is initialized with those at angle 0.
@@ -643,29 +637,22 @@ def sweep_through_angles( \
             # avoid duplicates, but do not remove them from remove_cell events,
             # because they still need to be removed
             if center_events[arg_min[add_event_id]] > 0.:
-                add_cell_events.append(arg_min[add_event_id])
-            arg_min[add_event_id] = 0
-            add_event_id += 1
-    #   2.1- add cells
-        if len(add_cell_events) > 0:
-            for c in add_cell_events:
+                c = arg_min[add_event_id]
                 d = distances[c]
                 v = visibility[c]
                 active_pixels = add_active_pixel_cython(active_pixels, c, d, v)
-        # Collect remove_cell events:
-        remove_cell_events = []
+            add_event_id += 1
+        # 2.2- remove cells
         while (remove_event_id < remove_event_count) and \
             (remove_events[arg_max[remove_event_id]] <= angles[a+1]):
-            remove_cell_events.append(arg_max[remove_event_id])
-            arg_max[remove_event_id] = 0
-            remove_event_id += 1
-    #   2.2- remove cells
-        for c in remove_cell_events:
-            d = distances[c]
-            v = visibility[c]
+            d = distances[arg_max[remove_event_id]]
             active_pixels = remove_active_pixel_cython(active_pixels, d)
+            remove_event_id += 1
         # The sweep line is current, now compute pixel visibility
         update_visible_pixels_cython(active_pixels, I, J, visibility_map)
+
+    # clean up
+    free(cell_events)
 
     return visibility_map
 
