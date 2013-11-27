@@ -3,7 +3,10 @@ import unittest
 import logging
 import math
 import collections
+from copy import copy
 from random import shuffle
+from random import randint
+from random import uniform
 
 import numpy as np
 
@@ -190,7 +193,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Gather extreme angles from cython algorithm
         # TODO: change the line below to call the actual cython function
         extreme_angles_cython = \
-        aesthetic_quality_cython_core.list_extreme_cell_angles_cython(array_shape, viewpoint)
+        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
@@ -549,10 +552,9 @@ class TestAestheticQualityCore(unittest.TestCase):
         # All the skip levels are accessible:
         #current_node = skip_nodes[0][-1]
         # -- Debug info for sanity check:
-        print('Skip pointers hierarchy:')
-        print('active pixels:')
         current = sweep_line['closest']
         right = current['next']
+        #print('active pixels:')
         #print('distance ' + str(current['distance']) + ', next ' + \
         #    str(right if right is None else right['distance']))
         while(right is not None):
@@ -579,8 +581,8 @@ class TestAestheticQualityCore(unittest.TestCase):
                 #    'down ' + str(current['down']['distance']), \
                 #    'span', span)
         # Test the data structure is valid
-        print('skip list is consistent', \
-            aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
+        #print('skip list is consistent', \
+        #    aesthetic_quality_core.skip_list_is_consistent(sweep_line, skip_nodes))
         # 2.3.1- Find the appropriate value
         for distance in [0, 2, 4, 6, -1, 3, 7]:
             found = aesthetic_quality_core.find_active_pixel_fast(sweep_line, \
@@ -591,6 +593,291 @@ class TestAestheticQualityCore(unittest.TestCase):
             assert found == expected, message
         # 2.3.2- O(log n) performance is maintained
 
+    def identical_active_pixels(self, first, second):
+        """Test that two active pixels are identical.
+            
+            Input:
+                -first, second: dictionaries with the following fields:
+                    -distance: pixel distance to the sweep line origin (float)
+                    -visibility: ratio between angle and distance (float)
+                    -index: integer
+                    -next: reference to the next pixel. This one is not tested.
+                
+            Return a tuple (bool, string) where bool is True if the active 
+            pixels are identical, False otherwise. string is an explanation of
+            the outcome for information purposes.
+        """
+        # Test for None
+        if (first is None) and (second is None):
+            return (True, 'Both pixels are None')
+
+        # test fields within a pixel:
+        if first['distance'] != second['distance']:
+            return (False, 'Distances differ: ' + str(first['distance']) + \
+            ' vs ' + str(second['distance']))
+
+        if first['visibility'] != second['visibility']:
+            return (False, 'Visibility differ: ' + str(first['visibility']) + \
+            ' vs ' + str(second['visibility']))
+
+        if first['index'] != second['index']:
+            return (False, 'Indices differ: ' + str(first['index']) + \
+            ' vs ' + str(second['index']))
+
+        return (True, 'Pixels look identical')        
+
+    def test_identical_active_pixels(self):
+        """Test the function identical_active_pixels"""
+        # Build reference pixel
+        first= {}
+        first['index'] = 3
+        first['visibility'] = 3.1415926535897932
+        first['distance'] = 123456
+        
+        # Test each execution path:
+        second = {}
+        
+        # identical values
+        second['index'] = 3
+        second['visibility'] = 3.1415926535897932
+        second['distance'] = 123456
+        test_result = self.identical_active_pixels(first, second)
+        message = 'The two pixels should test identical: ' + test_result[1]
+        assert test_result[0] is True, message
+
+        # different indices
+        second['index'] += 1
+        test_result = self.identical_active_pixels(first, second)
+        message = 'The two indices should test different: ' + test_result[1]
+        assert test_result[0] is False, message
+        second['index'] -= 1
+
+        # different visibilities
+        second['visibility'] += 1.
+        test_result = self.identical_active_pixels(first, second)
+        message='The two visibilities should test different: ' + test_result[1]
+        assert test_result[0] is False, message
+        second['visibility'] -= 1
+
+        # different distances
+        second['distance'] += 1.
+        test_result = self.identical_active_pixels(first, second)
+        message = 'The two pixels should test different: ' + test_result[1]
+        assert test_result[0] is False, message
+        second['distance'] -= 1.
+
+
+    def identical_sweep_lines(self, first, second):
+        """Test that two sweep lines are identical.
+            
+            Input:
+                -first: reference sweep line
+                -second: sweep line to test against first
+                
+            Returns True if both sweep lines are identical, False otherwise.
+            
+            Note: The sweep lines are dictionaries that should be updated by
+            add_active_pixel or remove_active_pixel"""
+        # test lengths
+        if len(first) != len(second):
+            return (False, 'lengths of first and second differ (' + \
+                str(len(first)) + ' vs ' + str(len(second)) + ')')
+
+        # test distances + closest
+        for pixel in first:
+            # Test keys
+            if pixel not in second:
+                return (False, 'pixel ' + str(pixel) + \
+                    ' not in second sweep line')
+            # Test pixel equality except for the field 'next'
+            same_pixels = self.identical_active_pixels(first[pixel], second[pixel])
+            if not same_pixels[0]:
+                return (False, str(pixel) + "'s pixel: " + same_pixels[1])
+            # Test the next pixel
+            same_pixels = self.identical_active_pixels(first[pixel]['next'], \
+                second[pixel]['next'])
+            if not same_pixels[0]:
+                return (False, str(pixel) + "'s next pixel: " + same_pixels[1])
+        # Everything looks good
+        return (True, 'Sweep lines appear identical')
+
+    def test_identical_sweep_lines(self):
+        """Testing the function identical_sweep_lines"""
+        # Test that identical randomly generated sweep_lines evaluate to True
+        for test in range(50):
+            first = {}
+            second = {}
+            sweep_line_length = randint(1, 50)
+            for pixel in range(sweep_line_length):
+                index = pixel
+                distance = uniform(0., 100.)
+                visibility = uniform(0., 100.)
+                aesthetic_quality_core.add_active_pixel(first, index, \
+                    distance, visibility)
+                aesthetic_quality_core.add_active_pixel(second, index, \
+                    distance, visibility)
+            test_result = self.identical_sweep_lines(first, second)
+            message = 'Sweep lines should be identical: ' + test_result[1]
+            assert test_result[0] is True, message
+
+        # Test that different randomly generated sweep lines evaluate to False
+        for test in range(50):
+            first = {}
+            second = {}
+            distances = []
+            sweep_line_length = randint(1, 50)
+            for pixel in range(sweep_line_length):
+                index = pixel
+                distance = uniform(0., 100.)
+                distances.append(distance)
+                visibility = uniform(0., 100.)
+                aesthetic_quality_core.add_active_pixel(first, index, \
+                    distance, visibility)
+            for pixel in range(sweep_line_length):
+                p = first[distances[pixel]]
+                index = copy(p['index'])
+                distance = copy(p['distance'])
+                visibility = copy(p['visibility'])
+                aesthetic_quality_core.add_active_pixel(second, index, \
+                    distance, visibility)
+            # Perturbation of sweep line length
+            position = randint(0, sweep_line_length-1)
+            offset = randint(-1, 1)
+            # If sweep line of same length, perturb something else
+            if not offset:
+                pixel = first[distances[position]]
+                keys = ['index', 'visibility', 'distance']
+                i = randint(0, 2) # Choose something to modify
+                pixel[keys[i]] += 1 # apply modification
+            else:
+                if offset == 1:
+                    pixel = first[distances[position]]
+                    aesthetic_quality_core.add_active_pixel(second, \
+                        pixel['index'], pixel['visibility'], pixel['distance'])
+                else:
+                    aesthetic_quality_core.remove_active_pixel(second, \
+                        distances[position])
+
+            test_result = self.identical_sweep_lines(first, second)
+            message = 'Sweep lines should be different: ' + test_result[1]
+            assert test_result[0] is False, message
+
+    def test_dictionary_conversion(self):
+        """Test the python-to-C dictionary conversion"""
+        for i in range(50):
+            sweep_line = {}
+            sweep_line_length = randint(1, 50)
+            for pixel in range(sweep_line_length):
+                index = pixel
+                distance = uniform(0., 100.)
+                visibility = uniform(0., 100.)
+                aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+                    distance, visibility)
+            converted = \
+            aesthetic_quality_cython_core.dict_to_active_pixels_to_dict( \
+            sweep_line)
+            
+            test_result = self.identical_sweep_lines(sweep_line, converted)
+            message = 'Sweep lines should be identical: ' + test_result[1]
+            assert test_result[0] is True, message
+
+    def test_find_pixel_cython(self):
+        """Function that tests the cython version of find_active_pixel"""
+        # Create the test sweep_line, and the test values to look for
+        sweep_line = {}
+        for i in range(1,6):
+            index = i
+            distance = 2. * i
+            visibility = 0.1 * i
+            aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+            distance, visibility)
+        test_values = [-1, 0, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14, 20]
+        # Gather the list of values from the sweep line in a list
+        sweep_line_values = []
+        pixel = sweep_line['closest']
+        sweep_line_values.append(pixel['distance'])
+        while pixel['next'] is not None:
+            pixel = pixel['next']
+            sweep_line_values.append(pixel['distance'])
+        # Create the lists of the distance found and those before and after
+        found = []
+        found_cython = []
+        for distance in test_values:
+            node = aesthetic_quality_core.find_active_pixel(sweep_line,distance)
+            found.append(node['distance'] if node is not None else None)
+            node = aesthetic_quality_cython_core.find_active_pixel(sweep_line,
+            distance)
+            found_cython.append(node['distance'] if node is not None else None)
+        # Test if the distances found by the algorithm are consistent
+        for i in range(len(test_values)):
+            distance = test_values[i]
+            message = 'Distance ' + str(distance) + \
+            ': result from the python function ('+str(found[i]) \
+            + ') is different from the cython version (' + str(found_cython[i])\
+            + ')'
+            assert found[i] == found_cython[i], message
+
+    def test_add_active_pixel_cython(self):
+        """Function that tests the cython version of add_active_pixel"""
+        # Create the test sweep_line, and the test values to look for
+        for test in range(50):
+            sweep_line = {}
+            cython_sweep_line = {}
+            line_length = randint(1, 50)
+            # Sorting the distance, so the array is consistent
+            distances = sorted([uniform(0., 100.) for i in range(line_length)])
+            for i in range(line_length):
+                index = i
+                distance = distances[i]
+                visibility = uniform(0., 0.1)
+                aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+                distance, visibility)
+                cython_sweep_line = \
+                aesthetic_quality_cython_core.add_active_pixel( \
+                cython_sweep_line, index, distance, visibility)
+            # Test that the sweep lines are consistent
+            result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+            if result[0] is False:
+                print('python:')
+                aesthetic_quality_core.print_sweep_line(sweep_line)
+                print('cython:')
+                aesthetic_quality_core.print_sweep_line(cython_sweep_line)
+            message = 'C/Python sweep lines are different: ' + result[1]
+            assert result[0] is True, message
+
+    def test_remove_active_pixel_cython(self):
+        """Function that tests the cython version of add_active_pixel"""
+        # Create the test sweep_line, and the test values to look for
+        for test in range(50):
+            sweep_line = {}
+            cython_sweep_line = {}
+            line_length = randint(1, 50)
+            # Sorting the distance, so the array is consistent
+            distances = sorted([uniform(0., 100.) for i in range(line_length)])
+            # Creating random sweep_lines 
+            for i in range(line_length):
+                index = i
+                distance = distances[i]
+                visibility = uniform(0., 0.1)
+                aesthetic_quality_core.add_active_pixel(sweep_line, index, \
+                distance, visibility)
+                cython_sweep_line = \
+                aesthetic_quality_cython_core.add_active_pixel( \
+                cython_sweep_line, index, distance, visibility)
+            # Removing pixels from the random sweep_lines
+            for i in range(1): #line_length):
+                index = randint(0, line_length -1 -i)
+                aesthetic_quality_core.remove_active_pixel(sweep_line, \
+                distances[index])
+                cython_sweep_line = \
+                aesthetic_quality_cython_core.remove_active_pixel( \
+                cython_sweep_line, distances[index])
+                del distances[index]
+                # Test that the sweep lines are consistent
+                result = self.identical_sweep_lines(sweep_line, cython_sweep_line)
+                message = 'C/Python sweep lines are different: ' + result[1]
+                assert result[0] is True, message
+
     def test_find_pixel_before(self):
         """Test find_pixel_before_fast
         Test the function that finds the pixel with the immediate smaller
@@ -600,15 +887,17 @@ class TestAestheticQualityCore(unittest.TestCase):
                     2- insert_active_pixel_fast: the new pixel to insert is
                         right after this pixel.
         Very useful."""
+        # Create the test sweep_line, and the test values to look for
         sweep_line, skip_nodes = self.build_skip_list()
-        
         test_values = [0, 2, 4, 6, -1, 3, 7, 12, 13, 14, 20]
+        # Gather the list of values from the sweep line in a list
         sweep_line_values = []
         pixel = sweep_line['closest']
         sweep_line_values.append(pixel['distance'])
         while pixel['next'] is not None:
             pixel = pixel['next']
             sweep_line_values.append(pixel['distance'])
+        # Create the lists of the distance found and those before and after
         found = []
         before = []
         after = []
@@ -622,6 +911,7 @@ class TestAestheticQualityCore(unittest.TestCase):
             after.append((node['next']['distance'] if node['next'] is not None
             else None) if node is not None else 
                 sweep_line['closest']['distance'])
+        # Test if the distances found by the algorithm are consistent
         for i in range(len(test_values)):
             distance = test_values[i]
             if distance < sweep_line['closest']['distance']:
@@ -647,19 +937,32 @@ class TestAestheticQualityCore(unittest.TestCase):
         
 
     def test_viewshed(self):
-        array_shape = (6,6)
+        """Compare the python and cython versions of compute_viewshed"""
+        array_shape = (150,100)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
-        viewpoint = (3, 1) #np.array([array_shape[0]/2, array_shape[1]/2])
+        DEW = DEM.astype(np.int8)
+        viewpoint = (5, 3) #np.array([array_shape[0]/2, array_shape[1]/2])
         viewpoint_elevation = 1.75
-        pixel_visibility = np.ones(array_shape) * 2
+        pixel_visibility = (np.ones(array_shape) * 2).astype(np.int16)
 
         pixel_visibility = aesthetic_quality_core.compute_viewshed(DEM, \
-        viewpoint, 1.75, 0.0, -1.0, 1.0)
+        viewpoint, 1.75, 0.0, -1.0, 1.0, 'python')
 
-        #print('input_array', DEM)
-        #print('pixel visibility', pixel_visibility)
+        pixel_visibility_cython = aesthetic_quality_core.compute_viewshed( \
+        DEM, viewpoint, 1.75, 0.0, -1.0, 1.0, 'cython')
+        
+        difference = np.sum(np.absolute(pixel_visibility - pixel_visibility_cython))
+        if difference > 0:
+            print('input_array', DEM)
+            print('python pixel visibility', pixel_visibility)
+            print('cython pixel visibility', pixel_visibility_cython)
 
-        print('current working dir', os.getcwd())
+        message = 'test_viewshed: inconsistent pixel_visibility ' + \
+        str(difference)
+        assert difference == 0, message
+
+
+        #print('current working dir', os.getcwd())
         args = {}
         args['working_dir'] = 'invest-data/test/data/test_out/aesthetic_quality'
         args['aoi_uri'] = \

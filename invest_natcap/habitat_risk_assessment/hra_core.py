@@ -9,6 +9,7 @@ import math
 import datetime
 import matplotlib.pyplot
 import re
+import random
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -150,11 +151,11 @@ def execute(args):
         tables_dir = os.path.join(output_dir, 'HTML_Plots')
         os.mkdir(tables_dir)
         
-        make_aoi_tables(tables_dir, aoi_pairs, args['max_risk'])
+        make_aoi_tables(tables_dir, aoi_pairs)
 
         if args['risk_eq'] == 'Euclidean':
-            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], num_stress,
-                        len(h_risk_dict))
+            make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], 
+                args['max_stress'],num_stress, len(h_risk_dict))
     '''
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
@@ -171,7 +172,7 @@ def execute(args):
 
         LOGGER.warn(text)
 
-def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
+def make_risk_plots(out_dir, aoi_pairs, max_risk, max_stress, num_stress, num_habs):
     '''This function will produce risk plots when the risk equation is
     euclidean.
 
@@ -186,6 +187,11 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
                 ....
             }
 
+        max_risk- Double representing the highest potential value for a single
+            h-s raster. The amount of risk for a given Habitat raster would be
+            SUM(s) for a given h.
+        max_stress- The largest number of stressors that the user believes will
+            overlap. This will be used to get an accurate estimate of risk.
         num_stress- A dictionary that simply associates every habaitat with the
             number of stressors associated with it. This will help us determine
             the max E/C we should be expecting in our overarching ecosystem 
@@ -201,29 +207,46 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
 
     '''
     def plot_background_circle(max_value):
-        circle_stuff = [(5, '#C44539'), (4.75, '#CF5B46'), (4.5, '#D66E54'), (4.25, '#E08865'),
-                        (4, '#E89D74'), (3.75, '#F0B686'), (3.5, '#F5CC98'), (3.25, '#FAE5AC'),
-                        (3, '#FFFFBF'), (2.75, '#EAEBC3'), (2.5, '#CFD1C5'), (2.25, '#B9BEC9'),
-                        (2, '#9FA7C9'), (1.75, '#8793CC'), (1.5, '#6D83CF'), (1.25, '#5372CF'),
-                        (1, '#305FCF')]
+        circle_stuff = [(6, '#000000'),(5, '#780000'), (4.75, '#911206'), (4.5, '#AB2C20'), 
+                        (4.25, '#C44539'), (4, '#CF5B46'), (3.75, '#D66E54'), (3.5, '#E08865'), 
+                        (3.25, '#E89D74'), (3, '#F0B686'), (2.75, '#F5CC98'), (2.5, '#FAE5AC'), 
+                        (2.25, '#FFFFBF'), (2, '#EAEBC3'), (1.75, '#CFD1C5'), (1.5, '#B9BEC9'), 
+                        (1.25, '#9FA7C9'), (1, '#8793CC'), (0.75, '#6D83CF'), (0.5, '#5372CF'), 
+                        (0.25, '#305FCF')]
         index = 0
         for radius, color in circle_stuff:
             index += 1
             linestyle = 'solid' if index % 2 == 0 else 'dashed'
             cir = matplotlib.pyplot.Circle((0, 0), edgecolor='.25', 
-                        linestyle=linestyle, radius=radius * max_value/ 3.5, 
+                        linestyle=linestyle, radius=radius * max_value/ 3.75, 
                         fc=color)
             matplotlib.pyplot.gca().add_patch(cir)
 
-    
+    def jigger(E, C):
+        '''Want to return a fractionally offset set of coordinates so that each of
+        the text related to strings is slightly offset.
+        
+        Range of x: E <= x <= E+.1 
+        Range of y: C-.1 <= y <= C+.1
+        '''
+
+        x = E + random.random() * .1
+        y = C + ((random.random() * .4) -.2)
+   
+        return (x, y)
+
     #Create plots for each combination of AOI, Hab
     plot_index = 0
 
     for aoi_name, aoi_list in aoi_pairs.iteritems():
 
-        matplotlib.pyplot.figure(plot_index)
+        LOGGER.debug("AOI list for %s: %s" % (aoi_name, aoi_list))
+
+        fig = matplotlib.pyplot.figure(plot_index)
         plot_index += 1
         matplotlib.pyplot.suptitle(aoi_name)
+        fig.text(0.5, 0.04, 'Exposure', ha='center', va='center')
+        fig.text(0.06, 0.5, 'Consequence', ha='center', va='center', rotation='vertical')
 
         hab_index = 0
         curr_hab_name = aoi_list[0][0]
@@ -238,10 +261,8 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
                                         2, hab_index)
                 plot_background_circle(max_risk)
                 matplotlib.pyplot.title(curr_hab_name)
-                matplotlib.pyplot.xlim([0, max_risk])
-                matplotlib.pyplot.ylim([0, max_risk])
-                matplotlib.pyplot.xlabel("Exposure")
-                matplotlib.pyplot.ylabel("Consequence")
+                matplotlib.pyplot.xlim([-.5, max_risk])
+                matplotlib.pyplot.ylim([-.5, max_risk])
 
             hab_name = element[0]
             if curr_hab_name == hab_name:
@@ -249,7 +270,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
                 matplotlib.pyplot.plot(element[2], element[3], 'k^', 
                         markerfacecolor='black', markersize=8)
                 matplotlib.pyplot.annotate(element[1], xy=(element[2], 
-                        element[3]), xytext=(element[2], element[3]+0.07))
+                        element[3]), xytext= jigger(element[2], element[3]))
                 continue    
             
             #We get here once we get to the next habitat
@@ -261,10 +282,14 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
             curr_hab_name = hab_name
 
             matplotlib.pyplot.title(curr_hab_name)
-            matplotlib.pyplot.xlim([0, max_risk])
-            matplotlib.pyplot.ylim([0, max_risk])
-            matplotlib.pyplot.xlabel("Exposure")
-            matplotlib.pyplot.ylabel("Consequence")
+            matplotlib.pyplot.xlim([-.5, max_risk])
+            matplotlib.pyplot.ylim([-.5, max_risk])
+            
+            #We still need to plot the element that gets us here.
+            matplotlib.pyplot.plot(element[2], element[3], 'k^', 
+                    markerfacecolor='black', markersize=8)
+            matplotlib.pyplot.annotate(element[1], xy=(element[2], 
+                    element[3]), xytext= jigger(element[2], element[3]))
 
         out_uri = os.path.join(out_dir, 'risk_plot_' + 'AOI[' + aoi_name+ '].png')
 
@@ -274,7 +299,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
     #a given habitat, AOI pairing. So each dot would be (HabitatName, AOI1)
     #for all habitats in the ecosystem.
     plot_index += 1
-    max_tot_risk = max_risk * max(num_stress.values()) * num_habs 
+    max_tot_risk = max_risk * max_stress * num_habs 
     
     matplotlib.pyplot.figure(plot_index)
     matplotlib.pyplot.suptitle("Ecosystem Risk")
@@ -311,7 +336,7 @@ def make_risk_plots(out_dir, aoi_pairs, max_risk, num_stress, num_habs):
     out_uri = os.path.join(out_dir, 'ecosystem_risk_plot.png')
     matplotlib.pyplot.savefig(out_uri, format='png')
 
-def make_aoi_tables(out_dir, aoi_pairs, max_risk):
+def make_aoi_tables(out_dir, aoi_pairs):
     '''This function will take in an shapefile containing multiple AOIs, and
     output a table containing values averaged over those areas.
 
@@ -542,7 +567,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             name = name_map[ident]
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
-            LOGGER.debug("The frac overlap for %s is %s" % (ident, frac_over))
             s_o_score = max_risk * frac_over + (1-frac_over)
 
             if frac_over == 0.:
@@ -567,8 +591,6 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
             else:
                 avgs_dict[h][s].append({'Name': name, 'E': e_score,
                            'C': c_agg_dict[ident]})
-    
-    LOGGER.debug("AVGS_DICT: %s" % avgs_dict)
     
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
@@ -840,8 +862,6 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
     #maximum potential risk for any given overlap between habitat and stressor
     #This yields a user defined threshold for risk.
     user_max_risk = max_stress * max_risk
-    LOGGER.debug("User max risk is %s" % user_max_risk)
-
 
     def high_risk_raster(*pixels):
 
@@ -1219,7 +1239,8 @@ def make_risk_rasters(h_s_c, habs, inter_dir, crit_lists, denoms, risk_eq, warni
             #Going to add in the h_s_c dict to have the URI for the 
             #overlap raster
             calc_E_raster(e_out_uri, crit_lists['Risk']['h_s_e'][pair],
-                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'])
+                        denoms['Risk']['h_s_e'][pair], h_s_c[pair]['DS'],
+                        habs[h]['DS'])
         
         calc_C_raster(c_out_uri, crit_lists['Risk']['h_s_c'][pair], 
                     denoms['Risk']['h_s_c'][pair], crit_lists['Risk']['h'][h],
@@ -1351,7 +1372,7 @@ def make_risk_euc(base_uri, e_uri, c_uri, risk_uri):
                     grid_size, "union", resample_method_list=None, 
                     dataset_to_align_index=0, aoi_uri=None)
 
-def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
+def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
     '''Should return a raster burned with an 'E' raster that is a combination
     of all the rasters passed in within the list, divided by the denominator.
 
@@ -1365,8 +1386,8 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
 
     Returns nothing.
     '''
-    grid_size = raster_utils.get_cell_size_from_uri(base_uri)
-    nodata = raster_utils.get_nodata_from_uri(base_uri)
+    grid_size = raster_utils.get_cell_size_from_uri(h_s_base_uri)
+    nodata = raster_utils.get_nodata_from_uri(h_s_base_uri)
 
     #Using regex to pull out the criteria name after the last ]_. Will do this 
     #for all full URI's.
@@ -1376,9 +1397,13 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
             '.*\]_([^_]*)', 
             os.path.splitext(os.path.basename(uri))[0]).group(1), h_s_list)
 
+
     def add_e_pix(*pixels):
 
-        base_pixel = pixels[0]
+
+        h_base_pix = pixels[0]
+        h_s_base_pix = pixels[1]
+        h_s_pixels = pixels[2::]
 
         all_nodata = True
         for p in pixels:
@@ -1386,27 +1411,33 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, base_uri):
                 all_nodata = False
         if all_nodata:
             return nodata
-        
+       
+        #Know here that at least some pixels exist. h_s_pixels and h_s_base_pix
+        #should cover the same area since they're all burned to h_s overlap.
+        #Need to check if the one that exists is only the h pixel. If not
+        #catching here, can assume that there are h_s values, and continue with
+        #equation.
+        if h_s_base_pix == nodata and h_base_pix != nodata:
+            return 0
+
+        #If we're here, want to go ahead and calculate out the values, since
+        #we know there is overlap.
         value = 0.
         denom_val = 0.
 
         #Ignoring first pixel, since that's the base
-        for i in range(1, len(pixels)):
+        for i in range(len(h_s_pixels)):
             
             p = pixels[i]
 
             if p != nodata:
                 value += p
                 #Will be off by 1 because basename is now at the front
-                denom_val += denom_dict[crit_name_list[i-1]]
+                denom_val += denom_dict[crit_name_list[i]]
 
-        #As a final check, make sure there's overlap here
-        if base_pixel == nodata:
-            return nodata
-        else:
-            return value / denom_val
+        return value / denom_val
 
-    uri_list = [base_uri] + h_s_list
+    uri_list = [h_base_uri, h_s_base_uri] + h_s_list
 
     raster_utils.vectorize_datasets(uri_list, add_e_pix, out_uri,
                         gdal.GDT_Float32, -1., grid_size, "union", 
