@@ -13,6 +13,7 @@ import csv
 import math
 import errno
 import collections
+import exceptions
 
 from osgeo import gdal
 from osgeo import osr
@@ -2024,7 +2025,26 @@ def align_dataset_list(
         mask_dataset = None
         os.remove(mask_uri)
 
-
+def assert_file_existance(dataset_uri_list):
+    """Verify that the uris passed in the argument exist on the filesystem
+        if not, raise an exeception indicating which files do not exist
+        
+        dataset_uri_list - a list of relative or absolute file paths to validate
+        
+        returns nothing, but raises an IOError if any files are not found"""
+        
+    not_found_uris = []
+    for uri in dataset_uri_list:
+        if not os.path.exists(uri):
+            not_found_uris.append(uri)
+            
+    if len(not_found_uris) != 0:
+        error_message = (
+            "The following files do not exist on the filesystem: " + 
+            str(not_found_uris))
+        raise exceptions.IOError(error_message)
+        
+        
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
@@ -2083,7 +2103,12 @@ def vectorize_datasets(
         assert_datasets_projected - (optional) if True this operation will
             test if any datasets are not projected and raise an exception
             if so."""
-
+    
+    if aoi_uri == None:
+        assert_file_existance(dataset_uri_list)
+    else:
+        assert_file_existance(dataset_uri_list + [aoi_uri])
+        
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
