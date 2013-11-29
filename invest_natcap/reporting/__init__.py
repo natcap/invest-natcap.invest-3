@@ -5,6 +5,7 @@ import os
 import logging
 import csv
 import json
+import codecs
 
 import numpy as np
 from osgeo import gdal
@@ -12,39 +13,39 @@ from osgeo import ogr
 
 
 from invest_natcap import raster_utils
-import table_generator 
+import table_generator
 
 LOGGER = logging.getLogger('invest_natcap.reporting')
 
 def generate_report(reporting_args):
     """Generate an html page from the arguments given in 'reporting_args'
-    
+
         reporting_args[title] - a string for the title of the html page
             (required)
-        
+
         reporting_args[out_uri] - a URI to the output destination for the html
             page (required)
 
         reporting_args[elements] - a list of dictionaries that represent html
-            elements to be added to the html page. (required) If no elements 
+            elements to be added to the html page. (required) If no elements
             are provided (list is empty) a blank html page will be generated.
             The 3 main element types are 'table', 'head', and 'text'.
             All elements share the following arguments:
                 'type' - a string that depicts the type of element being add.
                     Currently 'table', 'head', and 'text' are defined (required)
-                
+
                 'section' - a string that depicts whether the element belongs
-                    in the body or head of the html page. 
+                    in the body or head of the html page.
                     Values: 'body' | 'head' (required)
-                        
+
                 'position' - a positive integer that depicts where the element
                     should be placed on the html page. Elements will be written
                     in ascending order with sections 'body' and 'head'
                     separately defined. If two elements have the same position,
                     the following repeated positions will be bumped up
                     (required)
-            
-            Table element dictionary has at least the following additional arguments: 
+
+            Table element dictionary has at least the following additional arguments:
                 'sortable' - a boolean value for whether the tables columns
                     should be sortable (required)
 
@@ -53,10 +54,10 @@ def generate_report(reporting_args):
                     to the bottom of the table that will show the total of the
                     columns selected (optional)
 
-                'data_type' - one of the following string values: 
+                'data_type' - one of the following string values:
                     'shapefile'|'csv'|'dictionary'. Depicts the type of data
                     structure to build the table from (required)
-                    
+
                 'data' - either a dictionary if 'data_type' is 'dictionary' or
                     a URI to a CSV table or shapefile if 'data_type' is
                     'shapefile' or 'csv' (required). If a dictionary it should
@@ -65,7 +66,7 @@ def generate_report(reporting_args):
                      row_id_1: {col_name_1: value, col_name_2: value, ...},
                      ...
                     }
-                
+
                 'key' - a string that defines which column or field should be
                     used as the keys for extracting data from a shapefile or csv
                     table 'key_field'.
@@ -79,26 +80,26 @@ def generate_report(reporting_args):
                         'name' - a string for the column name (required)
                         'total' - a boolean for whether the column should be
                             totaled (required)
-                
+
                 'total'- a boolean value for whether there should be a constant
                     total row at the bottom of the table that sums the column
                     values (optional)
-            
-            Head element dictionary has at least the following additional arguments: 
+
+            Head element dictionary has at least the following additional arguments:
                 'format' - a string representing the type of head element being
                     added. Currently 'script' (javascript) and 'link' (css
                     style) accepted (required)
 
                 'src'- a URI to the location of the external file for either
                     the 'script' or the 'link' (required)
-            
-            Text element dictionary has at least the following additional arguments: 
+
+            Text element dictionary has at least the following additional arguments:
                 'text'- a string to add as a paragraph element in the html page
                     (required)
 
         returns - nothing"""
 
-    # Get the title for the hmlt page and place it in a string with html 
+    # Get the title for the hmlt page and place it in a string with html
     # title tags
     html_title = '<title>%s</title>' % reporting_args['title']
 
@@ -107,10 +108,10 @@ def generate_report(reporting_args):
     # first list holds the string representations of the html elements and the
     # second list is the corresponding 'position' of those elements. This allows
     # for proper ordering later in 'write_html'.
-    # Initialize head's first element to be the title where the -1 position 
+    # Initialize head's first element to be the title where the -1 position
     # ensures it will be the first element
     html_obj = {'head':([html_title],[-1]), 'body':([],[])}
-   
+
     # A dictionary of 'types' that point to corresponding functions. When an
     # 'element' is passed in the 'type' will be one of the defined types below
     # and will execute a function that properly handles that element
@@ -154,11 +155,11 @@ def write_html(html_obj, out_uri):
             key (required)
             example: {'head':(['elem_1', 'elem_2',...],[pos_1, pos_2,...]),
                       'body':(['elem_1', 'elem_2',...],[pos_1, pos_2,...])}
-        
+
         out_uri - a URI for the output html file
 
         returns - nothing"""
-    
+
     # Start the string that will be written as the html file
     html_str = '<html>'
 
@@ -193,35 +194,35 @@ def write_html(html_obj, out_uri):
         os.remove(out_uri)
 
     # Open the file, write the string and close the file
-    html_file = open(out_uri, 'w')
+    html_file = codecs.open(out_uri, 'wb', 'utf-8')
     html_file.write(html_str)
     html_file.close()
 
 def build_table(param_args):
-    """Generates a string representing a table in html format. 
+    """Generates a string representing a table in html format.
 
         param_args - a dictionary that has the parameters for building up the
             html table. The dictionary includes the following:
 
             param_args['sortable'] - a boolean value that determines whether the
                 table should be sortable (required)
-            
+
             param_args['data_type'] - a string depicting the type of input to
                 build the table from. Either 'shapefile', 'csv', or 'dictionary'
                 (required)
-            
+
             param_args['data'] - a URI to a csv or shapefile OR a dictionary
                 (required)
-            
+
             param_args['key'] - a string that depicts which column (csv) or
                 field (shapefile) will be the unique key to use in extracting
                 the data into a dictionary. (required for 'data_type'
                 'shapefile' and 'csv')
-            
+
             param_args['columns'] - a dictionary where the keys are the ids of
                 the columns (representing how the order they should be
                 displayed) and the values are dictionaries that have the
-                following attributes represented by key-value pairs (required): 
+                following attributes represented by key-value pairs (required):
                 'name' - a string for the name of the column (required)
                 'total' - a boolean that determines whether the column
                     entries should be summed in a total row (required)
@@ -234,20 +235,20 @@ def build_table(param_args):
     """
     # Initialize an intermediate dictionary which will hold the physical data
     # elements of the table
-    data_dict = {} 
+    data_dict = {}
 
     # Initialize the final dictionary which will have the data of the table as
     # well as parameters needed to build up the html table
-    table_dict = {} 
+    table_dict = {}
 
     # Get the data type of the input being passed in so that it can properly be
     # pre-processed
     data_type = param_args['data_type']
-    
+
     # Get a handle on the input data being passed in, whether it a URI to a
     # shapefile / csv file or a dictionary
     input_data = param_args['data']
-    
+
     # Depending on the type of input being passed in, pre-process it accordingly
     if data_type == 'shapefile':
         key = param_args['key']
@@ -257,23 +258,23 @@ def build_table(param_args):
         data_dict = raster_utils.get_lookup_from_csv(input_data, key)
     else:
         data_dict = input_data
-   
+
     LOGGER.debug('Data Collected from Input Source: %s', data_dict)
 
     # Add the columns dictionary to the final dictionary that is to be passed
     # off to the table generator
     table_dict['cols'] = param_args['columns']
-    
+
     # Add the properly formatted data dictionary to the final dictionary that is
     # to be passed to the table generator
     table_dict['rows'] = data_dict
-    
+
     # If a totals row is present, add it to the final dictionary
     if 'total' in param_args:
         table_dict['total'] = param_args['total']
-    
+
     LOGGER.debug('Final Table Dictionary: %s', table_dict)
-    
+
     attr = None
     # If table is sortable build up a dictionary with the proper key-value pair
     if param_args['sortable']:
@@ -282,24 +283,23 @@ def build_table(param_args):
     # If a checkbox column is wanted pass in the table dictionary
     if 'checkbox' in param_args and param_args['checkbox']:
         table_dict['checkbox'] = True
-    
+
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict, attr)
 
 def add_text_element(param_args):
-    """Generates a string that represents a html text block wrapped in
-        paragraph tags
+    """Generates a string that represents a html text block. The input string
+        should be wrapped in proper html tags
 
         param_args - a dictionary with the following arguments:
-            
+
             param_args['text'] - a string
 
         returns - a string
     """
-    
-    html_str = '<p>%s</p>' % param_args['text']
-    return html_str
+
+    return param_args['text']
 
 def add_head_element(param_args):
     """Generates a string that represents a valid element in the head section of
@@ -310,7 +310,7 @@ def add_head_element(param_args):
 
             param_args['format'] - a string representing the type of element to
                 be added. Currently : 'script', 'link' (required)
-            
+
             param_args['src'] - a string URI path for the external source of the
                 element (required)
 

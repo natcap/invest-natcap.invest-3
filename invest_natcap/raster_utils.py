@@ -102,19 +102,6 @@ def get_row_col_from_uri(dataset_uri):
     return (n_rows, n_cols)
 
 
-def calculate_raster_stats(dataset):
-    """Calculates and sets the min, max, stdev, and mean for the bandataset in
-       the raster.
-
-       dataset - a GDAL raster dataset that will be modified by having its band
-            statistics set
-
-        returns nothing"""
-
-    for band_number in range(dataset.RasterCount):
-        band = dataset.GetRasterBand(band_number + 1)
-        band.ComputeStatistics(0)
-
 def calculate_raster_stats_uri(dataset_uri):
     """Calculates and sets the min, max, stdev, and mean for the bands in
        the raster.
@@ -144,23 +131,6 @@ def get_statistics_from_uri(dataset_uri):
     dataset = None
     return statistics
 
-def get_cell_area_from_uri(dataset_uri):
-    return pixel_area(gdal.Open(dataset_uri))
-
-def pixel_area(dataset):
-    """Calculates the pixel area of the given dataset in m^2
-
-        dataset - GDAL dataset
-
-        returns area in m ^ 2 of each pixel in dataset"""
-
-    srs = osr.SpatialReference()
-    srs.SetProjection(dataset.GetProjection())
-    linear_units = srs.GetLinearUnits()
-    geotransform = dataset.GetGeoTransform()
-    #take absolute value since sometimes negative widths/heights
-    area_meters = abs(geotransform[1] * geotransform[5] * (linear_units ** 2))
-    return area_meters
 
 def get_cell_size_from_uri(dataset_uri):
     srs = osr.SpatialReference()
@@ -814,10 +784,8 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
     raster_cython_utils.reclassify_by_dictionary(
         dataset, rules, output_uri, format, default_value, datatype,
         output_dataset,)
+    calculate_raster_stats_uri(output_uri)
     LOGGER.info('Finished reclassification')
-
-    calculate_raster_stats(output_dataset)
-
     return output_dataset
 
 
@@ -856,7 +824,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
     slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
-    calculate_raster_stats(slope_dataset)
+    calculate_raster_stats_uri(slope_uri)
 
     dem_small_dataset = None
     os.remove(dem_small_uri)
@@ -1581,7 +1549,7 @@ def gaussian_filter_dataset(
     LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
 
-    calculate_raster_stats(out_dataset)
+    calculate_raster_stats_uri(out_uri)
 
     LOGGER.info('deleting %s' % temp_dir)
     dest_array = None
@@ -1635,8 +1603,9 @@ def reclassify_dataset(
         dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
     out_band = out_dataset.GetRasterBand(1)
 
-    calculate_raster_stats(dataset)
     in_band, in_nodata = extract_band_and_nodata(dataset)
+    in_band.ComputeStatistics(0)
+
     dataset_max = in_band.GetMaximum()
 
     #Make an array the same size as the max entry in the dictionary of the same
@@ -1851,7 +1820,7 @@ def get_datasource_bounding_box(datasource_uri):
     return bounding_box
 
 
-def resize_and_resample_dataset(
+def resize_and_resample_dataset_uri(
     original_dataset_uri, bounding_box, out_pixel_size, output_uri,
     resample_method):
     """A function to resample a datsaet to larger or smaller pixel sizes
@@ -1908,7 +1877,10 @@ def resize_and_resample_dataset(
     gdal.ReprojectImage(original_dataset, output_dataset,
                         original_sr.ExportToWkt(), original_sr.ExportToWkt(),
                         resample_dict[resample_method])
-    calculate_raster_stats(output_dataset)
+
+    gdal.Dataset.__swig_destroy__(output_dataset)
+    output_dataset = None
+    calculate_raster_stats_uri(output_uri)
 
 
 def align_dataset_list(
@@ -2013,7 +1985,7 @@ def align_dataset_list(
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        resize_and_resample_dataset(
+        resize_and_resample_dataset_uri(
             original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
             resample_method)
 
@@ -2056,7 +2028,8 @@ def align_dataset_list(
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
-    dataset_to_align_index=None, aoi_uri=None, assert_datasets_projected=True):
+    dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
+    assert_datasets_projected=True):
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
         with one of the input datasets, output a dataset that is the union
@@ -2086,11 +2059,13 @@ def vectorize_datasets(
         nodata_out - the nodata value of the output dataset.
         pixel_size_out - the pixel size of the output dataset in
             projected coordinates.
-        bounding_box_mode - one of "union" or "intersection". If union
+        bounding_box_mode - one of "union" or "intersection", "dataset". If union
             the output dataset bounding box will be the union of the
             input datasets.  Will be the intersection otherwise. An
             exception is raised if the mode is "intersection" and the
-            input datasets have an empty intersection.
+            input datasets have an empty intersection. If dataset it will make a
+            bounding box as large as the given dataset, if given
+            dataset_to_bound_index must be defined.
         resample_method_list - (optional) a list of resampling methods
             for each output uri in dataset_out_uri list.  Each element
             must be one of "nearest|bilinear|cubic|cubic_spline|lanczos".
@@ -2100,6 +2075,8 @@ def vectorize_datasets(
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
+        dataset_to_bound_index - if mode is "dataset" this indicates which
+            dataset should be the output size.
         aoi_uri - (optional) a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
@@ -2121,6 +2098,7 @@ def vectorize_datasets(
     align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
+        dataset_to_bound_index=dataset_to_bound_index,
         aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected)
     aligned_datasets = [
         gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]

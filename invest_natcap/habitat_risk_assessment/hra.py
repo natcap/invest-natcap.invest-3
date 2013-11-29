@@ -235,12 +235,6 @@ def execute(args):
 
         os.makedirs(folder)
     
-    #Criteria, if they exist.
-    if 'criteria_dir' in hra_args:
-        c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
-        add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
-                    hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'])
-
     #Habitats
     hab_list = []
     for ele in ('habitats_dir', 'species_dir'):
@@ -249,7 +243,7 @@ def execute(args):
             hab_list += fnmatch.filter(hab_names, '*.shp')
     
     add_hab_rasters(hab_dir, hra_args['habitats'], hab_list, args['grid_size'])
-
+    
     #Get all stressor URI's
     stress_names = listdir(hra_args['stressors_dir'])
     stress_list = fnmatch.filter(stress_names, '*.shp')
@@ -266,6 +260,13 @@ def execute(args):
     make_add_overlap_rasters(overlap_dir, hra_args['habitats'], 
             stress_dict, hra_args['h_s_c'],hra_args['h_s_e'], args['grid_size'])
     
+    #Criteria, if they exist.
+    if 'criteria_dir' in hra_args:
+        c_shape_dict = hra_preprocessor.make_crit_shape_dict(hra_args['criteria_dir'])
+        
+        add_crit_rasters(crit_dir, c_shape_dict, hra_args['habitats'], 
+                    hra_args['h_s_e'], hra_args['h_s_c'], args['grid_size'])
+
     #No reason to hold the directory paths in memory since all info is now
     #within dictionaries. Can remove them here before passing to core.
     for name in ('habitats_dir', 'species_dir', 'stressors_dir', 'criteria_dir'):
@@ -332,7 +333,6 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     
     Returns nothing.
     '''
-    LOGGER.debug('h_s_c from parse?: %s' % h_s_c)
     for pair in h_s_c:
 
         h, s = pair
@@ -613,9 +613,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         datasource = ogr.Open(shape)
         layer = datasource.GetLayer()
       
-        LOGGER.debug("Is there a source? %s" % datasource)
-        LOGGER.debug("Sources uri: %s" % shape)
-
         r_dataset = \
             raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
                     gdal.GDT_Float32, -1., out_uri, datasource)
@@ -710,11 +707,14 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                         {'CritName':
                             {'Weight': 1.0, 'DQ': 1.0}
                         },
-                    }
+                    },
+                    'DS': "HabitatStressor Raster URI"
             }
         habitats- Similar to the h-s dictionary, a multi-level
             dictionary containing all habitat-specific criteria ratings and
-            raster information. The outermost keys are habitat names.
+            raster information. The outermost keys are habitat names. Within
+            the dictionary, the habitats['habName']['DS'] will be the URI of
+            the raster of that habitat.
         h_s_e- Similar to the h-s dictionary, a multi-level dictionary 
             containing all stressor-specific criteria ratings and 
             raster information. The outermost keys are tuples of 
@@ -760,22 +760,42 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                         contain the attribute \"Rating\" in order to be properly used \
                         within the HRA model run.")
                 
-            out_uri = os.path.join(dir, filename + '.tif')
+            out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
-
-
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
 
             #lower_attrib['rating'] should give us what rating is called within
             #this set of features.
             gdal.RasterizeLayer(r_dataset, [1], layer, 
                             options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-             
+            
+            #Want to do a vectorize with the base layer, to make sure we're not
+            #adding in values where there should be none
+            base_uri = h_s_c[pair]['DS']
+            base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+
+            def overlap_hsc_spat_crit(base_pix, spat_pix):
+
+                #If there is no overlap, just return whatever is underneath.
+                #It will either be the value of that patial region or nodata
+                if base_pix != base_nodata:
+                    return spat_pix
+
+                else:
+                    return base_nodata
+
+            out_uri = os.path.join(dir, filename + '.tif') 
+        
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+                        overlap_hsc_spat_crit, out_uri, gdal.GDT_Float32, -1.,
+                        grid_size, "union", resample_method_list=None, 
+                        dataset_to_align_index=0, aoi_uri=None)
+    
             if c_name in h_s_c[pair]['Crit_Rasters']:
                 h_s_c[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:
@@ -812,18 +832,36 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                         contain the attribute \"Rating\" in order to be properly used \
                         within the HRA model run.")
             
-            out_uri = os.path.join(dir, filename + '.tif')
+            out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
+            
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+            
+            #Want to do a vectorize with the base layer, to make sure we're not
+            #adding in values where there should be none
+            base_uri = habitats[h]['DS']
+            base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+            
+            def overlap_h_spat_crit(base_pix, spat_pix):
 
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
+                #If there is no overlap, just return whatever is underneath.
+                #It will either be the value of that patial region or nodata
+                if base_pix != base_nodata:
+                    return spat_pix
 
+                else:
+                    return base_nodata
 
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
-
-            gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+            out_uri = os.path.join(dir, filename + '.tif') 
+        
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+                        overlap_h_spat_crit, out_uri, gdal.GDT_Float32, -1., 
+                        grid_size, "union", resample_method_list=None, 
+                        dataset_to_align_index=0, aoi_uri=None)
             
             if c_name in habitats[h]['Crit_Rasters']:  
                 habitats[h]['Crit_Rasters'][c_name]['DS'] = out_uri
@@ -835,7 +873,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
     #H-S-E
     for pair in crit_dict['h_s_e']:
         
-        for c_name, c_path in crit_dict['h_s_c'][pair].iteritems():
+        for c_name, c_path in crit_dict['h_s_e'][pair].iteritems():
 
             #The path coming in from the criteria should be of the form
             #dir/h_s_critname.shp.
@@ -860,22 +898,37 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
                         contain the attribute \"Rating\" in order to be properly used \
                         within the HRA model run.")
                 
-            out_uri = os.path.join(dir, filename + '.tif')
+            out_uri_pre_overlap = os.path.join(dir, filename + '_pre_overlap.tif')
 
-            r_dataset = \
-                raster_utils.create_raster_from_vector_extents(grid_size, 
-                        grid_size, gdal.GDT_Int32, -1, out_uri, shape)
+            raster_utils.create_raster_from_vector_extents_uri(
+                c_path, grid_size, gdal.GDT_Int32, -1, out_uri_pre_overlap)
+            
+            raster_utils.rasterize_layer_uri(
+                out_uri_pre_overlap, c_path, 
+                option_list=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
+                
+            #Want to do a vectorize with the base layer, to make sure we're not
+            #adding in values where there should be none
+            base_uri = h_s_e[pair]['DS']
+            base_nodata = raster_utils.get_nodata_from_uri(base_uri)
+            
+            def overlap_hse_spat_crit(base_pix, spat_pix):
 
+                #If there is no overlap, just return whatever is underneath.
+                #It will either be the value of that patial region or nodata
+                if base_pix != base_nodata:
+                    return spat_pix
 
-            band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
-            band.Fill(nodata)
+                else:
+                    return base_nodata
 
+            out_uri = os.path.join(dir, filename + '.tif') 
+        
+            raster_utils.vectorize_datasets([base_uri, out_uri_pre_overlap], 
+                        overlap_hse_spat_crit, out_uri, gdal.GDT_Float32, -1.,
+                        grid_size, "union", resample_method_list=None, 
+                        dataset_to_align_index=0, aoi_uri=None)
 
-            #lower_attrib['rating'] should give us what rating is called within
-            #this set of features.
-            gdal.RasterizeLayer(r_dataset, [1], layer, 
-                            options=['ATTRIBUTE=' + lower_attrib['rating'],'ALL_TOUCHED=TRUE'])
-             
             if c_name in h_s_e[pair]['Crit_Rasters']:
                 h_s_e[pair]['Crit_Rasters'][c_name]['DS'] = out_uri
             else:

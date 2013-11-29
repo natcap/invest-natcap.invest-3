@@ -1,16 +1,17 @@
 """The invest_natcap.testing package defines core testing routines and
 functionality."""
 
-import unittest
-import os
-import logging
-import shutil
-import functools
-import hashlib
-import filecmp
-import time
 import csv
+import filecmp
+import functools
+import glob
+import hashlib
 import json
+import logging
+import os
+import shutil
+import time
+import unittest
 
 import numpy
 np = numpy
@@ -319,8 +320,13 @@ class GISTest(unittest.TestCase):
 
         self.assertWorkspace(archive_1_folder, archive_2_folder)
 
-    def assertWorkspace(self, archive_1_folder, archive_2_folder):
-        """Check the contents of two folders against each other."""
+    def assertWorkspace(self, archive_1_folder, archive_2_folder,
+            glob_exclude=''):
+        """Check the contents of two folders against each other.
+
+        archive_1_folder - a uri to a folder on disk
+        archive_2_folder - a uri to a folder on disk
+        glob_exclude='' - a string in glob format representing files to ignore"""
 
         # uncompress the two archives
 
@@ -331,9 +337,11 @@ class GISTest(unittest.TestCase):
                 (archive_2_files, archive_2_folder)]:
             for root, dirs, files in os.walk(workspace):
                 root = root.replace(workspace + os.sep, '')
+                ignored_files = glob.glob(glob_exclude)
                 for filename in files:
-                    full_path = os.path.join(root, filename)
-                    files_list.append(full_path)
+                    if filename not in ignored_files:
+                        full_path = os.path.join(root, filename)
+                        files_list.append(full_path)
 
         archive_1_files = sorted(archive_1_files)
         archive_2_files = sorted(archive_2_files)

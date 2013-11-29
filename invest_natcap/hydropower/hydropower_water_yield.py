@@ -296,7 +296,7 @@ def execute(args):
             aoi_uri=sheds_uri)
   
     # Get the area of the pixel to use in later calculations for volume
-    wyield_pixel_area = raster_utils.get_cell_area_from_uri(wyield_clipped_path)
+    wyield_pixel_area = raster_utils.get_cell_size_from_uri(wyield_clipped_path) ** 2
 
     if sub_sheds_uri is not None:
         # Create a list of tuples that pair up field names and raster uris so

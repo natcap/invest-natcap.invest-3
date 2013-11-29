@@ -391,7 +391,7 @@ def execute(args):
         
         # get the area of a base pixel to use for computing rarity where the 
         # pixel sizes are different between base and cur/fut rasters
-        base_area = raster_utils.get_cell_area_from_uri(lulc_base_uri)
+        base_area = raster_utils.get_cell_size_from_uri(lulc_base_uri) ** 2
         base_nodata = raster_utils.get_nodata_from_uri(lulc_base_uri)
         rarity_nodata = float(np.finfo(np.float32).min)
         
@@ -403,7 +403,7 @@ def execute(args):
                 lulc_x = biophysical_args['landuse_uri_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
-                lulc_area = raster_utils.get_cell_area_from_uri(lulc_x)
+                lulc_area = raster_utils.get_cell_size_from_uri(lulc_x) ** 2
                 lulc_nodata = raster_utils.get_nodata_from_uri(lulc_x)
                 
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,

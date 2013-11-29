@@ -27,8 +27,11 @@
                     "type": "file",
                     "label": "Area(s) of Interest",
                     "required": true,
-                    "validateAs": {"type": "GDAL"},
-                    "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. "
+                    "validateAs": {"type": "OGR",
+                        "layers": [{"name": {"inheritFrom": "file"}}],
+		    		    "mustExist": true,
+                        "fieldsExist": ["NAME"]},
+                    "helpText": "This is a shapefile which will be used to display outputs within the region or regions of interest. The layer should contain one feature for every region of interest, and each should have a 'name' attribute. The name can be numeric or alphabetic, but must be unique within the file."
                 },
                 {
                     "id" : "param_csv",
@@ -37,6 +40,26 @@
                     "label": "Parameters for Age Classes and Area(s)",
                     "required": true,
                     "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
+                },
+                {
+                    "id" : "maturity_type",
+                    "args_id" : "maturity_type",
+                    "type": "dropdown",
+                    "label": "Maturity Type",
+                    "required": true,
+                    "options" : ["Age Specific", "Stage Specific"],
+                    "returns": "strings",
+                    "dataType": "string",
+                    "helpText": "This dropdown specifies whether the classes being input within the parameters CSV is classified into maturity classes by age or stage. Age specific models (ex: lobster, Dungeness crab) are separated by age in years in uniform time steps. Stage specific models (ex: shrimp) can have variable length time steps. Should Stage Specific time steps be chosen, there should be a column in the parameters CSV titled 'Duration' which will contain the number of time steps that each stage will last."
+                },
+                {
+                    "id" : "do_gender",
+                    "args_id" : "is_gendered",
+                    "type": "checkbox",
+                    "label": "Classes Are Sex-Specific?",
+                    "defaultValue": false,
+                    "required": true,
+                    "helpText": "This box indicates whether the age/stage classes provided are gender specific. Checking this box indicates that the population functions differently across gender lines, and spawning should be adjusted accordingly."
                 }
             ]
         },
@@ -66,7 +89,7 @@
                         "type": "text",
                         "label": "Alpha (Beverton-Holt/Ricker)",
                         "required": false,
-                        "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                        "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An alpha parameter should be entered here if you selected either of those two equations in the dropdown menu above."
                     },
                     {
                         "id" : "beta",
@@ -74,7 +97,7 @@
                         "type": "text",
                         "label": "Beta (Beverton-Holt/Ricker)",
                         "required": false,
-                        "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                        "helpText": "This is a required parameter for both the Beverton-Holt and the Ricker equations for modeling recruitment. An beta parameter should be entered here if you selected either of those two equations in the dropdown menu above."
                     },
                     {
                         "id" : "fec_csv",
@@ -82,7 +105,7 @@
                         "type": "file",
                         "label": "Offspring per Age Class (Fecundity)",
                         "required": true,
-                        "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
+                        "helpText": "This CSV file is required if the chosen recruitment equation is 'Fecundity.' It should contain numbers of potential offspring for each age class being included in the main parameters CSV."
                     },
                     {
                         "id" : "fix_param",
@@ -90,7 +113,7 @@
                         "type": "text",
                         "label": "Number of Recruits (Fixed)",
                         "required": false,
-                        "helpText": "By checking this box, you are indicating that you would like to use criteria from shapefiles Each shapefile in the folder directories will need to conatin the 'Rating' attribute in order to use it for calculation in the HRA model. Refer to the HRA User's Guide for information about the MANDATORY layout of the shapefile directories."
+                        "helpText": "This parameter is required if the recruitment equation is 'Fixed'. This number representes a single number of recruits that will be brought into all areas at each time step."
                     }
                     ]
                 }
@@ -106,7 +129,9 @@
                     "type": "text",
                     "label": "Initial Number of Recruits",
                     "required": true,
-                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                    "dataType": "int",
+                    "validateAs": {"type":"number"},
+                    "helpText": "The initial number of recruits that will be placed into the model. If there are multiple AOI zones, this initial number will be split equally amongst them."
                 }
             ]
         },
@@ -123,18 +148,11 @@
                         {
                             "id" : "mig_csv",
                             "args_id" : "mig_params_uri",
-                            "type": "file",
-                            "label": "Migration Matrix CSV",
+                            "type": "folder",
+                            "label": "Migration Matrix CSV Folder",
                             "required": true,
-                            "helpText": "This CSV file should contain all necessary parameters for age classes and areas. These are the main parameters upon which the model should run. For help in determining what should go into your CSV, please see the documentation."
-                        },
-                        {
-                            "id" : "mig_classes",
-                            "args_id" : "mig_classes",
-                            "type": "text",
-                            "label": "Migratory Age/Stage Classes (space separated)",
-                            "required": true,
-                            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                            "validateAs": {"type": "folder"},
+                            "helpText": "This folder should contain all CSV matrices for migration. There should be one CSV per age class, labeled accordingly. Each matrix should contain the portion of that age class which will move from one area to another."
                         }
                     ]
                 }
@@ -156,7 +174,9 @@
                             "type": "text",
                             "label": "Fraction After Processing",
                             "required": true,
-                            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                            "dataType": "float",
+                            "validateAs": {"type":"number"},
+                            "helpText": "This is the fraction of the meat left over from the animal after processing is complete."
                         },
                         {
                             "id" : "unit_price",
@@ -164,7 +184,9 @@
                             "type": "text",
                             "label": "Unit Price",
                             "required": true,
-                            "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                            "dataType": "float",
+                            "validateAs": {"type": "number"},
+                            "helpText": "Price for the desired measurable unit of the animal."
                         }
                     ]
                 }
@@ -181,7 +203,7 @@
                     "label": "Duration of Simulation (time steps)",
                     "validateAs": {"type": "number"},
                     "required": true,
-                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                    "helpText": "Number of time steps that the model should be run. Keep in mind that the model may be run for additional time steps if it has not yet equillibrated."
                } 
             ]
         }
