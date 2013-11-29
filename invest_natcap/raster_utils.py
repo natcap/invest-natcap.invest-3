@@ -561,7 +561,7 @@ def vectorize_points(
 
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
-    threshold_amount_lookup=None):
+    threshold_amount_lookup=None, ignore_value_list=[]):
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
 
@@ -580,6 +580,8 @@ def aggregate_raster_values_uri(
         threshold_amount_lookup - (optional) a dictionary indexing the
             shapefile_field's to threshold amounts to subtract from the
             aggregate value.  The result will be clamped to zero.
+        ignore_value_list - (optional) a list of values to ignore when
+            calculating the stats
 
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
@@ -670,10 +672,11 @@ def aggregate_raster_values_uri(
 
             #Only consider values which lie in the polygon for attribute_id
             masked_values = clipped_array[mask_array == attribute_id]
-            #Remove the nodata values for later processing
+            #Remove the nodata and ignore values for later processing
             masked_values_nodata_removed = (
-                masked_values[masked_values != raster_nodata])
-
+                masked_values[~numpy.in1d(masked_values, [raster_nodata] + 
+                ignore_value_list).reshape(masked_values.shape)])
+    
             #Find the min and max which might not yet be calculated
             if masked_values_nodata_removed.size > 0:
                 if pixel_min_dict[attribute_id] is None:

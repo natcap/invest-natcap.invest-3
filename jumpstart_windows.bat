@@ -6,4 +6,5 @@ python setup_environment.py --clear --system-site-packages %ENVDIR%
 copy C:\Python27\Lib\distutils\distutils.cfg .\%ENVDIR%\Lib\distutils\distutils.cfg
 %ENVDIR%\Scripts\python setup.py install
 
-%ENVDIR%\Scripts\python invest_carbon_biophysical.py
+::%ENVDIR%\Scripts\python invest_carbon_biophysical.py
+%ENVDIR%\Scripts\python test_aggregate.py
