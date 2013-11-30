@@ -12,12 +12,11 @@ out_uri = './out.tif'
 
 def calc_it(
     ds_args, ds_out, operation):
-    
-    h5file = tb.openFile('test.h5', mode='w', title="calc_it data")
+    h5_filename = raster_utils.temporary_filename()
+    h5file = tb.openFile(h5_filename, mode='w', title="calc_it data")
     root = h5file.root
     
     ds = gdal.Open(ds_args.values()[0])
-    
     
     user_args = {}
     for id, uri in ds_args.iteritems():
