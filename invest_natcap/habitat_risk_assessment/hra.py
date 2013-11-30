@@ -610,9 +610,6 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
 
         out_uri = os.path.join(dir, name + '.tif')
         
-        datasource = ogr.Open(shape)
-        layer = datasource.GetLayer()
-      
         r_dataset = \
             raster_utils.create_raster_from_vector_extents_uri(shape, grid_size,
                     gdal.GDT_Float32, -1., out_uri)
@@ -620,7 +617,7 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
 
-        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+        raster_utils.rasterize_layer_uri(out_uri, shape, burn_values=[1], 
                                                 options=['ALL_TOUCHED=TRUE'])
         habitats[name]['DS'] = out_uri
 
