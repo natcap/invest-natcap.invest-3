@@ -397,9 +397,11 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         #path.splitext returns a tuple such that the first element is what comes
         #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(shape)[1])[0]
-
         out_uri = os.path.join(dir, name + '.tif')
-        
+       
+        datasource = ogr.Open(shape)
+        layer = datasource.GetLayer()
+
         buff = buffer_dict[name]
        
         #Want to set this specifically to make later overlap easier.
@@ -432,8 +434,8 @@ def make_stress_rasters(dir, stress_list, grid_size, decay_eq, buffer_dict):
         band.Fill(nodata)
         band.FlushCache()
 
-        raster_utils.rasterize_layer_uri(out_uri, shape, burn_values=[1], 
-                                                option_list=['ALL_TOUCHED=TRUE'])
+        gdal.RasterizeLayer(raster, [1], layer, burn_values=[1], 
+                                                options=['ALL_TOUCHED=TRUE'])
        
         #Now, want to take that raster, and make it into a buffered version of
         #itself.
