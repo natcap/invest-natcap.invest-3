@@ -15,6 +15,7 @@ import errno
 import collections
 import exceptions
 import multiprocessing
+import multiprocessing.pool
 
 from osgeo import gdal
 from osgeo import osr
@@ -39,6 +40,19 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float32: numpy.float32,
     gdal.GDT_Float64: numpy.float64
     }
+    
+class NoDaemonProcess(multiprocessing.Process):
+    # make 'daemon' attribute always return False
+    def _get_daemon(self):
+        return False
+    def _set_daemon(self, value):
+        pass
+    daemon = property(_get_daemon, _set_daemon)
+
+# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+# because the latter is only a wrapper function, not a proper class.
+class PoolNoDaemon(multiprocessing.pool.Pool):
+    Process = NoDaemonProcess
     
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
@@ -1986,7 +2000,7 @@ def align_dataset_list(
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
     result_list = []
-    pool = multiprocessing.Pool(multiprocessing.cpu_count() - 1)
+    pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
