@@ -1990,20 +1990,14 @@ def align_dataset_list(
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        LOGGER.debug('resizing ' + original_dataset_uri)
-        # resize_and_resample_dataset_uri(
-            # original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
-            # resample_method)
         result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
             args=[original_dataset_uri, bounding_box, out_pixel_size,
             out_dataset_uri, resample_method]))
     for result in result_list: 
-        LOGGER.debug('waitin on results')
+        #wait on results and raise exception if process raised exception
         result.get(0xFFFF)
-        
     pool.close()
     pool.join()
-
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
