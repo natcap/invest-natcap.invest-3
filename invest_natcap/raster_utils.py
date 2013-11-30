@@ -14,6 +14,7 @@ import math
 import errno
 import collections
 import exceptions
+import multiprocessing
 
 from osgeo import gdal
 from osgeo import osr
@@ -38,7 +39,7 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float32: numpy.float32,
     gdal.GDT_Float64: numpy.float64
     }
-
+    
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
 class SpatialExtentOverlapException(Exception):
@@ -1984,11 +1985,25 @@ def align_dataset_list(
             bounding_box[index] = \
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
+    result_list = []
+    pool = multiprocessing.Pool(multiprocessing.cpu_count() - 1)
+
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        resize_and_resample_dataset_uri(
-            original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
-            resample_method)
+        LOGGER.debug('resizing ' + original_dataset_uri)
+        # resize_and_resample_dataset_uri(
+            # original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
+            # resample_method)
+        result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
+            args=[original_dataset_uri, bounding_box, out_pixel_size,
+            out_dataset_uri, resample_method]))
+    for result in result_list: 
+        LOGGER.debug('waitin on results')
+        result.get(0xFFFF)
+        
+    pool.close()
+    pool.join()
+
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
