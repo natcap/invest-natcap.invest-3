@@ -614,8 +614,8 @@ def add_hab_rasters(dir, habitats, hab_list, grid_size):
         layer = datasource.GetLayer()
       
         r_dataset = \
-            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
-                    gdal.GDT_Float32, -1., out_uri, datasource)
+            raster_utils.create_raster_from_vector_extents_uri(shape, grid_size,
+                    gdal.GDT_Float32, -1., out_uri)
 
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
