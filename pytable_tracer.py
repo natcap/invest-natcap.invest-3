@@ -44,7 +44,7 @@ def calc_it(
     for row_index in xrange(ds.RasterYSize):
         band.WriteArray(out[row_index,:].reshape((1,ds.RasterXSize)), 0, row_index)
         
-calc_it(ds_args, out_uri, 'ds1 + ds2')
+calc_it(ds_args, out_uri, 'where((ds1==255) | (ds2==255), -1, ds1 + ds2)')
  
     
 # ds1 = gdal.Open('./test/invest-data/test/data/base_data/terrestrial/lulc_samp_cur')
