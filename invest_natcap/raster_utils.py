@@ -1878,10 +1878,8 @@ def resize_and_resample_dataset_uri(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
-        LOGGER.debug('original nodata is %s' % original_nodata)
         original_nodata = float(
             calculate_value_not_in_dataset(original_dataset))
-        LOGGER.debug('setting new nodata to %s' % original_nodata)
     output_band.SetNoDataValue(original_nodata)
     output_band.Fill(original_nodata)
 
@@ -2007,14 +2005,15 @@ def align_dataset_list(
         result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
             args=[original_dataset_uri, bounding_box, out_pixel_size,
             out_dataset_uri, resample_method]))
-    for result in result_list: 
+    while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
-        result.get(0xFFFF)
+        result_list.pop().get(0xFFFF)
     pool.close()
     pool.join()
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
+        print 'masking out aoi'
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
