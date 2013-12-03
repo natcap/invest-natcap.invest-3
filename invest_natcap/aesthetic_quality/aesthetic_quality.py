@@ -162,19 +162,27 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     for f in range(1): #feature_count):
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
+        print('number of fields: ' + str(field_count))
+        # Check whether there is a filed that contains the radius information
         for field in range(field_count):
-            geometry = feature.GetGeometryRef()
-            assert geometry is not None
-            message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
-            ' point is "POINT"'
-            assert geometry.GetGeometryName() == 'POINT', message
-            x = geometry.GetX()
-            y = geometry.GetY()
-            i = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
-            j = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
-            print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j))
-            aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
-            (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
+            field_def = feature.GetFieldDefnRef(field)
+            field_name = field_def.GetNameRef()
+            print('field ' + str(field) + ' is ' + field_name)
+            if field_name is 'RADIUS2':
+                field_type = field_def.GetType()
+                print('filed type is ' + str(field_type) + ', string is ' + str(ogr.OFTString))
+        geometry = feature.GetGeometryRef()
+        assert geometry is not None
+        message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
+        ' point is "POINT"'
+        assert geometry.GetGeometryName() == 'POINT', message
+        x = geometry.GetX()
+        y = geometry.GetY()
+        i = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
+        j = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
+        print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j))
+        aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
+        (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
     
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
