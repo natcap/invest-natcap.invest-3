@@ -168,9 +168,14 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
             field_def = feature.GetFieldDefnRef(field)
             field_name = field_def.GetNameRef()
             print('field ' + str(field) + ' is ' + field_name)
-            if field_name is 'RADIUS2':
+            if field_name == 'RADIUS2':
                 field_type = field_def.GetType()
-                print('filed type is ' + str(field_type) + ', string is ' + str(ogr.OFTString))
+                message = 'Wrong field type ' + str(field_type) + \
+                    ' expected 0 (ogr.OFTInteger)'
+                assert field_type == ogr.OFTInteger, message
+                max_dist = -feature.GetFieldAsInteger(field)
+                print('field value is', max_dist)
+                
         geometry = feature.GetGeometryRef()
         assert geometry is not None
         message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
