@@ -162,19 +162,16 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     for f in range(1): #feature_count):
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
-        print('number of fields: ' + str(field_count))
         # Check whether there is a filed that contains the radius information
         for field in range(field_count):
             field_def = feature.GetFieldDefnRef(field)
             field_name = field_def.GetNameRef()
-            print('field ' + str(field) + ' is ' + field_name)
             if field_name == 'RADIUS2':
                 field_type = field_def.GetType()
                 message = 'Wrong field type ' + str(field_type) + \
                     ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
                 max_dist = -feature.GetFieldAsInteger(field)
-                print('field value is', max_dist)
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
