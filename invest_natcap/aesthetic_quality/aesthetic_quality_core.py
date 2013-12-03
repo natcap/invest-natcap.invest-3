@@ -1,11 +1,14 @@
 import math
-
+import os
 import numpy as np
 import collections
 import logging
 
 from osgeo import gdal
+
+from invest_natcap import raster_utils
 import aesthetic_quality_cython_core
+
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -1096,6 +1099,10 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     coordinates, obs_elev, tgt_elev, max_dist, refraction_coeff, alg_version)
     
     # Save the output in the output URI
+    if os.path.exists(output_uri):
+        os.remove(output_uri)
+    raster_utils.new_raster_from_base_uri(input_uri, output_uri, 'GTiff', \
+        255, gdal.GDT_Byte, fill_value = 255)
     output_raster = gdal.Open(output_uri, gdal.GA_Update)
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message

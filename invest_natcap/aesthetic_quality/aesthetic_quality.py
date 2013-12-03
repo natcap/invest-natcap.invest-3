@@ -158,7 +158,7 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     GT = in_dem_raster.GetGeoTransform()
     iGT = gdal.InvGeoTransform(GT)[1]
     feature_count = layer.GetFeatureCount()
-    print('feature count', feature_count)
+    print('Number of viewpoints: ' + str(feature_count))
     for f in range(1): #feature_count):
         feature = layer.GetFeature(f)
         field_count = feature.GetFieldCount()
@@ -170,12 +170,9 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
             assert geometry.GetGeometryName() == 'POINT', message
             x = geometry.GetX()
             y = geometry.GetY()
-            #print('x', x, 'y', y)
-            #print('GT ', GT)
-            #print('iGT', iGT)
             i = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
             j = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
-            print('i', i, 'j', j)
+            print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j))
             aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
             (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
     
