@@ -1,3 +1,5 @@
+"""
+"""
 from osgeo import gdal, ogr, osr
 gdal.UseExceptions()
 from invest_natcap import raster_utils
@@ -27,14 +29,40 @@ def transition_soil_carbon(area_final, carbon_final, depth_final,
 
 class ConstantOp:
     """A class that allows constants to be added to function calls"""
+    
     def __init__(self, op, *c):
+        """Constructor for ConstantOp class
+
+        :param op: The callable operator
+        :type op: <type 'function'>
+        :param c: The list of constants
+        :type c: list
+
+        :return: instance of ConstantOp
+        :rtype: <type 'instance'>
+        """
         self.op = op
         self.c = c
 
     def __call__(self, *f):
+        """Call to ConstantOp operator
+
+        :param f: The paramters with which to call the operator
+        :type f: list
+
+        :return: return of the operator
+        """
         return apply(self.op, f+self.c)
 
 def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
+    """Creates a shapefile with the bounding box from a raster.
+
+    :param dataset_uri: The uri for the input raster.
+    :type dataset_uri: str
+
+    :return: None
+    :rtype: None
+    """
     LOGGER.debug("Creating extent from: %s", dataset_uri)
     LOGGER.debug("Storing extent in: %s", datasource_uri)
     geotransform = raster_utils.get_geotransform_uri(dataset_uri)
@@ -95,11 +123,45 @@ def datasource_from_dataset_bounding_box_uri(dataset_uri, datasource_uri):
     datasource = None
 
 def sum_uri(dataset_uri, datasource_uri):
+    """Wrapper call to raster_utils.aggregate_raster_values_uri to extract total
+
+    :param dataset_uri: The uri for the input raster.
+    :type dataset_uri: str
+
+    :return: None
+    :rtype: None
+    """
     total = raster_utils.aggregate_raster_values_uri(dataset_uri, datasource_uri).total
     return total.__getitem__(total.keys().pop())
     
 
 def execute(args):
+    """Entry point for the blue carbon model.
+
+    :param args["workspace_dir"]: The directory to hold output from a particular model run
+    :type args["workspace_dir"]: str
+    :param args["lulc_uri_1"]: The land use land cover raster for time 1.
+    :type args["lulc_uri_1"]: str
+    :param args["year_1"]: The year for the land use land cover raster for time 1.
+    :type args["year_1"]: int
+    :param args["lulc_uri_2"]: The land use land cover raster for time 2.
+    :type args["lulc_uri_2"]: str
+    :param args["year_2"]: The year for the land use land cover raster for time 2.
+    :type args["year_2"]: int
+    :param args["lulc_uri_3"]: The land use land cover raster for time 3.
+    :type args["lulc_uri_3"]: str
+    :param args["year_3"]: The year for the land use land cover raster for time 3.
+    :type args["year_3"]: int
+    :param args["lulc_uri_4"]: The land use land cover raster for time 4.
+    :type args["lulc_uri_4"]: str
+    :param args["year_4"]: The year for the land use land cover raster for time 4.
+    :type args["year_4"]: int
+    :param args["lulc_uri_5"]: The land use land cover raster for time 5.
+    :type args["lulc_uri_5"]: str
+    :param args["year_5"]: The year for the land use land cover raster for time 5.
+    :type args["year_5"]: int
+    
+    """
     ##preprocess args for possible ease of adoption of future IUI features
     #this creates a hypothetical IUI element from existing element
     lulc_list = []
@@ -159,24 +221,28 @@ def execute(args):
     ##outputs
     extent_name = "extent.shp"
     report_name = "report.htm"
+    intermediate_dir = "intermediate"
+
+    if not os.path.exists(os.path.join(workspace_dir, intermediate_dir)):
+        os.makedirs(os.path.join(workspace_dir, intermediate_dir))
     
     #carbon pool file names
-    above_name = "%i_base_above.tif"
-    below_name = "%i_base_below.tif"
-    soil_name = "%i_base_soil.tif"
-    litter_name = "%i_base_litter.tif"
-    biomass_name = "%i_base_biomass.tif"
+    above_name = os.path.join(intermediate_dir, "%i_base_above.tif")
+    below_name = os.path.join(intermediate_dir, "%i_base_below.tif")
+    soil_name = os.path.join(intermediate_dir, "%i_base_soil.tif")
+    litter_name = os.path.join(intermediate_dir, "%i_base_litter.tif")
+    biomass_name = os.path.join(intermediate_dir, "%i_base_biomass.tif")
     carbon_name = "%i_base_total.tif"
 
     #carbon accumulation file names
-    acc_soil_name = "%i_acc_soil.tif"
-    acc_soil_co_name = "%i_acc_soil_co.tif"
+    acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
+    acc_soil_co_name = os.path.join(intermediate_dir, "%i_acc_soil_co.tif")
 
     #carbon disturbance file names
-    dis_bio_co_name = "%i_dis_bio_co.tif"
-    dis_soil_co_name = "%i_dis_soil_co.tif"
-    dis_bio_name = "%i_dis_bio.tif"
-    dis_soil_name = "%i_dis_soil.tif"
+    dis_bio_co_name = os.path.join(intermediate_dir, "%i_dis_bio_co.tif")
+    dis_soil_co_name = os.path.join(intermediate_dir, "%i_dis_soil_co.tif")
+    dis_bio_name = os.path.join(intermediate_dir, "%i_dis_bio.tif")
+    dis_soil_name = os.path.join(intermediate_dir, "%i_dis_soil.tif")
 
 
     #totals
@@ -380,8 +446,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_co_uri,
                                                   "GTiff",
-                                                  0.0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Identity raster for soil accumulation coefficent created.")
 
         #multiply by number of years
@@ -399,8 +466,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_uri,
                                                   "GTiff",
-                                                  0.0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Zero soil accumulation raster created.")
 
         ##calculate biomass disturbance
@@ -421,8 +489,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_bio_co_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Identity raster for biomass disturbance coefficent created.")
 
         #multiply coefficients by base biomass carbon
@@ -440,8 +509,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_bio_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Zero biomass disturbance raster created.")
 
         ##calculate soil disturbance
@@ -461,8 +531,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_soil_co_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Identity raster for soil disturbance created.")
 
 
@@ -481,8 +552,9 @@ def execute(args):
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_soil_uri,
                                                   "GTiff",
-                                                  0,
-                                                  gdal.GDT_Byte)
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
             LOGGER.debug("Zero soil disturbance raster created.")
 
             #set base to new LULC and year
@@ -521,8 +593,9 @@ def execute(args):
         raster_utils.new_raster_from_base_uri(acc_soil_uri_list[0],
                                               total_acc_soil_uri,
                                               "GTiff",
-                                              0,
-                                              gdal.GDT_Byte)
+                                              255,
+                                              gdal.GDT_Byte,
+                                              fill_value=0)
     LOGGER.debug("Cumilative soil accumulation raster created.")
 
     try:                                              
@@ -537,8 +610,9 @@ def execute(args):
         raster_utils.new_raster_from_base_uri(dis_soil_uri_list[0],
                                       total_dis_soil_uri,
                                       "GTiff",
-                                      0,
-                                      gdal.GDT_Byte)
+                                      255,
+                                      gdal.GDT_Byte,
+                                      fill_value=0)
     LOGGER.debug("Cumilative soil disturbance raster created.")
 
     try:                                              
@@ -553,8 +627,9 @@ def execute(args):
         raster_utils.new_raster_from_base_uri(dis_bio_uri_list[0],
                                       total_dis_bio_uri,
                                       "GTiff",
-                                      0,
-                                      gdal.GDT_Byte)
+                                      255,
+                                      gdal.GDT_Byte,
+                                      fill_value=0)
     LOGGER.debug("Cumilative biomass disturbance raster created.")
 
     

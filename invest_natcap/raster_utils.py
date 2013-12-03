@@ -13,6 +13,9 @@ import csv
 import math
 import errno
 import collections
+import exceptions
+import multiprocessing
+import multiprocessing.pool
 
 from osgeo import gdal
 from osgeo import osr
@@ -37,7 +40,20 @@ GDAL_TO_NUMPY_TYPE = {
     gdal.GDT_Float32: numpy.float32,
     gdal.GDT_Float64: numpy.float64
     }
+    
+class NoDaemonProcess(multiprocessing.Process):
+    # make 'daemon' attribute always return False
+    def _get_daemon(self):
+        return False
+    def _set_daemon(self, value):
+        pass
+    daemon = property(_get_daemon, _set_daemon)
 
+# We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+# because the latter is only a wrapper function, not a proper class.
+class PoolNoDaemon(multiprocessing.pool.Pool):
+    Process = NoDaemonProcess
+    
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
 class SpatialExtentOverlapException(Exception):
@@ -531,7 +547,7 @@ def vectorize_points(
 
 def aggregate_raster_values_uri(
     raster_uri, shapefile_uri, shapefile_field=None, ignore_nodata=True,
-    threshold_amount_lookup=None):
+    threshold_amount_lookup=None, ignore_value_list=[]):
     """Collect all the raster values that lie in shapefile depending on the
         value of operation
 
@@ -550,6 +566,8 @@ def aggregate_raster_values_uri(
         threshold_amount_lookup - (optional) a dictionary indexing the
             shapefile_field's to threshold amounts to subtract from the
             aggregate value.  The result will be clamped to zero.
+        ignore_value_list - (optional) a list of values to ignore when
+            calculating the stats
 
         returns a named tuple of the form
            ('aggregate_values', 'total pixel_mean hectare_mean n_pixels
@@ -640,10 +658,11 @@ def aggregate_raster_values_uri(
 
             #Only consider values which lie in the polygon for attribute_id
             masked_values = clipped_array[mask_array == attribute_id]
-            #Remove the nodata values for later processing
+            #Remove the nodata and ignore values for later processing
             masked_values_nodata_removed = (
-                masked_values[masked_values != raster_nodata])
-
+                masked_values[~numpy.in1d(masked_values, [raster_nodata] + 
+                ignore_value_list).reshape(masked_values.shape)])
+    
             #Find the min and max which might not yet be calculated
             if masked_values_nodata_removed.size > 0:
                 if pixel_min_dict[attribute_id] is None:
@@ -1859,10 +1878,8 @@ def resize_and_resample_dataset_uri(
         output_uri, new_x_size, new_y_size, 1, original_band.DataType)
     output_band = output_dataset.GetRasterBand(1)
     if original_nodata is None:
-        LOGGER.debug('original nodata is %s' % original_nodata)
         original_nodata = float(
             calculate_value_not_in_dataset(original_dataset))
-        LOGGER.debug('setting new nodata to %s' % original_nodata)
     output_band.SetNoDataValue(original_nodata)
     output_band.Fill(original_nodata)
 
@@ -1980,14 +1997,23 @@ def align_dataset_list(
             bounding_box[index] = \
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
+    result_list = []
+    pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
+
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        resize_and_resample_dataset_uri(
-            original_dataset_uri, bounding_box, out_pixel_size, out_dataset_uri,
-            resample_method)
+        result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
+            args=[original_dataset_uri, bounding_box, out_pixel_size,
+            out_dataset_uri, resample_method]))
+    while len(result_list) > 0:
+        #wait on results and raise exception if process raised exception
+        result_list.pop().get(0xFFFF)
+    pool.close()
+    pool.join()
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
+        print 'masking out aoi'
         first_dataset = gdal.Open(dataset_out_uri_list[0])
         n_rows = first_dataset.RasterYSize
         n_cols = first_dataset.RasterXSize
@@ -2021,11 +2047,31 @@ def align_dataset_list(
         mask_dataset = None
         os.remove(mask_uri)
 
-
+def assert_file_existance(dataset_uri_list):
+    """Verify that the uris passed in the argument exist on the filesystem
+        if not, raise an exeception indicating which files do not exist
+        
+        dataset_uri_list - a list of relative or absolute file paths to validate
+        
+        returns nothing, but raises an IOError if any files are not found"""
+        
+    not_found_uris = []
+    for uri in dataset_uri_list:
+        if not os.path.exists(uri):
+            not_found_uris.append(uri)
+            
+    if len(not_found_uris) != 0:
+        error_message = (
+            "The following files do not exist on the filesystem: " + 
+            str(not_found_uris))
+        raise exceptions.IOError(error_message)
+        
+        
 def vectorize_datasets(
     dataset_uri_list, dataset_pixel_op, dataset_out_uri, datatype_out,
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
-    dataset_to_align_index=None, aoi_uri=None, assert_datasets_projected=True):
+    dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
+    assert_datasets_projected=True):
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
         with one of the input datasets, output a dataset that is the union
@@ -2055,11 +2101,13 @@ def vectorize_datasets(
         nodata_out - the nodata value of the output dataset.
         pixel_size_out - the pixel size of the output dataset in
             projected coordinates.
-        bounding_box_mode - one of "union" or "intersection". If union
+        bounding_box_mode - one of "union" or "intersection", "dataset". If union
             the output dataset bounding box will be the union of the
             input datasets.  Will be the intersection otherwise. An
             exception is raised if the mode is "intersection" and the
-            input datasets have an empty intersection.
+            input datasets have an empty intersection. If dataset it will make a
+            bounding box as large as the given dataset, if given
+            dataset_to_bound_index must be defined.
         resample_method_list - (optional) a list of resampling methods
             for each output uri in dataset_out_uri list.  Each element
             must be one of "nearest|bilinear|cubic|cubic_spline|lanczos".
@@ -2069,13 +2117,20 @@ def vectorize_datasets(
             rasters to fix on the upper left hand corner of the output
             datasets.  If negative, the bounding box aligns the intersection/
             union without adjustment.
+        dataset_to_bound_index - if mode is "dataset" this indicates which
+            dataset should be the output size.
         aoi_uri - (optional) a URI to an OGR datasource to be used for the
             aoi.  Irrespective of the `mode` input, the aoi will be used
             to intersect the final bounding box.
         assert_datasets_projected - (optional) if True this operation will
             test if any datasets are not projected and raise an exception
             if so."""
-
+    
+    if aoi_uri == None:
+        assert_file_existance(dataset_uri_list)
+    else:
+        assert_file_existance(dataset_uri_list + [aoi_uri])
+        
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
@@ -2090,6 +2145,7 @@ def vectorize_datasets(
     align_dataset_list(
         dataset_uri_list, dataset_out_uri_list, resample_method_list,
         pixel_size_out, bounding_box_mode, dataset_to_align_index,
+        dataset_to_bound_index=dataset_to_bound_index,
         aoi_uri=aoi_uri, assert_datasets_projected=assert_datasets_projected)
     aligned_datasets = [
         gdal.Open(filename, gdal.GA_Update) for filename in dataset_out_uri_list]

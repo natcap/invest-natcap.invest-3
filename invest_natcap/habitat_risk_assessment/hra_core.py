@@ -568,7 +568,7 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
            
             frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
             s_o_score = max_risk * frac_over + (1-frac_over)
-
+            LOGGER.debug("Spatial Overlap Score: %s, E_Score: %s" % (s_o_score, e_agg_dict[ident]))
             if frac_over == 0.:
                 e_score = 0.
             
@@ -1425,14 +1425,12 @@ def calc_E_raster(out_uri, h_s_list, denom_dict, h_s_base_uri, h_base_uri):
         value = 0.
         denom_val = 0.
 
-        #Ignoring first pixel, since that's the base
         for i in range(len(h_s_pixels)):
             
-            p = pixels[i]
+            p = h_s_pixels[i]
 
             if p != nodata:
                 value += p
-                #Will be off by 1 because basename is now at the front
                 denom_val += denom_dict[crit_name_list[i]]
 
         return value / denom_val
