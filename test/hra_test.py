@@ -23,6 +23,7 @@ class TestHRA(invest_natcap.testing.GISTest):
         args['grid_size'] = 500
         args['max_rating'] = 3
         args['csv_uri'] = './invest-data/test/data/hra_regression_data/habitat_stressor_ratings'
+        args['max_stress'] = 3
 
         self.args = args
 
