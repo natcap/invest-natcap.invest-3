@@ -3,7 +3,6 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 from invest_natcap import raster_utils
-from invest_natcap import testing
 from invest_natcap.aesthetic_quality import aesthetic_quality_core
 #from invest_natcap.overlap_analysis import overlap_analysis
 
@@ -180,8 +179,6 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
             aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
             (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
     
-    testing.assertRasterEquals(src_filename, out_viewshed_uri)
-
 
 def add_field_feature_set_uri(fs_uri, field_name, field_type):
     shapefile = ogr.Open(fs_uri, 1)
