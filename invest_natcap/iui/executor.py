@@ -205,6 +205,11 @@ class Executor(threading.Thread):
                         'model': self.runModel,
                         'saveParams': self.saveParamsToDisk}
 
+    def flush(self):
+        # This function is required, since I point sys.stdout to self.  Flush()
+        # is called by some parts of the multiprocessing module.
+        pass
+
     def write(self, string):
         self.printQueueLock.acquire()
         self.printQueue.append(string)
