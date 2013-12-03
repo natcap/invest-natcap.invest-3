@@ -566,7 +566,13 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
    
             name = name_map[ident]
            
-            frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            #Might be the case that neither exists within the subregion. In that
+            #case we want to short circuit in order to avoid divide by 0 errors.
+            if h_agg_dict[ident] in [0, 0.]:
+                frac_over = 0.
+            else:
+                frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            
             s_o_score = max_risk * frac_over + (1-frac_over)
             LOGGER.debug("Spatial Overlap Score: %s, E_Score: %s" % (s_o_score, e_agg_dict[ident]))
             if frac_over == 0.:
