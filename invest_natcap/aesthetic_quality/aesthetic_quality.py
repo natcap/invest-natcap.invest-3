@@ -306,7 +306,7 @@ def execute(args):
 
     #calculate viewshed
     LOGGER.info("Calculating viewshed.")
-    viewshed(aq_args['dem_uri'],
+    viewshed(viewshed_dem_reclass_uri,
              viewshed_uri,
              aq_args['structure_uri'],
              curvature_correction,

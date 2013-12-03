@@ -1089,6 +1089,7 @@ def viewshed(input_uri, output_uri, coordinates, obs_elev=1.75, tgt_elev=0.0, \
     assert input_raster is not None, message
     input_array = input_raster.GetRasterBand(1).ReadAsArray()
     array_shape = input_array.shape
+    print('computing viewshed on ' + input_uri, array_shape)
     
     # Compute the viewshed on it
     output_array = compute_viewshed(input_array, \
