@@ -1018,7 +1018,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
         sweep_line['closest'] = new_pixel
     return sweep_line
 
-def get_perimeter_cells(array_shape, viewpoint):
+def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     """Compute cells along the perimeter of an array.
 
         Inputs:
@@ -1026,6 +1026,8 @@ def get_perimeter_cells(array_shape, viewpoint):
             size of the array from which to compute the perimeter
             -viewpoint: tuple (row, col) indicating the position of the
             observer
+            -max_dist: maximum distance in pixels from the center of the array.
+            Negative values are ignored (same effect as infinite distance).
             
         Returns a tuple (rows, cols) of the cell rows and columns following
         the convention of numpy.where() where the first cell is immediately
@@ -1121,7 +1123,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     array_shape = input_array.shape
     # 1- get perimeter cells
     perimeter_cells = \
-    get_perimeter_cells(array_shape, coordinates)
+    get_perimeter_cells(array_shape, coordinates, max_dist)
     # 1.1- remove perimeter cell if same coord as viewpoint
     # 2- compute cell angles
     angles = cell_angles(perimeter_cells, coordinates)
