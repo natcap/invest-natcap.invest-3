@@ -223,7 +223,7 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_get_perimeter_cells(self):
         """Test get_perimeter_cells on 2 hand-designed examples"""
-        # First hand-designed example: 3x4 raster
+        # First hand-designed example: 3x4 raster, infinite max_dist
         # Given the shape of the array below and the viewpoint coordinates
         array_shape = (3, 4)
         viewpoint = (2, 3)
@@ -246,7 +246,7 @@ class TestAestheticQualityCore(unittest.TestCase):
         message = 'difference in columns: ' + str(col_diff)
         assert col_diff == 0, message
 
-        # Second hand-designed example: 5x3 raster
+        # Second hand-designed example: 5x3 raster, infinite max_dist
         # Given the shape of the array below and the viewpoint coordinates
         array_shape = (5, 3)
         viewpoint = (0, 1)
@@ -260,6 +260,51 @@ class TestAestheticQualityCore(unittest.TestCase):
             ', computed' + str(computed_rows.shape)
         assert expected_rows.shape == computed_rows.shape, message
         message = 'number of cols disagree: expected' + str(expected_rows.shape) + \
+            ', computed' + str(computed_rows.shape)
+        assert expected_cols.shape == computed_cols.shape, message
+        row_diff = np.sum(np.absolute(expected_rows - computed_rows))
+        message = 'difference in rows: ' + str(row_diff)
+        assert row_diff == 0, message
+        col_diff = np.sum(np.absolute(expected_cols - computed_cols))
+        message = 'difference in columns: ' + str(col_diff)
+        assert col_diff == 0, message
+
+        # Third hand-designed example: 100x100 raster, max_dist = 100
+        array_shape = (100, 100)
+        viewpoint = (25, 75)
+        max_dist = 100
+        row_count, col_count = array_shape
+        # Create top row, except cell (0,0)
+        expected_rows = np.zeros(col_count - 1)
+        expected_cols = np.array(range(col_count-1, 0, -1))
+        # Create left side, avoiding repeat from top row
+        expected_rows = \
+        np.concatenate((expected_rows, np.array(range(row_count -1))))
+        expected_cols = \
+        np.concatenate((expected_cols, np.zeros(row_count - 1)))
+        # Create bottom row, avoiding repat from left side
+        expected_rows = \
+        np.concatenate((expected_rows, np.ones(col_count -1) * (row_count -1)))
+        expected_cols = \
+        np.concatenate((expected_cols, np.array(range(col_count - 1))))
+        # Create last part of the right side, avoiding repeat from bottom row
+        expected_rows = \
+        np.concatenate((expected_rows, np.array(range(row_count - 1, 0, -1))))
+        expected_cols = \
+        np.concatenate((expected_cols, np.ones(row_count -1) * (col_count -1)))
+        # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
+        expected_rows = np.roll(expected_rows, viewpoint[0])
+        expected_cols = np.roll(expected_cols, viewpoint[0])
+        # Test if the computed rows and columns agree with the expected ones
+        computed_rows, computed_cols = \
+            aesthetic_quality_core.get_perimeter_cells(array_shape, viewpoint,\
+            max_dist)
+        message = \
+            'number of rows disagree: expected' + str(expected_rows.shape) + \
+            ', computed' + str(computed_rows.shape)
+        assert expected_rows.shape == computed_rows.shape, message
+        message = \
+            'number of cols disagree: expected' + str(expected_rows.shape) + \
             ', computed' + str(computed_rows.shape)
         assert expected_cols.shape == computed_cols.shape, message
         row_diff = np.sum(np.absolute(expected_rows - computed_rows))
