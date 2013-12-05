@@ -621,11 +621,21 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
                 else:
                     avgs_r_sum[h][sub_dict['Name']] = r_val
 
+    LOGGER.debug("AVGS_R_SUM: %s" % avgs_r_sum)
+
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
         
-                sub_dict['R_Pct'] = sub_dict['Risk']/avgs_r_sum[h][sub_dict['Name']]
+                #Want to avoid div by 0 errors if there is none of a particular
+                #habitat within a subregion. Thus, if the total for risk for a
+                #habitat is 0, just return 0 as a percentage too.
+                curr_total_risk = avgs_r_sum[h][sub_dict['Name']]
+
+                if curr_total_risk == 0.:
+                    sub_dict['R_Pct'] = 0.
+                else:
+                    sub_dict['R_Pct'] = sub_dict['Risk']/curr_total_risk
 
 
     return avgs_dict, name_map.values()
