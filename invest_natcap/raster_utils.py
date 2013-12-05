@@ -1998,18 +1998,23 @@ def align_dataset_list(
                 n_pixels * align_pixel_size + align_bounding_box[index]
 
     result_list = []
-    pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
+    #pool = PoolNoDaemon(multiprocessing.cpu_count() - 1)
 
     for original_dataset_uri, out_dataset_uri, resample_method in zip(
         dataset_uri_list, dataset_out_uri_list, resample_method_list):
-        result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
-            args=[original_dataset_uri, bounding_box, out_pixel_size,
-            out_dataset_uri, resample_method]))
+        resize_and_resample_dataset_uri(
+            original_dataset_uri, bounding_box, out_pixel_size,
+            out_dataset_uri, resample_method)
+        
+        
+#        result_list.append(pool.apply_async(resize_and_resample_dataset_uri, 
+#            args=[original_dataset_uri, bounding_box, out_pixel_size,
+#            out_dataset_uri, resample_method]))
     while len(result_list) > 0:
         #wait on results and raise exception if process raised exception
         result_list.pop().get(0xFFFF)
-    pool.close()
-    pool.join()
+    #pool.close()
+    #pool.join()
 
     #If there's an AOI, mask it out
     if aoi_uri != None:
