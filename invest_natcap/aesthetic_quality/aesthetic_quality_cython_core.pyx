@@ -628,7 +628,7 @@ def sweep_through_angles( \
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 2))
+        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # 2.1- add cells
         while (add_event_id < add_event_count) and \
             (add_events[arg_min[add_event_id]] < angles[a+1]):

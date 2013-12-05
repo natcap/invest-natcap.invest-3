@@ -1061,8 +1061,9 @@ def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     rows += i_min
     cols += j_min
     # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
+    print('Roll factor', i_min)
     rows = np.roll(rows, viewpoint[0] - i_min)
-    cols = np.roll(cols, viewpoint[0] - j_min)
+    cols = np.roll(cols, viewpoint[0] - i_min)
     return (rows, cols)
 
 def cell_angles(cell_coords, viewpoint):
@@ -1196,7 +1197,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 2))
+        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
