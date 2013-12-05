@@ -2,8 +2,19 @@
 
 import collections
 import locale
+import logging
 
-locale.setlocale(locale.LC_ALL, '')
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('raster_utils')
+
+
+try:
+    locale.setlocale(locale.LC_ALL, '')
+except Exception:
+    LOGGER.warn("couldn't set locale")
+
 
 class HTMLDocument(object):
     '''Utility class for creating simple HTML files.
