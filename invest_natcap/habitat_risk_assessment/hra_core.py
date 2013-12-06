@@ -566,7 +566,13 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
    
             name = name_map[ident]
            
-            frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            #Might be the case that neither exists within the subregion. In that
+            #case we want to short circuit in order to avoid divide by 0 errors.
+            if h_agg_dict[ident] in [0, 0.]:
+                frac_over = 0.
+            else:
+                frac_over = hs_agg_dict[ident] / h_agg_dict[ident]
+            
             s_o_score = max_risk * frac_over + (1-frac_over)
             LOGGER.debug("Spatial Overlap Score: %s, E_Score: %s" % (s_o_score, e_agg_dict[ident]))
             if frac_over == 0.:
@@ -615,11 +621,21 @@ def pre_calc_avgs(inter_dir, risk_dict, aoi_uri, aoi_key, risk_eq, max_risk):
                 else:
                     avgs_r_sum[h][sub_dict['Name']] = r_val
 
+    LOGGER.debug("AVGS_R_SUM: %s" % avgs_r_sum)
+
     for h, hab_dict in avgs_dict.iteritems():
         for s, sub_list in hab_dict.iteritems():
             for sub_dict in sub_list:
         
-                sub_dict['R_Pct'] = sub_dict['Risk']/avgs_r_sum[h][sub_dict['Name']]
+                #Want to avoid div by 0 errors if there is none of a particular
+                #habitat within a subregion. Thus, if the total for risk for a
+                #habitat is 0, just return 0 as a percentage too.
+                curr_total_risk = avgs_r_sum[h][sub_dict['Name']]
+
+                if curr_total_risk == 0.:
+                    sub_dict['R_Pct'] = 0.
+                else:
+                    sub_dict['R_Pct'] = sub_dict['Risk']/curr_total_risk
 
 
     return avgs_dict, name_map.values()
