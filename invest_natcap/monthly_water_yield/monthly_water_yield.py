@@ -734,6 +734,8 @@ def calculate_in_absorption_rate(
 
         alpha_one_uri - a URI to a gdal dataset for the alpha one values
         
+        out_uri - URI to the output absorption raster
+        
         out_nodata - a float for the output nodata value
 
         returns - nothing"""
@@ -755,7 +757,7 @@ def calculate_in_absorption_rate(
             if pix == pix_nodata: 
                 return out_nodata
         # This equation is taken from equation (1) by factoring out the Tp value
-        return imperv_pix + (1.0 - imperv_pix) * alpha_pix
+        return 1.0 - (imperv_pix + (1.0 - imperv_pix) * alpha_pix)
     
     cell_size = raster_utils.get_cell_size_from_uri(imperv_uri)
 
