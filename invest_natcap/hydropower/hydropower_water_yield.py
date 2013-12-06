@@ -86,7 +86,9 @@ def execute(args):
     # Construct folder paths
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
-    raster_utils.create_directories([workspace, output_dir])
+    per_pixel_output_dir = os.path.join(workspace, output_dir)
+    raster_utils.create_directories([
+        workspace, output_dir, per_pixel_output_dir])
     
     # Get inputs from the args dictionary
     clipped_lulc_uri = raster_utils.temporary_filename()
@@ -123,11 +125,13 @@ def execute(args):
         file_suffix = ''
     
     # Paths for clipping the fractp/wyield raster to watershed polygons
-    fractp_clipped_path = os.path.join(output_dir, 'fractp%s.tif' % file_suffix)
-    wyield_clipped_path = os.path.join(output_dir, 'wyield%s.tif' % file_suffix)
+    fractp_clipped_path = os.path.join(
+        per_pixel_output_dir, 'fractp%s.tif' % file_suffix)
+    wyield_clipped_path = os.path.join(
+        per_pixel_output_dir, 'wyield%s.tif' % file_suffix)
     
     # Paths for the actual evapotranspiration rasters
-    aet_path = os.path.join(output_dir, 'aet%s.tif' % file_suffix) 
+    aet_path = os.path.join(per_pixel_output_dir, 'aet%s.tif' % file_suffix) 
     
     # Paths for the watershed and subwatershed tables
     wyield_ws_table_uri = os.path.join(
