@@ -1018,7 +1018,7 @@ def add_active_pixel(sweep_line, index, distance, visibility):
         sweep_line['closest'] = new_pixel
     return sweep_line
 
-def get_perimeter_cells(array_shape, viewpoint):
+def get_perimeter_cells(array_shape, viewpoint, max_dist=-1):
     """Compute cells along the perimeter of an array.
 
         Inputs:
@@ -1026,12 +1026,25 @@ def get_perimeter_cells(array_shape, viewpoint):
             size of the array from which to compute the perimeter
             -viewpoint: tuple (row, col) indicating the position of the
             observer
+            -max_dist: maximum distance in pixels from the center of the array.
+            Negative values are ignored (same effect as infinite distance).
             
         Returns a tuple (rows, cols) of the cell rows and columns following
         the convention of numpy.where() where the first cell is immediately
         right to the viewpoint, and the others are enumerated clockwise."""
+    # Adjust max_dist to a very large value if negative
+    if max_dist < 0:
+        max_dist = 1000000000
+    # Limit the perimeter cells to the intersection between the array's bounds
+    # and the axis-aligned bounding box that extends around viewpoint out to
+    # max_dist
+    i_min = max(viewpoint[0] - max_dist, 0)
+    i_max = min(viewpoint[0] + max_dist, array_shape[0])
+    j_min = max(viewpoint[1] - max_dist, 0)
+    j_max = min(viewpoint[1] + max_dist, array_shape[1])
     # list all perimeter cell center angles
-    row_count, col_count = array_shape
+    row_count = i_max - i_min 
+    col_count = j_max - j_min
     # Create top row, except cell (0,0)
     rows = np.zeros(col_count - 1)
     cols = np.array(range(col_count-1, 0, -1))
@@ -1044,9 +1057,13 @@ def get_perimeter_cells(array_shape, viewpoint):
     # Create last part of the right side, avoiding repeat from bottom row
     rows = np.concatenate((rows, np.array(range(row_count - 1, 0, -1))))
     cols = np.concatenate((cols, np.ones(row_count - 1) * (col_count - 1)))
+    # Add a offsets to rows & cols to be consistent with viewpoint
+    rows += i_min
+    cols += j_min
     # Roll the arrays so the first point's angle at (rows[0], cols[0]) is 0
-    rows = np.roll(rows, viewpoint[0])
-    cols = np.roll(cols, viewpoint[0])
+    print('Roll factor', i_min)
+    rows = np.roll(rows, viewpoint[0] - i_min)
+    cols = np.roll(cols, viewpoint[0] - i_min)
     return (rows, cols)
 
 def cell_angles(cell_coords, viewpoint):
@@ -1121,7 +1138,7 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     array_shape = input_array.shape
     # 1- get perimeter cells
     perimeter_cells = \
-    get_perimeter_cells(array_shape, coordinates)
+    get_perimeter_cells(array_shape, coordinates, max_dist)
     # 1.1- remove perimeter cell if same coord as viewpoint
     # 2- compute cell angles
     angles = cell_angles(perimeter_cells, coordinates)
@@ -1180,7 +1197,7 @@ def sweep_through_angles(angles, add_events, center_events, remove_events, \
         
     # 2- loop through line sweep angles:
     for a in range(angle_count-1):
-        print('angle ' + str(a) + ' / ' + str(angle_count - 2))
+        #print('angle ' + str(a) + ' / ' + str(angle_count - 2))
         # Collect add_cell events:
         add_cell_events = []
         while (add_event_id < add_event_count) and \
