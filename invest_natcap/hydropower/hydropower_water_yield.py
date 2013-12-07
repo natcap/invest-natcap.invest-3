@@ -112,7 +112,7 @@ def execute(args):
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
         bio_dict[int(row['lucode'])] = {
-                'Kc':float(row['Kc']), 'root_depth':float(row['root_depth'])}
+                'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']), 'LULC_veg':float(row['LULC_veg'])}
 
     biophysical_table_file.close() 
     
@@ -146,9 +146,15 @@ def execute(args):
     # Kc and root_depth fields to use for reclassifying 
     Kc_dict = {}
     root_dict = {}
+    vegetated_dict = {}
+    
     for lulc_code in bio_dict:
         Kc_dict[lulc_code] = bio_dict[lulc_code]['Kc']
-        root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+        vegetated_dict[lulc_code] = bio_dict[lulc_code]['LULC_veg']
+        if vegetated_dict[lulc_code] == 1.0:
+            root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+        else:
+            root_dict[lulc_code] = 1.0
 
     # Create Kc raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_Kc raster")
@@ -166,6 +172,14 @@ def execute(args):
             clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float32,
             out_nodata)
 
+    # Create veg raster from table values to use in future calculations
+    LOGGER.info("Reclassifying tmp_veg raster")
+    tmp_veg_raster_uri = raster_utils.temporary_filename()
+    
+    raster_utils.reclassify_dataset_uri(
+            clipped_lulc_uri, vegetated_dict, tmp_veg_raster_uri, gdal.GDT_Float32,
+            out_nodata)            
+            
     # Get out_nodata values so that we can avoid any issues when running
     # operations
     Kc_nodata = raster_utils.get_nodata_from_uri(tmp_Kc_raster_uri)
@@ -174,6 +188,9 @@ def execute(args):
     root_nodata = raster_utils.get_nodata_from_uri(tmp_root_raster_uri)
     if root_nodata is None:
         root_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(tmp_root_raster_uri))
+    veg_nodata = raster_utils.get_nodata_from_uri(tmp_veg_raster_uri)
+    if veg_nodata is None:
+        veg_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(tmp_veg_raster_uri))
     precip_nodata = raster_utils.get_nodata_from_uri(precip_uri)
     if precip_nodata is None:
         precip_nodata = float(raster_utils.calculate_value_not_in_dataset_uri(precip_uri))
@@ -200,7 +217,7 @@ def execute(args):
             return out_nodata
         # Dividing by 1000 here because Kc is input as an integer that has been
         # multiplied by 1000.0. Get decimal version
-        return eto_pix * Kc_pix / 1000.0
+        return eto_pix * Kc_pix
     
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
@@ -219,18 +236,19 @@ def execute(args):
         'eto':eto_nodata,
         'precip':precip_nodata,
         'root':root_nodata,
+        'veg':veg_nodata,
         'soil':root_rest_layer_nodata,
         'pawc':pawc_nodata,
         }
-    def fractp_op(Kc, eto, precip, root, soil, pawc):
+    def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
         """A wrapper function to call hydropower's cython core. Acts as a
             closure for fractp_nodata_dict, out_nodata, seasonality_constant
             """
 
         return hydropower_cython_core.fractp_op(
             out_nodata, seasonality_constant, 
-            Kc, eto, precip, root, soil, pawc, 
-            Kc_nodata, eto_nodata, precip_nodata, root_nodata, root_rest_layer_nodata, pawc_nodata)
+            Kc, eto, precip, root, soil, pawc, veg,
+            Kc_nodata, eto_nodata, precip_nodata, root_nodata, root_rest_layer_nodata, pawc_nodata, veg_nodata)
     
     # Vectorize operation
     fractp_vec = np.vectorize(fractp_op)
@@ -238,7 +256,7 @@ def execute(args):
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
             tmp_Kc_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
-            depth_to_root_rest_layer_uri, pawc_uri]
+            depth_to_root_rest_layer_uri, pawc_uri, tmp_veg_raster_uri]
     
     LOGGER.debug('Performing fractp operation')
     # Create clipped fractp_clipped raster
@@ -278,25 +296,29 @@ def execute(args):
                 output_dir, 'wyield_sub_sheds%s.shp' % file_suffix)
         raster_utils.copy_datasource_uri(sub_sheds_uri, wyield_sub_sheds_uri)
 
-    def aet_op(fractp, precip):
+    def aet_op(fractp, precip, veg):
         """Function to compute the actual evapotranspiration values
         
             fractp - numpy array with the fractp raster values
             precip - numpy array with the precipitation raster values (mm)
+            veg - numpy array that depicts which AET equation was used
             
             returns - actual evapotranspiration values (mm)"""
         
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number. 
-        if fractp >= 0 and precip != precip_nodata:
-            return fractp * precip
+        if fractp >= 0 and precip != precip_nodata and veg != veg_nodata:
+            if veg == 1.0:
+                return fractp * precip
+            else:
+                return fractp
         else:
             return out_nodata
     
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster 
     raster_utils.vectorize_datasets(
-            [fractp_clipped_path, precip_uri], aet_op, aet_path,
+            [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
             gdal.GDT_Float32, out_nodata, pixel_size, 'intersection',
             aoi_uri=sheds_uri)
   
