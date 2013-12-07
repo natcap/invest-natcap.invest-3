@@ -52,10 +52,11 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         return out_nodata
 
     #Compute Budyko Dryness index
-    #Use the original equation if the land cover type is vegetation
+    #Use the original AET equation if the land cover type is vegetation
     #If not vegetation (wetlands, urban, water, etc...) use
     #Alternative equation Kc * Eto
     
+    # Initiate some variables to be used in the if/else block
     cdef double phi
     cdef double awc
     cdef double w_x
@@ -88,5 +89,4 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         
     else:
         return Kc * eto    
-    
     

@@ -55,7 +55,10 @@ def execute(args):
         
         args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
-            coefficients such as root_depth (mm) and Kc, which are required. 
+            coefficients such as root_depth (mm) and Kc, which are required.
+            A column with header LULC_veg is also required which should
+            have values of 1 or 0, 1 indicating a land cover type of
+            vegetation, a 0 indicating non vegetation or wetland, water.
             NOTE: these data are attributes of each LULC class rather than 
             attributes of individual cells in the raster map (required)
         
@@ -142,8 +145,8 @@ def execute(args):
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
     
-    # Break the bio_dict into two separate dictionaries based on
-    # Kc and root_depth fields to use for reclassifying 
+    # Break the bio_dict into three separate dictionaries based on
+    # Kc, root_depth, and LULC_veg fields to use for reclassifying 
     Kc_dict = {}
     root_dict = {}
     vegetated_dict = {}
@@ -151,8 +154,12 @@ def execute(args):
     for lulc_code in bio_dict:
         Kc_dict[lulc_code] = bio_dict[lulc_code]['Kc']
         vegetated_dict[lulc_code] = bio_dict[lulc_code]['LULC_veg']
+        # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+        # If LULC_veg value is 0 then we do not care about root
+        # depth value so will just substitute in a 1.0 . This
+        # value will not end up being used.
         else:
             root_dict[lulc_code] = 1.0
 
@@ -173,6 +180,7 @@ def execute(args):
             out_nodata)
 
     # Create veg raster from table values to use in future calculations
+    # of determining which AET equation to use
     LOGGER.info("Reclassifying tmp_veg raster")
     tmp_veg_raster_uri = raster_utils.temporary_filename()
     
@@ -301,7 +309,10 @@ def execute(args):
         
             fractp - numpy array with the fractp raster values
             precip - numpy array with the precipitation raster values (mm)
-            veg - numpy array that depicts which AET equation was used
+            veg - numpy array that depicts which AET equation was used in
+                calculations of fractp. Value of 1.0 indicates original
+                equation was used, value of 0.0 indicates the alternate
+                version was used (AET = Kc * ETo)
             
             returns - actual evapotranspiration values (mm)"""
         
@@ -309,8 +320,12 @@ def execute(args):
         # and the nodata value is a large negative number. 
         if fractp >= 0 and precip != precip_nodata and veg != veg_nodata:
             if veg == 1.0:
+                # Since original equation was used, multiply by precip to get
+                # amount of water that was evaporated
                 return fractp * precip
             else:
+                # Return fractp here since alternate equation was used
+                # where fractp = AET = Kc * ETo
                 return fractp
         else:
             return out_nodata
