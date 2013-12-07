@@ -115,7 +115,8 @@ def execute(args):
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
         bio_dict[int(row['lucode'])] = {
-                'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']), 'LULC_veg':float(row['LULC_veg'])}
+                'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']),
+                'LULC_veg':float(row['LULC_veg'])}
 
     biophysical_table_file.close() 
     
@@ -223,8 +224,6 @@ def execute(args):
 
         if eto_pix == eto_nodata or Kc_pix == Kc_nodata:
             return out_nodata
-        # Dividing by 1000 here because Kc is input as an integer that has been
-        # multiplied by 1000.0. Get decimal version
         return eto_pix * Kc_pix
     
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
