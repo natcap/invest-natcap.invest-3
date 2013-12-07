@@ -89,7 +89,7 @@ def execute(args):
     # Construct folder paths
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
-    per_pixel_output_dir = os.path.join(workspace, output_dir)
+    per_pixel_output_dir = os.path.join(output_dir, 'per_pixel')
     raster_utils.create_directories([
         workspace, output_dir, per_pixel_output_dir])
     
