@@ -232,7 +232,7 @@ def execute(args):
     soil_name = os.path.join(intermediate_dir, "%i_base_soil.tif")
     litter_name = os.path.join(intermediate_dir, "%i_base_litter.tif")
     biomass_name = os.path.join(intermediate_dir, "%i_base_biomass.tif")
-    carbon_name = "%i_base_total.tif"
+    carbon_name = "%i_total.tif"
 
     #carbon accumulation file names
     acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
@@ -706,3 +706,14 @@ def execute(args):
 
     #close report
     report.close()
+
+
+    ##clean up
+    driver = gdal.GetDriverByName('GTiff')
+    for year in lulc_years[1:]:
+        driver.Delete(os.path.join(workspace_dir, above_name % year))
+        driver.Delete(os.path.join(workspace_dir, below_name % year))
+        driver.Delete(os.path.join(workspace_dir, soil_name % year))
+        driver.Delete(os.path.join(workspace_dir, litter_name % year))
+        driver.Delete(os.path.join(workspace_dir, biomass_name % year))
+        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
