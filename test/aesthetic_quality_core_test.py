@@ -1102,20 +1102,20 @@ class TestAestheticQualityCore(unittest.TestCase):
         assert difference == 0, message
 
         #pr = cProfile.Profile()
-        pr = line_profiler.LineProfiler()
-        #pr.wrap_function(aesthetic_quality_cython_core.sweep_through_angles)
-        #pr.__call__(aesthetic_quality_cython_core.sweep_through_angles)
-        pr.enable()
-        pr.runcall(aesthetic_quality_core.compute_viewshed, DEM, viewpoint,
-        1.75, 0.0, -1.0, 1.0, 'cython')
-        pr.disable()
-        #pr.dump_stats('compute_viewshed_python.prof')
-        #stats = pstats.Stats('compute_viewshed_python.prof')
-        #stats.strip_dirs()
-        #stats.sort_stats('time')
-        #stats.print_stats()
+        ##pr = line_profiler.LineProfiler()
+        ##pr.wrap_function(aesthetic_quality_cython_core.sweep_through_angles)
+        ##pr.__call__(aesthetic_quality_cython_core.sweep_through_angles)
+        #pr.enable()
+        #pr.runcall(aesthetic_quality_core.compute_viewshed, DEM, viewpoint,
+        #1.75, 0.0, -1.0, 1.0, 'cython')
+        #pr.disable()
+        ##pr.dump_stats('compute_viewshed_python.prof')
+        ##stats = pstats.Stats('compute_viewshed_python.prof')
+        ##stats.strip_dirs()
+        ##stats.sort_stats('time')
+        ##stats.print_stats()
 
-        pr.print_stats()
+        #pr.print_stats()
 
         print('current working dir', os.getcwd())
         args = {}
