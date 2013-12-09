@@ -236,11 +236,11 @@ def execute(args):
 
     #carbon accumulation file names
     acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
-    acc_soil_co_name = os.path.join(intermediate_dir, "%i_acc_soil_co.tif")
+    acc_soil_co_name = os.path.join(intermediate_dir, "%i_%i_acc_soil_co.tif")
 
     #carbon disturbance file names
-    dis_bio_co_name = os.path.join(intermediate_dir, "%i_dis_bio_co.tif")
-    dis_soil_co_name = os.path.join(intermediate_dir, "%i_dis_soil_co.tif")
+    dis_bio_co_name = os.path.join(intermediate_dir, "%i_%i_dis_bio_co.tif")
+    dis_soil_co_name = os.path.join(intermediate_dir, "%i_%i_dis_soil_co.tif")
     dis_bio_name = os.path.join(intermediate_dir, "%i_dis_bio.tif")
     dis_soil_name = os.path.join(intermediate_dir, "%i_dis_soil.tif")
 
@@ -359,13 +359,13 @@ def execute(args):
         lulc_base_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
         lulc_base_carbon_uri = os.path.join(workspace_dir, carbon_name % lulc_base_year)
         
-        lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % lulc_base_year)
+        lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % lulc_base_year)
 
-        lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % lulc_base_year)
+        lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % lulc_base_year)
 
-        lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % lulc_base_year)
+        lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % lulc_base_year)
 
 
