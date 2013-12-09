@@ -717,3 +717,6 @@ def execute(args):
         driver.Delete(os.path.join(workspace_dir, litter_name % year))
         driver.Delete(os.path.join(workspace_dir, biomass_name % year))
         driver.Delete(os.path.join(workspace_dir, carbon_name % year))
+
+    for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
+        driver.Delete(uri)
