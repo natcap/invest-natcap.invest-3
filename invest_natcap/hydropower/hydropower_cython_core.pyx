@@ -7,8 +7,8 @@ cdef double fmin(double a, double b):
 
 @cython.cdivision(True)
 cpdef double fractp_op(double out_nodata, double seasonality_constant,
-              double Kc, double eto, double precip, double root, double soil, double pawc,
-              double Kc_nodata, double eto_nodata, double precip_nodata, double root_nodata, double soil_nodata, double pawc_nodata):
+              double Kc, double eto, double precip, double root, double soil, double pawc, double veg,
+              double Kc_nodata, double eto_nodata, double precip_nodata, double root_nodata, double soil_nodata, double pawc_nodata, double veg_nodata):
     """Function that calculates the fractp (actual evapotranspiration
        fraction of precipitation) raster
 
@@ -23,6 +23,10 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
             values (mm)
         pawc - numpy array with the plant available water content raster 
                values
+        veg - numpy array with a 1 or 0 where 1 depicts the land type as
+                vegetation and 0 depicts the land type as non 
+                vegetation (wetlands, urban, water, etc...). If 1 use 
+                regular AET equation if 0 use: AET = Kc * ETo
 
     returns - fractp value """
 
@@ -40,35 +44,49 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         return out_nodata
     if pawc == pawc_nodata:
         return out_nodata
-
+    if veg == veg_nodata:
+        return out_nodata
     #Check to make sure that variables are not zero to avoid dividing by
     #zero error
     if precip == 0.0 or Kc == 0.0 or eto == 0.0:
         return out_nodata
 
     #Compute Budyko Dryness index
-    #Converting to a percent because 'Kc' is stored in the table 
-    #as int(percent * 1000)
-    cdef double phi = (Kc * eto) / (precip * 1000)
+    #Use the original AET equation if the land cover type is vegetation
+    #If not vegetation (wetlands, urban, water, etc...) use
+    #Alternative equation Kc * Eto
+    
+    # Initiate some variables to be used in the if/else block
+    cdef double phi
+    cdef double awc
+    cdef double w_x
+    cdef double aet_p
+    
+    if veg == 1.0:
+        phi = (Kc * eto) / (precip)
+        
+        #Calculate plant available water content (mm) using the minimum
+        #of soil depth and root depth
+        awc = (fmin(root, soil) * pawc)  
 
-    #Calculate plant available water content (mm) using the minimum
-    #of soil depth and root depth
-    cdef double awc = (fmin(root, soil) * pawc)  
+        #Calculate dimensionless ratio of plant accessible water
+        #storage to expected precipitation during the year
 
-    #Calculate dimensionless ratio of plant accessible water
-    #storage to expected precipitation during the year
+        w_x = (awc / precip) * seasonality_constant
 
-    cdef double w_x = (awc / precip) * seasonality_constant
+        #Compute evapotranspiration partition of the water balance
+        aet_p = (1+ w_x * phi) / (1 + w_x * phi + 1 / phi)
 
-    #Compute evapotranspiration partition of the water balance
-    cdef double aet_p = (1+ w_x * phi) / (1 + w_x * phi + 1 / phi)
+        #Currently as of release 2.2.2 the following operation is not
+        #documented in the users guide. We take the minimum of the
+        #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
+        #partition of the water balance (see users guide for variable
+        #and equation references). This was confirmed by Yonas Ghile on
+        #5/10/12
+        #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
 
-    #Currently as of release 2.2.2 the following operation is not
-    #documented in the users guide. We take the minimum of the
-    #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
-    #partition of the water balance (see users guide for variable
-    #and equation references). This was confirmed by Yonas Ghile on
-    #5/10/12
-    #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
-
-    return fmin(phi, aet_p)
+        return fmin(phi, aet_p)
+        
+    else:
+        return Kc * eto    
+    

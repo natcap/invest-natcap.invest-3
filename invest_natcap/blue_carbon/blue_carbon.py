@@ -232,15 +232,15 @@ def execute(args):
     soil_name = os.path.join(intermediate_dir, "%i_base_soil.tif")
     litter_name = os.path.join(intermediate_dir, "%i_base_litter.tif")
     biomass_name = os.path.join(intermediate_dir, "%i_base_biomass.tif")
-    carbon_name = "%i_base_total.tif"
+    carbon_name = "%i_total.tif"
 
     #carbon accumulation file names
     acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
-    acc_soil_co_name = os.path.join(intermediate_dir, "%i_acc_soil_co.tif")
+    acc_soil_co_name = os.path.join(intermediate_dir, "%i_%i_acc_soil_co.tif")
 
     #carbon disturbance file names
-    dis_bio_co_name = os.path.join(intermediate_dir, "%i_dis_bio_co.tif")
-    dis_soil_co_name = os.path.join(intermediate_dir, "%i_dis_soil_co.tif")
+    dis_bio_co_name = os.path.join(intermediate_dir, "%i_%i_dis_bio_co.tif")
+    dis_soil_co_name = os.path.join(intermediate_dir, "%i_%i_dis_soil_co.tif")
     dis_bio_name = os.path.join(intermediate_dir, "%i_dis_bio.tif")
     dis_soil_name = os.path.join(intermediate_dir, "%i_dis_soil.tif")
 
@@ -359,13 +359,13 @@ def execute(args):
         lulc_base_biomass_uri = os.path.join(workspace_dir, biomass_name % lulc_base_year)
         lulc_base_carbon_uri = os.path.join(workspace_dir, carbon_name % lulc_base_year)
         
-        lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % lulc_base_year)
+        lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % lulc_base_year)
 
-        lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % lulc_base_year)
+        lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % lulc_base_year)
 
-        lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % lulc_base_year)
+        lulc_base_dis_soil_co_uri = os.path.join(workspace_dir, dis_soil_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_dis_soil_uri = os.path.join(workspace_dir, dis_soil_name % lulc_base_year)
 
 
@@ -404,7 +404,7 @@ def execute(args):
                                    exception_flag="values_required")
         LOGGER.debug("Created stock litter raster.")
 
-        raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri, lulc_base_litter_uri],
+        raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri],
                                         add_op,
                                         lulc_base_biomass_uri,
                                         gdal_type,
@@ -706,3 +706,17 @@ def execute(args):
 
     #close report
     report.close()
+
+
+    ##clean up
+    driver = gdal.GetDriverByName('GTiff')
+    for year in lulc_years[1:]:
+        driver.Delete(os.path.join(workspace_dir, above_name % year))
+        driver.Delete(os.path.join(workspace_dir, below_name % year))
+        driver.Delete(os.path.join(workspace_dir, soil_name % year))
+        driver.Delete(os.path.join(workspace_dir, litter_name % year))
+        driver.Delete(os.path.join(workspace_dir, biomass_name % year))
+        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
+
+    for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
+        driver.Delete(uri)
