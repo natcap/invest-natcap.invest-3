@@ -404,7 +404,7 @@ def execute(args):
                                    exception_flag="values_required")
         LOGGER.debug("Created stock litter raster.")
 
-        raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri, lulc_base_litter_uri],
+        raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri],
                                         add_op,
                                         lulc_base_biomass_uri,
                                         gdal_type,
