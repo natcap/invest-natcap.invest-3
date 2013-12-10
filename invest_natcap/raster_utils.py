@@ -1636,7 +1636,6 @@ def reclassify_dataset(
 
     LOGGER.info('Looping through rows in the input data')
 
-    #Doing two loops here for performance purposes, this saves us from
     for row_index in xrange(in_band.YSize):
         row_array = in_band.ReadAsArray(0, row_index, in_band.XSize, 1)
 
