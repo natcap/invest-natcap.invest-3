@@ -88,6 +88,11 @@ def execute(args):
     transition_matrix.write("Id,Name,")
     transition_matrix.write(",".join([str(value) for value in final_values]))
 
+
+    args["lulc_id"] = "Id"
+    args["lulc_name"] = "Name"
+    args["lulc_type"] = "Veg Type"
+
     labels_dict = {}
     #This will cause problems if the carbon table is missing more than one label.
     if args["labels"] != "":
