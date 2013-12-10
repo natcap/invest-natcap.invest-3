@@ -102,12 +102,13 @@ def execute(args):
     precip_uri = args['precipitation_uri']
     depth_to_root_rest_layer_uri = args['depth_to_root_rest_layer_uri']
     pawc_uri = args['pawc_uri']
+    seasonality_constant = float(args['seasonality_constant'])
+    sheds_uri = args['watersheds_uri']
+    
     sub_sheds_uri = None
+    # If subwatersheds was input get the URI
     if 'sub_watersheds_uri' in args and args['sub_watersheds_uri'] != '':
         sub_sheds_uri = args['sub_watersheds_uri']
-
-    sheds_uri = args['watersheds_uri']
-    seasonality_constant = float(args['seasonality_constant'])
     
     # Open/read in the csv file into a dictionary and add to arguments
     bio_dict = {}
@@ -437,7 +438,6 @@ def execute(args):
             watershed_results_uri, 'ws_id', field_list_ws)
     
     LOGGER.debug('wyield_value_dict_ws : %s', wyield_value_dict_ws)
-    
   
     #clear out the temporary filenames, doing this because a giant run of
     #hydropower water yield chews up all available disk space
@@ -501,7 +501,7 @@ def execute(args):
     
     # Add aggregated consumption to sheds shapefiles
     add_dict_to_shape(
-            watershedshed_results_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
+            watershed_results_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
     
     # Add aggregated consumption means to sheds shapefiles
     add_dict_to_shape(
@@ -578,11 +578,11 @@ def execute(args):
     write_new_table(
             watershed_results_csv_uri, field_list_ws, watershed_dict_ws)
     
-def compute_watershed_valuation(val_sheds_uri, val_dict):
+def compute_watershed_valuation(watersheds_uri, val_dict):
     """Computes and adds the net present value and energy for the watersheds to
         an output shapefile. 
 
-        val_sheds_uri - a URI path to an OGR shapefile for the valuation
+        watersheds_uri - a URI path to an OGR shapefile for the 
             watershed results. Where the results will be added.
 
         val_dict - a python dictionary that has all the valuation parameters for
@@ -590,8 +590,8 @@ def compute_watershed_valuation(val_sheds_uri, val_dict):
 
         returns - Nothing 
     """
-    val_ds = ogr.Open(val_sheds_uri, 1)
-    val_layer = val_ds.GetLayer()
+    ws_ds = ogr.Open(watersheds_uri, 1)
+    ws_layer = ws_ds.GetLayer()
     
     # The field names for the new attributes
     energy_field = 'hp_energy'
@@ -600,22 +600,22 @@ def compute_watershed_valuation(val_sheds_uri, val_dict):
     # Add the new fields to the shapefile
     for new_field in [energy_field, npv_field]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
-        val_layer.CreateField(field_defn)
+        ws_layer.CreateField(field_defn)
 
-    num_features = val_layer.GetFeatureCount()
+    num_features = ws_layer.GetFeatureCount()
     # Iterate over the number of features (polygons)
     for feat_id in xrange(num_features):
-        val_feat = val_layer.GetFeature(feat_id)
+        ws_feat = ws_layer.GetFeature(feat_id)
         # Get the indices for the output fields
-        energy_id = val_feat.GetFieldIndex(energy_field)
-        npv_id = val_feat.GetFieldIndex(npv_field)
+        energy_id = ws_feat.GetFieldIndex(energy_field)
+        npv_id = ws_feat.GetFieldIndex(npv_field)
        
         # Get the watershed ID to index into the valuation parameter dictionary
-        ws_index = val_feat.GetFieldIndex('ws_id')
-        ws_id = val_feat.GetField(ws_index)
+        ws_index = ws_feat.GetFieldIndex('ws_id')
+        ws_id = ws_feat.GetField(ws_index)
         # Get the rsupply volume for the watershed
-        rsupply_vl_id = val_feat.GetFieldIndex('rsupply_vl')
-        rsupply_vl = val_feat.GetField(rsupply_vl_id)
+        rsupply_vl_id = ws_feat.GetFieldIndex('rsupply_vl')
+        rsupply_vl = ws_feat.GetField(rsupply_vl_id)
        
         # Get the valuation parameters for watershed 'ws_id'
         val_row = val_dict[ws_id]
@@ -636,48 +636,15 @@ def compute_watershed_valuation(val_sheds_uri, val_dict):
         npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
         # Get the volume field index and add value
-        val_feat.SetField(energy_id, energy)
-        val_feat.SetField(npv_id, npv)
+        ws_feat.SetField(energy_id, energy)
+        ws_feat.SetField(npv_id, npv)
         
-        val_layer.SetFeature(val_feat)
-
-def combine_dictionaries(dict_1, dict_2):
-    """Add dict_2 to dict_1 and return in a new dictionary. Both input
-        dictionaries have the same unique keys that point to sub dictionaries.
-        Therefore, the inner dictionaries are what is being accumulated. If a
-        duplicate key is present in dict_2 it will be ignored.
-
-        dict_1 - a python dictionary with unique keys that point to dictionaries
-            ex: {1: {'ws_id':1, 'vol':65},
-                 2: {'ws_id':2, 'vol':34}...}
-        
-        dict_2 - a python dictionary with unique keys that point to dictionaries
-            ex: {1: {'ws_id':1, 'area':5},
-                 2: {'ws_id':2, 'area':41}...}
-
-        returns - a python dictionary with the same unique keys but updated
-        inner dictionaries. ex:
-            ex: {1: {'ws_id':1, 'vol':65, 'area':5},
-                 2: {'ws_id':2, 'vol':34, 'area':41}...}
-    """
-    # Make a copy of dict_1 the dictionary we want to add on to
-    dict_3 = dict_1.copy()
-    # Iterate through dict_2, the dictionary we want to get new fields/values
-    # from
-    for key, sub_dict in dict_2.iteritems():
-        # Iterate over the inner dictionary for each key
-        for field, value in sub_dict.iteritems():
-            # Ignore fields that already exist in dictionary we are adding to
-            if not field in dict_3[key].keys():
-                dict_3[key][field] = value
-
-    return dict_3
+        ws_layer.SetFeature(ws_feat)
 
 def compute_rsupply_volume(watershed_results_uri):
     """Calculate the total realized water supply volume and the mean realized
-        water supply volume per hectare for the given sheds (either for
-        each sub-watershed or watershed). Output units in cubic meters and cubic
-        meters per hectare respectively.
+        water supply volume per hectare for the given sheds. Output units in
+        cubic meters and cubic meters per hectare respectively.
 
         watershed_results_uri - a URI path to an OGR shapefile to get water yield
             values from
@@ -723,11 +690,10 @@ def compute_rsupply_volume(watershed_results_uri):
         
         wyield_layer.SetFeature(wyield_feat)
 
-def calculate_cyield_vol(wyield_shed_uri, calib_dict):
-    """Calculate the calibrated water yield volume for per sub-watershed or
-        watershed, depending on inputs.
+def calculate_cyield_vol(watershed_uri, calib_dict):
+    """Calculate the calibrated water yield volume for per watershed
 
-        wyield_shed_uri - a URI path to an OGR shapefile that has water yield
+        watershed_uri - a URI path to an OGR shapefile that has water yield
             values
 
         calib_dict - a python dictionary that has the calibrated values for the
@@ -735,36 +701,36 @@ def calculate_cyield_vol(wyield_shed_uri, calib_dict):
 
         returns nothing"""
     
-    wyield_ds = ogr.Open(wyield_shed_uri)
-    wyield_layer = wyield_ds.GetLayer()
+    ws_ds = ogr.Open(watershed_uri)
+    ws_layer = ws_ds.GetLayer()
    
     # The field names for the new attributes
     cyield_name = 'cyield_vol'
 
     # Add the new fields to the shapefile
     field_defn = ogr.FieldDefn(cyield_name, ogr.OFTReal)
-    wyield_layer.CreateField(field_defn)
+    ws_layer.CreateField(field_defn)
 
-    num_features = wyield_layer.GetFeatureCount()
+    num_features = ws_layer.GetFeatureCount()
     # Iterate over the number of features (polygons)
     for feat_id in xrange(num_features):
-        wyield_feat = wyield_layer.GetFeature(feat_id)
+        ws_feat = ws_layer.GetFeature(feat_id)
         # Get the water yield volume
-        wyield_vol_id = wyield_feat.GetFieldIndex('wyield_vol')
-        wyield_vol = wyield_feat.GetField(wyield_vol_id)
+        ws_vol_id = ws_feat.GetFieldIndex('wyield_vol')
+        wyield_vol = ws_feat.GetField(wyield_vol_id)
         
         # Get the watershed ID
-        ws_id_index = wyield_feat.GetFieldIndex('ws_id')
-        ws_id = wyield_feat.GetField(ws_id_index)
+        ws_id_index = ws_feat.GetFieldIndex('ws_id')
+        ws_id = ws_feat.GetField(ws_id_index)
         
         # Calculate calibrated water yield
         cyield_vol = wyield_vol * calib_dict[ws_id]
 
         # Add calibrated water yield to feature
-        cyield_id = wyield_feat.GetFieldIndex('cyield_vol')
-        wyield_feat.SetField(cyield_id, cyield_vol)
+        cyield_id = ws_feat.GetFieldIndex('cyield_vol')
+        ws_feat.SetField(cyield_id, cyield_vol)
         
-        wyield_layer.SetFeature(wyield_feat)
+        ws_layer.SetFeature(ws_feat)
 
 def extract_datasource_table_by_key(
         datasource_uri, key_field, wanted_list):
