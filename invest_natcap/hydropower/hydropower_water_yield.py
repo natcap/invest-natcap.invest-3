@@ -138,10 +138,10 @@ def execute(args):
     aet_path = os.path.join(per_pixel_output_dir, 'aet%s.tif' % file_suffix) 
     
     # Paths for the watershed and subwatershed tables
-    wyield_ws_table_uri = os.path.join(
-            output_dir, 'water_yield_watershed%s.csv' % file_suffix) 
-    wyield_sws_table_uri = os.path.join(
-            output_dir, 'water_yield_subwatershed%s.csv' % file_suffix) 
+    watershed_results_csv_uri = os.path.join(
+            output_dir, 'watershed_results%s.csv' % file_suffix) 
+    subwatershed_results_csv_uri = os.path.join(
+            output_dir, 'subwatershed_results%s.csv' % file_suffix) 
     
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
@@ -393,7 +393,7 @@ def execute(args):
     
         # Write sub-watershed CSV table
         write_new_table(
-                wyield_sws_table_uri, field_list_sws, wyield_value_dict_sws)
+                subwatershed_results_csv_uri, field_list_sws, wyield_value_dict_sws)
     
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
@@ -438,8 +438,6 @@ def execute(args):
     
     LOGGER.debug('wyield_value_dict_ws : %s', wyield_value_dict_ws)
     
-    # Write watershed CSV table
-    write_new_table(wyield_ws_table_uri, field_list_ws, wyield_value_dict_ws)
   
     #clear out the temporary filenames, doing this because a giant run of
     #hydropower water yield chews up all available disk space
@@ -451,6 +449,9 @@ def execute(args):
     water_scarcity_checked = args.pop('water_scarcity_container', False)
     if not water_scarcity_checked:
         LOGGER.debug('Water Scarcity Not Selected')
+        # Since Scarcity and Valuation are not selected write out
+        # the CSV table
+        write_new_table(watershed_results_csv_uri, field_list_ws, wyield_value_dict_ws)
         # The rest of the function is water scarcity and valuation, so we can
         # quit now
         os.remove(clipped_lulc_uri)
@@ -540,9 +541,6 @@ def execute(args):
             wyield_value_dict_ws, scarcity_value_dict)
 
     LOGGER.debug('Scarcity_dict_ws : %s', scarcity_dict_ws)
-    
-    # Write watershed CSV table for water scarcity
-    write_new_table(scarcity_table_ws_uri, field_list_ws, scarcity_dict_ws)
 
     #Don't need this anymore
     os.remove(tmp_demand_uri)
@@ -552,6 +550,10 @@ def execute(args):
     valuation_checked = args.pop('valuation_container', False)
     if not valuation_checked:
         LOGGER.debug('Valuation Not Selected')
+        # Since Valuation are not selected write out
+        # the CSV table
+        write_new_table(
+                watershed_results_csv_uri, field_list_ws, scarcity_dict_ws)
         # The rest of the function is valuation, so we can quit now
         return
         
@@ -607,8 +609,9 @@ def execute(args):
     # exclude the first field in the list because they are duplicates
     field_list_ws = field_list_ws + val_field_list_ws[1:]
    
-    # Generate the final CSV file
-    write_new_table(valuation_table_ws_uri, field_list_ws, hydropower_dict_ws)
+    # Write out the CSV Table
+    write_new_table(
+            watershed_results_csv_uri, field_list_ws, hydropower_dict_ws)
     
 def compute_watershed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
     """Computes and adds the net present value and energy for the watersheds to
