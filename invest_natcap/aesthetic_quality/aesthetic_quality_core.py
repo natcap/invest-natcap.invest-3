@@ -24,7 +24,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
-            -maximum viewing distance
+            -max_dist: maximum viewing distance
             
         returns a tuple (min, center, max, I, J) with min, center and max 
         Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
@@ -1160,7 +1160,8 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     # Viewer's coordiantes relative to the viewshed 
     v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
-    aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v)
+    aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
+    max_dist)
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     visibility = \
     (input_array[(I, J)] - input_array[coordinates[0], \

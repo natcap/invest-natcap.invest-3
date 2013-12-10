@@ -206,7 +206,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         # Gather extreme angles from cython algorithm
         # TODO: change the line below to call the actual cython function
         extreme_angles_cython = \
-        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
         aesthetic_quality_core.list_extreme_cell_angles(array_shape, \

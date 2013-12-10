@@ -15,7 +15,7 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan2(double x, double x)
 
-def list_extreme_cell_angles(array_shape, viewpoint_coords):
+def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
@@ -25,6 +25,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
+            -max_dist: maximum viewing distance
             
         returns a tuple (min, center, max, I, J) with min, center and max 
         Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
@@ -35,6 +36,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         # constants
         double pi = 3.141592653589793238462643
         double two_pi = 2. * pi
+        double max_dist_sq = max_dist**2
         # viewpoint coordinates
         int viewpoint_row = viewpoint_coords[0]
         int viewpoint_col = viewpoint_coords[1]
@@ -113,6 +115,10 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         # Loop through the columns    
         for col in range(array_cols):
             viewpoint_to_cell_col = col - viewpoint_col
+            # Skip if cell is too far
+            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
+            if d > max_dist_sq:
+                continue
             # Show progress in 0.1% increment
             # Skip if cell falls on the viewpoint
             if (row == viewpoint_row) and (col == viewpoint_col):
