@@ -319,15 +319,8 @@ def execute(args):
         
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number. 
-        if fractp >= 0 and precip != precip_nodata and veg != veg_nodata:
-            if veg == 1.0:
-                # Since original equation was used, multiply by precip to get
-                # amount of water that was evaporated
-                return fractp * precip
-            else:
-                # Return fractp here since alternate equation was used
-                # where fractp = AET = Kc * ETo
-                return fractp
+        if fractp >= 0 and precip != precip_nodata:
+            return fractp * precip
         else:
             return out_nodata
     
