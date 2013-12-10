@@ -1,10 +1,7 @@
 """A collection of GDAL dataset and raster utilities"""
 
-import traceback
 import logging
-import random
 import os
-import time
 import tempfile
 import shutil
 import atexit
@@ -495,7 +492,6 @@ def vectorize_points(
             and point[1] <= bounding_box[1] and point[1] >= bounding_box[3]
 
     layer = shapefile.GetLayer(0)
-    count = 0
     point_list = []
     value_list = []
 
@@ -737,7 +733,6 @@ def aggregate_raster_values_uri(
     mask_band = None
     mask_dataset = None
     clipped_band = None
-    clipped_dataset = None
     for filename in [temporary_mask_filename, clipped_raster_uri]:
         try:
             os.remove(filename)
@@ -827,7 +822,7 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
     dem_float_nodata = float(dem_nodata)
 
     vectorize_datasets(
-        [dem_dataset_uri], lambda x: float(x), dem_small_uri,
+        [dem_dataset_uri], float, dem_small_uri,
         gdal.GDT_Float32, dem_float_nodata, out_pixel_size, "intersection",
         dataset_to_align_index=0, aoi_uri=aoi_uri)
 
@@ -839,7 +834,6 @@ def calculate_slope(dem_dataset_uri, slope_uri, aoi_uri=None):
         dem_small_dataset, slope_uri, 'GTiff', slope_nodata, gdal.GDT_Float32)
     raster_cython_utils._cython_calculate_slope(dem_small_uri, slope_uri)
 
-    slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
     calculate_raster_stats_uri(slope_uri)
 
     dem_small_dataset = None
@@ -921,6 +915,7 @@ def calculate_value_not_in_dataset_uri(dataset_uri):
     dataset = gdal.Open(dataset_uri)
     return calculate_value_not_in_dataset(dataset)
 
+
 def calculate_value_not_in_dataset(dataset):
     """Calcualte a value not contained in a dataset.  Useful for calculating
         nodata values.
@@ -929,8 +924,9 @@ def calculate_value_not_in_dataset(dataset):
 
         returns a number not contained in the dataset"""
 
-    band, nodata, array = extract_band_and_nodata(dataset, get_array = True)
+    _, _, array = extract_band_and_nodata(dataset, get_array=True)
     return calculate_value_not_in_array(array)
+
 
 def calculate_value_not_in_array(array):
     """This function calcualtes a number that is not in the given array, if
@@ -1715,7 +1711,7 @@ def temporary_filename():
             in atexit"""
         try:
             os.remove(path)
-        except OSError as exception:
+        except OSError:
             #This happens if the file didn't exist, which is okay because maybe
             #we deleted it in a method
             pass
@@ -2077,6 +2073,7 @@ def vectorize_datasets(
     nodata_out, pixel_size_out, bounding_box_mode, resample_method_list=None,
     dataset_to_align_index=None, dataset_to_bound_index=None, aoi_uri=None,
     assert_datasets_projected=True):
+
     """This function applies a user defined function across a stack of
         datasets.  It has functionality align the output dataset grid
         with one of the input datasets, output a dataset that is the union
@@ -2136,6 +2133,11 @@ def vectorize_datasets(
     else:
         assert_file_existance(dataset_uri_list + [aoi_uri])
         
+    if dataset_out_uri in dataset_uri_list:
+        raise ValueError(
+            "%s is used as an output file, but it is also an input file "
+            "in the input list %s" % (dataset_out_uri, str(dataset_uri_list)))
+
     #Create a temporary list of filenames whose files delete on the python
     #interpreter exit
     dataset_out_uri_list = [temporary_filename() for _ in dataset_uri_list]
