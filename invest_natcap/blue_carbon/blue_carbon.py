@@ -250,16 +250,16 @@ def execute(args):
 
 
     #totals
-    total_acc_soil_name = "total_soil_acc.tif"
-    total_acc_bio_name = "total_bio_acc.tif"
-    total_dis_soil_name = "total_soil_dis.tif"
-    total_dis_bio_name = "total_bio_dis.tif"
+    total_acc_soil_name = "total_soil_acc_%i_%i.tif"
+    total_acc_bio_name = "total_bio_acc_%i_%i.tif"
+    total_dis_soil_name = "total_soil_dis_%i_%i.tif"
+    total_dis_bio_name = "total_bio_dis_%i_%i.tif"
 
     #uri
-    total_acc_soil_uri = os.path.join(workspace_dir, total_acc_soil_name)
-    total_acc_bio_uri = os.path.join(workspace_dir, total_acc_bio_name)
-    total_dis_soil_uri = os.path.join(workspace_dir, total_dis_soil_name)
-    total_dis_bio_uri = os.path.join(workspace_dir, total_dis_bio_name)
+    total_acc_soil_uri = os.path.join(workspace_dir, total_acc_soil_name % (lulc_years[0], analysis_year))
+    total_acc_bio_uri = os.path.join(workspace_dir, total_acc_bio_name % (lulc_years[0], analysis_year))
+    total_dis_soil_uri = os.path.join(workspace_dir, total_dis_soil_name % (lulc_years[0], analysis_year))
+    total_dis_bio_uri = os.path.join(workspace_dir, total_dis_bio_name % (lulc_years[0], analysis_year))
 
     extent_uri = os.path.join(workspace_dir, extent_name)
     report_uri = os.path.join(workspace_dir, report_name)
