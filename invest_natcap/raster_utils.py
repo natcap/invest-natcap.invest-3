@@ -39,6 +39,8 @@ GDAL_TO_NUMPY_TYPE = {
     }
     
 class NoDaemonProcess(multiprocessing.Process):
+    """A class to make non-deamonic pools in case we want to have pools of 
+        pools"""
     # make 'daemon' attribute always return False
     def _get_daemon(self):
         return False
