@@ -209,9 +209,10 @@ def execute(args):
     dis_field_veg_name = "veg name"
 
     #accumulation table
-    acc_soil_csv_uri = args["accumulation_csv_uri"]
-
+    acc_soil_csv_uri = args["soil_accumulation_csv_uri"]
     acc_soil_field_key = "veg type"
+    acc_bio_csv_uri = args["biomass_accumulation_csv_uri"]
+    acc_bio_field_key = "veg type"    
 
 ##    #valuation flags
 ##    private_valuation = args["private_valuation"]
@@ -237,6 +238,9 @@ def execute(args):
     #carbon accumulation file names
     acc_soil_name = os.path.join(intermediate_dir, "%i_acc_soil.tif")
     acc_soil_co_name = os.path.join(intermediate_dir, "%i_%i_acc_soil_co.tif")
+    acc_bio_name = os.path.join(intermediate_dir, "%i_acc_bio.tif")
+    acc_bio_co_name = os.path.join(intermediate_dir, "%i_%i_acc_bio_co.tif")
+    
 
     #carbon disturbance file names
     dis_bio_co_name = os.path.join(intermediate_dir, "%i_%i_dis_bio_co.tif")
@@ -247,11 +251,13 @@ def execute(args):
 
     #totals
     total_acc_soil_name = "total_soil_acc.tif"
+    total_acc_bio_name = "total_bio_acc.tif"
     total_dis_soil_name = "total_soil_dis.tif"
     total_dis_bio_name = "total_bio_dis.tif"
 
     #uri
     total_acc_soil_uri = os.path.join(workspace_dir, total_acc_soil_name)
+    total_acc_bio_uri = os.path.join(workspace_dir, total_acc_bio_name)
     total_dis_soil_uri = os.path.join(workspace_dir, total_dis_soil_name)
     total_dis_bio_uri = os.path.join(workspace_dir, total_dis_bio_name)
 
@@ -261,8 +267,11 @@ def execute(args):
     ##process inputs
     #load tables from files
     acc_soil = raster_utils.get_lookup_from_csv(acc_soil_csv_uri, acc_soil_field_key)
+    acc_bio = raster_utils.get_lookup_from_csv(acc_bio_csv_uri, acc_bio_field_key)
+
     dis_bio = raster_utils.get_lookup_from_csv(dis_bio_csv_uri, dis_field_key)
     dis_soil = raster_utils.get_lookup_from_csv(dis_soil_csv_uri, dis_field_key)
+
     trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
 
@@ -316,6 +325,15 @@ def execute(args):
         except KeyError:
             return 0.0
 
+    def acc_bio_co_op(lulc_base, lulc_transition):
+        if nodata in [lulc_base, lulc_transition]:
+            return 0.0
+        try:
+            return float(acc_bio[carbon[int(lulc_base)][carbon_field_veg]]\
+                   [trans[int(lulc_base)][str(int(lulc_transition))]])
+        except KeyError:
+            return 0.0
+
     def dis_bio_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
             return 0.0
@@ -361,6 +379,9 @@ def execute(args):
         
         lulc_base_acc_soil_co_uri = os.path.join(workspace_dir, acc_soil_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_acc_soil_uri = os.path.join(workspace_dir, acc_soil_name % lulc_base_year)
+
+        lulc_base_acc_bio_co_uri = os.path.join(workspace_dir, acc_bio_co_name % (lulc_base_year, lulc_transition_year))
+        lulc_base_acc_bio_uri = os.path.join(workspace_dir, acc_bio_name % lulc_base_year)        
 
         lulc_base_dis_bio_co_uri = os.path.join(workspace_dir, dis_bio_co_name % (lulc_base_year, lulc_transition_year))
         lulc_base_dis_bio_uri = os.path.join(workspace_dir, dis_bio_name % lulc_base_year)
@@ -471,6 +492,49 @@ def execute(args):
                                                   fill_value=0)
             LOGGER.debug("Zero soil accumulation raster created.")
 
+        ##calculate biomass accumulation
+        LOGGER.info("Processing biomass accumulation.")
+        #get coefficients
+        try:
+            raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
+                                            acc_bio_co_op,
+                                            lulc_base_acc_bio_co_uri,
+                                            gdal.GDT_Float64,
+                                            0.0,
+                                            cell_size,
+                                            "union")
+
+            LOGGER.debug("Accumulation coefficent raster created.")
+
+        except:
+            raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                  lulc_base_acc_bio_co_uri,
+                                                  "GTiff",
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
+            LOGGER.debug("Identity raster for biomass accumulation coefficent created.")
+
+        #multiply by number of years
+        try:
+            raster_utils.vectorize_datasets([lulc_base_acc_bio_co_uri],
+                                            ConstantOp(mul_op,t),
+                                            lulc_base_acc_bio_uri,
+                                            gdal.GDT_Float64,
+                                            0.0,
+                                            cell_size,
+                                            "union")
+            LOGGER.debug("Biomass accumulation raster created.")
+
+        except:
+            raster_utils.new_raster_from_base_uri(lulc_base_uri,
+                                                  lulc_base_acc_bio_uri,
+                                                  "GTiff",
+                                                  255,
+                                                  gdal.GDT_Byte,
+                                                  fill_value=0)
+            LOGGER.debug("Zero biomass accumulation raster created.")
+
         ##calculate biomass disturbance
         LOGGER.info("Processing biomass disturbance.")
         #get coefficients
@@ -572,11 +636,13 @@ def execute(args):
     lulc_years.pop(-1)
 
     acc_soil_uri_list = []
+    acc_bio_uri_list = []
     dis_soil_uri_list = []
     dis_bio_uri_list = []
 
     for year in lulc_years:
         acc_soil_uri_list.append(os.path.join(workspace_dir, acc_soil_name % year))
+        acc_bio_uri_list.append(os.path.join(workspace_dir, acc_bio_name % year))
         dis_soil_uri_list.append(os.path.join(workspace_dir, dis_soil_name % year))
         dis_bio_uri_list.append(os.path.join(workspace_dir, dis_bio_name % year))
 
@@ -597,6 +663,24 @@ def execute(args):
                                               gdal.GDT_Byte,
                                               fill_value=0)
     LOGGER.debug("Cumilative soil accumulation raster created.")
+
+    try:
+        raster_utils.vectorize_datasets(acc_bio_uri_list,
+                                        add_op,
+                                        total_acc_bio_uri,
+                                        gdal.GDT_Float64,
+                                        0.0,
+                                        cell_size,
+                                        "union")
+
+    except:
+        raster_utils.new_raster_from_base_uri(acc_bio_uri_list[0],
+                                              total_acc_bio_uri,
+                                              "GTiff",
+                                              255,
+                                              gdal.GDT_Byte,
+                                              fill_value=0)
+    LOGGER.debug("Cumilative biomass accumulation raster created.")        
 
     try:                                              
         raster_utils.vectorize_datasets(dis_soil_uri_list,
