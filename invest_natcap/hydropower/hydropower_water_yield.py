@@ -650,8 +650,8 @@ def compute_rsupply_volume(watershed_results_uri):
             values from
 
         returns - Nothing"""
-    wyield_ds = ogr.Open(watershed_results_uri)
-    wyield_layer = wyield_ds.GetLayer()
+    ws_ds = ogr.Open(watershed_results_uri, 1)
+    ws_layer = ws_ds.GetLayer()
     
     # The field names for the new attributes
     rsupply_vol_name = 'rsupply_vl'
@@ -660,35 +660,35 @@ def compute_rsupply_volume(watershed_results_uri):
     # Add the new fields to the shapefile
     for new_field in [rsupply_vol_name, rsupply_mn_name]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
-        wyield_layer.CreateField(field_defn)
+        ws_layer.CreateField(field_defn)
 
-    num_features = wyield_layer.GetFeatureCount()
+    num_features = ws_layer.GetFeatureCount()
     # Iterate over the number of features (polygons)
     for feat_id in xrange(num_features):
-        wyield_feat = wyield_layer.GetFeature(feat_id)
+        ws_feat = ws_layer.GetFeature(feat_id)
         # Get mean water yield value
-        wyield_mn_id = wyield_feat.GetFieldIndex('wyield_mn')
-        wyield_mn = wyield_feat.GetField(wyield_mn_id)
+        wyield_mn_id = ws_feat.GetFieldIndex('wyield_mn')
+        wyield_mn = ws_feat.GetField(wyield_mn_id)
         
         # Get water demand/consumption values
-        cyield_id = wyield_feat.GetFieldIndex('cyield_vol')
-        cyield = wyield_feat.GetField(cyield_id)
-        consump_vol_id = wyield_feat.GetFieldIndex('consum_vol')
-        consump_vol = wyield_feat.GetField(consump_vol_id)
-        consump_mn_id = wyield_feat.GetFieldIndex('consum_mn')
-        consump_mn = wyield_feat.GetField(consump_mn_id)
+        cyield_id = ws_feat.GetFieldIndex('cyield_vol')
+        cyield = ws_feat.GetField(cyield_id)
+        consump_vol_id = ws_feat.GetFieldIndex('consum_vol')
+        consump_vol = ws_feat.GetField(consump_vol_id)
+        consump_mn_id = ws_feat.GetFieldIndex('consum_mn')
+        consump_mn = ws_feat.GetField(consump_mn_id)
       
         # Calculate realized supply
         rsupply_vol = cyield - consump_vol
         rsupply_mn = wyield_mn - consump_mn
 
         # Get the indices for the output fields and set their values
-        rsupply_vol_index = wyield_feat.GetFieldIndex(rsupply_vol_name)
-        wyield_feat.SetField(rsupply_vol_index, rsupply_vol)
-        rsupply_mn_index = wyield_feat.GetFieldIndex(rsupply_mn_name)
-        wyield_feat.SetField(rsupply_mn_index, rsupply_mn)
+        rsupply_vol_index = ws_feat.GetFieldIndex(rsupply_vol_name)
+        ws_feat.SetField(rsupply_vol_index, rsupply_vol)
+        rsupply_mn_index = ws_feat.GetFieldIndex(rsupply_mn_name)
+        ws_feat.SetField(rsupply_mn_index, rsupply_mn)
         
-        wyield_layer.SetFeature(wyield_feat)
+        ws_layer.SetFeature(ws_feat)
 
 def calculate_cyield_vol(watershed_uri, calib_dict):
     """Calculate the calibrated water yield volume for per watershed
@@ -701,7 +701,7 @@ def calculate_cyield_vol(watershed_uri, calib_dict):
 
         returns nothing"""
     
-    ws_ds = ogr.Open(watershed_uri)
+    ws_ds = ogr.Open(watershed_uri, 1)
     ws_layer = ws_ds.GetLayer()
    
     # The field names for the new attributes
@@ -716,7 +716,7 @@ def calculate_cyield_vol(watershed_uri, calib_dict):
     for feat_id in xrange(num_features):
         ws_feat = ws_layer.GetFeature(feat_id)
         # Get the water yield volume
-        ws_vol_id = ws_feat.GetFieldIndex('wyield_vol')
+        wyield_vol_id = ws_feat.GetFieldIndex('wyield_vol')
         wyield_vol = ws_feat.GetField(wyield_vol_id)
         
         # Get the watershed ID
