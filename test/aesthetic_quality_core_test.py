@@ -151,13 +151,19 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_extreme_cell_angles(self):
         """Testing naive vs optimized version of the same functionality"""
-        array_shape = (3, 3)
+        max_dist = 10
+        array_shape = (30, 30)
         viewpoint = (array_shape[0]/2, array_shape[1]/2)
+        max_dist_sq = max_dist **2 # Used to skip cells that are too far
 
         # Gather extreme angles from naive algorithm 
         extreme_angles_naive = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
+                cell = np.array([row, col])
+                viewpoint_to_cell = cell - viewpoint
+                if np.sum(viewpoint_to_cell**2) > max_dist_sq:
+                    continue
                 if (row == viewpoint[0]) and (col == viewpoint[1]):
                     continue
                 cell = (row, col)
@@ -172,7 +178,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_naive = (min_angles, center_angles, max_angles)
         # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
         # Compare the two
         error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
             np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
@@ -193,6 +200,7 @@ class TestAestheticQualityCore(unittest.TestCase):
     def test_list_extreme_cell_angles_cython(self):
         """Comparing cython vs python list_extreme_cell_angles"""
         array_shape = (30, 30)
+        max_dist = 10
         viewpoint = (array_shape[0]/4, array_shape[1]/3)
 
         # Gather extreme angles from cython algorithm
@@ -201,7 +209,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, viewpoint)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
         # Compare the two
 #        print('extreme_angles_python', type(extreme_angles_python), extreme_angles_python)
 #        print('extreme_angles_cython', type(extreme_angles_cython),

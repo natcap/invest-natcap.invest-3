@@ -14,7 +14,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('aesthetic_quality_core')
 
-def list_extreme_cell_angles(array_shape, viewpoint_coords):
+def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
@@ -24,6 +24,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
+            -maximum viewing distance
             
         returns a tuple (min, center, max, I, J) with min, center and max 
         Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
@@ -52,6 +53,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     max_angles = []
     I = []
     J = []
+    max_dist_sq = max_dist**2 # Used for skipping points that are too far
     #print('listing extreme cell angles')
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
@@ -61,13 +63,16 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 (current_cell_id % (cell_count/1000)) == 0:
                 progress = round(float(current_cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
+            # Skip if cell is too far
+            cell = np.array([row, col])
+            viewpoint_to_cell = cell - viewpoint
+            if np.sum(viewpoint_to_cell**2) > max_dist_sq:
+                continue
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
                 continue
-            cell = np.array([row, col])
             I.append(row)
             J.append(col)
-            viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
             angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
             angles.append((angle + two_pi) % two_pi)
