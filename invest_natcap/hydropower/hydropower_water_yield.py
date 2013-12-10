@@ -459,10 +459,6 @@ def execute(args):
 
     LOGGER.info('Starting Water Scarcity')
     
-    # Paths for watershed scarcity table
-    scarcity_table_ws_uri = os.path.join(
-            output_dir, 'water_scarcity_watershed%s.csv' % file_suffix) 
-    
     # Open/read in the demand csv file into a dictionary
     demand_dict = {}
     demand_table_file = open(args['demand_table_uri'])
@@ -482,15 +478,10 @@ def execute(args):
 
     LOGGER.debug('Calib_Dict : %s', calib_dict) 
     hydro_cal_table_file.close()
-    
-    # Making a copy of watershed to add water scarcity results to
-    scarcity_sheds_uri = os.path.join(
-            output_dir, 'scarcity_sheds%s.shp' % file_suffix)
-    raster_utils.copy_datasource_uri(sheds_uri, scarcity_sheds_uri)
    
     # Calculate the calibrated water yield for sheds
     LOGGER.debug('Calculating CYIELD')
-    calculate_cyield_vol(watershed_results_uri, calib_dict, scarcity_sheds_uri)
+    calculate_cyield_vol(watershed_results_uri, calib_dict)
     
     # Create demand raster from table values to use in future calculations
     LOGGER.info("Reclassifying demand raster")
@@ -510,15 +501,15 @@ def execute(args):
     
     # Add aggregated consumption to sheds shapefiles
     add_dict_to_shape(
-            scarcity_sheds_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
+            watershedshed_results_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
     
     # Add aggregated consumption means to sheds shapefiles
     add_dict_to_shape(
-            scarcity_sheds_uri, consump_mn_dict_ws, 'consum_mn', 'ws_id')
+            watershed_results_uri, consump_mn_dict_ws, 'consum_mn', 'ws_id')
     
     # Calculate the realised water supply after consumption
     LOGGER.info('Calculating RSUPPLY')
-    compute_rsupply_volume(scarcity_sheds_uri, watershed_results_uri)
+    compute_rsupply_volume(watershed_results_uri)
     
     # List of wanted fields to output in the watershed CSV table
     scarcity_field_list_ws = [
@@ -532,15 +523,8 @@ def execute(args):
 
     # Get a dictionary from the watershed shapefiles attributes based on the
     # fields to be outputted to the CSV table
-    scarcity_value_dict = extract_datasource_table_by_key(
-            scarcity_sheds_uri, 'ws_id', scarcity_field_list_ws)
-   
-    # Since we want the scarcity output to have both water yield and scarcity
-    # values, combine the scarcity and water yield dictionaries 
-    scarcity_dict_ws = combine_dictionaries(
-            wyield_value_dict_ws, scarcity_value_dict)
-
-    LOGGER.debug('Scarcity_dict_ws : %s', scarcity_dict_ws)
+    watershed_dict = extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id', field_list_ws)
 
     #Don't need this anymore
     os.remove(tmp_demand_uri)
@@ -553,17 +537,11 @@ def execute(args):
         # Since Valuation are not selected write out
         # the CSV table
         write_new_table(
-                watershed_results_csv_uri, field_list_ws, scarcity_dict_ws)
+                watershed_results_csv_uri, field_list_ws, watershed_dict)
         # The rest of the function is valuation, so we can quit now
         return
         
     LOGGER.info('Starting Valuation Calculation')
-    service_dir = os.path.join(workspace, 'service')
-    raster_utils.create_directories([service_dir])
-    
-    # Paths for the watershed table
-    valuation_table_ws_uri = os.path.join(
-            service_dir, 'hydropower_value_watershed%s.csv' % file_suffix)
     
     # Open/read in valuation parameters from CSV file
     valuation_params = {}
@@ -580,49 +558,32 @@ def execute(args):
     
     valuation_table_file.close()
     
-    # Making a copy of watershed to add valuation results to
-    valuation_sheds_uri = os.path.join(
-            service_dir, 'valuation_sheds%s.shp' % file_suffix)
-    raster_utils.copy_datasource_uri(sheds_uri, valuation_sheds_uri)
-   
     # Compute NPV and Energy for the watersheds
     LOGGER.info('Calculating NPV/ENERGY for Sheds')
-    compute_watershed_valuation(
-            valuation_sheds_uri, scarcity_sheds_uri, valuation_params)
+    compute_watershed_valuation(watershed_results_uri, valuation_params)
     
     # List of fields for the valuation run   
     val_field_list_ws = ['ws_id', 'hp_energy', 'hp_npv']
     
-    # Get a dictionary from the watershed shapefiles attributes based on the
-    # fields to be outputted to the CSV table
-    valuation_dict_ws = extract_datasource_table_by_key(
-            valuation_sheds_uri, 'ws_id', val_field_list_ws)
-    
-    # Since we want the valuation output to have water yield and scarcity
-    # values also, combine the dictionaries
-    hydropower_dict_ws = combine_dictionaries(
-            scarcity_dict_ws, valuation_dict_ws)
-
-    LOGGER.debug('Hydro WS Dict: %s', hydropower_dict_ws)
-    
     # Aggregate water yield, water scarcity, and valuation fields, where we
     # exclude the first field in the list because they are duplicates
     field_list_ws = field_list_ws + val_field_list_ws[1:]
-   
+    
+    # Get a dictionary from the watershed shapefiles attributes based on the
+    # fields to be outputted to the CSV table
+    watershed_dict_ws = extract_datasource_table_by_key(
+            watershed_results_uri, 'ws_id', field_list_ws)
+    
     # Write out the CSV Table
     write_new_table(
-            watershed_results_csv_uri, field_list_ws, hydropower_dict_ws)
+            watershed_results_csv_uri, field_list_ws, watershed_dict_ws)
     
-def compute_watershed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
+def compute_watershed_valuation(val_sheds_uri, val_dict):
     """Computes and adds the net present value and energy for the watersheds to
         an output shapefile. 
 
         val_sheds_uri - a URI path to an OGR shapefile for the valuation
             watershed results. Where the results will be added.
-
-        scarcity_sheds_uri - a URI path to an OGR shapefile for the water
-            scarcity watersheds. This file will have needed values from
-            computing water scarcity.
 
         val_dict - a python dictionary that has all the valuation parameters for
             each watershed
@@ -631,9 +592,6 @@ def compute_watershed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
     """
     val_ds = ogr.Open(val_sheds_uri, 1)
     val_layer = val_ds.GetLayer()
-    
-    scarcity_ds = ogr.Open(scarcity_sheds_uri)
-    scarcity_layer = scarcity_ds.GetLayer()
     
     # The field names for the new attributes
     energy_field = 'hp_energy'
@@ -653,12 +611,11 @@ def compute_watershed_valuation(val_sheds_uri, scarcity_sheds_uri, val_dict):
         npv_id = val_feat.GetFieldIndex(npv_field)
        
         # Get the watershed ID to index into the valuation parameter dictionary
-        scarcity_feat = scarcity_layer.GetFeature(feat_id)
-        ws_index = scarcity_feat.GetFieldIndex('ws_id')
-        ws_id = scarcity_feat.GetField(ws_index)
+        ws_index = val_feat.GetFieldIndex('ws_id')
+        ws_id = val_feat.GetField(ws_index)
         # Get the rsupply volume for the watershed
-        rsupply_vl_id = scarcity_feat.GetFieldIndex('rsupply_vl')
-        rsupply_vl = scarcity_feat.GetField(rsupply_vl_id)
+        rsupply_vl_id = val_feat.GetFieldIndex('rsupply_vl')
+        rsupply_vl = val_feat.GetField(rsupply_vl_id)
        
         # Get the valuation parameters for watershed 'ws_id'
         val_row = val_dict[ws_id]
@@ -716,14 +673,11 @@ def combine_dictionaries(dict_1, dict_2):
 
     return dict_3
 
-def compute_rsupply_volume(scarcity_sheds_uri, watershed_results_uri):
+def compute_rsupply_volume(watershed_results_uri):
     """Calculate the total realized water supply volume and the mean realized
         water supply volume per hectare for the given sheds (either for
         each sub-watershed or watershed). Output units in cubic meters and cubic
         meters per hectare respectively.
-
-        scarcity_sheds_uri - a URI path to an OGR shapefile to get consumption
-            values from, as well as to write out results to
 
         watershed_results_uri - a URI path to an OGR shapefile to get water yield
             values from
@@ -732,9 +686,6 @@ def compute_rsupply_volume(scarcity_sheds_uri, watershed_results_uri):
     wyield_ds = ogr.Open(watershed_results_uri)
     wyield_layer = wyield_ds.GetLayer()
     
-    scarcity_ds = ogr.Open(scarcity_sheds_uri, 1)
-    scarcity_layer = scarcity_ds.GetLayer()
-    
     # The field names for the new attributes
     rsupply_vol_name = 'rsupply_vl'
     rsupply_mn_name = 'rsupply_mn'
@@ -742,7 +693,7 @@ def compute_rsupply_volume(scarcity_sheds_uri, watershed_results_uri):
     # Add the new fields to the shapefile
     for new_field in [rsupply_vol_name, rsupply_mn_name]:
         field_defn = ogr.FieldDefn(new_field, ogr.OFTReal)
-        scarcity_layer.CreateField(field_defn)
+        wyield_layer.CreateField(field_defn)
 
     num_features = wyield_layer.GetFeatureCount()
     # Iterate over the number of features (polygons)
@@ -752,29 +703,27 @@ def compute_rsupply_volume(scarcity_sheds_uri, watershed_results_uri):
         wyield_mn_id = wyield_feat.GetFieldIndex('wyield_mn')
         wyield_mn = wyield_feat.GetField(wyield_mn_id)
         
-        scarcity_feat = scarcity_layer.GetFeature(feat_id)
         # Get water demand/consumption values
-        cyield_id = scarcity_feat.GetFieldIndex('cyield_vol')
-        cyield = scarcity_feat.GetField(cyield_id)
-        consump_vol_id = scarcity_feat.GetFieldIndex('consum_vol')
-        consump_vol = scarcity_feat.GetField(consump_vol_id)
-        consump_mn_id = scarcity_feat.GetFieldIndex('consum_mn')
-        consump_mn = scarcity_feat.GetField(consump_mn_id)
+        cyield_id = wyield_feat.GetFieldIndex('cyield_vol')
+        cyield = wyield_feat.GetField(cyield_id)
+        consump_vol_id = wyield_feat.GetFieldIndex('consum_vol')
+        consump_vol = wyield_feat.GetField(consump_vol_id)
+        consump_mn_id = wyield_feat.GetFieldIndex('consum_mn')
+        consump_mn = wyield_feat.GetField(consump_mn_id)
       
         # Calculate realized supply
         rsupply_vol = cyield - consump_vol
         rsupply_mn = wyield_mn - consump_mn
 
         # Get the indices for the output fields and set their values
-        rsupply_vol_index = scarcity_feat.GetFieldIndex(rsupply_vol_name)
-        scarcity_feat.SetField(rsupply_vol_index, rsupply_vol)
-        rsupply_mn_index = scarcity_feat.GetFieldIndex(rsupply_mn_name)
-        scarcity_feat.SetField(rsupply_mn_index, rsupply_mn)
+        rsupply_vol_index = wyield_feat.GetFieldIndex(rsupply_vol_name)
+        wyield_feat.SetField(rsupply_vol_index, rsupply_vol)
+        rsupply_mn_index = wyield_feat.GetFieldIndex(rsupply_mn_name)
+        wyield_feat.SetField(rsupply_mn_index, rsupply_mn)
         
-        scarcity_layer.SetFeature(scarcity_feat)
+        wyield_layer.SetFeature(wyield_feat)
 
-def calculate_cyield_vol(
-        wyield_shed_uri, calib_dict, scarcity_shed_uri):
+def calculate_cyield_vol(wyield_shed_uri, calib_dict):
     """Calculate the calibrated water yield volume for per sub-watershed or
         watershed, depending on inputs.
 
@@ -784,23 +733,17 @@ def calculate_cyield_vol(
         calib_dict - a python dictionary that has the calibrated values for the
             sheds
 
-        scarcity_shed_uri - a URI path to an OGR shapefile to write the results
-            to
-
         returns nothing"""
     
     wyield_ds = ogr.Open(wyield_shed_uri)
     wyield_layer = wyield_ds.GetLayer()
    
-    scarcity_ds = ogr.Open(scarcity_shed_uri, 1)
-    scarcity_layer = scarcity_ds.GetLayer()
-    
     # The field names for the new attributes
     cyield_name = 'cyield_vol'
 
     # Add the new fields to the shapefile
     field_defn = ogr.FieldDefn(cyield_name, ogr.OFTReal)
-    scarcity_layer.CreateField(field_defn)
+    wyield_layer.CreateField(field_defn)
 
     num_features = wyield_layer.GetFeatureCount()
     # Iterate over the number of features (polygons)
@@ -817,12 +760,11 @@ def calculate_cyield_vol(
         # Calculate calibrated water yield
         cyield_vol = wyield_vol * calib_dict[ws_id]
 
-        scarcity_feat = scarcity_layer.GetFeature(feat_id)
         # Add calibrated water yield to feature
-        scarcity_cyield_id = scarcity_feat.GetFieldIndex('cyield_vol')
-        scarcity_feat.SetField(scarcity_cyield_id, cyield_vol)
+        cyield_id = wyield_feat.GetFieldIndex('cyield_vol')
+        wyield_feat.SetField(cyield_id, cyield_vol)
         
-        scarcity_layer.SetFeature(scarcity_feat)
+        wyield_layer.SetFeature(wyield_feat)
 
 def extract_datasource_table_by_key(
         datasource_uri, key_field, wanted_list):
