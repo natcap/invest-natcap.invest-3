@@ -563,7 +563,7 @@ def execute(args):
     compute_watershed_valuation(watershed_results_uri, valuation_params)
     
     # List of fields for the valuation run   
-    val_field_list_ws = ['ws_id', 'hp_energy', 'hp_npv']
+    val_field_list_ws = ['ws_id', 'hp_energy', 'hp_val']
     
     # Aggregate water yield, water scarcity, and valuation fields, where we
     # exclude the first field in the list because they are duplicates
@@ -595,7 +595,7 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
     
     # The field names for the new attributes
     energy_field = 'hp_energy'
-    npv_field = 'hp_npv'
+    npv_field = 'hp_val'
 
     # Add the new fields to the shapefile
     for new_field in [energy_field, npv_field]:
