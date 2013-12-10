@@ -1136,15 +1136,26 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     visibility_map = np.ones(input_array.shape, dtype=np.int8)
     array_shape = input_array.shape
     # 1- get perimeter cells
+    # TODO: Make this function return 10 scalars instead of 2 arrays 
     perimeter_cells = \
     get_perimeter_cells(array_shape, coordinates, max_dist)
     # 1.1- remove perimeter cell if same coord as viewpoint
     # 2- compute cell angles
+    # TODO: move nympy array creation code from get_perimeter_cell in
+    # cell_angles + append the last element (2 PI) automatically
     angles = cell_angles(perimeter_cells, coordinates)
     angles = np.append(angles, 2.0 * math.pi)
     # 3- compute information on raster cells
+    row_max = np.amax(perimeter_cells[0])
+    row_min = np.amin(perimeter_cells[0])
+    col_max = np.amax(perimeter_cells[1])
+    col_min = np.amin(perimeter_cells[1])
+    # Shape of the viewshed
+    viewshed_shape = (row_max-row_min + 1, col_max-col_min + 1)
+    # Viewer's coordiantes relative to the viewshed 
+    v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
-    aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, coordinates)
+    aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v)
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     visibility = \
     (input_array[(I, J)] - input_array[coordinates[0], \
