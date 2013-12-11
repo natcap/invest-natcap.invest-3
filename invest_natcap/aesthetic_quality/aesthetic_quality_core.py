@@ -53,10 +53,10 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     max_angles = []
     I = []
     J = []
-    max_dist_sq = max_dist**2 # Used for skipping points that are too far
-    #print('listing extreme cell angles')
+    max_dist_sq = max_dist**2 if max_dist > 0 else 1000000000
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
+    discarded_cells = 0
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
             if (cell_count > 1000) and \
@@ -67,9 +67,11 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             cell = np.array([row, col])
             viewpoint_to_cell = cell - viewpoint
             if np.sum(viewpoint_to_cell**2) > max_dist_sq:
+                discarded_cells += 1
                 continue
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
+                discarded_cells += 1
                 continue
             I.append(row)
             J.append(col)
@@ -94,7 +96,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
             current_cell_id += 1
-    #print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
     angles = np.array(angles)
@@ -1168,6 +1169,9 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     coordinates[1]] - obs_elev) / distances
 
     if alg_version is 'python':
+        #print('angles', angles)
+        #print('viewshed shape', viewshed_shape)
+        #print('center_events', center_events)
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances, visibility, visibility_map)
     else:
