@@ -9,6 +9,8 @@ import logging
 import copy
 import os
 
+import random
+
 import operator
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -249,6 +251,12 @@ def execute(args):
     dis_soil_name = os.path.join(intermediate_dir, "%i_dis_soil.tif")
 
 
+    #adjusted carbon file names
+    adj_above_name = os.path.join(intermediate_dir, "%i_adj_above.tif")
+    adj_below_name = os.path.join(intermediate_dir, "%i_adj_below.tif")
+    adj_bio_name = os.path.join(intermediate_dir, "%i_adj_bio.tif")
+    adj_soil_name = os.path.join(intermediate_dir, "%i_adj_soil.tif")
+
     #totals
     total_acc_soil_name = "total_soil_acc_%i_%i.tif"
     total_acc_bio_name = "total_bio_acc_%i_%i.tif"
@@ -274,6 +282,44 @@ def execute(args):
 
     trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
+
+    #validate disturbance and accumulation tables
+    change_types = set()
+    for k1 in trans:
+        for k2 in trans:
+            change_types.add(trans[k1][str(k2)])
+
+    change_columns = set(acc_soil[random.choice(list(acc_soil.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Soil accumulation table valid.")
+    else:
+        msg = "Soil accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    change_columns = set(dis_soil[random.choice(list(dis_soil.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Soil disturbance table valid.")
+    else:
+        msg = "Soil disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    change_columns = set(acc_bio[random.choice(list(acc_bio.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Biomass accumulation table valid.")
+    else:
+        msg = "Biomass accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    change_columns = set(dis_bio[random.choice(list(dis_bio.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Biomass disturbance table valid.")
+    else:
+        msg = "Biomass disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
 
     #construct dictionaries for single parameter lookups
     above_dict = dict([(k, float(carbon[k][carbon_field_above])) for k in carbon])
