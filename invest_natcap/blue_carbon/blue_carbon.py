@@ -368,8 +368,6 @@ def execute(args):
         try:
             return float(acc_soil[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     def acc_bio_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
@@ -377,8 +375,6 @@ def execute(args):
         try:
             return float(acc_bio[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     def dis_bio_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
@@ -386,8 +382,6 @@ def execute(args):
         try:
             return float(dis_bio[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     def dis_soil_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
@@ -395,8 +389,6 @@ def execute(args):
         try:
             return float(dis_soil[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
