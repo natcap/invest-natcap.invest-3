@@ -978,52 +978,41 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif') 
-        h_out_uri = os.path.join(dir, '[' + h + ']_HIGH_RISK.shp')
         
         raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-        #Use gdal.Polygonize to take the raster, which should have only
-        #data where there are high percentage risk values, and turn it into
-        #a shapefile. 
-        raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
-
         #Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
-        m_out_uri = os.path.join(dir, '[' + h + ']_MED_RISK.shp')
         
         raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-        #Use gdal.Polygonize to take the raster, which should have only
-        #data where there are high percentage risk values, and turn it into
-        #a shapefile. 
-        raster_to_polygon(m_out_uri_r, m_out_uri, h, 'VALUE')
-        
         #Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
-        l_out_uri = os.path.join(dir, '[' + h + ']_LOW_RISK.shp')
         
         raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-        #Use gdal.Polygonize to take the raster, which should have only
-        #data where there are high percentage risk values, and turn it into
-        #a shapefile. 
-        raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
-
         #Want to do another vectorize in order to create a single shapefile
         #with high, medium, low values.
-        
-        
-        single_raster_uri = 
+        single_raster_uri_r = os.path.join(dir, '[' + h + ']_ALL_RISK.tif')
+        single_raster_uri = os.path.join(dir, '[' + h + ']_RISK.shp')
 
+        raster_utils.vectorize_datasets([l_out_uri_r, m_out_uri_r, h_out_uri_r], 
+                        combo_risk_raster, single_raster_uri_r, gdal.GDT_Float32, 
+                        -1., grid_size, "union", resample_method_list=None, 
+                        dataset_to_align_index=0, aoi_uri=None)
+       
+        raster_to_polygon(single_raster_uri_r, single_risk_raster_uri,
+                            h, 'VALUE')
+        
     return num_stress
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
