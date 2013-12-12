@@ -15,7 +15,7 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan2(double x, double x)
 
-def list_extreme_cell_angles(array_shape, viewpoint_coords):
+def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
@@ -25,6 +25,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
+            -max_dist: maximum viewing distance
             
         returns a tuple (min, center, max, I, J) with min, center and max 
         Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
@@ -35,6 +36,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         # constants
         double pi = 3.141592653589793238462643
         double two_pi = 2. * pi
+        double max_dist_sq = max_dist**2 if max_dist >= 0 else 1000000000
         # viewpoint coordinates
         int viewpoint_row = viewpoint_coords[0]
         int viewpoint_col = viewpoint_coords[1]
@@ -45,7 +47,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         int array_rows = array_shape[0]
         int array_cols = array_shape[1]
         # Number of cells processed
-        int cell_count = array_rows * array_cols
+        int cell_count = 0
         # This array stores the offset coordinates to recover the first 
         # and last corners of a cell reached by the sweep line. Since the 
         # line sweeps from angle 0 to angle 360, the first corner 
@@ -92,15 +94,15 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         double max_corner_offset_col
         # C array that will be used in the loop
         # pointer to min angle values
-        double *min_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+        double *min_a_ptr = NULL
         # pointer to cell center angle values
-        double *a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+        double *a_ptr = NULL
         # pointer to max angle values
-        double *max_a_ptr = <double *>malloc((cell_count-1) * sizeof(double))
+        double *max_a_ptr = NULL
         # pointer to the cells row number
-        long *I_ptr = <long *>malloc((cell_count-1) * sizeof(long))
+        long *I_ptr = NULL
         # pointer to the cells column number
-        long *J_ptr = <long *>malloc((cell_count-1) * sizeof(long))
+        long *J_ptr = NULL
         # variables used in the loop
         int cell_id = 0 # processed cell counter
         int row # row counter
@@ -113,7 +115,32 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
         # Loop through the columns    
         for col in range(array_cols):
             viewpoint_to_cell_col = col - viewpoint_col
-            # Show progress in 0.1% increment
+            # Skip if cell is too far
+            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
+            if d > max_dist_sq:
+                continue
+            # Skip if cell falls on the viewpoint
+            if (row == viewpoint_row) and (col == viewpoint_col):
+                continue
+            cell_count += 1
+
+    min_a_ptr = <double *>malloc((cell_count) * sizeof(double))
+    a_ptr = <double *>malloc((cell_count) * sizeof(double))
+    max_a_ptr = <double *>malloc((cell_count) * sizeof(double))
+    I_ptr = <long *>malloc((cell_count) * sizeof(long))
+    J_ptr = <long *>malloc((cell_count) * sizeof(long))
+
+    # Loop through the rows
+    for row in range(array_rows):
+        viewpoint_to_cell_row = row - viewpoint_row
+        # Loop through the columns    
+        for col in range(array_cols):
+            viewpoint_to_cell_col = col - viewpoint_col
+            # Skip if cell is too far
+            d = viewpoint_to_cell_row**2 + viewpoint_to_cell_col**2
+            #print('max_dist', max_dist, 'max_dist_sq', max_dist_sq, 'd', d)
+            if d > max_dist_sq:
+                continue
             # Skip if cell falls on the viewpoint
             if (row == viewpoint_row) and (col == viewpoint_col):
                 continue
@@ -154,13 +181,13 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             cell_id += 1
     # Copy C-array contents to numpy arrays:
     # TODO: use memcpy if possible (or memoryviews?)
-    min_angles = np.ndarray(cell_count -1, dtype = np.float)
-    angles = np.ndarray(cell_count -1, dtype = np.float)
-    max_angles = np.ndarray(cell_count -1, dtype = np.float)
-    I = np.ndarray(cell_count -1, dtype = np.int32)
-    J = np.ndarray(cell_count -1, dtype = np.int32)
+    min_angles = np.ndarray(cell_count, dtype = np.float)
+    angles = np.ndarray(cell_count, dtype = np.float)
+    max_angles = np.ndarray(cell_count, dtype = np.float)
+    I = np.ndarray(cell_count, dtype = np.int32)
+    J = np.ndarray(cell_count, dtype = np.int32)
 
-    for i in range(cell_count-1):
+    for i in range(cell_count):
         min_angles[i] = min_a_ptr[i]
         angles[i] = a_ptr[i]
         max_angles[i] = max_a_ptr[i]

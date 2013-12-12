@@ -88,5 +88,5 @@ cpdef double fractp_op(double out_nodata, double seasonality_constant,
         return fmin(phi, aet_p)
         
     else:
-        return Kc * eto    
+        return Kc * eto / precip 
     

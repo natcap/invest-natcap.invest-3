@@ -151,13 +151,19 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_extreme_cell_angles(self):
         """Testing naive vs optimized version of the same functionality"""
-        array_shape = (3, 3)
+        max_dist = 10
+        array_shape = (30, 30)
         viewpoint = (array_shape[0]/2, array_shape[1]/2)
+        max_dist_sq = max_dist **2 # Used to skip cells that are too far
 
         # Gather extreme angles from naive algorithm 
         extreme_angles_naive = []
         for row in range(array_shape[0]):
             for col in range(array_shape[1]):
+                cell = np.array([row, col])
+                viewpoint_to_cell = cell - viewpoint
+                if np.sum(viewpoint_to_cell**2) > max_dist_sq:
+                    continue
                 if (row == viewpoint[0]) and (col == viewpoint[1]):
                     continue
                 cell = (row, col)
@@ -172,7 +178,8 @@ class TestAestheticQualityCore(unittest.TestCase):
         extreme_angles_naive = (min_angles, center_angles, max_angles)
         # Gather extreme angles from efficient algorithm
         extreme_angles_fast = \
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
         # Compare the two
         error = np.sum(np.abs(extreme_angles_naive[0]-extreme_angles_fast[0])+\
             np.abs(extreme_angles_naive[1]-extreme_angles_fast[1]) + \
@@ -192,20 +199,47 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_list_extreme_cell_angles_cython(self):
         """Comparing cython vs python list_extreme_cell_angles"""
-        array_shape = (30, 30)
+        array_size = 6
+        array_shape = (array_size, array_size)
         viewpoint = (array_shape[0]/4, array_shape[1]/3)
 
+        # Test with infinite distance
+        max_dist = -1
         # Gather extreme angles from cython algorithm
-        # TODO: change the line below to call the actual cython function
         extreme_angles_cython = \
-        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
         # Gather extreme angles from python algorithm
         extreme_angles_python = \
-        aesthetic_quality_core.list_extreme_cell_angles(array_shape, viewpoint)
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
         # Compare the two
-#        print('extreme_angles_python', type(extreme_angles_python), extreme_angles_python)
-#        print('extreme_angles_cython', type(extreme_angles_cython),
-#        extreme_angles_cython)
+        error = np.sum(np.abs(extreme_angles_python[0]-extreme_angles_cython[0])+\
+            np.abs(extreme_angles_python[1]-extreme_angles_cython[1]) + \
+            np.abs(extreme_angles_python[2]-extreme_angles_cython[2]))
+        # assert if necessary
+        if error > 5e-15:
+            print('python', extreme_angles_python)
+            print('cython', extreme_angles_cython)
+            print('difference')
+            print(extreme_angles_cython[0] - extreme_angles_python[0])
+            print(extreme_angles_cython[1] - extreme_angles_python[1])
+            print(extreme_angles_cython[2] - extreme_angles_python[2])
+        message = 'error on expected and computed angles is too large:' + \
+        str(error)
+        assert error < 5e-15, message
+
+        # Test with finite distance
+        max_dist = 2
+        # Gather extreme angles from cython algorithm
+        extreme_angles_cython = \
+        aesthetic_quality_cython_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
+        # Gather extreme angles from python algorithm
+        extreme_angles_python = \
+        aesthetic_quality_core.list_extreme_cell_angles(array_shape, \
+        viewpoint, max_dist)
+        # Compare the two
         error = np.sum(np.abs(extreme_angles_python[0]-extreme_angles_cython[0])+\
             np.abs(extreme_angles_python[1]-extreme_angles_cython[1]) + \
             np.abs(extreme_angles_python[2]-extreme_angles_cython[2]))
@@ -1077,7 +1111,7 @@ class TestAestheticQualityCore(unittest.TestCase):
 
     def test_viewshed(self):
         """Compare the python and cython versions of compute_viewshed"""
-        array_shape = (150,100)
+        array_shape = (8, 6)
         DEM = np.random.random([array_shape[0], array_shape[1]]) * 10.
         DEW = DEM.astype(np.int8)
         viewpoint = (5, 3) #np.array([array_shape[0]/2, array_shape[1]/2])

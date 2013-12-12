@@ -14,7 +14,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 LOGGER = logging.getLogger('aesthetic_quality_core')
 
-def list_extreme_cell_angles(array_shape, viewpoint_coords):
+def list_extreme_cell_angles(array_shape, viewpoint_coords, max_dist):
     """List the minimum and maximum angles spanned by each cell of a
         rectangular raster if scanned by a sweep line centered on
         viewpoint_coords.
@@ -24,6 +24,7 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
                 calling numpy.ndarray.shape()
             -viewpoint_coords: a 2-tuple of coordinates similar to array_shape
             where the sweep line originates
+            -max_dist: maximum viewing distance
             
         returns a tuple (min, center, max, I, J) with min, center and max 
         Nx1 numpy arrays of each raster cell's minimum, center, and maximum 
@@ -52,22 +53,28 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
     max_angles = []
     I = []
     J = []
-    #print('listing extreme cell angles')
+    max_dist_sq = max_dist**2 if max_dist > 0 else 1000000000
     cell_count = array_shape[0]*array_shape[1]
     current_cell_id = 0
+    discarded_cells = 0
     for row in range(array_shape[0]):
         for col in range(array_shape[1]):
             if (cell_count > 1000) and \
                 (current_cell_id % (cell_count/1000)) == 0:
                 progress = round(float(current_cell_id) / cell_count * 100.,1)
                 print(str(progress) + '%')
+            # Skip if cell is too far
+            cell = np.array([row, col])
+            viewpoint_to_cell = cell - viewpoint
+            if np.sum(viewpoint_to_cell**2) > max_dist_sq:
+                discarded_cells += 1
+                continue
             # Skip if cell falls on the viewpoint
             if (row == viewpoint[0]) and (col == viewpoint[1]):
+                discarded_cells += 1
                 continue
-            cell = np.array([row, col])
             I.append(row)
             J.append(col)
-            viewpoint_to_cell = cell - viewpoint
             # Compute the angle of the cell center
             angle = np.arctan2(-viewpoint_to_cell[0], viewpoint_to_cell[1])
             angles.append((angle + two_pi) % two_pi)
@@ -89,7 +96,6 @@ def list_extreme_cell_angles(array_shape, viewpoint_coords):
             max_angle = np.arctan2(-max_corner[0], max_corner[1])
             max_angles.append((max_angle + two_pi) % two_pi)
             current_cell_id += 1
-    #print('done listing extreme cell angles, storing results')
     # Create a tuple of ndarray angles before returning
     min_angles = np.array(min_angles)
     angles = np.array(angles)
@@ -1155,13 +1161,17 @@ def compute_viewshed(input_array, coordinates, obs_elev, tgt_elev, max_dist,
     # Viewer's coordiantes relative to the viewshed 
     v = (coordinates[0] - row_min, coordinates[1] - col_min)
     add_events, center_events, remove_events, I, J = \
-    aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v)
+    aesthetic_quality_cython_core.list_extreme_cell_angles(viewshed_shape, v, \
+    max_dist)
     distances = (coordinates[0] - I)**2 + (coordinates[1] - J)**2
     visibility = \
     (input_array[(I, J)] - input_array[coordinates[0], \
     coordinates[1]] - obs_elev) / distances
 
     if alg_version is 'python':
+        #print('angles', angles)
+        #print('viewshed shape', viewshed_shape)
+        #print('center_events', center_events)
         sweep_through_angles(angles, add_events, center_events, remove_events,\
         I, J, distances, visibility, visibility_map)
     else:
