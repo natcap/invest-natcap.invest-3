@@ -180,8 +180,11 @@ def execute(args):
 
 
     ##constants
-    gdal_type = gdal.GDT_Float64
-
+    gdal_format = "GTiff"
+    gdal_type_carbon = gdal.GDT_Float64
+    nodata_default_int = -1
+    nodata_default_float = -1
+    gdal_type_identity_raster = gdal.GDT_Int16
 
     ##inputs parameters
     workspace_dir = args["workspace_dir"]
@@ -329,10 +332,10 @@ def execute(args):
     depth_dict = dict([(k, float(carbon[k][carbon_field_depth])) for k in carbon])
 
     #validating data
-    nodata = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
-    if len(nodata) == 1:
+    nodata_lulc = set([raster_utils.get_nodata_from_uri(lulc_uri_dict[k]) for k in lulc_uri_dict])
+    if len(nodata_lulc) == 1:
         LOGGER.debug("All rasters have the same nodata value.")
-        nodata = nodata.pop()
+        nodata_lulc = nodata_lulc.pop()
     else:
         msg = "All rasters must have the same nodata value."
         LOGGER.error(msg)
@@ -352,43 +355,39 @@ def execute(args):
     ##vectorize datasets operations
     #standard ops
     def add_op(*values):
-        if nodata in values:
-            return nodata
+        if nodata_default_int in values:
+            return nodata_default_int
         return reduce(operator.add,values)
 
     def mul_op(*values):
-        if nodata in values:
-            return nodata
+        if nodata_default_int in values:
+            return nodata_default_int
         return reduce(operator.mul,values)
 
     #custom ops
     def acc_soil_co_op(lulc_base, lulc_transition):
-        if nodata in [lulc_base, lulc_transition]:
-            return 0.0
-        try:
-            return float(acc_soil[carbon[int(lulc_base)][carbon_field_veg]]\
-                   [trans[int(lulc_base)][str(int(lulc_transition))]])
+        if nodata_lulc in [lulc_base, lulc_transition]:
+            return nodata_default_float
+        return float(acc_soil[carbon[int(lulc_base)][carbon_field_veg]]\
+                     [trans[int(lulc_base)][str(int(lulc_transition))]])
 
     def acc_bio_co_op(lulc_base, lulc_transition):
-        if nodata in [lulc_base, lulc_transition]:
-            return 0.0
-        try:
-            return float(acc_bio[carbon[int(lulc_base)][carbon_field_veg]]\
-                   [trans[int(lulc_base)][str(int(lulc_transition))]])
+        if nodata_lulc in [lulc_base, lulc_transition]:
+            return nodata_default_float
+        return float(acc_bio[carbon[int(lulc_base)][carbon_field_veg]]\
+                     [trans[int(lulc_base)][str(int(lulc_transition))]])
 
     def dis_bio_co_op(lulc_base, lulc_transition):
-        if nodata in [lulc_base, lulc_transition]:
-            return 0.0
-        try:
-            return float(dis_bio[carbon[int(lulc_base)][carbon_field_veg]]\
-                   [trans[int(lulc_base)][str(int(lulc_transition))]])
+        if nodata_lulc in [lulc_base, lulc_transition]:
+            return nodata_default_float
+        return float(dis_bio[carbon[int(lulc_base)][carbon_field_veg]]\
+                     [trans[int(lulc_base)][str(int(lulc_transition))]])
 
     def dis_soil_co_op(lulc_base, lulc_transition):
-        if nodata in [lulc_base, lulc_transition]:
-            return 0.0
-        try:
-            return float(dis_soil[carbon[int(lulc_base)][carbon_field_veg]]\
-                   [trans[int(lulc_base)][str(int(lulc_transition))]])
+        if nodata_lulc in [lulc_base, lulc_transition]:
+            return nodata_default_float
+        return float(dis_soil[carbon[int(lulc_base)][carbon_field_veg]]\
+                     [trans[int(lulc_base)][str(int(lulc_transition))]])
 
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
@@ -396,11 +395,11 @@ def execute(args):
     lulc_base_uri = lulc_uri_dict[lulc_base_year]
 
     #add reclass entry for nodata
-    above_dict[int(nodata)] = 0.0
-    below_dict[int(nodata)] = 0.0
-    soil_dict[int(nodata)] = 0.0
-    litter_dict[int(nodata)] = 0.0
-    depth_dict[int(nodata)] = 0.0
+    above_dict[int(nodata_lulc)] = nodata_default_float
+    below_dict[int(nodata_lulc)] = nodata_default_float
+    soil_dict[int(nodata_lulc)] = nodata_default_float
+    litter_dict[int(nodata_lulc)] = nodata_default_float
+    depth_dict[int(nodata_lulc)] = nodata_default_float
 
     ##loop over lulc years
     for lulc_transition_year in lulc_years + [analysis_year]:
@@ -433,16 +432,16 @@ def execute(args):
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    above_dict,
                                    lulc_base_above_uri,
-                                   gdal_type,
-                                   0.0,
+                                   gdal_type_carbon,
+                                   nodata_default_float,
                                    exception_flag="values_required")
         LOGGER.debug("Created stock above raster.")
 
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    below_dict,
                                    lulc_base_below_uri,
-                                   gdal_type,
-                                   0.0,
+                                   gdal_type_carbon,
+                                   nodata_default_float,
                                    exception_flag="values_required")
         LOGGER.debug("Created stock below raster.")
 
@@ -450,24 +449,24 @@ def execute(args):
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    soil_dict,
                                    lulc_base_soil_uri,
-                                   gdal_type,
-                                   0.0,
+                                   gdal_type_carbon,
+                                   nodata_default_float,
                                    exception_flag="values_required")
         LOGGER.debug("Created stock soil raster.")
 
         raster_utils.reclassify_dataset_uri(lulc_base_uri,
                                    litter_dict,
                                    lulc_base_litter_uri,
-                                   gdal_type,
-                                   0.0,
+                                   gdal_type_carbon,
+                                   nodata_default_float,
                                    exception_flag="values_required")
         LOGGER.debug("Created stock litter raster.")
 
         raster_utils.vectorize_datasets([lulc_base_above_uri, lulc_base_below_uri],
                                         add_op,
                                         lulc_base_biomass_uri,
-                                        gdal_type,
-                                        0.0,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
                                         cell_size,
                                         "union")
         LOGGER.debug("Created stock biomass raster.")
@@ -475,8 +474,8 @@ def execute(args):
         raster_utils.vectorize_datasets([lulc_base_biomass_uri, lulc_base_soil_uri],
                                         add_op,
                                         lulc_base_carbon_uri,
-                                        gdal_type,
-                                        0.0,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
                                         cell_size,
                                         "union")
         LOGGER.debug("Created stock total raster.")
@@ -494,8 +493,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             acc_soil_co_op,
                                             lulc_base_acc_soil_co_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
 
@@ -504,9 +503,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_co_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Identity raster for soil accumulation coefficent created.")
 
@@ -515,8 +514,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_acc_soil_co_uri],
                                             ConstantOp(mul_op,t),
                                             lulc_base_acc_soil_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
             LOGGER.debug("Soil accumulation raster created.")
@@ -524,9 +523,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_soil_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Zero soil accumulation raster created.")
 
@@ -537,8 +536,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             acc_bio_co_op,
                                             lulc_base_acc_bio_co_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
 
@@ -547,9 +546,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_bio_co_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Identity raster for biomass accumulation coefficent created.")
 
@@ -558,8 +557,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_acc_bio_co_uri],
                                             ConstantOp(mul_op,t),
                                             lulc_base_acc_bio_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
             LOGGER.debug("Biomass accumulation raster created.")
@@ -567,9 +566,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_acc_bio_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Zero biomass accumulation raster created.")
 
@@ -580,8 +579,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             biomass_disturbance_co_op,
                                             lulc_base_dis_bio_co_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
 
@@ -590,9 +589,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_bio_co_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Identity raster for biomass disturbance coefficent created.")
 
@@ -601,8 +600,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_dis_bio_co_uri, lulc_base_biomass_uri],
                                             mul_op,
                                             lulc_base_dis_bio_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
             LOGGER.debug("Biomass disturbance raster created.")
@@ -610,9 +609,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_bio_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Zero biomass disturbance raster created.")
 
@@ -623,8 +622,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_uri, lulc_transition_uri],
                                             soil_disturbance_co_op,
                                             lulc_base_dis_soil_co_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
             LOGGER.debug("Soil disturbance coefficient raster created.")
@@ -632,9 +631,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_soil_co_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Identity raster for soil disturbance created.")
 
@@ -644,8 +643,8 @@ def execute(args):
             raster_utils.vectorize_datasets([lulc_base_dis_soil_co_uri, lulc_base_soil_uri],
                                             mul_op,
                                             lulc_base_dis_soil_uri,
-                                            gdal.GDT_Float64,
-                                            0.0,
+                                            gdal_type_carbon,
+                                            nodata_default_float,
                                             cell_size,
                                             "union")
             LOGGER.debug("Soil disturbance raster created.")
@@ -653,9 +652,9 @@ def execute(args):
         except:
             raster_utils.new_raster_from_base_uri(lulc_base_uri,
                                                   lulc_base_dis_soil_uri,
-                                                  "GTiff",
-                                                  255,
-                                                  gdal.GDT_Byte,
+                                                  gdal_format,
+                                                  nodata_default_int,
+                                                  gdal_type_identity_raster,
                                                   fill_value=0)
             LOGGER.debug("Zero soil disturbance raster created.")
 
@@ -668,8 +667,8 @@ def execute(args):
 
     ##calculate adjusted pools
     def adj_op(base, acc, dis):
-        if nodata in [base, acc, dis]:
-            return nodata
+        if nodata_default_float in [base, acc, dis]:
+            return nodata_default_float
         else:
             return base + acc - dis
             
@@ -713,17 +712,17 @@ def execute(args):
         raster_utils.vectorize_datasets(acc_soil_uri_list,
                                         add_op,
                                         total_acc_soil_uri,
-                                        gdal.GDT_Float64,
-                                        0.0,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
                                         cell_size,
                                         "union")
 
     except:
         raster_utils.new_raster_from_base_uri(acc_soil_uri_list[0],
                                               total_acc_soil_uri,
-                                              "GTiff",
-                                              255,
-                                              gdal.GDT_Byte,
+                                              gdal_format,
+                                              nodata_default_int,
+                                              gdal_type_identity_raster,
                                               fill_value=0)
     LOGGER.debug("Cumilative soil accumulation raster created.")
 
@@ -731,17 +730,17 @@ def execute(args):
         raster_utils.vectorize_datasets(acc_bio_uri_list,
                                         add_op,
                                         total_acc_bio_uri,
-                                        gdal.GDT_Float64,
-                                        0.0,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
                                         cell_size,
                                         "union")
 
     except:
         raster_utils.new_raster_from_base_uri(acc_bio_uri_list[0],
                                               total_acc_bio_uri,
-                                              "GTiff",
-                                              255,
-                                              gdal.GDT_Byte,
+                                              gdal_format,
+                                              nodata_default_int,
+                                              gdal_type_identity_raster,
                                               fill_value=0)
     LOGGER.debug("Cumilative biomass accumulation raster created.")        
 
@@ -749,16 +748,16 @@ def execute(args):
         raster_utils.vectorize_datasets(dis_soil_uri_list,
                                         add_op,
                                         total_dis_soil_uri,
-                                        gdal.GDT_Float64,
-                                        0.0,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
                                         cell_size,
                                         "union")
     except:
         raster_utils.new_raster_from_base_uri(dis_soil_uri_list[0],
                                       total_dis_soil_uri,
-                                      "GTiff",
-                                      255,
-                                      gdal.GDT_Byte,
+                                      gdal_format,
+                                      nodata_default_int,
+                                      gdal_type_identity_raster,
                                       fill_value=0)
     LOGGER.debug("Cumilative soil disturbance raster created.")
 
@@ -766,16 +765,16 @@ def execute(args):
         raster_utils.vectorize_datasets(dis_bio_uri_list,
                                         add_op,
                                         total_dis_bio_uri,
-                                        gdal.GDT_Float64,
-                                        0.0,
+                                        gdal_type_carbon,
+                                        nodata_default_float,
                                         cell_size,
                                         "union")
     except:
         raster_utils.new_raster_from_base_uri(dis_bio_uri_list[0],
                                       total_dis_bio_uri,
-                                      "GTiff",
-                                      255,
-                                      gdal.GDT_Byte,
+                                      gdal_format,
+                                      nodata_default_int,
+                                      gdal_type_identity_raster,
                                       fill_value=0)
     LOGGER.debug("Cumilative biomass disturbance raster created.")       
 
@@ -853,15 +852,15 @@ def execute(args):
     report.close()
 
 
-    ##clean up
-    driver = gdal.GetDriverByName('GTiff')
-    for year in lulc_years[1:]:
-        driver.Delete(os.path.join(workspace_dir, above_name % year))
-        driver.Delete(os.path.join(workspace_dir, below_name % year))
-        driver.Delete(os.path.join(workspace_dir, soil_name % year))
-        driver.Delete(os.path.join(workspace_dir, litter_name % year))
-        driver.Delete(os.path.join(workspace_dir, biomass_name % year))
-        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
-
-    for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
-        driver.Delete(uri)
+##    ##clean up
+##    driver = gdal.GetDriverByName('GTiff')
+##    for year in lulc_years[1:]:
+##        driver.Delete(os.path.join(workspace_dir, above_name % year))
+##        driver.Delete(os.path.join(workspace_dir, below_name % year))
+##        driver.Delete(os.path.join(workspace_dir, soil_name % year))
+##        driver.Delete(os.path.join(workspace_dir, litter_name % year))
+##        driver.Delete(os.path.join(workspace_dir, biomass_name % year))
+##        driver.Delete(os.path.join(workspace_dir, carbon_name % year))
+##
+##    for uri in acc_soil_uri_list+dis_soil_uri_list+dis_bio_uri_list:
+##        driver.Delete(uri)
