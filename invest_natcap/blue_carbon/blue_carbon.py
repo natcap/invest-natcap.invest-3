@@ -666,6 +666,31 @@ def execute(args):
             lulc_base_uri = lulc_uri_dict[lulc_base_year]
             LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
+    ##calculate adjusted pools
+    def adj_op(base, acc, dis):
+        if nodata in [base, acc, dis]:
+            return nodata
+        else:
+            return base + acc - dis
+            
+    year = lulc_years[0]
+    transition_year = lulc_years[1]
+
+    year = transition_year
+    for transition_year in lulc_years[2:]:
+        adj_above_uri = adj_above_name % transition_year
+        adj_below_uri = adj_below_name % transition_year
+        adj_bio_uri = adj_bio_name % transition_year
+        adj_soil_uri = adj_soil_name % transition_year
+
+        #calculate adjusted above
+        #calculate adjusted below
+        #calculate adjusted bio
+        #calculate adjusted soil
+
+        year = transition_year
+
+
     ##calculate totals
     LOGGER.info("Calculating totals.")
     #construct list of rasters for totals
@@ -752,9 +777,7 @@ def execute(args):
                                       255,
                                       gdal.GDT_Byte,
                                       fill_value=0)
-    LOGGER.debug("Cumilative biomass disturbance raster created.")
-
-    
+    LOGGER.debug("Cumilative biomass disturbance raster created.")       
 
     ##calculate totals in rasters and write report
     LOGGER.info("Tabulating data and generating report.")
