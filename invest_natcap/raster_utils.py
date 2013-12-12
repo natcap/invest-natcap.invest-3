@@ -2275,6 +2275,19 @@ def get_lookup_from_csv(csv_table_uri, key_field):
             {header_1: val_1_0, header_2: val_2_0, etc.}
             depending on the values of those fields"""
 
+    def smart_cast(value):
+        """Attempts to cast value to a float, int, or leave it as string"""
+        if type(value) != str:
+            return value
+
+        cast_functions = [int, float]
+        for fn in cast_functions:
+            try:
+                return fn(value)
+            except ValueError:
+                pass
+        return value
+
     with open(csv_table_uri, 'rU') as csv_file:
         csv_reader = csv.reader(csv_file)
         header_row = csv_reader.next()
@@ -2303,19 +2316,6 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
 
         returns a dictionary of the form {key_field_0:
             {field_0: value0, field_1: value1}...}"""
-
-    def smart_cast(value):
-        """Attempts to cast value to a float, int, or leave it as string"""
-        if type(value) != str:
-            return value
-
-        cast_functions = [int, float]
-        for fn in cast_functions:
-            try:
-                return fn(value)
-            except ValueError:
-                pass
-        return value
 
     #Pull apart the datasource
     datasource = ogr.Open(datasource_uri)
