@@ -196,6 +196,8 @@ def add_field_feature_set_uri(fs_uri, field_name, field_type):
 
 def add_id_feature_set_uri(fs_uri, id_name):
     shapefile = ogr.Open(fs_uri, 1)
+    message = "Failed to open " + fs_uri + ": can't add new field."
+    assert shapefile is not None, message
     layer = shapefile.GetLayer()
     new_field = ogr.FieldDefn(id_name, ogr.OFTInteger)
     layer.CreateField(new_field)
@@ -437,26 +439,28 @@ def execute(args):
                                     aq_args["cell_size"],
                                     "union")
 
-    LOGGER.debug("Copying overlap analysis features.")
-    raster_utils.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
+    if aq_args["overlap_uri"]:  
+        LOGGER.debug("Copying overlap analysis features.")
+        raster_utils.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
 
-    LOGGER.debug("Adding id field to overlap features.")
-    id_name = "investID"
-    add_id_feature_set_uri(overlap_uri, id_name)
+        LOGGER.debug("Adding id field to overlap features.")
+        id_name = "investID"
+        add_id_feature_set_uri(overlap_uri, id_name)
 
-    LOGGER.debug("Add area field to overlap features.")
-    area_name = "overlap"
-    add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
-    
-    LOGGER.debug("Count overlapping pixels per area.")
-    values = raster_utils.aggregate_raster_values_uri(
-        viewshed_reclass_uri, overlap_uri, id_name, ignore_nodata=True).total
-
-    def calculate_percent(feature):
-        if feature.GetFieldAsInteger(id_name) in values:
-            return (values[feature.GetFieldAsInteger(id_name)] * aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
-        else:
-            return 0
+        LOGGER.debug("Add area field to overlap features.")
+        area_name = "overlap"
+        add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
         
-    LOGGER.debug("Set area field values.")
-    set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
+        LOGGER.debug("Count overlapping pixels per area.")
+        values = raster_utils.aggregate_raster_values_uri(
+            viewshed_reclass_uri, overlap_uri, id_name, ignore_nodata=True).total
+
+        def calculate_percent(feature):
+            if feature.GetFieldAsInteger(id_name) in values:
+                return (values[feature.GetFieldAsInteger(id_name)] * \
+                aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
+            else:
+                return 0
+            
+        LOGGER.debug("Set area field values.")
+        set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
