@@ -156,15 +156,16 @@ def execute(args):
         if args['risk_eq'] == 'Euclidean':
             make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], 
                 args['max_stress'],num_stress, len(h_risk_dict))
-    '''
+    
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
     unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
     os.removedirs(unecessary_folder)
+
     #Want to remove that AOI copy that we used for ID number->name translation.
-    unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
-    os.remove(unnecessary_file)
-    '''
+    if 'aoi_tables' in args:
+        unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
+        os.remove(unnecessary_file)
 
     #Want to print out our warnings as the last possible things in the
     #console window.
@@ -1012,7 +1013,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
        
         raster_to_polygon(single_raster_uri_r, single_raster_uri,
                             h, 'VALUE')
-        
+       
+        #Now, want to delete all the other rasters that we don't need for risk.
+        for file_uri in [h_out_uri_r, m_out_uri_r, l_out_uri_r, single_raster_uri_r]:
+            
+            os.remove(file_uri)
+
     return num_stress
 
 def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
@@ -1053,10 +1059,6 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
 
     gdal.Polygonize(band, mask, layer, 0)
 
-    layer = None
-
-    ds.SyncToDisk()
-
     #Now, want to loop through the polygons that we just created, and add a new
     #field with a string description, depending on what the 3/2/1 number is. 
     field_defn = ogr.FieldDefn('CLASSIFY', ogr.OFTString)
@@ -1067,13 +1069,16 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
         class_number = feature.items()['VALUE']
     
         if class_number == 3:
-            feature.setField('CLASSIFY', 'HIGH')
+            feature.SetField('CLASSIFY', 'HIGH')
         elif class_number == 2:
-            feature.setField('CLASSIFY', 'MED')
+            feature.SetField('CLASSIFY', 'MED')
         elif class_number == 1:
-            feature.setField('CLASSIFY', 'LOW')
+            feature.SetField('CLASSIFY', 'LOW')
     
         layer.SetFeature(feature)
+    
+    layer = None
+    ds.SyncToDisk()
 
 def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
