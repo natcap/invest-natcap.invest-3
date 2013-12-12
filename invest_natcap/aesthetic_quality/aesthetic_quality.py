@@ -130,7 +130,7 @@ def get_data_type_uri(ds_uri):
 def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correction, refraction):
     # default parameter values that are not passed to this function but that
     # aesthetic_quality_core.viewshed needs
-    obs_elev = 1.75 # Observator's elevation in meters
+    obs_elev = 1.00 # Observator's elevation in meters
     tgt_elev = 0.0  # Extra elevation applied to all the DEM
     max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
     refr_coeff = 0.13 # Refractivity coefficient
