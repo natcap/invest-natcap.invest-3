@@ -180,8 +180,8 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
         assert geometry.GetGeometryName() == 'POINT', message
         x = geometry.GetX()
         y = geometry.GetY()
-        i = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
-        j = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
+        j = int(round(iGT[0] + x*iGT[1] + y*iGT[2]))
+        i = int(round(iGT[3] + x*iGT[4] + y*iGT[5]))
         print('Computing viewshed from viewpoint ' + str(i) + ' ' + str(j))
         aesthetic_quality_core.viewshed(in_dem_uri, out_viewshed_uri, \
         (i,j), obs_elev, tgt_elev, max_dist, refr_coeff)
