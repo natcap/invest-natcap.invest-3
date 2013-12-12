@@ -18,6 +18,17 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('blue_carbon')
 
+
+
+##class NoRasterUtils(logging.Filter):
+##    def filter(self, record):
+##        return not record.name == "raster_utils"
+##
+##hdlr = logging.FileHandler("/home/mlacayo/workspace/BlueCarbon/output/log.txt", 'w')
+##hdlr.addFilter(NoRasterUtils())
+##
+##LOGGER.addHandler(hdlr)
+
 def transition_soil_carbon(area_final, carbon_final, depth_final,
                            transition_rate, year, area_initial,
                            carbon_initial, depth_initial):
