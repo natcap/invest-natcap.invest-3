@@ -951,6 +951,20 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #considered low risk. Can return nodata.
         return -1.
 
+    def combo_risk_raster(l_pix, m_pix, h_pix):
+
+        if h_pix != -1.:
+            return 3
+        
+        elif m_pix != -1.:
+            return 2
+
+        elif l_pix != -1.:
+            return 1
+
+        else:
+            return -1.
+
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
         #curr_top_risk = num_stress[h] * max_risk
@@ -1003,6 +1017,12 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         #data where there are high percentage risk values, and turn it into
         #a shapefile. 
         raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
+
+        #Want to do another vectorize in order to create a single shapefile
+        #with high, medium, low values.
+        
+        
+        single_raster_uri = 
 
     return num_stress
 
