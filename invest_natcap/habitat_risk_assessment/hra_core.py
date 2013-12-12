@@ -10,6 +10,7 @@ import datetime
 import matplotlib.pyplot
 import re
 import random
+import shutil
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -160,7 +161,7 @@ def execute(args):
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
     unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
-    os.removedirs(unecessary_folder)
+    shutil.rmtree(unecessary_folder)
 
     #Want to remove that AOI copy that we used for ID number->name translation.
     if 'aoi_tables' in args:
