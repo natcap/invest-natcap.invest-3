@@ -1010,7 +1010,7 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
                         -1., grid_size, "union", resample_method_list=None, 
                         dataset_to_align_index=0, aoi_uri=None)
        
-        raster_to_polygon(single_raster_uri_r, single_risk_raster_uri,
+        raster_to_polygon(single_raster_uri_r, single_raster_uri,
                             h, 'VALUE')
         
     return num_stress
@@ -1056,6 +1056,24 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
     layer = None
 
     ds.SyncToDisk()
+
+    #Now, want to loop through the polygons that we just created, and add a new
+    #field with a string description, depending on what the 3/2/1 number is. 
+    field_defn = ogr.FieldDefn('CLASSIFY', ogr.OFTString)
+    layer.CreateField(field_defn)
+
+    for feature in layer:
+        
+        class_number = feature.items()['VALUE']
+    
+        if class_number == 3:
+            feature.setField('CLASSIFY', 'HIGH')
+        elif class_number == 2:
+            feature.setField('CLASSIFY', 'MED')
+        elif class_number == 1:
+            feature.setField('CLASSIFY', 'LOW')
+    
+        layer.SetFeature(feature)
 
 def make_hab_risk_raster(dir, risk_dict):
     '''This will create a combined raster for all habitat-stressor pairings
