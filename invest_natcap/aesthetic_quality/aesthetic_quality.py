@@ -149,6 +149,9 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
     dst_ds = None
     src_ds = None
 
+    # Extract cell size from input DEM
+    cell_size = raster_utils.get_cell_size_from_uri(in_dem_uri)
+
     # The model extracts each point from the shapefile
     point_list = []
     shapefile = ogr.Open(in_structure_uri)
@@ -172,6 +175,7 @@ def viewshed(in_dem_uri, out_viewshed_uri, in_structure_uri, curvature_correctio
                     ' expected 0 (ogr.OFTInteger)'
                 assert field_type == ogr.OFTInteger, message
                 max_dist = -feature.GetFieldAsInteger(field)
+                max_dist = int(max_dist/cell_size)
                 
         geometry = feature.GetGeometryRef()
         assert geometry is not None
