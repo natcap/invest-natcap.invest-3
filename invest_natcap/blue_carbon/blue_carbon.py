@@ -9,6 +9,8 @@ import logging
 import copy
 import os
 
+import random
+
 import operator
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -249,6 +251,12 @@ def execute(args):
     dis_soil_name = os.path.join(intermediate_dir, "%i_dis_soil.tif")
 
 
+    #adjusted carbon file names
+    adj_above_name = os.path.join(intermediate_dir, "%i_adj_above.tif")
+    adj_below_name = os.path.join(intermediate_dir, "%i_adj_below.tif")
+    adj_bio_name = os.path.join(intermediate_dir, "%i_adj_bio.tif")
+    adj_soil_name = os.path.join(intermediate_dir, "%i_adj_soil.tif")
+
     #totals
     total_acc_soil_name = "total_soil_acc_%i_%i.tif"
     total_acc_bio_name = "total_bio_acc_%i_%i.tif"
@@ -274,6 +282,44 @@ def execute(args):
 
     trans = raster_utils.get_lookup_from_csv(trans_uri, trans_field_key)
     carbon = raster_utils.get_lookup_from_csv(carbon_uri, carbon_field_key)
+
+    #validate disturbance and accumulation tables
+    change_types = set()
+    for k1 in trans:
+        for k2 in trans:
+            change_types.add(trans[k1][str(k2)])
+
+    change_columns = set(acc_soil[random.choice(list(acc_soil.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Soil accumulation table valid.")
+    else:
+        msg = "Soil accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    change_columns = set(dis_soil[random.choice(list(dis_soil.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Soil disturbance table valid.")
+    else:
+        msg = "Soil disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    change_columns = set(acc_bio[random.choice(list(acc_bio.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Biomass accumulation table valid.")
+    else:
+        msg = "Biomass accumulation table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
+
+    change_columns = set(dis_bio[random.choice(list(dis_bio.keys()))].keys())
+    if change_columns.issuperset(change_types):
+        LOGGER.debug("Biomass disturbance table valid.")
+    else:
+        msg = "Biomass disturbance table missing column(s): %s", str(change_types.difference(change_columns))
+        LOGGER.error(msg)
+        raise ValueError, msg
 
     #construct dictionaries for single parameter lookups
     above_dict = dict([(k, float(carbon[k][carbon_field_above])) for k in carbon])
@@ -322,8 +368,6 @@ def execute(args):
         try:
             return float(acc_soil[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     def acc_bio_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
@@ -331,8 +375,6 @@ def execute(args):
         try:
             return float(acc_bio[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     def dis_bio_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
@@ -340,8 +382,6 @@ def execute(args):
         try:
             return float(dis_bio[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     def dis_soil_co_op(lulc_base, lulc_transition):
         if nodata in [lulc_base, lulc_transition]:
@@ -349,8 +389,6 @@ def execute(args):
         try:
             return float(dis_soil[carbon[int(lulc_base)][carbon_field_veg]]\
                    [trans[int(lulc_base)][str(int(lulc_transition))]])
-        except KeyError:
-            return 0.0
 
     LOGGER.info("Running analysis.")
     ##calculate stock carbon values
@@ -628,6 +666,31 @@ def execute(args):
             lulc_base_uri = lulc_uri_dict[lulc_base_year]
             LOGGER.debug("Changed base uri to. %s" % lulc_base_uri)    
 
+    ##calculate adjusted pools
+    def adj_op(base, acc, dis):
+        if nodata in [base, acc, dis]:
+            return nodata
+        else:
+            return base + acc - dis
+            
+    year = lulc_years[0]
+    transition_year = lulc_years[1]
+
+    year = transition_year
+    for transition_year in lulc_years[2:]:
+        adj_above_uri = adj_above_name % transition_year
+        adj_below_uri = adj_below_name % transition_year
+        adj_bio_uri = adj_bio_name % transition_year
+        adj_soil_uri = adj_soil_name % transition_year
+
+        #calculate adjusted above
+        #calculate adjusted below
+        #calculate adjusted bio
+        #calculate adjusted soil
+
+        year = transition_year
+
+
     ##calculate totals
     LOGGER.info("Calculating totals.")
     #construct list of rasters for totals
@@ -714,9 +777,7 @@ def execute(args):
                                       255,
                                       gdal.GDT_Byte,
                                       fill_value=0)
-    LOGGER.debug("Cumilative biomass disturbance raster created.")
-
-    
+    LOGGER.debug("Cumilative biomass disturbance raster created.")       
 
     ##calculate totals in rasters and write report
     LOGGER.info("Tabulating data and generating report.")

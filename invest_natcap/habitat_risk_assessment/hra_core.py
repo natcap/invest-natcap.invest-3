@@ -10,6 +10,7 @@ import datetime
 import matplotlib.pyplot
 import re
 import random
+import shutil
 
 from osgeo import gdal, ogr, osr
 from invest_natcap import raster_utils
@@ -156,15 +157,16 @@ def execute(args):
         if args['risk_eq'] == 'Euclidean':
             make_risk_plots(tables_dir, aoi_pairs, args['max_risk'], 
                 args['max_stress'],num_stress, len(h_risk_dict))
-    '''
+    
     #Want to clean up the intermediate folder containing the added r/dq*w
     #rasters, since it serves no purpose for the users.
     unecessary_folder = os.path.join(inter_dir, 'ReBurned_Crit_Rasters')
-    os.removedirs(unecessary_folder)
+    shutil.rmtree(unecessary_folder)
+
     #Want to remove that AOI copy that we used for ID number->name translation.
-    unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
-    os.remove(unnecessary_file)
-    '''
+    if 'aoi_tables' in args:
+        unnecessary_file = os.path.join(inter_dir, 'temp_aoi_copy.shp') 
+        os.remove(unnecessary_file)
 
     #Want to print out our warnings as the last possible things in the
     #console window.
@@ -883,19 +885,16 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
-
         h_percent = float(h_pixel)/ user_max_risk
 
         #high risk is classified as the top third of risk
         if h_percent >= .666:
             return 1
-        
         #If we aren't getting high risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
     
             p_percent = float(p) / max_risk
-
             if p_percent >= .666:
                 return 1
 
@@ -907,19 +906,16 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
-
         h_percent = float(h_pixel)/ user_max_risk 
 
         #medium risk is classified as the middle third of risk
         if .333 <= h_percent < .666:
             return 1
-        
         #If we aren't getting medium risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
     
             p_percent = float(p) / max_risk
-
             if .333 <= p_percent < .666:
                 return 1
 
@@ -931,25 +927,33 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
 
         #We know that the overarching habitat pixel is the first in the list
         h_pixel = pixels[0]
-
         h_percent = float(h_pixel)/ user_max_risk
 
         #low risk is classified as the lowest third of risk
         if 0. <= h_percent < .333:
             return 1
-        
         #If we aren't getting low risk from just the habitat pixel, 
         #want to secondarily check each of the h_s pixels.
         for p in pixels[1::]:
     
             p_percent = float(p) / max_risk
-            
             if 0. <= p_percent < .333:
                 return 1
 
         #If we get here, neither the habitat raster nor the h_s_raster are
         #considered low risk. Can return nodata.
         return -1.
+
+    def combo_risk_raster(l_pix, m_pix, h_pix):
+
+        if h_pix != -1.:
+            return 3
+        elif m_pix != -1.:
+            return 2
+        elif l_pix != -1.:
+            return 1
+        else:
+            return -1.
 
     for h in h_dict:
         #Want to know the number of stressors for the current habitat        
@@ -964,45 +968,45 @@ def make_risk_shapes(dir, crit_lists, h_dict, h_s_dict, max_risk, max_stress):
         grid_size = raster_utils.get_cell_size_from_uri(old_ds_uri)
 
         h_out_uri_r = os.path.join(dir, '[' + h + ']_HIGH_RISK.tif') 
-        h_out_uri = os.path.join(dir, '[' + h + ']_HIGH_RISK.shp')
         
         raster_utils.vectorize_datasets(risk_raster_list, high_risk_raster, 
                         h_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-        #Use gdal.Polygonize to take the raster, which should have only
-        #data where there are high percentage risk values, and turn it into
-        #a shapefile. 
-        raster_to_polygon(h_out_uri_r, h_out_uri, h, 'VALUE')
-
         #Medium area would be here.
         m_out_uri_r = os.path.join(dir, '[' + h + ']_MED_RISK.tif') 
-        m_out_uri = os.path.join(dir, '[' + h + ']_MED_RISK.shp')
         
         raster_utils.vectorize_datasets(risk_raster_list, med_risk_raster, 
                         m_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union",
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-        #Use gdal.Polygonize to take the raster, which should have only
-        #data where there are high percentage risk values, and turn it into
-        #a shapefile. 
-        raster_to_polygon(m_out_uri_r, m_out_uri, h, 'VALUE')
-        
         #Now, want to do the low area.
         l_out_uri_r = os.path.join(dir, '[' + h + ']_LOW_RISK.tif') 
-        l_out_uri = os.path.join(dir, '[' + h + ']_LOW_RISK.shp')
         
         raster_utils.vectorize_datasets(risk_raster_list, low_risk_raster, 
                         l_out_uri_r, gdal.GDT_Float32, -1., grid_size, "union", 
                         resample_method_list=None, dataset_to_align_index=0,
                         aoi_uri=None)
 
-        #Use gdal.Polygonize to take the raster, which should have only
-        #data where there are high percentage risk values, and turn it into
-        #a shapefile. 
-        raster_to_polygon(l_out_uri_r, l_out_uri, h, 'VALUE')
+        #Want to do another vectorize in order to create a single shapefile
+        #with high, medium, low values.
+        single_raster_uri_r = os.path.join(dir, '[' + h + ']_ALL_RISK.tif')
+        single_raster_uri = os.path.join(dir, '[' + h + ']_RISK.shp')
+
+        raster_utils.vectorize_datasets([l_out_uri_r, m_out_uri_r, h_out_uri_r], 
+                        combo_risk_raster, single_raster_uri_r, gdal.GDT_Float32, 
+                        -1., grid_size, "union", resample_method_list=None, 
+                        dataset_to_align_index=0, aoi_uri=None)
+       
+        raster_to_polygon(single_raster_uri_r, single_raster_uri,
+                            h, 'VALUE')
+       
+        #Now, want to delete all the other rasters that we don't need for risk.
+        for file_uri in [h_out_uri_r, m_out_uri_r, l_out_uri_r, single_raster_uri_r]:
+            
+            os.remove(file_uri)
 
     return num_stress
 
@@ -1044,8 +1048,25 @@ def raster_to_polygon(raster_uri, out_uri, layer_name, field_name):
 
     gdal.Polygonize(band, mask, layer, 0)
 
-    layer = None
+    #Now, want to loop through the polygons that we just created, and add a new
+    #field with a string description, depending on what the 3/2/1 number is. 
+    field_defn = ogr.FieldDefn('CLASSIFY', ogr.OFTString)
+    layer.CreateField(field_defn)
 
+    for feature in layer:
+        
+        class_number = feature.items()['VALUE']
+    
+        if class_number == 3:
+            feature.SetField('CLASSIFY', 'HIGH')
+        elif class_number == 2:
+            feature.SetField('CLASSIFY', 'MED')
+        elif class_number == 1:
+            feature.SetField('CLASSIFY', 'LOW')
+    
+        layer.SetFeature(feature)
+    
+    layer = None
     ds.SyncToDisk()
 
 def make_hab_risk_raster(dir, risk_dict):
