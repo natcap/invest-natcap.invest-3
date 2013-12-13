@@ -157,15 +157,13 @@ if platform.system() == 'Windows':
          'invest_nutrient.py',
          'invest_wind_energy.py',
          'invest_fisheries.py',
+         'invest_pollination.py',
          'invest_ntfp.py',
          'invest_monthly_water_yield.py',
          'invest_blue_carbon.py',
          'invest_blue_carbon_preprocessor.py',
          'invest_test_all.py']
 
-    py2exe_args['windows'] = [
-        'invest_pollination.py',
-    ]
     from py2exe.build_exe import py2exe as py2exeCommand
 
     class CustomPy2exe(py2exeCommand):
